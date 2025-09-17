@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, MapPin, Send, CheckCircle2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, MapPin, Send, CheckCircle2, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 // Mock data - در واقعیت از API یا دیتابیس خواهد آمد
@@ -47,6 +49,7 @@ interface LocationFormData {
   destinationProvince: string;
   destinationCounty: string;
   destinationCity: string;
+  phoneNumber: string;
 }
 
 const LocationForm = () => {
@@ -58,15 +61,28 @@ const LocationForm = () => {
     destinationProvince: "",
     destinationCounty: "",
     destinationCity: "",
+    phoneNumber: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = () => {
     if (!formData.originProvince || !formData.originCounty || !formData.originCity ||
-        !formData.destinationProvince || !formData.destinationCounty || !formData.destinationCity) {
+        !formData.destinationProvince || !formData.destinationCounty || !formData.destinationCity ||
+        !formData.phoneNumber) {
       toast({
         title: "خطا",
         description: "لطفاً همه فیلدها را تکمیل کنید",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Phone number validation
+    const phoneRegex = /^09\d{9}$/;
+    if (!phoneRegex.test(formData.phoneNumber)) {
+      toast({
+        title: "خطا",
+        description: "شماره تماس باید با 09 شروع شده و 11 رقم باشد",
         variant: "destructive",
       });
       return;
@@ -87,6 +103,7 @@ const LocationForm = () => {
       destinationProvince: "",
       destinationCounty: "",
       destinationCity: "",
+      phoneNumber: "",
     });
     setIsSubmitted(false);
   };
@@ -284,6 +301,33 @@ const LocationForm = () => {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Phone Number Section */}
+        <div className="space-y-3">
+          <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Phone className="w-4 h-4 text-primary" />
+            شماره تماس
+          </Label>
+          <Input
+            id="phone"
+            type="tel"
+            placeholder="09123456789"
+            value={formData.phoneNumber}
+            onChange={(e) => {
+              // Only allow numbers and limit to 11 digits
+              const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+              setFormData({
+                ...formData,
+                phoneNumber: value,
+              });
+            }}
+            className="text-left"
+            dir="ltr"
+          />
+          <p className="text-xs text-muted-foreground">
+            شماره موبایل خود را وارد کنید تا کارشناس با شما تماس بگیرد
+          </p>
         </div>
 
         {/* Submit Button */}
