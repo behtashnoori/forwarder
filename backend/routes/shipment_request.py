@@ -10,8 +10,18 @@ from backend.models import ShipmentRequest, ShipmentRequestLog
 
 shipment_request_bp = Blueprint("shipment_request", __name__, url_prefix="/api")
 
+VALID_TRANSPORT_METHODS = {
+    "road",
+    "rail",
+    "sea",
+    "combined",
+    "road-sea",
+    "rail-sea",
+    "multi-modal",
+}
 
-@shipment_request_bp.post("/shipment-requests")
+
+@shipment_request_bp.post("/shipment-request")
 def create_shipment_request():
     """Create a shipment request from public form submissions."""
     data: Dict[str, Any] = request.get_json(silent=True) or {}
@@ -38,6 +48,15 @@ def create_shipment_request():
             400,
         )
 
+    transport_method = data.get("transport_method")
+    if transport_method not in VALID_TRANSPORT_METHODS:
+        return (
+            jsonify({
+                "message": "روش حمل انتخاب‌شده نامعتبر است.",
+            }),
+            400,
+        )
+
     timestamp = datetime.utcnow()
 
     try:
@@ -49,6 +68,7 @@ def create_shipment_request():
             dest_county_id=dest_county_id,
             dest_city_id=dest_city_id,
             contact_phone=contact_phone,
+            transport_method=transport_method,
             created_at=timestamp,
             ready_at=timestamp,
             status_request_status="new",
@@ -81,7 +101,7 @@ def create_shipment_request():
     )
 
 
-@shipment_request_bp.get("/shipment-requests/ping")
+@shipment_request_bp.get("/shipment-request/ping")
 def ping():
     """Health check endpoint for the shipment request blueprint."""
     return jsonify({"message": "pong"})

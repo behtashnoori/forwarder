@@ -24,6 +24,7 @@ def get_shipment_request_detail(request_id: int):
     response = {
         "id": shipment_request.id,
         "contact_phone": shipment_request.contact_phone,
+        "transport_method": shipment_request.transport_method,
         "origin": {
             "province": origin_province.name_fa if origin_province else None,
             "county": origin_county.name_fa if origin_county else None,
@@ -99,6 +100,7 @@ def list_shipment_requests():
             {
                 "id": shipment_request.id,
                 "contact_phone": shipment_request.contact_phone,
+                "transport_method": shipment_request.transport_method,
                 "origin": {
                     "province": province_lookup.get(shipment_request.origin_province_id),
                     "county": county_lookup.get(shipment_request.origin_county_id),

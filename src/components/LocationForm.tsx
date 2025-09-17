@@ -311,6 +311,7 @@ const LocationForm = () => {
         dest_county_id: Number(formData.destinationCounty),
         dest_city_id: Number(formData.destinationCity),
         contact_phone: formData.phoneNumber,
+        transport_method: formData.transportMethod,
       });
 
       setIsSubmitted(true);
