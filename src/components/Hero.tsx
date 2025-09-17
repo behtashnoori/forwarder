@@ -15,14 +15,14 @@ const Hero = () => {
       {/* Content */}
       <div className="relative z-10 container mx-auto px-4 text-center text-primary-foreground">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
             ارسال سریع و مطمئن
             <br />
-            <span className="text-secondary-light">در سراسر کشور</span>
+            <span className="text-secondary-light">با انواع روش‌های حمل</span>
           </h1>
           
           <p className="text-lg md:text-xl mb-8 opacity-90 leading-relaxed">
-            با سرویس فورواردری ما، بسته‌های خود را با اطمینان کامل و در کوتاه‌ترین زمان ممکن ارسال کنید
+            با سرویس فورواردری ما، بسته‌های خود را از طریق جاده، ریل، دریا یا ترکیبی از این روش‌ها ارسال کنید
           </p>
 
           {/* Features */}
