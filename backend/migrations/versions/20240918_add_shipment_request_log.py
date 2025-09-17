@@ -1,7 +1,7 @@
 """add shipment request log table
 
 Revision ID: 20240918_add_shipment_request_log
-Revises: 
+Revises: 20240917_initial_schema
 Create Date: 2024-09-18 00:00:00.000000
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "20240918_add_shipment_request_log"
-down_revision = None
+down_revision = "20240917_initial_schema"
 branch_labels = None
 depends_on = None
 
