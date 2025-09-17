@@ -19,8 +19,8 @@ def upgrade() -> None:
     """Create shipment_request_log table."""
     op.create_table(
         "shipment_request_log",
-        sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column("shipment_request_id", sa.Integer(), nullable=False),
+        sa.Column("id", sa.BigInteger(), primary_key=True),
+        sa.Column("shipment_request_id", sa.BigInteger(), nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("note", sa.Text(), nullable=False),
         sa.Column("ip_address", sa.Text(), nullable=True),

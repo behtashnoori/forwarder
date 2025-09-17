@@ -25,14 +25,14 @@ def get_shipment_request_detail(request_id: int):
         "id": shipment_request.id,
         "contact_phone": shipment_request.contact_phone,
         "origin": {
-            "province": origin_province.name if origin_province else None,
-            "county": origin_county.name if origin_county else None,
-            "city": origin_city.name if origin_city else None,
+            "province": origin_province.name_fa if origin_province else None,
+            "county": origin_county.name_fa if origin_county else None,
+            "city": origin_city.name_fa if origin_city else None,
         },
         "destination": {
-            "province": dest_province.name if dest_province else None,
-            "county": dest_county.name if dest_county else None,
-            "city": dest_city.name if dest_city else None,
+            "province": dest_province.name_fa if dest_province else None,
+            "county": dest_county.name_fa if dest_county else None,
+            "city": dest_city.name_fa if dest_city else None,
         },
         "created_at": shipment_request.created_at.isoformat()
         if shipment_request.created_at
@@ -89,9 +89,9 @@ def list_shipment_requests():
     )
     cities = City.query.filter(City.id.in_(city_ids)).all() if city_ids else []
 
-    province_lookup = {province.id: province.name for province in provinces}
-    county_lookup = {county.id: county.name for county in counties}
-    city_lookup = {city.id: city.name for city in cities}
+    province_lookup = {province.id: province.name_fa for province in provinces}
+    county_lookup = {county.id: county.name_fa for county in counties}
+    city_lookup = {city.id: city.name_fa for city in cities}
 
     response = []
     for shipment_request in shipment_requests:

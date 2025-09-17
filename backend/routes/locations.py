@@ -14,7 +14,7 @@ def list_provinces():
         [
             {
                 "id": province.id,
-                "name": province.name,
+                "name": province.name_fa,
             }
             for province in provinces
         ]
@@ -36,7 +36,7 @@ def list_counties():
         [
             {
                 "id": county.id,
-                "name": county.name,
+                "name": county.name_fa,
             }
             for county in counties
         ]
@@ -58,7 +58,7 @@ def list_cities():
         [
             {
                 "id": city.id,
-                "name": city.name,
+                "name": city.name_fa,
             }
             for city in cities
         ]
