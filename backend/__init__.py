@@ -1,14 +1,17 @@
 """Backend application factory."""
 from __future__ import annotations
 
-import os
-from pathlib import Path
+from os import getenv, makedirs
 from typing import Any, Mapping, MutableMapping
 
+from dotenv import load_dotenv
 from flask import Flask
+from sqlalchemy import text
 
 from backend.extensions import db
 from backend.routes import register_routes
+
+load_dotenv()
 
 
 def create_app(config: Mapping[str, Any] | None = None) -> Flask:
@@ -25,11 +28,8 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     # Default configuration makes it easy to run the backend locally while still
     # allowing full override via environment variables or a provided config mapping.
     default_config: MutableMapping[str, Any] = {
-        "SQLALCHEMY_DATABASE_URI": os.getenv(
-            "DATABASE_URL",
-            # Store the SQLite database in the Flask instance folder by default.
-            f"sqlite:///{Path(app.instance_path) / 'forwarder.db'}",
-        ),
+        "SQLALCHEMY_DATABASE_URI": getenv("DATABASE_URL")
+        or "sqlite:///instance/forwarder.sqlite3",
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
     }
 
@@ -38,9 +38,16 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         app.config.from_mapping(config)
 
     # Ensure the instance path exists before any SQLite database is created.
-    os.makedirs(app.instance_path, exist_ok=True)
+    makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
+
+    with app.app_context():
+        try:
+            db.session.execute(text("SELECT 1"))
+            print("✅ Database connection successful.")
+        except Exception as exc:  # pragma: no cover - startup diagnostic
+            print("❌ Database connection failed:", exc)
 
     # Register all HTTP routes with the application.
     register_routes(app)
