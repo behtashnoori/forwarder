@@ -48,13 +48,19 @@ def create_shipment_request():
             400,
         )
 
-    transport_method = data.get("transport_method")
+    transport_method_raw = data.get("transport_method") or data.get("shipment_mode")
+    transport_method = (
+        transport_method_raw.lower() if isinstance(transport_method_raw, str) else None
+    )
     if transport_method not in VALID_TRANSPORT_METHODS:
         return (
-            jsonify({
-                "message": "روش حمل انتخاب‌شده نامعتبر است.",
-            }),
-            400,
+            jsonify(
+                {
+                    "message": "روش حمل انتخاب‌شده نامعتبر است.",
+                    "allowed_methods": sorted(VALID_TRANSPORT_METHODS),
+                }
+            ),
+            422,
         )
 
     timestamp = datetime.utcnow()
@@ -95,9 +101,10 @@ def create_shipment_request():
         jsonify(
             {
                 "message": "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت.",
+                "id": shipment_request.id,
             }
         ),
-        200,
+        201,
     )
 
 
