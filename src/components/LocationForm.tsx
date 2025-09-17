@@ -1,46 +1,20 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck } from "lucide-react";
+import { ArrowLeft, MapPin, Send, CheckCircle2, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-// Mock data - در واقعیت از API یا دیتابیس خواهد آمد
-const provinces = [
-  { id: 1, name: "تهران" },
-  { id: 2, name: "اصفهان" },
-  { id: 3, name: "فارس" },
-  { id: 4, name: "خراسان رضوی" },
-  { id: 5, name: "آذربایجان شرقی" },
-];
-
-const counties = {
-  1: [{ id: 11, name: "تهران" }, { id: 12, name: "شمیرانات" }, { id: 13, name: "ری" }],
-  2: [{ id: 21, name: "اصفهان" }, { id: 22, name: "کاشان" }, { id: 23, name: "نجف‌آباد" }],
-  3: [{ id: 31, name: "شیراز" }, { id: 32, name: "مرودشت" }, { id: 33, name: "فسا" }],
-  4: [{ id: 41, name: "مشهد" }, { id: 42, name: "نیشابور" }, { id: 43, name: "سبزوار" }],
-  5: [{ id: 51, name: "تبریز" }, { id: 52, name: "مراغه" }, { id: 53, name: "اهر" }],
-};
-
-const cities = {
-  11: [{ id: 111, name: "تهران" }, { id: 112, name: "شهریار" }],
-  12: [{ id: 121, name: "شمیران" }, { id: 122, name: "تجریش" }],
-  13: [{ id: 131, name: "ری" }, { id: 132, name: "ورامین" }],
-  21: [{ id: 211, name: "اصفهان" }, { id: 212, name: "فولادشهر" }],
-  22: [{ id: 221, name: "کاشان" }, { id: 222, name: "آران و بیدگل" }],
-  23: [{ id: 231, name: "نجف‌آباد" }, { id: 232, name: "تیران" }],
-  31: [{ id: 311, name: "شیراز" }, { id: 312, name: "صدرا" }],
-  32: [{ id: 321, name: "مرودشت" }, { id: 322, name: "درودزن" }],
-  33: [{ id: 331, name: "فسا" }, { id: 332, name: "قیر" }],
-  41: [{ id: 411, name: "مشهد" }, { id: 412, name: "طوس" }],
-  42: [{ id: 421, name: "نیشابور" }, { id: 422, name: "فیروزه" }],
-  43: [{ id: 431, name: "سبزوار" }, { id: 432, name: "جوین" }],
-  51: [{ id: 511, name: "تبریز" }, { id: 512, name: "آذرشهر" }],
-  52: [{ id: 521, name: "مراغه" }, { id: 522, name: "بناب" }],
-  53: [{ id: 531, name: "اهر" }, { id: 532, name: "هریس" }],
-};
+import {
+  City,
+  County,
+  Province,
+  fetchCities,
+  fetchCounties,
+  fetchProvinces,
+  submitShipmentRequest,
+} from "@/lib/api";
 
 interface LocationFormData {
   originProvince: string;
@@ -50,11 +24,20 @@ interface LocationFormData {
   destinationCounty: string;
   destinationCity: string;
   phoneNumber: string;
-  transportMethod: string;
 }
 
 const LocationForm = () => {
   const { toast } = useToast();
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [originCounties, setOriginCounties] = useState<County[]>([]);
+  const [destinationCounties, setDestinationCounties] = useState<County[]>([]);
+  const [originCities, setOriginCities] = useState<City[]>([]);
+  const [destinationCities, setDestinationCities] = useState<City[]>([]);
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [isLoadingOriginCounties, setIsLoadingOriginCounties] = useState(false);
+  const [isLoadingDestinationCounties, setIsLoadingDestinationCounties] = useState(false);
+  const [isLoadingOriginCities, setIsLoadingOriginCities] = useState(false);
+  const [isLoadingDestinationCities, setIsLoadingDestinationCities] = useState(false);
   const [formData, setFormData] = useState<LocationFormData>({
     originProvince: "",
     originCounty: "",
@@ -63,14 +46,241 @@ const LocationForm = () => {
     destinationCounty: "",
     destinationCity: "",
     phoneNumber: "",
-    transportMethod: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  useEffect(() => {
+    let active = true;
+
+    const loadProvinces = async () => {
+      setIsLoadingProvinces(true);
+      try {
+        const data = await fetchProvinces();
+        if (active) {
+          setProvinces(data);
+        }
+      } catch (error) {
+        if (active) {
+          toast({
+            title: "خطا در دریافت استان‌ها",
+            description: error instanceof Error ? error.message : "دریافت اطلاعات استان‌ها با خطا مواجه شد.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (active) {
+          setIsLoadingProvinces(false);
+        }
+      }
+    };
+
+    loadProvinces();
+
+    return () => {
+      active = false;
+    };
+  }, [toast]);
+
+  useEffect(() => {
+    let active = true;
+    if (!formData.originProvince) {
+      setOriginCounties([]);
+      setOriginCities([]);
+      setIsLoadingOriginCounties(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const provinceId = Number(formData.originProvince);
+    setIsLoadingOriginCounties(true);
+    setOriginCounties([]);
+    setOriginCities([]);
+
+    const loadCounties = async () => {
+      try {
+        const data = await fetchCounties(provinceId);
+        if (active) {
+          setOriginCounties(data);
+        }
+      } catch (error) {
+        if (active) {
+          toast({
+            title: "خطا در دریافت شهرستان‌های مبدا",
+            description: error instanceof Error ? error.message : "دریافت شهرستان‌ها با خطا مواجه شد.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (active) {
+          setIsLoadingOriginCounties(false);
+        }
+      }
+    };
+
+    loadCounties();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.originProvince, toast]);
+
+  useEffect(() => {
+    let active = true;
+    if (!formData.destinationProvince) {
+      setDestinationCounties([]);
+      setDestinationCities([]);
+      setIsLoadingDestinationCounties(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const provinceId = Number(formData.destinationProvince);
+    setIsLoadingDestinationCounties(true);
+    setDestinationCounties([]);
+    setDestinationCities([]);
+
+    const loadCounties = async () => {
+      try {
+        const data = await fetchCounties(provinceId);
+        if (active) {
+          setDestinationCounties(data);
+        }
+      } catch (error) {
+        if (active) {
+          toast({
+            title: "خطا در دریافت شهرستان‌های مقصد",
+            description: error instanceof Error ? error.message : "دریافت شهرستان‌ها با خطا مواجه شد.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (active) {
+          setIsLoadingDestinationCounties(false);
+        }
+      }
+    };
+
+    loadCounties();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.destinationProvince, toast]);
+
+  useEffect(() => {
+    let active = true;
+    if (!formData.originCounty) {
+      setOriginCities([]);
+      setIsLoadingOriginCities(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const countyId = Number(formData.originCounty);
+    setIsLoadingOriginCities(true);
+    setOriginCities([]);
+
+    const loadCities = async () => {
+      try {
+        const data = await fetchCities(countyId);
+        if (active) {
+          setOriginCities(data);
+        }
+      } catch (error) {
+        if (active) {
+          toast({
+            title: "خطا در دریافت شهرهای مبدا",
+            description: error instanceof Error ? error.message : "دریافت شهرها با خطا مواجه شد.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (active) {
+          setIsLoadingOriginCities(false);
+        }
+      }
+    };
+
+    loadCities();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.originCounty, toast]);
+
+  useEffect(() => {
+    let active = true;
+    if (!formData.destinationCounty) {
+      setDestinationCities([]);
+      setIsLoadingDestinationCities(false);
+      return () => {
+        active = false;
+      };
+    }
+
+    const countyId = Number(formData.destinationCounty);
+    setIsLoadingDestinationCities(true);
+    setDestinationCities([]);
+
+    const loadCities = async () => {
+      try {
+        const data = await fetchCities(countyId);
+        if (active) {
+          setDestinationCities(data);
+        }
+      } catch (error) {
+        if (active) {
+          toast({
+            title: "خطا در دریافت شهرهای مقصد",
+            description: error instanceof Error ? error.message : "دریافت شهرها با خطا مواجه شد.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        if (active) {
+          setIsLoadingDestinationCities(false);
+        }
+      }
+    };
+
+    loadCities();
+
+    return () => {
+      active = false;
+    };
+  }, [formData.destinationCounty, toast]);
+
+  const provinceOptions = useMemo(
+    () => [...provinces].sort((a, b) => a.name.localeCompare(b.name)),
+    [provinces],
+  );
+  const originCountyOptions = useMemo(
+    () => [...originCounties].sort((a, b) => a.name.localeCompare(b.name)),
+    [originCounties],
+  );
+  const destinationCountyOptions = useMemo(
+    () => [...destinationCounties].sort((a, b) => a.name.localeCompare(b.name)),
+    [destinationCounties],
+  );
+  const originCityOptions = useMemo(
+    () => [...originCities].sort((a, b) => a.name.localeCompare(b.name)),
+    [originCities],
+  );
+  const destinationCityOptions = useMemo(
+    () => [...destinationCities].sort((a, b) => a.name.localeCompare(b.name)),
+    [destinationCities],
+  );
+
+  const handleSubmit = async () => {
     if (!formData.originProvince || !formData.originCounty || !formData.originCity ||
-        !formData.destinationProvince || !formData.destinationCounty || !formData.destinationCity ||
-        !formData.phoneNumber || !formData.transportMethod) {
+        !formData.destinationProvince ||
+        !formData.destinationCounty ||
+        !formData.destinationCity ||
+        !formData.phoneNumber) {
       toast({
         title: "خطا",
         description: "لطفاً همه فیلدها را تکمیل کنید",
@@ -90,11 +300,33 @@ const LocationForm = () => {
       return;
     }
 
-    setIsSubmitted(true);
-    toast({
-      title: "درخواست ثبت شد",
-      description: "کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت",
-    });
+    setIsSubmitting(true);
+
+    try {
+      await submitShipmentRequest({
+        origin_province_id: Number(formData.originProvince),
+        origin_county_id: Number(formData.originCounty),
+        origin_city_id: Number(formData.originCity),
+        dest_province_id: Number(formData.destinationProvince),
+        dest_county_id: Number(formData.destinationCounty),
+        dest_city_id: Number(formData.destinationCity),
+        contact_phone: formData.phoneNumber,
+      });
+
+      setIsSubmitted(true);
+      toast({
+        title: "درخواست ثبت شد",
+        description: "کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت",
+      });
+    } catch (error) {
+      toast({
+        title: "ثبت درخواست ناموفق بود",
+        description: error instanceof Error ? error.message : "خطایی در ثبت درخواست رخ داد.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
@@ -106,7 +338,6 @@ const LocationForm = () => {
       destinationCounty: "",
       destinationCity: "",
       phoneNumber: "",
-      transportMethod: "",
     });
     setIsSubmitted(false);
   };
@@ -161,16 +392,22 @@ const LocationForm = () => {
                   originCity: "",
                 });
               }}
+              disabled={isLoadingProvinces && provinceOptions.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب استان" />
+                <SelectValue placeholder={isLoadingProvinces ? "در حال بارگذاری..." : "انتخاب استان"} />
               </SelectTrigger>
               <SelectContent>
-                {provinces.map((province) => (
+                {provinceOptions.map((province) => (
                   <SelectItem key={province.id} value={province.id.toString()}>
                     {province.name}
                   </SelectItem>
                 ))}
+                {provinceOptions.length === 0 && !isLoadingProvinces && (
+                  <SelectItem value="no-origin-province" disabled>
+                    استان موجود نیست
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -183,17 +420,30 @@ const LocationForm = () => {
                   originCity: "",
                 });
               }}
-              disabled={!formData.originProvince}
+              disabled={!formData.originProvince || isLoadingOriginCounties}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب شهرستان" />
+                <SelectValue
+                  placeholder={
+                    !formData.originProvince
+                      ? "ابتدا استان را انتخاب کنید"
+                      : isLoadingOriginCounties
+                        ? "در حال بارگذاری..."
+                        : "انتخاب شهرستان"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {formData.originProvince && counties[parseInt(formData.originProvince)]?.map((county) => (
+                {originCountyOptions.map((county) => (
                   <SelectItem key={county.id} value={county.id.toString()}>
                     {county.name}
                   </SelectItem>
                 ))}
+                {originCountyOptions.length === 0 && formData.originProvince && !isLoadingOriginCounties && (
+                  <SelectItem value="no-origin-county" disabled>
+                    شهرستانی یافت نشد
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -205,17 +455,30 @@ const LocationForm = () => {
                   originCity: value,
                 });
               }}
-              disabled={!formData.originCounty}
+              disabled={!formData.originCounty || isLoadingOriginCities}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب شهر" />
+                <SelectValue
+                  placeholder={
+                    !formData.originCounty
+                      ? "ابتدا شهرستان را انتخاب کنید"
+                      : isLoadingOriginCities
+                        ? "در حال بارگذاری..."
+                        : "انتخاب شهر"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {formData.originCounty && cities[parseInt(formData.originCounty)]?.map((city) => (
+                {originCityOptions.map((city) => (
                   <SelectItem key={city.id} value={city.id.toString()}>
                     {city.name}
                   </SelectItem>
                 ))}
+                {originCityOptions.length === 0 && formData.originCounty && !isLoadingOriginCities && (
+                  <SelectItem value="no-origin-city" disabled>
+                    شهری یافت نشد
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -246,16 +509,22 @@ const LocationForm = () => {
                   destinationCity: "",
                 });
               }}
+              disabled={isLoadingProvinces && provinceOptions.length === 0}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب استان" />
+                <SelectValue placeholder={isLoadingProvinces ? "در حال بارگذاری..." : "انتخاب استان"} />
               </SelectTrigger>
               <SelectContent>
-                {provinces.map((province) => (
+                {provinceOptions.map((province) => (
                   <SelectItem key={province.id} value={province.id.toString()}>
                     {province.name}
                   </SelectItem>
                 ))}
+                {provinceOptions.length === 0 && !isLoadingProvinces && (
+                  <SelectItem value="no-destination-province" disabled>
+                    استان موجود نیست
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -268,17 +537,30 @@ const LocationForm = () => {
                   destinationCity: "",
                 });
               }}
-              disabled={!formData.destinationProvince}
+              disabled={!formData.destinationProvince || isLoadingDestinationCounties}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب شهرستان" />
+                <SelectValue
+                  placeholder={
+                    !formData.destinationProvince
+                      ? "ابتدا استان را انتخاب کنید"
+                      : isLoadingDestinationCounties
+                        ? "در حال بارگذاری..."
+                        : "انتخاب شهرستان"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {formData.destinationProvince && counties[parseInt(formData.destinationProvince)]?.map((county) => (
+                {destinationCountyOptions.map((county) => (
                   <SelectItem key={county.id} value={county.id.toString()}>
                     {county.name}
                   </SelectItem>
                 ))}
+                {destinationCountyOptions.length === 0 && formData.destinationProvince && !isLoadingDestinationCounties && (
+                  <SelectItem value="no-destination-county" disabled>
+                    شهرستانی یافت نشد
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -290,53 +572,33 @@ const LocationForm = () => {
                   destinationCity: value,
                 });
               }}
-              disabled={!formData.destinationCounty}
+              disabled={!formData.destinationCounty || isLoadingDestinationCities}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب شهر" />
+                <SelectValue
+                  placeholder={
+                    !formData.destinationCounty
+                      ? "ابتدا شهرستان را انتخاب کنید"
+                      : isLoadingDestinationCities
+                        ? "در حال بارگذاری..."
+                        : "انتخاب شهر"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                {formData.destinationCounty && cities[parseInt(formData.destinationCounty)]?.map((city) => (
+                {destinationCityOptions.map((city) => (
                   <SelectItem key={city.id} value={city.id.toString()}>
                     {city.name}
                   </SelectItem>
                 ))}
+                {destinationCityOptions.length === 0 && formData.destinationCounty && !isLoadingDestinationCities && (
+                  <SelectItem value="no-destination-city" disabled>
+                    شهری یافت نشد
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        {/* Transport Method Section */}
-        <div className="space-y-3">
-          <Label htmlFor="transport" className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Truck className="w-4 h-4 text-primary" />
-            روش حمل و نقل
-          </Label>
-          <Select
-            value={formData.transportMethod}
-            onValueChange={(value) => {
-              setFormData({
-                ...formData,
-                transportMethod: value,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="انتخاب روش حمل و نقل" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="road">جاده‌ای</SelectItem>
-              <SelectItem value="rail">ریلی</SelectItem>
-              <SelectItem value="sea">دریایی</SelectItem>
-              <SelectItem value="combined">ترکیبی (جاده‌ای + ریلی)</SelectItem>
-              <SelectItem value="road-sea">ترکیبی (جاده‌ای + دریایی)</SelectItem>
-              <SelectItem value="rail-sea">ترکیبی (ریلی + دریایی)</SelectItem>
-              <SelectItem value="multi-modal">چندوجهی (همه روش‌ها)</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            کارشناس ما بهترین روش حمل را بر اساس انتخاب شما پیشنهاد خواهد داد
-          </p>
         </div>
 
         {/* Phone Number Section */}
@@ -367,13 +629,14 @@ const LocationForm = () => {
         </div>
 
         {/* Submit Button */}
-        <Button 
-          onClick={handleSubmit} 
+        <Button
+          onClick={handleSubmit}
           className="w-full bg-gradient-primary hover:shadow-primary font-medium"
           size="lg"
+          disabled={isSubmitting}
         >
           <Send className="w-4 h-4 ml-2" />
-          درخواست ارسال
+          {isSubmitting ? "در حال ارسال..." : "درخواست ارسال"}
         </Button>
       </CardContent>
     </Card>
