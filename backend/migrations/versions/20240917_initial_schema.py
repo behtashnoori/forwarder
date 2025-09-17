@@ -20,7 +20,6 @@ def upgrade() -> None:
     op.create_table(
         "province",
         sa.Column("id", sa.BigInteger(), primary_key=True),
-        sa.Column("code", sa.Text(), nullable=True),
         sa.Column("name_fa", sa.Text(), nullable=False),
     )
 
