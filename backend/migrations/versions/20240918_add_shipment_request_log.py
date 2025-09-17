@@ -8,6 +8,9 @@ from alembic import op
 import sqlalchemy as sa
 
 
+BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
+
+
 # revision identifiers, used by Alembic.
 revision = "20240918_add_shipment_request_log"
 down_revision = "20240917_initial_schema"
@@ -19,8 +22,8 @@ def upgrade() -> None:
     """Create shipment_request_log table."""
     op.create_table(
         "shipment_request_log",
-        sa.Column("id", sa.BigInteger(), primary_key=True),
-        sa.Column("shipment_request_id", sa.BigInteger(), nullable=False),
+        sa.Column("id", BIGINT, primary_key=True),
+        sa.Column("shipment_request_id", BIGINT, nullable=False),
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.Column("note", sa.Text(), nullable=False),
         sa.Column("ip_address", sa.Text(), nullable=True),

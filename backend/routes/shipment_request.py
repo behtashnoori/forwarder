@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Any, Dict
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
@@ -73,6 +73,7 @@ def create_shipment_request():
         db.session.commit()
     except (SQLAlchemyError, Exception):
         db.session.rollback()
+        current_app.logger.exception("Failed to create shipment request")
         return (
             jsonify({"message": "خطای داخلی سرور رخ داده است. لطفاً بعداً تلاش کنید."}),
             500,

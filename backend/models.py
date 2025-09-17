@@ -4,12 +4,18 @@ from datetime import datetime
 from backend.extensions import db
 
 
+# SQLAlchemy does not automatically generate primary keys for BIGINT columns on
+# SQLite. Using a variant that maps BIGINT to INTEGER on SQLite keeps
+# auto-increment behaviour in development while retaining BIGINT for Postgres.
+SQLITE_COMPAT_BIGINT = db.BigInteger().with_variant(db.Integer, "sqlite")
+
+
 class Province(db.Model):
     """Represents a province."""
 
     __tablename__ = "province"
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     code = db.Column(db.String(10), nullable=True)
     name_fa = db.Column(db.Text, nullable=False)
 
@@ -25,8 +31,10 @@ class County(db.Model):
 
     __tablename__ = "county"
 
-    id = db.Column(db.BigInteger, primary_key=True)
-    province_id = db.Column(db.BigInteger, db.ForeignKey("province.id"), nullable=False)
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    province_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
+    )
     name_fa = db.Column(db.Text, nullable=False)
 
     province = db.relationship("Province", back_populates="counties")
@@ -41,9 +49,13 @@ class City(db.Model):
 
     __tablename__ = "city"
 
-    id = db.Column(db.BigInteger, primary_key=True)
-    county_id = db.Column(db.BigInteger, db.ForeignKey("county.id"), nullable=False)
-    province_id = db.Column(db.BigInteger, db.ForeignKey("province.id"), nullable=False)
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    county_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=False
+    )
+    province_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
+    )
     name_fa = db.Column(db.Text, nullable=False)
 
     county = db.relationship("County", back_populates="cities")
@@ -58,23 +70,31 @@ class ShipmentRequest(db.Model):
 
     __tablename__ = "shipment_request"
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     origin_province_id = db.Column(
-        db.BigInteger, db.ForeignKey("province.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
     )
     origin_county_id = db.Column(
-        db.BigInteger, db.ForeignKey("county.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=False
     )
-    origin_city_id = db.Column(db.BigInteger, db.ForeignKey("city.id"), nullable=False)
-    dest_province_id = db.Column(db.BigInteger, db.ForeignKey("province.id"), nullable=False)
-    dest_county_id = db.Column(db.BigInteger, db.ForeignKey("county.id"), nullable=False)
-    dest_city_id = db.Column(db.BigInteger, db.ForeignKey("city.id"), nullable=False)
+    origin_city_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id"), nullable=False
+    )
+    dest_province_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
+    )
+    dest_county_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=False
+    )
+    dest_city_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id"), nullable=False
+    )
     contact_phone = db.Column(db.String(32), nullable=False)
     transport_method = db.Column(db.String(32), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     ready_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     status_request_status = db.Column(db.String(32), nullable=False, default="new")
-    request_user_id = db.Column(db.BigInteger, nullable=True)
+    request_user_id = db.Column(SQLITE_COMPAT_BIGINT, nullable=True)
 
     logs = db.relationship("ShipmentRequestLog", backref="shipment_request", lazy=True)
 
@@ -87,9 +107,9 @@ class ShipmentRequestLog(db.Model):
 
     __tablename__ = "shipment_request_log"
 
-    id = db.Column(db.BigInteger, primary_key=True)
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     shipment_request_id = db.Column(
-        db.BigInteger, db.ForeignKey("shipment_request.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
     )
     created_at = db.Column(db.DateTime, nullable=False)
     note = db.Column(db.Text, nullable=False)
