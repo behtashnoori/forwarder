@@ -12,7 +12,8 @@ class Province(db.Model):
     id = db.Column(db.BigInteger, primary_key=True)
     name_fa = db.Column(db.Text, nullable=False)
 
-    counties = db.relationship("County", backref="province", lazy=True)
+    counties = db.relationship("County", back_populates="province", lazy=True)
+    cities = db.relationship("City", back_populates="province", lazy=True)
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<Province id={self.id} name_fa={self.name_fa!r}>"
@@ -27,7 +28,8 @@ class County(db.Model):
     province_id = db.Column(db.BigInteger, db.ForeignKey("province.id"), nullable=False)
     name_fa = db.Column(db.Text, nullable=False)
 
-    cities = db.relationship("City", backref="county", lazy=True)
+    province = db.relationship("Province", back_populates="counties")
+    cities = db.relationship("City", back_populates="county", lazy=True)
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<County id={self.id} name_fa={self.name_fa!r}>"
@@ -42,6 +44,9 @@ class City(db.Model):
     county_id = db.Column(db.BigInteger, db.ForeignKey("county.id"), nullable=False)
     province_id = db.Column(db.BigInteger, db.ForeignKey("province.id"), nullable=False)
     name_fa = db.Column(db.Text, nullable=False)
+
+    county = db.relationship("County", back_populates="cities")
+    province = db.relationship("Province", back_populates="cities")
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<City id={self.id} name_fa={self.name_fa!r}>"
