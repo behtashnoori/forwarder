@@ -6,7 +6,7 @@ from backend.models import City, County, Province, ShipmentRequest
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api")
 
 
-@admin_bp.get("/shipment-request/<int:request_id>")
+@admin_bp.get("/shipment-requests/<int:request_id>")
 def get_shipment_request_detail(request_id: int):
     """Return a shipment request with human-readable location names."""
     shipment_request = ShipmentRequest.query.get(request_id)

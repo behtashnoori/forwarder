@@ -102,8 +102,10 @@ export function fetchCities(countyId: number): Promise<City[]> {
   return request<City[]>(path);
 }
 
-export function submitShipmentRequest(payload: ShipmentRequestPayload): Promise<{ message: string }> {
-  return request<{ message: string }>("/shipment-request", {
+export function submitShipmentRequest(
+  payload: ShipmentRequestPayload,
+): Promise<{ message: string }> {
+  return request<{ message: string }>("/shipment-requests", {
     method: "POST",
     body: JSON.stringify(payload),
   });

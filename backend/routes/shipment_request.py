@@ -8,12 +8,10 @@ from sqlalchemy.exc import SQLAlchemyError
 from backend.extensions import db
 from backend.models import ShipmentRequest, ShipmentRequestLog
 
-shipment_request_bp = Blueprint(
-    "shipment_request", __name__, url_prefix="/api/shipment-request"
-)
+shipment_request_bp = Blueprint("shipment_request", __name__, url_prefix="/api")
 
 
-@shipment_request_bp.post("/")
+@shipment_request_bp.post("/shipment-requests")
 def create_shipment_request():
     """Create a shipment request from public form submissions."""
     data: Dict[str, Any] = request.get_json(silent=True) or {}
@@ -83,7 +81,7 @@ def create_shipment_request():
     )
 
 
-@shipment_request_bp.get("/ping")
+@shipment_request_bp.get("/shipment-requests/ping")
 def ping():
     """Health check endpoint for the shipment request blueprint."""
     return jsonify({"message": "pong"})

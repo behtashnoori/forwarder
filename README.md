@@ -100,7 +100,7 @@ The Flask backend reads configuration from the project root `.env` file using
 
    When the server starts it prints a connectivity check (for example,
    `✅ Database connection successful.`). Browse to
-   `http://127.0.0.1:5000/api/shipment-request/ping` to confirm the API responds.
+  `http://127.0.0.1:5000/api/shipment-requests/ping` to confirm the API responds.
 
 ## What technologies are used for this project?
 
