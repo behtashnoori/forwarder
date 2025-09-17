@@ -2,95 +2,143 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Forwarding Service Design System - Persian RTL Optimized
+All colors MUST be HSL. Mobile-first design with professional aesthetics.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Background System */
+    --background: 250 50% 98%;
+    --background-secondary: 245 20% 96%;
+    --foreground: 220 15% 20%;
 
+    /* Card System */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 15% 20%;
+    --card-shadow: 220 20% 85%;
 
+    /* Popover System */
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 220 15% 20%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary Brand Colors - Professional Blue */
+    --primary: 215 85% 35%;
+    --primary-light: 215 75% 55%;
+    --primary-dark: 215 95% 25%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary Colors - Success Green */
+    --secondary: 150 65% 45%;
+    --secondary-light: 150 55% 65%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Accent Colors */
+    --accent: 245 15% 92%;
+    --accent-foreground: 220 15% 20%;
+    --accent-hover: 245 20% 88%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Muted Colors */
+    --muted: 245 10% 94%;
+    --muted-foreground: 220 10% 55%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status Colors */
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 35 85% 55%;
+    --warning-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* Interactive Elements */
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 215 85% 35%;
+    --input-focus: 0 0% 100%;
 
-    --radius: 0.5rem;
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(215 85% 35%), hsl(215 75% 55%));
+    --gradient-secondary: linear-gradient(135deg, hsl(150 65% 45%), hsl(150 55% 65%));
+    --gradient-background: linear-gradient(180deg, hsl(250 50% 98%), hsl(245 20% 96%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(245 15% 97%));
 
-    --sidebar-background: 0 0% 98%;
+    /* Shadows */
+    --shadow-sm: 0 2px 8px hsl(220 20% 85% / 0.3);
+    --shadow-md: 0 4px 16px hsl(220 20% 80% / 0.4);
+    --shadow-lg: 0 8px 32px hsl(220 20% 75% / 0.5);
+    --shadow-primary: 0 4px 20px hsl(215 85% 35% / 0.3);
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    /* Layout */
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-lg: 1rem;
 
-    --sidebar-primary: 240 5.9% 10%;
+    /* Transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    /* Typography - Persian Optimized */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    --line-height-tight: 1.25;
+    --line-height-normal: 1.5;
+    --line-height-relaxed: 1.75;
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Spacing System */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 220 15% 8%;
+    --background-secondary: 220 15% 12%;
+    --foreground: 220 10% 95%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 220 15% 10%;
+    --card-foreground: 220 10% 95%;
+    --card-shadow: 220 30% 5%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 220 15% 10%;
+    --popover-foreground: 220 10% 95%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 215 85% 55%;
+    --primary-light: 215 75% 65%;
+    --primary-dark: 215 95% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 150 65% 55%;
+    --secondary-light: 150 55% 75%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 220 15% 18%;
+    --accent-foreground: 220 10% 95%;
+    --accent-hover: 220 15% 22%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --muted: 220 15% 15%;
+    --muted-foreground: 220 10% 65%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --border: 220 15% 25%;
+    --input: 220 15% 25%;
+    --input-focus: 220 15% 30%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --gradient-primary: linear-gradient(135deg, hsl(215 85% 55%), hsl(215 75% 65%));
+    --gradient-secondary: linear-gradient(135deg, hsl(150 65% 55%), hsl(150 55% 75%));
+    --gradient-background: linear-gradient(180deg, hsl(220 15% 8%), hsl(220 15% 12%));
+    --gradient-card: linear-gradient(145deg, hsl(220 15% 10%), hsl(220 15% 15%));
+
+    --shadow-sm: 0 2px 8px hsl(220 30% 5% / 0.5);
+    --shadow-md: 0 4px 16px hsl(220 30% 5% / 0.6);
+    --shadow-lg: 0 8px 32px hsl(220 30% 5% / 0.7);
+    --shadow-primary: 0 4px 20px hsl(215 85% 55% / 0.4);
   }
 }
 
@@ -99,7 +147,49 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  html {
+    direction: rtl;
+    font-family: system-ui, -apple-system, 'Segoe UI', 'Vazir', 'Tahoma', sans-serif;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gradient-to-br from-background to-background-secondary text-foreground;
+    @apply font-medium leading-normal;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Persian Typography */
+  .font-persian {
+    font-family: 'Vazir', 'Tahoma', system-ui, sans-serif;
+  }
+
+  /* Smooth animations */
+  * {
+    transition: var(--transition-smooth);
+  }
+
+  /* Form elements RTL optimization */
+  input, select, textarea {
+    text-align: right;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary-dark));
   }
 }
