@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import re
 from typing import Any, Mapping, MutableMapping
 
 from dotenv import load_dotenv
@@ -48,9 +49,13 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
 
     db.init_app(app)
 
-    cors_origin = app.config.get("CORS_ORIGIN") or "http://localhost"
-    origin_prefix = cors_origin.rstrip("*")
-    CORS(app, resources={r"/api/*": {"origins": f"{origin_prefix}*"}})
+    cors_origin_regex = os.getenv("CORS_ORIGIN_REGEX")
+    if cors_origin_regex:
+        compiled_origin = re.compile(cors_origin_regex)
+        CORS(app, resources={r"/api/*": {"origins": compiled_origin}})
+    else:
+        cors_origin = app.config.get("CORS_ORIGIN") or "*"
+        CORS(app, resources={r"/api/*": {"origins": cors_origin}})
 
     with app.app_context():
         try:
