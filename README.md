@@ -50,6 +50,60 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
+## Running the backend locally
+
+The backend is a Flask application that loads its configuration from environment
+variables (via `python-dotenv`) and defaults to SQLite if a database URL is not
+provided. Follow the steps below to bring it up locally:
+
+1. **Create a virtual environment and install dependencies**
+
+   ```sh
+   cd backend
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
+   pip install -r requirements.txt
+   ```
+
+2. **Configure environment variables**
+
+   Copy the provided template and adjust it for your environment. The backend
+   automatically loads `.env` from the project root.
+
+   ```sh
+   cp ../.env.example ../.env
+   # edit ../.env to set DATABASE_URL, CORS_ORIGIN, SLA_HOURS as needed
+   ```
+
+   * `DATABASE_URL` &mdash; optional. Defaults to `sqlite:///instance/forwarder.sqlite3`
+     when omitted, so you can start without PostgreSQL.
+   * `CORS_ORIGIN` &mdash; optional. Used by the app if your deployment needs specific
+     origins.
+   * `SLA_HOURS` &mdash; optional. Controls the service-level agreement message shown to
+     users.
+
+   The application creates the `instance/` folder automatically; make sure the
+   process has write permissions if you rely on the SQLite fallback.
+
+3. **Initialize the database schema**
+
+   When running against a fresh database you can create the tables with:
+
+   ```sh
+   flask --app backend.wsgi shell -c "from backend.extensions import db; db.create_all()"
+   ```
+
+4. **Start the development server**
+
+   ```sh
+   flask --app backend.wsgi run --debug
+   ```
+
+   On startup the server prints a message indicating whether the database
+   connection succeeded (e.g. `✅ Database connection successful.`). Visit
+   `http://127.0.0.1:5000/api/shipment-request/ping` to verify the API is
+   reachable.
+
 ## What technologies are used for this project?
 
 This project is built with:
