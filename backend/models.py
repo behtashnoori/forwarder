@@ -10,6 +10,7 @@ class Province(db.Model):
     __tablename__ = "province"
 
     id = db.Column(db.BigInteger, primary_key=True)
+    code = db.Column(db.String(10), nullable=True)
     name_fa = db.Column(db.Text, nullable=False)
 
     counties = db.relationship("County", back_populates="province", lazy=True)

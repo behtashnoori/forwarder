@@ -15,6 +15,7 @@ def list_provinces():
             {
                 "id": province.id,
                 "name": province.name_fa,
+                "code": province.code,
             }
             for province in provinces
         ]
