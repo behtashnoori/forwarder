@@ -1,7 +1,8 @@
 """Backend application factory."""
 from __future__ import annotations
 
-from os import getenv, makedirs
+import os
+from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
 from dotenv import load_dotenv
@@ -11,7 +12,7 @@ from sqlalchemy import text
 from backend.extensions import db
 from backend.routes import register_routes
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
 
 
 def create_app(config: Mapping[str, Any] | None = None) -> Flask:
@@ -27,9 +28,10 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
 
     # Default configuration makes it easy to run the backend locally while still
     # allowing full override via environment variables or a provided config mapping.
+    database_uri = os.getenv("DATABASE_URL") or "sqlite:///instance/forwarder.sqlite3"
+
     default_config: MutableMapping[str, Any] = {
-        "SQLALCHEMY_DATABASE_URI": getenv("DATABASE_URL")
-        or "sqlite:///instance/forwarder.sqlite3",
+        "SQLALCHEMY_DATABASE_URI": database_uri,
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
     }
 
@@ -38,7 +40,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         app.config.from_mapping(config)
 
     # Ensure the instance path exists before any SQLite database is created.
-    makedirs(app.instance_path, exist_ok=True)
+    os.makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
 
