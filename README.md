@@ -50,59 +50,57 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## Running the backend locally
+## Running the backend locally (Windows PowerShell)
 
-The backend is a Flask application that loads its configuration from environment
-variables (via `python-dotenv`) and defaults to SQLite if a database URL is not
-provided. Follow the steps below to bring it up locally:
+The Flask backend reads configuration from the project root `.env` file using
+`python-dotenv`. If `DATABASE_URL` is missing, it falls back to a SQLite file in
+`instance/forwarder.sqlite3`, so the service can start without PostgreSQL.
 
 1. **Create a virtual environment and install dependencies**
 
-   ```sh
-   cd backend
+   ```powershell
    python -m venv .venv
-   source .venv/bin/activate  # On Windows use: .venv\Scripts\activate
-   pip install -r requirements.txt
+   .venv\Scripts\Activate.ps1
+   pip install -r backend/requirements.txt
    ```
 
 2. **Configure environment variables**
 
-   Copy the provided template and adjust it for your environment. The backend
-   automatically loads `.env` from the project root.
+   Copy the template and adjust it for your environment. The application
+   automatically loads `.env` from the repository root on startup.
 
-   ```sh
-   cp ../.env.example ../.env
-   # edit ../.env to set DATABASE_URL, CORS_ORIGIN, SLA_HOURS as needed
+   ```powershell
+   Copy-Item .env.example .env
+   # Edit .env and set DATABASE_URL, CORS_ORIGIN, and SLA_HOURS as needed
    ```
 
-   * `DATABASE_URL` &mdash; optional. Defaults to `sqlite:///instance/forwarder.sqlite3`
-     when omitted, so you can start without PostgreSQL.
-   * `CORS_ORIGIN` &mdash; optional. Used by the app if your deployment needs specific
-     origins.
-   * `SLA_HOURS` &mdash; optional. Controls the service-level agreement message shown to
-     users.
+   * `DATABASE_URL` &mdash; optional. When omitted, the backend uses
+     `sqlite:///instance/forwarder.sqlite3`.
+   * `CORS_ORIGIN` &mdash; optional. Lets you define which frontend origin is allowed.
+   * `SLA_HOURS` &mdash; optional. Controls the SLA message exposed by the API.
 
-   The application creates the `instance/` folder automatically; make sure the
-   process has write permissions if you rely on the SQLite fallback.
+   The application creates the `instance/` directory automatically; ensure your
+   shell has permission to write to it if you rely on the SQLite fallback.
 
 3. **Initialize the database schema**
 
-   When running against a fresh database you can create the tables with:
+   Create the tables for a fresh environment (works for SQLite or PostgreSQL):
 
-   ```sh
+   ```powershell
    flask --app backend.wsgi shell -c "from backend.extensions import db; db.create_all()"
    ```
 
 4. **Start the development server**
 
-   ```sh
-   flask --app backend.wsgi run --debug
+   ```powershell
+   $env:FLASK_APP = "backend.wsgi"
+   $env:FLASK_ENV = "development"
+   flask run
    ```
 
-   On startup the server prints a message indicating whether the database
-   connection succeeded (e.g. `✅ Database connection successful.`). Visit
-   `http://127.0.0.1:5000/api/shipment-request/ping` to verify the API is
-   reachable.
+   When the server starts it prints a connectivity check (for example,
+   `✅ Database connection successful.`). Browse to
+   `http://127.0.0.1:5000/api/shipment-request/ping` to confirm the API responds.
 
 ## What technologies are used for this project?
 

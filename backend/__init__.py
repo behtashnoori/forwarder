@@ -2,17 +2,16 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
 from dotenv import load_dotenv
 from flask import Flask
-from sqlalchemy import text
 
 from backend.extensions import db
 from backend.routes import register_routes
 
-load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent / ".env")
+PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
+load_dotenv(dotenv_path=os.path.join(PROJECT_ROOT, ".env"))
 
 
 def create_app(config: Mapping[str, Any] | None = None) -> Flask:
@@ -28,11 +27,14 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
 
     # Default configuration makes it easy to run the backend locally while still
     # allowing full override via environment variables or a provided config mapping.
-    database_uri = os.getenv("DATABASE_URL") or "sqlite:///instance/forwarder.sqlite3"
-
     default_config: MutableMapping[str, Any] = {
-        "SQLALCHEMY_DATABASE_URI": database_uri,
+        "SQLALCHEMY_DATABASE_URI": os.getenv(
+            "DATABASE_URL",
+            "sqlite:///instance/forwarder.sqlite3",
+        ),
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "http://localhost:8084"),
+        "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
     }
 
     app.config.from_mapping(default_config)
@@ -46,7 +48,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
 
     with app.app_context():
         try:
-            db.session.execute(text("SELECT 1"))
+            db.session.execute("SELECT 1")
             print("✅ Database connection successful.")
         except Exception as exc:  # pragma: no cover - startup diagnostic
             print("❌ Database connection failed:", exc)
