@@ -10,17 +10,6 @@ from backend.models import ShipmentRequest, ShipmentRequestLog
 
 shipment_request_bp = Blueprint("shipment_request", __name__, url_prefix="/api")
 
-VALID_TRANSPORT_METHODS = {
-    "road",
-    "rail",
-    "sea",
-    "combined",
-    "road-sea",
-    "rail-sea",
-    "multi-modal",
-}
-
-
 @shipment_request_bp.post("/shipment-request")
 def create_shipment_request():
     """Create a shipment request from public form submissions."""
@@ -49,19 +38,11 @@ def create_shipment_request():
         )
 
     transport_method_raw = data.get("transport_method") or data.get("shipment_mode")
-    transport_method = (
-        transport_method_raw.lower() if isinstance(transport_method_raw, str) else None
-    )
-    if transport_method not in VALID_TRANSPORT_METHODS:
-        return (
-            jsonify(
-                {
-                    "message": "روش حمل انتخاب‌شده نامعتبر است.",
-                    "allowed_methods": sorted(VALID_TRANSPORT_METHODS),
-                }
-            ),
-            422,
-        )
+    transport_method = None
+    if isinstance(transport_method_raw, str):
+        sanitized = transport_method_raw.strip()
+        if sanitized:
+            transport_method = sanitized.lower()
 
     timestamp = datetime.utcnow()
 

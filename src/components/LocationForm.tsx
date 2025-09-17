@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck } from "lucide-react";
+import { ArrowLeft, MapPin, Send, CheckCircle2, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   City,
@@ -24,7 +24,6 @@ interface LocationFormData {
   destinationCounty: string;
   destinationCity: string;
   phoneNumber: string;
-  transportMethod: string;
 }
 
 const LocationForm = () => {
@@ -47,7 +46,6 @@ const LocationForm = () => {
     destinationCounty: "",
     destinationCity: "",
     phoneNumber: "",
-    transportMethod: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -279,8 +277,10 @@ const LocationForm = () => {
 
   const handleSubmit = async () => {
     if (!formData.originProvince || !formData.originCounty || !formData.originCity ||
-        !formData.destinationProvince || !formData.destinationCounty || !formData.destinationCity ||
-        !formData.phoneNumber || !formData.transportMethod) {
+        !formData.destinationProvince ||
+        !formData.destinationCounty ||
+        !formData.destinationCity ||
+        !formData.phoneNumber) {
       toast({
         title: "خطا",
         description: "لطفاً همه فیلدها را تکمیل کنید",
@@ -311,7 +311,6 @@ const LocationForm = () => {
         dest_county_id: Number(formData.destinationCounty),
         dest_city_id: Number(formData.destinationCity),
         contact_phone: formData.phoneNumber,
-        transport_method: formData.transportMethod,
       });
 
       setIsSubmitted(true);
@@ -339,7 +338,6 @@ const LocationForm = () => {
       destinationCounty: "",
       destinationCity: "",
       phoneNumber: "",
-      transportMethod: "",
     });
     setIsSubmitted(false);
   };
@@ -601,39 +599,6 @@ const LocationForm = () => {
               </SelectContent>
             </Select>
           </div>
-        </div>
-
-        {/* Transport Method Section */}
-        <div className="space-y-3">
-          <Label htmlFor="transport" className="flex items-center gap-2 text-sm font-semibold text-foreground">
-            <Truck className="w-4 h-4 text-primary" />
-            روش حمل و نقل
-          </Label>
-          <Select
-            value={formData.transportMethod}
-            onValueChange={(value) => {
-              setFormData({
-                ...formData,
-                transportMethod: value,
-              });
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="انتخاب روش حمل و نقل" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="road">جاده‌ای</SelectItem>
-              <SelectItem value="rail">ریلی</SelectItem>
-              <SelectItem value="sea">دریایی</SelectItem>
-              <SelectItem value="combined">ترکیبی (جاده‌ای + ریلی)</SelectItem>
-              <SelectItem value="road-sea">ترکیبی (جاده‌ای + دریایی)</SelectItem>
-              <SelectItem value="rail-sea">ترکیبی (ریلی + دریایی)</SelectItem>
-              <SelectItem value="multi-modal">چندوجهی (همه روش‌ها)</SelectItem>
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            کارشناس ما بهترین روش حمل را بر اساس انتخاب شما پیشنهاد خواهد داد
-          </p>
         </div>
 
         {/* Phone Number Section */}

@@ -70,7 +70,7 @@ class ShipmentRequest(db.Model):
     dest_county_id = db.Column(db.BigInteger, db.ForeignKey("county.id"), nullable=False)
     dest_city_id = db.Column(db.BigInteger, db.ForeignKey("city.id"), nullable=False)
     contact_phone = db.Column(db.String(32), nullable=False)
-    transport_method = db.Column(db.String(32), nullable=False)
+    transport_method = db.Column(db.String(32), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     ready_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     status_request_status = db.Column(db.String(32), nullable=False, default="new")

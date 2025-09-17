@@ -22,7 +22,6 @@ export interface ShipmentRequestPayload {
   dest_county_id: number;
   dest_city_id: number;
   contact_phone: string;
-  transport_method: string;
 }
 
 const rawBaseUrl = import.meta.env.VITE_API_URL ?? "";
@@ -105,8 +104,8 @@ export function fetchCities(countyId: number): Promise<City[]> {
 
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
-): Promise<{ message: string }> {
-  return request<{ message: string }>("/shipment-request", {
+): Promise<{ message: string; id: number }> {
+  return request<{ message: string; id: number }>("/shipment-request", {
     method: "POST",
     body: JSON.stringify(payload),
   });
