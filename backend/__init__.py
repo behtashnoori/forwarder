@@ -6,6 +6,7 @@ from typing import Any, Mapping, MutableMapping
 
 from dotenv import load_dotenv
 from flask import Flask
+from flask_cors import CORS
 from sqlalchemy import text
 
 from backend.extensions import db
@@ -34,7 +35,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
             "sqlite:///instance/forwarder.sqlite3",
         ),
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-        "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "http://localhost:8084"),
+        "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "http://localhost"),
         "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
     }
 
@@ -46,6 +47,10 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     os.makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
+
+    cors_origin = app.config.get("CORS_ORIGIN") or "http://localhost"
+    origin_prefix = cors_origin.rstrip("*")
+    CORS(app, resources={r"/api/*": {"origins": f"{origin_prefix}*"}})
 
     with app.app_context():
         try:
