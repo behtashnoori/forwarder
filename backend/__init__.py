@@ -6,6 +6,7 @@ from typing import Any, Mapping, MutableMapping
 
 from dotenv import load_dotenv
 from flask import Flask
+from sqlalchemy import text
 
 from backend.extensions import db
 from backend.routes import register_routes
@@ -48,7 +49,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
 
     with app.app_context():
         try:
-            db.session.execute("SELECT 1")
+            db.session.execute(text("SELECT 1"))
             print("✅ Database connection successful.")
         except Exception as exc:  # pragma: no cover - startup diagnostic
             print("❌ Database connection failed:", exc)
