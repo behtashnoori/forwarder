@@ -37,12 +37,59 @@ def create_shipment_request():
             400,
         )
 
+    # Customer details (optional)
+    customer_first_name = data.get("customer_first_name", "").strip() or None
+    customer_last_name = data.get("customer_last_name", "").strip() or None
+
     transport_method_raw = data.get("transport_method") or data.get("shipment_mode")
     transport_method = None
     if isinstance(transport_method_raw, str):
         sanitized = transport_method_raw.strip()
         if sanitized:
             transport_method = sanitized.lower()
+
+    # Process cargo details (optional)
+    cargo_description = data.get("cargo_description", "").strip() or None
+    cargo_weight = data.get("cargo_weight")
+    cargo_volume = data.get("cargo_volume")
+    cargo_value = data.get("cargo_value")
+    special_instructions = data.get("special_instructions", "").strip() or None
+    pickup_date = data.get("pickup_date")
+    delivery_date = data.get("delivery_date")
+
+    # Convert numeric fields
+    if cargo_weight is not None:
+        try:
+            cargo_weight = float(cargo_weight)
+        except (ValueError, TypeError):
+            cargo_weight = None
+
+    if cargo_volume is not None:
+        try:
+            cargo_volume = float(cargo_volume)
+        except (ValueError, TypeError):
+            cargo_volume = None
+
+    if cargo_value is not None:
+        try:
+            cargo_value = float(cargo_value)
+        except (ValueError, TypeError):
+            cargo_value = None
+
+    # Convert date fields
+    pickup_date_obj = None
+    delivery_date_obj = None
+    if pickup_date:
+        try:
+            pickup_date_obj = datetime.strptime(pickup_date, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pickup_date_obj = None
+
+    if delivery_date:
+        try:
+            delivery_date_obj = datetime.strptime(delivery_date, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            delivery_date_obj = None
 
     timestamp = datetime.utcnow()
 
@@ -55,7 +102,16 @@ def create_shipment_request():
             dest_county_id=dest_county_id,
             dest_city_id=dest_city_id,
             contact_phone=contact_phone,
+            customer_first_name=customer_first_name,
+            customer_last_name=customer_last_name,
             transport_method=transport_method,
+            cargo_description=cargo_description,
+            cargo_weight=cargo_weight,
+            cargo_volume=cargo_volume,
+            cargo_value=cargo_value,
+            special_instructions=special_instructions,
+            pickup_date=pickup_date_obj,
+            delivery_date=delivery_date_obj,
             created_at=timestamp,
             ready_at=timestamp,
             status_request_status="new",

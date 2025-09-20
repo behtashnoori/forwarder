@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, Phone, Info } from "lucide-react";
 import { useState } from "react";
+import ExpertLogin from "./ExpertLogin";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -21,7 +22,7 @@ const Header = () => {
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          <nav className="hidden md:flex items-center gap-4">
             <Button variant="ghost" className="text-sm font-medium">
               <Info className="w-4 h-4 ml-2" />
               درباره ما
@@ -30,6 +31,7 @@ const Header = () => {
               <Phone className="w-4 h-4 ml-2" />
               تماس با ما
             </Button>
+            <ExpertLogin />
           </nav>
 
           {/* Mobile Menu Button */}
@@ -55,6 +57,9 @@ const Header = () => {
                 <Phone className="w-4 h-4 ml-2" />
                 تماس با ما
               </Button>
+              <div className="px-3 py-2">
+                <ExpertLogin />
+              </div>
             </nav>
           </div>
         )}

@@ -10,7 +10,7 @@ from flask import Flask
 from flask_cors import CORS
 from sqlalchemy import text
 
-from backend.extensions import db
+from backend.extensions import db, migrate
 from backend.routes import register_routes
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
@@ -48,6 +48,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     os.makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
+    migrate.init_app(app, db)
 
     cors_origin_regex = os.getenv("CORS_ORIGIN_REGEX")
     if cors_origin_regex:

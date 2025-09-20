@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Send, CheckCircle2, Phone } from "lucide-react";
+import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, Weight, DollarSign, FileText, ChevronDown, ChevronUp, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   City,
@@ -24,6 +24,18 @@ interface LocationFormData {
   destinationCounty: string;
   destinationCity: string;
   phoneNumber: string;
+  // Customer details (optional)
+  customerFirstName: string;
+  customerLastName: string;
+  transportMethod: string;
+  // Cargo details (optional)
+  cargoDescription: string;
+  cargoWeight: string;
+  cargoVolume: string;
+  cargoValue: string;
+  specialInstructions: string;
+  pickupDate: string;
+  deliveryDate: string;
 }
 
 const LocationForm = () => {
@@ -46,9 +58,28 @@ const LocationForm = () => {
     destinationCounty: "",
     destinationCity: "",
     phoneNumber: "",
+    customerFirstName: "",
+    customerLastName: "",
+    transportMethod: "",
+    cargoDescription: "",
+    cargoWeight: "",
+    cargoVolume: "",
+    cargoValue: "",
+    specialInstructions: "",
+    pickupDate: "",
+    deliveryDate: "",
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showCargoDetails, setShowCargoDetails] = useState(false);
+
+  // Transport method options
+  const transportMethods = [
+    { value: "road", label: "حمل زمینی (جاده‌ای)" },
+    { value: "air", label: "حمل هوایی" },
+    { value: "sea", label: "حمل دریایی" },
+    { value: "rail", label: "حمل ریلی" },
+  ];
 
   useEffect(() => {
     let active = true;
@@ -280,10 +311,11 @@ const LocationForm = () => {
         !formData.destinationProvince ||
         !formData.destinationCounty ||
         !formData.destinationCity ||
-        !formData.phoneNumber) {
+        !formData.phoneNumber ||
+        !formData.transportMethod) {
       toast({
         title: "خطا",
-        description: "لطفاً همه فیلدها را تکمیل کنید",
+        description: "لطفاً همه فیلدهای اجباری را تکمیل کنید",
         variant: "destructive",
       });
       return;
@@ -303,7 +335,7 @@ const LocationForm = () => {
     setIsSubmitting(true);
 
     try {
-      await submitShipmentRequest({
+      const payload: any = {
         origin_province_id: Number(formData.originProvince),
         origin_county_id: Number(formData.originCounty),
         origin_city_id: Number(formData.originCity),
@@ -311,7 +343,41 @@ const LocationForm = () => {
         dest_county_id: Number(formData.destinationCounty),
         dest_city_id: Number(formData.destinationCity),
         contact_phone: formData.phoneNumber,
-      });
+        transport_method: formData.transportMethod,
+      };
+
+      // Add customer details if provided
+      if (formData.customerFirstName.trim()) {
+        payload.customer_first_name = formData.customerFirstName.trim();
+      }
+      if (formData.customerLastName.trim()) {
+        payload.customer_last_name = formData.customerLastName.trim();
+      }
+
+      // Add cargo details if provided
+      if (formData.cargoDescription.trim()) {
+        payload.cargo_description = formData.cargoDescription.trim();
+      }
+      if (formData.cargoWeight.trim()) {
+        payload.cargo_weight = parseFloat(formData.cargoWeight);
+      }
+      if (formData.cargoVolume.trim()) {
+        payload.cargo_volume = parseFloat(formData.cargoVolume);
+      }
+      if (formData.cargoValue.trim()) {
+        payload.cargo_value = parseFloat(formData.cargoValue);
+      }
+      if (formData.specialInstructions.trim()) {
+        payload.special_instructions = formData.specialInstructions.trim();
+      }
+      if (formData.pickupDate) {
+        payload.pickup_date = formData.pickupDate;
+      }
+      if (formData.deliveryDate) {
+        payload.delivery_date = formData.deliveryDate;
+      }
+
+      await submitShipmentRequest(payload);
 
       setIsSubmitted(true);
       toast({
@@ -338,8 +404,19 @@ const LocationForm = () => {
       destinationCounty: "",
       destinationCity: "",
       phoneNumber: "",
+      customerFirstName: "",
+      customerLastName: "",
+      transportMethod: "",
+      cargoDescription: "",
+      cargoWeight: "",
+      cargoVolume: "",
+      cargoValue: "",
+      specialInstructions: "",
+      pickupDate: "",
+      deliveryDate: "",
     });
     setIsSubmitted(false);
+    setShowCargoDetails(false);
   };
 
   if (isSubmitted) {
@@ -601,6 +678,54 @@ const LocationForm = () => {
           </div>
         </div>
 
+        {/* Customer Details Section */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <User className="w-4 h-4 text-primary" />
+            اطلاعات مشتری (اختیاری)
+          </Label>
+          
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="customerFirstName" className="flex items-center gap-2 text-sm font-medium">
+                <User className="w-4 h-4 text-muted-foreground" />
+                نام
+              </Label>
+              <Input
+                id="customerFirstName"
+                placeholder="نام خود را وارد کنید"
+                value={formData.customerFirstName}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    customerFirstName: e.target.value,
+                  });
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customerLastName" className="flex items-center gap-2 text-sm font-medium">
+                <User className="w-4 h-4 text-muted-foreground" />
+                نام خانوادگی
+              </Label>
+              <Input
+                id="customerLastName"
+                placeholder="نام خانوادگی خود را وارد کنید"
+                value={formData.customerLastName}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    customerLastName: e.target.value,
+                  });
+                }}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            برای خدمات بهتر، نام خود را وارد کنید (اختیاری)
+          </p>
+        </div>
+
         {/* Phone Number Section */}
         <div className="space-y-3">
           <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -627,6 +752,207 @@ const LocationForm = () => {
             شماره موبایل خود را وارد کنید تا کارشناس با شما تماس بگیرد
           </p>
         </div>
+
+        {/* Transport Method Section */}
+        <div className="space-y-3">
+          <Label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Truck className="w-4 h-4 text-primary" />
+            روش حمل
+          </Label>
+          <Select
+            value={formData.transportMethod}
+            onValueChange={(value) => {
+              setFormData({
+                ...formData,
+                transportMethod: value,
+              });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="انتخاب روش حمل" />
+            </SelectTrigger>
+            <SelectContent>
+              {transportMethods.map((method) => (
+                <SelectItem key={method.value} value={method.value}>
+                  {method.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            روش حمل و نقل مورد نظر خود را انتخاب کنید
+          </p>
+        </div>
+
+        {/* Cargo Details Toggle Button */}
+        <div className="space-y-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowCargoDetails(!showCargoDetails)}
+            className="w-full flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-primary" />
+              <span>مشخصات کالا (اختیاری)</span>
+            </div>
+            {showCargoDetails ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            برای اطلاعات دقیق‌تر در مورد کالای خود، مشخصات را وارد کنید
+          </p>
+        </div>
+
+        {/* Cargo Details Form */}
+        {showCargoDetails && (
+          <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
+              <Package className="w-4 h-4 text-primary" />
+              جزئیات کالا
+            </div>
+
+            {/* Cargo Description */}
+            <div className="space-y-2">
+              <Label htmlFor="cargoDescription" className="flex items-center gap-2 text-sm font-medium">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                توضیحات کالا
+              </Label>
+              <Input
+                id="cargoDescription"
+                placeholder="مثال: لوازم الکترونیکی، پوشاک، مواد غذایی..."
+                value={formData.cargoDescription}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    cargoDescription: e.target.value,
+                  });
+                }}
+              />
+            </div>
+
+            {/* Weight and Volume Row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="cargoWeight" className="flex items-center gap-2 text-sm font-medium">
+                  <Weight className="w-4 h-4 text-muted-foreground" />
+                  وزن (کیلوگرم)
+                </Label>
+                <Input
+                  id="cargoWeight"
+                  type="number"
+                  placeholder="0"
+                  value={formData.cargoWeight}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      cargoWeight: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cargoVolume" className="flex items-center gap-2 text-sm font-medium">
+                  <Package className="w-4 h-4 text-muted-foreground" />
+                  حجم (متر مکعب)
+                </Label>
+                <Input
+                  id="cargoVolume"
+                  type="number"
+                  step="0.01"
+                  placeholder="0"
+                  value={formData.cargoVolume}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      cargoVolume: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Cargo Value */}
+            <div className="space-y-2">
+              <Label htmlFor="cargoValue" className="flex items-center gap-2 text-sm font-medium">
+                <DollarSign className="w-4 h-4 text-muted-foreground" />
+                ارزش کالا (تومان)
+              </Label>
+              <Input
+                id="cargoValue"
+                type="number"
+                placeholder="0"
+                value={formData.cargoValue}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    cargoValue: e.target.value,
+                  });
+                }}
+              />
+            </div>
+
+            {/* Special Instructions */}
+            <div className="space-y-2">
+              <Label htmlFor="specialInstructions" className="flex items-center gap-2 text-sm font-medium">
+                <FileText className="w-4 h-4 text-muted-foreground" />
+                دستورالعمل‌های خاص
+              </Label>
+              <Input
+                id="specialInstructions"
+                placeholder="مثال: مراقبت ویژه، دمای خاص، و..."
+                value={formData.specialInstructions}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    specialInstructions: e.target.value,
+                  });
+                }}
+              />
+            </div>
+
+            {/* Dates Row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="pickupDate" className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  تاریخ تحویل
+                </Label>
+                <Input
+                  id="pickupDate"
+                  type="date"
+                  value={formData.pickupDate}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      pickupDate: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="deliveryDate" className="flex items-center gap-2 text-sm font-medium">
+                  <Calendar className="w-4 h-4 text-muted-foreground" />
+                  تاریخ تحویل
+                </Label>
+                <Input
+                  id="deliveryDate"
+                  type="date"
+                  value={formData.deliveryDate}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      deliveryDate: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Submit Button */}
         <Button
