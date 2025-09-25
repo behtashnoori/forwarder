@@ -33,10 +33,10 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     default_config: MutableMapping[str, Any] = {
         "SQLALCHEMY_DATABASE_URI": os.getenv(
             "DATABASE_URL",
-            "sqlite:///instance/forwarder.sqlite3",
+            "postgresql+psycopg2://postgres:bagheri13@127.0.0.1:5432/forwarder_db",
         ),
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-        "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "http://localhost"),
+        "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "*"),
         "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
     }
 
@@ -50,13 +50,14 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     db.init_app(app)
     migrate.init_app(app, db)
 
-    cors_origin_regex = os.getenv("CORS_ORIGIN_REGEX")
-    if cors_origin_regex:
-        compiled_origin = re.compile(cors_origin_regex)
-        CORS(app, resources={r"/api/*": {"origins": compiled_origin}})
-    else:
-        cors_origin = app.config.get("CORS_ORIGIN") or "*"
-        CORS(app, resources={r"/api/*": {"origins": cors_origin}})
+    # Configure CORS for all routes and all origins
+    CORS(app, resources={
+        r"/*": {
+            "origins": "*",
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
 
     with app.app_context():
         try:

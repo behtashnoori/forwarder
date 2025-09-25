@@ -22,6 +22,27 @@ def list_provinces():
     )
 
 
+# Add a direct route for /provinces (without /api prefix)
+from flask import Blueprint
+
+provinces_bp = Blueprint("provinces", __name__)
+
+@provinces_bp.get("/provinces")
+def list_provinces_direct():
+    """Return a list of all provinces (direct route for frontend compatibility)."""
+    provinces = Province.query.all()
+    return jsonify(
+        [
+            {
+                "id": province.id,
+                "name": province.name_fa,
+                "code": province.code,
+            }
+            for province in provinces
+        ]
+    )
+
+
 @location_bp.get("/counties")
 def list_counties():
     """Return counties filtered by the provided province ID."""
