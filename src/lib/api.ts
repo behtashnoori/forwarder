@@ -320,3 +320,260 @@ export function markRequestAsRead(requestId: number, expertId: number): Promise<
 export function fetchExperts(): Promise<{ experts: ExpertUser[] }> {
   return request("/expert/experts");
 }
+
+// CRM Interfaces
+export interface Customer {
+  id: number;
+  name: string;
+  company_name?: string;
+  email?: string;
+  phone?: string;
+  customer_type: string;
+  status: string;
+  industry?: string;
+  last_contact_at?: string;
+  created_at: string;
+  total_opportunities: number;
+  total_activities: number;
+}
+
+export interface CustomerDetail extends Customer {
+  mobile?: string;
+  website?: string;
+  company_size?: string;
+  source?: string;
+  notes?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  country?: string;
+  contacts: CustomerContact[];
+  opportunities: Opportunity[];
+  recent_activities: Activity[];
+}
+
+export interface CustomerContact {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  position?: string;
+  is_primary: boolean;
+  is_decision_maker: boolean;
+}
+
+export interface Opportunity {
+  id: number;
+  title: string;
+  customer?: {
+    id: number;
+    name: string;
+    company_name?: string;
+  };
+  stage: string;
+  value?: number;
+  probability: number;
+  status: string;
+  expected_close_date?: string;
+  assigned_to?: {
+    id: number;
+    name: string;
+  };
+  created_at: string;
+}
+
+export interface Activity {
+  id: number;
+  type: string;
+  subject: string;
+  description?: string;
+  status: string;
+  priority: string;
+  due_date?: string;
+  completed_at?: string;
+  outcome?: string;
+  customer?: {
+    id: number;
+    name: string;
+  };
+  expert?: {
+    id: number;
+    name: string;
+  };
+  created_at: string;
+}
+
+export interface CRMDashboardKPIs {
+  customers: {
+    total: number;
+    new_this_month: number;
+  };
+  opportunities: {
+    total: number;
+    open: number;
+    won: number;
+    pipeline_value: number;
+  };
+  activities: {
+    total: number;
+    completed: number;
+  };
+  recent_activities: Array<{
+    id: number;
+    type: string;
+    subject: string;
+    customer_name: string;
+    expert_name: string;
+    created_at: string;
+  }>;
+}
+
+// CRM API Functions
+export function fetchCustomers(params?: {
+  page?: number;
+  per_page?: number;
+  search?: string;
+  customer_type?: string;
+  status?: string;
+  sort_by?: string;
+  sort_order?: string;
+}): Promise<{
+  customers: Customer[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}> {
+  const path = withQuery("/crm/customers", params);
+  return request(path);
+}
+
+export function createCustomer(customerData: {
+  company_name?: string;
+  first_name: string;
+  last_name: string;
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  website?: string;
+  industry?: string;
+  company_size?: string;
+  customer_type?: string;
+  status?: string;
+  source?: string;
+  notes?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  country?: string;
+}): Promise<{ message: string; customer_id: number }> {
+  return request("/crm/customers", {
+    method: "POST",
+    body: JSON.stringify(customerData),
+  });
+}
+
+export function fetchCustomerDetail(customerId: number): Promise<CustomerDetail> {
+  return request(`/crm/customers/${customerId}`);
+}
+
+export function updateCustomer(
+  customerId: number,
+  customerData: Partial<CustomerDetail>
+): Promise<{ message: string }> {
+  return request(`/crm/customers/${customerId}`, {
+    method: "PUT",
+    body: JSON.stringify(customerData),
+  });
+}
+
+export function fetchOpportunities(params?: {
+  page?: number;
+  per_page?: number;
+  stage?: string;
+  assigned_to?: number;
+  search?: string;
+}): Promise<{
+  opportunities: Opportunity[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}> {
+  const path = withQuery("/crm/opportunities", params);
+  return request(path);
+}
+
+export function createOpportunity(opportunityData: {
+  customer_id: number;
+  title: string;
+  description?: string;
+  stage?: string;
+  probability?: number;
+  value?: number;
+  currency?: string;
+  expected_close_date?: string;
+  source?: string;
+  assigned_to?: number;
+  notes?: string;
+}): Promise<{ message: string; opportunity_id: number }> {
+  return request("/crm/opportunities", {
+    method: "POST",
+    body: JSON.stringify(opportunityData),
+  });
+}
+
+export function fetchActivities(params?: {
+  page?: number;
+  per_page?: number;
+  activity_type?: string;
+  expert_id?: number;
+  customer_id?: number;
+  status?: string;
+}): Promise<{
+  activities: Activity[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}> {
+  const path = withQuery("/crm/activities", params);
+  return request(path);
+}
+
+export function createActivity(activityData: {
+  customer_id?: number;
+  opportunity_id?: number;
+  shipment_request_id?: number;
+  expert_user_id: number;
+  activity_type: string;
+  subject: string;
+  description?: string;
+  priority?: string;
+  due_date?: string;
+  outcome?: string;
+  next_action?: string;
+}): Promise<{ message: string; activity_id: number }> {
+  return request("/crm/activities", {
+    method: "POST",
+    body: JSON.stringify(activityData),
+  });
+}
+
+export function fetchCRMDashboardKPIs(): Promise<CRMDashboardKPIs> {
+  return request("/crm/dashboard/kpis");
+}

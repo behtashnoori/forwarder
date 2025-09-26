@@ -12,6 +12,8 @@ from sqlalchemy import text
 
 from backend.extensions import db, migrate
 from backend.routes import register_routes
+from backend.security import security
+from backend.app_logging import logger
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 load_dotenv(dotenv_path=os.path.join(PROJECT_ROOT, ".env"))
@@ -49,13 +51,22 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
 
     db.init_app(app)
     migrate.init_app(app, db)
+    
+    # Initialize security
+    security.init_app(app)
+    
+    # Initialize logging
+    logger.init_app(app)
 
-    # Configure CORS for all routes and all origins
+    # Configure CORS with security restrictions
+    cors_origins = app.config.get("CORS_ORIGINS", ["http://localhost:3000", "http://localhost:5173"])
     CORS(app, resources={
-        r"/*": {
-            "origins": "*",
+        r"/api/*": {
+            "origins": cors_origins,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
+            "allow_headers": ["Content-Type", "Authorization", "X-CSRF-Token"],
+            "supports_credentials": True,
+            "max_age": 3600
         }
     })
 

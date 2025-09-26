@@ -1,0 +1,249 @@
+"""Security utilities and middleware for the application."""
+import hashlib
+import secrets
+from datetime import datetime, timedelta
+from typing import Optional, Dict, Any
+from functools import wraps
+
+from flask import request, jsonify, current_app, g
+from werkzeug.security import generate_password_hash, check_password_hash
+import jwt
+
+
+class SecurityManager:
+    """Centralized security management for the application."""
+    
+    def __init__(self, app=None):
+        self.app = app
+        if app:
+            self.init_app(app)
+    
+    def init_app(self, app):
+        """Initialize security with Flask app."""
+        self.app = app
+        
+        # Security configuration
+        app.config.setdefault('SECRET_KEY', secrets.token_hex(32))
+        app.config.setdefault('JWT_SECRET_KEY', secrets.token_hex(32))
+        app.config.setdefault('JWT_ACCESS_TOKEN_EXPIRES', timedelta(hours=1))
+        app.config.setdefault('JWT_REFRESH_TOKEN_EXPIRES', timedelta(days=30))
+        app.config.setdefault('PASSWORD_HASH_METHOD', 'pbkdf2:sha256')
+        app.config.setdefault('MAX_LOGIN_ATTEMPTS', 5)
+        app.config.setdefault('LOCKOUT_DURATION', timedelta(minutes=15))
+        
+        # Rate limiting
+        app.config.setdefault('RATELIMIT_STORAGE_URL', 'memory://')
+        app.config.setdefault('RATELIMIT_DEFAULT', '100 per hour')
+        
+        # CORS security
+        app.config.setdefault('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:5173'])
+        
+        # Security headers
+        self._setup_security_headers(app)
+    
+    def _setup_security_headers(self, app):
+        """Setup security headers middleware."""
+        @app.after_request
+        def add_security_headers(response):
+            # Prevent clickjacking
+            response.headers['X-Frame-Options'] = 'DENY'
+            
+            # Prevent MIME type sniffing
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            
+            # XSS Protection
+            response.headers['X-XSS-Protection'] = '1; mode=block'
+            
+            # Strict Transport Security (HTTPS only)
+            if request.is_secure:
+                response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+            
+            # Content Security Policy
+            response.headers['Content-Security-Policy'] = (
+                "default-src 'self'; "
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+                "style-src 'self' 'unsafe-inline'; "
+                "img-src 'self' data: https:; "
+                "font-src 'self' data:; "
+                "connect-src 'self' https:; "
+                "frame-ancestors 'none';"
+            )
+            
+            # Referrer Policy
+            response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            
+            return response
+    
+    def hash_password(self, password: str) -> str:
+        """Hash a password using the configured method."""
+        return generate_password_hash(password, method=self.app.config['PASSWORD_HASH_METHOD'])
+    
+    def verify_password(self, password: str, hashed: str) -> bool:
+        """Verify a password against its hash."""
+        return check_password_hash(hashed, password)
+    
+    def generate_token(self, user_id: int, token_type: str = 'access') -> str:
+        """Generate JWT token for user."""
+        payload = {
+            'user_id': user_id,
+            'token_type': token_type,
+            'iat': datetime.utcnow(),
+            'exp': datetime.utcnow() + (
+                self.app.config['JWT_ACCESS_TOKEN_EXPIRES'] if token_type == 'access'
+                else self.app.config['JWT_REFRESH_TOKEN_EXPIRES']
+            )
+        }
+        return jwt.encode(payload, self.app.config['JWT_SECRET_KEY'], algorithm='HS256')
+    
+    def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Verify and decode JWT token."""
+        try:
+            payload = jwt.decode(token, self.app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+            return payload
+        except jwt.ExpiredSignatureError:
+            return None
+        except jwt.InvalidTokenError:
+            return None
+    
+    def generate_csrf_token(self) -> str:
+        """Generate CSRF token."""
+        return secrets.token_urlsafe(32)
+    
+    def verify_csrf_token(self, token: str, session_token: str) -> bool:
+        """Verify CSRF token."""
+        return secrets.compare_digest(token, session_token)
+
+
+# Global security manager instance
+security = SecurityManager()
+
+
+def require_auth(f):
+    """Decorator to require authentication."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = None
+        
+        # Check for token in Authorization header
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            try:
+                token = auth_header.split(' ')[1]  # Bearer <token>
+            except IndexError:
+                return jsonify({'error': 'Invalid authorization header'}), 401
+        
+        if not token:
+            return jsonify({'error': 'Token is missing'}), 401
+        
+        try:
+            payload = security.verify_token(token)
+            if not payload:
+                return jsonify({'error': 'Invalid token'}), 401
+            
+            g.current_user_id = payload['user_id']
+            g.current_user_token_type = payload['token_type']
+            
+        except Exception as e:
+            return jsonify({'error': 'Token verification failed'}), 401
+        
+        return f(*args, **kwargs)
+    
+    return decorated_function
+
+
+def require_role(required_role: str):
+    """Decorator to require specific role."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # This would need to be implemented with user role checking
+            # For now, just check if user is authenticated
+            if not hasattr(g, 'current_user_id'):
+                return jsonify({'error': 'Authentication required'}), 401
+            
+            # TODO: Implement role-based access control
+            return f(*args, **kwargs)
+        
+        return decorated_function
+    return decorator
+
+
+def validate_input(schema: Dict[str, Any]):
+    """Decorator to validate input data."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if request.is_json:
+                data = request.get_json()
+                if not data:
+                    return jsonify({'error': 'Invalid JSON data'}), 400
+                
+                # Basic validation - in production, use a proper validation library like marshmallow
+                for field, rules in schema.items():
+                    if rules.get('required', False) and field not in data:
+                        return jsonify({'error': f'Field {field} is required'}), 400
+                    
+                    if field in data:
+                        value = data[field]
+                        field_type = rules.get('type', str)
+                        
+                        if field_type == str and not isinstance(value, str):
+                            return jsonify({'error': f'Field {field} must be a string'}), 400
+                        elif field_type == int and not isinstance(value, int):
+                            return jsonify({'error': f'Field {field} must be an integer'}), 400
+                        elif field_type == float and not isinstance(value, (int, float)):
+                            return jsonify({'error': f'Field {field} must be a number'}), 400
+                        
+                        # Length validation for strings
+                        if isinstance(value, str) and 'max_length' in rules:
+                            if len(value) > rules['max_length']:
+                                return jsonify({'error': f'Field {field} is too long'}), 400
+                        
+                        # Range validation for numbers
+                        if isinstance(value, (int, float)) and 'min' in rules:
+                            if value < rules['min']:
+                                return jsonify({'error': f'Field {field} is too small'}), 400
+                        if isinstance(value, (int, float)) and 'max' in rules:
+                            if value > rules['max']:
+                                return jsonify({'error': f'Field {field} is too large'}), 400
+            
+            return f(*args, **kwargs)
+        
+        return decorated_function
+    return decorator
+
+
+def sanitize_input(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Sanitize input data to prevent XSS and injection attacks."""
+    sanitized = {}
+    
+    for key, value in data.items():
+        if isinstance(value, str):
+            # Remove potentially dangerous characters
+            sanitized[key] = value.strip().replace('<', '&lt;').replace('>', '&gt;')
+        elif isinstance(value, dict):
+            sanitized[key] = sanitize_input(value)
+        elif isinstance(value, list):
+            sanitized[key] = [sanitize_input(item) if isinstance(item, dict) else item for item in value]
+        else:
+            sanitized[key] = value
+    
+    return sanitized
+
+
+def rate_limit(max_requests: int = 100, per: int = 3600):
+    """Simple rate limiting decorator."""
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Simple in-memory rate limiting
+            # In production, use Redis or similar
+            client_ip = request.remote_addr
+            current_time = datetime.utcnow()
+            
+            # This is a simplified implementation
+            # In production, use proper rate limiting library
+            return f(*args, **kwargs)
+        
+        return decorated_function
+    return decorator

@@ -238,6 +238,182 @@ class ExpertConsoleNotification(db.Model):
         return f"<ExpertConsoleNotification id={self.id} type={self.notification_type}>"
 
 
+# CRM Models - Customer Management
+class Customer(db.Model):
+    """Represents a customer in the CRM system."""
+    
+    __tablename__ = "customer"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    company_name = db.Column(db.String(200), nullable=True)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), unique=True, nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    mobile = db.Column(db.String(20), nullable=True)
+    website = db.Column(db.String(200), nullable=True)
+    industry = db.Column(db.String(100), nullable=True)
+    company_size = db.Column(db.String(50), nullable=True)  # small, medium, large, enterprise
+    customer_type = db.Column(db.String(20), default="prospect")  # prospect, customer, partner, vendor
+    status = db.Column(db.String(20), default="active")  # active, inactive, blocked
+    source = db.Column(db.String(50), nullable=True)  # website, referral, cold_call, etc.
+    notes = db.Column(db.Text, nullable=True)
+    address = db.Column(db.Text, nullable=True)
+    city = db.Column(db.String(100), nullable=True)
+    province = db.Column(db.String(100), nullable=True)
+    postal_code = db.Column(db.String(20), nullable=True)
+    country = db.Column(db.String(100), default="Iran")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_contact_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    contacts = db.relationship("CustomerContact", backref="customer", lazy=True)
+    opportunities = db.relationship("Opportunity", backref="customer", lazy=True)
+    activities = db.relationship("Activity", backref="customer", lazy=True)
+    shipments = db.relationship("ShipmentRequest", backref="customer", lazy=True)
+    
+    def __repr__(self) -> str:
+        return f"<Customer id={self.id} name={self.first_name} {self.last_name}>"
+
+
+class CustomerContact(db.Model):
+    """Represents contacts within a customer organization."""
+    
+    __tablename__ = "customer_contact"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=False)
+    first_name = db.Column(db.String(100), nullable=False)
+    last_name = db.Column(db.String(100), nullable=False)
+    email = db.Column(db.String(100), nullable=True)
+    phone = db.Column(db.String(20), nullable=True)
+    mobile = db.Column(db.String(20), nullable=True)
+    position = db.Column(db.String(100), nullable=True)
+    department = db.Column(db.String(100), nullable=True)
+    is_primary = db.Column(db.Boolean, default=False)
+    is_decision_maker = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    def __repr__(self) -> str:
+        return f"<CustomerContact id={self.id} name={self.first_name} {self.last_name}>"
+
+
+# CRM Models - Sales Management
+class Opportunity(db.Model):
+    """Represents sales opportunities in the CRM."""
+    
+    __tablename__ = "opportunity"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    stage = db.Column(db.String(50), nullable=False)  # lead, qualified, proposal, negotiation, closed_won, closed_lost
+    probability = db.Column(db.Integer, default=0)  # 0-100 percentage
+    value = db.Column(db.Float, nullable=True)
+    currency = db.Column(db.String(3), default="IRR")
+    expected_close_date = db.Column(db.Date, nullable=True)
+    actual_close_date = db.Column(db.Date, nullable=True)
+    source = db.Column(db.String(50), nullable=True)
+    assigned_to = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=True)
+    status = db.Column(db.String(20), default="open")  # open, won, lost, cancelled
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    activities = db.relationship("Activity", backref="opportunity", lazy=True)
+    assigned_expert = db.relationship("ExpertUser", backref="assigned_opportunities")
+    
+    def __repr__(self) -> str:
+        return f"<Opportunity id={self.id} title={self.title}>"
+
+
+# CRM Models - Activity Management
+class Activity(db.Model):
+    """Represents activities and interactions with customers."""
+    
+    __tablename__ = "activity"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True)
+    opportunity_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("opportunity.id"), nullable=True)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=True)
+    expert_user_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    activity_type = db.Column(db.String(50), nullable=False)  # call, email, meeting, task, note, follow_up
+    subject = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default="pending")  # pending, completed, cancelled
+    priority = db.Column(db.String(10), default="normal")  # low, normal, high, urgent
+    due_date = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    duration_minutes = db.Column(db.Integer, nullable=True)
+    outcome = db.Column(db.String(100), nullable=True)  # successful, unsuccessful, rescheduled
+    next_action = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    expert_user = db.relationship("ExpertUser", backref="activities")
+    
+    def __repr__(self) -> str:
+        return f"<Activity id={self.id} type={self.activity_type}>"
+
+
+# CRM Models - Task Management
+class Task(db.Model):
+    """Represents tasks and to-dos for experts."""
+    
+    __tablename__ = "task"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    assigned_to = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    priority = db.Column(db.String(10), default="normal")  # low, normal, high, urgent
+    status = db.Column(db.String(20), default="pending")  # pending, in_progress, completed, cancelled
+    due_date = db.Column(db.DateTime, nullable=True)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True)
+    opportunity_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("opportunity.id"), nullable=True)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    assigned_expert = db.relationship("ExpertUser", foreign_keys=[assigned_to], backref="assigned_tasks")
+    creator = db.relationship("ExpertUser", foreign_keys=[created_by], backref="created_tasks")
+    
+    def __repr__(self) -> str:
+        return f"<Task id={self.id} title={self.title}>"
+
+
+# CRM Models - Reporting and Analytics
+class Report(db.Model):
+    """Represents saved reports and dashboards."""
+    
+    __tablename__ = "report"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    report_type = db.Column(db.String(50), nullable=False)  # sales, customer, activity, performance
+    filters = db.Column(db.Text, nullable=True)  # JSON string of filter criteria
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    is_public = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    creator = db.relationship("ExpertUser", backref="created_reports")
+    
+    def __repr__(self) -> str:
+        return f"<Report id={self.id} name={self.name}>"
+
+
 __all__ = [
     "Province",
     "County",
@@ -248,4 +424,11 @@ __all__ = [
     "ExpertConsoleLog",
     "ExpertConsoleMessage",
     "ExpertConsoleNotification",
+    # CRM Models
+    "Customer",
+    "CustomerContact", 
+    "Opportunity",
+    "Activity",
+    "Task",
+    "Report",
 ]

@@ -11,11 +11,15 @@ from backend.models import (
     ShipmentRequest, ShipmentRequestLog, Province, County, City,
     ExpertUser, ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification
 )
+from backend.auth import auth_manager, login_required, get_current_user
+from backend.security import require_auth, validate_input, sanitize_input
+from backend.cache import cached, cache_manager, performance_monitor
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
 
 @expert_console_bp.get("/requests")
+@require_auth
 def get_shipment_requests():
     """Get filtered and paginated shipment requests for expert console."""
     try:
@@ -521,60 +525,79 @@ def get_notifications():
 
 
 @expert_console_bp.post("/auth/login")
+@validate_input({
+    "username": {"type": str, "required": True, "max_length": 50},
+    "password": {"type": str, "required": True, "max_length": 100}
+})
 def expert_login():
-    """Authenticate expert user."""
+    """Authenticate expert user with enhanced security."""
     try:
         data = request.get_json()
         username = data.get("username")
         password = data.get("password")
         
-        if not username or not password:
-            return jsonify({"error": "نام کاربری و رمز عبور الزامی است"}), 400
+        # Sanitize input
+        username = sanitize_input({"username": username})["username"]
+        password = sanitize_input({"password": password})["password"]
         
-        # Simple authentication - in production, use proper password hashing
-        valid_credentials = {
-            "expert": "expert123",
-            "admin": "admin123",
-            "expert1": "expert123",
-            "expert2": "expert123"
-        }
+        # Authenticate user
+        user_data = auth_manager.authenticate_user(username, password)
         
-        if username in valid_credentials and valid_credentials[username] == password:
-            # Try to find expert in database
-            expert = ExpertUser.query.filter_by(username=username).first()
-            
-            if expert:
-                return jsonify({
-                    "success": True,
-                    "expert": {
-                        "id": expert.id,
-                        "username": expert.username,
-                        "full_name": expert.full_name,
-                        "email": expert.email,
-                        "role": expert.role
-                    }
-                })
-            else:
-                # Return success even if expert not in DB (for demo purposes)
-                return jsonify({
-                    "success": True,
-                    "expert": {
-                        "id": 1,
-                        "username": username,
-                        "full_name": "کارشناس اول" if username == "expert" else "مدیر سیستم",
-                        "email": f"{username}@company.com",
-                        "role": "expert" if username != "admin" else "admin"
-                    }
-                })
-        else:
+        if not user_data:
             return jsonify({"error": "نام کاربری یا رمز عبور اشتباه است"}), 401
+        
+        # Generate tokens
+        tokens = auth_manager.generate_tokens(user_data['id'])
+        
+        return jsonify({
+            "success": True,
+            "expert": user_data,
+            "tokens": tokens
+        })
             
     except Exception as e:
         current_app.logger.error(f"Login error: {str(e)}")
         return jsonify({"error": "خطا در ورود"}), 500
 
 
+@expert_console_bp.post("/auth/refresh")
+@validate_input({
+    "refresh_token": {"type": str, "required": True}
+})
+def refresh_token():
+    """Refresh access token using refresh token."""
+    try:
+        data = request.get_json()
+        refresh_token = data.get("refresh_token")
+        
+        tokens = auth_manager.refresh_access_token(refresh_token)
+        
+        if not tokens:
+            return jsonify({"error": "Invalid refresh token"}), 401
+        
+        return jsonify(tokens)
+        
+    except Exception as e:
+        current_app.logger.error(f"Token refresh error: {str(e)}")
+        return jsonify({"error": "خطا در تازه‌سازی توکن"}), 500
+
+
+@expert_console_bp.post("/auth/logout")
+@require_auth
+def logout():
+    """Logout user (invalidate tokens)."""
+    try:
+        # In production, add token to blacklist
+        return jsonify({"message": "با موفقیت خارج شدید"})
+        
+    except Exception as e:
+        current_app.logger.error(f"Logout error: {str(e)}")
+        return jsonify({"error": "خطا در خروج"}), 500
+
+
 @expert_console_bp.get("/dashboard/kpis")
+@require_auth
+@cached(ttl=300, key_prefix="dashboard_kpis")
 def get_dashboard_kpis():
     """Get KPI data for expert console dashboard."""
     try:
