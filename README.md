@@ -102,6 +102,64 @@ The Flask backend reads configuration from the project root `.env` file using
    `✅ Database connection successful.`). Browse to
   `http://127.0.0.1:5000/api/shipment-requests/ping` to confirm the API responds.
 
+## Integrated run (Backend + Frontend)
+
+Run backend and frontend together during development.
+
+### Option A) Two terminals (quick start)
+
+1) Backend (Terminal 1)
+```powershell
+# From project root
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r backend/requirements.txt
+
+# Optional: If you have PostgreSQL, set DATABASE_URL in .env. Otherwise omit to use SQLite fallback
+$env:FLASK_APP = "backend.wsgi"
+$env:FLASK_ENV = "development"
+flask run
+```
+
+2) Frontend (Terminal 2)
+```powershell
+# From project root
+npm install
+npm run dev
+```
+
+- Backend will listen at `http://127.0.0.1:5000`.
+- Frontend (Vite) typically serves at `http://localhost:5173`.
+- If you set `CORS_ORIGIN` in `.env`, include your frontend origin(s), e.g. `http://localhost:5173,http://127.0.0.1:5173`.
+
+### Option B) Start both in new windows (PowerShell)
+
+Run this from the project root to open two PowerShell windows and start both services:
+```powershell
+# Ensure backend venv is created and dependencies installed at least once
+if (-not (Test-Path ".venv")) {
+  python -m venv .venv
+  .venv\Scripts\Activate.ps1
+  pip install -r backend/requirements.txt
+}
+
+# Start Backend window
+Start-Process powershell -ArgumentList @(
+  '-NoExit',
+  '-Command',
+  "$env:FLASK_APP='backend.wsgi'; $env:FLASK_ENV='development'; flask run"
+)
+
+# Start Frontend window
+Start-Process powershell -ArgumentList @(
+  '-NoExit',
+  '-Command',
+  "npm install; npm run dev"
+)
+```
+
+Health check: `http://127.0.0.1:5000/api/shipment-requests/ping`
+
 ## What technologies are used for this project?
 
 This project is built with:
