@@ -115,6 +115,15 @@ def create_shipment_request():
             created_at=timestamp,
             ready_at=timestamp,
             status_request_status="new",
+            # Expert Console fields with default values
+            assigned_to=None,
+            status="new",
+            sla_due_at=None,
+            last_customer_touch_at=None,
+            has_unread_for_assignee=True,
+            priority="normal",
+            estimated_value=None,
+            customer_id=None,  # Will be set later when customer is created
         )
         db.session.add(shipment_request)
         db.session.flush()
@@ -127,11 +136,12 @@ def create_shipment_request():
         )
         db.session.add(log_entry)
         db.session.commit()
-    except (SQLAlchemyError, Exception):
+    except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Failed to create shipment request")
+        current_app.logger.error(f"Error details: {str(e)}")
         return (
-            jsonify({"message": "خطای داخلی سرور رخ داده است. لطفاً بعداً تلاش کنید."}),
+            jsonify({"message": f"خطای داخلی سرور: {str(e)}"}),
             500,
         )
 

@@ -8,7 +8,10 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup:env": "node scripts/setup-env.js",
+    "test:api": "node scripts/test-api-simple.js",
+    "postinstall": "npm run setup:env"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

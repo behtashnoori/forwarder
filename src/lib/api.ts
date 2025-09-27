@@ -36,8 +36,9 @@ export interface ShipmentRequestPayload {
   delivery_date?: string;
 }
 
-const rawBaseUrl = import.meta.env.VITE_API_URL ?? "";
-const API_BASE_URL = rawBaseUrl.replace(/\/+$/, "");
+import { env } from './env';
+
+const API_BASE_URL = env.API_URL.replace(/\/+$/, "");
 
 function buildPath(path: string): string {
   if (!path.startsWith("/")) {
@@ -67,7 +68,7 @@ function withQuery(path: string, params?: Record<string, string | number | undef
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_BASE_URL) {
-    throw new Error("VITE_API_URL is not defined");
+    throw new Error("API URL is not configured. Please check your environment variables.");
   }
 
   const url = `${API_BASE_URL}${buildPath(path)}`;
@@ -101,23 +102,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function fetchProvinces(): Promise<Province[]> {
-  return request<Province[]>("/provinces");
+  return request<Province[]>("/api/provinces");
 }
 
 export function fetchCounties(provinceId: number): Promise<County[]> {
-  const path = withQuery("/counties", { province_id: provinceId });
+  const path = withQuery("/api/counties", { province_id: provinceId });
   return request<County[]>(path);
 }
 
 export function fetchCities(countyId: number): Promise<City[]> {
-  const path = withQuery("/cities", { county_id: countyId });
+  const path = withQuery("/api/cities", { county_id: countyId });
   return request<City[]>(path);
 }
 
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
 ): Promise<{ message: string; id: number }> {
-  return request<{ message: string; id: number }>("/shipment-request", {
+  return request<{ message: string; id: number }>("/api/shipment-request", {
     method: "POST",
     body: JSON.stringify(payload),
   });
@@ -224,7 +225,7 @@ export function fetchExpertRequests(params?: {
     has_prev: boolean;
   };
 }> {
-  const path = withQuery("/expert/requests", params);
+  const path = withQuery("/api/expert/requests", params);
   return request(path);
 }
 
@@ -250,14 +251,14 @@ export function fetchExpertRequestDetail(requestId: number): Promise<ExpertReque
   }>;
   messages: ExpertMessage[];
 }> {
-  return request(`/expert/requests/${requestId}`);
+  return request(`/api/expert/requests/${requestId}`);
 }
 
 export function assignRequest(requestId: number, expertId: number): Promise<{
   message: string;
   assigned_to: { id: number; name: string };
 }> {
-  return request(`/expert/requests/${requestId}/assign`, {
+  return request(`/api/expert/requests/${requestId}/assign`, {
     method: "POST",
     body: JSON.stringify({ expert_id: expertId }),
   });
@@ -268,7 +269,7 @@ export function changeRequestStatus(
   status: string,
   note?: string
 ): Promise<{ message: string; status: string }> {
-  return request(`/expert/requests/${requestId}/status`, {
+  return request(`/api/expert/requests/${requestId}/status`, {
     method: "POST",
     body: JSON.stringify({ status, note }),
   });
@@ -281,7 +282,7 @@ export function addMessage(
   subject?: string,
   expertId?: number
 ): Promise<{ message: string; message_id: number }> {
-  return request(`/expert/requests/${requestId}/messages`, {
+  return request(`/api/expert/requests/${requestId}/messages`, {
     method: "POST",
     body: JSON.stringify({
       type: messageType,
@@ -296,7 +297,7 @@ export function fetchNotifications(expertId: number, unreadOnly = false): Promis
   notifications: ExpertNotification[];
   unread_count: number;
 }> {
-  const path = withQuery("/expert/notifications", {
+  const path = withQuery("/api/expert/notifications", {
     expert_id: expertId,
     unread_only: unreadOnly,
   });
@@ -304,21 +305,21 @@ export function fetchNotifications(expertId: number, unreadOnly = false): Promis
 }
 
 export function fetchKPIs(expertId?: number): Promise<KPIs> {
-  const path = withQuery("/expert/dashboard/kpis", expertId ? { expert_id: expertId } : undefined);
+  const path = withQuery("/api/expert/dashboard/kpis", expertId ? { expert_id: expertId } : undefined);
   return request(path);
 }
 
 export function markRequestAsRead(requestId: number, expertId: number): Promise<{
   message: string;
 }> {
-  const path = withQuery(`/expert/requests/${requestId}/mark-read`, {
+  const path = withQuery(`/api/expert/requests/${requestId}/mark-read`, {
     expert_id: expertId,
   });
   return request(path, { method: "POST" });
 }
 
 export function fetchExperts(): Promise<{ experts: ExpertUser[] }> {
-  return request("/expert/experts");
+  return request("/api/expert/experts");
 }
 
 // CRM Interfaces
@@ -449,7 +450,7 @@ export function fetchCustomers(params?: {
     has_prev: boolean;
   };
 }> {
-  const path = withQuery("/crm/customers", params);
+  const path = withQuery("/api/crm/customers", params);
   return request(path);
 }
 
@@ -473,7 +474,7 @@ export function createCustomer(customerData: {
   postal_code?: string;
   country?: string;
 }): Promise<{ message: string; customer_id: number }> {
-  return request("/crm/customers", {
+  return request("/api/crm/customers", {
     method: "POST",
     body: JSON.stringify(customerData),
   });
@@ -510,7 +511,7 @@ export function fetchOpportunities(params?: {
     has_prev: boolean;
   };
 }> {
-  const path = withQuery("/crm/opportunities", params);
+  const path = withQuery("/api/crm/opportunities", params);
   return request(path);
 }
 
@@ -527,7 +528,7 @@ export function createOpportunity(opportunityData: {
   assigned_to?: number;
   notes?: string;
 }): Promise<{ message: string; opportunity_id: number }> {
-  return request("/crm/opportunities", {
+  return request("/api/crm/opportunities", {
     method: "POST",
     body: JSON.stringify(opportunityData),
   });
@@ -551,7 +552,7 @@ export function fetchActivities(params?: {
     has_prev: boolean;
   };
 }> {
-  const path = withQuery("/crm/activities", params);
+  const path = withQuery("/api/crm/activities", params);
   return request(path);
 }
 
@@ -568,12 +569,12 @@ export function createActivity(activityData: {
   outcome?: string;
   next_action?: string;
 }): Promise<{ message: string; activity_id: number }> {
-  return request("/crm/activities", {
+  return request("/api/crm/activities", {
     method: "POST",
     body: JSON.stringify(activityData),
   });
 }
 
 export function fetchCRMDashboardKPIs(): Promise<CRMDashboardKPIs> {
-  return request("/crm/dashboard/kpis");
+  return request("/api/crm/dashboard/kpis");
 }

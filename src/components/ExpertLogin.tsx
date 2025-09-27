@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { User, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { env } from '@/lib/env';
 
 const ExpertLogin = () => {
   const [username, setUsername] = useState('');
@@ -24,8 +25,7 @@ const ExpertLogin = () => {
     setError('');
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
-      const response = await fetch(`${apiUrl}/api/expert/auth/login`, {
+      const response = await fetch(`${env.API_URL}/api/expert/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

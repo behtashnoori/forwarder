@@ -14,6 +14,7 @@ from backend.extensions import db, migrate
 from backend.routes import register_routes
 from backend.security import security
 from backend.app_logging import logger
+from backend.cors_config import get_cors_config, log_cors_info
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 load_dotenv(dotenv_path=os.path.join(PROJECT_ROOT, ".env"))
@@ -58,44 +59,12 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     # Initialize logging
     logger.init_app(app)
 
-    # Configure CORS with dynamic origins for development
-    cors_origins = app.config.get("CORS_ORIGINS", [
-        "http://localhost:3000", "http://localhost:5173", "http://localhost:8080",
-        "http://localhost:8084", "http://localhost:8085", "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173", "http://127.0.0.1:8080", "http://127.0.0.1:8084",
-        "http://127.0.0.1:8085"
-    ])
+    # Configure CORS with dynamic origins
+    cors_config = get_cors_config()
+    CORS(app, **cors_config)
     
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": cors_origins,
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-CSRF-Token"],
-            "supports_credentials": True,
-            "max_age": 3600
-        },
-        r"/provinces": {
-            "origins": cors_origins,
-            "methods": ["GET", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-CSRF-Token"],
-            "supports_credentials": True,
-            "max_age": 3600
-        },
-        r"/counties": {
-            "origins": cors_origins,
-            "methods": ["GET", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-CSRF-Token"],
-            "supports_credentials": True,
-            "max_age": 3600
-        },
-        r"/cities": {
-            "origins": cors_origins,
-            "methods": ["GET", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-CSRF-Token"],
-            "supports_credentials": True,
-            "max_age": 3600
-        }
-    })
+    # Log CORS configuration for debugging
+    log_cors_info()
 
     with app.app_context():
         try:
