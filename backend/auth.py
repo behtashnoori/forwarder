@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from functools import wraps
+import bcrypt
 
 from flask import request, jsonify, g, current_app
 from sqlalchemy.exc import SQLAlchemyError
@@ -30,9 +31,8 @@ class AuthManager:
                 self._record_failed_attempt(client_ip)
                 return None
             
-            # In production, use proper password hashing
-            # For now, using simple comparison (NOT SECURE FOR PRODUCTION)
-            if user.username == username and password == "expert123":  # Demo credentials
+            # Verify password using bcrypt
+            if user.password_hash and bcrypt.checkpw(password.encode('utf-8'), user.password_hash.encode('utf-8')):
                 self._clear_failed_attempts(client_ip)
                 
                 # Update last login

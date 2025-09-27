@@ -1,5 +1,5 @@
 """Location-related routes for provinces, counties, and cities."""
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, current_app
 
 from backend.models import City, County, Province
 
@@ -27,11 +27,49 @@ from flask import Blueprint
 
 provinces_bp = Blueprint("provinces", __name__)
 
-@provinces_bp.get("/provinces")
+@provinces_bp.route("/provinces", methods=["GET", "OPTIONS"])
 def list_provinces_direct():
     """Return a list of all provinces (direct route for frontend compatibility)."""
-    provinces = Province.query.all()
-    return jsonify(
+    
+    # Get the origin from request headers
+    origin = request.headers.get('Origin')
+    
+    # List of allowed origins
+    allowed_origins = [
+        'http://localhost:3000',
+        'http://localhost:5173', 
+        'http://localhost:8080',
+        'http://localhost:8084',
+        'http://localhost:8085',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173',
+        'http://127.0.0.1:8080',
+        'http://127.0.0.1:8084',
+        'http://127.0.0.1:8085'
+    ]
+    
+    # Use the requesting origin if it's allowed, otherwise use wildcard for development
+    cors_origin = origin if origin in allowed_origins else '*'
+    
+    # Handle OPTIONS request for CORS preflight
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    try:
+        # Use raw SQL to avoid relationship issues
+        from backend.extensions import db
+        result = db.session.execute(db.text("SELECT id, name_fa, code FROM province"))
+        provinces = result.fetchall()
+    except Exception as e:
+        current_app.logger.error(f"Error querying provinces: {e}")
+        return jsonify({"error": "خطا در دریافت استان‌ها"}), 500
+    
+    response = jsonify(
         [
             {
                 "id": province.id,
@@ -41,6 +79,14 @@ def list_provinces_direct():
             for province in provinces
         ]
     )
+    
+    # Add CORS headers manually with dynamic origin
+    response.headers.add('Access-Control-Allow-Origin', cors_origin)
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
+    return response
 
 
 @location_bp.get("/counties")

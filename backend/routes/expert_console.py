@@ -524,13 +524,37 @@ def get_notifications():
         return jsonify({"error": "خطا در دریافت اعلان‌ها"}), 500
 
 
-@expert_console_bp.post("/auth/login")
+@expert_console_bp.route("/auth/login", methods=["POST", "OPTIONS"])
 @validate_input({
     "username": {"type": str, "required": True, "max_length": 50},
     "password": {"type": str, "required": True, "max_length": 100}
 })
 def expert_login():
     """Authenticate expert user with enhanced security."""
+    
+    # Get the origin from request headers
+    origin = request.headers.get('Origin')
+    
+    # List of allowed origins
+    allowed_origins = [
+        'http://localhost:3000', 'http://localhost:5173', 'http://localhost:8080',
+        'http://localhost:8084', 'http://localhost:8085', 'http://127.0.0.1:3000',
+        'http://127.0.0.1:5173', 'http://127.0.0.1:8080', 'http://127.0.0.1:8084',
+        'http://127.0.0.1:8085'
+    ]
+    
+    # Use the requesting origin if it's allowed, otherwise use wildcard for development
+    cors_origin = origin if origin in allowed_origins else '*'
+    
+    # Handle OPTIONS request for CORS preflight
+    if request.method == "OPTIONS":
+        response = jsonify({})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
     try:
         data = request.get_json()
         username = data.get("username")
@@ -544,20 +568,38 @@ def expert_login():
         user_data = auth_manager.authenticate_user(username, password)
         
         if not user_data:
-            return jsonify({"error": "نام کاربری یا رمز عبور اشتباه است"}), 401
+            response = jsonify({"error": "نام کاربری یا رمز عبور اشتباه است"})
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
+            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
+            response.headers.add('Access-Control-Allow-Credentials', 'true')
+            return response, 401
         
         # Generate tokens
         tokens = auth_manager.generate_tokens(user_data['id'])
         
-        return jsonify({
+        response = jsonify({
             "success": True,
             "expert": user_data,
             "tokens": tokens
         })
+        
+        # Add CORS headers manually
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        
+        return response
             
     except Exception as e:
         current_app.logger.error(f"Login error: {str(e)}")
-        return jsonify({"error": "خطا در ورود"}), 500
+        response = jsonify({"error": "خطا در ورود"})
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response, 500
 
 
 @expert_console_bp.post("/auth/refresh")

@@ -72,6 +72,7 @@ class ExpertUser(db.Model):
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
+    password_hash = db.Column(db.String(128), nullable=False)
     full_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=True)
     phone = db.Column(db.String(20), nullable=True)
@@ -134,6 +135,9 @@ class ShipmentRequest(db.Model):
     has_unread_for_assignee = db.Column(db.Boolean, default=True)
     priority = db.Column(db.String(10), default="normal")
     estimated_value = db.Column(db.Float, nullable=True)
+    
+    # Optional CRM integration
+    customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True)
 
     logs = db.relationship("ShipmentRequestLog", backref="shipment_request", lazy=True)
     expert_logs = db.relationship("ExpertConsoleLog", backref="shipment_request", lazy=True)
@@ -271,7 +275,7 @@ class Customer(db.Model):
     contacts = db.relationship("CustomerContact", backref="customer", lazy=True)
     opportunities = db.relationship("Opportunity", backref="customer", lazy=True)
     activities = db.relationship("Activity", backref="customer", lazy=True)
-    shipments = db.relationship("ShipmentRequest", backref="customer", lazy=True)
+    # shipments relationship removed - will be added later when needed
     
     def __repr__(self) -> str:
         return f"<Customer id={self.id} name={self.first_name} {self.last_name}>"
