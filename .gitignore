@@ -23,4 +23,14 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.production
+.env.docker
 instance/
+backup/
+backend/__pycache__/__init__.cpython-312.pyc
+backend/__pycache__/cors_config.cpython-312.pyc
+backend/__pycache__/__init__.cpython-312.pyc
+backend/routes/__pycache__/shipment_request.cpython-312.pyc
+*.pyc
+backend/__pycache__/__init__.cpython-312.pyc
+backend/routes/__pycache__/shipment_request.cpython-312.pyc

@@ -1,183 +1,136 @@
-# Welcome to your Lovable project
+# پروژه Forwarder - سیستم مدیریت درخواست‌های حمل
 
-## Project info
+## توضیحات پروژه
 
-**URL**: https://lovable.dev/projects/6537ffc1-88ab-4c2a-8eb9-82b3b1bc9f4f
+این پروژه یک سیستم کامل برای مدیریت درخواست‌های حمل و نقل است که شامل:
+- **فرانت‌اند**: React + TypeScript + Vite
+- **بک‌اند**: Flask + Python
+- **دیتابیس**: PostgreSQL
+- **مدیریت**: Docker
 
-## How can I edit this code?
+## پیش‌نیازها
 
-There are several ways of editing your application.
+- Docker و Docker Compose نصب شده باشد
+- دسترسی administrator/root
+- پورت‌های 80 و 8080 آزاد باشد
 
-**Use Lovable**
+## راه‌اندازی سریع
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/6537ffc1-88ab-4c2a-8eb9-82b3b1bc9f4f) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+### 1. دانلود و استخراج پروژه
+```bash
+# دانلود فایل پروژه و استخراج
+unzip forwarder-project.zip
+cd forwarder-project
 ```
 
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## Running the backend locally (Windows PowerShell)
-
-The Flask backend reads configuration from the project root `.env` file using
-`python-dotenv`. If `DATABASE_URL` is missing, it falls back to a SQLite file in
-`instance/forwarder.sqlite3`, so the service can start without PostgreSQL.
-
-1. **Create a virtual environment and install dependencies**
-
-   ```powershell
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   pip install -r backend/requirements.txt
-   ```
-
-2. **Configure environment variables**
-
-   Copy the template and adjust it for your environment. The application
-   automatically loads `.env` from the repository root on startup.
-
-   ```powershell
-   Copy-Item .env.example .env
-   # Edit .env and set DATABASE_URL, CORS_ORIGIN, and SLA_HOURS as needed
-   ```
-
-   * `DATABASE_URL` &mdash; optional. When omitted, the backend uses
-     `sqlite:///instance/forwarder.sqlite3`.
-   * `CORS_ORIGIN` &mdash; optional. Lets you define which frontend origin is allowed.
-   * `SLA_HOURS` &mdash; optional. Controls the SLA message exposed by the API.
-
-   The application creates the `instance/` directory automatically; ensure your
-   shell has permission to write to it if you rely on the SQLite fallback.
-
-3. **Initialize the database schema**
-
-   Create the tables for a fresh environment (works for SQLite or PostgreSQL):
-
-   ```powershell
-   flask --app backend.wsgi shell -c "from backend.extensions import db; db.create_all()"
-   ```
-
-4. **Start the development server**
-
-   ```powershell
-   $env:FLASK_APP = "backend.wsgi"
-   $env:FLASK_ENV = "development"
-   flask run
-   ```
-
-   When the server starts it prints a connectivity check (for example,
-   `✅ Database connection successful.`). Browse to
-  `http://127.0.0.1:5000/api/shipment-requests/ping` to confirm the API responds.
-
-## Integrated run (Backend + Frontend)
-
-Run backend and frontend together during development.
-
-### Option A) Two terminals (quick start)
-
-1) Backend (Terminal 1)
-```powershell
-# From project root
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r backend/requirements.txt
-
-# Optional: If you have PostgreSQL, set DATABASE_URL in .env. Otherwise omit to use SQLite fallback
-$env:FLASK_APP = "backend.wsgi"
-$env:FLASK_ENV = "development"
-flask run
+### 2. تنظیم محیط
+```bash
+# اجرای اسکریپت تنظیم
+chmod +x setup-env.sh
+./setup-env.sh
 ```
 
-2) Frontend (Terminal 2)
-```powershell
-# From project root
-npm install
-npm run dev
+### 3. تنظیم متغیرهای محیطی
+```bash
+# ویرایش تنظیمات production
+nano backend/.env.production
+
+# تغییر موارد زیر:
+# - SECRET_KEY: کلید امنیتی جدید
+# - CORS_ORIGIN: دامنه وب‌سایت شما
 ```
 
-- Backend will listen at `http://127.0.0.1:5000`.
-- Frontend (Vite) typically serves at `http://localhost:5173`.
-- If you set `CORS_ORIGIN` in `.env`, include your frontend origin(s), e.g. `http://localhost:5173,http://127.0.0.1:5173`.
-
-### Option B) Start both in new windows (PowerShell)
-
-Run this from the project root to open two PowerShell windows and start both services:
-```powershell
-# Ensure backend venv is created and dependencies installed at least once
-if (-not (Test-Path ".venv")) {
-  python -m venv .venv
-  .venv\Scripts\Activate.ps1
-  pip install -r backend/requirements.txt
-}
-
-# Start Backend window
-Start-Process powershell -ArgumentList @(
-  '-NoExit',
-  '-Command',
-  "$env:FLASK_APP='backend.wsgi'; $env:FLASK_ENV='development'; flask run"
-)
-
-# Start Frontend window
-Start-Process powershell -ArgumentList @(
-  '-NoExit',
-  '-Command',
-  "npm install; npm run dev"
-)
+### 4. تنظیم رمز عبور دیتابیس
+```bash
+# تنظیم رمز عبور دیتابیس
+export DB_PASSWORD="your-secure-database-password"
 ```
 
-Health check: `http://127.0.0.1:5000/api/shipment-requests/ping`
+### 5. راه‌اندازی پروژه
+```bash
+# اجرای deployment
+./deploy.sh
+```
 
-## What technologies are used for this project?
+## دسترسی‌ها
 
-This project is built with:
+- **وب‌سایت اصلی**: http://your-server-ip/
+- **پنل مدیریت دیتابیس**: http://your-server-ip:8080
+- **لاگ‌های سیستم**: ./instance/logs/
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+## مدیریت پروژه
 
-## How can I deploy this project?
+### مشاهده وضعیت سرویس‌ها
+```bash
+docker-compose -f docker-compose.production.yml ps
+```
 
-Simply open [Lovable](https://lovable.dev/projects/6537ffc1-88ab-4c2a-8eb9-82b3b1bc9f4f) and click on Share -> Publish.
+### مشاهده لاگ‌ها
+```bash
+# لاگ API
+docker-compose -f docker-compose.production.yml logs -f api
 
-## Can I connect a custom domain to my Lovable project?
+# لاگ دیتابیس
+docker-compose -f docker-compose.production.yml logs -f db
+```
 
-Yes, you can!
+### پشتیبان‌گیری از دیتابیس
+```bash
+docker-compose -f docker-compose.production.yml exec db pg_dump -U postgres forwarder_db > backup/db_backup_$(date +%Y%m%d_%H%M%S).sql
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### به‌روزرسانی پروژه
+```bash
+git pull
+./deploy.sh
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## عیب‌یابی
+
+### مشکل اتصال به دیتابیس
+```bash
+# بررسی وضعیت دیتابیس
+docker-compose -f docker-compose.production.yml logs db
+
+# تست اتصال
+docker-compose -f docker-compose.production.yml exec api python -c "from backend import create_app; app = create_app(); print('Database connection OK')"
+```
+
+### مشکل پورت
+```bash
+# بررسی پورت‌های در حال استفاده
+netstat -tulpn | grep :80
+netstat -tulpn | grep :8080
+```
+
+## تنظیمات امنیتی
+
+1. **تغییر SECRET_KEY**: حتماً کلید مخفی رو تغییر بدید
+2. **محدود کردن CORS_ORIGIN**: فقط دامنه‌های مجاز رو اجازه بدید
+3. **فایروال**: پورت 8080 (Adminer) رو فقط برای IP های مجاز باز کنید
+4. **رمز عبور دیتابیس**: از رمز عبور قوی استفاده کنید
+
+## پشتیبانی
+
+در صورت بروز مشکل:
+1. لاگ‌ها رو بررسی کنید
+2. وضعیت سرویس‌ها رو چک کنید
+3. با تیم پشتیبانی تماس بگیرید
+
+## فایل‌های مهم
+
+- `DEPLOYMENT.md`: راهنمای کامل نصب و راه‌اندازی
+- `docker-compose.production.yml`: تنظیمات Docker
+- `backend/.env.production`: تنظیمات محیطی
+- `deploy.sh`: اسکریپت deployment
+- `setup-env.sh`: اسکریپت تنظیم محیط
+
+## تکنولوژی‌های استفاده شده
+
+این پروژه با استفاده از تکنولوژی‌های زیر ساخته شده:
+
+- **Frontend**: Vite, TypeScript, React, shadcn-ui, Tailwind CSS
+- **Backend**: Flask, Python, SQLAlchemy
+- **Database**: PostgreSQL
+- **Containerization**: Docker, Docker Compose
+- **Deployment**: Gunicorn, Nginx (optional)
