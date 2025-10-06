@@ -103,16 +103,16 @@ def log_cors_info():
     config = get_cors_config()
     origins = config['origins']
     
-    print("🌐 CORS Configuration:")
-    print(f"   📊 Total Origins: {len(origins)}")
-    print(f"   🔧 Supports Credentials: {config['supports_credentials']}")
-    print(f"   ⏰ Max Age: {config['resources'][r'/*']['max_age']} seconds")
+    print("CORS Configuration:")
+    print(f"   Total Origins: {len(origins)}")
+    print(f"   Supports Credentials: {config['supports_credentials']}")
+    print(f"   Max Age: {config['resources'][r'/*']['max_age']} seconds")
     
     # Show first few origins as examples
     if origins:
-        print("   📋 Sample Origins:")
+        print("   Sample Origins:")
         for origin in origins[:5]:
-            print(f"      ✅ {origin}")
+            print(f"      - {origin}")
         if len(origins) > 5:
             print(f"      ... and {len(origins) - 5} more")
     
@@ -121,5 +121,11 @@ def log_cors_info():
 
 if __name__ == '__main__':
     log_cors_info()
+
+
+
+
+
+
 
 

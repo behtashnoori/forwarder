@@ -8,6 +8,10 @@ import NotFound from "./pages/NotFound";
 import ExpertConsole from "./pages/ExpertConsole";
 import RequestDetail from "./pages/RequestDetail";
 import CRMDashboard from "./pages/CRMDashboard";
+import UserManagement from "./pages/UserManagement";
+import CustomerDashboard from "./pages/CustomerDashboard";
+import CustomerRequestDetail from "./pages/CustomerRequestDetail";
+import PublicTracking from "./pages/PublicTracking";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -42,6 +46,28 @@ const App = () => (
                   <CRMDashboard />
                 </ErrorBoundary>
               </ProtectedRoute>
+            } />
+            <Route path="/user-management" element={
+              <ProtectedRoute>
+                <ErrorBoundary>
+                  <UserManagement />
+                </ErrorBoundary>
+              </ProtectedRoute>
+            } />
+            <Route path="/customer/:customerId" element={
+              <ErrorBoundary>
+                <CustomerDashboard />
+              </ErrorBoundary>
+            } />
+            <Route path="/request/:requestId" element={
+              <ErrorBoundary>
+                <CustomerRequestDetail />
+              </ErrorBoundary>
+            } />
+            <Route path="/customer/track/:requestId" element={
+              <ErrorBoundary>
+                <PublicTracking />
+              </ErrorBoundary>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

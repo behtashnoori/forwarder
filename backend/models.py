@@ -65,6 +65,47 @@ class City(db.Model):
         return f"<City id={self.id} name_fa={self.name_fa!r}>"
 
 
+class Country(db.Model):
+    """Represents a country for international shipping."""
+
+    __tablename__ = "country"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name_en = db.Column(db.String(100), nullable=False)
+    name_fa = db.Column(db.String(100), nullable=False)
+    code = db.Column(db.String(3), nullable=False, unique=True)  # ISO country code
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    cities = db.relationship("InternationalCity", back_populates="country", lazy=True)
+
+    def __repr__(self) -> str:
+        return f"<Country id={self.id} name_fa={self.name_fa!r}>"
+
+
+class InternationalCity(db.Model):
+    """Represents a city or port in a country for international shipping."""
+
+    __tablename__ = "international_city"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name_en = db.Column(db.String(100), nullable=False)
+    name_fa = db.Column(db.String(100), nullable=False)
+    country_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id"), nullable=False
+    )
+    city_type = db.Column(db.String(20), nullable=False, default="city")  # city, port, airport
+    is_major_port = db.Column(db.Boolean, default=False)
+    is_major_airport = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    country = db.relationship("Country", back_populates="cities")
+
+    def __repr__(self) -> str:
+        return f"<InternationalCity id={self.id} name_fa={self.name_fa!r}>"
+
+
 class ExpertUser(db.Model):
     """Represents an expert user who can handle shipment requests."""
     
@@ -76,13 +117,102 @@ class ExpertUser(db.Model):
     full_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=True)
     phone = db.Column(db.String(20), nullable=True)
-    role = db.Column(db.String(20), default="expert")
+    role = db.Column(db.String(20), default="expert")  # expert, supervisor, crm_manager, business_expert
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
     
+    # Hierarchy fields
+    manager_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=True)
+    department = db.Column(db.String(50), nullable=True)  # crm, business, operations, etc.
+    specialization = db.Column(db.Text, nullable=True)  # JSON string for additional specializations
+    
+    # Relationships
+    manager = db.relationship("ExpertUser", remote_side=[id], backref="subordinates")
+    assigned_requests = db.relationship("ShipmentRequest", back_populates="assigned_expert", lazy=True)
+    created_logs = db.relationship("ExpertConsoleLog", back_populates="created_by_user", lazy=True)
+    created_messages = db.relationship("ExpertConsoleMessage", back_populates="created_by_user", lazy=True)
+    
     def __repr__(self) -> str:
         return f"<ExpertUser id={self.id} username={self.username}>"
+    
+    def get_specializations(self):
+        """Get expert's transport method specializations."""
+        return [spec for spec in self.specializations if spec.transport_method.is_active]
+    
+    def can_handle_transport_method(self, transport_method_id):
+        """Check if expert can handle a specific transport method."""
+        return any(spec.transport_method_id == transport_method_id for spec in self.get_specializations())
+    
+    def get_workload(self):
+        """Get current workload (number of assigned requests)."""
+        return len([req for req in self.assigned_requests if req.status in ['assigned', 'in_progress']])
+
+
+class CustomerGamification(db.Model):
+    """Represents a customer who can track their requests with gamification."""
+    
+    __tablename__ = "customer_gamification"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    phone = db.Column(db.String(20), nullable=False)
+    first_name = db.Column(db.String(100), nullable=True)
+    last_name = db.Column(db.String(100), nullable=True)
+    is_email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(100), nullable=True)
+    verification_expires_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    
+    # Gamification fields
+    total_requests = db.Column(db.Integer, default=0)
+    completed_requests = db.Column(db.Integer, default=0)
+    loyalty_points = db.Column(db.Integer, default=0)
+    customer_level = db.Column(db.String(20), default="bronze")  # bronze, silver, gold, platinum
+    
+    # Relationships
+    requests = db.relationship("ShipmentRequest", back_populates="gamification_customer", lazy=True)
+    
+    def __repr__(self) -> str:
+        return f"<CustomerGamification id={self.id} email={self.email}>"
+    
+    def update_loyalty_points(self, points: int):
+        """Update customer loyalty points and level."""
+        self.loyalty_points += points
+        
+        # Update level based on points
+        if self.loyalty_points >= 1000:
+            self.customer_level = "platinum"
+        elif self.loyalty_points >= 500:
+            self.customer_level = "gold"
+        elif self.loyalty_points >= 100:
+            self.customer_level = "silver"
+        else:
+            self.customer_level = "bronze"
+
+
+class CustomerWorkflowStep(db.Model):
+    """Tracks customer workflow steps for gamification."""
+    
+    __tablename__ = "customer_workflow_step"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer_gamification.id"), nullable=False)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False)
+    step_name = db.Column(db.String(50), nullable=False)  # email_verified, request_submitted, expert_assigned, etc.
+    step_order = db.Column(db.Integer, nullable=False)
+    is_completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    points_earned = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    customer = db.relationship("CustomerGamification", backref="workflow_steps")
+    shipment_request = db.relationship("ShipmentRequest", backref="workflow_steps")
+    
+    def __repr__(self) -> str:
+        return f"<CustomerWorkflowStep id={self.id} step={self.step_name}>"
 
 
 class ShipmentRequest(db.Model):
@@ -91,29 +221,53 @@ class ShipmentRequest(db.Model):
     __tablename__ = "shipment_request"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    
+    # Shipping type: 'domestic' or 'international'
+    shipping_type = db.Column(db.String(20), nullable=False, default="domestic")
+    
+    # Domestic shipping fields (nullable for international)
     origin_province_id = db.Column(
-        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=True
     )
     origin_county_id = db.Column(
-        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=True
     )
     origin_city_id = db.Column(
-        SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id"), nullable=True
     )
     dest_province_id = db.Column(
-        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=True
     )
     dest_county_id = db.Column(
-        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=True
     )
     dest_city_id = db.Column(
-        SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id"), nullable=True
     )
+    
+    # International shipping fields (nullable for domestic)
+    origin_country = db.Column(db.String(100), nullable=True)
+    origin_city_international = db.Column(db.String(100), nullable=True)
+    origin_address_international = db.Column(db.Text, nullable=True)
+    dest_country = db.Column(db.String(100), nullable=True)
+    dest_city_international = db.Column(db.String(100), nullable=True)
+    dest_address_international = db.Column(db.Text, nullable=True)
+    
+    # Iran entry point fields (for international shipping to Iran)
+    iran_entry_port = db.Column(db.String(100), nullable=True)
+    iran_entry_province = db.Column(db.String(100), nullable=True)
+    iran_entry_port_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("iran_port.id"), nullable=True)
+    iran_entry_province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=True)
+    
     contact_phone = db.Column(db.String(32), nullable=False)
     # Customer details (optional)
     customer_first_name = db.Column(db.String(100), nullable=True)
     customer_last_name = db.Column(db.String(100), nullable=True)
-    transport_method = db.Column(db.String(32), nullable=True)
+    transport_method = db.Column(db.String(32), nullable=True)  # Legacy field, kept for backward compatibility
+    # Separate transport methods for international and domestic shipping
+    international_transport_method = db.Column(db.String(32), nullable=True)
+    domestic_transport_method = db.Column(db.String(32), nullable=True)
+    transport_method_preference = db.Column(db.String(20), nullable=True, default="customer_choice")  # customer_choice, forwarder_suggestion
     # Cargo details (optional)
     cargo_description = db.Column(db.Text, nullable=True)
     cargo_weight = db.Column(db.Float, nullable=True)
@@ -138,12 +292,15 @@ class ShipmentRequest(db.Model):
     
     # Optional CRM integration
     customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True)
+    gamification_customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer_gamification.id"), nullable=True)
 
     logs = db.relationship("ShipmentRequestLog", backref="shipment_request", lazy=True)
     expert_logs = db.relationship("ExpertConsoleLog", backref="shipment_request", lazy=True)
     expert_messages = db.relationship("ExpertConsoleMessage", backref="shipment_request", lazy=True)
     expert_notifications = db.relationship("ExpertConsoleNotification", backref="shipment_request", lazy=True)
-    assigned_expert = db.relationship("ExpertUser", backref="assigned_requests")
+    assigned_expert = db.relationship("ExpertUser", back_populates="assigned_requests")
+    customer = db.relationship("Customer", back_populates="requests")
+    gamification_customer = db.relationship("CustomerGamification", back_populates="requests")
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<ShipmentRequest id={self.id}>"
@@ -188,7 +345,7 @@ class ExpertConsoleLog(db.Model):
     ip_address = db.Column(db.String(45), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
-    created_by_user = db.relationship("ExpertUser", backref="created_logs")
+    created_by_user = db.relationship("ExpertUser", back_populates="created_logs")
     
     def __repr__(self) -> str:
         return f"<ExpertConsoleLog id={self.id} action={self.action}>"
@@ -214,7 +371,7 @@ class ExpertConsoleMessage(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    created_by_user = db.relationship("ExpertUser", backref="created_messages")
+    created_by_user = db.relationship("ExpertUser", back_populates="created_messages")
     
     def __repr__(self) -> str:
         return f"<ExpertConsoleMessage id={self.id} type={self.message_type}>"
@@ -418,10 +575,139 @@ class Report(db.Model):
         return f"<Report id={self.id} name={self.name}>"
 
 
+class TransportMethod(db.Model):
+    """Represents different transport methods available in the system."""
+    
+    __tablename__ = "transport_method"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)  # English name
+    name_fa = db.Column(db.String(100), nullable=False)  # Persian name
+    description = db.Column(db.Text, nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    expert_specializations = db.relationship("ExpertSpecialization", backref="transport_method", lazy=True)
+    
+    def __repr__(self) -> str:
+        return f"<TransportMethod id={self.id} name={self.name_fa}>"
+
+
+class ExpertSpecialization(db.Model):
+    """Represents expert specializations in different transport methods."""
+    
+    __tablename__ = "expert_specialization"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    expert_user_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    transport_method_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("transport_method.id"), nullable=False)
+    proficiency_level = db.Column(db.String(20), default="intermediate")  # beginner, intermediate, advanced, expert
+    is_primary = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    expert_user = db.relationship("ExpertUser", backref="specializations")
+    
+    def __repr__(self) -> str:
+        return f"<ExpertSpecialization expert={self.expert_user_id} transport={self.transport_method_id}>"
+
+
+class AssignmentRule(db.Model):
+    """Represents rules for automatic assignment of shipment requests."""
+    
+    __tablename__ = "assignment_rule"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    rule_type = db.Column(db.String(50), nullable=False)  # transport_method, location, priority, workload
+    conditions = db.Column(db.Text, nullable=False)  # JSON string for rule conditions
+    priority = db.Column(db.Integer, default=1)  # Higher number = higher priority
+    is_active = db.Column(db.Boolean, default=True)
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    creator = db.relationship("ExpertUser", backref="created_assignment_rules")
+    assignment_logs = db.relationship("AssignmentLog", backref="assignment_rule", lazy=True)
+    
+    def __repr__(self) -> str:
+        return f"<AssignmentRule id={self.id} name={self.name}>"
+
+
+class AssignmentLog(db.Model):
+    """Logs automatic assignments for tracking and analysis."""
+    
+    __tablename__ = "assignment_log"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False)
+    assigned_expert_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    assignment_rule_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("assignment_rule.id"), nullable=True)
+    assignment_method = db.Column(db.String(20), nullable=False)  # automatic, manual, override
+    assignment_reason = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    shipment_request = db.relationship("ShipmentRequest", backref="assignment_logs")
+    assigned_expert = db.relationship("ExpertUser", backref="assignment_logs")
+    
+    def __repr__(self) -> str:
+        return f"<AssignmentLog id={self.id} request={self.shipment_request_id} expert={self.assigned_expert_id}>"
+
+
+class IranPort(db.Model):
+    """Represents major ports in Iran for international shipping entry points."""
+    
+    __tablename__ = "iran_port"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name_fa = db.Column(db.String(100), nullable=False)
+    name_en = db.Column(db.String(100), nullable=False)
+    port_type = db.Column(db.String(20), nullable=False, default="sea")  # sea, air, land
+    province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False)
+    is_major_port = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, default=True)
+    description = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    province = db.relationship("Province", backref="ports")
+    
+    def __repr__(self) -> str:
+        return f"<IranPort id={self.id} name_fa={self.name_fa!r}>"
+
+
+class PortProvinceMapping(db.Model):
+    """Maps which ports are suitable for which provinces based on logistics efficiency."""
+    
+    __tablename__ = "port_province_mapping"
+    
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    port_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("iran_port.id"), nullable=False)
+    province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False)
+    suitability_score = db.Column(db.Float, default=1.0)  # 0.0 to 1.0, higher is better
+    transport_method = db.Column(db.String(50), nullable=True)  # road, rail, air, sea
+    estimated_days = db.Column(db.Integer, nullable=True)  # estimated transport days
+    is_recommended = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationships
+    port = db.relationship("IranPort", backref="province_mappings")
+    province = db.relationship("Province", backref="port_mappings")
+    
+    def __repr__(self) -> str:
+        return f"<PortProvinceMapping port={self.port_id} province={self.province_id}>"
+
+
 __all__ = [
     "Province",
     "County",
     "City",
+    "Country",
+    "InternationalCity",
     "ExpertUser",
     "ShipmentRequest",
     "ShipmentRequestLog",
@@ -435,4 +721,12 @@ __all__ = [
     "Activity",
     "Task",
     "Report",
+    # Hierarchy and Assignment Models
+    "TransportMethod",
+    "ExpertSpecialization",
+    "AssignmentRule",
+    "AssignmentLog",
+    # Iran Ports Models
+    "IranPort",
+    "PortProvinceMapping",
 ]

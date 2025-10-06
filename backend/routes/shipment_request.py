@@ -6,27 +6,92 @@ from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
-from backend.models import ShipmentRequest, ShipmentRequestLog
+from backend.models import ShipmentRequest, ShipmentRequestLog, TransportMethod, CustomerGamification, CustomerWorkflowStep
+from backend.assignment_engine import assignment_engine
 
 shipment_request_bp = Blueprint("shipment_request", __name__, url_prefix="/api")
+
+
+@shipment_request_bp.get("/transport-methods")
+def get_transport_methods():
+    """Get available transport methods for international and domestic shipping."""
+    try:
+        # Get all active transport methods
+        methods = db.session.query(TransportMethod).filter(TransportMethod.is_active == True).all()
+        
+        # Categorize methods based on their names
+        international_methods = []
+        domestic_methods = []
+        
+        for method in methods:
+            method_data = {
+                "id": method.id,
+                "name": method.name,
+                "name_fa": method.name_fa,
+                "description": method.description
+            }
+            
+            # Categorize based on method name
+            if method.name.lower() in ["sea freight", "air freight", "land transport", "rail transport"]:
+                international_methods.append(method_data)
+            elif method.name.lower() in ["road transport", "rail transport", "air transport"]:
+                domestic_methods.append(method_data)
+            else:
+                # Default to both if unclear
+                international_methods.append(method_data)
+                domestic_methods.append(method_data)
+        
+        return jsonify({
+            "international_methods": international_methods,
+            "domestic_methods": domestic_methods,
+            "preference_options": [
+                {"value": "customer_choice", "label": "انتخاب مشتری", "description": "مشتری روش حمل را انتخاب می‌کند"},
+                {"value": "forwarder_suggestion", "label": "پیشنهاد فورواردر", "description": "فورواردر بهترین روش را پیشنهاد می‌دهد"}
+            ]
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching transport methods: {str(e)}")
+        return jsonify({"message": "خطا در دریافت روش‌های حمل"}), 500
 
 @shipment_request_bp.post("/shipment-request")
 def create_shipment_request():
     """Create a shipment request from public form submissions."""
     data: Dict[str, Any] = request.get_json(silent=True) or {}
 
-    try:
-        origin_province_id = int(data["origin_province_id"])
-        origin_county_id = int(data["origin_county_id"])
-        origin_city_id = int(data["origin_city_id"])
-        dest_province_id = int(data["dest_province_id"])
-        dest_county_id = int(data["dest_county_id"])
-        dest_city_id = int(data["dest_city_id"])
-    except (KeyError, TypeError, ValueError):
+    # Determine shipping type
+    shipping_type = data.get("shipping_type", "domestic")
+    if shipping_type not in ["domestic", "international"]:
         return (
-            jsonify({"message": "اطلاعات مبدا و مقصد نامعتبر است."}),
+            jsonify({"message": "نوع ارسال نامعتبر است."}),
             400,
         )
+
+    # Validate location data based on shipping type
+    if shipping_type == "domestic":
+        try:
+            origin_province_id = int(data["origin_province_id"])
+            origin_county_id = int(data["origin_county_id"])
+            origin_city_id = int(data["origin_city_id"])
+            dest_province_id = int(data["dest_province_id"])
+            dest_county_id = int(data["dest_county_id"])
+            dest_city_id = int(data["dest_city_id"])
+        except (KeyError, TypeError, ValueError):
+            return (
+                jsonify({"message": "اطلاعات مبدا و مقصد داخلی نامعتبر است."}),
+                400,
+            )
+    else:  # international
+        origin_country = data.get("origin_country", "").strip()
+        origin_city_international = data.get("origin_city_international", "").strip()
+        dest_country = data.get("dest_country", "").strip()
+        dest_city_international = data.get("dest_city_international", "").strip()
+        
+        if not origin_country or not origin_city_international or not dest_country or not dest_city_international:
+            return (
+                jsonify({"message": "اطلاعات مبدا و مقصد بین‌المللی نامعتبر است."}),
+                400,
+            )
 
     contact_phone = data.get("contact_phone", "")
     if not _is_valid_phone(contact_phone):
@@ -40,13 +105,26 @@ def create_shipment_request():
     # Customer details (optional)
     customer_first_name = data.get("customer_first_name", "").strip() or None
     customer_last_name = data.get("customer_last_name", "").strip() or None
+    
+    # Gamification customer ID (optional)
+    gamification_customer_id = data.get("gamification_customer_id")
 
+    # Handle transport methods - support both legacy and new format
     transport_method_raw = data.get("transport_method") or data.get("shipment_mode")
     transport_method = None
     if isinstance(transport_method_raw, str):
         sanitized = transport_method_raw.strip()
         if sanitized:
             transport_method = sanitized.lower()
+    
+    # New separate transport methods
+    international_transport_method = data.get("international_transport_method")
+    domestic_transport_method = data.get("domestic_transport_method")
+    transport_method_preference = data.get("transport_method_preference", "customer_choice")
+    
+    # Validate transport method preference
+    if transport_method_preference not in ["customer_choice", "forwarder_suggestion"]:
+        transport_method_preference = "customer_choice"
 
     # Process cargo details (optional)
     cargo_description = data.get("cargo_description", "").strip() or None
@@ -94,37 +172,59 @@ def create_shipment_request():
     timestamp = datetime.utcnow()
 
     try:
-        shipment_request = ShipmentRequest(
-            origin_province_id=origin_province_id,
-            origin_county_id=origin_county_id,
-            origin_city_id=origin_city_id,
-            dest_province_id=dest_province_id,
-            dest_county_id=dest_county_id,
-            dest_city_id=dest_city_id,
-            contact_phone=contact_phone,
-            customer_first_name=customer_first_name,
-            customer_last_name=customer_last_name,
-            transport_method=transport_method,
-            cargo_description=cargo_description,
-            cargo_weight=cargo_weight,
-            cargo_volume=cargo_volume,
-            cargo_value=cargo_value,
-            special_instructions=special_instructions,
-            pickup_date=pickup_date_obj,
-            delivery_date=delivery_date_obj,
-            created_at=timestamp,
-            ready_at=timestamp,
-            status_request_status="new",
+        # Create shipment request with appropriate fields based on shipping type
+        shipment_request_data = {
+            "shipping_type": shipping_type,
+            "contact_phone": contact_phone,
+            "customer_first_name": customer_first_name,
+            "customer_last_name": customer_last_name,
+            "transport_method": transport_method,  # Legacy field
+            "international_transport_method": international_transport_method,
+            "domestic_transport_method": domestic_transport_method,
+            "transport_method_preference": transport_method_preference,
+            "cargo_description": cargo_description,
+            "cargo_weight": cargo_weight,
+            "cargo_volume": cargo_volume,
+            "cargo_value": cargo_value,
+            "special_instructions": special_instructions,
+            "pickup_date": pickup_date_obj,
+            "delivery_date": delivery_date_obj,
+            "created_at": timestamp,
+            "ready_at": timestamp,
+            "status_request_status": "new",
             # Expert Console fields with default values
-            assigned_to=None,
-            status="new",
-            sla_due_at=None,
-            last_customer_touch_at=None,
-            has_unread_for_assignee=True,
-            priority="normal",
-            estimated_value=None,
-            customer_id=None,  # Will be set later when customer is created
-        )
+            "assigned_to": None,
+            "status": "new",
+            "sla_due_at": None,
+            "last_customer_touch_at": None,
+            "has_unread_for_assignee": True,
+            "priority": "normal",
+            "estimated_value": None,
+            "customer_id": None,  # Will be set later when customer is created
+            "gamification_customer_id": gamification_customer_id,
+        }
+
+        # Add location fields based on shipping type
+        if shipping_type == "domestic":
+            shipment_request_data.update({
+                "origin_province_id": origin_province_id,
+                "origin_county_id": origin_county_id,
+                "origin_city_id": origin_city_id,
+                "dest_province_id": dest_province_id,
+                "dest_county_id": dest_county_id,
+                "dest_city_id": dest_city_id,
+            })
+        else:  # international
+            shipment_request_data.update({
+                "origin_country": origin_country,
+                "origin_city_international": origin_city_international,
+                "origin_address_international": data.get("origin_address_international", "").strip() or None,
+                "dest_country": dest_country,
+                "dest_city_international": dest_city_international,
+                "dest_address_international": data.get("dest_address_international", "").strip() or None,
+            })
+
+        shipment_request = ShipmentRequest(**shipment_request_data)
         db.session.add(shipment_request)
         db.session.flush()
 
@@ -135,7 +235,51 @@ def create_shipment_request():
             ip_address=request.remote_addr,
         )
         db.session.add(log_entry)
+        
+        # Handle gamification if customer is registered
+        if gamification_customer_id:
+            try:
+                # Update customer request count
+                customer = db.session.query(CustomerGamification).filter(
+                    CustomerGamification.id == gamification_customer_id
+                ).first()
+                
+                if customer:
+                    customer.total_requests += 1
+                    
+                    # Create workflow step for request submission
+                    workflow_step = CustomerWorkflowStep(
+                        customer_id=gamification_customer_id,
+                        shipment_request_id=shipment_request.id,
+                        step_name="request_submitted",
+                        step_order=2,
+                        is_completed=True,
+                        completed_at=timestamp,
+                        points_earned=20
+                    )
+                    db.session.add(workflow_step)
+                    
+                    # Award points for request submission
+                    customer.update_loyalty_points(20)
+                    
+                    current_app.logger.info(f"Gamification: Customer {gamification_customer_id} submitted request {shipment_request.id}, earned 20 points")
+                    
+            except Exception as e:
+                current_app.logger.error(f"Error in gamification for request {shipment_request.id}: {e}")
+                # Don't fail the request creation if gamification fails
+        
         db.session.commit()
+        
+        # Try automatic assignment
+        try:
+            assigned_expert_id = assignment_engine.assign_request(shipment_request.id, "automatic")
+            if assigned_expert_id:
+                current_app.logger.info(f"Request {shipment_request.id} automatically assigned to expert {assigned_expert_id}")
+            else:
+                current_app.logger.info(f"No suitable expert found for automatic assignment of request {shipment_request.id}")
+        except Exception as e:
+            current_app.logger.error(f"Error in automatic assignment for request {shipment_request.id}: {e}")
+            # Don't fail the request creation if assignment fails
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Failed to create shipment request")

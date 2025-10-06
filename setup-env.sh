@@ -1,35 +1,49 @@
 #!/bin/bash
 
-# اسکریپت تنظیم متغیرهای محیطی
+# اسکریپت ایجاد فایل‌های محیطی
 echo "🔧 Setting up environment files..."
 
-# کپی کردن فایل‌های نمونه
+# Create backend .env.production if it doesn't exist
 if [ ! -f "backend/.env.production" ]; then
+    echo "📝 Creating backend/.env.production..."
     cp backend/env.production.example backend/.env.production
-    echo "✅ Created backend/.env.production from example"
+    echo "✅ Created backend/.env.production"
+    echo "⚠️  Please edit this file with your actual values!"
 else
-    echo "⚠️  backend/.env.production already exists"
+    echo "✅ backend/.env.production already exists"
 fi
 
+# Create backend .env.docker if it doesn't exist
 if [ ! -f "backend/.env.docker" ]; then
+    echo "📝 Creating backend/.env.docker..."
     cp backend/env.docker.example backend/.env.docker
-    echo "✅ Created backend/.env.docker from example"
+    echo "✅ Created backend/.env.docker"
 else
-    echo "⚠️  backend/.env.docker already exists"
+    echo "✅ backend/.env.docker already exists"
 fi
 
-# ایجاد پوشه backup
-mkdir -p backup
-echo "✅ Created backup directory"
+# Create instance directory for logs
+if [ ! -d "instance/logs" ]; then
+    echo "📁 Creating instance/logs directory..."
+    mkdir -p instance/logs
+    echo "✅ Created instance/logs directory"
+else
+    echo "✅ instance/logs directory already exists"
+fi
 
-# تنظیم دسترسی‌ها
-chmod +x deploy.sh
-echo "✅ Set execute permission on deploy.sh"
+# Create backup directory
+if [ ! -d "backup" ]; then
+    echo "📁 Creating backup directory..."
+    mkdir -p backup
+    echo "✅ Created backup directory"
+else
+    echo "✅ backup directory already exists"
+fi
 
 echo ""
-echo "🎯 Next steps:"
-echo "1. Edit backend/.env.production and set your SECRET_KEY and CORS_ORIGIN"
-echo "2. Set DB_PASSWORD environment variable: export DB_PASSWORD='your-password'"
-echo "3. Run ./deploy.sh to start the application"
+echo "🎉 Environment setup completed!"
 echo ""
-echo "📖 For detailed instructions, see DEPLOYMENT.md"
+echo "📋 Next steps:"
+echo "1. Edit backend/.env.production with your actual values"
+echo "2. Set DB_PASSWORD environment variable: export DB_PASSWORD='your-secure-password'"
+echo "3. Run deployment: ./deploy.sh"

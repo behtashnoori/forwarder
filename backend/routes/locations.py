@@ -1,7 +1,7 @@
 """Location-related routes for provinces, counties, and cities."""
 from flask import Blueprint, jsonify, request, current_app
 
-from backend.models import City, County, Province
+from backend.models import City, County, Province, Country, InternationalCity, IranPort, PortProvinceMapping
 
 location_bp = Blueprint("location", __name__, url_prefix="/api")
 
@@ -129,5 +129,163 @@ def list_cities():
                 "name": city.name_fa,
             }
             for city in cities
+        ]
+    )
+
+
+@location_bp.get("/countries")
+def list_countries():
+    """Return a list of all active countries for international shipping."""
+    countries = Country.query.filter_by(is_active=True).order_by(Country.name_fa).all()
+    return jsonify(
+        [
+            {
+                "id": country.id,
+                "name": country.name_fa,
+                "name_en": country.name_en,
+                "code": country.code,
+            }
+            for country in countries
+        ]
+    )
+
+
+@location_bp.get("/international-cities")
+def list_international_cities():
+    """Return international cities/ports filtered by the provided country ID."""
+    country_id = request.args.get("country_id", type=int)
+    if country_id is None:
+        return (
+            jsonify({"message": "شناسه کشور الزامی است."}),
+            400,
+        )
+
+    cities = InternationalCity.query.filter_by(
+        country_id=country_id, 
+        is_active=True
+    ).order_by(InternationalCity.name_fa).all()
+    
+    return jsonify(
+        [
+            {
+                "id": city.id,
+                "name": city.name_fa,
+                "name_en": city.name_en,
+                "city_type": city.city_type,
+                "is_major_port": city.is_major_port,
+                "is_major_airport": city.is_major_airport,
+            }
+            for city in cities
+        ]
+    )
+
+
+@location_bp.get("/iran-ports")
+def list_iran_ports():
+    """Return a list of all active Iran ports."""
+    port_type = request.args.get("port_type")  # Optional filter by port type
+    
+    query = IranPort.query.filter_by(is_active=True)
+    if port_type:
+        query = query.filter_by(port_type=port_type)
+    
+    ports = query.order_by(IranPort.name_fa).all()
+    
+    return jsonify(
+        [
+            {
+                "id": port.id,
+                "name_fa": port.name_fa,
+                "name_en": port.name_en,
+                "port_type": port.port_type,
+                "province_id": port.province_id,
+                "province_name": port.province.name_fa if port.province else None,
+                "is_major_port": port.is_major_port,
+                "description": port.description,
+            }
+            for port in ports
+        ]
+    )
+
+
+@location_bp.get("/port-province-mappings")
+def list_port_province_mappings():
+    """Return port-province mappings for a specific port or province."""
+    port_id = request.args.get("port_id", type=int)
+    province_id = request.args.get("province_id", type=int)
+    
+    if not port_id and not province_id:
+        return (
+            jsonify({"message": "شناسه بندر یا استان الزامی است."}),
+            400,
+        )
+    
+    query = PortProvinceMapping.query
+    if port_id:
+        query = query.filter_by(port_id=port_id)
+    if province_id:
+        query = query.filter_by(province_id=province_id)
+    
+    mappings = query.order_by(PortProvinceMapping.suitability_score.desc()).all()
+    
+    return jsonify(
+        [
+            {
+                "id": mapping.id,
+                "port_id": mapping.port_id,
+                "port_name": mapping.port.name_fa if mapping.port else None,
+                "province_id": mapping.province_id,
+                "province_name": mapping.province.name_fa if mapping.province else None,
+                "suitability_score": mapping.suitability_score,
+                "transport_method": mapping.transport_method,
+                "estimated_days": mapping.estimated_days,
+                "is_recommended": mapping.is_recommended,
+            }
+            for mapping in mappings
+        ]
+    )
+
+
+@location_bp.get("/recommended-ports")
+def get_recommended_ports():
+    """Get recommended ports for a specific province based on suitability scores."""
+    province_id = request.args.get("province_id", type=int)
+    if province_id is None:
+        return (
+            jsonify({"message": "شناسه استان الزامی است."}),
+            400,
+        )
+    
+    # Get recommended ports for the province
+    mappings = PortProvinceMapping.query.filter_by(
+        province_id=province_id,
+        is_recommended=True
+    ).order_by(PortProvinceMapping.suitability_score.desc()).all()
+    
+    # Also get top 3 ports by suitability score even if not marked as recommended
+    top_mappings = PortProvinceMapping.query.filter_by(
+        province_id=province_id
+    ).order_by(PortProvinceMapping.suitability_score.desc()).limit(3).all()
+    
+    # Combine and deduplicate
+    all_mappings = {}
+    for mapping in mappings + top_mappings:
+        if mapping.port_id not in all_mappings:
+            all_mappings[mapping.port_id] = mapping
+    
+    return jsonify(
+        [
+            {
+                "port_id": mapping.port_id,
+                "port_name_fa": mapping.port.name_fa if mapping.port else None,
+                "port_name_en": mapping.port.name_en if mapping.port else None,
+                "port_type": mapping.port.port_type if mapping.port else None,
+                "suitability_score": mapping.suitability_score,
+                "transport_method": mapping.transport_method,
+                "estimated_days": mapping.estimated_days,
+                "is_recommended": mapping.is_recommended,
+                "description": mapping.port.description if mapping.port else None,
+            }
+            for mapping in sorted(all_mappings.values(), key=lambda x: x.suitability_score, reverse=True)
         ]
     )

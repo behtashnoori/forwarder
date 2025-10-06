@@ -19,6 +19,13 @@ const ExpertLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Logout function
+  const handleLogout = () => {
+    localStorage.removeItem('expert_user');
+    localStorage.removeItem('expert_token');
+    navigate('/');
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -39,8 +46,9 @@ const ExpertLogin = () => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Store expert info in localStorage
+        // Store expert info and token in localStorage
         localStorage.setItem('expert_user', JSON.stringify(data.expert));
+        localStorage.setItem('expert_token', data.tokens.access_token);
         
         toast({
           title: "ورود موفق",

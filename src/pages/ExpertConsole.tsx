@@ -608,12 +608,15 @@ const ExpertConsole = () => {
                             <span>
                               {request.route.origin.city} → {request.route.destination.city}
                             </span>
-                            {request.transport_method && (
+                            {(request.transport_method || request.international_transport_method || request.domestic_transport_method) && (
                               <>
                                 <span>•</span>
                                 <span className="flex items-center gap-1">
                                   <Truck className="w-4 h-4" />
-                                  {request.transport_method}
+                                  {request.international_transport_method && `بین‌المللی: ${request.international_transport_method}`}
+                                  {request.domestic_transport_method && `داخلی: ${request.domestic_transport_method}`}
+                                  {request.transport_method && !request.international_transport_method && !request.domestic_transport_method && request.transport_method}
+                                  {request.transport_method_preference === "forwarder_suggestion" && " (پیشنهاد فورواردر)"}
                                 </span>
                               </>
                             )}

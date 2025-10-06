@@ -8,122 +8,85 @@
 - **دیتابیس**: PostgreSQL
 - **مدیریت**: Docker
 
-## پیش‌نیازها
+## 🚀 شروع سریع
 
-- Docker و Docker Compose نصب شده باشد
+### 🖥️ روش 1: اجرای محلی (پیشنهادی برای توسعه)
+
+برای شروع کار با پروژه، ابتدا آن را به صورت محلی اجرا کنید:
+
+**📋 پیش‌نیازها:**
+- Python 3.12+
+- Node.js 18+
+- PostgreSQL 16+
+
+**⚡ راه‌اندازی سریع:**
+```bash
+# 1. نصب dependencies
+npm install
+cd backend && pip install -r requirements.txt && cd ..
+
+# 2. تنظیم دیتابیس
+sudo -u postgres psql -c "CREATE DATABASE forwarder_db;"
+
+# 3. اجرای migrations
+cd backend && flask db upgrade && cd ..
+
+# 4. اجرای backend (از root پروژه)
+python backend/wsgi.py
+# در ترمینال جدید: npm run dev
+```
+
+**📖 راهنمای کامل:** [local_setup.md](local_setup.md)
+
+### 🐳 روش 2: اجرای با Docker
+
+برای deployment در سرور:
+
+**📋 پیش‌نیازها:**
+- Docker و Docker Compose
 - دسترسی administrator/root
-- پورت‌های 80 و 8080 آزاد باشد
+- پورت‌های 80 و 8080 آزاد
 
-## راه‌اندازی سریع
-
-### 1. دانلود و استخراج پروژه
+**⚡ راه‌اندازی سریع:**
 ```bash
-# دانلود فایل پروژه و استخراج
-unzip forwarder-project.zip
-cd forwarder-project
-```
+# 1. تنظیم محیط
+chmod +x setup-env.sh && ./setup-env.sh
 
-### 2. تنظیم محیط
-```bash
-# اجرای اسکریپت تنظیم
-chmod +x setup-env.sh
-./setup-env.sh
-```
-
-### 3. تنظیم متغیرهای محیطی
-```bash
-# ویرایش تنظیمات production
+# 2. تنظیم متغیرهای محیطی
+cp backend/env.production.example backend/.env.production
 nano backend/.env.production
 
-# تغییر موارد زیر:
-# - SECRET_KEY: کلید امنیتی جدید
-# - CORS_ORIGIN: دامنه وب‌سایت شما
-```
-
-### 4. تنظیم رمز عبور دیتابیس
-```bash
-# تنظیم رمز عبور دیتابیس
+# 3. تنظیم رمز عبور دیتابیس
 export DB_PASSWORD="your-secure-database-password"
-```
 
-### 5. راه‌اندازی پروژه
-```bash
-# اجرای deployment
+# 4. راه‌اندازی
 ./deploy.sh
 ```
 
-## دسترسی‌ها
+**📖 راهنمای کامل:** [DEPLOYMENT.md](DEPLOYMENT.md)
 
+## 🔗 دسترسی‌ها
+
+### اجرای محلی
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:5000
+- **API Health**: http://localhost:5000/api/health
+
+### اجرای Docker
 - **وب‌سایت اصلی**: http://your-server-ip/
 - **پنل مدیریت دیتابیس**: http://your-server-ip:8080
 - **لاگ‌های سیستم**: ./instance/logs/
 
-## مدیریت پروژه
+## 📚 مستندات و راهنماها
 
-### مشاهده وضعیت سرویس‌ها
-```bash
-docker-compose -f docker-compose.production.yml ps
-```
-
-### مشاهده لاگ‌ها
-```bash
-# لاگ API
-docker-compose -f docker-compose.production.yml logs -f api
-
-# لاگ دیتابیس
-docker-compose -f docker-compose.production.yml logs -f db
-```
-
-### پشتیبان‌گیری از دیتابیس
-```bash
-docker-compose -f docker-compose.production.yml exec db pg_dump -U postgres forwarder_db > backup/db_backup_$(date +%Y%m%d_%H%M%S).sql
-```
-
-### به‌روزرسانی پروژه
-```bash
-git pull
-./deploy.sh
-```
-
-## عیب‌یابی
-
-### مشکل اتصال به دیتابیس
-```bash
-# بررسی وضعیت دیتابیس
-docker-compose -f docker-compose.production.yml logs db
-
-# تست اتصال
-docker-compose -f docker-compose.production.yml exec api python -c "from backend import create_app; app = create_app(); print('Database connection OK')"
-```
-
-### مشکل پورت
-```bash
-# بررسی پورت‌های در حال استفاده
-netstat -tulpn | grep :80
-netstat -tulpn | grep :8080
-```
-
-## تنظیمات امنیتی
-
-1. **تغییر SECRET_KEY**: حتماً کلید مخفی رو تغییر بدید
-2. **محدود کردن CORS_ORIGIN**: فقط دامنه‌های مجاز رو اجازه بدید
-3. **فایروال**: پورت 8080 (Adminer) رو فقط برای IP های مجاز باز کنید
-4. **رمز عبور دیتابیس**: از رمز عبور قوی استفاده کنید
-
-## پشتیبانی
-
-در صورت بروز مشکل:
-1. لاگ‌ها رو بررسی کنید
-2. وضعیت سرویس‌ها رو چک کنید
-3. با تیم پشتیبانی تماس بگیرید
-
-## فایل‌های مهم
-
-- `DEPLOYMENT.md`: راهنمای کامل نصب و راه‌اندازی
-- `docker-compose.production.yml`: تنظیمات Docker
-- `backend/.env.production`: تنظیمات محیطی
-- `deploy.sh`: اسکریپت deployment
-- `setup-env.sh`: اسکریپت تنظیم محیط
+| فایل | توضیحات |
+|------|---------|
+| **[local_setup.md](local_setup.md)** | 🖥️ راهنمای کامل اجرای محلی |
+| **[DEPLOYMENT.md](DEPLOYMENT.md)** | 🐳 راهنمای deployment با Docker |
+| **[DOCKER_README.md](DOCKER_README.md)** | 📖 راهنمای Docker و Containerization |
+| **[docs/API.md](docs/API.md)** | 🔌 مستندات API |
+| **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** | 👤 راهنمای کاربر |
+| **[docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)** | 🏗️ معماری سیستم |
 
 ## تکنولوژی‌های استفاده شده
 

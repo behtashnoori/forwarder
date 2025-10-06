@@ -14,18 +14,104 @@ export interface City {
   name: string;
 }
 
+export interface Country {
+  id: number;
+  name: string;
+  name_en: string;
+  code: string;
+}
+
+export interface InternationalCity {
+  id: number;
+  name: string;
+  name_en: string;
+  city_type: string;
+  is_major_port: boolean;
+  is_major_airport: boolean;
+}
+
+export interface IranPort {
+  id: number;
+  name_fa: string;
+  name_en: string;
+  port_type: string;
+  province_id: number;
+  province_name?: string;
+  is_major_port: boolean;
+  description?: string;
+}
+
+export interface PortProvinceMapping {
+  id: number;
+  port_id: number;
+  port_name?: string;
+  province_id: number;
+  province_name?: string;
+  suitability_score: number;
+  transport_method?: string;
+  estimated_days?: number;
+  is_recommended: boolean;
+}
+
+export interface RecommendedPort {
+  port_id: number;
+  port_name_fa: string;
+  port_name_en: string;
+  port_type: string;
+  suitability_score: number;
+  transport_method?: string;
+  estimated_days?: number;
+  is_recommended: boolean;
+  description?: string;
+}
+
+export interface TransportMethod {
+  id: number;
+  name: string;
+  name_fa: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+export interface TransportMethodOptions {
+  international_methods: TransportMethod[];
+  domestic_methods: TransportMethod[];
+  preference_options: {
+    value: string;
+    label: string;
+    description: string;
+  }[];
+}
+
 export interface ShipmentRequestPayload {
-  origin_province_id: number;
-  origin_county_id: number;
-  origin_city_id: number;
-  dest_province_id: number;
-  dest_county_id: number;
-  dest_city_id: number;
+  shipping_type: "domestic" | "international";
+  // Domestic shipping fields
+  origin_province_id?: number;
+  origin_county_id?: number;
+  origin_city_id?: number;
+  dest_province_id?: number;
+  dest_county_id?: number;
+  dest_city_id?: number;
+  // International shipping fields
+  origin_country?: string;
+  origin_city_international?: string;
+  origin_address_international?: string;
+  dest_country?: string;
+  dest_city_international?: string;
+  dest_address_international?: string;
+  // Iran entry point fields (for international shipping to Iran)
+  iran_entry_port?: string;
+  iran_entry_province?: string;
+  iran_entry_port_id?: number;
+  iran_entry_province_id?: number;
   contact_phone: string;
   // Customer details (optional)
   customer_first_name?: string;
   customer_last_name?: string;
-  transport_method?: string;
+  transport_method?: string;  // Legacy field
+  international_transport_method?: string;
+  domestic_transport_method?: string;
+  transport_method_preference?: string;
   // Cargo details (optional)
   cargo_description?: string;
   cargo_weight?: number;
@@ -72,10 +158,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   const url = `${API_BASE_URL}${buildPath(path)}`;
+  
+  // Get token from localStorage
+  const token = localStorage.getItem('expert_token');
+  
   const requestInit: RequestInit = {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` }),
       ...(init?.headers ?? {}),
     },
   };
@@ -113,6 +204,15 @@ export function fetchCounties(provinceId: number): Promise<County[]> {
 export function fetchCities(countyId: number): Promise<City[]> {
   const path = withQuery("/api/cities", { county_id: countyId });
   return request<City[]>(path);
+}
+
+export function fetchCountries(): Promise<Country[]> {
+  return request<Country[]>("/api/countries");
+}
+
+export function fetchInternationalCities(countryId: number): Promise<InternationalCity[]> {
+  const path = withQuery("/api/international-cities", { country_id: countryId });
+  return request<InternationalCity[]>(path);
 }
 
 export function submitShipmentRequest(
@@ -577,4 +677,193 @@ export function createActivity(activityData: {
 
 export function fetchCRMDashboardKPIs(): Promise<CRMDashboardKPIs> {
   return request("/api/crm/dashboard/kpis");
+}
+
+// User Management Interfaces
+export interface TransportMethod {
+  id: number;
+  name: string;
+  name_fa: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface UserSpecialization {
+  id: number;
+  transport_method: {
+    id: number;
+    name: string;
+  };
+  proficiency_level: string;
+  is_primary: boolean;
+}
+
+export interface User {
+  id: number;
+  username: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  role: string;
+  department?: string;
+  is_active: boolean;
+  created_at: string;
+  last_login_at?: string;
+  manager?: {
+    id: number;
+    name: string;
+  };
+  subordinates_count: number;
+  specializations: UserSpecialization[];
+  workload: number;
+}
+
+export interface AssignmentRule {
+  id: number;
+  name: string;
+  description?: string;
+  rule_type: string;
+  conditions: any;
+  priority: number;
+  is_active: boolean;
+  created_by: {
+    id: number;
+    name: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssignmentStatistics {
+  total_assignments: number;
+  automatic_assignments: number;
+  manual_assignments: number;
+  expert_workloads: {
+    expert_id: number;
+    expert_name: string;
+    workload: number;
+  }[];
+}
+
+// User Management API Functions
+export function fetchUsers(): Promise<{ users: User[] }> {
+  return request("/api/user-management/users");
+}
+
+export function createUser(userData: {
+  username: string;
+  password_hash: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  role: string;
+  department?: string;
+  manager_id?: number;
+  is_active?: boolean;
+  specializations?: {
+    transport_method_id: number;
+    proficiency_level?: string;
+    is_primary?: boolean;
+  }[];
+}): Promise<{ message: string; user_id: number }> {
+  return request("/api/user-management/users", {
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+}
+
+export function updateUser(
+  userId: number,
+  userData: Partial<User>
+): Promise<{ message: string }> {
+  return request(`/api/user-management/users/${userId}`, {
+    method: "PUT",
+    body: JSON.stringify(userData),
+  });
+}
+
+export function fetchTransportMethods(): Promise<{ transport_methods: TransportMethod[] }> {
+  return request("/api/user-management/transport-methods");
+}
+
+export function fetchTransportMethodOptions(): Promise<TransportMethodOptions> {
+  return request("/api/transport-methods");
+}
+
+export function createTransportMethod(transportData: {
+  name: string;
+  name_fa: string;
+  description?: string;
+  is_active?: boolean;
+}): Promise<{ message: string; transport_method_id: number }> {
+  return request("/api/user-management/transport-methods", {
+    method: "POST",
+    body: JSON.stringify(transportData),
+  });
+}
+
+export function fetchAssignmentRules(): Promise<{ assignment_rules: AssignmentRule[] }> {
+  return request("/api/user-management/assignment-rules");
+}
+
+export function createAssignmentRule(ruleData: {
+  name: string;
+  description?: string;
+  rule_type: string;
+  conditions: any;
+  priority?: number;
+  is_active?: boolean;
+}): Promise<{ message: string; rule_id: number }> {
+  return request("/api/user-management/assignment-rules", {
+    method: "POST",
+    body: JSON.stringify(ruleData),
+  });
+}
+
+export function updateAssignmentRule(
+  ruleId: number,
+  ruleData: Partial<AssignmentRule>
+): Promise<{ message: string }> {
+  return request(`/api/user-management/assignment-rules/${ruleId}`, {
+    method: "PUT",
+    body: JSON.stringify(ruleData),
+  });
+}
+
+export function fetchAssignmentStatistics(): Promise<AssignmentStatistics> {
+  return request("/api/user-management/assignment-statistics");
+}
+
+export function manualAssignment(assignmentData: {
+  request_id: number;
+  expert_id: number;
+  reason?: string;
+}): Promise<{ message: string }> {
+  return request("/api/user-management/manual-assignment", {
+    method: "POST",
+    body: JSON.stringify(assignmentData),
+  });
+}
+
+// Iran Ports API Functions
+export function fetchIranPorts(portType?: string): Promise<IranPort[]> {
+  const params = portType ? `?port_type=${portType}` : "";
+  return request(`/api/iran-ports${params}`);
+}
+
+export function fetchPortProvinceMappings(params: {
+  port_id?: number;
+  province_id?: number;
+}): Promise<PortProvinceMapping[]> {
+  const queryParams = new URLSearchParams();
+  if (params.port_id) queryParams.append("port_id", params.port_id.toString());
+  if (params.province_id) queryParams.append("province_id", params.province_id.toString());
+  
+  const queryString = queryParams.toString();
+  return request(`/api/port-province-mappings${queryString ? `?${queryString}` : ""}`);
+}
+
+export function fetchRecommendedPorts(provinceId: number): Promise<RecommendedPort[]> {
+  return request(`/api/recommended-ports?province_id=${provinceId}`);
 }

@@ -66,7 +66,10 @@ interface RequestDetail {
       city: string;
     };
   };
-  transport_method?: string;
+  transport_method?: string;  // Legacy field
+  international_transport_method?: string;
+  domestic_transport_method?: string;
+  transport_method_preference?: string;
   cargo: {
     description?: string;
     weight?: number;
@@ -369,11 +372,34 @@ const RequestDetail = () => {
                       </div>
                     </div>
                     
-                    {request.transport_method && (
-                      <div className="flex items-center gap-2 pt-3 border-t">
-                        <Truck className="w-4 h-4 text-gray-600" />
-                        <span className="text-sm text-gray-600">روش حمل:</span>
-                        <span className="text-sm font-medium">{request.transport_method}</span>
+                    {(request.transport_method || request.international_transport_method || request.domestic_transport_method) && (
+                      <div className="space-y-2 pt-3 border-t">
+                        <div className="flex items-center gap-2">
+                          <Truck className="w-4 h-4 text-gray-600" />
+                          <span className="text-sm text-gray-600">روش حمل:</span>
+                        </div>
+                        <div className="space-y-1 pr-6">
+                          {request.international_transport_method && (
+                            <div className="text-sm">
+                              <span className="text-gray-600">بین‌المللی:</span>
+                              <span className="font-medium mr-2">{request.international_transport_method}</span>
+                            </div>
+                          )}
+                          {request.domestic_transport_method && (
+                            <div className="text-sm">
+                              <span className="text-gray-600">داخلی:</span>
+                              <span className="font-medium mr-2">{request.domestic_transport_method}</span>
+                            </div>
+                          )}
+                          {request.transport_method && !request.international_transport_method && !request.domestic_transport_method && (
+                            <div className="text-sm font-medium">{request.transport_method}</div>
+                          )}
+                          {request.transport_method_preference === "forwarder_suggestion" && (
+                            <div className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded">
+                              پیشنهاد فورواردر
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </CardContent>

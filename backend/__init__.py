@@ -69,9 +69,9 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     with app.app_context():
         try:
             db.session.execute(text("SELECT 1"))
-            print("✅ Database connection successful.")
+            print("Database connection successful.")
         except Exception as exc:  # pragma: no cover - startup diagnostic
-            print("❌ Database connection failed:", exc)
+            print("Database connection failed:", exc)
 
     # Register all HTTP routes with the application.
     register_routes(app)

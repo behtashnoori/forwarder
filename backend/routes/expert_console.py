@@ -137,7 +137,10 @@ def get_shipment_requests():
                         "city": dest_city.name_fa if dest_city else "نامشخص"
                     }
                 },
-                "transport_method": req.transport_method,
+                "transport_method": req.transport_method,  # Legacy field
+                "international_transport_method": req.international_transport_method,
+                "domestic_transport_method": req.domestic_transport_method,
+                "transport_method_preference": req.transport_method_preference,
                 "cargo": {
                     "description": req.cargo_description,
                     "weight": req.cargo_weight,
