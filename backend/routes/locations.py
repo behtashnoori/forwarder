@@ -41,11 +41,17 @@ def list_provinces_direct():
         'http://localhost:8080',
         'http://localhost:8084',
         'http://localhost:8085',
+        'http://localhost:9960',
+        'http://localhost:9961',
+        'http://localhost:9962',
         'http://127.0.0.1:3000',
         'http://127.0.0.1:5173',
         'http://127.0.0.1:8080',
         'http://127.0.0.1:8084',
-        'http://127.0.0.1:8085'
+        'http://127.0.0.1:8085',
+        'http://127.0.0.1:9960',
+        'http://127.0.0.1:9961',
+        'http://127.0.0.1:9962'
     ]
     
     # Use the requesting origin if it's allowed, otherwise use wildcard for development

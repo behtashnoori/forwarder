@@ -15,13 +15,16 @@ def generate_cors_origins() -> List[str]:
     origins: Set[str] = set()
     
     # Common development ports
-    common_ports = [3000, 5173, 8080, 8081, 8082, 8083, 8084, 8085]
+    common_ports = [3000, 5173, 8080, 8081, 8082, 8083, 8084, 8085, 9960, 9961, 9962]
     
     # Vite development server port range (8080-8200)
     vite_ports = list(range(8080, 8201))
     
+    # Additional custom range around 9900-9999 for alternative dev setups
+    alt_ports = list(range(9900, 10000))
+    
     # Combine all ports
-    all_ports = list(set(common_ports + vite_ports))
+    all_ports = list(set(common_ports + vite_ports + alt_ports))
     
     # Generate origins for localhost and 127.0.0.1
     for port in all_ports:

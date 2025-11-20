@@ -8,8 +8,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import (
-    ShipmentRequest, ShipmentRequestLog, Province, County, City,
-    ExpertUser, ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification
+    ShipmentRequest, ShipmentRequestLog, Province, County, City, ExpertUser,
+    ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification
 )
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
@@ -743,6 +743,7 @@ def mark_request_read(request_id: int):
 
 
 @expert_console_bp.get("/experts")
+@require_auth
 def get_experts():
     """Get list of active experts."""
     try:

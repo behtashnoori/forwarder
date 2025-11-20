@@ -1,0 +1,68 @@
+{
+  "total_tests": 12,
+  "passed": 12,
+  "failed": 0,
+  "errors": [],
+  "test_details": [
+    {
+      "name": "Status Change: New to Assigned",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Status Change: Assigned to In Progress",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Status Change: In Progress to Quoted",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Status Change: Quoted to Waiting for Customer",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Status Change: To Won",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Status Change: To Lost",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Status Change: To Closed",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Invalid Status Change",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "SLA Compliance: Assigned Status",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "SLA Compliance: Overdue Status",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "SLA Compliance: Due Soon Status",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    },
+    {
+      "name": "Multiple Status Transitions",
+      "status": "PASSED",
+      "message": "Test completed successfully"
+    }
+  ]
+}

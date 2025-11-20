@@ -21,9 +21,11 @@
 
 **⚡ راه‌اندازی سریع:**
 ```bash
-# 1. نصب dependencies
+# 1. نصب وابستگی‌ها
+python -m venv .venv
+.venv\Scripts\pip install -r backend/requirements.txt   # ویندوز
+# یا: source .venv/bin/activate && pip install -r backend/requirements.txt
 npm install
-cd backend && pip install -r requirements.txt && cd ..
 
 # 2. تنظیم دیتابیس
 sudo -u postgres psql -c "CREATE DATABASE forwarder_db;"
@@ -31,9 +33,12 @@ sudo -u postgres psql -c "CREATE DATABASE forwarder_db;"
 # 3. اجرای migrations
 cd backend && flask db upgrade && cd ..
 
-# 4. اجرای backend (از root پروژه)
-python backend/wsgi.py
-# در ترمینال جدید: npm run dev
+# 4. اجرای backend (از ریشه پروژه)
+.venv\Scripts\python.exe backend\wsgi.py          # ویندوز
+# یا: FLASK_RUN_PORT=8501 python backend/wsgi.py  # لینوکس/مک
+
+# 5. اجرای frontend (در ترمینال جدید)
+npm run dev -- --port 9960
 ```
 
 **📖 راهنمای کامل:** [local_setup.md](local_setup.md)
@@ -68,9 +73,9 @@ export DB_PASSWORD="your-secure-database-password"
 ## 🔗 دسترسی‌ها
 
 ### اجرای محلی
-- **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:5000
-- **API Health**: http://localhost:5000/api/health
+- **Frontend (Vite dev server)**: http://localhost:9960
+- **Backend API (Flask dev server)**: http://127.0.0.1:8501
+- **API Health**: http://127.0.0.1:8501/api/health
 
 ### اجرای Docker
 - **وب‌سایت اصلی**: http://your-server-ip/

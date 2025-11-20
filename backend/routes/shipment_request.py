@@ -32,12 +32,19 @@ def get_transport_methods():
             }
             
             # Categorize based on method name
-            if method.name.lower() in ["sea freight", "air freight", "land transport", "rail transport"]:
+            method_name_lower = method.name.lower()
+            
+            # Check for international methods
+            if method_name_lower in ["sea freight", "air freight", "land transport", "rail transport"]:
                 international_methods.append(method_data)
-            elif method.name.lower() in ["road transport", "rail transport", "air transport"]:
+            
+            # Check for domestic methods (separate if to allow overlap)
+            if method_name_lower in ["road transport", "rail transport", "air transport"]:
                 domestic_methods.append(method_data)
-            else:
-                # Default to both if unclear
+            
+            # If method doesn't match any category, add to both
+            if (method_name_lower not in ["sea freight", "air freight", "land transport", "rail transport"] and 
+                method_name_lower not in ["road transport", "rail transport", "air transport"]):
                 international_methods.append(method_data)
                 domestic_methods.append(method_data)
         
