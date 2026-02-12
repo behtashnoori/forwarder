@@ -6,7 +6,7 @@ import re
 from typing import Any, Mapping, MutableMapping
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from sqlalchemy import text
 
@@ -65,6 +65,60 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     
     # Log CORS configuration for debugging
     log_cors_info()
+    
+    def _is_cors_origin_allowed(origin: str | None) -> bool:
+        """Return True if the given origin is allowed for CORS."""
+        if not origin:
+            return False
+        is_dev = os.getenv('FLASK_ENV', '').lower() in ('development', 'dev') or os.getenv('FLASK_DEBUG', '').lower() in ('true', '1', 'yes')
+        allow_any = os.getenv('CORS_ALLOW_ALL_ORIGINS', '').lower() in ('1', 'true', 'yes')
+        if is_dev or allow_any:
+            return True
+        origins_config = cors_config.get('origins')
+        if callable(origins_config):
+            return origins_config(origin)
+        if isinstance(origins_config, list):
+            return origin in origins_config
+        return False
+
+    def _add_cors_headers_to_response(response):
+        """Add CORS headers to a response."""
+        origin = request.headers.get('Origin')
+        if origin and _is_cors_origin_allowed(origin):
+            if 'Access-Control-Allow-Origin' not in response.headers:
+                response.headers.add('Access-Control-Allow-Origin', origin)
+            if 'Access-Control-Allow-Credentials' not in response.headers:
+                response.headers.add('Access-Control-Allow-Credentials', 'true')
+            if 'Access-Control-Allow-Methods' not in response.headers:
+                response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+            if 'Access-Control-Allow-Headers' not in response.headers:
+                response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Origin')
+            if 'Access-Control-Max-Age' not in response.headers:
+                response.headers.add('Access-Control-Max-Age', '3600')
+
+    # Ensure CORS headers are always added (backup for Flask-CORS)
+    @app.after_request
+    def add_cors_headers(response):
+        """Ensure CORS headers are always present."""
+        _add_cors_headers_to_response(response)
+        return response
+
+    # Handle OPTIONS requests explicitly so preflight always gets CORS headers
+    @app.before_request
+    def handle_options():
+        """Handle OPTIONS requests for CORS preflight."""
+        if request.method == 'OPTIONS':
+            origin = request.headers.get('Origin')
+            # Always respond to OPTIONS with CORS headers when Origin is present
+            if origin and _is_cors_origin_allowed(origin):
+                from flask import jsonify
+                response = jsonify({})
+                response.headers.add('Access-Control-Allow-Origin', origin)
+                response.headers.add('Access-Control-Allow-Credentials', 'true')
+                response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH')
+                response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With, Accept, Origin')
+                response.headers.add('Access-Control-Max-Age', '3600')
+                return response
 
     with app.app_context():
         try:

@@ -34,6 +34,8 @@ DATABASE_URL=postgresql+psycopg2://postgres:bagheri13@127.0.0.1:5432/forwarder_d
 
 # CORS Configuration - Allow multiple origins for development
 CORS_ORIGIN=http://localhost:8107,http://localhost:8080,http://localhost:3000,http://127.0.0.1:8107,http://127.0.0.1:8080
+# Set to 1 to allow any origin (for network/internet access from e.g. http://SERVER_IP:8080)
+CORS_ALLOW_ALL_ORIGINS=1
 
 # SLA Configuration
 SLA_HOURS=2

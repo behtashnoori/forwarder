@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle, ArrowLeft, Send, User, Phone, MapPin, Package, Calendar, FileText, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { env } from "@/lib/env";
 
 interface RequestConfirmationProps {
   formData: any;
@@ -43,7 +44,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
 
     setIsRegistering(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/customer/register`, {
+      const response = await fetch(`${env.API_URL}/api/customer/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

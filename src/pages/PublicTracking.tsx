@@ -19,6 +19,7 @@ import {
   Star
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { env } from "@/lib/env";
 
 interface PublicTrackingData {
   id: number;
@@ -70,7 +71,7 @@ const PublicTracking: React.FC = () => {
   const fetchRequestData = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/public/track/${requestId}`
+        `${env.API_URL}/api/public/track/${requestId}`
       );
       
       if (response.ok) {

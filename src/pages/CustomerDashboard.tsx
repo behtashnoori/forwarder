@@ -21,6 +21,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { env } from "@/lib/env";
 
 interface CustomerProfile {
   id: number;
@@ -75,7 +76,7 @@ const CustomerDashboard: React.FC = () => {
   const fetchCustomerData = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/customer/profile/${customerId}`
+        `${env.API_URL}/api/customer/profile/${customerId}`
       );
       
       if (response.ok) {

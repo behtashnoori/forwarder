@@ -3,8 +3,9 @@ Dynamic CORS Configuration
 Automatically handles CORS origins for development environments
 """
 
+import os
 import re
-from typing import List, Set
+from typing import List, Set, Union, Callable
 
 
 def generate_cors_origins() -> List[str]:
@@ -28,9 +29,8 @@ def generate_cors_origins() -> List[str]:
         origins.add(f"http://localhost:{port}")
         origins.add(f"http://127.0.0.1:{port}")
     
-    # Add any custom origins from environment
-    import os
-    custom_origins = os.getenv('CORS_ORIGINS', '')
+    # Add any custom origins from environment (e.g. http://130.185.77.25:8080 for network access)
+    custom_origins = os.getenv('CORS_ORIGINS', '') or os.getenv('CORS_ORIGIN', '')
     if custom_origins:
         for origin in custom_origins.split(','):
             origin = origin.strip()
@@ -68,12 +68,23 @@ def validate_origin(origin: str) -> bool:
     return False
 
 
-def get_cors_config():
+def _allow_any_origin(origin: str) -> bool:
+    """Allow any origin (for development / network access)."""
+    return True
+
+
+def get_cors_config() -> dict:
     """
     Get CORS configuration with dynamic origins.
+    In development (or when CORS_ALLOW_ALL_ORIGINS=1), allow any origin for network/internet access.
     """
-    origins = generate_cors_origins()
-    
+    origins_list = generate_cors_origins()
+    is_dev = os.getenv('FLASK_ENV', '').lower() in ('development', 'dev') or os.getenv('FLASK_DEBUG', '').lower() in ('true', '1', 'yes')
+    allow_all = os.getenv('CORS_ALLOW_ALL_ORIGINS', '').lower() in ('1', 'true', 'yes')
+
+    # In development or when CORS_ALLOW_ALL_ORIGINS=1: allow any origin
+    origins: Union[List[str], Callable[[str], bool]] = _allow_any_origin if (is_dev or allow_all) else origins_list
+
     return {
         'resources': {
             r'/*': {
@@ -104,12 +115,14 @@ def log_cors_info():
     origins = config['origins']
     
     print("CORS Configuration:")
-    print(f"   Total Origins: {len(origins)}")
+    if callable(origins):
+        print("   Mode: Allow any origin (development)")
+    else:
+        print(f"   Total Origins: {len(origins)}")
     print(f"   Supports Credentials: {config['supports_credentials']}")
     print(f"   Max Age: {config['resources'][r'/*']['max_age']} seconds")
     
-    # Show first few origins as examples
-    if origins:
+    if not callable(origins) and origins:
         print("   Sample Origins:")
         for origin in origins[:5]:
             print(f"      - {origin}")

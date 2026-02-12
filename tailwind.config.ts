@@ -83,7 +83,8 @@ export default {
         'bounce': 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
       },
       fontFamily: {
-        'persian': ['Vazir', 'Tahoma', 'system-ui', 'sans-serif'],
+        sans: ['Vazirmatn', 'Vazir', 'Tahoma', 'system-ui', 'sans-serif'],
+        'persian': ['Vazirmatn', 'Vazir', 'Tahoma', 'system-ui', 'sans-serif'],
       },
       keyframes: {
         "accordion-down": {

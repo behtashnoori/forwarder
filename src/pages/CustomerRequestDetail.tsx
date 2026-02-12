@@ -18,6 +18,7 @@ import {
   RefreshCw
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { env } from "@/lib/env";
 
 interface WorkflowStep {
   name: string;
@@ -58,7 +59,7 @@ const CustomerRequestDetail: React.FC = () => {
   const fetchRequestDetail = async () => {
     try {
       const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/customer/workflow/${customer}?request_id=${requestId}`
+        `${env.API_URL}/api/customer/workflow/${customer}?request_id=${requestId}`
       );
       
       if (response.ok) {

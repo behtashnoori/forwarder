@@ -34,27 +34,15 @@ def list_provinces_direct():
     # Get the origin from request headers
     origin = request.headers.get('Origin')
     
-    # List of allowed origins
-    allowed_origins = [
-        'http://localhost:3000',
-        'http://localhost:5173', 
-        'http://localhost:8080',
-        'http://localhost:8084',
-        'http://localhost:8085',
-        'http://127.0.0.1:3000',
-        'http://127.0.0.1:5173',
-        'http://127.0.0.1:8080',
-        'http://127.0.0.1:8084',
-        'http://127.0.0.1:8085'
-    ]
-    
-    # Use the requesting origin if it's allowed, otherwise use wildcard for development
-    cors_origin = origin if origin in allowed_origins else '*'
+    # In development, echo back the requesting origin (Flask-CORS handles this, but we keep for compatibility)
+    # Never use '*' when supports_credentials is true - browsers reject it
+    cors_origin = origin if origin else None
     
     # Handle OPTIONS request for CORS preflight
     if request.method == "OPTIONS":
         response = jsonify({})
-        response.headers.add('Access-Control-Allow-Origin', cors_origin)
+        if cors_origin:
+            response.headers.add('Access-Control-Allow-Origin', cors_origin)
         response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
         response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
         response.headers.add('Access-Control-Allow-Credentials', 'true')
@@ -80,8 +68,9 @@ def list_provinces_direct():
         ]
     )
     
-    # Add CORS headers manually with dynamic origin
-    response.headers.add('Access-Control-Allow-Origin', cors_origin)
+    # Add CORS headers - echo back the requesting origin (Flask-CORS also handles this)
+    if cors_origin:
+        response.headers.add('Access-Control-Allow-Origin', cors_origin)
     response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
     response.headers.add('Access-Control-Allow-Credentials', 'true')

@@ -149,7 +149,7 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
 
   html {
     direction: rtl;
-    font-family: system-ui, -apple-system, 'Segoe UI', 'Vazir', 'Tahoma', sans-serif;
+    font-family: 'Vazirmatn', 'Vazir', Tahoma, system-ui, sans-serif;
   }
 
   body {
@@ -160,9 +160,9 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Persian Typography */
+  /* Persian Typography - Vazirmatn */
   .font-persian {
-    font-family: 'Vazir', 'Tahoma', system-ui, sans-serif;
+    font-family: 'Vazirmatn', 'Vazir', Tahoma, system-ui, sans-serif;
   }
 
   /* Smooth animations */

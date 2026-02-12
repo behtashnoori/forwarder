@@ -21,10 +21,20 @@ function validateEnv() {
   }
 }
 
+// API base URL: in browser use same host as page (port 5000) so app works from network/internet
+const getApiUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:5000`;
+  }
+  return import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+};
+
 // Validate and export environment configuration
 export const env = {
-  // API Configuration
-  API_URL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000',
+  // API Configuration (use getApiUrl() for runtime; API_URL kept for backward compat, may be overridden by getApiUrl in call sites)
+  get API_URL(): string {
+    return getApiUrl();
+  },
   
   // App Configuration
   APP_NAME: import.meta.env.VITE_APP_NAME || 'Forwarder App',
@@ -39,7 +49,12 @@ export const env = {
 try {
   validateEnv();
   console.log('✅ Environment variables validated successfully');
-  console.log('🔗 API URL:', env.API_URL);
+  // Log API URL dynamically (will show correct URL in browser)
+  if (typeof window !== 'undefined') {
+    console.log('🔗 API URL (browser):', env.API_URL);
+  } else {
+    console.log('🔗 API URL (build-time):', import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000');
+  }
 } catch (error) {
   console.error('❌ Environment validation failed:', error);
   // Don't throw in development to allow debugging
