@@ -432,7 +432,7 @@ class Customer(db.Model):
     contacts = db.relationship("CustomerContact", backref="customer", lazy=True)
     opportunities = db.relationship("Opportunity", backref="customer", lazy=True)
     activities = db.relationship("Activity", backref="customer", lazy=True)
-    # shipments relationship removed - will be added later when needed
+    requests = db.relationship("ShipmentRequest", back_populates="customer", lazy=True)
     
     def __repr__(self) -> str:
         return f"<Customer id={self.id} name={self.first_name} {self.last_name}>"

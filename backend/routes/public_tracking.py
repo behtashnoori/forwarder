@@ -102,3 +102,4 @@ def get_public_tracking_info(request_id: int):
     except Exception as e:
         current_app.logger.error(f"Error in public tracking: {e}")
         return jsonify({"message": "خطای داخلی سرور"}), 500
+

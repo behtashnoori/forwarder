@@ -1,0 +1,251 @@
+[
+  {
+    "test": "Expert Scoring - Best Expert Selection",
+    "success": true,
+    "message": "Best expert selected: کارشناس ۱ (score: 49.0)",
+    "details": {
+      "scores": [
+        {
+          "expert_id": 1,
+          "name": "کارشناس ۱",
+          "score": 49.0,
+          "is_active": true
+        },
+        {
+          "expert_id": 3,
+          "name": "کارشناس ۳",
+          "score": 40.0,
+          "is_active": false
+        },
+        {
+          "expert_id": 2,
+          "name": "کارشناس ۲",
+          "score": 30.0,
+          "is_active": true
+        }
+      ]
+    },
+    "timestamp": "2025-10-07T12:10:47.569331"
+  },
+  {
+    "test": "Expert Scoring - Active Expert Filtering",
+    "success": true,
+    "message": "Correctly filtered out inactive experts",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.569331"
+  },
+  {
+    "test": "Assignment Rules - Active Rule Filtering",
+    "success": true,
+    "message": "Correctly filtered 3 active rules",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.572732"
+  },
+  {
+    "test": "Assignment Rules - Priority Sorting",
+    "success": true,
+    "message": "Rules correctly sorted by priority: قاعده اولویت بالا",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.572732"
+  },
+  {
+    "test": "Assignment Rules - Rule Matching",
+    "success": true,
+    "message": "Correctly matched 3 requests to rules",
+    "details": {
+      "matches": [
+        {
+          "request": {
+            "transport_method": "road",
+            "priority": "normal"
+          },
+          "rule": {
+            "id": 1,
+            "name": "قاعده حمل جاده‌ای",
+            "type": "transport_method",
+            "conditions": {
+              "transport_methods": [
+                "road"
+              ]
+            },
+            "priority": 10,
+            "is_active": true
+          }
+        },
+        {
+          "request": {
+            "transport_method": "air",
+            "priority": "normal"
+          },
+          "rule": {
+            "id": 2,
+            "name": "قاعده حمل هوایی",
+            "type": "transport_method",
+            "conditions": {
+              "transport_methods": [
+                "air"
+              ]
+            },
+            "priority": 10,
+            "is_active": true
+          }
+        },
+        {
+          "request": {
+            "transport_method": "road",
+            "priority": "high"
+          },
+          "rule": {
+            "id": 3,
+            "name": "قاعده اولویت بالا",
+            "type": "priority",
+            "conditions": {
+              "priority": "high"
+            },
+            "priority": 20,
+            "is_active": true
+          }
+        }
+      ]
+    },
+    "timestamp": "2025-10-07T12:10:47.572732"
+  },
+  {
+    "test": "Workload Distribution - Average Calculation",
+    "success": true,
+    "message": "Correctly calculated average workload: 2.67",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Workload Distribution - Best Expert Selection",
+    "success": true,
+    "message": "Correctly selected expert with lowest workload: کارشناس ۳",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Workload Distribution - Balancing",
+    "success": true,
+    "message": "Workload reasonably balanced (max: 5, min: 4)",
+    "details": {
+      "assignments": [
+        3,
+        1,
+        3,
+        1,
+        3
+      ],
+      "final_workloads": [
+        4,
+        5,
+        4
+      ]
+    },
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Valid Assignment",
+    "success": true,
+    "message": "Validation result: True",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Missing Request ID",
+    "success": true,
+    "message": "Validation result: False",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Missing Expert ID",
+    "success": true,
+    "message": "Validation result: False",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Invalid Request ID",
+    "success": true,
+    "message": "Validation result: False",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Invalid Expert ID",
+    "success": true,
+    "message": "Validation result: False",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Status 'new'",
+    "success": true,
+    "message": "Status validation: True",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Status 'assigned'",
+    "success": true,
+    "message": "Status validation: True",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Status 'invalid_status'",
+    "success": true,
+    "message": "Status validation: False",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Status 'pending'",
+    "success": true,
+    "message": "Status validation: False",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Validation - Status 'closed'",
+    "success": true,
+    "message": "Status validation: True",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Statistics - Total Count",
+    "success": true,
+    "message": "Correctly calculated total assignments: 5",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Statistics - Method Distribution",
+    "success": true,
+    "message": "Correctly calculated method distribution: 3 automatic, 2 manual",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Statistics - Expert Workload Distribution",
+    "success": true,
+    "message": "Correctly calculated workload for 3 experts",
+    "details": {
+      "expert_workloads": {
+        "1": 2,
+        "2": 2,
+        "3": 1
+      }
+    },
+    "timestamp": "2025-10-07T12:10:47.573919"
+  },
+  {
+    "test": "Assignment Statistics - Average Workload",
+    "success": true,
+    "message": "Correctly calculated average workload: 1.67",
+    "details": {},
+    "timestamp": "2025-10-07T12:10:47.573919"
+  }
+]
