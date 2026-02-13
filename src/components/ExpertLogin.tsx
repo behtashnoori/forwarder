@@ -153,14 +153,6 @@ const ExpertLogin = () => {
             )}
           </Button>
         </form>
-
-        <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-          <h4 className="font-semibold text-sm mb-2">اطلاعات ورود:</h4>
-          <div className="text-xs space-y-1">
-            <div><strong>کارشناس:</strong> expert / expert123</div>
-            <div><strong>مدیر:</strong> admin / Pirooz13@!</div>
-          </div>
-        </div>
       </DialogContent>
     </Dialog>
   );
