@@ -1,11 +1,42 @@
 import { Button } from "@/components/ui/button";
-import { Menu, Phone, Info, BarChart3, Users } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Menu, Phone, Info, BarChart3, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    const checkAdmin = () => {
+      try {
+        const expertUser = localStorage.getItem("expert_user");
+        if (!expertUser) {
+          setIsAdmin(false);
+          return;
+        }
+        const user = JSON.parse(expertUser);
+        setIsAdmin(user?.role === "admin");
+      } catch {
+        setIsAdmin(false);
+      }
+    };
+
+    checkAdmin();
+    
+    // Listen for storage changes (when login happens in another tab)
+    window.addEventListener("storage", checkAdmin);
+    
+    // Also check periodically in case login happens in same tab
+    const interval = setInterval(checkAdmin, 1000);
+    
+    return () => {
+      window.removeEventListener("storage", checkAdmin);
+      clearInterval(interval);
+    };
+  }, [location.pathname]); // Re-check when route changes
 
   return (
     <header className="w-full bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -38,12 +69,14 @@ const Header = () => {
                 CRM
               </Link>
             </Button>
-            <Button variant="ghost" className="text-sm font-medium" asChild>
-              <Link to="/user-management">
-                <Users className="w-4 h-4 ml-2" />
-                مدیریت کاربران
-              </Link>
-            </Button>
+            {isAdmin && (
+              <Button variant="ghost" className="text-sm font-medium" asChild>
+                <Link to="/admin">
+                  <Shield className="w-4 h-4 ml-2" />
+                  پنل ادمین
+                </Link>
+              </Button>
+            )}
             <ExpertLogin />
           </nav>
 
@@ -76,12 +109,14 @@ const Header = () => {
                   CRM
                 </Link>
               </Button>
-              <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                <Link to="/user-management">
-                  <Users className="w-4 h-4 ml-2" />
-                  مدیریت کاربران
-                </Link>
-              </Button>
+              {isAdmin && (
+                <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
+                  <Link to="/admin">
+                    <Shield className="w-4 h-4 ml-2" />
+                    پنل ادمین
+                  </Link>
+                </Button>
+              )}
               <div className="px-3 py-2">
                 <ExpertLogin />
               </div>

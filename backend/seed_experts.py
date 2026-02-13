@@ -14,9 +14,10 @@ def seed_experts():
     app = create_app()
     
     with app.app_context():
-        # Check if experts already exist
-        if ExpertUser.query.count() > 0:
-            print("Expert users already exist. Skipping seed.")
+        # Check if expert user already exists
+        existing_expert = ExpertUser.query.filter_by(username="expert").first()
+        if existing_expert:
+            print("Expert user 'expert' already exists. Skipping seed.")
             return
         
         # Hash the default password
@@ -59,7 +60,14 @@ def seed_experts():
             }
         ]
         
+        created_count = 0
         for expert_data in experts:
+            # Check if this specific expert already exists
+            existing = ExpertUser.query.filter_by(username=expert_data["username"]).first()
+            if existing:
+                print(f"User '{expert_data['username']}' already exists. Skipping.")
+                continue
+            
             # Hash each user's password
             user_password_hash = bcrypt.hashpw(expert_data["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
             
@@ -74,9 +82,13 @@ def seed_experts():
                 created_at=datetime.utcnow()
             )
             db.session.add(expert)
+            created_count += 1
         
-        db.session.commit()
-        print("Sample expert users created successfully!")
+        if created_count > 0:
+            db.session.commit()
+            print(f"✅ {created_count} expert user(s) created successfully!")
+        else:
+            print("ℹ️  All expert users already exist. No new users created.")
 
 if __name__ == "__main__":
     seed_experts()

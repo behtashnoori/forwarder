@@ -54,7 +54,13 @@ const ExpertLogin = () => {
           title: "ورود موفق",
           description: `به پنل ${data.expert.full_name} خوش آمدید`
         });
-        navigate('/expert');
+        
+        // Redirect based on role
+        if (data.expert.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/expert');
+        }
       } else {
         setError(data.error || 'نام کاربری یا رمز عبور اشتباه است');
       }
@@ -152,7 +158,7 @@ const ExpertLogin = () => {
           <h4 className="font-semibold text-sm mb-2">اطلاعات ورود:</h4>
           <div className="text-xs space-y-1">
             <div><strong>کارشناس:</strong> expert / expert123</div>
-            <div><strong>مدیر:</strong> admin / admin123</div>
+            <div><strong>مدیر:</strong> admin / Pirooz13@!</div>
           </div>
         </div>
       </DialogContent>

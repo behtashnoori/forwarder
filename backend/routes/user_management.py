@@ -2,6 +2,7 @@
 import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+import bcrypt
 
 from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import and_, or_, desc, func
@@ -9,17 +10,19 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import (
-    ExpertUser, TransportMethod, ExpertSpecialization, AssignmentRule, AssignmentLog
+    ExpertUser, TransportMethod, ExpertSpecialization, AssignmentRule, AssignmentLog,
+    ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification,
+    ShipmentRequest, Opportunity, Activity, Task, Report,
 )
 from backend.auth import require_auth, get_current_user
-from backend.security import validate_input, sanitize_input
+from backend.security import require_role, validate_input, sanitize_input
 
 user_management_bp = Blueprint("user_management", __name__, url_prefix="/api/user-management")
 
 
-# Transport Methods Management
+# Transport Methods Management (admin only for consistency with user management panel)
 @user_management_bp.get("/transport-methods")
-@require_auth
+@require_role("admin")
 def get_transport_methods():
     """Get all transport methods."""
     try:
@@ -48,14 +51,10 @@ def get_transport_methods():
 
 
 @user_management_bp.post("/transport-methods")
-@require_auth
+@require_role("admin")
 def create_transport_method():
     """Create a new transport method."""
     try:
-        current_user = get_current_user()
-        if current_user.role not in ["admin", "crm_manager"]:
-            return jsonify({"error": "دسترسی غیرمجاز"}), 403
-        
         data = request.get_json()
         
         transport_method = TransportMethod(
@@ -79,33 +78,14 @@ def create_transport_method():
         return jsonify({"error": "خطا در ایجاد روش حمل"}), 500
 
 
-# User Management
+# User Management (admin only)
 @user_management_bp.get("/users")
-@require_auth
+@require_role("admin")
 def get_users():
     """Get all users with hierarchy information."""
     try:
-        current_user = get_current_user()
-        
-        # Build query based on user role
-        query = db.session.query(ExpertUser)
-        
-        if current_user.role == "crm_manager":
-            # CRM managers can see their subordinates
-            query = query.filter(
-                or_(
-                    ExpertUser.manager_id == current_user.id,
-                    ExpertUser.id == current_user.id
-                )
-            )
-        elif current_user.role == "admin":
-            # Admins can see all users
-            pass
-        else:
-            # Other users can only see themselves
-            query = query.filter(ExpertUser.id == current_user.id)
-        
-        users = query.order_by(ExpertUser.full_name).all()
+        # Admins can see all users
+        users = db.session.query(ExpertUser).order_by(ExpertUser.full_name).all()
         
         users_data = []
         for user in users:
@@ -160,31 +140,41 @@ def get_users():
 
 
 @user_management_bp.post("/users")
-@require_auth
+@require_role("admin")
 def create_user():
     """Create a new user."""
     try:
-        current_user = get_current_user()
-        if current_user.role not in ["admin", "crm_manager"]:
-            return jsonify({"error": "دسترسی غیرمجاز"}), 403
-        
         data = request.get_json()
         
-        # Validate role hierarchy
-        new_role = data.get("role")
-        if current_user.role == "crm_manager" and new_role not in ["business_expert", "expert"]:
-            return jsonify({"error": "شما فقط می‌توانید کارشناس بازرگانی و کارشناس ایجاد کنید"}), 400
+        # Validate required fields
+        if not data.get("username"):
+            return jsonify({"error": "نام کاربری الزامی است"}), 400
+        if not data.get("password"):
+            return jsonify({"error": "رمز عبور الزامی است"}), 400
+        if not data.get("full_name"):
+            return jsonify({"error": "نام کامل الزامی است"}), 400
+        if not data.get("role"):
+            return jsonify({"error": "نقش کاربر الزامی است"}), 400
+        
+        # Check if username already exists
+        existing_user = ExpertUser.query.filter_by(username=data.get("username")).first()
+        if existing_user:
+            return jsonify({"error": "نام کاربری قبلاً استفاده شده است"}), 400
+        
+        # Hash password using bcrypt
+        password = data.get("password")
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
         # Create user
         user = ExpertUser(
             username=data.get("username"),
-            password_hash=data.get("password_hash"),  # Should be hashed on frontend
+            password_hash=password_hash,
             full_name=data.get("full_name"),
             email=data.get("email"),
             phone=data.get("phone"),
-            role=new_role,
+            role=data.get("role"),
             department=data.get("department"),
-            manager_id=current_user.id if current_user.role == "crm_manager" else data.get("manager_id"),
+            manager_id=data.get("manager_id"),
             is_active=data.get("is_active", True)
         )
         
@@ -211,32 +201,45 @@ def create_user():
         
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error creating user: {e}")
-        return jsonify({"error": "خطا در ایجاد کاربر"}), 500
+        current_app.logger.error(f"Error creating user: {e}", exc_info=True)
+        err_msg = "خطا در ایجاد کاربر"
+        if current_app.debug or current_app.config.get("TESTING"):
+            err_msg += f": {str(e)}"
+        return jsonify({"error": err_msg}), 500
 
 
 @user_management_bp.put("/users/<int:user_id>")
-@require_auth
+@require_role("admin")
 def update_user(user_id: int):
     """Update user information."""
     try:
-        current_user = get_current_user()
-        
-        # Check permissions
-        if current_user.role not in ["admin", "crm_manager"]:
-            if current_user.id != user_id:
-                return jsonify({"error": "دسترسی غیرمجاز"}), 403
-        
         user = db.session.query(ExpertUser).get(user_id)
         if not user:
             return jsonify({"error": "کاربر یافت نشد"}), 404
         
-        # Check hierarchy permissions
-        if current_user.role == "crm_manager":
-            if user.manager_id != current_user.id and user.id != current_user.id:
-                return jsonify({"error": "شما فقط می‌توانید زیردستان خود را ویرایش کنید"}), 403
-        
         data = request.get_json()
+        
+        # Update username (with uniqueness check)
+        if "username" in data:
+            new_username = data["username"]
+            if new_username != user.username:
+                # Check if username already exists (excluding current user)
+                existing_user = ExpertUser.query.filter(
+                    and_(
+                        ExpertUser.username == new_username,
+                        ExpertUser.id != user_id
+                    )
+                ).first()
+                if existing_user:
+                    return jsonify({"error": "نام کاربری قبلاً استفاده شده است"}), 400
+                user.username = new_username
+        
+        # Update password (optional - only if provided and not empty)
+        if "password" in data:
+            password = data["password"]
+            if password and password.strip():
+                password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+                user.password_hash = password_hash
         
         # Update basic fields
         updatable_fields = ["full_name", "email", "phone", "department", "is_active"]
@@ -244,12 +247,12 @@ def update_user(user_id: int):
             if field in data:
                 setattr(user, field, data[field])
         
-        # Update role (only admins and CRM managers)
-        if current_user.role in ["admin", "crm_manager"] and "role" in data:
+        # Update role (admins can update any role)
+        if "role" in data:
             user.role = data["role"]
         
-        # Update manager (only admins)
-        if current_user.role == "admin" and "manager_id" in data:
+        # Update manager
+        if "manager_id" in data:
             user.manager_id = data["manager_id"]
         
         # Update specializations
@@ -281,15 +284,113 @@ def update_user(user_id: int):
         return jsonify({"error": "خطا در به‌روزرسانی کاربر"}), 500
 
 
-# Assignment Rules Management
+@user_management_bp.delete("/users/<int:user_id>")
+@require_role("admin")
+def delete_user(user_id: int):
+    """
+    Delete an expert user and all related data.
+    Only admin can delete. Cannot delete self. Cannot delete other admins (only experts/supervisors/etc).
+    """
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "احراز هویت نشده"}), 401
+
+        if current_user["id"] == user_id:
+            return jsonify({"error": "امکان حذف حساب خودتان وجود ندارد"}), 400
+
+        user = db.session.query(ExpertUser).get(user_id)
+        if not user:
+            return jsonify({"error": "کاربر یافت نشد"}), 404
+
+        if user.role == "admin":
+            return jsonify({"error": "امکان حذف کاربر با نقش مدیر وجود ندارد"}), 400
+
+        # Order matters: remove FKs that reference this user, then delete user
+        expert_id = user.id
+        expert_username = user.username  # capture before delete (session will expire after commit)
+        admin_id = current_user["id"]
+
+        # 1. Subordinates: unset manager
+        db.session.query(ExpertUser).filter(ExpertUser.manager_id == expert_id).update(
+            {ExpertUser.manager_id: None}, synchronize_session=False
+        )
+
+        # 2. Delete expert-specific records (all references to this expert)
+        db.session.query(ExpertConsoleNotification).filter(
+            ExpertConsoleNotification.expert_user_id == expert_id
+        ).delete(synchronize_session=False)
+        db.session.query(ExpertConsoleMessage).filter(
+            ExpertConsoleMessage.expert_user_id == expert_id
+        ).delete(synchronize_session=False)
+        db.session.query(ExpertConsoleLog).filter(
+            ExpertConsoleLog.expert_user_id == expert_id
+        ).delete(synchronize_session=False)
+        db.session.query(AssignmentLog).filter(
+            AssignmentLog.assigned_expert_id == expert_id
+        ).delete(synchronize_session=False)
+        db.session.query(ExpertSpecialization).filter(
+            ExpertSpecialization.expert_user_id == expert_id
+        ).delete(synchronize_session=False)
+        db.session.query(Activity).filter(Activity.expert_user_id == expert_id).delete(
+            synchronize_session=False
+        )
+        db.session.query(Task).filter(
+            (Task.assigned_to == expert_id) | (Task.created_by == expert_id)
+        ).delete(synchronize_session=False)
+        db.session.query(Report).filter(Report.created_by == expert_id).delete(
+            synchronize_session=False
+        )
+        db.session.flush()
+
+        # 3. AssignmentRule: reassign creator to current admin (rule stays)
+        db.session.query(AssignmentRule).filter(
+            AssignmentRule.created_by == expert_id
+        ).update({AssignmentRule.created_by: int(admin_id)}, synchronize_session=False)
+        db.session.flush()
+
+        # 4. Unassign from shipment_requests and opportunities
+        db.session.query(ShipmentRequest).filter(
+            ShipmentRequest.assigned_to == expert_id
+        ).update({ShipmentRequest.assigned_to: None}, synchronize_session=False)
+        db.session.query(Opportunity).filter(Opportunity.assigned_to == expert_id).update(
+            {Opportunity.assigned_to: None}, synchronize_session=False
+        )
+        db.session.flush()
+
+        # 5. Subordinates already unset in step 1; now delete the user
+        db.session.delete(user)
+        db.session.commit()
+
+        current_app.logger.info(
+            f"Admin {current_user.get('username')} deleted user id={expert_id} ({expert_username}) and related data."
+        )
+        return jsonify({
+            "message": "کاربر و تمام داده‌های مرتبط با موفقیت حذف شدند"
+        })
+
+    except SQLAlchemyError as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting user: {e}", exc_info=True)
+        err_msg = "خطا در حذف کاربر"
+        if current_app.debug or current_app.config.get("TESTING"):
+            err_msg += f": {str(e)}"
+        return jsonify({"error": err_msg}), 500
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting user: {e}", exc_info=True)
+        err_msg = "خطا در حذف کاربر"
+        if current_app.debug or current_app.config.get("TESTING"):
+            err_msg += f": {str(e)}"
+        return jsonify({"error": err_msg}), 500
+
+
+# Assignment Rules Management (admin only for consistency)
 @user_management_bp.get("/assignment-rules")
-@require_auth
+@require_role("admin")
 def get_assignment_rules():
     """Get all assignment rules."""
     try:
-        current_user = get_current_user()
-        if current_user.role not in ["admin", "crm_manager"]:
-            return jsonify({"error": "دسترسی غیرمجاز"}), 403
         
         rules = db.session.query(AssignmentRule).order_by(
             desc(AssignmentRule.priority), AssignmentRule.name
@@ -323,14 +424,11 @@ def get_assignment_rules():
 
 
 @user_management_bp.post("/assignment-rules")
-@require_auth
+@require_role("admin")
 def create_assignment_rule():
     """Create a new assignment rule."""
     try:
         current_user = get_current_user()
-        if current_user.role not in ["admin", "crm_manager"]:
-            return jsonify({"error": "دسترسی غیرمجاز"}), 403
-        
         data = request.get_json()
         
         rule = AssignmentRule(
@@ -340,7 +438,7 @@ def create_assignment_rule():
             conditions=json.dumps(data.get("conditions", {})),
             priority=data.get("priority", 1),
             is_active=data.get("is_active", True),
-            created_by=current_user.id
+            created_by=current_user.get("id")
         )
         
         db.session.add(rule)
@@ -358,13 +456,10 @@ def create_assignment_rule():
 
 
 @user_management_bp.put("/assignment-rules/<int:rule_id>")
-@require_auth
+@require_role("admin")
 def update_assignment_rule(rule_id: int):
     """Update an assignment rule."""
     try:
-        current_user = get_current_user()
-        if current_user.role not in ["admin", "crm_manager"]:
-            return jsonify({"error": "دسترسی غیرمجاز"}), 403
         
         rule = db.session.query(AssignmentRule).get(rule_id)
         if not rule:
@@ -395,15 +490,12 @@ def update_assignment_rule(rule_id: int):
         return jsonify({"error": "خطا در به‌روزرسانی قانون ارجاع"}), 500
 
 
-# Assignment Statistics
+# Assignment Statistics (admin only)
 @user_management_bp.get("/assignment-statistics")
-@require_auth
+@require_role("admin")
 def get_assignment_statistics():
     """Get assignment statistics."""
     try:
-        current_user = get_current_user()
-        if current_user.role not in ["admin", "crm_manager"]:
-            return jsonify({"error": "دسترسی غیرمجاز"}), 403
         
         from backend.assignment_engine import assignment_engine
         stats = assignment_engine.get_assignment_statistics()
@@ -415,16 +507,12 @@ def get_assignment_statistics():
         return jsonify({"error": "خطا در دریافت آمار ارجاع"}), 500
 
 
-# Manual Assignment
+# Manual Assignment (admin only)
 @user_management_bp.post("/manual-assignment")
-@require_auth
+@require_role("admin")
 def manual_assignment():
     """Manually assign a request to an expert."""
     try:
-        current_user = get_current_user()
-        if current_user.role not in ["admin", "crm_manager", "supervisor"]:
-            return jsonify({"error": "دسترسی غیرمجاز"}), 403
-        
         data = request.get_json()
         request_id = data.get("request_id")
         expert_id = data.get("expert_id")
@@ -445,11 +533,6 @@ def manual_assignment():
         expert = db.session.query(ExpertUser).get(expert_id)
         if not expert:
             return jsonify({"error": "کارشناس یافت نشد"}), 404
-        
-        # Check if expert is under current user's management
-        if current_user.role == "crm_manager":
-            if expert.manager_id != current_user.id:
-                return jsonify({"error": "شما فقط می‌توانید به زیردستان خود ارجاع دهید"}), 403
         
         # Manual assignment
         request.assigned_to = expert_id

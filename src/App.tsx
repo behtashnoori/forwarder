@@ -13,7 +13,9 @@ import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerRequestDetail from "./pages/CustomerRequestDetail";
 import PublicTracking from "./pages/PublicTracking";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AdminPanel from "./pages/AdminPanel";
 
 const queryClient = new QueryClient();
 
@@ -47,12 +49,19 @@ const App = () => (
                 </ErrorBoundary>
               </ProtectedRoute>
             } />
-            <Route path="/user-management" element={
-              <ProtectedRoute>
+            <Route path="/admin" element={
+              <AdminRoute>
                 <ErrorBoundary>
-                  <UserManagement />
+                  <AdminPanel />
                 </ErrorBoundary>
-              </ProtectedRoute>
+              </AdminRoute>
+            } />
+            <Route path="/user-management" element={
+              <AdminRoute>
+                <ErrorBoundary>
+                  <AdminPanel />
+                </ErrorBoundary>
+              </AdminRoute>
             } />
             <Route path="/customer/:customerId" element={
               <ErrorBoundary>

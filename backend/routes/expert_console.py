@@ -485,14 +485,17 @@ def add_message(request_id: int):
 
 
 @expert_console_bp.get("/notifications")
+@require_auth
 def get_notifications():
-    """Get notifications for expert console."""
+    """Get notifications for current authenticated expert."""
     try:
-        expert_id = request.args.get("expert_id")
-        unread_only = request.args.get("unread_only", "false").lower() == "true"
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
         
-        if not expert_id:
-            return jsonify({"error": "شناسه کارشناس الزامی است"}), 400
+        expert_id = current_user['id']
+        unread_only = request.args.get("unread_only", "false").lower() == "true"
+        limit = min(int(request.args.get("limit", 50)), 200)
         
         query = db.session.query(ExpertConsoleNotification).filter(
             ExpertConsoleNotification.expert_user_id == expert_id
@@ -502,8 +505,16 @@ def get_notifications():
             query = query.filter(ExpertConsoleNotification.is_read == False)
         
         notifications = query.order_by(
-            ExpertConsoleNotification.created_at.desc()
-        ).limit(50).all()
+            desc(ExpertConsoleNotification.created_at)
+        ).limit(limit).all()
+        
+        # Get total unread count
+        total_unread = db.session.query(func.count(ExpertConsoleNotification.id)).filter(
+            and_(
+                ExpertConsoleNotification.expert_user_id == expert_id,
+                ExpertConsoleNotification.is_read == False
+            )
+        ).scalar() or 0
         
         notifications_data = []
         for notif in notifications:
@@ -519,12 +530,68 @@ def get_notifications():
         
         return jsonify({
             "notifications": notifications_data,
-            "unread_count": len([n for n in notifications_data if not n["is_read"]])
+            "unread_count": total_unread
         })
         
     except Exception as e:
         current_app.logger.error(f"Error getting notifications: {e}")
         return jsonify({"error": "خطا در دریافت اعلان‌ها"}), 500
+
+
+@expert_console_bp.post("/notifications/mark-read")
+@require_auth
+def mark_notifications_read():
+    """Mark one or more notifications as read."""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
+        
+        expert_id = current_user['id']
+        data = request.get_json() or {}
+        
+        notification_ids = data.get("notification_ids", [])
+        mark_all = data.get("mark_all", False)
+        
+        if mark_all:
+            # Mark all notifications as read for this expert
+            updated = db.session.query(ExpertConsoleNotification).filter(
+                and_(
+                    ExpertConsoleNotification.expert_user_id == expert_id,
+                    ExpertConsoleNotification.is_read == False
+                )
+            ).update({"is_read": True}, synchronize_session=False)
+            
+            db.session.commit()
+            
+            return jsonify({
+                "message": f"{updated} اعلان به عنوان خوانده شده علامت‌گذاری شد",
+                "marked_count": updated
+            })
+        
+        elif notification_ids:
+            # Mark specific notifications as read
+            updated = db.session.query(ExpertConsoleNotification).filter(
+                and_(
+                    ExpertConsoleNotification.id.in_(notification_ids),
+                    ExpertConsoleNotification.expert_user_id == expert_id
+                )
+            ).update({"is_read": True}, synchronize_session=False)
+            
+            db.session.commit()
+            
+            return jsonify({
+                "message": f"{updated} اعلان به عنوان خوانده شده علامت‌گذاری شد",
+                "marked_count": updated
+            })
+        
+        else:
+            return jsonify({"error": "شناسه اعلان‌ها یا mark_all الزامی است"}), 400
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error marking notifications as read: {e}")
+        return jsonify({"error": "خطا در به‌روزرسانی اعلان‌ها"}), 500
 
 
 @expert_console_bp.route("/auth/login", methods=["POST", "OPTIONS"])

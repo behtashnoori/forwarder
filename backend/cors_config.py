@@ -82,8 +82,10 @@ def get_cors_config() -> dict:
     is_dev = os.getenv('FLASK_ENV', '').lower() in ('development', 'dev') or os.getenv('FLASK_DEBUG', '').lower() in ('true', '1', 'yes')
     allow_all = os.getenv('CORS_ALLOW_ALL_ORIGINS', '').lower() in ('1', 'true', 'yes')
 
-    # In development or when CORS_ALLOW_ALL_ORIGINS=1: allow any origin
-    origins: Union[List[str], Callable[[str], bool]] = _allow_any_origin if (is_dev or allow_all) else origins_list
+    # Flask-CORS expects origins to be an iterable (list), not a callable.
+    # When is_dev or allow_all, we pass the full list; our after_request in __init__.py
+    # adds CORS headers for any other origin via _is_cors_origin_allowed().
+    origins: List[str] = origins_list
 
     return {
         'resources': {

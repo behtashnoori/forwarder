@@ -8,6 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Users, 
   UserPlus,
@@ -29,6 +39,7 @@ import {
   Clock
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { env } from "@/lib/env";
 
 // Types
 interface TransportMethod {
@@ -112,6 +123,31 @@ const UserManagement = () => {
   const [transportDialogOpen, setTransportDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editingRule, setEditingRule] = useState<AssignmentRule | null>(null);
+  
+  // User form states
+  const [userFormData, setUserFormData] = useState({
+    username: "",
+    password: "",
+    full_name: "",
+    email: "",
+    phone: "",
+    role: "expert",
+    department: "",
+    is_active: true
+  });
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    full_name: "",
+    phone: "",
+    username: "",
+    password: "",
+    is_active: true
+  });
+  const [updatingUser, setUpdatingUser] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -120,25 +156,26 @@ const UserManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      const token = localStorage.getItem('expert_token');
       const [usersRes, transportRes, rulesRes, statsRes] = await Promise.all([
-        fetch("/api/user-management/users", {
+        fetch(`${env.API_URL}/api/user-management/users`, {
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem('expert_token')}`
+            "Authorization": `Bearer ${token}`
           }
         }),
-        fetch("/api/user-management/transport-methods", {
+        fetch(`${env.API_URL}/api/user-management/transport-methods`, {
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem('expert_token')}`
+            "Authorization": `Bearer ${token}`
           }
         }),
-        fetch("/api/user-management/assignment-rules", {
+        fetch(`${env.API_URL}/api/user-management/assignment-rules`, {
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem('expert_token')}`
+            "Authorization": `Bearer ${token}`
           }
         }),
-        fetch("/api/user-management/assignment-statistics", {
+        fetch(`${env.API_URL}/api/user-management/assignment-statistics`, {
           headers: {
-            "Authorization": `Bearer ${localStorage.getItem('expert_token')}`
+            "Authorization": `Bearer ${token}`
           }
         })
       ]);
@@ -231,6 +268,173 @@ const UserManagement = () => {
     const matchesRole = selectedRole === "all" || user.role === selectedRole;
     return matchesSearch && matchesRole;
   });
+
+  const openEditDialog = (user: User) => {
+    setEditingUser(user);
+    setEditFormData({
+      full_name: user.full_name,
+      phone: user.phone || "",
+      username: user.username,
+      password: "",
+      is_active: user.is_active
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setUpdatingUser(true);
+    try {
+      const body: Record<string, unknown> = {
+        full_name: editFormData.full_name,
+        phone: editFormData.phone,
+        username: editFormData.username,
+        is_active: editFormData.is_active
+      };
+      if (editFormData.password.trim()) {
+        body.password = editFormData.password;
+      }
+      const token = localStorage.getItem('expert_token');
+      const response = await fetch(`${env.API_URL}/api/user-management/users/${editingUser.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ title: "موفق", description: data.message || "کاربر به‌روزرسانی شد" });
+        setEditDialogOpen(false);
+        setEditingUser(null);
+        loadData();
+      } else {
+        toast({ title: "خطا", description: data.error || "خطا در به‌روزرسانی", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "خطا", description: "خطا در ارتباط با سرور", variant: "destructive" });
+    } finally {
+      setUpdatingUser(false);
+    }
+  };
+
+  const handleToggleActive = async (user: User) => {
+    try {
+      const token = localStorage.getItem('expert_token');
+      const response = await fetch(`${env.API_URL}/api/user-management/users/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ is_active: !user.is_active })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({ title: "موفق", description: data.message || "وضعیت به‌روزرسانی شد" });
+        loadData();
+      } else {
+        toast({ title: "خطا", description: data.error || "خطا در به‌روزرسانی", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "خطا", description: "خطا در ارتباط با سرور", variant: "destructive" });
+    }
+  };
+
+  const openDeleteDialog = (user: User) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setDeletingUser(true);
+    try {
+      const token = localStorage.getItem('expert_token');
+      const response = await fetch(`${env.API_URL}/api/user-management/users/${userToDelete.id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        toast({
+          title: "موفق",
+          description: data.message || "کاربر و داده‌های مرتبط حذف شدند"
+        });
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
+        loadData();
+      } else {
+        toast({
+          title: "خطا",
+          description: data.error || "خطا در حذف کاربر",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطا",
+        description: "خطا در ارتباط با سرور",
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreatingUser(true);
+
+    try {
+      const token = localStorage.getItem('expert_token');
+      const response = await fetch(`${env.API_URL}/api/user-management/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(userFormData)
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "موفق",
+          description: data.message || "کاربر با موفقیت ایجاد شد"
+        });
+        setUserDialogOpen(false);
+        setUserFormData({
+          username: "",
+          password: "",
+          full_name: "",
+          email: "",
+          phone: "",
+          role: "expert",
+          department: "",
+          is_active: true
+        });
+        loadData();
+      } else {
+        toast({
+          title: "خطا",
+          description: data.error || "خطا در ایجاد کاربر",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "خطا",
+        description: "خطا در ارتباط با سرور",
+        variant: "destructive"
+      });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -460,11 +664,29 @@ const UserManagement = () => {
                           )}
                         </div>
 
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
+                        <div className="flex gap-2 items-center">
+                          <Button
+                            size="sm"
+                            variant={user.is_active ? "outline" : "secondary"}
+                            onClick={() => handleToggleActive(user)}
+                          >
+                            {user.is_active ? "غیرفعال کردن" : "فعال کردن"}
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => openEditDialog(user)}>
                             <Edit className="w-4 h-4 ml-2" />
                             ویرایش
                           </Button>
+                          {user.role !== "admin" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => openDeleteDialog(user)}
+                            >
+                              <Trash2 className="w-4 h-4 ml-2" />
+                              حذف
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </CardContent>
@@ -593,6 +815,263 @@ const UserManagement = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create User Dialog */}
+      <Dialog open={userDialogOpen} onOpenChange={setUserDialogOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>ایجاد کاربر جدید</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateUser} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="username">نام کاربری *</Label>
+                <Input
+                  id="username"
+                  value={userFormData.username}
+                  onChange={(e) => setUserFormData({ ...userFormData, username: e.target.value })}
+                  placeholder="نام کاربری"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">رمز عبور *</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={userFormData.password}
+                  onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                  placeholder="رمز عبور"
+                  required
+                  minLength={6}
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="full_name">نام کامل *</Label>
+                <Input
+                  id="full_name"
+                  value={userFormData.full_name}
+                  onChange={(e) => setUserFormData({ ...userFormData, full_name: e.target.value })}
+                  placeholder="نام و نام خانوادگی"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">ایمیل</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={userFormData.email}
+                  onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
+                  placeholder="email@example.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">شماره تماس</Label>
+                <Input
+                  id="phone"
+                  value={userFormData.phone}
+                  onChange={(e) => setUserFormData({ ...userFormData, phone: e.target.value })}
+                  placeholder="09123456789"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="role">نقش کاربر *</Label>
+                <Select
+                  value={userFormData.role}
+                  onValueChange={(value) => setUserFormData({ ...userFormData, role: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="انتخاب نقش" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="expert">کارشناس</SelectItem>
+                    <SelectItem value="business_expert">کارشناس بازرگانی</SelectItem>
+                    <SelectItem value="supervisor">سرپرست</SelectItem>
+                    <SelectItem value="crm_manager">مدیر CRM</SelectItem>
+                    <SelectItem value="admin">مدیر سیستم</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="department">بخش</Label>
+                <Input
+                  id="department"
+                  value={userFormData.department}
+                  onChange={(e) => setUserFormData({ ...userFormData, department: e.target.value })}
+                  placeholder="بخش کاری"
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <input
+                    type="checkbox"
+                    id="is_active"
+                    checked={userFormData.is_active}
+                    onChange={(e) => setUserFormData({ ...userFormData, is_active: e.target.checked })}
+                    className="w-4 h-4"
+                  />
+                  <Label htmlFor="is_active" className="cursor-pointer">
+                    کاربر فعال است
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setUserDialogOpen(false);
+                  setUserFormData({
+                    username: "",
+                    password: "",
+                    full_name: "",
+                    email: "",
+                    phone: "",
+                    role: "expert",
+                    department: "",
+                    is_active: true
+                  });
+                }}
+              >
+                انصراف
+              </Button>
+              <Button type="submit" disabled={creatingUser}>
+                {creatingUser ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                    در حال ایجاد...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4 ml-2" />
+                    ایجاد کاربر
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>ویرایش کاربر</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleUpdateUser} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit_full_name">نام و نام خانوادگی *</Label>
+              <Input
+                id="edit_full_name"
+                value={editFormData.full_name}
+                onChange={(e) => setEditFormData({ ...editFormData, full_name: e.target.value })}
+                placeholder="نام و نام خانوادگی"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_phone">شماره تماس</Label>
+              <Input
+                id="edit_phone"
+                value={editFormData.phone}
+                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                placeholder="09123456789"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_username">نام کاربری *</Label>
+              <Input
+                id="edit_username"
+                value={editFormData.username}
+                onChange={(e) => setEditFormData({ ...editFormData, username: e.target.value })}
+                placeholder="نام کاربری"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit_password">رمز عبور (خالی بگذارید تا تغییر نکند)</Label>
+              <Input
+                id="edit_password"
+                type="password"
+                value={editFormData.password}
+                onChange={(e) => setEditFormData({ ...editFormData, password: e.target.value })}
+                placeholder="رمز عبور جدید"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="edit_is_active"
+                checked={editFormData.is_active}
+                onChange={(e) => setEditFormData({ ...editFormData, is_active: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <Label htmlFor="edit_is_active" className="cursor-pointer">
+                کاربر فعال است
+              </Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-4">
+              <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
+                انصراف
+              </Button>
+              <Button type="submit" disabled={updatingUser}>
+                {updatingUser ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                    در حال ذخیره...
+                  </>
+                ) : (
+                  "ذخیره"
+                )}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete User Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>حذف کارشناس</AlertDialogTitle>
+            <AlertDialogDescription>
+              آیا از حذف <strong>{userToDelete?.full_name}</strong> (@{userToDelete?.username}) اطمینان دارید؟
+              با حذف این کاربر، تمام داده‌های مرتبط (ارجاعات، لاگ‌ها، پیام‌ها، اعلان‌ها، تخصص‌ها، فعالیت‌ها و وظایف) نیز از دیتابیس حذف می‌شوند. این عمل قابل بازگشت نیست.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel disabled={deletingUser}>انصراف</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteUser();
+              }}
+              disabled={deletingUser}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {deletingUser ? (
+                <>
+                  <RefreshCw className="w-4 h-4 ml-2 animate-spin" />
+                  در حال حذف...
+                </>
+              ) : (
+                "حذف کاربر"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

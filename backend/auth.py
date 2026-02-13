@@ -1,6 +1,6 @@
 """Authentication and authorization system."""
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from functools import wraps
 import bcrypt
 
@@ -123,15 +123,8 @@ def login_required(f):
 
 def admin_required(f):
     """Decorator to require admin role."""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if not hasattr(g, 'current_user_id'):
-            return jsonify({'error': 'Authentication required'}), 401
-        
-        # TODO: Implement proper role checking
-        # For now, allow all authenticated users
-        return f(*args, **kwargs)
-    return decorated_function
+    from backend.security import require_role
+    return require_role('admin')(f)
 
 
 def get_current_user() -> Optional[Dict[str, Any]]:
@@ -149,7 +142,65 @@ def get_current_user() -> Optional[Dict[str, Any]]:
             'username': user.username,
             'full_name': user.full_name,
             'email': user.email,
-            'role': user.role
+            'role': user.role,
+            'manager_id': user.manager_id
         }
     except SQLAlchemyError:
         return None
+
+
+def can_manage_user(manager_user: ExpertUser, target_user: ExpertUser) -> bool:
+    """
+    Check if manager_user can manage target_user based on hierarchy.
+    
+    Rules:
+    - admin can manage everyone
+    - crm_manager can manage their subordinates (business_expert, expert)
+    - supervisor can manage their subordinates (expert)
+    - Users can always manage themselves
+    """
+    from backend.security import get_role_level
+    
+    # User can always manage themselves
+    if manager_user.id == target_user.id:
+        return True
+    
+    manager_level = get_role_level(manager_user.role)
+    
+    # Admin can manage everyone
+    if manager_level >= 5:  # admin
+        return True
+    
+    # Check if target is a subordinate
+    if manager_user.role == 'crm_manager':
+        # CRM manager can manage business_expert and expert who report to them
+        return (target_user.manager_id == manager_user.id and 
+                target_user.role in ['business_expert', 'expert'])
+    
+    elif manager_user.role == 'supervisor':
+        # Supervisor can manage experts who report to them
+        return (target_user.manager_id == manager_user.id and 
+                target_user.role == 'expert')
+    
+    return False
+
+
+def get_subordinate_ids(user_id: int) -> List[int]:
+    """Get all subordinate user IDs for a given user (recursive)."""
+    from backend.security import get_role_level
+    
+    user = ExpertUser.query.get(user_id)
+    if not user:
+        return []
+    
+    subordinate_ids = []
+    
+    # Get direct subordinates
+    direct_subordinates = ExpertUser.query.filter_by(manager_id=user_id, is_active=True).all()
+    
+    for subordinate in direct_subordinates:
+        subordinate_ids.append(subordinate.id)
+        # Recursively get their subordinates
+        subordinate_ids.extend(get_subordinate_ids(subordinate.id))
+    
+    return subordinate_ids

@@ -151,17 +151,87 @@ def require_auth(f):
     return decorated_function
 
 
-def require_role(required_role: str):
-    """Decorator to require specific role."""
+# Role hierarchy mapping (higher number = higher privilege)
+ROLE_HIERARCHY = {
+    'admin': 5,
+    'crm_manager': 4,
+    'supervisor': 3,
+    'business_expert': 2,
+    'expert': 1
+}
+
+
+def get_role_level(role: str) -> int:
+    """Get hierarchy level for a role."""
+    return ROLE_HIERARCHY.get(role, 0)
+
+
+def can_access_role(user_role: str, required_role: str) -> bool:
+    """
+    Check if user role can access resources requiring required_role.
+    Uses hierarchical permission: higher roles can access lower role resources.
+    """
+    user_level = get_role_level(user_role)
+    required_level = get_role_level(required_role)
+    return user_level >= required_level
+
+
+def require_role(*allowed_roles: str, allow_owner: bool = False, owner_param: str = 'user_id'):
+    """
+    Decorator to require specific role(s) with hierarchical permission support.
+    
+    Args:
+        *allowed_roles: One or more roles that can access the endpoint
+        allow_owner: If True, allow access if user owns the resource (e.g., user_id matches)
+        owner_param: Parameter name to check for ownership (default: 'user_id')
+    
+    Examples:
+        @require_role('admin', 'crm_manager')  # Only admin or crm_manager
+        @require_role('admin')  # Only admin (but admin can access everything)
+        @require_role('expert', allow_owner=True, owner_param='expert_id')  # Expert or owner
+    """
     def decorator(f):
         @wraps(f)
+        @require_auth
         def decorated_function(*args, **kwargs):
-            # This would need to be implemented with user role checking
-            # For now, just check if user is authenticated
-            if not hasattr(g, 'current_user_id'):
-                return jsonify({'error': 'Authentication required'}), 401
+            from backend.auth import get_current_user
             
-            # TODO: Implement role-based access control
+            current_user = get_current_user()
+            if not current_user:
+                return jsonify({'error': 'کاربر احراز هویت نشده است'}), 401
+            
+            user_role = current_user.get('role')
+            user_id = current_user.get('id')
+            
+            if not user_role:
+                return jsonify({'error': 'نقش کاربر تعیین نشده است'}), 403
+            
+            # Check if user role is in allowed roles or has higher privilege
+            has_access = False
+            
+            # Check direct role match or hierarchical access
+            for allowed_role in allowed_roles:
+                if user_role == allowed_role or can_access_role(user_role, allowed_role):
+                    has_access = True
+                    break
+            
+            # Check ownership if allowed
+            if not has_access and allow_owner:
+                owner_id = kwargs.get(owner_param) or request.view_args.get(owner_param)
+                if owner_id and int(owner_id) == user_id:
+                    has_access = True
+            
+            if not has_access:
+                return jsonify({
+                    'error': 'دسترسی غیرمجاز',
+                    'required_roles': list(allowed_roles),
+                    'user_role': user_role
+                }), 403
+            
+            # Store user info in g for use in route handlers
+            g.current_user = current_user
+            g.current_user_role = user_role
+            
             return f(*args, **kwargs)
         
         return decorated_function
