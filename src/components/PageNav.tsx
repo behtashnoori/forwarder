@@ -1,23 +1,31 @@
 import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Home } from "lucide-react";
+import { ArrowRight, Home, LogOut } from "lucide-react";
 
 interface PageNavProps {
   /** مسیر بازگشت؛ اگر نباشد از history برمی‌گردد */
   backTo?: string;
   /** متن دکمه بازگشت */
   backLabel?: string;
+  /** نمایش دکمه خروج (پاک کردن توکن و رفتن به صفحه اصلی) */
+  showLogout?: boolean;
   /** کلاس اضافی برای کانتینر */
   className?: string;
 }
 
-const PageNav = ({ backTo, backLabel = "بازگشت", className = "" }: PageNavProps) => {
+const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, className = "" }: PageNavProps) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
     if (backTo) navigate(backTo);
     else navigate(-1);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("expert_user");
+    localStorage.removeItem("expert_token");
+    window.location.href = "/";
   };
 
   return (
@@ -32,6 +40,12 @@ const PageNav = ({ backTo, backLabel = "بازگشت", className = "" }: PageNav
           خانه
         </Link>
       </Button>
+      {showLogout && (
+        <Button variant="outline" size="sm" onClick={handleLogout} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+          <LogOut className="w-4 h-4 ml-2" />
+          خروج
+        </Button>
+      )}
     </div>
   );
 };

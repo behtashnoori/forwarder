@@ -22,9 +22,9 @@ import {
   Phone,
   Calendar,
   Weight,
-  DollarSign,
-  ArrowLeft
+  DollarSign
 } from "lucide-react";
+import PageNav from "@/components/PageNav";
 import { useToast } from "@/hooks/use-toast";
 import { 
   fetchExpertRequestDetail, 
@@ -262,13 +262,13 @@ const RequestDetail = () => {
 
   if (!request) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-600">درخواست یافت نشد</p>
-          <Button onClick={() => navigate("/expert")} className="mt-4">
-            بازگشت به کنسول
-          </Button>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <PageNav backTo="/expert" backLabel="بازگشت به کنسول" />
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-600">درخواست یافت نشد</p>
+          </div>
         </div>
       </div>
     );
@@ -278,16 +278,9 @@ const RequestDetail = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate("/expert")}
-            >
-              <ArrowLeft className="w-4 h-4 ml-2" />
-              بازگشت
-            </Button>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <PageNav backTo="/expert" backLabel="بازگشت به کنسول" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {request.tracking_number}

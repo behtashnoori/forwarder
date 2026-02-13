@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import PageNav from "@/components/PageNav";
 import { 
   fetchExpertRequests, 
   fetchKPIs, 
@@ -273,10 +274,13 @@ const ExpertConsole = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">کنسول کارشناس</h1>
-            <p className="text-gray-600 mt-1">مدیریت درخواست‌های حمل و نقل</p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <PageNav backTo="/" showLogout />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">کنسول کارشناس</h1>
+              <p className="text-gray-600 mt-1">مدیریت درخواست‌های حمل و نقل</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <Button

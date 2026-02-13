@@ -6,6 +6,7 @@ import { RefreshCw, BarChart3, Users, Package, Clock, AlertCircle, TrendingUp } 
 import { useToast } from "@/hooks/use-toast";
 import { env } from "@/lib/env";
 import UserManagement from "./UserManagement";
+import PageNav from "@/components/PageNav";
 
 interface DashboardStats {
   total_requests: number;
@@ -109,10 +110,13 @@ const AdminPanel = () => {
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">پنل مدیریت</h1>
-            <p className="text-gray-600 mt-1">داشبورد و مدیریت کاربران</p>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <PageNav backTo="/" showLogout />
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">پنل مدیریت</h1>
+              <p className="text-gray-600 mt-1">داشبورد و مدیریت کاربران</p>
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <button
