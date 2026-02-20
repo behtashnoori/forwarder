@@ -12,6 +12,7 @@ import UserManagement from "./pages/UserManagement";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerRequestDetail from "./pages/CustomerRequestDetail";
 import PublicTracking from "./pages/PublicTracking";
+import VerifyEmail from "./pages/VerifyEmail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -76,6 +77,11 @@ const App = () => (
             <Route path="/customer/track/:requestId" element={
               <ErrorBoundary>
                 <PublicTracking />
+              </ErrorBoundary>
+            } />
+            <Route path="/verify-email" element={
+              <ErrorBoundary>
+                <VerifyEmail />
               </ErrorBoundary>
             } />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

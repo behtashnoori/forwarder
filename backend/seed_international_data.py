@@ -145,6 +145,20 @@ def seed_international_data():
                     {"name_en": "Vladivostok", "name_fa": "ولادیوستوک", "city_type": "port", "is_major_port": True, "is_major_airport": True},
                     {"name_en": "Novosibirsk", "name_fa": "نووسیبیرسک", "city_type": "city", "is_major_port": False, "is_major_airport": True},
                 ]
+            },
+            {
+                "name_en": "Iran",
+                "name_fa": "ایران",
+                "code": "IR",
+                "cities": [
+                    {"name_en": "Tehran", "name_fa": "تهران", "city_type": "city", "is_major_port": False, "is_major_airport": True},
+                    {"name_en": "Bandar Abbas", "name_fa": "بندرعباس", "city_type": "port", "is_major_port": True, "is_major_airport": True},
+                    {"name_en": "Imam Khomeini Port", "name_fa": "بندر امام خمینی", "city_type": "port", "is_major_port": True, "is_major_airport": False},
+                    {"name_en": "Mashhad", "name_fa": "مشهد", "city_type": "city", "is_major_port": False, "is_major_airport": True},
+                    {"name_en": "Shiraz", "name_fa": "شیراز", "city_type": "city", "is_major_port": False, "is_major_airport": True},
+                    {"name_en": "Tabriz", "name_fa": "تبریز", "city_type": "city", "is_major_port": False, "is_major_airport": True},
+                    {"name_en": "Isfahan", "name_fa": "اصفهان", "city_type": "city", "is_major_port": False, "is_major_airport": True},
+                ]
             }
         ]
         

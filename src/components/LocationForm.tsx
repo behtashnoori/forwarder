@@ -585,6 +585,50 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     [destinationInternationalCities],
   );
 
+  /** Resolved origin/destination labels for confirmation page (avoids undefined when formData only has IDs). */
+  const confirmationLocationDisplay = useMemo(() => {
+    if (shippingType === "domestic") {
+      const oProv = provinceOptions.find((p) => p.id.toString() === formData.originProvince);
+      const oCounty = originCountyOptions.find((c) => c.id.toString() === formData.originCounty);
+      const oCity = originCityOptions.find((c) => c.id.toString() === formData.originCity);
+      const dProv = provinceOptions.find((p) => p.id.toString() === formData.destinationProvince);
+      const dCounty = destinationCountyOptions.find((c) => c.id.toString() === formData.destinationCounty);
+      const dCity = destinationCityOptions.find((c) => c.id.toString() === formData.destinationCity);
+      return {
+        origin: [oCity?.name, oCounty?.name, oProv?.name].filter(Boolean).join("، ") || "—",
+        destination: [dCity?.name, dCounty?.name, dProv?.name].filter(Boolean).join("، ") || "—",
+      };
+    }
+    const oCountry = countryOptions.find((c) => c.id.toString() === formData.originCountry);
+    const oCity = originInternationalCityOptions.find((c) => c.id.toString() === formData.originCityInternational);
+    const dCountry = countryOptions.find((c) => c.id.toString() === formData.destCountry);
+    const dCity = destinationInternationalCityOptions.find((c) => c.id.toString() === formData.destCityInternational);
+    return {
+      origin: [oCity?.name, oCountry?.name].filter(Boolean).join("، ") || "—",
+      destination: [dCity?.name, dCountry?.name].filter(Boolean).join("، ") || "—",
+    };
+  }, [
+    shippingType,
+    formData.originProvince,
+    formData.originCounty,
+    formData.originCity,
+    formData.destinationProvince,
+    formData.destinationCounty,
+    formData.destinationCity,
+    formData.originCountry,
+    formData.originCityInternational,
+    formData.destCountry,
+    formData.destCityInternational,
+    provinceOptions,
+    originCountyOptions,
+    destinationCountyOptions,
+    originCityOptions,
+    destinationCityOptions,
+    countryOptions,
+    originInternationalCityOptions,
+    destinationInternationalCityOptions,
+  ]);
+
   const handleSubmit = async () => {
     // Validate required fields based on shipping type
     let isValid = true;
@@ -906,6 +950,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         onBack={() => setShowConfirmation(false)}
         onSubmit={handleFinalSubmit}
         isSubmitting={isSubmitting}
+        locationDisplay={confirmationLocationDisplay}
       />
     );
   }

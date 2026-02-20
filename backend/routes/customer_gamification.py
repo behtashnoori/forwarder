@@ -1,4 +1,5 @@
 """Routes for customer gamification and email verification."""
+import os
 import secrets
 import hashlib
 from datetime import datetime, timedelta
@@ -21,9 +22,11 @@ def generate_verification_token() -> str:
 def send_verification_email(email: str, token: str, customer_name: str = None) -> bool:
     """Send verification email to customer."""
     try:
+        # Link must point to frontend so user is redirected to customer panel after verify
+        frontend_url = (os.environ.get("FRONTEND_URL") or "http://localhost:5173").rstrip("/")
+        verification_url = f"{frontend_url}/verify-email?token={token}"
         # In a real implementation, you would use an email service like SendGrid, AWS SES, etc.
         # For now, we'll just log the email details
-        verification_url = f"{request.host_url}api/customer/verify-email?token={token}"
         
         current_app.logger.info(f"Verification email would be sent to {email}")
         current_app.logger.info(f"Verification URL: {verification_url}")

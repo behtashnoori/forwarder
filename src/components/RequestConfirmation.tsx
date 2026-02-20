@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,19 @@ import { CheckCircle, ArrowLeft, Send, User, Phone, MapPin, Package, Calendar, F
 import { useToast } from "@/hooks/use-toast";
 import { env } from "@/lib/env";
 
+export interface LocationDisplayPayload {
+  origin: string;
+  destination: string;
+}
+
 interface RequestConfirmationProps {
   formData: any;
   shippingType: "domestic" | "international";
   onBack: () => void;
   onSubmit: (gamificationCustomerId?: number) => void;
   isSubmitting: boolean;
+  /** Resolved origin/destination labels; when provided, used instead of formData name fields */
+  locationDisplay?: LocationDisplayPayload;
 }
 
 const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
@@ -21,8 +28,15 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
   shippingType,
   onBack,
   onSubmit,
-  isSubmitting
+  isSubmitting,
+  locationDisplay: locationDisplayProp,
 }) => {
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      console.log("[RequestConfirmation] formData received:", formData);
+    }
+  }, [formData]);
+
   const [showEmailRegistration, setShowEmailRegistration] = useState(false);
   const [email, setEmail] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -96,21 +110,20 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
     onSubmit(registeredCustomerId || undefined);
   };
 
-  const getLocationDisplay = () => {
+  const getLocationDisplayFallback = (): LocationDisplayPayload => {
     if (shippingType === "domestic") {
       return {
-        origin: `${formData.originCityName}، ${formData.originCountyName}، ${formData.originProvinceName}`,
-        destination: `${formData.destinationCityName}، ${formData.destinationCountyName}، ${formData.destinationProvinceName}`
-      };
-    } else {
-      return {
-        origin: `${formData.originCityInternationalName}، ${formData.originCountryName}`,
-        destination: `${formData.destCityInternationalName}، ${formData.destCountryName}`
+        origin: [formData.originCityName, formData.originCountyName, formData.originProvinceName].filter(Boolean).join("، ") || "—",
+        destination: [formData.destinationCityName, formData.destinationCountyName, formData.destinationProvinceName].filter(Boolean).join("، ") || "—",
       };
     }
+    return {
+      origin: [formData.originCityInternationalName, formData.originCountryName].filter(Boolean).join("، ") || "—",
+      destination: [formData.destCityInternationalName, formData.destCountryName].filter(Boolean).join("، ") || "—",
+    };
   };
 
-  const locationDisplay = getLocationDisplay();
+  const locationDisplay = locationDisplayProp ?? getLocationDisplayFallback();
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
