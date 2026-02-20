@@ -249,20 +249,32 @@ def get_customer_profile(customer_id: int):
 
 @customer_gamification_bp.get("/workflow/<int:customer_id>")
 def get_customer_workflow(customer_id: int):
-    """Get customer workflow steps for a specific request."""
-    request_id = request.args.get("request_id")
-    
-    if not request_id:
+    """Get customer workflow steps and request detail for a specific request."""
+    request_id_arg = request.args.get("request_id")
+    if not request_id_arg:
         return jsonify({"message": "شناسه درخواست الزامی است"}), 400
-    
     try:
-        # Get workflow steps for the request
+        request_id = int(request_id_arg)
+    except (TypeError, ValueError):
+        return jsonify({"message": "شناسه درخواست نامعتبر است"}), 400
+
+    try:
+        shipment_req = (
+            db.session.query(ShipmentRequest)
+            .filter(
+                ShipmentRequest.id == request_id,
+                ShipmentRequest.gamification_customer_id == customer_id,
+            )
+            .first()
+        )
+        if not shipment_req:
+            return jsonify({"message": "درخواست یافت نشد یا به این مشتری تعلق ندارد"}), 404
+
         steps = db.session.query(CustomerWorkflowStep).filter(
             CustomerWorkflowStep.customer_id == customer_id,
-            CustomerWorkflowStep.shipment_request_id == request_id
+            CustomerWorkflowStep.shipment_request_id == request_id,
         ).order_by(CustomerWorkflowStep.step_order).all()
-        
-        # Define all possible steps
+
         all_steps = [
             {"name": "email_verified", "order": 1, "title": "تایید ایمیل", "points": 10},
             {"name": "request_submitted", "order": 2, "title": "ارسال درخواست", "points": 20},
@@ -271,33 +283,54 @@ def get_customer_workflow(customer_id: int):
             {"name": "quote_provided", "order": 5, "title": "ارائه پیشنهاد", "points": 30},
             {"name": "contract_signed", "order": 6, "title": "امضای قرارداد", "points": 50},
             {"name": "shipment_picked_up", "order": 7, "title": "تحویل مرسوله", "points": 40},
-            {"name": "shipment_delivered", "order": 8, "title": "تحویل به مقصد", "points": 100}
+            {"name": "shipment_delivered", "order": 8, "title": "تحویل به مقصد", "points": 100},
         ]
-        
-        # Create workflow status
+
         workflow_status = []
         for step_def in all_steps:
             completed_step = next((s for s in steps if s.step_name == step_def["name"]), None)
-            
             workflow_status.append({
                 "name": step_def["name"],
                 "order": step_def["order"],
                 "title": step_def["title"],
                 "points": step_def["points"],
                 "is_completed": completed_step.is_completed if completed_step else False,
-                "completed_at": completed_step.completed_at.isoformat() if completed_step and completed_step.completed_at else None,
-                "points_earned": completed_step.points_earned if completed_step else 0
+                "completed_at": (
+                    completed_step.completed_at.isoformat()
+                    if completed_step and completed_step.completed_at
+                    else None
+                ),
+                "points_earned": completed_step.points_earned if completed_step else 0,
             })
-        
+
+        assigned_expert = None
+        if shipment_req.assigned_expert:
+            exp = shipment_req.assigned_expert
+            assigned_expert = {
+                "id": exp.id,
+                "full_name": exp.full_name,
+                "phone": exp.phone or "",
+                "email": exp.email or "",
+            }
+
+        created_at = shipment_req.created_at
+        if hasattr(created_at, "isoformat"):
+            created_at = created_at.isoformat()
+
         return jsonify({
+            "id": shipment_req.id,
+            "shipping_type": shipment_req.shipping_type or "domestic",
+            "status": shipment_req.status or "new",
+            "created_at": created_at,
+            "assigned_expert": assigned_expert,
             "customer_id": customer_id,
             "request_id": request_id,
             "workflow_steps": workflow_status,
             "total_points_earned": sum(step.points_earned for step in steps),
             "completed_steps": len([s for s in steps if s.is_completed]),
-            "total_steps": len(all_steps)
+            "total_steps": len(all_steps),
         }), 200
-        
+
     except Exception as e:
         current_app.logger.error(f"Error getting customer workflow: {e}")
         return jsonify({"message": "خطا در دریافت گردش کار"}), 500

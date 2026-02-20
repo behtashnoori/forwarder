@@ -3,7 +3,8 @@ Run this when seed_international_data was already run without Iran (e.g. before 
 """
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Run from forwarder: python -m backend.add_iran_country  OR  PYTHONPATH=forwarder python forwarder/backend/add_iran_country.py
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime
 from backend.__init__ import create_app

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -72,6 +73,7 @@ interface LocationFormProps {
 
 const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [originCounties, setOriginCounties] = useState<County[]>([]);
   const [destinationCounties, setDestinationCounties] = useState<County[]>([]);
@@ -131,6 +133,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCargoDetails, setShowCargoDetails] = useState(false);
+  const [submittedCustomerId, setSubmittedCustomerId] = useState<number | null>(null);
 
   // Fetch transport method options on component mount
   useEffect(() => {
@@ -867,6 +870,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       const response = await submitShipmentRequest(payload);
       const trackingNumber = `SR${response.id.toString().padStart(6, '0')}`;
 
+      if (gamificationCustomerId != null) {
+        setSubmittedCustomerId(gamificationCustomerId);
+      }
       setIsSubmitted(true);
       setShowConfirmation(false);
       toast({
@@ -918,6 +924,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     });
     setIsSubmitted(false);
     setShowCargoDetails(false);
+    setSubmittedCustomerId(null);
     // Reset international cities arrays
     setOriginInternationalCities([]);
     setDestinationInternationalCities([]);
@@ -930,6 +937,19 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           <div className="mb-4">
             <CheckCircle2 className="w-16 h-16 text-secondary mx-auto" />
           </div>
+          {submittedCustomerId != null && (
+            <div className="mb-6 space-y-3">
+              <Button
+                onClick={() => navigate(`/customer/${submittedCustomerId}`)}
+                className="w-full bg-gradient-primary hover:shadow-primary"
+              >
+                ورود به پنل مشتری
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                از پنل مشتری می‌توانید درخواست‌های خود و وضعیت هر درخواست را ببینید.
+              </p>
+            </div>
+          )}
           <h3 className="text-xl font-bold text-foreground mb-2">درخواست شما ثبت شد!</h3>
           <p className="text-muted-foreground mb-6">
             کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت و جزئیات ارسال را هماهنگ خواهد کرد.

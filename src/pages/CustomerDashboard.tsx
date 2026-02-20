@@ -82,6 +82,13 @@ const CustomerDashboard: React.FC = () => {
       if (response.ok) {
         const customerData = await response.json();
         setData(customerData);
+        if (customerId) {
+          try {
+            localStorage.setItem("customer_panel_id", customerId);
+          } catch {
+            // ignore storage errors
+          }
+        }
       } else {
         toast({
           title: "خطا",

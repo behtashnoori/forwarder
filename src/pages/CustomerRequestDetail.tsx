@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,8 +47,16 @@ interface RequestDetail {
   total_steps: number;
 }
 
+const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
+
 const CustomerRequestDetail: React.FC = () => {
-  const { requestId, customer } = useParams<{ requestId: string; customer: string }>();
+  const { requestId } = useParams<{ requestId: string }>();
+  const [searchParams] = useSearchParams();
+  const customerFromQuery = searchParams.get("customer");
+  const customer =
+    customerFromQuery ??
+    (typeof localStorage !== "undefined" ? localStorage.getItem(CUSTOMER_PANEL_ID_KEY) : null) ??
+    undefined;
   const navigate = useNavigate();
   const { toast } = useToast();
   
@@ -87,6 +95,8 @@ const CustomerRequestDetail: React.FC = () => {
   useEffect(() => {
     if (requestId && customer) {
       fetchRequestDetail();
+    } else if (requestId && !customer) {
+      setLoading(false);
     }
   }, [requestId, customer]);
 
@@ -135,10 +145,17 @@ const CustomerRequestDetail: React.FC = () => {
     return (
       <div className="min-h-screen bg-gradient-background flex items-center justify-center">
         <div className="text-center">
-          <p className="text-muted-foreground mb-4">اطلاعات درخواست یافت نشد</p>
-          <Button onClick={() => navigate(`/customer/${customer}`)} variant="outline">
+          <p className="text-muted-foreground mb-4">
+            {customer
+              ? "اطلاعات درخواست یافت نشد"
+              : "لطفاً از پنل مشتری وارد شوید یا ابتدا وارد پنل خود شوید."}
+          </p>
+          <Button
+            onClick={() => navigate(customer ? `/customer/${customer}` : "/")}
+            variant="outline"
+          >
             <ArrowLeft className="w-4 h-4 ml-2" />
-            بازگشت به پنل مشتری
+            {customer ? "بازگشت به پنل مشتری" : "بازگشت به صفحه اصلی"}
           </Button>
         </div>
       </div>
@@ -154,7 +171,7 @@ const CustomerRequestDetail: React.FC = () => {
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Button
-              onClick={() => navigate(`/customer/${customer}`)}
+              onClick={() => navigate(customer ? `/customer/${customer}` : "/")}
               variant="outline"
               size="sm"
             >
