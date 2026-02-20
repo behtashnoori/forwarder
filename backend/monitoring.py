@@ -2,7 +2,7 @@
 import time
 import psutil
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Any, Optional
 from functools import wraps
 from collections import defaultdict, deque
@@ -26,13 +26,13 @@ class SystemMonitor:
             'users': defaultdict(int),
             'endpoints': defaultdict(int)
         }
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
     
     def record_request(self, method: str, endpoint: str, status_code: int, 
                       response_time: float, user_id: Optional[int] = None):
         """Record API request metrics."""
         request_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'method': method,
             'endpoint': endpoint,
             'status_code': status_code,
@@ -50,7 +50,7 @@ class SystemMonitor:
     def record_error(self, error: Exception, context: Dict[str, Any]):
         """Record error metrics."""
         error_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'error_type': type(error).__name__,
             'error_message': str(error),
             'context': context,
@@ -64,7 +64,7 @@ class SystemMonitor:
                           additional_metrics: Optional[Dict] = None):
         """Record performance metrics."""
         perf_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'operation': operation,
             'duration': duration,
             'additional_metrics': additional_metrics or {}
@@ -80,7 +80,7 @@ class SystemMonitor:
         disk = psutil.disk_usage('/')
         
         # Application metrics
-        uptime = (datetime.utcnow() - self.start_time).total_seconds()
+        uptime = (datetime.now(timezone.utc) - self.start_time).total_seconds()
         
         # Request metrics
         total_requests = len(self.metrics['requests'])
@@ -141,7 +141,7 @@ class SystemMonitor:
                     table_sizes[table] = result.scalar()
                 
                 # Recent activity counts
-                today = datetime.utcnow().date()
+                today = datetime.now(timezone.utc).date()
                 week_ago = today - timedelta(days=7)
                 
                 recent_requests = db.session.query(ShipmentRequest).filter(
@@ -279,7 +279,7 @@ class SystemMonitor:
         return {
             'overall': overall_health,
             'indicators': health_indicators,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
 
 
@@ -375,12 +375,12 @@ class AnalyticsEngine:
         
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
-            if datetime.utcnow().timestamp() - timestamp < self.cache_ttl:
+            if datetime.now(timezone.utc).timestamp() - timestamp < self.cache_ttl:
                 return cached_data
         
         try:
             with db.session.begin():
-                end_date = datetime.utcnow()
+                end_date = datetime.now(timezone.utc)
                 start_date = end_date - timedelta(days=days)
                 
                 # Customer growth
@@ -417,7 +417,7 @@ class AnalyticsEngine:
                 }
                 
                 # Cache the result
-                self.cache[cache_key] = (analytics, datetime.utcnow().timestamp())
+                self.cache[cache_key] = (analytics, datetime.now(timezone.utc).timestamp())
                 
                 return analytics
                 
@@ -431,12 +431,12 @@ class AnalyticsEngine:
         
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
-            if datetime.utcnow().timestamp() - timestamp < self.cache_ttl:
+            if datetime.now(timezone.utc).timestamp() - timestamp < self.cache_ttl:
                 return cached_data
         
         try:
             with db.session.begin():
-                end_date = datetime.utcnow()
+                end_date = datetime.now(timezone.utc)
                 start_date = end_date - timedelta(days=days)
                 
                 # Opportunity metrics
@@ -479,7 +479,7 @@ class AnalyticsEngine:
                 }
                 
                 # Cache the result
-                self.cache[cache_key] = (analytics, datetime.utcnow().timestamp())
+                self.cache[cache_key] = (analytics, datetime.now(timezone.utc).timestamp())
                 
                 return analytics
                 
@@ -493,12 +493,12 @@ class AnalyticsEngine:
         
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
-            if datetime.utcnow().timestamp() - timestamp < self.cache_ttl:
+            if datetime.now(timezone.utc).timestamp() - timestamp < self.cache_ttl:
                 return cached_data
         
         try:
             with db.session.begin():
-                end_date = datetime.utcnow()
+                end_date = datetime.now(timezone.utc)
                 start_date = end_date - timedelta(days=days)
                 
                 # Request metrics
@@ -513,7 +513,7 @@ class AnalyticsEngine:
                 
                 # SLA compliance
                 overdue_requests = db.session.query(ShipmentRequest).filter(
-                    ShipmentRequest.sla_due_at < datetime.utcnow(),
+                    ShipmentRequest.sla_due_at < datetime.now(timezone.utc),
                     ShipmentRequest.status.in_(['assigned', 'in_progress'])
                 ).count()
                 
@@ -536,7 +536,7 @@ class AnalyticsEngine:
                 }
                 
                 # Cache the result
-                self.cache[cache_key] = (analytics, datetime.utcnow().timestamp())
+                self.cache[cache_key] = (analytics, datetime.now(timezone.utc).timestamp())
                 
                 return analytics
                 

@@ -46,10 +46,16 @@ def main():
             try:
                 command.upgrade(config, "head")
             except Exception as upgrade_err:
-                # If upgrade fails due to already-applied schema (multiple branches),
-                # set DB to head and ensure tracking_code column exists
+                # If upgrade fails due to already-applied schema (multiple branches)
+                # or missing revision (e.g. DB was migrated with another folder), set DB to head
                 err_str = str(upgrade_err).lower()
-                if "duplicatecolumn" in err_str or "duplicatetable" in err_str or "already exists" in err_str:
+                if (
+                    "duplicatecolumn" in err_str
+                    or "duplicatetable" in err_str
+                    or "already exists" in err_str
+                    or "can't locate revision" in err_str
+                    or "can not locate revision" in err_str
+                ):
                     head_rev = "20250220_merge_final"
                     print("Setting alembic_version to", head_rev, "and ensuring tracking_code.", flush=True)
                     try:

@@ -146,10 +146,13 @@ class TestAPIEndpoints:
             assert response.status_code in [200, 401]  # 401 if auth required
     
     def test_cors_headers(self):
-        """Test CORS headers are present."""
-        response = self.client.options('/api/health/ping')
-        
-        # Check for CORS headers
+        """Test CORS headers are present on OPTIONS preflight."""
+        response = self.client.open(
+            '/api/health/ping',
+            method='OPTIONS',
+            headers={'Origin': 'http://127.0.0.1:3000'},
+        )
+        # Check for CORS headers (added by before_request or after_request when Origin is sent)
         assert 'Access-Control-Allow-Origin' in response.headers
         assert 'Access-Control-Allow-Methods' in response.headers
     

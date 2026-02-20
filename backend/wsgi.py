@@ -30,7 +30,14 @@ with app.app_context():
         print("Migrations applied.")
     except Exception as _e:
         err_str = str(_e).lower()
-        if "duplicatecolumn" in err_str or "duplicatetable" in err_str or "already exists" in err_str:
+        needs_recovery = (
+            "duplicatecolumn" in err_str
+            or "duplicatetable" in err_str
+            or "already exists" in err_str
+            or "can't locate revision" in err_str
+            or "can not locate revision" in err_str
+        )
+        if needs_recovery:
             try:
                 with db.engine.connect() as conn:
                     with conn.begin():
@@ -46,6 +53,6 @@ with app.app_context():
 
 if __name__ == "__main__":
     host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
-    port = int(os.getenv("FLASK_RUN_PORT", "5000"))
+    port = int(os.getenv("FLASK_RUN_PORT", "5001"))
     debug = os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")
     app.run(host=host, port=port, debug=debug)

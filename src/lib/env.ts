@@ -21,12 +21,12 @@ function validateEnv() {
   }
 }
 
-// API base URL: in browser use same host as page (port 5000) so app works from network/internet
+// API base URL: in browser use same host as page (port 5001 = forwarder backend, to avoid conflict with other app on 5000)
 const getApiUrl = (): string => {
   if (typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:5000`;
+    return `${window.location.protocol}//${window.location.hostname}:5001`;
   }
-  return import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+  return import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001';
 };
 
 // Validate and export environment configuration
@@ -53,7 +53,7 @@ try {
   if (typeof window !== 'undefined') {
     console.log('🔗 API URL (browser):', env.API_URL);
   } else {
-    console.log('🔗 API URL (build-time):', import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000');
+    console.log('🔗 API URL (build-time):', import.meta.env.VITE_API_URL || 'http://127.0.0.1:5001');
   }
 } catch (error) {
   console.error('❌ Environment validation failed:', error);

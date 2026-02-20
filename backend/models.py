@@ -705,6 +705,19 @@ class PortProvinceMapping(db.Model):
         return f"<PortProvinceMapping port={self.port_id} province={self.province_id}>"
 
 
+class SiteSetting(db.Model):
+    """Key-value store for site-wide content (brand, contact, footer) editable by admin."""
+    __tablename__ = "site_setting"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    key = db.Column(db.String(80), unique=True, nullable=False)
+    value = db.Column(db.Text, nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<SiteSetting key={self.key!r}>"
+
+
 __all__ = [
     "Province",
     "County",
@@ -732,4 +745,5 @@ __all__ = [
     # Iran Ports Models
     "IranPort",
     "PortProvinceMapping",
+    "SiteSetting",
 ]

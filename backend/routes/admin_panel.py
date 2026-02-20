@@ -7,8 +7,8 @@ from sqlalchemy import and_, or_, func, desc, case
 from sqlalchemy.orm import joinedload
 
 from backend.models import (
-    City, County, Province, ShipmentRequest, ExpertUser, 
-    TransportMethod, AssignmentLog, ExpertConsoleLog
+    City, County, Province, ShipmentRequest, ExpertUser,
+    TransportMethod, AssignmentLog, ExpertConsoleLog, SiteSetting,
 )
 from backend.extensions import db
 from backend.security import require_role
@@ -300,6 +300,43 @@ def get_admin_dashboard():
     except Exception as e:
         current_app.logger.error(f"Error getting admin dashboard: {e}")
         return jsonify({"error": "خطا در دریافت آمار داشبورد"}), 500
+
+
+@admin_bp.get("/site-settings")
+@require_role("admin")
+def get_admin_site_settings():
+    """Return all site settings for admin edit (same shape as public)."""
+    rows = db.session.query(SiteSetting.key, SiteSetting.value).all()
+    return jsonify({r.key: r.value for r in rows})
+
+
+@admin_bp.put("/site-settings")
+@require_role("admin")
+def update_site_settings():
+    """Update site settings. Body: { \"key\": \"value\", ... } or { \"settings\": { ... } }."""
+    try:
+        data = request.get_json() or {}
+        if "settings" in data:
+            data = data["settings"]
+        if not isinstance(data, dict):
+            return jsonify({"error": "بدنه درخواست باید آبجکت باشد"}), 400
+        for key, value in data.items():
+            if not key or not isinstance(key, str):
+                continue
+            key = key.strip()[:80]
+            value = str(value).strip() if value is not None else ""
+            row = db.session.query(SiteSetting).filter_by(key=key).first()
+            if row:
+                row.value = value
+            else:
+                db.session.add(SiteSetting(key=key, value=value))
+        db.session.commit()
+        rows = db.session.query(SiteSetting.key, SiteSetting.value).all()
+        return jsonify({r.key: r.value for r in rows})
+    except Exception as e:
+        current_app.logger.error(f"Error updating site settings: {e}")
+        db.session.rollback()
+        return jsonify({"error": "خطا در ذخیره تنظیمات"}), 500
 
 
 @admin_bp.get("/reports/assignment-summary")

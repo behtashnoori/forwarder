@@ -26,7 +26,7 @@ pip install -r requirements.txt
 cd ..
 ```
 
-## 🗄️ مرحله 2: تنظیم PostgreSQL
+## 🗄️ مرحله 2: تنظیم Postgre
 
 ### نصب PostgreSQL (اگر نصب نیست)
 
@@ -104,10 +104,10 @@ cd backend
 python wsgi.py
 ```
 
-Backend روی `http://localhost:5000` اجرا می‌شود.
+Backend روی `http://localhost:5001` اجرا می‌شود (پورت 5001 تا با برنامهٔ دیگر روی 5000 تداخل نداشته باشد).
 
 **تأیید اجرا:**
-- در مرورگر به `http://localhost:5000` بروید
+- در مرورگر به `http://localhost:5001` بروید
 - باید پیام "✅ Backend is running" را ببینید
 
 ## 🌐 مرحله 6: اجرای Frontend
@@ -129,8 +129,8 @@ Frontend روی `http://localhost:5173` اجرا می‌شود.
 | سرویس | URL | توضیحات |
 |--------|-----|---------|
 | **Frontend** | http://localhost:5173 | رابط کاربری اصلی |
-| **Backend API** | http://localhost:5000 | API endpoints |
-| **API Health** | http://localhost:5000/api/health | بررسی وضعیت API |
+| **Backend API** | http://localhost:5001 | API endpoints (پورت 5001) |
+| **API Health** | http://localhost:5001/api/health | بررسی وضعیت API |
 
 ## 🐛 عیب‌یابی
 
@@ -162,11 +162,11 @@ psql -h 127.0.0.1 -U postgres -d forwarder_db
 **پیدا کردن پروسس:**
 ```bash
 # Linux/macOS
-lsof -i :5000
+lsof -i :5001
 lsof -i :5173
 
 # Windows
-netstat -ano | findstr :5000
+netstat -ano | findstr :5001
 netstat -ano | findstr :5173
 ```
 
@@ -220,7 +220,7 @@ npm run build
 
 ### مشاهده API endpoints
 ```bash
-curl http://localhost:5000/api/health
+curl http://localhost:5001/api/health
 ```
 
 ## 📁 ساختار پروژه

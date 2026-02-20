@@ -73,6 +73,15 @@ def _allow_any_origin(origin: str) -> bool:
     return True
 
 
+# IPv4 with port, e.g. http://130.185.77.25:8080
+_IP_ORIGIN_PATTERN = re.compile(r"^https?://\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$")
+
+
+def is_ip_based_origin(origin: str) -> bool:
+    """Return True if origin is http(s)://IPv4:port (for deployment on server IP)."""
+    return bool(origin and _IP_ORIGIN_PATTERN.match(origin))
+
+
 def get_cors_config() -> dict:
     """
     Get CORS configuration with dynamic origins.

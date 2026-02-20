@@ -14,7 +14,7 @@ from backend.extensions import db, migrate
 from backend.routes import register_routes
 from backend.security import security
 from backend.app_logging import logger
-from backend.cors_config import get_cors_config, log_cors_info
+from backend.cors_config import get_cors_config, log_cors_info, is_ip_based_origin
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 load_dotenv(dotenv_path=os.path.join(PROJECT_ROOT, ".env"))
@@ -72,7 +72,11 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
             return False
         is_dev = os.getenv('FLASK_ENV', '').lower() in ('development', 'dev') or os.getenv('FLASK_DEBUG', '').lower() in ('true', '1', 'yes')
         allow_any = os.getenv('CORS_ALLOW_ALL_ORIGINS', '').lower() in ('1', 'true', 'yes')
+        # Allow IP-based origins (e.g. http://130.185.77.25:8080) by default for deployment on VPS
+        allow_ip_origins = os.getenv('CORS_ALLOW_IP_ORIGINS', '1').lower() in ('1', 'true', 'yes')
         if is_dev or allow_any:
+            return True
+        if allow_ip_origins and is_ip_based_origin(origin):
             return True
         origins_config = cors_config.get('origins')
         if callable(origins_config):

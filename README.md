@@ -69,8 +69,8 @@ export DB_PASSWORD="your-secure-database-password"
 
 ### اجرای محلی
 - **Frontend**: http://localhost:5173
-- **Backend API**: http://localhost:5000
-- **API Health**: http://localhost:5000/api/health
+- **Backend API**: http://localhost:5001 (پورت 5001 برای جلوگیری از تداخل با برنامهٔ دیگر روی 5000)
+- **API Health**: http://localhost:5001/api/health
 
 ### اجرای Docker
 - **وب‌سایت اصلی**: http://your-server-ip/

@@ -3,11 +3,17 @@ import { Menu, Phone, Info, BarChart3, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
+import { useSiteSettings, getSetting } from "@/contexts/SiteSettingsContext";
+
+/** فعلاً آیکون CRM در نوار بالا نمایش داده نشود */
+const SHOW_CRM_NAV = false;
 
 const Header = () => {
+  const { settings } = useSiteSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
+  const siteName = getSetting(settings, "site_name");
 
   useEffect(() => {
     const checkAdmin = () => {
@@ -42,7 +48,7 @@ const Header = () => {
               <div className="w-6 h-6 bg-primary-foreground rounded-sm transform rotate-45"></div>
             </div>
             <div className="text-right">
-              <h1 className="text-lg font-bold text-foreground">فورواردری سریع</h1>
+              <h1 className="text-lg font-bold text-foreground">{siteName || "فورواردری سریع"}</h1>
               <p className="text-xs text-muted-foreground">ارسال آسان و مطمئن</p>
             </div>
           </div>
@@ -57,12 +63,14 @@ const Header = () => {
               <Phone className="w-4 h-4 ml-2" />
               تماس با ما
             </Button>
-            <Button variant="ghost" className="text-sm font-medium" asChild>
-              <Link to="/crm">
-                <BarChart3 className="w-4 h-4 ml-2" />
-                CRM
-              </Link>
-            </Button>
+            {SHOW_CRM_NAV && (
+              <Button variant="ghost" className="text-sm font-medium" asChild>
+                <Link to="/crm">
+                  <BarChart3 className="w-4 h-4 ml-2" />
+                  CRM
+                </Link>
+              </Button>
+            )}
             {isAdmin && (
               <Button variant="ghost" className="text-sm font-medium" asChild>
                 <Link to="/admin">
@@ -97,12 +105,14 @@ const Header = () => {
                 <Phone className="w-4 h-4 ml-2" />
                 تماس با ما
               </Button>
-              <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                <Link to="/crm">
-                  <BarChart3 className="w-4 h-4 ml-2" />
-                  CRM
-                </Link>
-              </Button>
+              {SHOW_CRM_NAV && (
+                <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
+                  <Link to="/crm">
+                    <BarChart3 className="w-4 h-4 ml-2" />
+                    CRM
+                  </Link>
+                </Button>
+              )}
               {isAdmin && (
                 <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
                   <Link to="/admin">

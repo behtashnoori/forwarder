@@ -867,3 +867,34 @@ export function fetchPortProvinceMappings(params: {
 export function fetchRecommendedPorts(provinceId: number): Promise<RecommendedPort[]> {
   return request(`/api/recommended-ports?province_id=${provinceId}`);
 }
+
+// Site settings (public + admin)
+export type SiteSettings = Record<string, string>;
+
+const DEFAULT_SITE_SETTINGS: SiteSettings = {
+  site_name: "فورواردری سریع",
+  site_tagline: "ارائه دهنده خدمات حمل و نقل و فورواردری با بیش از ۱۰ سال تجربه در سراسر کشور",
+  contact_phone: "۰۲۱-۸۸۷۷۶۶۵۵",
+  contact_email: "info@forwarding.ir",
+  contact_address: "تهران، میدان آزادی",
+  working_hours_week: "شنبه تا چهارشنبه: ۸-۱۸",
+  working_hours_thu: "پنج‌شنبه: ۸-۱۶",
+  support_text: "پشتیبانی ۲۴ ساعته",
+  copyright_text: "© ۱۴۰۳ فورواردری سریع. تمامی حقوق محفوظ است.",
+  show_contact_section: "1",
+  show_working_hours_section: "1",
+  show_footer: "1",
+};
+
+export function fetchSiteSettings(): Promise<SiteSettings> {
+  return request<SiteSettings>("/api/site-settings");
+}
+
+export function updateSiteSettings(settings: SiteSettings): Promise<SiteSettings> {
+  return request<SiteSettings>("/api/admin/site-settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
+}
+
+export { DEFAULT_SITE_SETTINGS };
