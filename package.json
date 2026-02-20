@@ -14,7 +14,8 @@
     "postinstall": "npm run setup:env",
     "firewall:open": "powershell -ExecutionPolicy Bypass -File ./scripts/open-firewall-port.ps1",
     "test:backend": "powershell -ExecutionPolicy Bypass -File ./scripts/test-backend-connection.ps1",
-    "test:provinces": "powershell -ExecutionPolicy Bypass -File ./scripts/test-provinces-api.ps1"
+    "test:provinces": "powershell -ExecutionPolicy Bypass -File ./scripts/test-provinces-api.ps1",
+    "test:ports": "node scripts/test-ports.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

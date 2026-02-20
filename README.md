@@ -68,9 +68,30 @@ export DB_PASSWORD="your-secure-database-password"
 ## 🔗 دسترسی‌ها
 
 ### اجرای محلی
-- **Frontend**: http://localhost:5173
+- **Frontend**: http://localhost:8080 (یا 5173 بسته به تنظیم Vite)
 - **Backend API**: http://localhost:5001 (پورت 5001 برای جلوگیری از تداخل با برنامهٔ دیگر روی 5000)
 - **API Health**: http://localhost:5001/api/health
+
+### دسترسی از خارج سرور (باز کردن پورت‌ها در فایروال)
+برای اینکه از بیرون سرور بتوانید به برنامه وصل شوید، پورت‌های **8080** (فرانت) و **5001** (API) باید در فایروال باز باشند.
+
+- **ویندوز (PowerShell با دسترسی Administrator):**
+  ```bash
+  npm run firewall:open
+  ```
+  یا مستقیم: `powershell -ExecutionPolicy Bypass -File ./scripts/open-firewall-port.ps1`
+- **لینوکس (ufw):**
+  ```bash
+  sudo ./scripts/open-firewall-ports.sh
+  ```
+
+بعد از باز کردن پورت‌ها، از شبکه: `http://IP_SERVER:8080` و `http://IP_SERVER:5001`
+
+**اگر از بیرون لاگین نمی‌شود (ERR_CONNECTION_TIMED_OUT روی :5001):** بک‌اند باید روی همه اینترفیس‌ها گوش بدهد. در فایل **`.env`** (در روت پروژه) مقدار زیر را قرار دهید و بک‌اند را یک بار ریستارت کنید:
+```bash
+FLASK_RUN_HOST=0.0.0.0
+```
+(در `.env.example` این مقدار پیش‌فرض است.)
 
 ### اجرای Docker
 - **وب‌سایت اصلی**: http://your-server-ip/

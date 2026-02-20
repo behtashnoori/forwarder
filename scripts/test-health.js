@@ -5,8 +5,8 @@
  * Tests all health-related endpoints
  */
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
-const TEST_ORIGIN = 'http://localhost:8109';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://127.0.0.1:5001';
+const TEST_ORIGIN = 'http://localhost:8080';
 
 // Health check tests
 const healthTests = [
@@ -144,8 +144,8 @@ async function runHealthTests() {
     
     // Provide troubleshooting tips
     console.log('\n🔧 Troubleshooting Tips:');
-    console.log('1. Make sure the backend server is running on port 5000');
-    console.log('2. Check if the server is accessible at http://127.0.0.1:5000');
+    console.log('1. Make sure the backend server is running on port 5001');
+    console.log('2. Check if the server is accessible at http://127.0.0.1:5001');
     console.log('3. Verify that all required dependencies are installed');
     console.log('4. Check server logs for any error messages');
   }

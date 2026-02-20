@@ -52,7 +52,16 @@ with app.app_context():
             print("Migrations (upgrade) failed:", _e)
 
 if __name__ == "__main__":
+    # Ensure .env from project root is loaded (backend/__init__.py already does this; redundant for clarity)
+    _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _env_path = os.path.join(_root, ".env")
+    if os.path.isfile(_env_path):
+        from dotenv import load_dotenv
+        load_dotenv(dotenv_path=_env_path)
     host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
     port = int(os.getenv("FLASK_RUN_PORT", "5001"))
     debug = os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")
+    print(f"Backend listening on http://{host}:{port}")
+    if host == "127.0.0.1":
+        print("WARNING: FLASK_RUN_HOST=127.0.0.1 — external access will fail. Set FLASK_RUN_HOST=0.0.0.0 in .env for access from outside.")
     app.run(host=host, port=port, debug=debug)
