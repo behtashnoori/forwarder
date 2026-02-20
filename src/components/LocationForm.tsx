@@ -133,7 +133,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCargoDetails, setShowCargoDetails] = useState(false);
-  const [submittedCustomerId, setSubmittedCustomerId] = useState<number | null>(null);
+  const [submittedTrackingCode, setSubmittedTrackingCode] = useState<string | null>(null);
 
   // Fetch transport method options on component mount
   useEffect(() => {
@@ -784,7 +784,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     }
   };
 
-  const handleFinalSubmit = async (gamificationCustomerId?: number) => {
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -796,11 +796,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         domestic_transport_method: formData.domesticTransportMethod,
         transport_method_preference: formData.transportMethodPreference,
       };
-
-      // Add gamification customer ID if available
-      if (gamificationCustomerId) {
-        payload.gamification_customer_id = gamificationCustomerId;
-      }
 
       // Add location data based on shipping type
       if (shippingType === "domestic") {
@@ -868,16 +863,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       }
 
       const response = await submitShipmentRequest(payload);
-      const trackingNumber = `SR${response.id.toString().padStart(6, '0')}`;
-
-      if (gamificationCustomerId != null) {
-        setSubmittedCustomerId(gamificationCustomerId);
-      }
+      const trackingCode = response.tracking_code || `SR${response.id.toString().padStart(6, "0")}`;
+      setSubmittedTrackingCode(trackingCode);
       setIsSubmitted(true);
       setShowConfirmation(false);
       toast({
         title: "درخواست ثبت شد",
-        description: `شماره پیگیری شما: ${trackingNumber}. کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت.`,
+        description: `شماره پیگیری شما: ${trackingCode}. کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت.`,
       });
     } catch (error) {
       toast({
@@ -924,7 +916,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     });
     setIsSubmitted(false);
     setShowCargoDetails(false);
-    setSubmittedCustomerId(null);
+    setSubmittedTrackingCode(null);
     // Reset international cities arrays
     setOriginInternationalCities([]);
     setDestinationInternationalCities([]);
@@ -937,26 +929,28 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           <div className="mb-4">
             <CheckCircle2 className="w-16 h-16 text-secondary mx-auto" />
           </div>
-          {submittedCustomerId != null && (
-            <div className="mb-6 space-y-3">
-              <Button
-                onClick={() => navigate(`/customer/${submittedCustomerId}`)}
-                className="w-full bg-gradient-primary hover:shadow-primary"
-              >
-                ورود به پنل مشتری
-              </Button>
-              <p className="text-sm text-muted-foreground">
-                از پنل مشتری می‌توانید درخواست‌های خود و وضعیت هر درخواست را ببینید.
-              </p>
+          <h3 className="text-xl font-bold text-foreground mb-2">درخواست شما ثبت شد!</h3>
+          {submittedTrackingCode && (
+            <div className="mb-4 p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-muted-foreground mb-1">شماره پیگیری</p>
+              <p className="text-xl font-mono font-bold text-foreground">{submittedTrackingCode}</p>
             </div>
           )}
-          <h3 className="text-xl font-bold text-foreground mb-2">درخواست شما ثبت شد!</h3>
           <p className="text-muted-foreground mb-6">
             کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت و جزئیات ارسال را هماهنگ خواهد کرد.
           </p>
-          <Button onClick={resetForm} variant="outline" className="w-full">
-            ثبت درخواست جدید
-          </Button>
+          <div className="space-y-2">
+            <Button
+              onClick={() => submittedTrackingCode && navigate(`/customer/track/${submittedTrackingCode}`)}
+              className="w-full bg-gradient-primary hover:shadow-primary"
+              disabled={!submittedTrackingCode}
+            >
+              پیگیری درخواست
+            </Button>
+            <Button onClick={resetForm} variant="outline" className="w-full">
+              ثبت درخواست جدید
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

@@ -1,4 +1,6 @@
 """Routes for shipment request creation."""
+import secrets
+import string
 from datetime import datetime
 from typing import Any, Dict
 
@@ -235,6 +237,20 @@ def create_shipment_request():
         db.session.add(shipment_request)
         db.session.flush()
 
+        # Generate unique non-guessable tracking code for public tracking (if column exists)
+        try:
+            alphabet = string.ascii_uppercase + string.digits
+            for _ in range(100):
+                code = "SR-" + "".join(secrets.choice(alphabet) for _ in range(6))
+                if db.session.query(ShipmentRequest).filter(ShipmentRequest.tracking_code == code).first() is None:
+                    shipment_request.tracking_code = code
+                    break
+            else:
+                shipment_request.tracking_code = "SR-" + secrets.token_hex(3).upper()
+        except Exception:
+            # Fallback if tracking_code column missing or any DB error (e.g. before migration)
+            shipment_request.tracking_code = f"SR{shipment_request.id:06d}"
+
         log_entry = ShipmentRequestLog(
             shipment_request_id=shipment_request.id,
             created_at=timestamp,
@@ -296,11 +312,13 @@ def create_shipment_request():
             500,
         )
 
+    tracking_display = getattr(shipment_request, "tracking_code", None) or f"SR{shipment_request.id:06d}"
     return (
         jsonify(
             {
                 "message": "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت.",
                 "id": shipment_request.id,
+                "tracking_code": tracking_display,
             }
         ),
         201,

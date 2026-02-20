@@ -221,7 +221,10 @@ class ShipmentRequest(db.Model):
     __tablename__ = "shipment_request"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
-    
+
+    # Public tracking code (unique, non-guessable); used for /customer/track/:identifier
+    tracking_code = db.Column(db.String(32), unique=True, nullable=True, index=True)
+
     # Shipping type: 'domestic' or 'international'
     shipping_type = db.Column(db.String(20), nullable=False, default="domestic")
     

@@ -1,15 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Menu, Phone, Info, BarChart3, Shield, User } from "lucide-react";
+import { Menu, Phone, Info, BarChart3, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
 
-const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
-
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [customerPanelId, setCustomerPanelId] = useState<string | null>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -26,25 +23,14 @@ const Header = () => {
         setIsAdmin(false);
       }
     };
-    const id = localStorage.getItem(CUSTOMER_PANEL_ID_KEY);
-    setCustomerPanelId(id);
-
     checkAdmin();
-    
-    // Listen for storage changes (when login happens in another tab)
     window.addEventListener("storage", checkAdmin);
-    
-    // Also check periodically in case login happens in same tab
-    const interval = setInterval(() => {
-      checkAdmin();
-      setCustomerPanelId(localStorage.getItem(CUSTOMER_PANEL_ID_KEY));
-    }, 1000);
-    
+    const interval = setInterval(checkAdmin, 1000);
     return () => {
       window.removeEventListener("storage", checkAdmin);
       clearInterval(interval);
     };
-  }, [location.pathname]); // Re-check when route changes
+  }, [location.pathname]);
 
   return (
     <header className="w-full bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -71,14 +57,6 @@ const Header = () => {
               <Phone className="w-4 h-4 ml-2" />
               تماس با ما
             </Button>
-            {customerPanelId && (
-              <Button variant="ghost" className="text-sm font-medium" asChild>
-                <Link to={`/customer/${customerPanelId}`}>
-                  <User className="w-4 h-4 ml-2" />
-                  پنل مشتری
-                </Link>
-              </Button>
-            )}
             <Button variant="ghost" className="text-sm font-medium" asChild>
               <Link to="/crm">
                 <BarChart3 className="w-4 h-4 ml-2" />
@@ -119,14 +97,6 @@ const Header = () => {
                 <Phone className="w-4 h-4 ml-2" />
                 تماس با ما
               </Button>
-              {customerPanelId && (
-                <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                  <Link to={`/customer/${customerPanelId}`}>
-                    <User className="w-4 h-4 ml-2" />
-                    پنل مشتری
-                  </Link>
-                </Button>
-              )}
               <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
                 <Link to="/crm">
                   <BarChart3 className="w-4 h-4 ml-2" />

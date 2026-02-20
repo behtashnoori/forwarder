@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle, ArrowLeft, Send, User, Phone, MapPin, Package, Calendar, FileText, ExternalLink } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { env } from "@/lib/env";
+import { ArrowLeft, Send, User, Phone, MapPin, Package, Calendar, FileText } from "lucide-react";
 
 export interface LocationDisplayPayload {
   origin: string;
@@ -17,7 +14,7 @@ interface RequestConfirmationProps {
   formData: any;
   shippingType: "domestic" | "international";
   onBack: () => void;
-  onSubmit: (gamificationCustomerId?: number) => void;
+  onSubmit: () => void;
   isSubmitting: boolean;
   /** Resolved origin/destination labels; when provided, used instead of formData name fields */
   locationDisplay?: LocationDisplayPayload;
@@ -37,77 +34,8 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
     }
   }, [formData]);
 
-  const [showEmailRegistration, setShowEmailRegistration] = useState(false);
-  const [email, setEmail] = useState("");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [registeredCustomerId, setRegisteredCustomerId] = useState<number | null>(null);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-
-  const handleEmailRegistration = async () => {
-    if (!email.trim()) {
-      toast({
-        title: "خطا",
-        description: "لطفاً ایمیل خود را وارد کنید",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsRegistering(true);
-    try {
-      const response = await fetch(`${env.API_URL}/api/customer/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          phone: formData.phoneNumber,
-          first_name: firstName.trim() || null,
-          last_name: lastName.trim() || null,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (response.ok) {
-        setRegisteredCustomerId(data.customer_id);
-        toast({
-          title: "ثبت‌نام موفق",
-          description: "ایمیل تایید به آدرس شما ارسال شد. لطفاً ایمیل خود را تایید کنید تا بتوانید از امکانات ویژه استفاده کنید.",
-          duration: 8000,
-        });
-      } else if (data.customer_id) {
-        // Customer already exists
-        setRegisteredCustomerId(data.customer_id);
-        toast({
-          title: "اطلاعات موجود",
-          description: "این ایمیل قبلاً ثبت شده است. می‌توانید از امکانات ویژه استفاده کنید.",
-          duration: 6000,
-        });
-      } else {
-        toast({
-          title: "خطا",
-          description: data.message || "خطا در ثبت‌نام",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "خطا",
-        description: "خطا در ارتباط با سرور",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRegistering(false);
-    }
-  };
-
   const handleFinalSubmit = () => {
-    onSubmit(registeredCustomerId || undefined);
+    onSubmit();
   };
 
   const getLocationDisplayFallback = (): LocationDisplayPayload => {
@@ -305,129 +233,6 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
           )}
         </CardContent>
       </Card>
-
-      {/* Email Registration for Gamification */}
-      {!registeredCustomerId ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              امکانات ویژه برای مشتریان
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                با ثبت ایمیل خود از امکانات ویژه استفاده کنید:
-              </h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• ردیابی کامل گردش کار درخواست شما</li>
-                <li>• مشاهده کارشناس مربوطه و اطلاعات تماس</li>
-                <li>• دریافت امتیاز و ارتقای سطح مشتری</li>
-                <li>• دسترسی به تاریخچه درخواست‌های قبلی</li>
-                <li>• دریافت پیشنهادات ویژه و تخفیفات</li>
-              </ul>
-              <div className="mt-3 p-2 bg-blue-100 dark:bg-blue-900/30 rounded text-xs text-blue-700 dark:text-blue-300">
-                💡 پس از ثبت‌نام، لینک تایید به ایمیل شما ارسال می‌شود. با کلیک روی آن، دسترسی کامل به پنل مشتری خواهید داشت.
-              </div>
-            </div>
-
-            {!showEmailRegistration ? (
-              <Button
-                onClick={() => setShowEmailRegistration(true)}
-                variant="outline"
-                className="w-full"
-              >
-                ثبت ایمیل برای استفاده از امکانات ویژه
-              </Button>
-            ) : (
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <input
-                    type="email"
-                    placeholder="آدرس ایمیل"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <input
-                    type="text"
-                    placeholder="نام (اختیاری)"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <input
-                  type="text"
-                  placeholder="نام خانوادگی (اختیاری)"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <div className="flex gap-2">
-                  <Button
-                    onClick={handleEmailRegistration}
-                    disabled={isRegistering}
-                    className="flex-1"
-                  >
-                    {isRegistering ? "در حال ثبت..." : "ثبت ایمیل"}
-                  </Button>
-                  <Button
-                    onClick={() => setShowEmailRegistration(false)}
-                    variant="outline"
-                  >
-                    انصراف
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-green-500" />
-              امکانات ویژه فعال شد
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-green-50 dark:bg-green-950/20 p-4 rounded-lg">
-              <h4 className="font-semibold text-green-900 dark:text-green-100 mb-2">
-                تبریک! حالا می‌توانید از امکانات ویژه استفاده کنید:
-              </h4>
-              <ul className="text-sm text-green-800 dark:text-green-200 space-y-1">
-                <li>• ردیابی کامل گردش کار درخواست شما</li>
-                <li>• مشاهده کارشناس مربوطه و اطلاعات تماس</li>
-                <li>• دریافت امتیاز و ارتقای سطح مشتری</li>
-                <li>• دسترسی به تاریخچه درخواست‌های قبلی</li>
-                <li>• دریافت پیشنهادات ویژه و تخفیفات</li>
-              </ul>
-            </div>
-            <div className="space-y-2">
-              <Button
-                onClick={() => navigate(`/customer/${registeredCustomerId}`)}
-                className="w-full"
-                variant="outline"
-              >
-                <ExternalLink className="w-4 h-4 ml-2" />
-                مشاهده پنل مشتری
-              </Button>
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground text-center">
-                  پس از تایید ایمیل، می‌توانید از طریق همین لینک به پنل خود دسترسی داشته باشید
-                </p>
-                <div className="bg-yellow-50 dark:bg-yellow-950/20 p-3 rounded-lg">
-                  <p className="text-xs text-yellow-800 dark:text-yellow-200 text-center">
-                    📧 لینک تایید به ایمیل شما ارسال شده است. لطفاً ایمیل خود را بررسی کنید.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Action Buttons */}
       <div className="flex gap-4">

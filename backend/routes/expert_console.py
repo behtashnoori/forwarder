@@ -111,7 +111,7 @@ def get_shipment_requests():
             
             requests_data.append({
                 "id": req.id,
-                "tracking_number": f"SR{req.id:06d}",
+                "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
                 "status": req.status,
                 "priority": req.priority,
                 "created_at": req.created_at.isoformat(),
@@ -231,7 +231,7 @@ def get_shipment_request_detail(request_id: int):
         
         return jsonify({
             "id": req.id,
-            "tracking_number": f"SR{req.id:06d}",
+            "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
             "status": req.status,
             "priority": req.priority,
             "created_at": req.created_at.isoformat(),

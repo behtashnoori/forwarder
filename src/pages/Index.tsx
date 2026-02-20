@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Package, User, ExternalLink } from "lucide-react";
+import { Search, Package, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const Index = () => {
@@ -25,20 +25,9 @@ const Index = () => {
   };
 
   const handleTrackRequest = () => {
-    if (!trackingNumber.trim()) {
-      return;
-    }
-    
-    // Extract ID from tracking number (SR000001 -> 1)
-    const id = trackingNumber.replace('SR', '');
-    const numericId = parseInt(id, 10);
-    
-    if (isNaN(numericId)) {
-      return;
-    }
-    
-    // Navigate to public tracking page
-    navigate(`/customer/track/${numericId}`);
+    const code = trackingNumber.trim();
+    if (!code) return;
+    navigate(`/customer/track/${encodeURIComponent(code)}`);
   };
 
   return (
@@ -131,7 +120,7 @@ const TrackingSection = ({
           </label>
           <Input
             id="trackingNumber"
-            placeholder="مثال: SR000001"
+            placeholder="مثال: SR-XXXXXX یا SR000001"
             value={trackingNumber}
             onChange={(e) => setTrackingNumber(e.target.value)}
             className="text-center"
@@ -147,17 +136,9 @@ const TrackingSection = ({
           پیگیری درخواست
         </Button>
         
-        <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg">
-          <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-            برای پیگیری کامل نیاز به ثبت‌نام دارید:
-          </h4>
-          <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-            <li>• مشاهده جزئیات کامل درخواست</li>
-            <li>• ردیابی مراحل کار</li>
-            <li>• ارتباط با کارشناس مربوطه</li>
-            <li>• دریافت امتیاز و تخفیفات</li>
-          </ul>
-        </div>
+        <p className="text-sm text-muted-foreground text-center">
+          برای مشاهده کامل جزئیات، کد رهگیری را وارد کنید.
+        </p>
         
         <div className="text-center">
           <p className="text-sm text-muted-foreground mb-2">

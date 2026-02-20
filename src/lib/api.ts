@@ -217,8 +217,8 @@ export function fetchInternationalCities(countryId: number): Promise<Internation
 
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
-): Promise<{ message: string; id: number }> {
-  return request<{ message: string; id: number }>("/api/shipment-request", {
+): Promise<{ message: string; id: number; tracking_code: string }> {
+  return request<{ message: string; id: number; tracking_code: string }>("/api/shipment-request", {
     method: "POST",
     body: JSON.stringify(payload),
   });

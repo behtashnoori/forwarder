@@ -1,0 +1,26 @@
+CORS Configuration:
+   Total Origins: 246
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+Database connection successful.
+CORS Configuration:
+   Total Origins: 246
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+Database connection successful.
