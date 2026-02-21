@@ -20,7 +20,6 @@ import {
   CheckCircle,
   Send,
   Phone,
-  Calendar,
   Weight,
   DollarSign
 } from "lucide-react";
@@ -450,36 +449,6 @@ const RequestDetail = () => {
                         <p className="text-gray-900">{request.cargo.special_instructions}</p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-
-                {/* Dates */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5" />
-                      تاریخ‌ها
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {request.dates.pickup_date && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-600">تاریخ تحویل</label>
-                          <p className="text-gray-900">
-                            {new Date(request.dates.pickup_date).toLocaleDateString("fa-IR")}
-                          </p>
-                        </div>
-                      )}
-                      {request.dates.delivery_date && (
-                        <div>
-                          <label className="text-sm font-medium text-gray-600">تاریخ تحویل نهایی</label>
-                          <p className="text-gray-900">
-                            {new Date(request.dates.delivery_date).toLocaleDateString("fa-IR")}
-                          </p>
-                        </div>
-                      )}
-                    </div>
                   </CardContent>
                 </Card>
               </TabsContent>

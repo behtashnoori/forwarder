@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Bell, 
   Search, 
   Filter, 
   Clock, 
@@ -33,7 +32,6 @@ import {
   fetchExperts,
   assignRequest,
   changeRequestStatus,
-  fetchNotifications,
   type ExpertRequest, 
   type KPIs,
   type ExpertUser 
@@ -52,7 +50,6 @@ const ExpertConsole = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
-  const [unreadCount, setUnreadCount] = useState(0);
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
 
   // Mock expert ID - in real app, this would come from auth context
@@ -61,13 +58,11 @@ const ExpertConsole = () => {
   useEffect(() => {
     loadRequests();
     loadKPIs();
-    loadNotifications();
     loadCurrentExpert();
     
     // Poll for updates every 30 seconds
     const interval = setInterval(() => {
       loadRequests();
-      loadNotifications();
     }, 30000);
 
     return () => clearInterval(interval);
@@ -125,15 +120,6 @@ const ExpertConsole = () => {
       setKpis(data);
     } catch (error) {
       console.error("Error loading KPIs:", error);
-    }
-  };
-
-  const loadNotifications = async () => {
-    try {
-      const data = await fetchNotifications(expertId, true);
-      setUnreadCount(data.unread_count || 0);
-    } catch (error) {
-      console.error("Error loading notifications:", error);
     }
   };
 
@@ -292,18 +278,6 @@ const ExpertConsole = () => {
               <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />
               به‌روزرسانی
             </Button>
-            <div className="relative">
-              <Button variant="outline" size="sm">
-                <Bell className="w-4 h-4 ml-2" />
-                اعلان‌ها
-                {unreadCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 bg-red-500 text-white text-xs">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </Button>
-            </div>
-            
             {/* Expert Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
