@@ -9,7 +9,7 @@ import axios from 'axios';
 import colors from 'colors';
 
 // Configuration
-const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
 const TEST_USERNAME = process.env.EXPERT_USERNAME || 'expert1';
 const TEST_PASSWORD = process.env.EXPERT_PASSWORD || 'password123';
 

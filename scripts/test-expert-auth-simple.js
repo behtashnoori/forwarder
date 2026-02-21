@@ -7,7 +7,7 @@
 import axios from 'axios';
 
 // Configuration
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
 const TEST_USERNAME = 'expert1';
 const TEST_PASSWORD = 'expert123';
 

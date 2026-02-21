@@ -31,7 +31,7 @@ from app import create_app
 class RequestAssignmentTester:
     """Comprehensive tester for request assignment functionality."""
     
-    def __init__(self, base_url: str = "http://localhost:5000"):
+    def __init__(self, base_url: str = "http://localhost:8000"):
         self.base_url = base_url
         self.app = create_app()
         self.assignment_engine = AssignmentEngine()
@@ -860,7 +860,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Test request assignment functionality")
-    parser.add_argument("--url", default="http://localhost:5000", help="Base URL for API tests")
+    parser.add_argument("--url", default="http://localhost:8000", help="Base URL for API tests")
     parser.add_argument("--skip-api", action="store_true", help="Skip API tests (server not running)")
     
     args = parser.parse_args()

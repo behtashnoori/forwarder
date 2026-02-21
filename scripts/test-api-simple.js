@@ -5,7 +5,7 @@
  * Tests basic API endpoints using built-in fetch
  */
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://127.0.0.1:8000';
 const TEST_ORIGIN = 'http://localhost:8109';
 
 // Test configuration

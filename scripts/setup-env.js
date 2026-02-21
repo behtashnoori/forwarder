@@ -20,7 +20,7 @@ function createEnvFile() {
   const envContent = `# ===========================================
 # FRONTEND ENVIRONMENT VARIABLES (Vite)
 # ===========================================
-VITE_API_URL=http://127.0.0.1:5000
+VITE_API_URL=http://127.0.0.1:8000
 VITE_APP_NAME=Forwarder App
 VITE_APP_VERSION=1.0.0
 

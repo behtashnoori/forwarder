@@ -1,9 +1,9 @@
-# Open ports 8080 (frontend) and 5000 (backend API) in Windows Firewall for network/internet access
+# Open ports 8080 (frontend) and 8000 (backend API) in Windows Firewall for network/internet access
 # Run this script as Administrator (Right-click PowerShell -> Run as Administrator)
 
 $ports = @(
     @{ Port = 8080; Name = "Vite Dev Server - Port 8080" },
-    @{ Port = 5000; Name = "Flask API - Port 5000" }
+    @{ Port = 8000; Name = "Flask API - Port 8000" }
 )
 
 foreach ($item in $ports) {
@@ -26,4 +26,4 @@ foreach ($item in $ports) {
         Write-Host "Error adding $ruleName : $_" -ForegroundColor Red
     }
 }
-Write-Host "Frontend: http://YOUR_SERVER_IP:8080  |  API: http://YOUR_SERVER_IP:5000" -ForegroundColor Cyan
+Write-Host "Frontend: http://YOUR_SERVER_IP:8080  |  API: http://YOUR_SERVER_IP:8000" -ForegroundColor Cyan

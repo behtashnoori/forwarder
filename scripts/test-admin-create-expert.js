@@ -14,7 +14,7 @@ import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, '..');
-const API_URL = 'http://127.0.0.1:5000';
+const API_URL = process.env.API_BASE_URL || 'http://127.0.0.1:8000';
 
 function getDatabaseUrl() {
   try {

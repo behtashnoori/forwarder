@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -17,13 +18,29 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AdminPanel from "./pages/AdminPanel";
+import { env } from "./lib/env";
 
 const queryClient = new QueryClient();
+
+function DevHealthCheck() {
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+    const base = env.API_URL || "";
+    fetch(`${base}/api/health`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.status === "ok") console.log("✅ Backend health OK:", data.message);
+      })
+      .catch(() => console.warn("⚠️ Backend health check failed (is backend running on PORT from .env?)"));
+  }, []);
+  return null;
+}
 
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
+        <DevHealthCheck />
         <Toaster />
         <Sonner />
         <BrowserRouter>

@@ -5,7 +5,7 @@
  * Tests the /api/monitoring/metrics endpoint and displays detailed information
  */
 
-const API_BASE_URL = 'http://127.0.0.1:5000';
+const API_BASE_URL = process.env.API_BASE_URL || 'http://127.0.0.1:8000';
 const TEST_ORIGIN = 'http://localhost:8109';
 
 async function testMetricsEndpoint() {

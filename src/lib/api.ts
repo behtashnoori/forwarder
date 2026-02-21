@@ -153,10 +153,9 @@ function withQuery(path: string, params?: Record<string, string | number | undef
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!API_BASE_URL) {
-    throw new Error("API URL is not configured. Please check your environment variables.");
+  if (!import.meta.env.DEV && !API_BASE_URL) {
+    throw new Error("API URL is not configured. Set VITE_API_URL for production.");
   }
-
   const url = `${API_BASE_URL}${buildPath(path)}`;
   
   // Get token from localStorage

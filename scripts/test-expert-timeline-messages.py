@@ -28,7 +28,7 @@ class ExpertTimelineMessagesTester:
     
     def __init__(self):
         self.app = create_app()
-        self.base_url = "http://localhost:5000"
+        self.base_url = "http://localhost:8000"
         self.test_data = {}
         self.results = []
         

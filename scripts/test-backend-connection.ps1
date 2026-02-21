@@ -2,7 +2,7 @@
 # This script checks if the backend is accessible
 
 $serverIP = "130.185.77.25"
-$apiPort = 5000
+$apiPort = 8000
 $frontendPort = 8080
 
 Write-Host "Testing Backend API Connection..." -ForegroundColor Cyan
@@ -44,7 +44,7 @@ try {
     Write-Host "  Solutions:" -ForegroundColor Yellow
     Write-Host "  - Set FLASK_RUN_HOST=0.0.0.0 in .env or environment" -ForegroundColor White
     Write-Host "  - Run: python backend/wsgi.py (defaults to 0.0.0.0)" -ForegroundColor White
-    Write-Host "  - Check firewall: Get-NetFirewallRule -DisplayName '*5000*'" -ForegroundColor White
+    Write-Host "  - Check firewall: Get-NetFirewallRule -DisplayName '*8000*'" -ForegroundColor White
 }
 
 Write-Host ""

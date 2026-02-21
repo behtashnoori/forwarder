@@ -1,6 +1,6 @@
 # Test provinces API endpoint from network perspective
 $serverIP = "130.185.77.25"
-$apiPort = 5000
+$apiPort = 8000
 
 Write-Host "Testing Provinces API Endpoint..." -ForegroundColor Cyan
 Write-Host "Server IP: $serverIP`:$apiPort" -ForegroundColor Yellow

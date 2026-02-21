@@ -1,5 +1,6 @@
 """WSGI entrypoint for running the backend with gunicorn or flask."""
 import os
+import socket
 import sys
 
 # Add the parent directory to the Python path
@@ -44,8 +45,23 @@ with app.app_context():
         else:
             print("Migrations (upgrade) failed:", _e)
 
+def _is_port_in_use(host: str, port: int) -> bool:
+    """Return True if the given host:port is already in use."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind((host, port))
+            return False
+        except OSError:
+            return True
+
+
 if __name__ == "__main__":
-    host = os.getenv("FLASK_RUN_HOST", "0.0.0.0")
-    port = int(os.getenv("FLASK_RUN_PORT", "5000"))
+    host = os.getenv("HOST") or os.getenv("FLASK_RUN_HOST", "0.0.0.0")
+    port = int(os.getenv("PORT") or os.getenv("FLASK_RUN_PORT") or "8000")
     debug = os.getenv("FLASK_DEBUG", "0").lower() in ("1", "true", "yes")
+
+    if _is_port_in_use(host, port):
+        print(f"Port {port} is in use. Stop the other process or set PORT to another value and restart.")
+        sys.exit(1)
+
     app.run(host=host, port=port, debug=debug)

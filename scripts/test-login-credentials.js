@@ -7,7 +7,7 @@
 
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5000';
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:8000';
 
 // Test credentials
 const TEST_CREDENTIALS = [
