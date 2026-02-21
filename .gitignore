@@ -25,6 +25,7 @@ dist-ssr
 .env
 .env.production
 .env.docker
+.backend-port
 instance/
 backup/
 backend/__pycache__/__init__.cpython-312.pyc

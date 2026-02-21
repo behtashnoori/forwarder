@@ -1,7 +1,21 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import fs from "fs";
 import { componentTagger } from "lovable-tagger";
+
+function getBackendTarget(): string {
+  const portFile = path.resolve(process.cwd(), ".backend-port");
+  try {
+    if (fs.existsSync(portFile)) {
+      const port = fs.readFileSync(portFile, "utf-8").trim();
+      if (port) return `http://localhost:${port}`;
+    }
+  } catch {
+    // ignore
+  }
+  return process.env.VITE_BACKEND_URL || process.env.VITE_API_URL || "http://localhost:5001";
+}
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -11,7 +25,7 @@ export default defineConfig(({ mode }) => ({
     allowedHosts: ["server.logisticmarket.ir"],
     proxy: {
       "/api": {
-        target: process.env.VITE_BACKEND_URL || "http://localhost:8000",
+        target: getBackendTarget(),
         changeOrigin: true,
       },
     },

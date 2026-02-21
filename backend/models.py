@@ -703,7 +703,7 @@ class ReferralAssignmentLog(db.Model):
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False)
-    rule_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("referral_rule.id"), nullable=False)
+    rule_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("referral_rule.id"), nullable=True)  # None = system auto-assign
     selected_expert_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
     strategy_used = db.Column(db.String(32), nullable=False)  # direct, round_robin, least_workload
     candidate_expert_ids = db.Column(db.Text, nullable=True)  # JSON array of ids
@@ -715,6 +715,15 @@ class ReferralAssignmentLog(db.Model):
 
     def __repr__(self) -> str:
         return f"<ReferralAssignmentLog id={self.id} request_id={self.request_id} expert_id={self.selected_expert_id}>"
+
+
+class ReferralAutoAssignState(db.Model):
+    """Single-row state for round-robin auto-assignment (no rules)."""
+    __tablename__ = "referral_auto_assign_state"
+
+    id = db.Column(db.Integer, primary_key=True)
+    last_index = db.Column(db.Integer, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
 
 class IranPort(db.Model):
@@ -788,6 +797,7 @@ __all__ = [
     "ReferralRule",
     "ReferralRuleState",
     "ReferralAssignmentLog",
+    "ReferralAutoAssignState",
     # Iran Ports Models
     "IranPort",
     "PortProvinceMapping",

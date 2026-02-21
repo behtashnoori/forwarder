@@ -11,10 +11,10 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def _load_env() -> None:
-    """Load .env and optionally .env.backend once. Idempotent."""
+    """Load .env and optionally .env.backend once. Idempotent. override=True so .env (PostgreSQL) always wins over stale shell env."""
     from dotenv import load_dotenv
-    load_dotenv(dotenv_path=os.path.join(_PROJECT_ROOT, ".env"))
-    load_dotenv(dotenv_path=os.path.join(_PROJECT_ROOT, ".env.backend"))
+    load_dotenv(dotenv_path=os.path.join(_PROJECT_ROOT, ".env"), override=True)
+    load_dotenv(dotenv_path=os.path.join(_PROJECT_ROOT, ".env.backend"), override=True)
     if os.path.isfile(os.path.join(_PROJECT_ROOT, ".env")):
         print("[startup] Loaded env from", os.path.join(_PROJECT_ROOT, ".env"))
     else:

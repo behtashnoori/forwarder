@@ -15,7 +15,7 @@ from backend.extensions import db, migrate
 from backend.routes import register_routes
 from backend.security import security
 from backend.app_logging import logger
-from backend.cors_config import get_cors_config, log_cors_info
+from backend.cors_config import get_cors_config, log_cors_info, validate_origin
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
@@ -83,7 +83,10 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         if callable(origins_config):
             return origins_config(origin)
         if isinstance(origins_config, list):
-            return origin in origins_config
+            if origin in origins_config:
+                return True
+            if validate_origin(origin):
+                return True
         return False
 
     def _add_cors_headers_to_response(response):

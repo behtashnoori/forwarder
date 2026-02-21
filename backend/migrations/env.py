@@ -32,8 +32,13 @@ target_metadata = db.metadata
 
 
 def get_url():
-    """Get database URL from Flask app config."""
-    app = create_app()
+    """Get database URL from Flask app config. Use current_app when already in app context (e.g. run from startup.run_migrations) to avoid recursion."""
+    try:
+        from flask import current_app
+        return current_app.config.get("SQLALCHEMY_DATABASE_URI")
+    except RuntimeError:
+        pass
+    app = create_app(skip_startup=True)
     with app.app_context():
         return app.config.get("SQLALCHEMY_DATABASE_URI")
 

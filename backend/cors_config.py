@@ -28,7 +28,13 @@ def generate_cors_origins() -> List[str]:
     for port in all_ports:
         origins.add(f"http://localhost:{port}")
         origins.add(f"http://127.0.0.1:{port}")
-    
+
+    # External/server access (so frontend can be opened from outside the server)
+    server_host = "server.logisticmarket.ir"
+    origins.add(f"http://{server_host}")
+    origins.add(f"https://{server_host}")
+    origins.add(f"http://{server_host}:8080")
+
     # Add any custom origins from environment (e.g. http://130.185.77.25:8080 for network access)
     custom_origins = os.getenv('CORS_ORIGINS', '') or os.getenv('CORS_ORIGIN', '')
     if custom_origins:
@@ -53,7 +59,8 @@ def validate_origin(origin: str) -> bool:
     # Allow specific domains (add your production domains here)
     allowed_domains = [
         r'^https://yourdomain\.com$',
-        r'^https://www\.yourdomain\.com$'
+        r'^https://www\.yourdomain\.com$',
+        r'^https?://server\.logisticmarket\.ir(:\d+)?$',
     ]
     
     # Check localhost pattern

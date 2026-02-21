@@ -72,10 +72,26 @@ def main() -> None:
         sys.exit(1)
     print("[startup] Environment OK.")
 
-    if _is_port_in_use(host, port):
-        print("Port %s is already in use. Please stop the process using it." % port)
+    # If configured port is in use, try next ports so the backend does not exit
+    max_tries = 20
+    try_port = port
+    while _is_port_in_use(host, try_port) and (try_port - port) < max_tries:
+        try_port += 1
+    if _is_port_in_use(host, try_port):
+        print("Ports %s..%s are in use. Please free a port." % (port, port + max_tries - 1))
         _print_port_hints(port)
         sys.exit(1)
+    if try_port != port:
+        print("Port %s in use, using port %s instead." % (port, try_port))
+        port = try_port
+
+    # So Vite proxy always targets the port we actually use (e.g. 5002 when 5001 is busy)
+    _backend_port_file = os.path.join(_PROJECT_ROOT, ".backend-port")
+    try:
+        with open(_backend_port_file, "w") as f:
+            f.write(str(port))
+    except OSError:
+        pass
 
     # Skip startup inside create_app so we run it once here (avoids running twice when reloader spawns child)
     app = create_app(skip_startup=True)
