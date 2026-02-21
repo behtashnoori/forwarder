@@ -1,7 +1,7 @@
 """
-Canonical dev entrypoint. Single place that loads config, checks port, runs migrations, starts server.
+Canonical dev entrypoint. Loads config, checks port, starts server.
+Migrations + verify + seed run inside create_app() so they always run on any backend start.
 Run: python -m backend.run [--reload]
-Do not start the server from elsewhere; use this module or call it.
 """
 from __future__ import annotations
 
@@ -9,18 +9,16 @@ import argparse
 import os
 import socket
 import sys
-import traceback
 
 # Ensure project root is on path when run as python -m backend.run or from backend/
-_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-_PROJECT_ROOT = os.path.dirname(_THIS_DIR)
+_PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
 # Load config first (loads .env and sets HOST, PORT, DEBUG, USE_RELOAD)
 from backend import config  # noqa: E402
-
 from backend import create_app  # noqa: E402
+from backend.startup import run_migrations, verify_critical_tables  # noqa: E402
 from backend.startup_seed import run_startup_seed  # noqa: E402
 
 
@@ -41,7 +39,7 @@ def _print_port_hints(port: int) -> None:
 
 
 def _get_server_ip_for_display() -> str:
-    """Best-effort non-loopback IP for startup log (so users know how to reach from network)."""
+    """Best-effort non-loopback IP for startup log."""
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(0.5)
@@ -57,70 +55,8 @@ def _get_server_ip_for_display() -> str:
         return "<server-ip>"
 
 
-def _run_migrations(app) -> None:
-    """Run pending migrations. On failure: log, traceback, exit 1."""
-    from backend.extensions import db
-    from flask import current_app
-    from alembic import command
-    from sqlalchemy import text
-
-    with app.app_context():
-        _migration_dir = os.path.join(_THIS_DIR, "migrations")
-        try:
-            with db.engine.connect() as conn:
-                with conn.begin():
-                    conn.execute(text(
-                        "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
-                    ))
-        except Exception:
-            pass
-        try:
-            cfg = current_app.extensions["migrate"].migrate.get_config(_migration_dir)
-            command.upgrade(cfg, "head")
-            print("[startup] Migrations applied.")
-        except Exception as e:
-            err_str = str(e).lower()
-            if "duplicatecolumn" in err_str or "duplicatetable" in err_str or "already exists" in err_str:
-                try:
-                    with db.engine.connect() as conn:
-                        with conn.begin():
-                            conn.execute(text("DELETE FROM alembic_version"))
-                            conn.execute(text("INSERT INTO alembic_version (version_num) VALUES (:rev)"), {"rev": "20250220_merge_final"})
-                            conn.execute(text("ALTER TABLE shipment_request ADD COLUMN IF NOT EXISTS tracking_code VARCHAR(32)"))
-                            conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_shipment_request_tracking_code ON shipment_request (tracking_code)"))
-                    print("[startup] Migrations applied (recovery).")
-                except Exception as e2:
-                    print("[startup] Migrations (recovery) failed:", e2)
-                    traceback.print_exc()
-                    sys.exit(1)
-            else:
-                print("[startup] Migrations (upgrade) failed:", e)
-                traceback.print_exc()
-                sys.exit(1)
-
-
-def _verify_critical_tables(app) -> None:
-    """Verify critical tables exist after migrations. Exit(1) if any missing."""
-    from backend.extensions import db
-    from sqlalchemy import text
-
-    with app.app_context():
-        for table_name, sql in (
-            ("province", text("SELECT 1 FROM province LIMIT 1")),
-            ("transport_method", text("SELECT 1 FROM transport_method LIMIT 1")),
-        ):
-            try:
-                with db.engine.connect() as conn:
-                    conn.execute(sql)
-            except Exception as e:
-                print("[startup] Critical table %r missing or inaccessible: %s" % (table_name, e))
-                traceback.print_exc()
-                sys.exit(1)
-    print("[startup] Critical tables OK.")
-
-
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run backend dev server (fixed port, no silent exit)")
+    parser = argparse.ArgumentParser(description="Run backend server (migrations run automatically in create_app)")
     parser.add_argument("--reload", action="store_true", help="Enable Flask reloader (default: off for stability)")
     args = parser.parse_args()
     use_reloader = args.reload
@@ -131,7 +67,6 @@ def main() -> None:
 
     print("[startup] PORT=%s, HOST=%s, DEBUG=%s, use_reloader=%s" % (port, host, debug, use_reloader))
 
-    # Require DATABASE_URL so we never silently use a hardcoded fallback
     if not os.getenv("DATABASE_URL"):
         print("[startup] DATABASE_URL is required. Set it in .env or environment.")
         sys.exit(1)
@@ -142,9 +77,10 @@ def main() -> None:
         _print_port_hints(port)
         sys.exit(1)
 
-    app = create_app()
-    _run_migrations(app)
-    _verify_critical_tables(app)
+    # Skip startup inside create_app so we run it once here (avoids running twice when reloader spawns child)
+    app = create_app(skip_startup=True)
+    run_migrations(app)
+    verify_critical_tables(app)
     run_startup_seed(app)
 
     server_ip = _get_server_ip_for_display()
@@ -152,7 +88,7 @@ def main() -> None:
     print("Listening on:")
     print("  - http://localhost:%s" % port)
     print("  - http://%s:%s" % (server_ip, port))
-    print("Health: GET http://localhost:%s/api/health (or use server IP from above for external access)" % port)
+    print("Health: GET http://localhost:%s/api/health" % port)
     app.run(host=host, port=port, debug=debug, use_reloader=use_reloader)
 
 

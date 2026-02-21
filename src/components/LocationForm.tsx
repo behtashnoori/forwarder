@@ -145,7 +145,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         console.error("Error fetching transport method options:", error);
         toast({
           title: "خطا",
-          description: "خطا در دریافت روش‌های حمل",
+          description: "خطا در دریافت اطلاعات پایه (استان‌ها/روش‌های حمل). لطفاً بک‌اند را بررسی کنید.",
           variant: "destructive",
         });
       }
@@ -174,9 +174,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         }
       } catch (error) {
         if (active) {
+          console.error("Error fetching provinces:", error);
           toast({
-            title: "خطا در دریافت استان‌ها",
-            description: error instanceof Error ? error.message : "دریافت اطلاعات استان‌ها با خطا مواجه شد.",
+            title: "خطا",
+            description: "خطا در دریافت اطلاعات پایه (استان‌ها/روش‌های حمل). لطفاً بک‌اند را بررسی کنید.",
             variant: "destructive",
           });
         }

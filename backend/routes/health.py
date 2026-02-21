@@ -1,7 +1,7 @@
 """Health check and landing routes."""
 import traceback
 
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import text
 
 from backend.extensions import db
@@ -17,26 +17,39 @@ def landing_redirect():
 
 @health_bp.get("/api/health")
 def health_root():
-    """Return JSON health status for probes and frontend. Checks DB; returns 500 if DB down."""
+    """Return JSON health status for probes and frontend. Only checks DB connection; returns 500 only if DB is down."""
     port = current_app.config.get("PORT")
     try:
         db.session.execute(text("SELECT 1"))
-        return jsonify({
-            "status": "ok",
-            "database": "connected",
-            "port": port,
-        })
     except Exception as e:
         current_app.logger.exception("Health check: database connection failed")
         traceback.print_exc()
         return (
             jsonify({
                 "status": "error",
-                "database": "disconnected",
+                "database": "not_ready",
                 "message": str(e),
             }),
             500,
         )
+    # Optional: check tables only when explicitly requested (e.g. GET /api/health?readiness=1)
+    tables_ok = True
+    if current_app.config.get("TESTING") or request.args.get("readiness"):
+        for table in ("province", "transport_method"):
+            try:
+                db.session.execute(text(f"SELECT 1 FROM {table} LIMIT 1"))
+            except Exception as e:
+                current_app.logger.warning("Health readiness: table %s missing or inaccessible: %s", table, e)
+                tables_ok = False
+                break
+    payload = {
+        "status": "ok",
+        "database": "connected",
+        "port": port,
+    }
+    if request.args.get("readiness"):
+        payload["tables_ready"] = tables_ok
+    return jsonify(payload)
 
 
 @health_bp.get("/api/health/ping")

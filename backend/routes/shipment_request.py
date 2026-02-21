@@ -1,6 +1,7 @@
 """Routes for shipment request creation."""
 import secrets
 import string
+import traceback
 from datetime import datetime
 from typing import Any, Dict
 
@@ -16,15 +17,12 @@ shipment_request_bp = Blueprint("shipment_request", __name__, url_prefix="/api")
 
 @shipment_request_bp.get("/transport-methods")
 def get_transport_methods():
-    """Get available transport methods for international and domestic shipping."""
+    """Get available transport methods. Returns 200 with empty lists if table empty; 500 only on real DB errors."""
     try:
-        # Get all active transport methods
         methods = db.session.query(TransportMethod).filter(TransportMethod.is_active == True).all()
-        
-        # Categorize methods based on their names
         international_methods = []
         domestic_methods = []
-        
+
         for method in methods:
             method_data = {
                 "id": method.id,
@@ -32,24 +30,16 @@ def get_transport_methods():
                 "name_fa": method.name_fa,
                 "description": method.description
             }
-            
-            # Categorize based on method name
             method_name_lower = method.name.lower()
-            
-            # Check for international methods
             if method_name_lower in ["sea freight", "air freight", "land transport", "rail transport"]:
                 international_methods.append(method_data)
-            
-            # Check for domestic methods (separate if to allow overlap)
             if method_name_lower in ["road transport", "rail transport", "air transport"]:
                 domestic_methods.append(method_data)
-            
-            # If method doesn't match any category, add to both
-            if (method_name_lower not in ["sea freight", "air freight", "land transport", "rail transport"] and 
+            if (method_name_lower not in ["sea freight", "air freight", "land transport", "rail transport"] and
                 method_name_lower not in ["road transport", "rail transport", "air transport"]):
                 international_methods.append(method_data)
                 domestic_methods.append(method_data)
-        
+
         return jsonify({
             "international_methods": international_methods,
             "domestic_methods": domestic_methods,
@@ -58,10 +48,16 @@ def get_transport_methods():
                 {"value": "forwarder_suggestion", "label": "پیشنهاد فورواردر", "description": "فورواردر بهترین روش را پیشنهاد می‌دهد"}
             ]
         })
-        
-    except Exception:
+    except Exception as e:
         current_app.logger.exception("Error fetching transport methods")
-        return jsonify({"message": "خطا در دریافت روش‌های حمل"}), 500
+        traceback.print_exc()
+        return (
+            jsonify({
+                "error": "خطا در دریافت روش‌های حمل",
+                "message": str(e),
+            }),
+            500,
+        )
 
 @shipment_request_bp.post("/shipment-request")
 def create_shipment_request():

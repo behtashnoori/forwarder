@@ -26,12 +26,24 @@ function DevHealthCheck() {
   useEffect(() => {
     if (!import.meta.env.DEV) return;
     const base = env.API_URL || "";
-    fetch(`${base}/api/health`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.status === "ok") console.log("✅ Backend health OK:", data.message);
+    const healthUrl = `${base}/api/health`;
+    console.warn("Health check URL:", healthUrl);
+    fetch(healthUrl)
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (r.ok && data?.status === "ok") {
+          console.log("✅ Backend health OK:", data.port != null ? `port ${data.port}` : data);
+          return;
+        }
+        const msg =
+          data?.message ||
+          data?.error ||
+          (data?.database === "not_ready" ? "Database not ready" : "Backend health check failed");
+        console.warn("⚠️ Backend health check failed:", msg);
       })
-      .catch(() => console.warn("⚠️ Backend health check failed (is backend running on PORT from .env?)"));
+      .catch((err) => {
+        console.warn("⚠️ Backend health check failed (is backend running on PORT from .env?):", err);
+      });
   }, []);
   return null;
 }

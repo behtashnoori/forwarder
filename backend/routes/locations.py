@@ -1,6 +1,10 @@
 """Location-related routes for provinces, counties, and cities."""
-from flask import Blueprint, jsonify, request, current_app
+import traceback
 
+from flask import Blueprint, jsonify, request, current_app
+from sqlalchemy import text
+
+from backend.extensions import db
 from backend.models import City, County, Province, Country, InternationalCity, IranPort, PortProvinceMapping
 
 location_bp = Blueprint("location", __name__, url_prefix="/api")
@@ -8,77 +12,58 @@ location_bp = Blueprint("location", __name__, url_prefix="/api")
 
 @location_bp.get("/provinces")
 def list_provinces():
-    """Return a list of all provinces. Empty list if no rows; 500 with JSON if DB error."""
+    """Return a list of all provinces. Empty list if no rows; 500 with JSON only on real DB error."""
     try:
         provinces = Province.query.all()
         return jsonify(
             [
-                {
-                    "id": province.id,
-                    "name": province.name_fa,
-                    "code": province.code,
-                }
-                for province in provinces
+                {"id": p.id, "name": p.name_fa, "code": p.code}
+                for p in provinces
             ]
         )
-    except Exception:
+    except Exception as e:
         current_app.logger.exception("Error fetching provinces")
-        return jsonify({"message": "خطا در دریافت استان‌ها"}), 500
+        traceback.print_exc()
+        return (
+            jsonify({"error": "خطا در دریافت استان‌ها", "message": str(e)}),
+            500,
+        )
 
 
-# Add a direct route for /provinces (without /api prefix)
-from flask import Blueprint
-
+# Direct route for /provinces (no /api prefix) for compatibility
 provinces_bp = Blueprint("provinces", __name__)
+
 
 @provinces_bp.route("/provinces", methods=["GET", "OPTIONS"])
 def list_provinces_direct():
-    """Return a list of all provinces (direct route for frontend compatibility)."""
-    
-    # Get the origin from request headers
-    origin = request.headers.get('Origin')
-    
-    # In development, echo back the requesting origin (Flask-CORS handles this, but we keep for compatibility)
-    # Never use '*' when supports_credentials is true - browsers reject it
+    """Return a list of all provinces. Empty list if no rows; 500 with JSON only on real DB error."""
+    origin = request.headers.get("Origin")
     cors_origin = origin if origin else None
-    
-    # Handle OPTIONS request for CORS preflight
+
     if request.method == "OPTIONS":
         response = jsonify({})
         if cors_origin:
-            response.headers.add('Access-Control-Allow-Origin', cors_origin)
-        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
+            response.headers.add("Access-Control-Allow-Origin", cors_origin)
+        response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token")
+        response.headers.add("Access-Control-Allow-Credentials", "true")
         return response
-    
+
     try:
-        # Use raw SQL to avoid relationship issues
-        from backend.extensions import db
-        result = db.session.execute(db.text("SELECT id, name_fa, code FROM province"))
-        provinces = result.fetchall()
-    except Exception:
+        result = db.session.execute(text("SELECT id, name_fa, code FROM province"))
+        rows = result.fetchall()
+        out = [{"id": r[0], "name": r[1], "code": r[2]} for r in rows]
+    except Exception as e:
         current_app.logger.exception("Error querying provinces (direct route)")
-        return jsonify({"error": "خطا در دریافت استان‌ها"}), 500
-    
-    response = jsonify(
-        [
-            {
-                "id": province.id,
-                "name": province.name_fa,
-                "code": province.code,
-            }
-            for province in provinces
-        ]
-    )
-    
-    # Add CORS headers - echo back the requesting origin (Flask-CORS also handles this)
+        traceback.print_exc()
+        return jsonify({"error": "خطا در دریافت استان‌ها", "message": str(e)}), 500
+
+    response = jsonify(out)
     if cors_origin:
-        response.headers.add('Access-Control-Allow-Origin', cors_origin)
-    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-CSRF-Token')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    
+        response.headers.add("Access-Control-Allow-Origin", cors_origin)
+    response.headers.add("Access-Control-Allow-Methods", "GET, OPTIONS")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token")
+    response.headers.add("Access-Control-Allow-Credentials", "true")
     return response
 
 

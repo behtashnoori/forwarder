@@ -20,13 +20,16 @@ from backend.cors_config import get_cors_config, log_cors_info
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
 
-def create_app(config: Mapping[str, Any] | None = None) -> Flask:
+def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = False) -> Flask:
     """Create and configure the Flask application.
 
     Parameters
     ----------
     config:
         Optional mapping of configuration values that should override the defaults.
+    skip_startup:
+        If True, do not run migrations/verify/seed inside create_app (caller will run them once, e.g. run.py).
+        Use True in run.py to avoid running startup twice when reloader spawns a child process.
     """
 
     app = Flask(__name__, instance_relative_config=True)
@@ -131,6 +134,14 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
             traceback.print_exc()
             sys.exit(1)
 
+    # When not testing and not skip_startup: run migrations, verify tables, seed (gunicorn/wsgi; run.py runs them itself to avoid double run with reloader)
+    if not app.config.get("TESTING") and not skip_startup:
+        from backend.startup import run_migrations, verify_critical_tables
+        from backend.startup_seed import run_startup_seed
+        run_migrations(app)
+        verify_critical_tables(app)
+        run_startup_seed(app)
+
     # Register all HTTP routes with the application.
     try:
         register_routes(app)
@@ -140,8 +151,24 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         traceback.print_exc()
         sys.exit(1)
 
-    # Global error handler: no silent 500; log full trace and return JSON
+    # Global error handler: no silent 500; log full trace and return JSON (with details in dev)
     _MAX_BODY_LOG = 2000
+    _is_dev = os.getenv("FLASK_ENV", "").lower() in ("development", "dev") or os.getenv("FLASK_DEBUG", "").lower() in ("true", "1", "yes")
+
+    def _make_error_response(tb: str, path: str, method: str, body: str, err: Exception | None = None):
+        app.logger.error(
+            "Unhandled 500: path=%s method=%s\nTraceback:\n%s\nRequest body (safe): %s",
+            path,
+            method,
+            tb,
+            body or "<empty>",
+        )
+        payload = {"error": "Internal server error", "path": path}
+        if _is_dev:
+            payload["details"] = (str(err) if err else "") + "\n" + tb
+        else:
+            payload["message"] = "An unexpected error occurred."
+        return jsonify(payload), 500
 
     @app.errorhandler(500)
     def _handle_500(err):
@@ -158,24 +185,14 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
                     body = raw[: _MAX_BODY_LOG] + "... (truncated)"
             except Exception:
                 body = "<non-text or unavailable>"
-        app.logger.error(
-            "Unhandled 500: path=%s method=%s\nTraceback:\n%s\nRequest body (safe): %s",
-            path,
-            method,
-            tb,
-            body or "<empty>",
-        )
-        return (
-            jsonify({"error": "Internal server error", "message": "An unexpected error occurred."}),
-            500,
-        )
+        return _make_error_response(tb, path, method, body or "<empty>", getattr(err, "original_exception", err))
 
     @app.errorhandler(Exception)
     def _handle_exception(err):
         from werkzeug.exceptions import HTTPException
 
         if isinstance(err, HTTPException) and err.code != 500:
-            raise err
+            return jsonify(error=getattr(err, "description", str(err))), err.code
         tb = traceback.format_exc()
         path = request.path if request else "<no request>"
         method = request.method if request else "<no request>"
@@ -189,17 +206,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
                     body = raw[: _MAX_BODY_LOG] + "... (truncated)"
             except Exception:
                 body = "<non-text or unavailable>"
-        app.logger.error(
-            "Unhandled exception: path=%s method=%s\nTraceback:\n%s\nRequest body (safe): %s",
-            path,
-            method,
-            tb,
-            body or "<empty>",
-        )
-        return (
-            jsonify({"error": "Internal server error", "message": "An unexpected error occurred."}),
-            500,
-        )
+        return _make_error_response(tb, path, method, body or "<empty>", err)
 
     @app.shell_context_processor
     def _make_shell_context() -> dict[str, Any]:
