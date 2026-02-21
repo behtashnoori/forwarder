@@ -183,11 +183,9 @@ const ExpertConsole = () => {
         description: "وضعیت درخواست به‌روزرسانی شد"
       });
 
-      // لیست را از سرور دوباره بگیر تا فقط وضعیت واقعی نمایش داده شود
-      await loadRequests();
       loadKPIs();
 
-      // Switch to appropriate tab based on new status
+      // Switch to appropriate tab based on new status (useEffect will loadRequests for new tab)
       if (newStatus === "in_progress") {
         setActiveTab("in_progress");
       } else if (newStatus === "waiting_for_customer") {
@@ -635,7 +633,9 @@ const ExpertConsole = () => {
                             <Eye className="w-4 h-4 ml-2" />
                             مشاهده
                           </Button>
-                          
+                          <p className="text-sm text-gray-600 text-center">
+                            {getStatusLabel(request.status)}
+                          </p>
                           {request.status === "new" && (
                             <Button
                               size="sm"

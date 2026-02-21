@@ -176,7 +176,7 @@ const RequestDetail = () => {
     if (!newMessage.content.trim()) {
       toast({
         title: "خطا",
-        description: "محتوای پیام الزامی است",
+        description: newMessage.type === "internal_note" ? "محتوای یادداشت الزامی است" : "محتوای پیام الزامی است",
         variant: "destructive"
       });
       return;
@@ -194,7 +194,7 @@ const RequestDetail = () => {
 
       toast({
         title: "موفق",
-        description: "پیام با موفقیت ارسال شد"
+        description: newMessage.type === "internal_note" ? "یادداشت با موفقیت ثبت شد" : "پیام با موفقیت ارسال شد"
       });
 
       setNewMessage({ type: "internal_note", subject: "", content: "" });
@@ -202,7 +202,7 @@ const RequestDetail = () => {
     } catch (error) {
       toast({
         title: "خطا",
-        description: "خطا در ارسال پیام",
+        description: newMessage.type === "internal_note" ? "خطا در ثبت یادداشت" : "خطا در ارسال پیام",
         variant: "destructive"
       });
     } finally {
@@ -454,13 +454,16 @@ const RequestDetail = () => {
               </TabsContent>
 
               <TabsContent value="notes" className="space-y-4">
-                {/* Add Note Form */}
+                {/* یادداشت‌های کارشناس برای خودش؛ در همین بخش ثبت می‌شوند */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="w-5 h-5" />
-                      افزودن یادداشت داخلی
+                      ثبت یادداشت
                     </CardTitle>
+                    <p className="text-sm text-gray-500 font-normal mt-1">
+                      یادداشت شخصی برای به‌روز نگه داشتن وضعیت؛ فقط برای خودتان ثبت می‌شود و در همین بخش نمایش داده می‌شود.
+                    </p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
@@ -485,12 +488,12 @@ const RequestDetail = () => {
                       disabled={sendingMessage || !newMessage.content.trim()}
                     >
                       <Send className="w-4 h-4 ml-2" />
-                      {sendingMessage ? "در حال ارسال..." : "ارسال یادداشت"}
+                      {sendingMessage ? "در حال ثبت..." : "ثبت یادداشت"}
                     </Button>
                   </CardContent>
                 </Card>
 
-                {/* Messages List */}
+                {/* لیست یادداشت‌های ثبت‌شده در همین بخش */}
                 <div className="space-y-4">
                   {request.messages
                     .filter(msg => msg.type === "internal_note")
@@ -498,7 +501,7 @@ const RequestDetail = () => {
                     <Card key={message.id}>
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium">{message.subject || "یادداشت داخلی"}</h4>
+                          <h4 className="font-medium">{message.subject || "یادداشت"}</h4>
                           <div className="text-sm text-gray-500">
                             {new Date(message.created_at).toLocaleDateString("fa-IR")}
                           </div>
