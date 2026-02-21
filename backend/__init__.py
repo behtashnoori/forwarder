@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import os
 import re
+import sys
+import traceback
 from typing import Any, Mapping, MutableMapping
 
-from dotenv import load_dotenv
+import backend.config  # noqa: F401 - load .env once (single source of truth in backend.config)
 from flask import Flask, request
 from flask_cors import CORS
 from sqlalchemy import text
@@ -17,7 +19,6 @@ from backend.app_logging import logger
 from backend.cors_config import get_cors_config, log_cors_info
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-load_dotenv(dotenv_path=os.path.join(PROJECT_ROOT, ".env"))
 
 
 def create_app(config: Mapping[str, Any] | None = None) -> Flask:
@@ -62,8 +63,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     # Configure CORS with dynamic origins
     cors_config = get_cors_config()
     CORS(app, **cors_config)
-    
-    # Log CORS configuration for debugging
+    print("[startup] CORS configured.")
     log_cors_info()
     
     def _is_cors_origin_allowed(origin: str | None) -> bool:
@@ -123,12 +123,20 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     with app.app_context():
         try:
             db.session.execute(text("SELECT 1"))
-            print("Database connection successful.")
+            print("[startup] Database connection successful.")
         except Exception as exc:  # pragma: no cover - startup diagnostic
-            print("Database connection failed:", exc)
+            print("[startup] Database connection failed:", exc)
+            traceback.print_exc()
+            sys.exit(1)
 
     # Register all HTTP routes with the application.
-    register_routes(app)
+    try:
+        register_routes(app)
+        print("[startup] Routes registered.")
+    except Exception as exc:
+        print("[startup] Route registration failed:", exc)
+        traceback.print_exc()
+        sys.exit(1)
 
     @app.shell_context_processor
     def _make_shell_context() -> dict[str, Any]:
