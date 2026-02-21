@@ -68,6 +68,18 @@ const ExpertConsole = () => {
     return () => clearInterval(interval);
   }, [activeTab, searchTerm, statusFilter, priorityFilter]);
 
+  // وقتی کاربر از تب جزئیات برمی‌گردد لیست با وضعیت واقعی از سرور به‌روز شود
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadRequests();
+        loadKPIs();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
   const loadRequests = async () => {
     try {
       setLoading(true);
@@ -171,14 +183,9 @@ const ExpertConsole = () => {
         description: "وضعیت درخواست به‌روزرسانی شد"
       });
 
-      // Update the local state immediately for better UX
-      setRequests(prevRequests => 
-        prevRequests.map(req => 
-          req.id === requestId 
-            ? { ...req, status: newStatus }
-            : req
-        )
-      );
+      // لیست را از سرور دوباره بگیر تا فقط وضعیت واقعی نمایش داده شود
+      await loadRequests();
+      loadKPIs();
 
       // Switch to appropriate tab based on new status
       if (newStatus === "in_progress") {
@@ -188,8 +195,6 @@ const ExpertConsole = () => {
       } else if (newStatus === "closed" || newStatus === "won" || newStatus === "lost") {
         setActiveTab("all"); // Show all requests including closed ones
       }
-
-      loadKPIs();
     } catch (error) {
       toast({
         title: "خطا",
@@ -660,7 +665,7 @@ const ExpertConsole = () => {
                               onClick={() => handleStatusChange(request.id, "waiting_for_customer")}
                             >
                               <MessageSquare className="w-4 h-4 ml-2" />
-                              انتظار مشتری
+                              ثبت: منتظر مشتری
                             </Button>
                           )}
                           
@@ -671,7 +676,7 @@ const ExpertConsole = () => {
                               onClick={() => handleStatusChange(request.id, "won")}
                             >
                               <CheckCircle className="w-4 h-4 ml-2" />
-                              برنده
+                              ثبت به عنوان برنده
                             </Button>
                           )}
                         </div>
