@@ -80,13 +80,90 @@ Port 8000 is already in use. Please stop the process using it.
 - **Endpoint:** `GET /api/health`
 - **پاسخ مورد انتظار:** `{"status": "ok", "message": "..."}`
 
-از ترمینال:
+از ترمینال (روی همان سرور):
 
 ```bash
 curl http://localhost:8000/api/health
 ```
 
 در فرانت، در حالت dev یک بار هنگام لود اپ، health به صورت خودکار با `/api/health` (از طریق proxy) چک می‌شود و نتیجه در console مرورگر نمایش داده می‌شود.
+
+---
+
+## دسترسی از شبکه (External access)
+
+برای اینکه کلاینت‌های خارج از سرور بتوانند به بک‌اند وصل شوند، سرور باید روی **0.0.0.0** bind شود (نه 127.0.0.1). در این پروژه مقدار پیش‌فرض `HOST=0.0.0.0` است و اگر در `.env` مقدار `127.0.0.1` یا `localhost` تنظیم شده باشد، به‌صورت خودکار به 0.0.0.0 تبدیل می‌شود.
+
+### تست دسترسی از بیرون
+
+از **یک ماشین دیگر** (یا موبایل در همان شبکه):
+
+```bash
+curl http://SERVER_IP:8000/api/health
+```
+
+`SERVER_IP` را با IP واقعی سرور عوض کنید (همان آدرسی که هنگام استارت در لاگ چاپ می‌شود: `Listening on: ... http://<server-ip>:8000`).
+
+**پاسخ مورد انتظار:** `{"status":"ok", ...}`
+
+- **Connection refused** → معمولاً فایروال یا بک‌اند روی 127.0.0.1 bind شده است.
+- **Timeout** → فایروال شبکه، Security Group ابر، یا مسیریابی.
+- **روی localhost کار می‌کند ولی از بیرون نه** → مشکل binding یا فایروال؛ مطمئن شوید آدرس listen برابر `0.0.0.0:8000` است.
+
+### تأیید آدرس listen
+
+روی **لینوکس** بعد از استارت بک‌اند:
+
+```bash
+ss -tulpn | grep 8000
+```
+
+خروجی درست: `LISTEN ... 0.0.0.0:8000` (یا `*:8000`).
+
+اگر `127.0.0.1:8000` بود یعنی binding اشتباه است؛ در این پروژه با `HOST=0.0.0.0` نباید چنین باشد.
+
+### فایروال سرور
+
+اگر از بیرون به بک‌اند وصل نمی‌شوید، پورت 8000 را روی سرور باز کنید:
+
+- **Ubuntu/Debian (ufw):**
+  ```bash
+  sudo ufw status
+  sudo ufw allow 8000/tcp
+  sudo ufw reload
+  ```
+- **firewalld (CentOS/RHEL):**
+  ```bash
+  sudo firewall-cmd --list-ports
+  sudo firewall-cmd --add-port=8000/tcp --permanent
+  sudo firewall-cmd --reload
+  ```
+- **iptables:** قوانین مربوط به INPUT را طوری تنظیم کنید که TCP روی پورت 8000 مجاز باشد.
+
+### محیط ابر (Cloud)
+
+اگر سرور روی ابر است، علاوه بر فایروال خود سرور، قوانین شبکهٔ ابر را هم چک کنید:
+
+- **AWS:** Security Group → Inbound rule برای TCP 8000 از `0.0.0.0/0` (یا محدودهٔ IP مورد نیاز).
+- **DigitalOcean:** Cloud Firewall → Inbound rule برای پورت 8000.
+- **Azure:** NSG (Network Security Group) → Inbound rule برای پورت 8000.
+- **سایر VPS:** پنل شبکه/فایروال را برای باز بودن TCP 8000 بررسی کنید.
+
+### چک‌لیست عیب‌یابی دسترسی از شبکه
+
+1. **Binding:** در `.env` مقدار `HOST=0.0.0.0` باشد (یا اصلاً ست نکنید؛ پیش‌فرض 0.0.0.0 است). بعد از استارت در لاگ باید خطوط `Listening on: ... http://<ip>:8000` را ببینید.
+2. **Listen روی سرور:** `ss -tulpn | grep 8000` باید `0.0.0.0:8000` نشان دهد.
+3. **فایروال سرور:** ufw/firewalld/iptables اجازهٔ ورود به پورت 8000 را بدهند.
+4. **فایروال ابر:** Security Group / Cloud Firewall / NSG برای TCP 8000 باز باشد.
+5. **تست از بیرون:** `curl http://SERVER_IP:8000/api/health` از یک ماشین دیگر پاسخ `{"status":"ok"}` بدهد.
+
+### توصیه برای production
+
+در production بهتر است بک‌اند مستقیماً روی اینترنت در معرض نباشد. پیشنهاد:
+
+- استفاده از **Nginx** (یا reverse proxy دیگر) روی پورت 80/443.
+- Nginx به `localhost:8000` proxy کند.
+- HTTPS روی Nginx فعال شود و پورت 8000 فقط از localhost در دسترس باشد.
 
 ## اگر بک‌اند بعد از استارت خاموش شد (Diagnostics)
 

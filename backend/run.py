@@ -39,6 +39,23 @@ def _print_port_hints(port: int) -> None:
     print("  Or: netstat -ano | findstr :%d" % port)
 
 
+def _get_server_ip_for_display() -> str:
+    """Best-effort non-loopback IP for startup log (so users know how to reach from network)."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        pass
+    try:
+        return socket.gethostbyname(socket.gethostname())
+    except Exception:
+        return "<server-ip>"
+
+
 def _run_migrations(app) -> None:
     """Run pending migrations. On failure: log, traceback, exit 1."""
     from backend.extensions import db
@@ -101,7 +118,12 @@ def main() -> None:
     app = create_app()
     _run_migrations(app)
 
-    print("Backend started successfully on http://localhost:%s. Health: GET http://localhost:%s/api/health" % (port, port))
+    server_ip = _get_server_ip_for_display()
+    print("Backend started successfully.")
+    print("Listening on:")
+    print("  - http://localhost:%s" % port)
+    print("  - http://%s:%s" % (server_ip, port))
+    print("Health: GET http://localhost:%s/api/health (or use server IP from above for external access)" % port)
     app.run(host=host, port=port, debug=debug, use_reloader=use_reloader)
 
 

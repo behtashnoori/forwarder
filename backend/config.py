@@ -39,7 +39,9 @@ def _int_env(name: str, default: int) -> int:
 
 
 # Server settings - single source of truth (default: no reload, fixed port 8000)
-HOST: str = os.getenv("HOST") or os.getenv("FLASK_RUN_HOST", "0.0.0.0")
+# Bind to 0.0.0.0 so the server is accessible from network; do not use 127.0.0.1
+_raw_host = (os.getenv("HOST") or os.getenv("FLASK_RUN_HOST") or "0.0.0.0").strip().lower()
+HOST: str = "0.0.0.0" if _raw_host in ("127.0.0.1", "localhost", "") else _raw_host
 PORT: int = _int_env("PORT", 8000)
 DEBUG: bool = _bool_env("FLASK_DEBUG", False)
 USE_RELOAD: bool = _bool_env("FLASK_USE_RELOAD", False)
