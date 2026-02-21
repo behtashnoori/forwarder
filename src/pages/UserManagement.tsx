@@ -21,7 +21,6 @@ import {
 import { 
   Users, 
   UserPlus,
-  Settings,
   Truck,
   BarChart3,
   RefreshCw,
@@ -443,7 +442,7 @@ const UserManagement = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">مدیریت کاربران</h1>
-            <p className="text-gray-600 mt-1">مدیریت سلسله مراتبی کاربران و قوانین ارجاع</p>
+            <p className="text-gray-600 mt-1">مدیریت سلسله مراتبی کاربران</p>
           </div>
           <div className="flex items-center gap-4">
             <Button
@@ -525,7 +524,7 @@ const UserManagement = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">
               <Users className="w-4 h-4 ml-2" />
               کاربران
@@ -533,10 +532,6 @@ const UserManagement = () => {
             <TabsTrigger value="transport">
               <Truck className="w-4 h-4 ml-2" />
               روش‌های حمل
-            </TabsTrigger>
-            <TabsTrigger value="rules">
-              <Settings className="w-4 h-4 ml-2" />
-              قوانین ارجاع
             </TabsTrigger>
             <TabsTrigger value="statistics">
               <BarChart3 className="w-4 h-4 ml-2" />
@@ -723,56 +718,6 @@ const UserManagement = () => {
                         </Badge>
                         <Button size="sm" variant="outline">
                           <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="rules" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">قوانین ارجاع خودکار</h3>
-              <Button size="sm" onClick={() => setRuleDialogOpen(true)}>
-                <Plus className="w-4 h-4 ml-2" />
-                قانون جدید
-              </Button>
-            </div>
-
-            <div className="grid gap-4">
-              {assignmentRules.map((rule) => (
-                <Card key={rule.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-medium">{rule.name}</h4>
-                          <Badge variant={rule.is_active ? "default" : "secondary"}>
-                            {rule.is_active ? "فعال" : "غیرفعال"}
-                          </Badge>
-                          <Badge variant="outline">
-                            اولویت: {rule.priority}
-                          </Badge>
-                        </div>
-                        {rule.description && (
-                          <p className="text-sm text-gray-600 mb-2">{rule.description}</p>
-                        )}
-                        <div className="text-sm text-gray-500">
-                          <span>نوع: {rule.rule_type}</span>
-                          <span className="mr-4">•</span>
-                          <span>ایجادکننده: {rule.created_by.name}</span>
-                          <span className="mr-4">•</span>
-                          <span>تاریخ ایجاد: {new Date(rule.created_at).toLocaleDateString("fa-IR")}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-red-600">
-                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </div>
