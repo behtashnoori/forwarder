@@ -177,6 +177,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       const body = await response.json();
       if (body && typeof body.message === "string") {
         message = body.message;
+      } else if (body && typeof body.error === "string") {
+        message = body.error;
       }
     } catch (error) {
       // Ignore JSON parsing errors and keep default message.
@@ -419,6 +421,20 @@ export function markRequestAsRead(requestId: number, expertId: number): Promise<
 
 export function fetchExperts(): Promise<{ experts: ExpertUser[] }> {
   return request("/api/expert/experts");
+}
+
+// Site settings (public + admin)
+export type SiteSettings = Record<string, string>;
+
+export function fetchSiteSettings(): Promise<SiteSettings> {
+  return request("/api/site-settings");
+}
+
+export function updateSiteSettings(settings: SiteSettings): Promise<SiteSettings> {
+  return request("/api/admin/site-settings", {
+    method: "PUT",
+    body: JSON.stringify(settings),
+  });
 }
 
 // CRM Interfaces

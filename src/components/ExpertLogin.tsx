@@ -9,8 +9,10 @@ import { User, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { env } from '@/lib/env';
+import { useSiteSettings } from '@/contexts/SiteSettingsContext';
 
 const ExpertLogin = () => {
+  const settings = useSiteSettings();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -77,7 +79,7 @@ const ExpertLogin = () => {
       <DialogTrigger asChild>
         <Button variant="outline" className="text-sm font-medium">
           <User className="w-4 h-4 ml-2" />
-          ورود کارشناس
+          {settings.btn_expert_login || "ورود کارشناس"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, Package, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 const Index = () => {
+  const s = useSiteSettings();
   const [shippingType, setShippingType] = useState<"domestic" | "international" | null>(null);
   const [activeTab, setActiveTab] = useState("request");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -40,10 +42,10 @@ const Index = () => {
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-4">
-              خدمات فورواردر
+              {s.index_services_title || "خدمات فورواردر"}
             </h2>
             <p className="text-muted-foreground text-base md:text-lg">
-              درخواست ارسال مرسوله یا پیگیری درخواست‌های قبلی
+              {s.index_services_subtitle || "درخواست ارسال مرسوله یا پیگیری درخواست‌های قبلی"}
             </p>
           </div>
           
@@ -53,30 +55,32 @@ const Index = () => {
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="request" className="flex items-center gap-2">
                     <Package className="w-4 h-4" />
-                    درخواست ارسال
+                    {s.index_tab_request || "درخواست ارسال"}
                   </TabsTrigger>
                   <TabsTrigger value="track" className="flex items-center gap-2">
                     <Search className="w-4 h-4" />
-                    پیگیری درخواست
+                    {s.index_tab_track || "پیگیری درخواست"}
                   </TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="request" className="mt-6">
                   <div className="text-center mb-6">
                     <h3 className="text-xl font-semibold text-foreground mb-2">
-                      نوع ارسال خود را انتخاب کنید
+                      {s.index_shipping_type_title || "نوع ارسال خود را انتخاب کنید"}
                     </h3>
                   </div>
                   <ShippingTypeSelector onSelect={handleShippingTypeSelect} />
                 </TabsContent>
                 
                 <TabsContent value="track" className="mt-6">
-                  <TrackingSection 
-                    trackingNumber={trackingNumber}
-                    setTrackingNumber={setTrackingNumber}
-                    onTrack={handleTrackRequest}
-                    onSwitchToRequest={() => setActiveTab('request')}
-                  />
+                <TrackingSection 
+                  trackingNumber={trackingNumber}
+                  setTrackingNumber={setTrackingNumber}
+                  onTrack={handleTrackRequest}
+                  onSwitchToRequest={() => setActiveTab('request')}
+                  trackTitle={s.index_track_title}
+                  trackLabel={s.index_track_label}
+                />
                 </TabsContent>
               </Tabs>
             ) : (
@@ -98,25 +102,29 @@ const TrackingSection = ({
   trackingNumber, 
   setTrackingNumber, 
   onTrack,
-  onSwitchToRequest
+  onSwitchToRequest,
+  trackTitle = "پیگیری درخواست",
+  trackLabel = "شماره پیگیری"
 }: { 
   trackingNumber: string;
   setTrackingNumber: (value: string) => void;
   onTrack: () => void;
   onSwitchToRequest: () => void;
+  trackTitle?: string;
+  trackLabel?: string;
 }) => {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Search className="w-5 h-5" />
-          پیگیری درخواست
+          {trackTitle}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <label htmlFor="trackingNumber" className="text-sm font-medium">
-            شماره پیگیری
+            {trackLabel}
           </label>
           <Input
             id="trackingNumber"
@@ -133,7 +141,7 @@ const TrackingSection = ({
           disabled={!trackingNumber.trim()}
         >
           <Search className="w-4 h-4 ml-2" />
-          پیگیری درخواست
+          {trackTitle}
         </Button>
         
         <p className="text-sm text-muted-foreground text-center">

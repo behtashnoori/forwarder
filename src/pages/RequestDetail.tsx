@@ -14,7 +14,6 @@ import {
   Truck, 
   Package, 
   Clock,
-  MessageSquare,
   FileText,
   AlertCircle,
   CheckCircle,
@@ -117,8 +116,17 @@ const RequestDetail = () => {
   });
   const [sendingMessage, setSendingMessage] = useState(false);
 
-  // Mock expert ID - in real app, this would come from auth context
-  const expertId = 1;
+  // Expert ID from logged-in user (localStorage). Backend uses token for note author.
+  const expertId = (() => {
+    try {
+      const stored = localStorage.getItem("expert_user");
+      if (stored) {
+        const expert = JSON.parse(stored) as { id?: number };
+        if (typeof expert?.id === "number") return expert.id;
+      }
+    } catch (_) {}
+    return 1;
+  })();
 
   useEffect(() => {
     if (id) {
@@ -176,7 +184,7 @@ const RequestDetail = () => {
     if (!newMessage.content.trim()) {
       toast({
         title: "خطا",
-        description: newMessage.type === "internal_note" ? "محتوای یادداشت الزامی است" : "محتوای پیام الزامی است",
+        description: "محتوای یادداشت الزامی است",
         variant: "destructive"
       });
       return;
@@ -186,7 +194,7 @@ const RequestDetail = () => {
       setSendingMessage(true);
       await addMessage(
         Number(id),
-        newMessage.type as "internal_note" | "customer_message",
+        "internal_note",
         newMessage.content,
         newMessage.subject,
         expertId
@@ -194,7 +202,7 @@ const RequestDetail = () => {
 
       toast({
         title: "موفق",
-        description: newMessage.type === "internal_note" ? "یادداشت با موفقیت ثبت شد" : "پیام با موفقیت ارسال شد"
+        description: "یادداشت با موفقیت ثبت شد"
       });
 
       setNewMessage({ type: "internal_note", subject: "", content: "" });
@@ -202,7 +210,7 @@ const RequestDetail = () => {
     } catch (error) {
       toast({
         title: "خطا",
-        description: newMessage.type === "internal_note" ? "خطا در ثبت یادداشت" : "خطا در ارسال پیام",
+        description: "خطا در ثبت یادداشت",
         variant: "destructive"
       });
     } finally {
@@ -310,7 +318,6 @@ const RequestDetail = () => {
               <TabsList>
                 <TabsTrigger value="details">جزئیات</TabsTrigger>
                 <TabsTrigger value="notes">یادداشت‌ها</TabsTrigger>
-                <TabsTrigger value="messages">پیام‌ها</TabsTrigger>
               </TabsList>
 
               <TabsContent value="details" className="space-y-4">
@@ -516,77 +523,6 @@ const RequestDetail = () => {
                 </div>
               </TabsContent>
 
-              <TabsContent value="messages" className="space-y-4">
-                {/* Add Customer Message Form */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <MessageSquare className="w-5 h-5" />
-                      ارسال پیام به مشتری
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">موضوع</label>
-                      <Input
-                        placeholder="موضوع پیام"
-                        value={newMessage.subject}
-                        onChange={(e) => setNewMessage({...newMessage, subject: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-600">محتوای پیام</label>
-                      <Textarea
-                        placeholder="پیام خود را بنویسید..."
-                        value={newMessage.content}
-                        onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
-                        rows={4}
-                      />
-                    </div>
-                    <Button 
-                      onClick={() => {
-                        setNewMessage({...newMessage, type: "customer_message"});
-                        handleSendMessage();
-                      }}
-                      disabled={sendingMessage || !newMessage.content.trim()}
-                    >
-                      <Send className="w-4 h-4 ml-2" />
-                      {sendingMessage ? "در حال ارسال..." : "ارسال پیام"}
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Customer Messages List */}
-                <div className="space-y-4">
-                  {request.messages
-                    .filter(msg => msg.type === "customer_message")
-                    .map((message) => (
-                    <Card key={message.id}>
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium">{message.subject}</h4>
-                          <div className="text-sm text-gray-500">
-                            {new Date(message.created_at).toLocaleDateString("fa-IR")}
-                          </div>
-                        </div>
-                        <p className="text-gray-700 mb-3">{message.content}</p>
-                        {message.customer_response && (
-                          <div className="bg-gray-50 p-3 rounded-lg mb-2">
-                            <p className="text-sm font-medium text-gray-600 mb-1">پاسخ مشتری:</p>
-                            <p className="text-gray-700">{message.customer_response}</p>
-                          </div>
-                        )}
-                        <div className="text-sm text-gray-500">
-                          توسط: {message.created_by}
-                          {message.is_read_by_customer && (
-                            <span className="mr-2 text-green-600">• خوانده شده</span>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
             </Tabs>
           </div>
 

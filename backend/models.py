@@ -770,6 +770,17 @@ class PortProvinceMapping(db.Model):
         return f"<PortProvinceMapping port={self.port_id} province={self.province_id}>"
 
 
+class SiteSetting(db.Model):
+    """Key-value store for site-wide editable settings (name, logo, footer, nav labels, etc.)."""
+    __tablename__ = "site_setting"
+
+    key = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.Text, nullable=True)
+
+    def __repr__(self) -> str:
+        return f"<SiteSetting key={self.key!r}>"
+
+
 __all__ = [
     "Province",
     "County",
@@ -801,4 +812,5 @@ __all__ = [
     # Iran Ports Models
     "IranPort",
     "PortProvinceMapping",
+    "SiteSetting",
 ]

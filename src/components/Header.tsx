@@ -3,8 +3,10 @@ import { Menu, Phone, Info, BarChart3, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 const Header = () => {
+  const settings = useSiteSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
@@ -38,12 +40,16 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <div className="w-6 h-6 bg-primary-foreground rounded-sm transform rotate-45"></div>
-            </div>
+            {settings.logo_url?.trim() ? (
+              <img src={settings.logo_url} alt="" className="h-10 w-10 object-contain rounded-lg" />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-primary-foreground rounded-sm transform rotate-45"></div>
+              </div>
+            )}
             <div className="text-right">
-              <h1 className="text-lg font-bold text-foreground">فورواردری سریع</h1>
-              <p className="text-xs text-muted-foreground">ارسال آسان و مطمئن</p>
+              <h1 className="text-lg font-bold text-foreground">{settings.site_name || "فورواردری سریع"}</h1>
+              <p className="text-xs text-muted-foreground">{settings.site_tagline || "ارسال آسان و مطمئن"}</p>
             </div>
           </div>
 
@@ -51,23 +57,23 @@ const Header = () => {
           <nav className="hidden md:flex items-center gap-4">
             <Button variant="ghost" className="text-sm font-medium">
               <Info className="w-4 h-4 ml-2" />
-              درباره ما
+              {settings.nav_about || "درباره ما"}
             </Button>
             <Button variant="ghost" className="text-sm font-medium">
               <Phone className="w-4 h-4 ml-2" />
-              تماس با ما
+              {settings.nav_contact || "تماس با ما"}
             </Button>
             <Button variant="ghost" className="text-sm font-medium" asChild>
               <Link to="/crm">
                 <BarChart3 className="w-4 h-4 ml-2" />
-                CRM
+                {settings.nav_crm || "CRM"}
               </Link>
             </Button>
             {isAdmin && (
               <Button variant="ghost" className="text-sm font-medium" asChild>
                 <Link to="/admin">
                   <Shield className="w-4 h-4 ml-2" />
-                  پنل ادمین
+                  {settings.nav_admin || "پنل ادمین"}
                 </Link>
               </Button>
             )}
@@ -91,23 +97,23 @@ const Header = () => {
             <nav className="flex flex-col gap-2">
               <Button variant="ghost" className="justify-start text-sm font-medium">
                 <Info className="w-4 h-4 ml-2" />
-                درباره ما
+                {settings.nav_about || "درباره ما"}
               </Button>
               <Button variant="ghost" className="justify-start text-sm font-medium">
                 <Phone className="w-4 h-4 ml-2" />
-                تماس با ما
+                {settings.nav_contact || "تماس با ما"}
               </Button>
               <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
                 <Link to="/crm">
                   <BarChart3 className="w-4 h-4 ml-2" />
-                  CRM
+                  {settings.nav_crm || "CRM"}
                 </Link>
               </Button>
               {isAdmin && (
                 <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
                   <Link to="/admin">
                     <Shield className="w-4 h-4 ml-2" />
-                    پنل ادمین
+                    {settings.nav_admin || "پنل ادمین"}
                   </Link>
                 </Button>
               )}

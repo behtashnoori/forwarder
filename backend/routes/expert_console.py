@@ -419,20 +419,22 @@ def update_request_status(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/messages")
+@require_auth
 def add_message(request_id: int):
-    """Add a message to a shipment request."""
+    """Add a message to a shipment request. Uses authenticated user as author."""
     try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
+        
+        expert_id = current_user["id"]
         data = request.get_json() or {}
-        message_type = data.get("type")  # internal_note or customer_message
+        message_type = data.get("type") or "internal_note"  # internal_note or customer_message
         subject = data.get("subject", "")
         content = data.get("content")
-        expert_id = data.get("expert_id")
         
         if not content:
             return jsonify({"error": "محتوای پیام الزامی است"}), 400
-        
-        if not expert_id:
-            return jsonify({"error": "شناسه کارشناس الزامی است"}), 400
         
         req = db.session.query(ShipmentRequest).get(request_id)
         if not req:

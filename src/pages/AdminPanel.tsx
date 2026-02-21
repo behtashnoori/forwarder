@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, BarChart3, Users, Package, Clock, AlertCircle, TrendingUp, Scale } from "lucide-react";
+import { RefreshCw, BarChart3, Users, Package, Clock, AlertCircle, TrendingUp, Scale, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { env } from "@/lib/env";
 import UserManagement from "./UserManagement";
 import ReferralRulesTab from "@/components/ReferralRulesTab";
+import SiteSettingsTab from "@/components/SiteSettingsTab";
 import PageNav from "@/components/PageNav";
 
 interface DashboardStats {
@@ -132,7 +133,7 @@ const AdminPanel = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 ml-2" />
               داشبورد
@@ -144,6 +145,10 @@ const AdminPanel = () => {
             <TabsTrigger value="referral-rules">
               <Scale className="w-4 h-4 ml-2" />
               قوانین ارجاع
+            </TabsTrigger>
+            <TabsTrigger value="site-settings">
+              <Settings className="w-4 h-4 ml-2" />
+              تنظیمات سایت
             </TabsTrigger>
           </TabsList>
 
@@ -281,6 +286,9 @@ const AdminPanel = () => {
 
           <TabsContent value="referral-rules" className="space-y-4">
             <ReferralRulesTab />
+          </TabsContent>
+          <TabsContent value="site-settings" className="space-y-4">
+            <SiteSettingsTab />
           </TabsContent>
         </Tabs>
       </div>
