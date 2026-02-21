@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import ShipmentRequest, ShipmentRequestLog, TransportMethod, CustomerGamification, CustomerWorkflowStep
-from backend.assignment_engine import assignment_engine
+from backend.referral_engine import referral_engine
 
 shipment_request_bp = Blueprint("shipment_request", __name__, url_prefix="/api")
 
@@ -293,15 +293,15 @@ def create_shipment_request():
         
         db.session.commit()
         
-        # Try automatic assignment
+        # Try referral-based automatic assignment (one request -> one expert; distribution by rule strategy)
         try:
-            assigned_expert_id = assignment_engine.assign_request(shipment_request.id, "automatic")
+            assigned_expert_id = referral_engine.auto_assign_request(shipment_request.id)
             if assigned_expert_id:
-                current_app.logger.info(f"Request {shipment_request.id} automatically assigned to expert {assigned_expert_id}")
+                current_app.logger.info(f"Request {shipment_request.id} assigned to expert {assigned_expert_id} via referral rules")
             else:
-                current_app.logger.info(f"No suitable expert found for automatic assignment of request {shipment_request.id}")
+                current_app.logger.info(f"No referral rule matched or no expert selected for request {shipment_request.id}; status remains new")
         except Exception as e:
-            current_app.logger.error(f"Error in automatic assignment for request {shipment_request.id}: {e}")
+            current_app.logger.error(f"Error in referral assignment for request {shipment_request.id}: {e}")
             # Don't fail the request creation if assignment fails
     except Exception as e:
         db.session.rollback()

@@ -661,6 +661,62 @@ class AssignmentLog(db.Model):
         return f"<AssignmentLog id={self.id} request={self.shipment_request_id} expert={self.assigned_expert_id}>"
 
 
+class ReferralRule(db.Model):
+    """Rules for referral-based assignment with direct or pool actions."""
+    __tablename__ = "referral_rule"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    priority = db.Column(db.Integer, default=1)  # Lower number = higher priority
+    conditions = db.Column(db.Text, nullable=False)  # JSON: shipping_type, transport_method, origin_province, destination_province
+    action = db.Column(db.Text, nullable=False)  # JSON: direct_assign { expert_id } | pool_assign { expert_ids, strategy, max_active_assignments_per_expert }
+    stop_on_match = db.Column(db.Boolean, default=True)
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    creator = db.relationship("ExpertUser", backref="created_referral_rules")
+    state = db.relationship("ReferralRuleState", backref="rule", uselist=False, lazy=True)
+    referral_logs = db.relationship("ReferralAssignmentLog", backref="rule", lazy=True)
+
+    def __repr__(self) -> str:
+        return f"<ReferralRule id={self.id} name={self.name!r}>"
+
+
+class ReferralRuleState(db.Model):
+    """Round-robin state per rule (one row per rule)."""
+    __tablename__ = "referral_rule_state"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    rule_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("referral_rule.id"), nullable=False, unique=True)
+    rr_index = db.Column(db.Integer, default=0)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<ReferralRuleState rule_id={self.rule_id} rr_index={self.rr_index}>"
+
+
+class ReferralAssignmentLog(db.Model):
+    """Log of referral assignments with strategy and debug info."""
+    __tablename__ = "referral_assignment_log"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False)
+    rule_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("referral_rule.id"), nullable=False)
+    selected_expert_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
+    strategy_used = db.Column(db.String(32), nullable=False)  # direct, round_robin, least_workload
+    candidate_expert_ids = db.Column(db.Text, nullable=True)  # JSON array of ids
+    debug = db.Column(db.Text, nullable=True)  # JSON debug trace
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    shipment_request = db.relationship("ShipmentRequest", backref="referral_assignment_logs")
+    selected_expert = db.relationship("ExpertUser", backref="referral_assignment_logs")
+
+    def __repr__(self) -> str:
+        return f"<ReferralAssignmentLog id={self.id} request_id={self.request_id} expert_id={self.selected_expert_id}>"
+
+
 class IranPort(db.Model):
     """Represents major ports in Iran for international shipping entry points."""
     
@@ -729,6 +785,9 @@ __all__ = [
     "ExpertSpecialization",
     "AssignmentRule",
     "AssignmentLog",
+    "ReferralRule",
+    "ReferralRuleState",
+    "ReferralAssignmentLog",
     # Iran Ports Models
     "IranPort",
     "PortProvinceMapping",

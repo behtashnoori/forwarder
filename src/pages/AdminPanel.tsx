@@ -2,10 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, BarChart3, Users, Package, Clock, AlertCircle, TrendingUp } from "lucide-react";
+import { RefreshCw, BarChart3, Users, Package, Clock, AlertCircle, TrendingUp, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { env } from "@/lib/env";
 import UserManagement from "./UserManagement";
+import ReferralRulesTab from "@/components/ReferralRulesTab";
 import PageNav from "@/components/PageNav";
 
 interface DashboardStats {
@@ -131,7 +132,7 @@ const AdminPanel = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="dashboard">
               <BarChart3 className="w-4 h-4 ml-2" />
               داشبورد
@@ -139,6 +140,10 @@ const AdminPanel = () => {
             <TabsTrigger value="users">
               <Users className="w-4 h-4 ml-2" />
               مدیریت کاربران
+            </TabsTrigger>
+            <TabsTrigger value="referral-rules">
+              <Scale className="w-4 h-4 ml-2" />
+              قوانین ارجاع
             </TabsTrigger>
           </TabsList>
 
@@ -272,6 +277,10 @@ const AdminPanel = () => {
 
           <TabsContent value="users" className="space-y-4">
             <UserManagement />
+          </TabsContent>
+
+          <TabsContent value="referral-rules" className="space-y-4">
+            <ReferralRulesTab />
           </TabsContent>
         </Tabs>
       </div>

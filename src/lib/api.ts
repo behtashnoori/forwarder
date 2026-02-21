@@ -846,6 +846,99 @@ export function manualAssignment(assignmentData: {
   });
 }
 
+// Referral rules (admin) - قوانین ارجاع
+export interface ReferralRuleActionDirect {
+  type: "direct_assign";
+  expert_id: number;
+}
+
+export interface ReferralRuleActionPool {
+  type: "pool_assign";
+  expert_ids: number[];
+  strategy: "round_robin" | "least_workload";
+  max_active_assignments_per_expert?: number | null;
+}
+
+export type ReferralRuleAction = ReferralRuleActionDirect | ReferralRuleActionPool;
+
+export interface ReferralRuleConditions {
+  shipping_type?: "domestic" | "international" | null;
+  transport_method?: "road" | "rail" | "air" | "sea" | "unknown" | null;
+  origin_province?: number | null;
+  destination_province?: number | null;
+}
+
+export interface ReferralRuleRow {
+  id: number;
+  name: string;
+  is_active: boolean;
+  priority: number;
+  conditions: ReferralRuleConditions;
+  action: ReferralRuleAction;
+  stop_on_match: boolean;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+  action_type: string;
+  pool_expert_count: number;
+  strategy: string | null;
+}
+
+export function fetchReferralRules(): Promise<{ referral_rules: ReferralRuleRow[] }> {
+  return request("/api/admin/referral-rules");
+}
+
+export function createReferralRule(ruleData: {
+  name: string;
+  is_active?: boolean;
+  priority?: number;
+  conditions: ReferralRuleConditions;
+  action: ReferralRuleAction;
+  stop_on_match?: boolean;
+}): Promise<{ message: string; rule_id: number }> {
+  return request("/api/admin/referral-rules", {
+    method: "POST",
+    body: JSON.stringify(ruleData),
+  });
+}
+
+export function updateReferralRule(
+  ruleId: number,
+  ruleData: Partial<{
+    name: string;
+    is_active: boolean;
+    priority: number;
+    conditions: ReferralRuleConditions;
+    action: ReferralRuleAction;
+    stop_on_match: boolean;
+  }>
+): Promise<{ message: string }> {
+  return request(`/api/admin/referral-rules/${ruleId}`, {
+    method: "PUT",
+    body: JSON.stringify(ruleData),
+  });
+}
+
+export function deleteReferralRule(ruleId: number): Promise<{ message: string }> {
+  return request(`/api/admin/referral-rules/${ruleId}`, { method: "DELETE" });
+}
+
+export interface ReferralPreviewResult {
+  matched_rule: { id: number; name: string; priority: number } | null;
+  candidates: number[];
+  selected_expert: { id: number; full_name: string } | null;
+  strategy_used: string | null;
+  debug_trace: Record<string, unknown>;
+  error?: string;
+}
+
+export function previewReferralRule(requestId: number): Promise<ReferralPreviewResult> {
+  return request("/api/admin/referral-rules/preview", {
+    method: "POST",
+    body: JSON.stringify({ request_id: requestId }),
+  });
+}
+
 // Iran Ports API Functions
 export function fetchIranPorts(portType?: string): Promise<IranPort[]> {
   const params = portType ? `?port_type=${portType}` : "";
