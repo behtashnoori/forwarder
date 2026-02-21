@@ -2,13 +2,12 @@
 from __future__ import annotations
 
 import os
-import re
 import sys
 import traceback
 from typing import Any, Mapping, MutableMapping
 
 import backend.config  # noqa: F401 - load .env once (single source of truth in backend.config)
-from flask import Flask, request
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 from sqlalchemy import text
 
@@ -43,6 +42,9 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "*"),
         "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
     }
+    # PORT for health endpoint and startup logs (single source of truth: backend.config)
+    import backend.config as _cfg  # noqa: E402
+    default_config["PORT"] = _cfg.PORT
 
     app.config.from_mapping(default_config)
     if config is not None:
@@ -123,7 +125,7 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
     with app.app_context():
         try:
             db.session.execute(text("SELECT 1"))
-            print("[startup] Database connection successful.")
+            print("[startup] Database connection OK.")
         except Exception as exc:  # pragma: no cover - startup diagnostic
             print("[startup] Database connection failed:", exc)
             traceback.print_exc()
@@ -137,6 +139,67 @@ def create_app(config: Mapping[str, Any] | None = None) -> Flask:
         print("[startup] Route registration failed:", exc)
         traceback.print_exc()
         sys.exit(1)
+
+    # Global error handler: no silent 500; log full trace and return JSON
+    _MAX_BODY_LOG = 2000
+
+    @app.errorhandler(500)
+    def _handle_500(err):
+        tb = traceback.format_exc()
+        path = request.path if request else "<no request>"
+        method = request.method if request else "<no request>"
+        body = ""
+        if request and request.get_data:
+            try:
+                raw = request.get_data(as_text=True)
+                if raw and len(raw) <= _MAX_BODY_LOG:
+                    body = raw
+                elif raw:
+                    body = raw[: _MAX_BODY_LOG] + "... (truncated)"
+            except Exception:
+                body = "<non-text or unavailable>"
+        app.logger.error(
+            "Unhandled 500: path=%s method=%s\nTraceback:\n%s\nRequest body (safe): %s",
+            path,
+            method,
+            tb,
+            body or "<empty>",
+        )
+        return (
+            jsonify({"error": "Internal server error", "message": "An unexpected error occurred."}),
+            500,
+        )
+
+    @app.errorhandler(Exception)
+    def _handle_exception(err):
+        from werkzeug.exceptions import HTTPException
+
+        if isinstance(err, HTTPException) and err.code != 500:
+            raise err
+        tb = traceback.format_exc()
+        path = request.path if request else "<no request>"
+        method = request.method if request else "<no request>"
+        body = ""
+        if request and request.get_data:
+            try:
+                raw = request.get_data(as_text=True)
+                if raw and len(raw) <= _MAX_BODY_LOG:
+                    body = raw
+                elif raw:
+                    body = raw[: _MAX_BODY_LOG] + "... (truncated)"
+            except Exception:
+                body = "<non-text or unavailable>"
+        app.logger.error(
+            "Unhandled exception: path=%s method=%s\nTraceback:\n%s\nRequest body (safe): %s",
+            path,
+            method,
+            tb,
+            body or "<empty>",
+        )
+        return (
+            jsonify({"error": "Internal server error", "message": "An unexpected error occurred."}),
+            500,
+        )
 
     @app.shell_context_processor
     def _make_shell_context() -> dict[str, Any]:

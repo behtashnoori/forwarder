@@ -8,18 +8,22 @@ location_bp = Blueprint("location", __name__, url_prefix="/api")
 
 @location_bp.get("/provinces")
 def list_provinces():
-    """Return a list of all provinces."""
-    provinces = Province.query.all()
-    return jsonify(
-        [
-            {
-                "id": province.id,
-                "name": province.name_fa,
-                "code": province.code,
-            }
-            for province in provinces
-        ]
-    )
+    """Return a list of all provinces. Empty list if no rows; 500 with JSON if DB error."""
+    try:
+        provinces = Province.query.all()
+        return jsonify(
+            [
+                {
+                    "id": province.id,
+                    "name": province.name_fa,
+                    "code": province.code,
+                }
+                for province in provinces
+            ]
+        )
+    except Exception:
+        current_app.logger.exception("Error fetching provinces")
+        return jsonify({"message": "خطا در دریافت استان‌ها"}), 500
 
 
 # Add a direct route for /provinces (without /api prefix)
@@ -53,8 +57,8 @@ def list_provinces_direct():
         from backend.extensions import db
         result = db.session.execute(db.text("SELECT id, name_fa, code FROM province"))
         provinces = result.fetchall()
-    except Exception as e:
-        current_app.logger.error(f"Error querying provinces: {e}")
+    except Exception:
+        current_app.logger.exception("Error querying provinces (direct route)")
         return jsonify({"error": "خطا در دریافت استان‌ها"}), 500
     
     response = jsonify(

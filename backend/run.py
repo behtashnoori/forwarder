@@ -21,6 +21,7 @@ if _PROJECT_ROOT not in sys.path:
 from backend import config  # noqa: E402
 
 from backend import create_app  # noqa: E402
+from backend.startup_seed import run_startup_seed  # noqa: E402
 
 
 def _is_port_in_use(host: str, port: int) -> bool:
@@ -98,6 +99,26 @@ def _run_migrations(app) -> None:
                 sys.exit(1)
 
 
+def _verify_critical_tables(app) -> None:
+    """Verify critical tables exist after migrations. Exit(1) if any missing."""
+    from backend.extensions import db
+    from sqlalchemy import text
+
+    with app.app_context():
+        for table_name, sql in (
+            ("province", text("SELECT 1 FROM province LIMIT 1")),
+            ("transport_method", text("SELECT 1 FROM transport_method LIMIT 1")),
+        ):
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(sql)
+            except Exception as e:
+                print("[startup] Critical table %r missing or inaccessible: %s" % (table_name, e))
+                traceback.print_exc()
+                sys.exit(1)
+    print("[startup] Critical tables OK.")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run backend dev server (fixed port, no silent exit)")
     parser.add_argument("--reload", action="store_true", help="Enable Flask reloader (default: off for stability)")
@@ -110,6 +131,12 @@ def main() -> None:
 
     print("[startup] PORT=%s, HOST=%s, DEBUG=%s, use_reloader=%s" % (port, host, debug, use_reloader))
 
+    # Require DATABASE_URL so we never silently use a hardcoded fallback
+    if not os.getenv("DATABASE_URL"):
+        print("[startup] DATABASE_URL is required. Set it in .env or environment.")
+        sys.exit(1)
+    print("[startup] Environment OK.")
+
     if _is_port_in_use(host, port):
         print("Port %s is already in use. Please stop the process using it." % port)
         _print_port_hints(port)
@@ -117,6 +144,8 @@ def main() -> None:
 
     app = create_app()
     _run_migrations(app)
+    _verify_critical_tables(app)
+    run_startup_seed(app)
 
     server_ip = _get_server_ip_for_display()
     print("Backend started successfully.")

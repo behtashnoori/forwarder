@@ -59,8 +59,8 @@ def get_transport_methods():
             ]
         })
         
-    except Exception as e:
-        current_app.logger.error(f"Error fetching transport methods: {str(e)}")
+    except Exception:
+        current_app.logger.exception("Error fetching transport methods")
         return jsonify({"message": "خطا در دریافت روش‌های حمل"}), 500
 
 @shipment_request_bp.post("/shipment-request")
