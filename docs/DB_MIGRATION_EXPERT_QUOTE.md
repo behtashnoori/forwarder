@@ -21,16 +21,16 @@ on `INSERT INTO expert_quote (...)`.
 
 The fix is **incremental only**: migrations only **create** the missing `expert_quote` table (and index). They do **not** reset the DB, drop other tables, or delete existing data.
 
-### Option A: Apply migrations on backend startup (recommended)
+### Option A: Automatic on backend startup (recommended)
 
-Migrations run automatically when you start the backend:
+When you start the backend (`python -m backend.run` or via gunicorn/wsgi), two things happen:
 
-```bash
-# From the project root (forwarder/)
-python -m backend.run
-```
+1. **Migrations** run (`flask db upgrade` to head). If the migration chain runs, the `expert_quote` table is created by the `20250223_ensure_quote` revision.
+2. **Startup fallback:** If migrations fail (e.g. DB has a revision like `20250223_site_settings` that is not in the codebase), the startup script catches the error and creates the `expert_quote` table directly with `CREATE TABLE IF NOT EXISTS`. You will see in the log:
+   - `[startup] expert_quote table missing -> created successfully.`
+   - `[startup] Migrations skipped (revision mismatch); expert_quote table ensured.`
 
-This runs `run_migrations(app)` and upgrades the database to `head`, which includes the idempotent "ensure expert_quote table" migration. If the table is missing, it will be created.
+So in practice, **just restart the backend** and the table will exist after startup. No manual `flask db upgrade` required if you have a revision mismatch.
 
 ### Option B: Apply migrations manually with Flask-Migrate
 
