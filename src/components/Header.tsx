@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, Phone, Info, BarChart3, Shield } from "lucide-react";
+import { Menu, Phone, Info, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
@@ -63,12 +63,6 @@ const Header = () => {
               <Phone className="w-4 h-4 ml-2" />
               {settings.nav_contact || "تماس با ما"}
             </Button>
-            <Button variant="ghost" className="text-sm font-medium" asChild>
-              <Link to="/crm">
-                <BarChart3 className="w-4 h-4 ml-2" />
-                {settings.nav_crm || "CRM"}
-              </Link>
-            </Button>
             {isAdmin && (
               <Button variant="ghost" className="text-sm font-medium" asChild>
                 <Link to="/admin">
@@ -102,12 +96,6 @@ const Header = () => {
               <Button variant="ghost" className="justify-start text-sm font-medium">
                 <Phone className="w-4 h-4 ml-2" />
                 {settings.nav_contact || "تماس با ما"}
-              </Button>
-              <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                <Link to="/crm">
-                  <BarChart3 className="w-4 h-4 ml-2" />
-                  {settings.nav_crm || "CRM"}
-                </Link>
               </Button>
               {isAdmin && (
                 <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
