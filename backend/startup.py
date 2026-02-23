@@ -69,6 +69,8 @@ def run_migrations(app) -> None:
     from sqlalchemy import text
 
     with app.app_context():
+        # Ensure expert_quote exists before any migration (no-op if table already there)
+        ensure_expert_quote_table(app)
         try:
             with db.engine.connect() as conn:
                 with conn.begin():
@@ -117,6 +119,7 @@ def verify_critical_tables(app) -> None:
         for table_name, sql in (
             ("province", text("SELECT 1 FROM province LIMIT 1")),
             ("transport_method", text("SELECT 1 FROM transport_method LIMIT 1")),
+            ("expert_quote", text("SELECT 1 FROM expert_quote LIMIT 1")),
         ):
             try:
                 with db.engine.connect() as conn:
