@@ -67,7 +67,8 @@ export function SiteSettingsProvider({ children }: { children: React.ReactNode }
   const fetchSettings = async () => {
     try {
       setError(null);
-      const res = await fetch(`${env.API_URL}/api/site-settings`);
+      const url = `${env.API_URL}/api/site-settings`.replace(/\/+/g, "/");
+      const res = await fetch(url, { cache: "no-store" });
       const data = await res.json();
       if (res.ok) {
         setSettings({

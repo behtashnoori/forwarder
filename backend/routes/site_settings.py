@@ -86,7 +86,10 @@ def get_site_settings():
     try:
         row = get_or_create_settings_row()
         data = _settings_to_dict(row)
-        return jsonify(data)
+        response = jsonify(data)
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        return response
     except Exception as e:
         current_app.logger.exception("get_site_settings: %s", e)
         return jsonify(_settings_to_dict(None))

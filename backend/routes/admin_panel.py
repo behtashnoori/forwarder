@@ -606,7 +606,9 @@ def admin_get_site_settings():
     try:
         row = get_or_create_settings_row()
         data = _settings_to_dict(row)
-        return jsonify(data)
+        response = jsonify(data)
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        return response
     except Exception as e:
         current_app.logger.exception("admin_get_site_settings: %s", e)
         return jsonify({"error": "خطا در دریافت تنظیمات"}), 500
@@ -644,6 +646,7 @@ def admin_update_site_settings():
         if "copyright_text" in data:
             row.copyright_text = (data["copyright_text"] or "").strip()
         row.updated_at = datetime.utcnow()
+        db.session.flush()
         db.session.commit()
         return jsonify({"message": "تنظیمات ذخیره شد", "settings": _settings_to_dict(row)})
     except Exception as e:

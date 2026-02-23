@@ -43,6 +43,7 @@ const SiteSettingsTab = () => {
       const token = localStorage.getItem("expert_token");
       const url = `${env.API_URL}/api/admin/site-settings`.replace(/\/+/g, "/");
       const res = await fetch(url, {
+        cache: "no-store",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json().catch(() => ({}));
@@ -83,6 +84,7 @@ const SiteSettingsTab = () => {
       const url = `${env.API_URL}/api/admin/site-settings`.replace(/\/+/g, "/");
       const res = await fetch(url, {
         method: "PUT",
+        cache: "no-store",
         headers: {
           "Content-Type": "application/json",
           ...(token && { Authorization: `Bearer ${token}` }),
@@ -91,6 +93,21 @@ const SiteSettingsTab = () => {
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
+        if (data.settings) {
+          setForm({
+            company_name: data.settings.company_name ?? form.company_name,
+            tagline: data.settings.tagline ?? form.tagline,
+            footer_description: data.settings.footer_description ?? "",
+            contact_phone: data.settings.contact_phone ?? "",
+            contact_email: data.settings.contact_email ?? "",
+            contact_address: data.settings.contact_address ?? "",
+            working_hours_weekdays: data.settings.working_hours_weekdays ?? "",
+            working_hours_thursday: data.settings.working_hours_thursday ?? "",
+            support_text: data.settings.support_text ?? "",
+            copyright_text: data.settings.copyright_text ?? "",
+            logo_url: data.settings.logo_url ?? null,
+          });
+        }
         toast({ title: "ذخیره شد", description: data.message || "تنظیمات با موفقیت ذخیره شد" });
         refetchPublicSettings();
       } else {
