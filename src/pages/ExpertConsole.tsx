@@ -23,12 +23,10 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  DollarSign
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageNav from "@/components/PageNav";
-import { QuoteModal } from "@/components/QuoteModal";
 import { 
   fetchExpertRequests, 
   fetchKPIs, 
@@ -55,9 +53,8 @@ const ExpertConsole = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
-  const [quoteModalRequestId, setQuoteModalRequestId] = useState<number | null>(null);
 
-  // Mock expert ID - in real app, this would come from auth context
+  // Mock expert ID
   const expertId = 1;
 
   useEffect(() => {
@@ -259,20 +256,6 @@ const ExpertConsole = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {quoteModalRequestId != null && (
-        <QuoteModal
-          open={quoteModalRequestId != null}
-          onOpenChange={(open) => !open && setQuoteModalRequestId(null)}
-          requestId={quoteModalRequestId}
-          onSuccess={() => {
-            loadRequests();
-            loadKPIs();
-            setActiveTab("waiting_for_customer");
-            setQuoteModalRequestId(null);
-            toast({ title: "پیشنهاد ثبت شد", description: "وضعیت به «منتظر مشتری» تغییر یافت." });
-          }}
-        />
-      )}
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -664,17 +647,6 @@ const ExpertConsole = () => {
                             >
                               <Clock className="w-4 h-4 ml-2" />
                               شروع پیگیری
-                            </Button>
-                          )}
-                          
-                          {(request.status === "in_progress" || request.status === "assigned") && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setQuoteModalRequestId(request.id)}
-                            >
-                              <DollarSign className="w-4 h-4 ml-2" />
-                              ارسال پیشنهاد
                             </Button>
                           )}
                           

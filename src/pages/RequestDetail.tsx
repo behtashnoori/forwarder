@@ -20,10 +20,8 @@ import {
   Send,
   Phone,
   Weight,
-  DollarSign
 } from "lucide-react";
 import PageNav from "@/components/PageNav";
-import { QuoteModal } from "@/components/QuoteModal";
 import { useToast } from "@/hooks/use-toast";
 import { 
   fetchExpertRequestDetail, 
@@ -125,9 +123,8 @@ const RequestDetail = () => {
     content: ""
   });
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
 
-  // Expert ID from logged-in user (localStorage). Backend uses token for note author.
+  // Expert ID from logged-in user
   const expertId = (() => {
     try {
       const stored = localStorage.getItem("expert_user");
@@ -294,15 +291,6 @@ const RequestDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <QuoteModal
-        open={quoteModalOpen}
-        onOpenChange={setQuoteModalOpen}
-        requestId={request.id}
-        onSuccess={() => {
-          loadRequestDetail();
-          toast({ title: "پیشنهاد ثبت شد", description: "وضعیت به «منتظر مشتری» تغییر یافت." });
-        }}
-      />
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -554,16 +542,6 @@ const RequestDetail = () => {
                 <CardTitle>عملیات</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {(request.status === "in_progress" || request.status === "assigned") && (
-                  <Button
-                    type="button"
-                    className="w-full"
-                    onClick={() => setQuoteModalOpen(true)}
-                  >
-                    <DollarSign className="w-4 h-4 ml-2" />
-                    ارسال پیشنهاد
-                  </Button>
-                )}
                 <Select onValueChange={handleStatusChange}>
                   <SelectTrigger>
                     <SelectValue placeholder="تغییر وضعیت" />
@@ -578,35 +556,6 @@ const RequestDetail = () => {
                 </Select>
               </CardContent>
             </Card>
-
-            {request.latest_quote && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>آخرین پیشنهاد</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">مبلغ:</span>
-                    <span className="font-medium">
-                      {request.latest_quote.amount?.toLocaleString("fa-IR")} {request.latest_quote.currency}
-                    </span>
-                  </div>
-                  {request.latest_quote.valid_until && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">اعتبار:</span>
-                      <span>{new Date(request.latest_quote.valid_until).toLocaleDateString("fa-IR")}</span>
-                    </div>
-                  )}
-                  {request.latest_quote.note && (
-                    <p className="text-gray-600 pt-1">{request.latest_quote.note}</p>
-                  )}
-                  <p className="text-xs text-gray-500 pt-1">
-                    {new Date(request.latest_quote.created_at).toLocaleDateString("fa-IR")}
-                    {request.latest_quote.created_by && ` — ${request.latest_quote.created_by}`}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Timeline */}
             <Card>

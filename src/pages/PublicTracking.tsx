@@ -456,7 +456,7 @@ const PublicTracking: React.FC = () => {
               </Card>
             )}
 
-            {requestData.latest_quote && (
+            {requestData.latest_quote && false && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

@@ -360,7 +360,7 @@ const CustomerRequestDetail: React.FC = () => {
               </CardContent>
             </Card>
 
-            {requestDetail.latest_quote && (
+            {requestDetail.latest_quote && false && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
