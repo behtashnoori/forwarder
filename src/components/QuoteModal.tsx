@@ -56,7 +56,14 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
       setNote("");
       setValidUntil("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "خطا در ثبت پیشنهاد");
+      const message = err instanceof Error ? err.message : "خطا در ثبت پیشنهاد";
+      if (message.includes("Invalid token") || message.includes("Token") || message.includes("token")) {
+        localStorage.removeItem("expert_token");
+        localStorage.removeItem("expert_user");
+        setError("نشست شما منقضی شده است. لطفاً دوباره وارد شوید.");
+      } else {
+        setError(message);
+      }
     } finally {
       setLoading(false);
     }
