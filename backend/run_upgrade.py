@@ -50,7 +50,7 @@ def main():
                 # set DB to head and ensure tracking_code column exists
                 err_str = str(upgrade_err).lower()
                 if "duplicatecolumn" in err_str or "duplicatetable" in err_str or "already exists" in err_str:
-                    head_rev = "20250220_merge_final"
+                    head_rev = "20250221_referral"
                     print("Setting alembic_version to", head_rev, "and ensuring tracking_code.", flush=True)
                     try:
                         with db.engine.connect() as conn:

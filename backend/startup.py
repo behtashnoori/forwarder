@@ -39,7 +39,7 @@ def run_migrations(app) -> None:
                     with db.engine.connect() as conn:
                         with conn.begin():
                             conn.execute(text("DELETE FROM alembic_version"))
-                            conn.execute(text("INSERT INTO alembic_version (version_num) VALUES (:rev)"), {"rev": "20250220_merge_final"})
+                            conn.execute(text("INSERT INTO alembic_version (version_num) VALUES (:rev)"), {"rev": "20250221_referral"})
                             conn.execute(text("ALTER TABLE shipment_request ADD COLUMN IF NOT EXISTS tracking_code VARCHAR(32)"))
                             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_shipment_request_tracking_code ON shipment_request (tracking_code)"))
                     print("[startup] Migrations applied (recovery).")
