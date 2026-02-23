@@ -16,6 +16,7 @@ import {
   AlertCircle,
   Truck,
   FileText,
+  DollarSign,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { env } from "@/lib/env";
@@ -73,6 +74,17 @@ interface PublicTrackingData {
     phone: string;
     email?: string;
   };
+  assigned_at?: string | null;
+  last_customer_touch_at?: string | null;
+  latest_quote?: {
+    id: number;
+    amount: number;
+    currency: string;
+    note?: string | null;
+    valid_until?: string | null;
+    created_at: string;
+    created_by?: string | null;
+  } | null;
   workflow_steps?: WorkflowStep[];
 }
 
@@ -210,7 +222,7 @@ const PublicTracking: React.FC = () => {
         {/* Summary box */}
         <Card className="mb-8 bg-muted/30">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">شماره رهگیری</p>
                 <p className="text-xl font-mono font-bold text-foreground">{requestData.tracking_number}</p>
@@ -222,13 +234,27 @@ const PublicTracking: React.FC = () => {
                 </Badge>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground mb-1">آخرین به‌روزرسانی</p>
+                <p className="text-sm text-muted-foreground mb-1">تاریخ ثبت درخواست</p>
                 <p className="text-sm font-medium">
                   {requestData.created_at
                     ? new Date(requestData.created_at).toLocaleDateString("fa-IR", {
                         year: "numeric",
                         month: "long",
                         day: "numeric",
+                      })
+                    : "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">تاریخ اختصاص کارشناس</p>
+                <p className="text-sm font-medium">
+                  {requestData.assigned_at
+                    ? new Date(requestData.assigned_at).toLocaleDateString("fa-IR", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })
                     : "—"}
                 </p>
@@ -399,6 +425,21 @@ const PublicTracking: React.FC = () => {
                     <User className="w-4 h-4 text-muted-foreground" />
                     <span className="font-medium">{requestData.assigned_expert.full_name}</span>
                   </div>
+                  {requestData.assigned_at && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4 shrink-0" />
+                      <span>
+                        تاریخ اختصاص:{" "}
+                        {new Date(requestData.assigned_at).toLocaleDateString("fa-IR", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
                     <Phone className="w-4 h-4 text-muted-foreground" />
                     <a href={`tel:${requestData.assigned_expert.phone}`} className="text-sm hover:underline">
@@ -411,6 +452,43 @@ const PublicTracking: React.FC = () => {
                       <span className="text-sm">{requestData.assigned_expert.email}</span>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            )}
+
+            {requestData.latest_quote && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    پیشنهاد (قیمت)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">مبلغ</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {requestData.latest_quote.amount?.toLocaleString("fa-IR")} {requestData.latest_quote.currency}
+                    </span>
+                  </div>
+                  {requestData.latest_quote.valid_until && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4 shrink-0" />
+                      <span>اعتبار تا: {new Date(requestData.latest_quote.valid_until).toLocaleDateString("fa-IR")}</span>
+                    </div>
+                  )}
+                  {requestData.latest_quote.note && (
+                    <p className="text-sm text-muted-foreground border-t pt-2">{requestData.latest_quote.note}</p>
+                  )}
+                  <div className="text-xs text-muted-foreground pt-1">
+                    {requestData.latest_quote.created_at &&
+                      new Date(requestData.latest_quote.created_at).toLocaleDateString("fa-IR", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    {requestData.latest_quote.created_by && ` — ${requestData.latest_quote.created_by}`}
+                  </div>
                 </CardContent>
               </Card>
             )}

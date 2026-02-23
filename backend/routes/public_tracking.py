@@ -1,9 +1,20 @@
 """Public tracking API routes for customers to track their requests."""
 from flask import Blueprint, jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 
 from backend.extensions import db
-from backend.models import ShipmentRequest, Province, County, City, ExpertUser
+from backend.models import (
+    ShipmentRequest,
+    Province,
+    County,
+    City,
+    ExpertUser,
+    ExpertQuote,
+    AssignmentLog,
+    ReferralAssignmentLog,
+    ExpertConsoleLog,
+)
 
 public_tracking_bp = Blueprint("public_tracking", __name__, url_prefix="/api/public")
 
@@ -33,19 +44,29 @@ STATUS_TO_COMPLETED_UP_TO = {
 }
 
 
-def _workflow_steps_from_status(status: str, created_at) -> list:
-    """Build 7 workflow steps with is_completed from status."""
+def _workflow_steps_from_status(status: str, created_at, assigned_at=None, quote_created_at=None) -> list:
+    """Build 7 workflow steps with is_completed and optional real completed_at."""
     max_completed = STATUS_TO_COMPLETED_UP_TO.get(status, 0)
     created_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
     steps = []
     for i, defn in enumerate(WORKFLOW_STEP_DEFS):
         is_completed = i <= max_completed
+        completed_at = None
+        if is_completed:
+            if i == 0:
+                completed_at = created_iso
+            elif i == 1 and assigned_at:
+                completed_at = assigned_at.isoformat() if hasattr(assigned_at, "isoformat") else str(assigned_at)
+            elif i == 3 and quote_created_at:
+                completed_at = quote_created_at.isoformat() if hasattr(quote_created_at, "isoformat") else str(quote_created_at)
+            else:
+                completed_at = created_iso
         steps.append({
             "name": defn["name"],
             "order": defn["order"],
             "title": defn["title"],
             "is_completed": is_completed,
-            "completed_at": created_iso if (is_completed and i == 0) else None,
+            "completed_at": completed_at,
             "points_earned": 0,
         })
     return steps
@@ -59,6 +80,62 @@ def _resolve_request(identifier: str):
     if identifier.isdigit():
         return db.session.query(ShipmentRequest).filter(ShipmentRequest.id == int(identifier)).first()
     return db.session.query(ShipmentRequest).filter(ShipmentRequest.tracking_code == identifier).first()
+
+
+def _get_assigned_at(req):
+    """Return the earliest date when this request was assigned to an expert (from logs)."""
+    dates = []
+    first_al = (
+        db.session.query(func.min(AssignmentLog.created_at))
+        .filter(AssignmentLog.shipment_request_id == req.id)
+        .scalar()
+    )
+    if first_al:
+        dates.append(first_al)
+    first_ral = (
+        db.session.query(func.min(ReferralAssignmentLog.assigned_at))
+        .filter(ReferralAssignmentLog.request_id == req.id)
+        .scalar()
+    )
+    if first_ral:
+        dates.append(first_ral)
+    first_log = (
+        db.session.query(func.min(ExpertConsoleLog.created_at))
+        .filter(
+            ExpertConsoleLog.shipment_request_id == req.id,
+            ExpertConsoleLog.new_status == "assigned",
+        )
+        .scalar()
+    )
+    if first_log:
+        dates.append(first_log)
+    if not dates:
+        return None
+    return min(dates)
+
+
+def _get_latest_quote(req):
+    """Return the latest quote for this request, or None."""
+    row = (
+        db.session.query(ExpertQuote)
+        .filter(ExpertQuote.shipment_request_id == req.id)
+        .order_by(ExpertQuote.created_at.desc())
+        .first()
+    )
+    if not row:
+        return None
+    created_by_name = None
+    if row.created_by_expert:
+        created_by_name = row.created_by_expert.full_name
+    return {
+        "id": row.id,
+        "amount": int(row.amount) if row.amount is not None else None,
+        "currency": row.currency or "IRR",
+        "note": row.note,
+        "valid_until": row.valid_until.isoformat() if row.valid_until else None,
+        "created_at": row.created_at.isoformat() if hasattr(row.created_at, "isoformat") else str(row.created_at),
+        "created_by": created_by_name,
+    }
 
 
 @public_tracking_bp.get("/track/<identifier>")
@@ -107,6 +184,11 @@ def get_public_tracking_info(identifier: str):
         created_at = req.created_at
         created_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
 
+        assigned_at = _get_assigned_at(req)
+        assigned_at_iso = assigned_at.isoformat() if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
+
+        latest_quote = _get_latest_quote(req)
+
         def _date_iso(d):
             if d is None:
                 return None
@@ -151,7 +233,15 @@ def get_public_tracking_info(identifier: str):
             "pickup_date": _date_iso(req.pickup_date),
             "delivery_date": _date_iso(req.delivery_date),
             "assigned_expert": assigned_expert,
-            "workflow_steps": _workflow_steps_from_status(req.status or "new", req.created_at),
+            "assigned_at": assigned_at_iso,
+            "last_customer_touch_at": _date_iso(req.last_customer_touch_at),
+            "latest_quote": latest_quote,
+            "workflow_steps": _workflow_steps_from_status(
+                req.status or "new",
+                req.created_at,
+                assigned_at=assigned_at,
+                quote_created_at=latest_quote.get("created_at") if latest_quote else None,
+            ),
         }
         return jsonify(response_data), 200
 
