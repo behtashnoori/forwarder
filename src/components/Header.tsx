@@ -3,8 +3,10 @@ import { Menu, Phone, Info, BarChart3, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
+import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 
 const Header = () => {
+  const { settings, logoFullUrl } = useSiteSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const location = useLocation();
@@ -38,12 +40,16 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-              <div className="w-6 h-6 bg-primary-foreground rounded-sm transform rotate-45"></div>
-            </div>
+            {logoFullUrl ? (
+              <img src={logoFullUrl} alt="" className="w-10 h-10 object-contain rounded-lg" />
+            ) : (
+              <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-primary-foreground rounded-sm transform rotate-45"></div>
+              </div>
+            )}
             <div className="text-right">
-              <h1 className="text-lg font-bold text-foreground">فورواردری سریع</h1>
-              <p className="text-xs text-muted-foreground">ارسال آسان و مطمئن</p>
+              <h1 className="text-lg font-bold text-foreground">{settings.company_name}</h1>
+              <p className="text-xs text-muted-foreground">{settings.tagline}</p>
             </div>
           </div>
 

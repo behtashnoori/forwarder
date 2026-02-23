@@ -770,6 +770,28 @@ class PortProvinceMapping(db.Model):
         return f"<PortProvinceMapping port={self.port_id} province={self.province_id}>"
 
 
+class SiteSettings(db.Model):
+    """Singleton model for site-wide settings (company info, footer, logo)."""
+    __tablename__ = "site_settings"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    company_name = db.Column(db.String(200), nullable=False, default="فورواردری سریع")
+    tagline = db.Column(db.String(200), nullable=True, default="ارسال آسان و مطمئن")
+    footer_description = db.Column(db.Text, nullable=True)
+    contact_phone = db.Column(db.String(50), nullable=True)
+    contact_email = db.Column(db.String(100), nullable=True)
+    contact_address = db.Column(db.String(300), nullable=True)
+    working_hours_weekdays = db.Column(db.String(100), nullable=True)
+    working_hours_thursday = db.Column(db.String(100), nullable=True)
+    support_text = db.Column(db.String(200), nullable=True)
+    copyright_text = db.Column(db.String(300), nullable=True)
+    logo_url = db.Column(db.String(500), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<SiteSettings id={self.id} company_name={self.company_name!r}>"
+
+
 __all__ = [
     "Province",
     "County",
@@ -801,4 +823,5 @@ __all__ = [
     # Iran Ports Models
     "IranPort",
     "PortProvinceMapping",
+    "SiteSettings",
 ]

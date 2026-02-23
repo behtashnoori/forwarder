@@ -1,21 +1,29 @@
 """Admin panel routes for shipment request insights."""
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional, Dict, Any
 
 from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import and_, or_, func, desc, case
 from sqlalchemy.orm import joinedload
+from werkzeug.utils import secure_filename
 
 from backend.models import (
     City, County, Province, ShipmentRequest, ExpertUser,
     TransportMethod, AssignmentLog, ExpertConsoleLog,
     ReferralRule, ReferralRuleState, ReferralAssignmentLog,
+    SiteSettings,
 )
 from backend.extensions import db
 from backend.security import require_role
 from backend.auth import get_current_user
 from backend.referral_engine import referral_engine
+from backend.routes.site_settings import (
+    _get_settings_row,
+    _settings_to_dict,
+    get_uploads_folder,
+)
 
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api/admin")
 
@@ -583,3 +591,108 @@ def preview_referral_rule():
     except Exception as e:
         current_app.logger.error(f"Error in referral preview: {e}")
         return jsonify({"error": "خطا در پیش‌نمایش ارجاع"}), 500
+
+
+# --- Site settings (تنظیمات سایت) ---
+
+ALLOWED_LOGO_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+
+@admin_bp.get("/site-settings")
+@require_role("admin")
+def admin_get_site_settings():
+    """Return site settings for admin form."""
+    try:
+        row = _get_settings_row()
+        data = _settings_to_dict(row)
+        return jsonify(data)
+    except Exception as e:
+        current_app.logger.exception("admin_get_site_settings: %s", e)
+        return jsonify({"error": "خطا در دریافت تنظیمات"}), 500
+
+
+@admin_bp.put("/site-settings")
+@require_role("admin")
+def admin_update_site_settings():
+    """Update site settings (text fields only)."""
+    try:
+        row = _get_settings_row()
+        if not row:
+            return jsonify({"error": "تنظیمات سایت یافت نشد"}), 404
+        data = request.get_json() or {}
+        if "company_name" in data:
+            row.company_name = (data["company_name"] or "").strip() or "فورواردری سریع"
+        if "tagline" in data:
+            row.tagline = (data["tagline"] or "").strip()
+        if "footer_description" in data:
+            row.footer_description = (data["footer_description"] or "").strip()
+        if "contact_phone" in data:
+            row.contact_phone = (data["contact_phone"] or "").strip()
+        if "contact_email" in data:
+            row.contact_email = (data["contact_email"] or "").strip()
+        if "contact_address" in data:
+            row.contact_address = (data["contact_address"] or "").strip()
+        if "working_hours_weekdays" in data:
+            row.working_hours_weekdays = (data["working_hours_weekdays"] or "").strip()
+        if "working_hours_thursday" in data:
+            row.working_hours_thursday = (data["working_hours_thursday"] or "").strip()
+        if "support_text" in data:
+            row.support_text = (data["support_text"] or "").strip()
+        if "copyright_text" in data:
+            row.copyright_text = (data["copyright_text"] or "").strip()
+        row.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"message": "تنظیمات ذخیره شد", "settings": _settings_to_dict(row)})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("admin_update_site_settings: %s", e)
+        return jsonify({"error": "خطا در ذخیره تنظیمات"}), 500
+
+
+@admin_bp.post("/site-settings/logo")
+@require_role("admin")
+def admin_upload_site_logo():
+    """Upload site logo image; update singleton row and return new logo_url."""
+    try:
+        if "file" not in request.files and "logo" not in request.files:
+            return jsonify({"error": "فایلی ارسال نشده است"}), 400
+        file = request.files.get("file") or request.files.get("logo")
+        if not file or not file.filename:
+            return jsonify({"error": "فایلی انتخاب نشده است"}), 400
+        ext = (Path(secure_filename(file.filename)).suffix or "").lstrip(".").lower()
+        if ext not in ALLOWED_LOGO_EXTENSIONS:
+            return jsonify({"error": "فرمت فایل باید یکی از png, jpg, jpeg, gif, webp باشد"}), 400
+        filename = f"site_logo.{ext}"
+        uploads = get_uploads_folder()
+        filepath = uploads / filename
+        file.save(str(filepath))
+        row = _get_settings_row()
+        if not row:
+            return jsonify({"error": "تنظیمات سایت یافت نشد"}), 404
+        logo_url = f"/api/uploads/{filename}"
+        row.logo_url = logo_url
+        row.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"message": "لوگو با موفقیت آپلود شد", "logo_url": logo_url})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("admin_upload_site_logo: %s", e)
+        return jsonify({"error": "خطا در آپلود لوگو"}), 500
+
+
+@admin_bp.delete("/site-settings/logo")
+@require_role("admin")
+def admin_remove_site_logo():
+    """Remove site logo (set logo_url to null)."""
+    try:
+        row = _get_settings_row()
+        if not row:
+            return jsonify({"error": "تنظیمات سایت یافت نشد"}), 404
+        row.logo_url = None
+        row.updated_at = datetime.utcnow()
+        db.session.commit()
+        return jsonify({"message": "لوگو حذف شد", "logo_url": None})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.exception("admin_remove_site_logo: %s", e)
+        return jsonify({"error": "خطا در حذف لوگو"}), 500

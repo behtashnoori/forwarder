@@ -11,6 +11,7 @@ from .shipment_request import shipment_request_bp
 from .monitoring import monitoring_bp
 from .user_management import user_management_bp
 from .public_tracking import public_tracking_bp
+from .site_settings import site_settings_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -24,5 +25,6 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(customer_gamification_bp)
     app.register_blueprint(user_management_bp)
     app.register_blueprint(monitoring_bp)
+    app.register_blueprint(site_settings_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(public_tracking_bp)
