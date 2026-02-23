@@ -13,6 +13,7 @@ def run_tests():
         ShipmentRequest,
         ReferralAssignmentLog,
         ReferralAutoAssignState,
+        ExpertConsoleLog,
         Province,
     )
     from backend.referral_engine import referral_engine
@@ -96,6 +97,13 @@ def run_tests():
                     errors.append("Expected rule_id=None for auto-assign")
                 elif log.strategy_used != "round_robin":
                     errors.append(f"Expected strategy_used=round_robin got {log.strategy_used}")
+                # Auto-assign must create ExpertConsoleLog for timeline consistency
+                console_log = db.session.query(ExpertConsoleLog).filter(
+                    ExpertConsoleLog.shipment_request_id == request_id,
+                    ExpertConsoleLog.action == "assignment",
+                ).first()
+                if not console_log:
+                    errors.append("ExpertConsoleLog (action=assignment) not created on auto-assign")
         except Exception as e:
             errors.append(f"auto_assign_request raised: {e}")
             import traceback

@@ -295,7 +295,7 @@ def create_shipment_request():
             if assigned_expert_id:
                 current_app.logger.info(f"Request {shipment_request.id} assigned to expert {assigned_expert_id} via referral rules")
             else:
-                current_app.logger.info(f"No referral rule matched or no expert selected for request {shipment_request.id}; status remains new")
+                current_app.logger.info("No active experts available for request %s; status remains new", shipment_request.id)
         except Exception as e:
             current_app.logger.error(f"Error in referral assignment for request {shipment_request.id}: {e}")
             # Don't fail the request creation if assignment fails
