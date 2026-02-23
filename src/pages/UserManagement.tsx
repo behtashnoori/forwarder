@@ -660,13 +660,15 @@ const UserManagement = () => {
                         </div>
 
                         <div className="flex gap-2 items-center">
-                          <Button
-                            size="sm"
-                            variant={user.is_active ? "outline" : "secondary"}
-                            onClick={() => handleToggleActive(user)}
-                          >
-                            {user.is_active ? "غیرفعال کردن" : "فعال کردن"}
-                          </Button>
+                          {user.role !== "admin" && user.role !== "expert" && (
+                            <Button
+                              size="sm"
+                              variant={user.is_active ? "outline" : "secondary"}
+                              onClick={() => handleToggleActive(user)}
+                            >
+                              {user.is_active ? "غیرفعال کردن" : "فعال کردن"}
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => openEditDialog(user)}>
                             <Edit className="w-4 h-4 ml-2" />
                             ویرایش
