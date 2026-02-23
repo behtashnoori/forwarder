@@ -389,21 +389,33 @@ const UserManagement = () => {
 
     try {
       const token = localStorage.getItem('expert_token');
+      // Omit empty optional strings so backend stores None and UNIQUE on email is not violated.
+      const payload: Record<string, unknown> = {
+        username: userFormData.username,
+        password: userFormData.password,
+        full_name: userFormData.full_name,
+        role: userFormData.role,
+        is_active: userFormData.is_active,
+      };
+      if (userFormData.email.trim() !== "") payload.email = userFormData.email.trim();
+      if (userFormData.phone.trim() !== "") payload.phone = userFormData.phone.trim();
+      if (userFormData.department.trim() !== "") payload.department = userFormData.department.trim();
+
       const response = await fetch(`${env.API_URL}/api/user-management/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(userFormData)
+        body: JSON.stringify(payload)
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
 
       if (response.ok) {
         toast({
           title: "موفق",
-          description: data.message || "کاربر با موفقیت ایجاد شد"
+          description: (data && (data as { message?: string }).message) || "کاربر با موفقیت ایجاد شد"
         });
         setUserDialogOpen(false);
         setUserFormData({
@@ -418,13 +430,25 @@ const UserManagement = () => {
         });
         loadData();
       } else {
+        const errPayload = data as { error?: string } | null;
+        let description: string;
+        if (response.status === 401 || response.status === 403) {
+          description = "دسترسی ندارید یا نشست شما منقضی شده است. دوباره وارد شوید.";
+        } else {
+          description = errPayload?.error ?? `خطا در ایجاد کاربر (کد: ${response.status})`;
+        }
+        if (!data && import.meta.env.DEV) {
+          const text = await response.text().catch(() => "");
+          console.warn("Create user error:", response.status, text);
+        }
         toast({
           title: "خطا",
-          description: data.error || "خطا در ایجاد کاربر",
+          description,
           variant: "destructive"
         });
       }
     } catch (error) {
+      if (import.meta.env.DEV) console.warn("Create user request failed:", error);
       toast({
         title: "خطا",
         description: "خطا در ارتباط با سرور",

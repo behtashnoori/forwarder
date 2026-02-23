@@ -6,7 +6,7 @@ import bcrypt
 
 from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import and_, or_, desc, func
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from backend.extensions import db
 from backend.models import (
@@ -164,16 +164,24 @@ def create_user():
         # Hash password using bcrypt
         password = data.get("password")
         password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        
+
+        # Normalize optional strings to None when empty so multiple users without email don't violate UNIQUE.
+        raw_email = data.get("email")
+        email = None if not raw_email or not str(raw_email).strip() else str(raw_email).strip().lower()
+        raw_phone = data.get("phone")
+        phone = None if not raw_phone or not str(raw_phone).strip() else str(raw_phone).strip()
+        raw_department = data.get("department")
+        department = None if not raw_department or not str(raw_department).strip() else str(raw_department).strip()
+
         # Create user
         user = ExpertUser(
             username=data.get("username"),
             password_hash=password_hash,
             full_name=data.get("full_name"),
-            email=data.get("email"),
-            phone=data.get("phone"),
+            email=email,
+            phone=phone,
             role=data.get("role"),
-            department=data.get("department"),
+            department=department,
             manager_id=data.get("manager_id"),
             is_active=data.get("is_active", True)
         )
@@ -198,7 +206,10 @@ def create_user():
             "message": "کاربر با موفقیت ایجاد شد",
             "user_id": user.id
         }), 201
-        
+
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "ایمیل تکراری است یا قبلاً استفاده شده است."}), 409
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating user: {e}", exc_info=True)
