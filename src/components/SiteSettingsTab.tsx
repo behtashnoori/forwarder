@@ -41,10 +41,11 @@ const SiteSettingsTab = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("expert_token");
-      const res = await fetch(`${env.API_URL}/api/admin/site-settings`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const url = `${env.API_URL}/api/admin/site-settings`.replace(/\/+/g, "/");
+      const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setForm({
           company_name: data.company_name ?? form.company_name,
@@ -60,7 +61,8 @@ const SiteSettingsTab = () => {
           logo_url: data.logo_url ?? null,
         });
       } else {
-        toast({ title: "خطا", description: data.error || "دریافت تنظیمات ناموفق بود", variant: "destructive" });
+        const msg = data.error || (res.status === 401 ? "لطفاً دوباره وارد شوید" : "دریافت تنظیمات ناموفق بود");
+        toast({ title: "خطا", description: msg, variant: "destructive" });
       }
     } catch (e) {
       toast({ title: "خطا", description: "ارتباط با سرور برقرار نشد", variant: "destructive" });
@@ -78,20 +80,22 @@ const SiteSettingsTab = () => {
     setSaving(true);
     try {
       const token = localStorage.getItem("expert_token");
-      const res = await fetch(`${env.API_URL}/api/admin/site-settings`, {
+      const url = `${env.API_URL}/api/admin/site-settings`.replace(/\/+/g, "/");
+      const res = await fetch(url, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify(form),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         toast({ title: "ذخیره شد", description: data.message || "تنظیمات با موفقیت ذخیره شد" });
         refetchPublicSettings();
       } else {
-        toast({ title: "خطا", description: data.error || "ذخیره ناموفق بود", variant: "destructive" });
+        const msg = data.error || (res.status === 401 ? "لطفاً دوباره وارد شوید" : "ذخیره ناموفق بود");
+        toast({ title: "خطا", description: msg, variant: "destructive" });
       }
     } catch (e) {
       toast({ title: "خطا", description: "ارتباط با سرور برقرار نشد", variant: "destructive" });
@@ -113,18 +117,20 @@ const SiteSettingsTab = () => {
       const token = localStorage.getItem("expert_token");
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch(`${env.API_URL}/api/admin/site-settings/logo`, {
+      const url = `${env.API_URL}/api/admin/site-settings/logo`.replace(/\/+/g, "/");
+      const res = await fetch(url, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: fd,
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setForm((prev) => ({ ...prev, logo_url: data.logo_url ?? null }));
         toast({ title: "آپلود لوگو", description: data.message || "لوگو با موفقیت آپلود شد" });
         refetchPublicSettings();
       } else {
-        toast({ title: "خطا", description: data.error || "آپلود ناموفق بود", variant: "destructive" });
+        const msg = data.error || (res.status === 401 ? "لطفاً دوباره وارد شوید" : "آپلود ناموفق بود");
+        toast({ title: "خطا", description: msg, variant: "destructive" });
       }
     } catch (e) {
       toast({ title: "خطا", description: "ارتباط با سرور برقرار نشد", variant: "destructive" });
@@ -137,8 +143,9 @@ const SiteSettingsTab = () => {
   const handleRemoveLogo = async () => {
     try {
       const token = localStorage.getItem("expert_token");
-      const res = await fetch(`${env.API_URL}/api/admin/site-settings/logo`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
-      const data = await res.json();
+      const url = `${env.API_URL}/api/admin/site-settings/logo`.replace(/\/+/g, "/");
+      const res = await fetch(url, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         setForm((prev) => ({ ...prev, logo_url: null }));
         toast({ title: "حذف لوگو", description: data.message || "لوگو حذف شد" });

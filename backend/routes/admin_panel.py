@@ -23,6 +23,7 @@ from backend.routes.site_settings import (
     _get_settings_row,
     _settings_to_dict,
     get_uploads_folder,
+    get_or_create_settings_row,
 )
 
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api/admin")
@@ -601,9 +602,9 @@ ALLOWED_LOGO_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 @admin_bp.get("/site-settings")
 @require_role("admin")
 def admin_get_site_settings():
-    """Return site settings for admin form."""
+    """Return site settings for admin form. Creates default row if missing."""
     try:
-        row = _get_settings_row()
+        row = get_or_create_settings_row()
         data = _settings_to_dict(row)
         return jsonify(data)
     except Exception as e:
@@ -614,12 +615,14 @@ def admin_get_site_settings():
 @admin_bp.put("/site-settings")
 @require_role("admin")
 def admin_update_site_settings():
-    """Update site settings (text fields only)."""
+    """Update site settings (text fields only). Creates default row if missing."""
     try:
-        row = _get_settings_row()
+        row = get_or_create_settings_row()
         if not row:
-            return jsonify({"error": "تنظیمات سایت یافت نشد"}), 404
-        data = request.get_json() or {}
+            return jsonify({"error": "تنظیمات سایت در دسترس نیست"}), 500
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "بدنه درخواست خالی است یا JSON معتبر نیست"}), 400
         if "company_name" in data:
             row.company_name = (data["company_name"] or "").strip() or "فورواردری سریع"
         if "tagline" in data:
@@ -652,7 +655,7 @@ def admin_update_site_settings():
 @admin_bp.post("/site-settings/logo")
 @require_role("admin")
 def admin_upload_site_logo():
-    """Upload site logo image; update singleton row and return new logo_url."""
+    """Upload site logo image; update singleton row and return new logo_url. Creates row if missing."""
     try:
         if "file" not in request.files and "logo" not in request.files:
             return jsonify({"error": "فایلی ارسال نشده است"}), 400
@@ -666,9 +669,9 @@ def admin_upload_site_logo():
         uploads = get_uploads_folder()
         filepath = uploads / filename
         file.save(str(filepath))
-        row = _get_settings_row()
+        row = get_or_create_settings_row()
         if not row:
-            return jsonify({"error": "تنظیمات سایت یافت نشد"}), 404
+            return jsonify({"error": "تنظیمات سایت در دسترس نیست"}), 500
         logo_url = f"/api/uploads/{filename}"
         row.logo_url = logo_url
         row.updated_at = datetime.utcnow()
@@ -685,9 +688,9 @@ def admin_upload_site_logo():
 def admin_remove_site_logo():
     """Remove site logo (set logo_url to null)."""
     try:
-        row = _get_settings_row()
+        row = get_or_create_settings_row()
         if not row:
-            return jsonify({"error": "تنظیمات سایت یافت نشد"}), 404
+            return jsonify({"error": "تنظیمات سایت در دسترس نیست"}), 500
         row.logo_url = None
         row.updated_at = datetime.utcnow()
         db.session.commit()
