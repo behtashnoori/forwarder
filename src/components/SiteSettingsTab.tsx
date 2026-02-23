@@ -7,17 +7,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { fetchSiteSettings, updateSiteSettings, uploadLogo, getLogoDisplayUrl, type SiteSettings } from "@/lib/api";
 import { useSiteSettingsUpdater } from "@/contexts/SiteSettingsContext";
-import { Save, Loader2, Upload, Trash2 } from "lucide-react";
+import { Save, Loader2, Upload, Trash2, Eye } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const SECTION_TITLES: Record<string, string> = {
   general: "عمومی (نام سایت، لوگو، عنوان صفحه)",
   nav: "منو و دکمه‌ها",
+  about_contact: "درباره ما و تماس با ما",
   footer: "فوتر",
   hero: "بخش هیرو (صفحه اصلی)",
   index: "صفحه اصلی - تب‌ها و متن‌ها",
 };
 
-const FIELDS: { key: keyof SiteSettings; label: string; placeholder?: string; section: string; multiline?: boolean }[] = [
+const FIELDS: { key: keyof SiteSettings; label: string; placeholder?: string; section: string; multiline?: boolean; rows?: number }[] = [
   { key: "site_name", label: "نام سایت", section: "general" },
   { key: "site_tagline", label: "شعار سایت", placeholder: "ارسال آسان و مطمئن", section: "general" },
   { key: "logo_url", label: "آدرس لوگو (URL)", placeholder: "خالی = لوگوی پیش‌فرض", section: "general" },
@@ -31,6 +38,8 @@ const FIELDS: { key: keyof SiteSettings; label: string; placeholder?: string; se
   { key: "nav_crm", label: "CRM", section: "nav" },
   { key: "nav_admin", label: "پنل ادمین", section: "nav" },
   { key: "btn_expert_login", label: "ورود", section: "nav" },
+  { key: "page_about_content", label: "محتوای صفحه درباره ما", section: "about_contact", multiline: true, rows: 6 },
+  { key: "page_contact_content", label: "محتوای صفحه تماس با ما", section: "about_contact", multiline: true, rows: 6 },
   { key: "footer_company_name", label: "نام شرکت (فوتر)", section: "footer" },
   { key: "footer_description", label: "توضیح شرکت (فوتر)", section: "footer", multiline: true },
   { key: "footer_contact_title", label: "عنوان بخش تماس", section: "footer" },
@@ -63,6 +72,7 @@ export default function SiteSettingsTab() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [previewDialog, setPreviewDialog] = useState<"about" | "contact" | null>(null);
   const { toast } = useToast();
   const setGlobalSettings = useSiteSettingsUpdater();
 
@@ -191,7 +201,7 @@ export default function SiteSettingsTab() {
                     value={form[field.key] ?? ""}
                     onChange={(e) => handleChange(field.key, e.target.value)}
                     placeholder={field.placeholder}
-                    rows={2}
+                    rows={field.rows ?? 2}
                     className="resize-none"
                   />
                 ) : (
@@ -204,9 +214,46 @@ export default function SiteSettingsTab() {
                 )}
               </div>
             ))}
+            {section === "about_contact" && (
+              <div className="flex flex-wrap gap-3 pt-2 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewDialog("about")}
+                  className="gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  مشاهده متن درباره ما
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPreviewDialog("contact")}
+                  className="gap-2"
+                >
+                  <Eye className="w-4 h-4" />
+                  مشاهده متن تماس با ما
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
+      <Dialog open={previewDialog !== null} onOpenChange={(open) => !open && setPreviewDialog(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              {previewDialog === "about" ? "متن صفحه درباره ما" : previewDialog === "contact" ? "متن صفحه تماس با ما" : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="overflow-y-auto flex-1 min-h-0 rounded border bg-muted/30 p-4 text-sm whitespace-pre-wrap">
+            {previewDialog === "about" && (form.page_about_content?.trim() || "متنی ثبت نشده است.")}
+            {previewDialog === "contact" && (form.page_contact_content?.trim() || "متنی ثبت نشده است.")}
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="flex justify-end">
         <Button type="submit" disabled={saving}>
           {saving ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <Save className="w-4 h-4 ml-2" />}
