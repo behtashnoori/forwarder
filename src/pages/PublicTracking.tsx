@@ -503,7 +503,9 @@ const PublicTracking: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {requestData.workflow_steps.map((step, index) => (
+                    {requestData.workflow_steps
+                      .filter((step) => step.name !== "quote_provided")
+                      .map((step, index) => (
                       <div key={index} className="flex items-center gap-3">
                         <div
                           className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${

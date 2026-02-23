@@ -329,7 +329,9 @@ const CustomerRequestDetail: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {requestDetail.workflow_steps.map((step, index) => (
+                  {requestDetail.workflow_steps
+                    .filter((step) => step.name !== "quote_provided")
+                    .map((step, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                         step.is_completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
