@@ -43,6 +43,14 @@ STATUS_TO_COMPLETED_UP_TO = {
     "pending": 0,
 }
 
+# Fixed 4-step customer timeline. Step 4 title is dynamic (pending vs پذیرش/عدم پذیرش).
+WORKFLOW_STEP_DEFS_SIMPLE_4 = [
+    {"name": "request_submitted", "order": 1, "title": "ارسال درخواست"},
+    {"name": "expert_assigned", "order": 2, "title": "اختصاص کارشناس"},
+    {"name": "in_progress", "order": 3, "title": "در حال پیگیری"},
+    {"name": "final_decision", "order": 4, "title": "پذیرش / عدم پذیرش"},  # base; overridden when completed
+]
+
 
 def _workflow_steps_from_status(status: str, created_at, assigned_at=None, quote_created_at=None) -> list:
     """Build 7 workflow steps with is_completed and optional real completed_at."""
@@ -69,6 +77,103 @@ def _workflow_steps_from_status(status: str, created_at, assigned_at=None, quote
             "completed_at": completed_at,
             "points_earned": 0,
         })
+    return steps
+
+
+def _get_final_decision_from_logs(shipment_request_id: int):
+    """Return the most recent won/lost decision from ExpertConsoleLog, or None."""
+    log = (
+        db.session.query(ExpertConsoleLog)
+        .filter(
+            ExpertConsoleLog.shipment_request_id == shipment_request_id,
+            ExpertConsoleLog.action == "status_change",
+            ExpertConsoleLog.new_status.in_(["won", "lost"]),
+        )
+        .order_by(ExpertConsoleLog.created_at.desc())
+        .first()
+    )
+    if not log or not log.new_status:
+        return None
+    completed_at = log.created_at.isoformat() if hasattr(log.created_at, "isoformat") else str(log.created_at)
+    return {"decision": log.new_status, "completed_at": completed_at}
+
+
+def _workflow_steps_simple_4(req, assigned_at=None):
+    """
+    Build the 4-step customer timeline. Steps 1-3 are always completed (systematically).
+    Step 4 is completed only when expert set won/lost; when status is closed without
+    won/lost in history, step 4 stays pending with meta.warning.
+    """
+    status = req.status or "new"
+    created_at = req.created_at
+    created_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+    if assigned_at is None:
+        assigned_at = _get_assigned_at(req)
+    assigned_at_iso = (
+        assigned_at.isoformat() if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
+    )
+    step2_at = assigned_at_iso if assigned_at_iso else created_iso
+
+    steps = []
+    # Step 1: request_submitted — always completed at created_at
+    steps.append({
+        "name": WORKFLOW_STEP_DEFS_SIMPLE_4[0]["name"],
+        "order": WORKFLOW_STEP_DEFS_SIMPLE_4[0]["order"],
+        "title": WORKFLOW_STEP_DEFS_SIMPLE_4[0]["title"],
+        "is_completed": True,
+        "completed_at": created_iso,
+    })
+    # Step 2: expert_assigned — always completed at assigned_at or created_at
+    steps.append({
+        "name": WORKFLOW_STEP_DEFS_SIMPLE_4[1]["name"],
+        "order": WORKFLOW_STEP_DEFS_SIMPLE_4[1]["order"],
+        "title": WORKFLOW_STEP_DEFS_SIMPLE_4[1]["title"],
+        "is_completed": True,
+        "completed_at": step2_at,
+    })
+    # Step 3: in_progress — always completed at created_at (simplified UX)
+    steps.append({
+        "name": WORKFLOW_STEP_DEFS_SIMPLE_4[2]["name"],
+        "order": WORKFLOW_STEP_DEFS_SIMPLE_4[2]["order"],
+        "title": WORKFLOW_STEP_DEFS_SIMPLE_4[2]["title"],
+        "is_completed": True,
+        "completed_at": created_iso,
+    })
+    # Step 4: final_decision — from expert status or logs when closed
+    step4_title = "پذیرش / عدم پذیرش"
+    step4_completed = False
+    step4_completed_at = None
+    step4_meta = None
+
+    if status == "won":
+        step4_title = "پذیرش مشتری"
+        decision = _get_final_decision_from_logs(req.id)
+        step4_completed_at = decision["completed_at"] if decision else created_iso
+        step4_completed = True
+    elif status == "lost":
+        step4_title = "عدم پذیرش مشتری"
+        decision = _get_final_decision_from_logs(req.id)
+        step4_completed_at = decision["completed_at"] if decision else created_iso
+        step4_completed = True
+    elif status == "closed":
+        decision = _get_final_decision_from_logs(req.id)
+        if decision:
+            step4_completed = True
+            step4_completed_at = decision["completed_at"]
+            step4_title = "پذیرش مشتری" if decision["decision"] == "won" else "عدم پذیرش مشتری"
+        else:
+            step4_meta = {"warning": "closed_without_decision"}
+
+    step4 = {
+        "name": WORKFLOW_STEP_DEFS_SIMPLE_4[3]["name"],
+        "order": WORKFLOW_STEP_DEFS_SIMPLE_4[3]["order"],
+        "title": step4_title,
+        "is_completed": step4_completed,
+        "completed_at": step4_completed_at,
+    }
+    if step4_meta:
+        step4["meta"] = step4_meta
+    steps.append(step4)
     return steps
 
 
@@ -242,6 +347,7 @@ def get_public_tracking_info(identifier: str):
                 assigned_at=assigned_at,
                 quote_created_at=latest_quote.get("created_at") if latest_quote else None,
             ),
+            "workflow_steps_simple": _workflow_steps_simple_4(req, assigned_at=assigned_at),
         }
         return jsonify(response_data), 200
 

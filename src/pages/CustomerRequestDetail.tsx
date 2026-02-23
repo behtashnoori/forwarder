@@ -25,10 +25,11 @@ interface WorkflowStep {
   name: string;
   order: number;
   title: string;
-  points: number;
+  points?: number;
   is_completed: boolean;
   completed_at: string | null;
-  points_earned: number;
+  points_earned?: number;
+  meta?: { warning?: string };
 }
 
 interface RequestDetail {
@@ -43,6 +44,7 @@ interface RequestDetail {
     email: string;
   } | null;
   workflow_steps: WorkflowStep[];
+  workflow_steps_simple?: WorkflowStep[];
   total_points_earned: number;
   completed_steps: number;
   total_steps: number;
@@ -135,9 +137,23 @@ const CustomerRequestDetail: React.FC = () => {
       quote_provided: "ارائه پیشنهاد",
       contract_signed: "امضای قرارداد",
       shipment_picked_up: "تحویل مرسوله",
-      shipment_delivered: "تحویل به مقصد"
+      shipment_delivered: "تحویل به مقصد",
+      in_progress: "در حال پیگیری",
+      final_decision: "پذیرش / عدم پذیرش",
     };
     return stepMap[stepName as keyof typeof stepMap] || stepName;
+  };
+
+  /** Optional "وضعیت فعلی" label for timeline (plan-specified map). */
+  const getCurrentStatusLabel = (status: string): string => {
+    const map: Record<string, string> = {
+      in_progress: "در حال پیگیری",
+      waiting_for_customer: "منتظر پاسخ شما",
+      won: "پذیرفته شد",
+      lost: "پذیرفته نشد",
+      closed: "بسته شد",
+    };
+    return map[status] ?? "";
   };
 
   if (loading) {
@@ -325,12 +341,15 @@ const CustomerRequestDetail: React.FC = () => {
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5" />
                   پیشرفت کار
+                  {getCurrentStatusLabel(requestDetail.status) && (
+                    <span className="text-sm font-normal text-muted-foreground mr-2">— وضعیت فعلی: {getCurrentStatusLabel(requestDetail.status)}</span>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {requestDetail.workflow_steps
-                    .filter((step) => step.name !== "quote_provided")
+                  {((requestDetail.workflow_steps_simple ?? requestDetail.workflow_steps)
+                    .filter((step) => requestDetail.workflow_steps_simple ? true : step.name !== "quote_provided"))
                     .map((step, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
@@ -344,15 +363,18 @@ const CustomerRequestDetail: React.FC = () => {
                       </div>
                       <div className="flex-1">
                         <p className="text-sm font-medium">
-                          {getStepTitle(step.name)}
+                          {requestDetail.workflow_steps_simple ? step.title : getStepTitle(step.name)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {step.is_completed && step.completed_at
                             ? new Date(step.completed_at).toLocaleDateString("fa-IR")
                             : "در انتظار"
                           }
-                          {step.points_earned > 0 && (
+                          {step.points_earned != null && step.points_earned > 0 && (
                             <span className="mr-2">• {step.points_earned} امتیاز</span>
+                          )}
+                          {(step.meta?.warning === "closed_without_decision") && (
+                            <span className="block text-amber-600 mt-0.5">بسته شده بدون ثبت پذیرش/عدم پذیرش</span>
                           )}
                         </p>
                       </div>

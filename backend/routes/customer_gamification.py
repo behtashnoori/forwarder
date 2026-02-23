@@ -10,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import CustomerGamification, CustomerWorkflowStep, ShipmentRequest, ExpertUser, ExpertQuote
+from backend.routes.public_tracking import _workflow_steps_simple_4
 
 customer_gamification_bp = Blueprint("customer_gamification", __name__, url_prefix="/api/customer")
 
@@ -344,6 +345,7 @@ def get_customer_workflow(customer_id: int):
             "customer_id": customer_id,
             "request_id": request_id,
             "workflow_steps": workflow_status,
+            "workflow_steps_simple": _workflow_steps_simple_4(shipment_req),
             "total_points_earned": sum(step.points_earned for step in steps),
             "completed_steps": len([s for s in steps if s.is_completed]),
             "total_steps": len(all_steps),
