@@ -144,8 +144,8 @@ def admin_upload_logo():
     path = os.path.join(upload_dir, safe_name)
     with open(path, "wb") as f:
         f.write(content)
-    base = request.host_url.rstrip("/")
-    url = f"{base}api/uploads/{safe_name}"
+    # Return path-only URL so frontend can prepend its API base (works with proxy and different origins)
+    url = f"/api/uploads/{safe_name}"
     return jsonify({"url": url})
 
 

@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { fetchSiteSettings, updateSiteSettings, uploadLogo, type SiteSettings } from "@/lib/api";
+import { fetchSiteSettings, updateSiteSettings, uploadLogo, getLogoDisplayUrl, type SiteSettings } from "@/lib/api";
 import { useSiteSettingsUpdater } from "@/contexts/SiteSettingsContext";
-import { Save, Loader2, Upload } from "lucide-react";
+import { Save, Loader2, Upload, Trash2 } from "lucide-react";
 
 const SECTION_TITLES: Record<string, string> = {
   general: "عمومی (نام سایت، لوگو، عنوان صفحه)",
@@ -84,14 +84,26 @@ export default function SiteSettingsTab() {
     e.target.value = "";
     try {
       const { url } = await uploadLogo(file);
-      setForm((prev) => ({ ...prev, logo_url: url }));
-      setGlobalSettings({ ...form, logo_url: url });
+      setForm((prev) => {
+        const next = { ...prev, logo_url: url };
+        setGlobalSettings(next);
+        return next;
+      });
       toast({ title: "لوگو آپلود شد", description: "آدرس لوگو به‌روز شد. برای ذخیرهٔ نهایی «ذخیره تنظیمات» را بزنید." });
     } catch (err) {
       toast({ title: "خطا", description: err instanceof Error ? err.message : "آپلود لوگو ناموفق بود", variant: "destructive" });
     } finally {
       setUploadingLogo(false);
     }
+  };
+
+  const handleRemoveLogo = () => {
+    setForm((prev) => {
+      const next = { ...prev, logo_url: "" };
+      setGlobalSettings(next);
+      return next;
+    });
+    toast({ title: "لوگو حذف شد", description: "برای اعمال در سایت «ذخیره تنظیمات» را بزنید." });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,8 +143,27 @@ export default function SiteSettingsTab() {
               <div className="space-y-2">
                 <Label>آپلود لوگو (ایکون / نام سایت)</Label>
                 <div className="flex flex-wrap items-center gap-4">
-                  {form.logo_url?.trim() && (
-                    <img src={form.logo_url} alt="لوگو" className="h-16 w-auto object-contain rounded border" />
+                  {form.logo_url?.trim() ? (
+                    <div className="relative flex items-center gap-2">
+                      <img
+                        src={getLogoDisplayUrl(form.logo_url)}
+                        alt="لوگو"
+                        className="h-16 w-auto max-w-[200px] object-contain rounded border bg-muted/30"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRemoveLogo}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title="حذف لوگو"
+                      >
+                        <Trash2 className="w-4 h-4 ml-1" />
+                        حذف لوگو
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">فعلاً لوگویی انتخاب نشده؛ با دکمهٔ زیر آپلود کنید.</p>
                   )}
                   <div className="flex items-center gap-2">
                     <label className="flex items-center gap-2 cursor-pointer">

@@ -152,6 +152,14 @@ function withQuery(path: string, params?: Record<string, string | number | undef
   return `${path}?${searchParams.toString()}`;
 }
 
+/** Build full URL for logo image so it loads correctly (handles path-only URLs from API). */
+export function getLogoDisplayUrl(url: string | undefined): string {
+  if (!url?.trim()) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  const base = env.API_URL.replace(/\/+$/, "");
+  return base ? base + url : url;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!import.meta.env.DEV && !API_BASE_URL) {
     throw new Error("API URL is not configured. Set VITE_API_URL for production.");

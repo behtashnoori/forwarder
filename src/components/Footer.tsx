@@ -1,5 +1,6 @@
 import { Phone, Mail, MapPin, Clock } from "lucide-react";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
+import { getLogoDisplayUrl } from "@/lib/api";
 
 const Footer = () => {
   const s = useSiteSettings();
@@ -11,7 +12,7 @@ const Footer = () => {
           <div className="text-center md:text-right">
             <div className="flex items-center justify-center md:justify-start gap-3 mb-4">
               {s.logo_url?.trim() ? (
-                <img src={s.logo_url} alt="" className="h-8 w-8 object-contain rounded-lg" />
+                <img src={getLogoDisplayUrl(s.logo_url)} alt="" className="h-8 w-8 object-contain rounded-lg" />
               ) : (
                 <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
                   <div className="w-4 h-4 bg-primary-foreground rounded-sm transform rotate-45"></div>

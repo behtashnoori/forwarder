@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
+import { getLogoDisplayUrl } from "@/lib/api";
 
 const Header = () => {
   const settings = useSiteSettings();
@@ -41,7 +42,7 @@ const Header = () => {
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
             {settings.logo_url?.trim() ? (
-              <img src={settings.logo_url} alt="" className="h-10 w-10 object-contain rounded-lg" />
+              <img src={getLogoDisplayUrl(settings.logo_url)} alt="" className="h-10 w-10 object-contain rounded-lg" />
             ) : (
               <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
                 <div className="w-6 h-6 bg-primary-foreground rounded-sm transform rotate-45"></div>
