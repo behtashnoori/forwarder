@@ -43,6 +43,15 @@ def run_migrations(app) -> None:
                             conn.execute(text("ALTER TABLE shipment_request ADD COLUMN IF NOT EXISTS tracking_code VARCHAR(32)"))
                             conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS ix_shipment_request_tracking_code ON shipment_request (tracking_code)"))
                     print("[startup] Migrations applied (recovery).")
+                    # Retry upgrade so remaining migrations (e.g. 20250221_referral -> 20250221_auto -> 20250223_site_settings) run
+                    try:
+                        cfg = current_app.extensions["migrate"].migrate.get_config(_MIGRATION_DIR)
+                        command.upgrade(cfg, "head")
+                        print("[startup] Migrations applied (retry after recovery).")
+                    except Exception as e2:
+                        print("[startup] Migrations (retry after recovery) failed:", e2)
+                        traceback.print_exc()
+                        sys.exit(1)
                 except Exception as e2:
                     print("[startup] Migrations (recovery) failed:", e2)
                     traceback.print_exc()

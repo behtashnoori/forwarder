@@ -33,7 +33,7 @@ target_metadata = db.metadata
 
 def get_url():
     """Get database URL from Flask app config."""
-    app = create_app()
+    app = create_app(skip_startup=True)
     with app.app_context():
         return app.config.get("SQLALCHEMY_DATABASE_URI")
 

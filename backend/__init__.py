@@ -57,7 +57,7 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     os.makedirs(app.instance_path, exist_ok=True)
 
     db.init_app(app)
-    migrate.init_app(app, db)
+    migrate.init_app(app, db, directory=os.path.join(os.path.dirname(__file__), "migrations"))
     
     # Initialize security
     security.init_app(app)

@@ -65,6 +65,8 @@ def main():
                                 conn.execute(text(
                                     "CREATE UNIQUE INDEX IF NOT EXISTS ix_shipment_request_tracking_code ON shipment_request (tracking_code)"
                                 ))
+                        print("Recovery done. Retrying upgrade to head.", flush=True)
+                        command.upgrade(config, "head")
                     except Exception as e:
                         print("Recovery step failed:", e, file=sys.stderr)
                         raise
