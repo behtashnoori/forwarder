@@ -402,7 +402,28 @@ class ExpertConsoleNotification(db.Model):
         return f"<ExpertConsoleNotification id={self.id} type={self.notification_type}>"
 
 
-# CRM Models - Customer Management
+class ExpertQuote(db.Model):
+    """Stored quote (preنهاد) for a shipment request. Multiple quotes per request allowed; latest is shown."""
+    __tablename__ = "expert_quote"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    shipment_request_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
+    )
+    amount = db.Column(SQLITE_COMPAT_BIGINT, nullable=False)  # integer amount (e.g. IRR)
+    currency = db.Column(db.String(10), nullable=False, default="IRR")
+    note = db.Column(db.Text, nullable=True)
+    valid_until = db.Column(db.Date, nullable=True)
+    created_by_expert_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    shipment_request = db.relationship("ShipmentRequest", backref=db.backref("quotes", lazy="dynamic"))
+    created_by_expert = db.relationship("ExpertUser", backref="created_quotes")
+
+    def __repr__(self) -> str:
+        return f"<ExpertQuote id={self.id} request_id={self.shipment_request_id}>"
 class Customer(db.Model):
     """Represents a customer in the CRM system."""
     
@@ -793,6 +814,7 @@ __all__ = [
     "ExpertConsoleLog",
     "ExpertConsoleMessage",
     "ExpertConsoleNotification",
+    "ExpertQuote",
     # CRM Models
     "Customer",
     "CustomerContact", 

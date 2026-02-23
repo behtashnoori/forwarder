@@ -9,7 +9,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from backend.extensions import db
 from backend.models import (
     ShipmentRequest, ShipmentRequestLog, Province, County, City, ExpertUser,
-    ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification
+    ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification, ExpertQuote
 )
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
@@ -194,6 +194,25 @@ def get_shipment_request_detail(request_id: int):
             ExpertConsoleMessage.shipment_request_id == request_id
         ).order_by(ExpertConsoleMessage.created_at.desc()).all()
         
+        # Get latest quote (if any)
+        latest_quote_row = (
+            db.session.query(ExpertQuote)
+            .filter(ExpertQuote.shipment_request_id == request_id)
+            .order_by(ExpertQuote.created_at.desc())
+            .first()
+        )
+        latest_quote = None
+        if latest_quote_row:
+            latest_quote = {
+                "id": latest_quote_row.id,
+                "amount": int(latest_quote_row.amount) if latest_quote_row.amount is not None else None,
+                "currency": latest_quote_row.currency or "IRR",
+                "note": latest_quote_row.note,
+                "valid_until": latest_quote_row.valid_until.isoformat() if latest_quote_row.valid_until else None,
+                "created_at": latest_quote_row.created_at.isoformat(),
+                "created_by": latest_quote_row.created_by_expert.full_name if latest_quote_row.created_by_expert else None,
+            }
+        
         # Format timeline
         timeline = []
         for log in logs:
@@ -274,7 +293,8 @@ def get_shipment_request_detail(request_id: int):
             },
             "timeline": timeline,
             "messages": messages_data,
-            "has_unread": req.has_unread_for_assignee
+            "has_unread": req.has_unread_for_assignee,
+            "latest_quote": latest_quote
         })
         
     except Exception as e:
@@ -416,6 +436,138 @@ def update_request_status(request_id: int):
         db.session.rollback()
         current_app.logger.error(f"Error updating status: {e}")
         return jsonify({"error": "خطا در به‌روزرسانی وضعیت"}), 500
+
+
+@expert_console_bp.post("/requests/<int:request_id>/quote")
+@require_auth
+def create_quote(request_id: int):
+    """Create a quote for a request and set status to waiting_for_customer."""
+    try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
+        expert_id = current_user["id"]
+
+        data = request.get_json() or {}
+        amount = data.get("amount")
+        currency = (data.get("currency") or "IRR").strip() or "IRR"
+        note = (data.get("note") or "").strip() or None
+        valid_until = data.get("valid_until")  # optional ISO date string
+
+        if amount is None:
+            return jsonify({"error": "مبلغ الزامی است"}), 400
+        try:
+            amount_int = int(amount)
+        except (TypeError, ValueError):
+            return jsonify({"error": "مبلغ باید عدد باشد"}), 400
+        if amount_int < 0:
+            return jsonify({"error": "مبلغ نامعتبر است"}), 400
+
+        req = db.session.query(ShipmentRequest).get(request_id)
+        if not req:
+            return jsonify({"error": "درخواست یافت نشد"}), 404
+
+        expert = db.session.query(ExpertUser).get(expert_id)
+        if not expert:
+            return jsonify({"error": "کارشناس یافت نشد"}), 404
+
+        valid_until_date = None
+        if valid_until:
+            try:
+                from datetime import date
+                valid_until_date = date.fromisoformat(valid_until.replace("Z", "").split("T")[0])
+            except Exception:
+                pass
+
+        quote = ExpertQuote(
+            shipment_request_id=request_id,
+            amount=amount_int,
+            currency=currency,
+            note=note,
+            valid_until=valid_until_date,
+            created_by_expert_id=expert_id,
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(quote)
+        db.session.flush()
+
+        old_status = req.status
+        req.status = "waiting_for_customer"
+        req.last_customer_touch_at = datetime.utcnow()
+        req.has_unread_for_assignee = True
+
+        log = ExpertConsoleLog(
+            shipment_request_id=request_id,
+            expert_user_id=expert_id,
+            action="status_change",
+            old_status=old_status,
+            new_status="waiting_for_customer",
+            note="ارسال پیشنهاد و انتظار پاسخ مشتری",
+            ip_address=request.remote_addr,
+            created_at=datetime.utcnow(),
+        )
+        db.session.add(log)
+
+        if req.assigned_to:
+            notification = ExpertConsoleNotification(
+                expert_user_id=req.assigned_to,
+                shipment_request_id=request_id,
+                notification_type="quote_sent",
+                title="پیشنهاد ارسال شد",
+                message=f"پیشنهاد برای درخواست {request_id} ثبت و وضعیت به منتظر مشتری تغییر یافت",
+                is_read=False,
+                created_at=datetime.utcnow(),
+            )
+            db.session.add(notification)
+
+        db.session.commit()
+
+        quote_data = {
+            "id": quote.id,
+            "amount": amount_int,
+            "currency": currency,
+            "note": note,
+            "valid_until": valid_until_date.isoformat() if valid_until_date else None,
+            "created_at": quote.created_at.isoformat(),
+        }
+        return jsonify({
+            "ok": True,
+            "quote": quote_data,
+            "request": {"id": req.id, "status": req.status},
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating quote: {e}")
+        return jsonify({"error": "خطا در ثبت پیشنهاد"}), 500
+
+
+@expert_console_bp.get("/requests/<int:request_id>/quote/latest")
+@require_auth
+def get_latest_quote(request_id: int):
+    """Get the latest quote for a request, or null."""
+    try:
+        latest = (
+            db.session.query(ExpertQuote)
+            .filter(ExpertQuote.shipment_request_id == request_id)
+            .order_by(ExpertQuote.created_at.desc())
+            .first()
+        )
+        if not latest:
+            return jsonify({"quote": None})
+        return jsonify({
+            "quote": {
+                "id": latest.id,
+                "amount": int(latest.amount) if latest.amount is not None else None,
+                "currency": latest.currency or "IRR",
+                "note": latest.note,
+                "valid_until": latest.valid_until.isoformat() if latest.valid_until else None,
+                "created_at": latest.created_at.isoformat(),
+                "created_by": latest.created_by_expert.full_name if latest.created_by_expert else None,
+            }
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting latest quote: {e}")
+        return jsonify({"error": "خطا در دریافت پیشنهاد"}), 500
 
 
 @expert_console_bp.post("/requests/<int:request_id>/messages")

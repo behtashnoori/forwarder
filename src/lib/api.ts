@@ -351,8 +351,34 @@ export function fetchExpertRequestDetail(requestId: number): Promise<ExpertReque
     created_by: string;
   }>;
   messages: ExpertMessage[];
+  latest_quote?: {
+    id: number;
+    amount: number;
+    currency: string;
+    note?: string | null;
+    valid_until?: string | null;
+    created_at: string;
+    created_by?: string | null;
+  } | null;
 }> {
   return request(`/api/expert/requests/${requestId}`);
+}
+
+export interface SubmitQuotePayload {
+  amount: number;
+  currency?: string;
+  note?: string;
+  valid_until?: string;
+}
+
+export function submitQuote(
+  requestId: number,
+  payload: SubmitQuotePayload
+): Promise<{ ok: boolean; quote: { id: number; amount: number; currency: string; note?: string | null; valid_until?: string | null; created_at: string }; request: { id: number; status: string } }> {
+  return request(`/api/expert/requests/${requestId}/quote`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function assignRequest(requestId: number, expertId: number): Promise<{

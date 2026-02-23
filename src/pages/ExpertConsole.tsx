@@ -22,11 +22,13 @@ import {
   RefreshCw,
   Settings,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  DollarSign
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import PageNav from "@/components/PageNav";
+import { QuoteModal } from "@/components/QuoteModal";
 import { 
   fetchExpertRequests, 
   fetchKPIs, 
@@ -53,6 +55,8 @@ const ExpertConsole = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
+  const [quoteModalRequestId, setQuoteModalRequestId] = useState<number | null>(null);
+  const [quoteModalRequestId, setQuoteModalRequestId] = useState<number | null>(null);
 
   // Mock expert ID - in real app, this would come from auth context
   const expertId = 1;
@@ -61,13 +65,6 @@ const ExpertConsole = () => {
     loadRequests();
     loadKPIs();
     loadCurrentExpert();
-    
-    // Poll for updates every 30 seconds
-    const interval = setInterval(() => {
-      loadRequests();
-    }, 30000);
-
-    return () => clearInterval(interval);
   }, [activeTab, searchTerm, statusFilter, priorityFilter]);
 
   // وقتی کاربر از تب جزئیات برمی‌گردد لیست با وضعیت واقعی از سرور به‌روز شود
@@ -263,6 +260,20 @@ const ExpertConsole = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {quoteModalRequestId != null && (
+        <QuoteModal
+          open={quoteModalRequestId != null}
+          onOpenChange={(open) => !open && setQuoteModalRequestId(null)}
+          requestId={quoteModalRequestId}
+          onSuccess={() => {
+            loadRequests();
+            loadKPIs();
+            setActiveTab("waiting_for_customer");
+            setQuoteModalRequestId(null);
+            toast({ title: "پیشنهاد ثبت شد", description: "وضعیت به «منتظر مشتری» تغییر یافت." });
+          }}
+        />
+      )}
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
@@ -486,7 +497,7 @@ const ExpertConsole = () => {
 
         {/* Main Content */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="new">
               جدید
               {kpis?.counts.new && (
@@ -505,9 +516,6 @@ const ExpertConsole = () => {
                   {kpis.counts.in_progress}
                 </Badge>
               )}
-            </TabsTrigger>
-            <TabsTrigger value="quoted">
-              پیشنهاد
             </TabsTrigger>
             <TabsTrigger value="waiting_for_customer">
               منتظر مشتری
@@ -660,14 +668,14 @@ const ExpertConsole = () => {
                             </Button>
                           )}
                           
-                          {request.status === "in_progress" && (
+                          {(request.status === "in_progress" || request.status === "assigned") && (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleStatusChange(request.id, "waiting_for_customer")}
+                              onClick={() => setQuoteModalRequestId(request.id)}
                             >
-                              <MessageSquare className="w-4 h-4 ml-2" />
-                              ثبت: منتظر مشتری
+                              <DollarSign className="w-4 h-4 ml-2" />
+                              ارسال پیشنهاد
                             </Button>
                           )}
                           
