@@ -10,11 +10,13 @@ interface PageNavProps {
   backLabel?: string;
   /** نمایش دکمه خروج (پاک کردن توکن و رفتن به صفحه اصلی) */
   showLogout?: boolean;
+  /** اگر مقدار داشته باشد، با زدن خروج به این مسیر برمی‌گردد (بدون پاک کردن توکن؛ برای بازگشت به پنل کارشناس) */
+  logoutTo?: string;
   /** کلاس اضافی برای کانتینر */
   className?: string;
 }
 
-const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, className = "" }: PageNavProps) => {
+const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, logoutTo, className = "" }: PageNavProps) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -23,6 +25,10 @@ const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, class
   };
 
   const handleLogout = () => {
+    if (logoutTo) {
+      navigate(logoutTo);
+      return;
+    }
     localStorage.removeItem("expert_user");
     localStorage.removeItem("expert_token");
     window.location.href = "/";

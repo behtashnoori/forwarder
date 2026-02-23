@@ -239,8 +239,8 @@ const RequestDetail = () => {
       in_progress: "در حال پیگیری",
       quoted: "پیشنهاد ارسال شده",
       waiting_for_customer: "منتظر مشتری",
-      won: "برنده",
-      lost: "باخته",
+      won: "پذیرش مشتری",
+      lost: "عدم پذیرش مشتری",
       closed: "مختومه"
     };
     return labels[status] || status;
@@ -271,7 +271,7 @@ const RequestDetail = () => {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          <PageNav backTo="/expert" backLabel="بازگشت به کنسول" />
+          <PageNav backTo="/expert" backLabel="بازگشت به کنسول" showLogout logoutTo="/expert" />
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-600">درخواست یافت نشد</p>
@@ -287,7 +287,7 @@ const RequestDetail = () => {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4 flex-wrap">
-            <PageNav backTo="/expert" backLabel="بازگشت به کنسول" />
+            <PageNav backTo="/expert" backLabel="بازگشت به کنسول" showLogout logoutTo="/expert" />
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
                 {request.tracking_number}
@@ -542,8 +542,8 @@ const RequestDetail = () => {
                     <SelectItem value="in_progress">در حال پیگیری</SelectItem>
                     <SelectItem value="quoted">ارسال پیشنهاد</SelectItem>
                     <SelectItem value="waiting_for_customer">منتظر مشتری</SelectItem>
-                    <SelectItem value="won">برنده</SelectItem>
-                    <SelectItem value="lost">باخته</SelectItem>
+                    <SelectItem value="won">پذیرش مشتری</SelectItem>
+                    <SelectItem value="lost">عدم پذیرش مشتری</SelectItem>
                     <SelectItem value="closed">بستن</SelectItem>
                   </SelectContent>
                 </Select>

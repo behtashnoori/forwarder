@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { fetchSiteSettings, updateSiteSettings, type SiteSettings } from "@/lib/api";
+import { fetchSiteSettings, updateSiteSettings, uploadLogo, type SiteSettings } from "@/lib/api";
 import { useSiteSettingsUpdater } from "@/contexts/SiteSettingsContext";
-import { Save, Loader2 } from "lucide-react";
+import { Save, Loader2, Upload } from "lucide-react";
 
 const SECTION_TITLES: Record<string, string> = {
   general: "عمومی (نام سایت، لوگو، عنوان صفحه)",
@@ -30,7 +30,7 @@ const FIELDS: { key: keyof SiteSettings; label: string; placeholder?: string; se
   { key: "nav_contact", label: "تماس با ما", section: "nav" },
   { key: "nav_crm", label: "CRM", section: "nav" },
   { key: "nav_admin", label: "پنل ادمین", section: "nav" },
-  { key: "btn_expert_login", label: "ورود کارشناس", section: "nav" },
+  { key: "btn_expert_login", label: "ورود", section: "nav" },
   { key: "footer_company_name", label: "نام شرکت (فوتر)", section: "footer" },
   { key: "footer_description", label: "توضیح شرکت (فوتر)", section: "footer", multiline: true },
   { key: "footer_contact_title", label: "عنوان بخش تماس", section: "footer" },
@@ -62,6 +62,7 @@ export default function SiteSettingsTab() {
   const [form, setForm] = useState<SiteSettings>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const { toast } = useToast();
   const setGlobalSettings = useSiteSettingsUpdater();
 
@@ -74,6 +75,23 @@ export default function SiteSettingsTab() {
 
   const handleChange = (key: string, value: string) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    e.target.value = "";
+    try {
+      const { url } = await uploadLogo(file);
+      setForm((prev) => ({ ...prev, logo_url: url }));
+      setGlobalSettings({ ...form, logo_url: url });
+      toast({ title: "لوگو آپلود شد", description: "آدرس لوگو به‌روز شد. برای ذخیرهٔ نهایی «ذخیره تنظیمات» را بزنید." });
+    } catch (err) {
+      toast({ title: "خطا", description: err instanceof Error ? err.message : "آپلود لوگو ناموفق بود", variant: "destructive" });
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -109,6 +127,30 @@ export default function SiteSettingsTab() {
             <CardTitle>{SECTION_TITLES[section] || section}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {section === "general" && (
+              <div className="space-y-2">
+                <Label>آپلود لوگو (ایکون / نام سایت)</Label>
+                <div className="flex flex-wrap items-center gap-4">
+                  {form.logo_url?.trim() && (
+                    <img src={form.logo_url} alt="لوگو" className="h-16 w-auto object-contain rounded border" />
+                  )}
+                  <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp,image/svg+xml"
+                        onChange={handleLogoUpload}
+                        disabled={uploadingLogo}
+                        className="max-w-xs"
+                      />
+                      {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin text-gray-500" /> : <Upload className="w-4 h-4" />}
+                      <span className="text-sm">انتخاب و آپلود</span>
+                    </label>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">فرمت‌های مجاز: PNG, JPG, GIF, WebP, SVG. حداکثر ۵ مگابایت.</p>
+              </div>
+            )}
             {FIELDS.filter((f) => f.section === section).map((field) => (
               <div key={field.key} className="space-y-2">
                 <Label htmlFor={field.key}>{field.label}</Label>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,7 @@ type ShipmentRequest = ExpertRequest;
 type KPI = KPIs;
 
 const ExpertConsole = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [requests, setRequests] = useState<ShipmentRequest[]>([]);
   const [kpis, setKpis] = useState<KPI | null>(null);
@@ -242,8 +244,8 @@ const ExpertConsole = () => {
       in_progress: "در حال پیگیری",
       quoted: "پیشنهاد ارسال شده",
       waiting_for_customer: "منتظر مشتری",
-      won: "برنده",
-      lost: "باخته",
+      won: "پذیرش مشتری",
+      lost: "عدم پذیرش مشتری",
       closed: "مختومه"
     };
     return labels[status] || status;
@@ -461,8 +463,8 @@ const ExpertConsole = () => {
                   <SelectItem value="in_progress">در حال پیگیری</SelectItem>
                   <SelectItem value="quoted">پیشنهاد ارسال شده</SelectItem>
                   <SelectItem value="waiting_for_customer">منتظر مشتری</SelectItem>
-                  <SelectItem value="won">برنده</SelectItem>
-                  <SelectItem value="lost">باخته</SelectItem>
+                  <SelectItem value="won">پذیرش مشتری</SelectItem>
+                  <SelectItem value="lost">عدم پذیرش مشتری</SelectItem>
                   <SelectItem value="closed">مختومه</SelectItem>
                 </SelectContent>
               </Select>
@@ -628,7 +630,7 @@ const ExpertConsole = () => {
                         <div className="flex flex-col gap-2">
                           <Button
                             size="sm"
-                            onClick={() => window.open(`/expert/requests/${request.id}`, "_blank")}
+                            onClick={() => navigate(`/expert/requests/${request.id}`)}
                           >
                             <Eye className="w-4 h-4 ml-2" />
                             مشاهده
@@ -676,7 +678,7 @@ const ExpertConsole = () => {
                               onClick={() => handleStatusChange(request.id, "won")}
                             >
                               <CheckCircle className="w-4 h-4 ml-2" />
-                              ثبت به عنوان برنده
+                              ثبت به عنوان پذیرش مشتری
                             </Button>
                           )}
                         </div>

@@ -79,7 +79,7 @@ const ExpertLogin = () => {
       <DialogTrigger asChild>
         <Button variant="outline" className="text-sm font-medium">
           <User className="w-4 h-4 ml-2" />
-          {settings.btn_expert_login || "ورود کارشناس"}
+          {settings.btn_expert_login || "ورود"}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

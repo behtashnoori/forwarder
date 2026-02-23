@@ -27,7 +27,7 @@ const defaultSettings: SiteSettings = {
   nav_contact: "تماس با ما",
   nav_crm: "CRM",
   nav_admin: "پنل ادمین",
-  btn_expert_login: "ورود کارشناس",
+  btn_expert_login: "ورود",
   hero_title_1: "ارسال سریع و مطمئن",
   hero_title_2: "با انواع روش‌های حمل",
   hero_subtitle: "با سرویس فورواردری ما، بسته‌های خود را از طریق جاده، ریل، دریا یا ترکیبی از این روش‌ها ارسال کنید",

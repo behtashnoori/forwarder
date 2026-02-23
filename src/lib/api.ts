@@ -437,6 +437,24 @@ export function updateSiteSettings(settings: SiteSettings): Promise<SiteSettings
   });
 }
 
+/** Upload logo image; returns { url: string }. Admin only. */
+export async function uploadLogo(file: File): Promise<{ url: string }> {
+  const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "");
+  const path = (p: string) => (API_BASE_URL ? `${API_BASE_URL}${p}` : p);
+  const url = path("/api/admin/upload");
+  const token = localStorage.getItem("expert_token");
+  const formData = new FormData();
+  formData.append("file", file);
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const response = await fetch(url, { method: "POST", body: formData, headers });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error((body && body.error) || `Upload failed: ${response.status}`);
+  }
+  return response.json();
+}
+
 // CRM Interfaces
 export interface Customer {
   id: number;
