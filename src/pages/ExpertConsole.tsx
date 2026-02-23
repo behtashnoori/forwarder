@@ -56,7 +56,6 @@ const ExpertConsole = () => {
   const [priorityFilter, setPriorityFilter] = useState("");
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
   const [quoteModalRequestId, setQuoteModalRequestId] = useState<number | null>(null);
-  const [quoteModalRequestId, setQuoteModalRequestId] = useState<number | null>(null);
 
   // Mock expert ID - in real app, this would come from auth context
   const expertId = 1;
