@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request, current_app, url_for
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
-from backend.models import CustomerGamification, CustomerWorkflowStep, ShipmentRequest, ExpertUser
+from backend.models import CustomerGamification, CustomerWorkflowStep, ShipmentRequest, ExpertUser, ExpertQuote
 
 customer_gamification_bp = Blueprint("customer_gamification", __name__, url_prefix="/api/customer")
 
@@ -317,6 +317,24 @@ def get_customer_workflow(customer_id: int):
         if hasattr(created_at, "isoformat"):
             created_at = created_at.isoformat()
 
+        latest_quote = None
+        quote_row = (
+            db.session.query(ExpertQuote)
+            .filter(ExpertQuote.shipment_request_id == shipment_req.id)
+            .order_by(ExpertQuote.created_at.desc())
+            .first()
+        )
+        if quote_row:
+            latest_quote = {
+                "id": quote_row.id,
+                "amount": int(quote_row.amount) if quote_row.amount is not None else None,
+                "currency": quote_row.currency or "IRR",
+                "note": quote_row.note,
+                "valid_until": quote_row.valid_until.isoformat() if quote_row.valid_until else None,
+                "created_at": quote_row.created_at.isoformat() if hasattr(quote_row.created_at, "isoformat") else str(quote_row.created_at),
+                "created_by": quote_row.created_by_expert.full_name if quote_row.created_by_expert else None,
+            }
+
         return jsonify({
             "id": shipment_req.id,
             "shipping_type": shipment_req.shipping_type or "domestic",
@@ -329,6 +347,7 @@ def get_customer_workflow(customer_id: int):
             "total_points_earned": sum(step.points_earned for step in steps),
             "completed_steps": len([s for s in steps if s.is_completed]),
             "total_steps": len(all_steps),
+            "latest_quote": latest_quote,
         }), 200
 
     except Exception as e:

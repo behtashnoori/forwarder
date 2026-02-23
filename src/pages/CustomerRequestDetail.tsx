@@ -15,7 +15,8 @@ import {
   CheckCircle, 
   Clock, 
   FileText,
-  RefreshCw
+  RefreshCw,
+  DollarSign
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { env } from "@/lib/env";
@@ -45,6 +46,15 @@ interface RequestDetail {
   total_points_earned: number;
   completed_steps: number;
   total_steps: number;
+  latest_quote?: {
+    id: number;
+    amount: number;
+    currency: string;
+    note?: string | null;
+    valid_until?: string | null;
+    created_at: string;
+    created_by?: string | null;
+  } | null;
 }
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
@@ -309,7 +319,7 @@ const CustomerRequestDetail: React.FC = () => {
           )}
 
           {/* Workflow Progress */}
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -349,6 +359,43 @@ const CustomerRequestDetail: React.FC = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {requestDetail.latest_quote && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    پیشنهاد (قیمت)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <span className="text-sm text-muted-foreground">مبلغ</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {requestDetail.latest_quote.amount?.toLocaleString("fa-IR")} {requestDetail.latest_quote.currency}
+                    </span>
+                  </div>
+                  {requestDetail.latest_quote.valid_until && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4 shrink-0" />
+                      <span>اعتبار تا: {new Date(requestDetail.latest_quote.valid_until).toLocaleDateString("fa-IR")}</span>
+                    </div>
+                  )}
+                  {requestDetail.latest_quote.note && (
+                    <p className="text-sm text-muted-foreground border-t pt-2">{requestDetail.latest_quote.note}</p>
+                  )}
+                  <div className="text-xs text-muted-foreground pt-1">
+                    {requestDetail.latest_quote.created_at &&
+                      new Date(requestDetail.latest_quote.created_at).toLocaleDateString("fa-IR", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    {requestDetail.latest_quote.created_by && ` — ${requestDetail.latest_quote.created_by}`}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>
