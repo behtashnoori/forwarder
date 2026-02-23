@@ -231,8 +231,8 @@ const RequestDetail = () => {
       in_progress: "در حال پیگیری",
       quoted: "پیشنهاد ارسال شده",
       waiting_for_customer: "منتظر مشتری",
-      won: "برنده",
-      lost: "باخته",
+      won: "پذیرش مشتری",
+      lost: "عدم پذیرش مشتری",
       closed: "مختومه"
     };
     return labels[status] || status;
@@ -606,8 +606,8 @@ const RequestDetail = () => {
                     <SelectItem value="in_progress">در حال پیگیری</SelectItem>
                     <SelectItem value="quoted">ارسال پیشنهاد</SelectItem>
                     <SelectItem value="waiting_for_customer">منتظر مشتری</SelectItem>
-                    <SelectItem value="won">برنده</SelectItem>
-                    <SelectItem value="lost">باخته</SelectItem>
+                    <SelectItem value="won">پذیرش مشتری</SelectItem>
+                    <SelectItem value="lost">عدم پذیرش مشتری</SelectItem>
                     <SelectItem value="closed">بستن</SelectItem>
                   </SelectContent>
                 </Select>

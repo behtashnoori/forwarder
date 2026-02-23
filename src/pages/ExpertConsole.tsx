@@ -242,8 +242,8 @@ const ExpertConsole = () => {
       in_progress: "در حال پیگیری",
       quoted: "پیشنهاد ارسال شده",
       waiting_for_customer: "منتظر مشتری",
-      won: "برنده",
-      lost: "باخته",
+      won: "پذیرش مشتری",
+      lost: "عدم پذیرش مشتری",
       closed: "مختومه"
     };
     return labels[status] || status;
@@ -461,8 +461,8 @@ const ExpertConsole = () => {
                   <SelectItem value="in_progress">در حال پیگیری</SelectItem>
                   <SelectItem value="quoted">پیشنهاد ارسال شده</SelectItem>
                   <SelectItem value="waiting_for_customer">منتظر مشتری</SelectItem>
-                  <SelectItem value="won">برنده</SelectItem>
-                  <SelectItem value="lost">باخته</SelectItem>
+                  <SelectItem value="won">پذیرش مشتری</SelectItem>
+                  <SelectItem value="lost">عدم پذیرش مشتری</SelectItem>
                   <SelectItem value="closed">مختومه</SelectItem>
                 </SelectContent>
               </Select>
@@ -676,7 +676,7 @@ const ExpertConsole = () => {
                               onClick={() => handleStatusChange(request.id, "won")}
                             >
                               <CheckCircle className="w-4 h-4 ml-2" />
-                              ثبت به عنوان برنده
+                              ثبت به عنوان پذیرش مشتری
                             </Button>
                           )}
                         </div>

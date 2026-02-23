@@ -88,8 +88,8 @@ const AdminPanel = () => {
       pending: "در انتظار",
       assigned: "ارجاع شده",
       in_progress: "در حال انجام",
-      won: "موفق",
-      lost: "ناموفق",
+      won: "پذیرش مشتری",
+      lost: "عدم پذیرش مشتری",
       cancelled: "لغو شده",
       waiting_for_customer: "در انتظار مشتری"
     };

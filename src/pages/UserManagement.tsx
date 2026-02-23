@@ -289,7 +289,9 @@ const UserManagement = () => {
         full_name: editFormData.full_name,
         phone: editFormData.phone,
         username: editFormData.username,
-        is_active: editFormData.is_active
+        is_active: (editingUser.role === "expert" || editingUser.role === "business_expert")
+          ? true
+          : editFormData.is_active
       };
       if (editFormData.password.trim()) {
         body.password = editFormData.password;
@@ -395,7 +397,11 @@ const UserManagement = () => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify(userFormData)
+        body: JSON.stringify(
+          (userFormData.role === "expert" || userFormData.role === "business_expert")
+            ? { ...userFormData, is_active: true }
+            : userFormData
+        )
       });
 
       const data = await response.json();
@@ -596,7 +602,7 @@ const UserManagement = () => {
                             <Badge className={getRoleColor(user.role)}>
                               {getRoleLabel(user.role)}
                             </Badge>
-                            {!user.is_active && (
+                            {!user.is_active && user.role !== "expert" && user.role !== "business_expert" && (
                               <Badge variant="outline" className="text-red-600">
                                 غیرفعال
                               </Badge>
@@ -660,13 +666,15 @@ const UserManagement = () => {
                         </div>
 
                         <div className="flex gap-2 items-center">
-                          <Button
-                            size="sm"
-                            variant={user.is_active ? "outline" : "secondary"}
-                            onClick={() => handleToggleActive(user)}
-                          >
-                            {user.is_active ? "غیرفعال کردن" : "فعال کردن"}
-                          </Button>
+                          {(user.role !== "expert" && user.role !== "business_expert") && (
+                            <Button
+                              size="sm"
+                              variant={user.is_active ? "outline" : "secondary"}
+                              onClick={() => handleToggleActive(user)}
+                            >
+                              {user.is_active ? "غیرفعال کردن" : "فعال کردن"}
+                            </Button>
+                          )}
                           <Button size="sm" variant="outline" onClick={() => openEditDialog(user)}>
                             <Edit className="w-4 h-4 ml-2" />
                             ویرایش
@@ -855,6 +863,7 @@ const UserManagement = () => {
               </div>
 
               <div className="space-y-2 md:col-span-2">
+                {(userFormData.role !== "expert" && userFormData.role !== "business_expert") && (
                 <div className="flex items-center space-x-2 space-x-reverse">
                   <input
                     type="checkbox"
@@ -867,6 +876,7 @@ const UserManagement = () => {
                     کاربر فعال است
                   </Label>
                 </div>
+                )}
               </div>
             </div>
 
@@ -955,6 +965,8 @@ const UserManagement = () => {
               />
             </div>
             <div className="flex items-center gap-2">
+              {(editingUser?.role !== "expert" && editingUser?.role !== "business_expert") && (
+              <>
               <input
                 type="checkbox"
                 id="edit_is_active"
@@ -965,6 +977,8 @@ const UserManagement = () => {
               <Label htmlFor="edit_is_active" className="cursor-pointer">
                 کاربر فعال است
               </Label>
+              </>
+              )}
             </div>
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>

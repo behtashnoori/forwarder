@@ -127,8 +127,8 @@ const PublicTracking: React.FC = () => {
       in_progress: { label: "در حال انجام", variant: "default", color: "bg-yellow-100 text-yellow-800" },
       quoted: { label: "پیشنهاد ارائه شده", variant: "default", color: "bg-purple-100 text-purple-800" },
       waiting_for_customer: { label: "در انتظار مشتری", variant: "default", color: "bg-orange-100 text-orange-800" },
-      won: { label: "تکمیل شده", variant: "default", color: "bg-green-100 text-green-800" },
-      lost: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
+      won: { label: "پذیرش مشتری", variant: "default", color: "bg-green-100 text-green-800" },
+      lost: { label: "عدم پذیرش مشتری", variant: "destructive", color: "bg-red-100 text-red-800" },
       closed: { label: "بسته شده", variant: "secondary", color: "bg-gray-100 text-gray-800" },
       cancelled: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
     };

@@ -77,13 +77,13 @@ const ExpertLogin = () => {
       <DialogTrigger asChild>
         <Button variant="outline" className="text-sm font-medium">
           <User className="w-4 h-4 ml-2" />
-          ورود کارشناس
+          ورود فقط
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-bold">
-            ورود به پنل کارشناس
+            ورود
           </DialogTitle>
         </DialogHeader>
         
