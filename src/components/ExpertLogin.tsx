@@ -85,7 +85,7 @@ const ExpertLogin = () => {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center text-xl font-bold">
-            ورود به پنل کارشناس
+            ورود
           </DialogTitle>
         </DialogHeader>
         
