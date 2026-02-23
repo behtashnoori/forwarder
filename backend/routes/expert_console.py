@@ -2,7 +2,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, g
 from sqlalchemy import and_, or_, desc, func
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -13,9 +13,18 @@ from backend.models import (
 )
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
-from backend.cache import cached, cache_manager, performance_monitor
+from backend.cache import cache_manager, performance_monitor
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
+
+
+def _can_access_request(req: ShipmentRequest, current_user: Optional[Dict]) -> bool:
+    """Admin can access any request; non-admin only if they are the assignee."""
+    if not current_user:
+        return False
+    if current_user.get("role") == "admin":
+        return True
+    return req.assigned_to == current_user.get("id")
 
 
 @expert_console_bp.get("/requests")
@@ -23,6 +32,10 @@ expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/exper
 def get_shipment_requests():
     """Get filtered and paginated shipment requests for expert console."""
     try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "احراز هویت نشده"}), 401
+
         # Query parameters
         page = request.args.get("page", 1, type=int)
         per_page = min(request.args.get("per_page", 20, type=int), 100)
@@ -35,6 +48,13 @@ def get_shipment_requests():
         
         # Build query
         query = db.session.query(ShipmentRequest)
+        
+        # Non-admin: only show requests assigned to current user
+        if current_user.get("role") != "admin":
+            query = query.filter(ShipmentRequest.assigned_to == current_user["id"])
+        elif assigned_to:
+            # Admin may filter by assigned_to
+            query = query.filter(ShipmentRequest.assigned_to == assigned_to)
         
         # Apply filters
         if status:
@@ -54,8 +74,6 @@ def get_shipment_requests():
                         ShipmentRequest.status_request_status == status
                     )
                 )
-        if assigned_to:
-            query = query.filter(ShipmentRequest.assigned_to == assigned_to)
         if priority:
             query = query.filter(ShipmentRequest.priority == priority)
         if search:
@@ -168,12 +186,16 @@ def get_shipment_requests():
 
 
 @expert_console_bp.get("/requests/<int:request_id>")
+@require_auth
 def get_shipment_request_detail(request_id: int):
     """Get detailed information about a specific shipment request."""
     try:
         req = db.session.query(ShipmentRequest).get(request_id)
         if not req:
             return jsonify({"error": "درخواست یافت نشد"}), 404
+        current_user = get_current_user()
+        if not current_user or not _can_access_request(req, current_user):
+            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
         
         # Get related data
         origin_province = db.session.query(Province).get(req.origin_province_id)
@@ -306,9 +328,13 @@ def get_shipment_request_detail(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/assign")
+@require_auth
 def assign_request(request_id: int):
-    """Assign a shipment request to an expert."""
+    """Assign a shipment request to an expert. Only admin can assign (or reassign)."""
     try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "احراز هویت نشده"}), 401
         data = request.get_json() or {}
         expert_id = data.get("expert_id")
         
@@ -318,6 +344,8 @@ def assign_request(request_id: int):
         req = db.session.query(ShipmentRequest).get(request_id)
         if not req:
             return jsonify({"error": "درخواست یافت نشد"}), 404
+        if not _can_access_request(req, current_user):
+            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
         
         expert = db.session.query(ExpertUser).get(expert_id)
         if not expert:
@@ -373,9 +401,13 @@ def assign_request(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/status")
+@require_auth
 def update_request_status(request_id: int):
     """Update the status of a shipment request."""
     try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "احراز هویت نشده"}), 401
         data = request.get_json() or {}
         new_status = data.get("status")
         note = data.get("note", "")
@@ -391,6 +423,8 @@ def update_request_status(request_id: int):
         req = db.session.query(ShipmentRequest).get(request_id)
         if not req:
             return jsonify({"error": "درخواست یافت نشد"}), 404
+        if not _can_access_request(req, current_user):
+            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
         
         old_status = req.status
         
@@ -469,6 +503,8 @@ def create_quote(request_id: int):
         req = db.session.query(ShipmentRequest).get(request_id)
         if not req:
             return jsonify({"error": "درخواست یافت نشد"}), 404
+        if not _can_access_request(req, current_user):
+            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
 
         expert = db.session.query(ExpertUser).get(expert_id)
         if not expert:
@@ -552,6 +588,14 @@ def create_quote(request_id: int):
 def get_latest_quote(request_id: int):
     """Get the latest quote for a request, or null."""
     try:
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "احراز هویت نشده"}), 401
+        req = db.session.query(ShipmentRequest).get(request_id)
+        if not req:
+            return jsonify({"error": "درخواست یافت نشد"}), 404
+        if not _can_access_request(req, current_user):
+            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
         latest = (
             db.session.query(ExpertQuote)
             .filter(ExpertQuote.shipment_request_id == request_id)
@@ -597,6 +641,8 @@ def add_message(request_id: int):
         req = db.session.query(ShipmentRequest).get(request_id)
         if not req:
             return jsonify({"error": "درخواست یافت نشد"}), 404
+        if not _can_access_request(req, current_user):
+            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
         
         expert = db.session.query(ExpertUser).get(expert_id)
         if not expert:
@@ -865,15 +911,16 @@ def logout():
 
 @expert_console_bp.get("/dashboard/kpis")
 @require_auth
-@cached(ttl=300, key_prefix="dashboard_kpis")
 def get_dashboard_kpis():
     """Get KPI data for expert console dashboard."""
     try:
-        expert_id = request.args.get("expert_id")
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "احراز هویت نشده"}), 401
         
-        # Base query - show all requests for dashboard overview
         query = db.session.query(ShipmentRequest)
-        # Don't filter by expert_id for dashboard KPIs to show all requests
+        if current_user.get("role") != "admin":
+            query = query.filter(ShipmentRequest.assigned_to == current_user["id"])
         
         # Today's date
         today = datetime.utcnow().date()
@@ -939,20 +986,19 @@ def get_dashboard_kpis():
 
 
 @expert_console_bp.post("/requests/<int:request_id>/mark-read")
+@require_auth
 def mark_request_read(request_id: int):
     """Mark a request as read for the assigned expert."""
     try:
-        expert_id = request.args.get("expert_id")
-        
-        if not expert_id:
-            return jsonify({"error": "شناسه کارشناس الزامی است"}), 400
+        current_user = get_current_user()
+        if not current_user:
+            return jsonify({"error": "احراز هویت نشده"}), 401
         
         req = db.session.query(ShipmentRequest).get(request_id)
         if not req:
             return jsonify({"error": "درخواست یافت نشد"}), 404
-        
-        if req.assigned_to != int(expert_id):
-            return jsonify({"error": "شما مسئول این درخواست نیستید"}), 403
+        if not _can_access_request(req, current_user):
+            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
         
         req.has_unread_for_assignee = False
         db.session.commit()
