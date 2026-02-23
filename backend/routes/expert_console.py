@@ -194,24 +194,27 @@ def get_shipment_request_detail(request_id: int):
             ExpertConsoleMessage.shipment_request_id == request_id
         ).order_by(ExpertConsoleMessage.created_at.desc()).all()
         
-        # Get latest quote (if any)
-        latest_quote_row = (
-            db.session.query(ExpertQuote)
-            .filter(ExpertQuote.shipment_request_id == request_id)
-            .order_by(ExpertQuote.created_at.desc())
-            .first()
-        )
+        # Get latest quote (if any) — safe if table does not exist yet
         latest_quote = None
-        if latest_quote_row:
-            latest_quote = {
-                "id": latest_quote_row.id,
-                "amount": int(latest_quote_row.amount) if latest_quote_row.amount is not None else None,
-                "currency": latest_quote_row.currency or "IRR",
-                "note": latest_quote_row.note,
-                "valid_until": latest_quote_row.valid_until.isoformat() if latest_quote_row.valid_until else None,
-                "created_at": latest_quote_row.created_at.isoformat(),
-                "created_by": latest_quote_row.created_by_expert.full_name if latest_quote_row.created_by_expert else None,
-            }
+        try:
+            latest_quote_row = (
+                db.session.query(ExpertQuote)
+                .filter(ExpertQuote.shipment_request_id == request_id)
+                .order_by(ExpertQuote.created_at.desc())
+                .first()
+            )
+            if latest_quote_row:
+                latest_quote = {
+                    "id": latest_quote_row.id,
+                    "amount": int(latest_quote_row.amount) if latest_quote_row.amount is not None else None,
+                    "currency": latest_quote_row.currency or "IRR",
+                    "note": latest_quote_row.note,
+                    "valid_until": latest_quote_row.valid_until.isoformat() if latest_quote_row.valid_until else None,
+                    "created_at": latest_quote_row.created_at.isoformat(),
+                    "created_by": latest_quote_row.created_by_expert.full_name if latest_quote_row.created_by_expert else None,
+                }
+        except Exception:
+            pass
         
         # Format timeline
         timeline = []
