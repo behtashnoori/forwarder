@@ -19,7 +19,7 @@ SQLITE_BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 def upgrade():
     op.create_table(
         "expert_quote",
-        sa.Column("id", SQLITE_BIGINT, nullable=False),
+        sa.Column("id", SQLITE_BIGINT, primary_key=True, autoincrement=True),
         sa.Column("shipment_request_id", SQLITE_BIGINT, nullable=False),
         sa.Column("amount", SQLITE_BIGINT, nullable=False),
         sa.Column("currency", sa.String(length=10), nullable=False, server_default="IRR"),
@@ -29,7 +29,6 @@ def upgrade():
         sa.Column("created_at", sa.DateTime(), nullable=False),
         sa.ForeignKeyConstraint(["shipment_request_id"], ["shipment_request.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["created_by_expert_id"], ["expert_user.id"]),
-        sa.PrimaryKeyConstraint("id"),
     )
     op.create_index("idx_expert_quote_request_id", "expert_quote", ["shipment_request_id"])
 

@@ -540,8 +540,11 @@ def create_quote(request_id: int):
         })
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error creating quote: {e}")
-        return jsonify({"error": "خطا در ثبت پیشنهاد"}), 500
+        current_app.logger.exception("Error creating quote: %s", e)
+        err_msg = "خطا در ثبت پیشنهاد"
+        if current_app.debug:
+            err_msg += f" ({e!s})"
+        return jsonify({"error": err_msg}), 500
 
 
 @expert_console_bp.get("/requests/<int:request_id>/quote/latest")
