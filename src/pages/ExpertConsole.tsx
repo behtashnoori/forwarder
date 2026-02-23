@@ -678,16 +678,6 @@ const ExpertConsole = () => {
                             </Button>
                           )}
                           
-                          {request.status === "waiting_for_customer" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusChange(request.id, "won")}
-                            >
-                              <CheckCircle className="w-4 h-4 ml-2" />
-                              ثبت به عنوان پذیرش مشتری
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </CardContent>
