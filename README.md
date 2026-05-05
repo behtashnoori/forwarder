@@ -79,6 +79,8 @@ export DB_PASSWORD="your-secure-database-password"
 
 ## 📚 مستندات و راهنماها
 
+- **Migration Canonical Path**: از این به بعد فقط `backend/migrations` مرجع رسمی migration است.
+
 | فایل | توضیحات |
 |------|---------|
 | **[local_setup.md](local_setup.md)** | 🖥️ راهنمای کامل اجرای محلی |
@@ -87,6 +89,7 @@ export DB_PASSWORD="your-secure-database-password"
 | **[docs/API.md](docs/API.md)** | 🔌 مستندات API |
 | **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** | 👤 راهنمای کاربر |
 | **[docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)** | 🏗️ معماری سیستم |
+| **[scripts/README.md](scripts/README.md)** | 🧰 کاتالوگ اسکریپت‌ها و قواعد استفاده |
 
 ## تکنولوژی‌های استفاده شده
 
