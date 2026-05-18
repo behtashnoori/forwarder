@@ -1,5 +1,4 @@
 """Admin panel routes for shipment request insights."""
-import json
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 
@@ -10,12 +9,11 @@ from sqlalchemy.orm import joinedload
 from backend.models import (
     City, County, Province, ShipmentRequest, ExpertUser,
     TransportMethod, AssignmentLog, ExpertConsoleLog,
-    ReferralRule, ReferralRuleState, ReferralAssignmentLog,
 )
 from backend.extensions import db
 from backend.security import require_role
 from backend.auth import get_current_user
-from backend.referral_engine import referral_engine
+from backend.services import referral_service
 
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api/admin")
 
@@ -428,37 +426,7 @@ def get_assignment_summary():
 def get_referral_rules():
     """List all referral rules ordered by priority ASC."""
     try:
-        rules = db.session.query(ReferralRule).order_by(
-            ReferralRule.priority.asc(), ReferralRule.name
-        ).all()
-        rules_data = []
-        for rule in rules:
-            try:
-                conditions = json.loads(rule.conditions) if rule.conditions else {}
-            except Exception:
-                conditions = {}
-            try:
-                action = json.loads(rule.action) if rule.action else {}
-            except Exception:
-                action = {}
-            action_type = action.get("type", "")
-            expert_ids = (action.get("expert_ids") or []) if action_type == "pool_assign" else []
-            rules_data.append({
-                "id": rule.id,
-                "name": rule.name,
-                "is_active": rule.is_active,
-                "priority": rule.priority,
-                "conditions": conditions,
-                "action": action,
-                "stop_on_match": getattr(rule, "stop_on_match", True),
-                "created_by": rule.creator.id if rule.creator else None,
-                "created_at": rule.created_at.isoformat() if rule.created_at else None,
-                "updated_at": rule.updated_at.isoformat() if rule.updated_at else None,
-                "action_type": action_type,
-                "pool_expert_count": len(expert_ids) if action_type == "pool_assign" else 0,
-                "strategy": action.get("strategy") if action_type == "pool_assign" else None,
-            })
-        return jsonify({"referral_rules": rules_data})
+        return jsonify(referral_service.list_referral_rules())
     except Exception as e:
         current_app.logger.error(f"Error getting referral rules: {e}")
         return jsonify({"error": "خطا در دریافت قوانین ارجاع"}), 500
@@ -469,38 +437,11 @@ def get_referral_rules():
 def create_referral_rule():
     """Create a new referral rule."""
     try:
-        current_user = get_current_user()
-        if not current_user:
-            return jsonify({"error": "احراز هویت نشده"}), 401
-        data = request.get_json() or {}
-        name = data.get("name")
-        if not name or not name.strip():
-            return jsonify({"error": "نام قانون الزامی است"}), 400
-        conditions = data.get("conditions")
-        if conditions is None:
-            conditions = {}
-        action = data.get("action")
-        if not action or action.get("type") not in ("direct_assign", "pool_assign"):
-            return jsonify({"error": "action باید نوع direct_assign یا pool_assign داشته باشد"}), 400
-        if action.get("type") == "direct_assign" and action.get("expert_id") is None:
-            return jsonify({"error": "برای direct_assign مقدار expert_id الزامی است"}), 400
-        if action.get("type") == "pool_assign":
-            if not action.get("expert_ids"):
-                return jsonify({"error": "برای pool_assign لیست expert_ids الزامی است"}), 400
-            if action.get("strategy") not in ("round_robin", "least_workload"):
-                return jsonify({"error": "برای pool_assign strategy باید round_robin یا least_workload باشد"}), 400
-        rule = ReferralRule(
-            name=name.strip(),
-            is_active=data.get("is_active", True),
-            priority=int(data.get("priority", 1)),
-            conditions=json.dumps(conditions),
-            action=json.dumps(action),
-            stop_on_match=data.get("stop_on_match", True),
-            created_by=current_user.get("id"),
-        )
-        db.session.add(rule)
-        db.session.commit()
-        return jsonify({"message": "قانون ارجاع با موفقیت ایجاد شد", "rule_id": rule.id}), 201
+        payload = referral_service.create_referral_rule(request.get_json() or {}, get_current_user())
+        return jsonify(payload), 201
+    except referral_service.ReferralServiceError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
     except ValueError as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
@@ -515,30 +456,10 @@ def create_referral_rule():
 def update_referral_rule(rule_id: int):
     """Update a referral rule."""
     try:
-        rule = db.session.query(ReferralRule).get(rule_id)
-        if not rule:
-            return jsonify({"error": "قانون ارجاع یافت نشد"}), 404
-        data = request.get_json() or {}
-        if "name" in data and data["name"]:
-            rule.name = data["name"].strip()
-        if "is_active" in data:
-            rule.is_active = bool(data["is_active"])
-        if "priority" in data:
-            rule.priority = int(data["priority"])
-        if "stop_on_match" in data:
-            rule.stop_on_match = bool(data["stop_on_match"])
-        if "conditions" in data:
-            rule.conditions = json.dumps(data["conditions"])
-        if "action" in data:
-            action = data["action"]
-            if action.get("type") not in ("direct_assign", "pool_assign"):
-                return jsonify({"error": "action.type باید direct_assign یا pool_assign باشد"}), 400
-            if action.get("type") == "pool_assign" and action.get("strategy") not in ("round_robin", "least_workload"):
-                return jsonify({"error": "strategy باید round_robin یا least_workload باشد"}), 400
-            rule.action = json.dumps(action)
-        rule.updated_at = datetime.utcnow()
-        db.session.commit()
-        return jsonify({"message": "قانون ارجاع به‌روزرسانی شد"})
+        return jsonify(referral_service.update_referral_rule(rule_id, request.get_json() or {}))
+    except referral_service.ReferralServiceError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
     except ValueError as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 400
@@ -553,13 +474,10 @@ def update_referral_rule(rule_id: int):
 def delete_referral_rule(rule_id: int):
     """Delete a referral rule and its state (logs kept for audit)."""
     try:
-        rule = db.session.query(ReferralRule).get(rule_id)
-        if not rule:
-            return jsonify({"error": "قانون ارجاع یافت نشد"}), 404
-        db.session.query(ReferralRuleState).filter(ReferralRuleState.rule_id == rule_id).delete()
-        db.session.delete(rule)
-        db.session.commit()
-        return jsonify({"message": "قانون ارجاع حذف شد"})
+        return jsonify(referral_service.delete_referral_rule(rule_id))
+    except referral_service.ReferralServiceError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting referral rule: {e}")
@@ -574,12 +492,9 @@ def preview_referral_rule():
     Body: { "request_id": number }. Does not change DB.
     """
     try:
-        data = request.get_json() or {}
-        request_id = data.get("request_id")
-        if request_id is None:
-            return jsonify({"error": "request_id الزامی است"}), 400
-        result = referral_engine.preview_assignment(int(request_id))
-        return jsonify(result)
+        return jsonify(referral_service.preview_referral_assignment(request.get_json() or {}))
+    except referral_service.ReferralServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         current_app.logger.error(f"Error in referral preview: {e}")
         return jsonify({"error": "خطا در پیش‌نمایش ارجاع"}), 500

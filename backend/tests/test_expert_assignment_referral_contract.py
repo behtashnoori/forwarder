@@ -602,6 +602,73 @@ def test_expert_notification_contracts_scope_order_and_mark_read(expert_contract
         assert db.session.get(ExpertConsoleNotification, other_expert_notification_id).is_read is False
 
 
+def test_referral_rule_crud_contracts(expert_contract_app):
+    """Referral rule create/update/delete endpoints keep validation, response, and persistence contracts."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    other_expert_id = expert_contract_app["other_expert_id"]
+
+    missing_name = client.post(
+        "/api/admin/referral-rules",
+        headers=admin_headers,
+        json={"action": {"type": "direct_assign", "expert_id": other_expert_id}},
+    )
+    assert missing_name.status_code == 400
+    assert missing_name.get_json() == {"error": "نام قانون الزامی است"}
+
+    invalid_action = client.post(
+        "/api/admin/referral-rules",
+        headers=admin_headers,
+        json={"name": "Invalid referral", "action": {"type": "invalid"}},
+    )
+    assert invalid_action.status_code == 400
+    assert invalid_action.get_json() == {"error": "action باید نوع direct_assign یا pool_assign داشته باشد"}
+
+    create_response = client.post(
+        "/api/admin/referral-rules",
+        headers=admin_headers,
+        json={
+            "name": "Direct referral",
+            "priority": 7,
+            "conditions": {"shipping_type": "domestic"},
+            "action": {"type": "direct_assign", "expert_id": other_expert_id},
+            "stop_on_match": False,
+        },
+    )
+    assert create_response.status_code == 201
+    create_payload = create_response.get_json()
+    assert set(create_payload.keys()) == {"message", "rule_id"}
+    assert create_payload["message"] == "قانون ارجاع با موفقیت ایجاد شد"
+    rule_id = create_payload["rule_id"]
+
+    update_invalid_action = client.put(
+        f"/api/admin/referral-rules/{rule_id}",
+        headers=admin_headers,
+        json={"action": {"type": "invalid"}},
+    )
+    assert update_invalid_action.status_code == 400
+    assert update_invalid_action.get_json() == {"error": "action.type باید direct_assign یا pool_assign باشد"}
+
+    update_response = client.put(
+        f"/api/admin/referral-rules/{rule_id}",
+        headers=admin_headers,
+        json={"name": "Updated referral", "priority": 3, "is_active": False},
+    )
+    assert update_response.status_code == 200
+    assert update_response.get_json() == {"message": "قانون ارجاع به‌روزرسانی شد"}
+
+    delete_missing = client.delete("/api/admin/referral-rules/999999", headers=admin_headers)
+    assert delete_missing.status_code == 404
+    assert delete_missing.get_json() == {"error": "قانون ارجاع یافت نشد"}
+
+    delete_response = client.delete(f"/api/admin/referral-rules/{rule_id}", headers=admin_headers)
+    assert delete_response.status_code == 200
+    assert delete_response.get_json() == {"message": "قانون ارجاع حذف شد"}
+
+    with expert_contract_app["app"].app_context():
+        assert db.session.get(ReferralRule, rule_id) is None
+
+
 def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(expert_contract_app):
     """Assignment/referral admin endpoints keep auth, read shapes, preview, and manual assignment behavior."""
     client = expert_contract_app["app"].test_client()
