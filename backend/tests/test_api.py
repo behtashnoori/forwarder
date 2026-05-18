@@ -158,10 +158,16 @@ class TestAPIEndpoints:
             assert response.status_code in [200, 401]  # 401 if auth required
     
     def test_cors_headers(self):
-        """Test CORS headers are present."""
-        response = self.client.options('/api/health/ping')
+        """Test CORS headers are present for a valid preflight request."""
+        response = self.client.options(
+            '/api/health/ping',
+            headers={
+                'Origin': 'http://127.0.0.1:3000',
+                'Access-Control-Request-Method': 'GET',
+            },
+        )
         
-        # Check for CORS headers
+        # CORS method metadata is part of preflight responses, not bare OPTIONS probes.
         assert 'Access-Control-Allow-Origin' in response.headers
         assert 'Access-Control-Allow-Methods' in response.headers
     
