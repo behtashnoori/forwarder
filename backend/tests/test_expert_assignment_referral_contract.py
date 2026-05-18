@@ -391,6 +391,84 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
         assert ExpertConsoleNotification.query.filter_by(expert_user_id=other_expert_id).count() >= 3
 
 
+def test_expert_notification_contracts_scope_order_and_mark_read(expert_contract_app):
+    """Notification endpoints keep expert scoping, ordering, unread counts, and mark-read behavior."""
+    client = expert_contract_app["app"].test_client()
+    expert_headers = _auth_headers(expert_contract_app["expert_token"])
+    expert_id = expert_contract_app["expert_id"]
+    other_expert_id = expert_contract_app["other_expert_id"]
+    request_id = expert_contract_app["request_id"]
+
+    with expert_contract_app["app"].app_context():
+        older = ExpertConsoleNotification(
+            expert_user_id=expert_id,
+            shipment_request_id=request_id,
+            notification_type="older",
+            title="Older notification",
+            message="Older message",
+            is_read=False,
+            created_at=datetime.utcnow() + timedelta(minutes=1),
+        )
+        newest = ExpertConsoleNotification(
+            expert_user_id=expert_id,
+            shipment_request_id=request_id,
+            notification_type="newest",
+            title="Newest notification",
+            message="Newest message",
+            is_read=False,
+            created_at=datetime.utcnow() + timedelta(minutes=2),
+        )
+        other_expert_notification = ExpertConsoleNotification(
+            expert_user_id=other_expert_id,
+            shipment_request_id=request_id,
+            notification_type="other_expert",
+            title="Other expert notification",
+            message="Other expert message",
+            is_read=False,
+            created_at=datetime.utcnow() + timedelta(minutes=3),
+        )
+        db.session.add_all([older, newest, other_expert_notification])
+        db.session.commit()
+        newest_id = newest.id
+        other_expert_notification_id = other_expert_notification.id
+
+    list_response = client.get(
+        "/api/expert/notifications?unread_only=true&limit=1",
+        headers=expert_headers,
+    )
+    assert list_response.status_code == 200
+    list_payload = list_response.get_json()
+    assert set(list_payload.keys()) == {"notifications", "unread_count"}
+    assert list_payload["unread_count"] == 3
+    assert len(list_payload["notifications"]) == 1
+    assert list_payload["notifications"][0]["id"] == newest_id
+    assert list_payload["notifications"][0]["type"] == "newest"
+    assert list_payload["notifications"][0]["is_read"] is False
+
+    invalid_mark_read = client.post(
+        "/api/expert/notifications/mark-read",
+        headers=expert_headers,
+        json={},
+    )
+    assert invalid_mark_read.status_code == 400
+    assert invalid_mark_read.get_json() == {"error": "شناسه اعلان‌ها یا mark_all الزامی است"}
+
+    mark_specific_response = client.post(
+        "/api/expert/notifications/mark-read",
+        headers=expert_headers,
+        json={"notification_ids": [newest_id, other_expert_notification_id]},
+    )
+    assert mark_specific_response.status_code == 200
+    assert mark_specific_response.get_json() == {
+        "message": "1 اعلان به عنوان خوانده شده علامت‌گذاری شد",
+        "marked_count": 1,
+    }
+
+    with expert_contract_app["app"].app_context():
+        assert db.session.get(ExpertConsoleNotification, newest_id).is_read is True
+        assert db.session.get(ExpertConsoleNotification, other_expert_notification_id).is_read is False
+
+
 def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(expert_contract_app):
     """Assignment/referral admin endpoints keep auth, read shapes, preview, and manual assignment behavior."""
     client = expert_contract_app["app"].test_client()

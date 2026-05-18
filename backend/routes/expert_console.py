@@ -14,7 +14,7 @@ from backend.models import (
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
-from backend.services import quote_service
+from backend.services import notification_service, quote_service
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
@@ -599,47 +599,17 @@ def get_notifications():
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
-        
-        expert_id = current_user['id']
-        unread_only = request.args.get("unread_only", "false").lower() == "true"
-        limit = min(int(request.args.get("limit", 50)), 200)
-        
-        query = db.session.query(ExpertConsoleNotification).filter(
-            ExpertConsoleNotification.expert_user_id == expert_id
+
+        payload = notification_service.list_notifications_for_expert(
+            current_user["id"],
+            {
+                "unread_only": request.args.get("unread_only", "false").lower() == "true",
+                "limit": request.args.get("limit", 50),
+            },
         )
-        
-        if unread_only:
-            query = query.filter(ExpertConsoleNotification.is_read == False)
-        
-        notifications = query.order_by(
-            desc(ExpertConsoleNotification.created_at)
-        ).limit(limit).all()
-        
-        # Get total unread count
-        total_unread = db.session.query(func.count(ExpertConsoleNotification.id)).filter(
-            and_(
-                ExpertConsoleNotification.expert_user_id == expert_id,
-                ExpertConsoleNotification.is_read == False
-            )
-        ).scalar() or 0
-        
-        notifications_data = []
-        for notif in notifications:
-            notifications_data.append({
-                "id": notif.id,
-                "type": notif.notification_type,
-                "title": notif.title,
-                "message": notif.message,
-                "is_read": notif.is_read,
-                "created_at": notif.created_at.isoformat(),
-                "shipment_request_id": notif.shipment_request_id
-            })
-        
-        return jsonify({
-            "notifications": notifications_data,
-            "unread_count": total_unread
-        })
-        
+
+        return jsonify(payload)
+
     except Exception as e:
         current_app.logger.error(f"Error getting notifications: {e}")
         return jsonify({"error": "خطا در دریافت اعلان‌ها"}), 500
@@ -653,48 +623,16 @@ def mark_notifications_read():
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
-        
-        expert_id = current_user['id']
-        data = request.get_json() or {}
-        
-        notification_ids = data.get("notification_ids", [])
-        mark_all = data.get("mark_all", False)
-        
-        if mark_all:
-            # Mark all notifications as read for this expert
-            updated = db.session.query(ExpertConsoleNotification).filter(
-                and_(
-                    ExpertConsoleNotification.expert_user_id == expert_id,
-                    ExpertConsoleNotification.is_read == False
-                )
-            ).update({"is_read": True}, synchronize_session=False)
-            
-            db.session.commit()
-            
-            return jsonify({
-                "message": f"{updated} اعلان به عنوان خوانده شده علامت‌گذاری شد",
-                "marked_count": updated
-            })
-        
-        elif notification_ids:
-            # Mark specific notifications as read
-            updated = db.session.query(ExpertConsoleNotification).filter(
-                and_(
-                    ExpertConsoleNotification.id.in_(notification_ids),
-                    ExpertConsoleNotification.expert_user_id == expert_id
-                )
-            ).update({"is_read": True}, synchronize_session=False)
-            
-            db.session.commit()
-            
-            return jsonify({
-                "message": f"{updated} اعلان به عنوان خوانده شده علامت‌گذاری شد",
-                "marked_count": updated
-            })
-        
-        else:
+
+        payload = notification_service.mark_notifications_read(
+            current_user["id"],
+            request.get_json() or {},
+        )
+        if payload is None:
             return jsonify({"error": "شناسه اعلان‌ها یا mark_all الزامی است"}), 400
-        
+
+        return jsonify(payload)
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error marking notifications as read: {e}")
