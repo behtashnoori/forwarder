@@ -1,17 +1,10 @@
 """CRM API routes for customer, sales, and activity management."""
-from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
-
+from datetime import datetime
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import and_, or_, desc, func, text
-from sqlalchemy.exc import SQLAlchemyError
-
 from backend.extensions import db
 from backend.security import require_role
-from backend.models import (
-    Customer, CustomerContact, Opportunity, Activity, Task, Report,
-    ExpertUser, ShipmentRequest
-)
+from backend.models import Customer, Opportunity, Activity
+from backend.services import crm_dashboard_service, crm_service
 
 crm_bp = Blueprint("crm", __name__, url_prefix="/api/crm")
 
@@ -22,81 +15,17 @@ crm_bp = Blueprint("crm", __name__, url_prefix="/api/crm")
 def get_customers():
     """Get filtered and paginated customers."""
     try:
-        page = request.args.get("page", 1, type=int)
-        per_page = min(request.args.get("per_page", 20, type=int), 100)
-        search = request.args.get("search")
-        customer_type = request.args.get("customer_type")
-        status = request.args.get("status")
-        sort_by = request.args.get("sort_by", "created_at")
-        sort_order = request.args.get("sort_order", "desc")
-        
-        query = db.session.query(Customer)
-        
-        # Apply filters
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                or_(
-                    Customer.first_name.like(search_term),
-                    Customer.last_name.like(search_term),
-                    Customer.company_name.like(search_term),
-                    Customer.email.like(search_term),
-                    Customer.phone.like(search_term)
-                )
-            )
-        
-        if customer_type:
-            query = query.filter(Customer.customer_type == customer_type)
-        if status:
-            query = query.filter(Customer.status == status)
-        
-        # Apply sorting
-        if sort_by == "name":
-            sort_column = Customer.first_name
-        elif sort_by == "company":
-            sort_column = Customer.company_name
-        elif sort_by == "last_contact":
-            sort_column = Customer.last_contact_at
-        else:
-            sort_column = Customer.created_at
-            
-        if sort_order == "desc":
-            query = query.order_by(desc(sort_column))
-        else:
-            query = query.order_by(sort_column)
-        
-        # Get paginated results
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        customers_data = []
-        for customer in pagination.items:
-            customers_data.append({
-                "id": customer.id,
-                "name": f"{customer.first_name} {customer.last_name}",
-                "company_name": customer.company_name,
-                "email": customer.email,
-                "phone": customer.phone,
-                "customer_type": customer.customer_type,
-                "status": customer.status,
-                "industry": customer.industry,
-                "last_contact_at": customer.last_contact_at.isoformat() if customer.last_contact_at else None,
-                "created_at": customer.created_at.isoformat(),
-                "total_opportunities": len(customer.opportunities),
-                "total_activities": len(customer.activities)
-            })
-        
-        return jsonify({
-            "customers": customers_data,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": pagination.total,
-                "pages": pagination.pages,
-                "has_next": pagination.has_next,
-                "has_prev": pagination.has_prev
-            }
-        })
-        
+        filters = {
+            "page": request.args.get("page", 1, type=int),
+            "per_page": min(request.args.get("per_page", 20, type=int), 100),
+            "search": request.args.get("search"),
+            "customer_type": request.args.get("customer_type"),
+            "status": request.args.get("status"),
+            "sort_by": request.args.get("sort_by", "created_at"),
+            "sort_order": request.args.get("sort_order", "desc"),
+        }
+        return jsonify(crm_service.list_customers(filters))
+
     except Exception as e:
         current_app.logger.error(f"Error getting customers: {e}")
         return jsonify({"error": "خطا در دریافت مشتریان"}), 500
@@ -149,88 +78,11 @@ def create_customer():
 def get_customer_detail(customer_id: int):
     """Get detailed information about a customer."""
     try:
-        customer = db.session.query(Customer).get(customer_id)
-        if not customer:
+        customer_payload = crm_service.get_customer_detail(customer_id)
+        if not customer_payload:
             return jsonify({"error": "مشتری یافت نشد"}), 404
-        
-        # Get related data
-        contacts = db.session.query(CustomerContact).filter(
-            CustomerContact.customer_id == customer_id
-        ).all()
-        
-        opportunities = db.session.query(Opportunity).filter(
-            Opportunity.customer_id == customer_id
-        ).all()
-        
-        activities = db.session.query(Activity).filter(
-            Activity.customer_id == customer_id
-        ).order_by(desc(Activity.created_at)).limit(10).all()
-        
-        # Format contacts
-        contacts_data = []
-        for contact in contacts:
-            contacts_data.append({
-                "id": contact.id,
-                "name": f"{contact.first_name} {contact.last_name}",
-                "email": contact.email,
-                "phone": contact.phone,
-                "position": contact.position,
-                "is_primary": contact.is_primary,
-                "is_decision_maker": contact.is_decision_maker
-            })
-        
-        # Format opportunities
-        opportunities_data = []
-        for opp in opportunities:
-            opportunities_data.append({
-                "id": opp.id,
-                "title": opp.title,
-                "stage": opp.stage,
-                "value": opp.value,
-                "probability": opp.probability,
-                "status": opp.status,
-                "expected_close_date": opp.expected_close_date.isoformat() if opp.expected_close_date else None,
-                "created_at": opp.created_at.isoformat()
-            })
-        
-        # Format activities
-        activities_data = []
-        for activity in activities:
-            activities_data.append({
-                "id": activity.id,
-                "type": activity.activity_type,
-                "subject": activity.subject,
-                "status": activity.status,
-                "created_at": activity.created_at.isoformat(),
-                "expert": activity.expert_user.full_name if activity.expert_user else "نامشخص"
-            })
-        
-        return jsonify({
-            "id": customer.id,
-            "name": f"{customer.first_name} {customer.last_name}",
-            "company_name": customer.company_name,
-            "email": customer.email,
-            "phone": customer.phone,
-            "mobile": customer.mobile,
-            "website": customer.website,
-            "industry": customer.industry,
-            "company_size": customer.company_size,
-            "customer_type": customer.customer_type,
-            "status": customer.status,
-            "source": customer.source,
-            "notes": customer.notes,
-            "address": customer.address,
-            "city": customer.city,
-            "province": customer.province,
-            "postal_code": customer.postal_code,
-            "country": customer.country,
-            "last_contact_at": customer.last_contact_at.isoformat() if customer.last_contact_at else None,
-            "created_at": customer.created_at.isoformat(),
-            "contacts": contacts_data,
-            "opportunities": opportunities_data,
-            "recent_activities": activities_data
-        })
-        
+        return jsonify(customer_payload)
+
     except Exception as e:
         current_app.logger.error(f"Error getting customer detail: {e}")
         return jsonify({"error": "خطا در دریافت جزئیات مشتری"}), 500
@@ -272,70 +124,15 @@ def update_customer(customer_id: int):
 def get_opportunities():
     """Get filtered and paginated opportunities."""
     try:
-        page = request.args.get("page", 1, type=int)
-        per_page = min(request.args.get("per_page", 20, type=int), 100)
-        stage = request.args.get("stage")
-        assigned_to = request.args.get("assigned_to")
-        search = request.args.get("search")
-        
-        query = db.session.query(Opportunity)
-        
-        # Apply filters
-        if stage:
-            query = query.filter(Opportunity.stage == stage)
-        if assigned_to:
-            query = query.filter(Opportunity.assigned_to == assigned_to)
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                or_(
-                    Opportunity.title.like(search_term),
-                    Opportunity.description.like(search_term)
-                )
-            )
-        
-        query = query.order_by(desc(Opportunity.created_at))
-        
-        # Get paginated results
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        opportunities_data = []
-        for opp in pagination.items:
-            customer = db.session.query(Customer).get(opp.customer_id)
-            assigned_expert = db.session.query(ExpertUser).get(opp.assigned_to) if opp.assigned_to else None
-            
-            opportunities_data.append({
-                "id": opp.id,
-                "title": opp.title,
-                "customer": {
-                    "id": customer.id,
-                    "name": f"{customer.first_name} {customer.last_name}",
-                    "company_name": customer.company_name
-                } if customer else None,
-                "stage": opp.stage,
-                "value": opp.value,
-                "probability": opp.probability,
-                "status": opp.status,
-                "expected_close_date": opp.expected_close_date.isoformat() if opp.expected_close_date else None,
-                "assigned_to": {
-                    "id": assigned_expert.id,
-                    "name": assigned_expert.full_name
-                } if assigned_expert else None,
-                "created_at": opp.created_at.isoformat()
-            })
-        
-        return jsonify({
-            "opportunities": opportunities_data,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": pagination.total,
-                "pages": pagination.pages,
-                "has_next": pagination.has_next,
-                "has_prev": pagination.has_prev
-            }
-        })
-        
+        filters = {
+            "page": request.args.get("page", 1, type=int),
+            "per_page": min(request.args.get("per_page", 20, type=int), 100),
+            "stage": request.args.get("stage"),
+            "assigned_to": request.args.get("assigned_to"),
+            "search": request.args.get("search"),
+        }
+        return jsonify(crm_service.list_opportunities(filters))
+
     except Exception as e:
         current_app.logger.error(f"Error getting opportunities: {e}")
         return jsonify({"error": "خطا در دریافت فرصت‌های فروش"}), 500
@@ -382,68 +179,16 @@ def create_opportunity():
 def get_activities():
     """Get filtered and paginated activities."""
     try:
-        page = request.args.get("page", 1, type=int)
-        per_page = min(request.args.get("per_page", 20, type=int), 100)
-        activity_type = request.args.get("activity_type")
-        expert_id = request.args.get("expert_id")
-        customer_id = request.args.get("customer_id")
-        status = request.args.get("status")
-        
-        query = db.session.query(Activity)
-        
-        # Apply filters
-        if activity_type:
-            query = query.filter(Activity.activity_type == activity_type)
-        if expert_id:
-            query = query.filter(Activity.expert_user_id == expert_id)
-        if customer_id:
-            query = query.filter(Activity.customer_id == customer_id)
-        if status:
-            query = query.filter(Activity.status == status)
-        
-        query = query.order_by(desc(Activity.created_at))
-        
-        # Get paginated results
-        pagination = query.paginate(page=page, per_page=per_page, error_out=False)
-        
-        activities_data = []
-        for activity in pagination.items:
-            customer = db.session.query(Customer).get(activity.customer_id) if activity.customer_id else None
-            expert = db.session.query(ExpertUser).get(activity.expert_user_id)
-            
-            activities_data.append({
-                "id": activity.id,
-                "type": activity.activity_type,
-                "subject": activity.subject,
-                "description": activity.description,
-                "status": activity.status,
-                "priority": activity.priority,
-                "due_date": activity.due_date.isoformat() if activity.due_date else None,
-                "completed_at": activity.completed_at.isoformat() if activity.completed_at else None,
-                "outcome": activity.outcome,
-                "customer": {
-                    "id": customer.id,
-                    "name": f"{customer.first_name} {customer.last_name}"
-                } if customer else None,
-                "expert": {
-                    "id": expert.id,
-                    "name": expert.full_name
-                } if expert else None,
-                "created_at": activity.created_at.isoformat()
-            })
-        
-        return jsonify({
-            "activities": activities_data,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": pagination.total,
-                "pages": pagination.pages,
-                "has_next": pagination.has_next,
-                "has_prev": pagination.has_prev
-            }
-        })
-        
+        filters = {
+            "page": request.args.get("page", 1, type=int),
+            "per_page": min(request.args.get("per_page", 20, type=int), 100),
+            "activity_type": request.args.get("activity_type"),
+            "expert_id": request.args.get("expert_id"),
+            "customer_id": request.args.get("customer_id"),
+            "status": request.args.get("status"),
+        }
+        return jsonify(crm_service.list_activities(filters))
+
     except Exception as e:
         current_app.logger.error(f"Error getting activities: {e}")
         return jsonify({"error": "خطا در دریافت فعالیت‌ها"}), 500
@@ -490,72 +235,8 @@ def create_activity():
 def get_crm_dashboard_kpis():
     """Get CRM dashboard KPIs."""
     try:
-        # Customer metrics
-        total_customers = db.session.query(Customer).count()
-        new_customers_this_month = db.session.query(Customer).filter(
-            func.date_trunc('month', Customer.created_at) == func.date_trunc('month', func.now())
-        ).count()
-        
-        # Opportunity metrics
-        total_opportunities = db.session.query(Opportunity).count()
-        open_opportunities = db.session.query(Opportunity).filter(
-            Opportunity.status == "open"
-        ).count()
-        won_opportunities = db.session.query(Opportunity).filter(
-            Opportunity.status == "won"
-        ).count()
-        
-        # Calculate total pipeline value
-        pipeline_value = db.session.query(func.sum(Opportunity.value)).filter(
-            and_(
-                Opportunity.status == "open",
-                Opportunity.value.isnot(None)
-            )
-        ).scalar() or 0
-        
-        # Activity metrics
-        total_activities = db.session.query(Activity).count()
-        completed_activities = db.session.query(Activity).filter(
-            Activity.status == "completed"
-        ).count()
-        
-        # Recent activities
-        recent_activities = db.session.query(Activity).order_by(
-            desc(Activity.created_at)
-        ).limit(5).all()
-        
-        recent_activities_data = []
-        for activity in recent_activities:
-            customer = db.session.query(Customer).get(activity.customer_id) if activity.customer_id else None
-            expert = db.session.query(ExpertUser).get(activity.expert_user_id)
-            
-            recent_activities_data.append({
-                "id": activity.id,
-                "type": activity.activity_type,
-                "subject": activity.subject,
-                "customer_name": f"{customer.first_name} {customer.last_name}" if customer else "نامشخص",
-                "expert_name": expert.full_name if expert else "نامشخص",
-                "created_at": activity.created_at.isoformat()
-            })
-        
-        return jsonify({
-            "customers": {
-                "total": total_customers,
-                "new_this_month": new_customers_this_month
-            },
-            "opportunities": {
-                "total": total_opportunities,
-                "open": open_opportunities,
-                "won": won_opportunities,
-                "pipeline_value": pipeline_value
-            },
-            "activities": {
-                "total": total_activities,
-                "completed": completed_activities
-            },
-            "recent_activities": recent_activities_data
-        })
-        
+        return jsonify(crm_dashboard_service.get_crm_dashboard_kpis())
+
     except Exception as e:
         current_app.logger.error(f"Error getting CRM KPIs: {e}")
         return jsonify({"error": "خطا در دریافت آمار CRM"}), 500
