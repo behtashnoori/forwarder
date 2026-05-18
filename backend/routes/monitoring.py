@@ -6,8 +6,8 @@ from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.monitoring import system_monitor, analytics_engine
-from backend.auth import require_auth, admin_required
-from backend.security import validate_input
+from backend.auth import admin_required
+from backend.security import require_role, validate_input
 
 monitoring_bp = Blueprint("monitoring", __name__, url_prefix="/api/monitoring")
 
@@ -24,7 +24,7 @@ def get_health_status():
 
 
 @monitoring_bp.get("/metrics")
-@require_auth
+@require_role("supervisor")
 def get_system_metrics():
     """Get system metrics (requires authentication)."""
     try:
@@ -36,7 +36,7 @@ def get_system_metrics():
 
 
 @monitoring_bp.get("/database")
-@require_auth
+@require_role("supervisor")
 def get_database_metrics():
     """Get database performance metrics."""
     try:
@@ -48,7 +48,7 @@ def get_database_metrics():
 
 
 @monitoring_bp.get("/business")
-@require_auth
+@require_role("supervisor")
 def get_business_metrics():
     """Get business metrics."""
     try:
@@ -60,7 +60,7 @@ def get_business_metrics():
 
 
 @monitoring_bp.get("/analytics/customers")
-@require_auth
+@require_role("supervisor")
 def get_customer_analytics():
     """Get customer analytics."""
     try:
@@ -73,7 +73,7 @@ def get_customer_analytics():
 
 
 @monitoring_bp.get("/analytics/sales")
-@require_auth
+@require_role("supervisor")
 def get_sales_analytics():
     """Get sales analytics."""
     try:
@@ -86,7 +86,7 @@ def get_sales_analytics():
 
 
 @monitoring_bp.get("/analytics/performance")
-@require_auth
+@require_role("supervisor")
 def get_performance_analytics():
     """Get performance analytics."""
     try:
@@ -99,7 +99,7 @@ def get_performance_analytics():
 
 
 @monitoring_bp.get("/dashboard")
-@require_auth
+@require_role("supervisor")
 def get_monitoring_dashboard():
     """Get comprehensive monitoring dashboard data."""
     try:
@@ -135,7 +135,7 @@ def get_monitoring_dashboard():
 
 
 @monitoring_bp.get("/alerts")
-@require_auth
+@require_role("supervisor")
 def get_system_alerts():
     """Get system alerts and warnings."""
     try:
@@ -222,7 +222,7 @@ def get_system_alerts():
 
 
 @monitoring_bp.post("/alerts/acknowledge")
-@require_auth
+@require_role("supervisor")
 def acknowledge_alert():
     """Acknowledge a system alert."""
     try:

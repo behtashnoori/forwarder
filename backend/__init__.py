@@ -15,7 +15,7 @@ from backend.extensions import db, migrate
 from backend.routes import register_routes
 from backend.security import security
 from backend.app_logging import logger
-from backend.cors_config import get_cors_config, log_cors_info, validate_origin
+from backend.cors_config import get_cors_config, is_cors_origin_allowed, log_cors_info
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
@@ -34,32 +34,37 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
 
     app = Flask(__name__, instance_relative_config=True)
 
-    # Default configuration makes it easy to run the backend locally while still
-    # allowing full override via environment variables or a provided config mapping.
-    # In test mode, never fall back to a developer/production DATABASE_URL; tests
-    # must use an isolated database unless they explicitly provide another URI.
+    # Default configuration keeps test/dev/prod behavior explicit. Tests never
+    # fall back to developer/production DATABASE_URL, while production fails fast
+    # unless sensitive runtime configuration is supplied by the environment.
     is_testing_config = bool(config and config.get("TESTING"))
-    default_database_uri = (
-        os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
-        if is_testing_config
-        else os.getenv(
-            "DATABASE_URL",
-            "postgresql+psycopg2://postgres:bagheri13@127.0.0.1:5432/forwarder_db",
-        )
-    )
-    default_config: MutableMapping[str, Any] = {
-        "SQLALCHEMY_DATABASE_URI": default_database_uri,
-        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
-        "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "*"),
-        "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
-    }
+
     # PORT for health endpoint and startup logs (single source of truth: backend.config)
     import backend.config as _cfg  # noqa: E402
-    default_config["PORT"] = _cfg.PORT
+
+    database_uri = _cfg.get_database_uri(testing=is_testing_config)
+    secret_key, jwt_secret_key = _cfg.get_secret_config(testing=is_testing_config)
+    default_config: MutableMapping[str, Any] = {
+        "SQLALCHEMY_DATABASE_URI": database_uri,
+        "SQLALCHEMY_TRACK_MODIFICATIONS": False,
+        "SECRET_KEY": secret_key,
+        "JWT_SECRET_KEY": jwt_secret_key,
+        "CORS_ORIGIN": os.getenv("CORS_ORIGIN", ""),
+        "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
+        "PORT": _cfg.PORT,
+        "APP_ENV": _cfg.get_runtime_environment(testing=is_testing_config),
+    }
 
     app.config.from_mapping(default_config)
     if config is not None:
         app.config.from_mapping(config)
+
+    _cfg.validate_runtime_config(
+        testing=bool(app.config.get("TESTING")),
+        database_uri=app.config["SQLALCHEMY_DATABASE_URI"],
+        secret_key=app.config["SECRET_KEY"],
+        jwt_secret_key=app.config["JWT_SECRET_KEY"],
+    )
 
     # Ensure the instance path exists before any SQLite database is created.
     os.makedirs(app.instance_path, exist_ok=True)
@@ -74,28 +79,18 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     logger.init_app(app)
 
     # Configure CORS with dynamic origins
-    cors_config = get_cors_config()
+    cors_config = get_cors_config(testing=bool(app.config.get("TESTING")))
     CORS(app, **cors_config)
     print("[startup] CORS configured.")
-    log_cors_info()
+    log_cors_info(testing=bool(app.config.get("TESTING")))
     
     def _is_cors_origin_allowed(origin: str | None) -> bool:
         """Return True if the given origin is allowed for CORS."""
-        if not origin:
-            return False
-        is_dev = os.getenv('FLASK_ENV', '').lower() in ('development', 'dev') or os.getenv('FLASK_DEBUG', '').lower() in ('true', '1', 'yes')
-        allow_any = os.getenv('CORS_ALLOW_ALL_ORIGINS', '').lower() in ('1', 'true', 'yes')
-        if is_dev or allow_any:
-            return True
-        origins_config = cors_config.get('origins')
-        if callable(origins_config):
-            return origins_config(origin)
-        if isinstance(origins_config, list):
-            if origin in origins_config:
-                return True
-            if validate_origin(origin):
-                return True
-        return False
+        return is_cors_origin_allowed(
+            origin,
+            testing=bool(app.config.get("TESTING")),
+            cors_config=cors_config,
+        )
 
     def _add_cors_headers_to_response(response):
         """Add CORS headers to a response."""

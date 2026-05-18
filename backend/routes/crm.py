@@ -7,6 +7,7 @@ from sqlalchemy import and_, or_, desc, func, text
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
+from backend.security import require_role
 from backend.models import (
     Customer, CustomerContact, Opportunity, Activity, Task, Report,
     ExpertUser, ShipmentRequest
@@ -17,6 +18,7 @@ crm_bp = Blueprint("crm", __name__, url_prefix="/api/crm")
 
 # Customer Management Routes
 @crm_bp.get("/customers")
+@require_role("business_expert")
 def get_customers():
     """Get filtered and paginated customers."""
     try:
@@ -101,6 +103,7 @@ def get_customers():
 
 
 @crm_bp.post("/customers")
+@require_role("business_expert")
 def create_customer():
     """Create a new customer."""
     try:
@@ -142,6 +145,7 @@ def create_customer():
 
 
 @crm_bp.get("/customers/<int:customer_id>")
+@require_role("business_expert")
 def get_customer_detail(customer_id: int):
     """Get detailed information about a customer."""
     try:
@@ -233,6 +237,7 @@ def get_customer_detail(customer_id: int):
 
 
 @crm_bp.put("/customers/<int:customer_id>")
+@require_role("business_expert")
 def update_customer(customer_id: int):
     """Update customer information."""
     try:
@@ -263,6 +268,7 @@ def update_customer(customer_id: int):
 
 # Opportunity Management Routes
 @crm_bp.get("/opportunities")
+@require_role("business_expert")
 def get_opportunities():
     """Get filtered and paginated opportunities."""
     try:
@@ -336,6 +342,7 @@ def get_opportunities():
 
 
 @crm_bp.post("/opportunities")
+@require_role("business_expert")
 def create_opportunity():
     """Create a new opportunity."""
     try:
@@ -371,6 +378,7 @@ def create_opportunity():
 
 # Activity Management Routes
 @crm_bp.get("/activities")
+@require_role("business_expert")
 def get_activities():
     """Get filtered and paginated activities."""
     try:
@@ -442,6 +450,7 @@ def get_activities():
 
 
 @crm_bp.post("/activities")
+@require_role("business_expert")
 def create_activity():
     """Create a new activity."""
     try:
@@ -477,6 +486,7 @@ def create_activity():
 
 # Dashboard and Analytics Routes
 @crm_bp.get("/dashboard/kpis")
+@require_role("business_expert")
 def get_crm_dashboard_kpis():
     """Get CRM dashboard KPIs."""
     try:

@@ -22,9 +22,14 @@ class SecurityManager:
         """Initialize security with Flask app."""
         self.app = app
         
-        # Security configuration
-        app.config.setdefault('SECRET_KEY', secrets.token_hex(32))
-        app.config.setdefault('JWT_SECRET_KEY', secrets.token_hex(32))
+        # Security configuration: create_app supplies validated values. Keep a
+        # development/test fallback here for direct SecurityManager initialization,
+        # but never generate runtime-random secrets that would invalidate tokens.
+        from backend.config import get_secret_config
+
+        secret_key, jwt_secret_key = get_secret_config(testing=bool(app.config.get('TESTING')))
+        app.config.setdefault('SECRET_KEY', secret_key)
+        app.config.setdefault('JWT_SECRET_KEY', jwt_secret_key)
         app.config.setdefault('JWT_ACCESS_TOKEN_EXPIRES', timedelta(hours=1))
         app.config.setdefault('JWT_REFRESH_TOKEN_EXPIRES', timedelta(days=30))
         app.config.setdefault('PASSWORD_HASH_METHOD', 'pbkdf2:sha256')

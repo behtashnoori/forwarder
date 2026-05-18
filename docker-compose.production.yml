@@ -40,7 +40,7 @@ services:
     image: postgres:16
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD must be set for production}
       POSTGRES_DB: forwarder_db
     volumes:
       - pgdata:/var/lib/postgresql/data
