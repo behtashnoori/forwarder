@@ -14,7 +14,7 @@ from backend.models import (
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
-from backend.services import message_service, notification_service, quote_service
+from backend.services import assignment_service, message_service, notification_service, quote_service
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
@@ -336,65 +336,16 @@ def assign_request(request_id: int):
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "احراز هویت نشده"}), 401
-        data = request.get_json() or {}
-        expert_id = data.get("expert_id")
-        
-        if not expert_id:
-            return jsonify({"error": "شناسه کارشناس الزامی است"}), 400
-        
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
-        if not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-        
-        expert = db.session.query(ExpertUser).get(expert_id)
-        if not expert:
-            return jsonify({"error": "کارشناس یافت نشد"}), 404
-        
-        old_assigned_to = req.assigned_to
-        old_status = req.status
-        
-        # Update request
-        req.assigned_to = expert_id
-        req.status = "assigned"
-        req.has_unread_for_assignee = True
-        
-        # Create log entry
-        log = ExpertConsoleLog(
-            shipment_request_id=request_id,
-            expert_user_id=expert_id,
-            action="assignment",
-            old_status=old_status,
-            new_status="assigned",
-            note=f"ارجاع به کارشناس: {expert.full_name}",
-            ip_address=request.remote_addr,
-            created_at=datetime.utcnow()
+
+        response_payload = assignment_service.assign_request_to_expert(
+            request_id,
+            actor=current_user,
+            payload=request.get_json() or {},
+            remote_addr=request.remote_addr,
         )
-        db.session.add(log)
-        
-        # Create notification
-        notification = ExpertConsoleNotification(
-            expert_user_id=expert_id,
-            shipment_request_id=request_id,
-            notification_type="assignment",
-            title="ارجاع درخواست جدید",
-            message=f"درخواست {request_id} به شما ارجاع داده شد",
-            is_read=False,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(notification)
-        
-        db.session.commit()
-        
-        return jsonify({
-            "message": "درخواست با موفقیت ارجاع داده شد",
-            "assigned_to": {
-                "id": expert.id,
-                "name": expert.full_name
-            }
-        })
-        
+        return jsonify(response_payload)
+    except assignment_service.AssignmentServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error assigning request: {e}")

@@ -303,6 +303,76 @@ def test_expert_message_contracts_access_creation_and_listing(expert_contract_ap
         ).count() == 1
 
 
+def test_expert_assignment_contracts_access_not_found_and_side_effects(expert_contract_app):
+    """Assignment endpoint keeps access, not-found responses, and assignment side effects."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    other_headers = _auth_headers(expert_contract_app["other_expert_token"])
+    request_id = expert_contract_app["request_id"]
+    other_expert_id = expert_contract_app["other_expert_id"]
+
+    forbidden_assignment = client.post(
+        f"/api/expert/requests/{request_id}/assign",
+        headers=other_headers,
+        json={"expert_id": other_expert_id},
+    )
+    assert forbidden_assignment.status_code == 403
+    assert forbidden_assignment.get_json() == {"error": "شما به این درخواست دسترسی ندارید"}
+
+    missing_request_assignment = client.post(
+        "/api/expert/requests/999999/assign",
+        headers=admin_headers,
+        json={"expert_id": other_expert_id},
+    )
+    assert missing_request_assignment.status_code == 404
+    assert missing_request_assignment.get_json() == {"error": "درخواست یافت نشد"}
+
+    missing_expert_assignment = client.post(
+        f"/api/expert/requests/{request_id}/assign",
+        headers=admin_headers,
+        json={"expert_id": 999999},
+    )
+    assert missing_expert_assignment.status_code == 404
+    assert missing_expert_assignment.get_json() == {"error": "کارشناس یافت نشد"}
+
+    assign_response = client.post(
+        f"/api/expert/requests/{request_id}/assign",
+        headers=admin_headers,
+        json={"expert_id": other_expert_id},
+    )
+    assert assign_response.status_code == 200
+    assert assign_response.get_json() == {
+        "message": "درخواست با موفقیت ارجاع داده شد",
+        "assigned_to": {"id": other_expert_id, "name": "Phase 4H Other Expert"},
+    }
+
+    with expert_contract_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert request_row.assigned_to == other_expert_id
+        assert request_row.status == "assigned"
+        assert request_row.has_unread_for_assignee is True
+
+        assignment_log = ExpertConsoleLog.query.filter_by(
+            shipment_request_id=request_id,
+            expert_user_id=other_expert_id,
+            action="assignment",
+            old_status="new",
+            new_status="assigned",
+            note="ارجاع به کارشناس: Phase 4H Other Expert",
+        ).one()
+        assert assignment_log.ip_address is not None
+
+        assignment_notification = ExpertConsoleNotification.query.filter_by(
+            expert_user_id=other_expert_id,
+            shipment_request_id=request_id,
+            notification_type="assignment",
+            title="ارجاع درخواست جدید",
+            message=f"درخواست {request_id} به شما ارجاع داده شد",
+            is_read=False,
+        ).one()
+        assert assignment_notification.created_at is not None
+
+
 def test_expert_assignment_status_quote_message_notification_contracts(expert_contract_app):
     """Mutation endpoints keep assignment/status/quote/message/notification response and side-effect contracts."""
     client = expert_contract_app["app"].test_client()
