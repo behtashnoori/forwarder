@@ -18,11 +18,11 @@ No feature work, migration generation, model/schema change, frontend change, API
 | Virtualenv status | No active virtualenv (`VIRTUAL_ENV` empty; `CONDA_PREFIX` empty). |
 | Official dependency source | `requirements.txt` at repo root; `backend/requirements.txt` also exists with the backend/container superset. |
 | Installed backend deps before restore | `pytest` installed; `flask`, `sqlalchemy`, `flask_migrate`, `alembic`, `flask_cors`, `dotenv`, `jwt`, `bcrypt`, `psutil`, and `psycopg2` missing. |
-| Install command | `python -m pip install -r requirements.txt` |
+| Install commands | `python -m pip install -r requirements.txt`; repeated with `python -m pip install -r backend/requirements.txt` because `backend/requirements.txt` is also an official backend/container requirements file. |
 | Install result | ENV_BLOCKED. Package restore failed before installing Flask. |
 | Package index/proxy issue | `OSError('Tunnel connection failed: 403 Forbidden')` while resolving `/simple/flask/`, followed by `ERROR: Could not find a version that satisfies the requirement Flask<4.0,>=3.0`. |
 
-Phase 3G was blocked for the same reason: the container did not have Flask/backend dependencies installed, and the package index/proxy rejected the official requirements install. Phase 3H retried the official root requirements install and confirmed the block persists.
+Phase 3G was blocked for the same reason: the container did not have Flask/backend dependencies installed, and the package index/proxy rejected the official requirements install. Phase 3H retried both official requirements files and confirmed the block persists before any Flask package could be installed.
 
 ## 3. Backend Test Results
 
@@ -60,7 +60,7 @@ Remaining DBA review risk: if a production database was ever stamped with archiv
 
 **BLOCKED_BY_ENV**
 
-Reason: Phase 3H could not create the required valid Python backend test environment because the package index/proxy still returns `403 Forbidden` when installing Flask from the official project requirements. Frontend/structure checks and migration safety re-check passed, but backend regression cannot be declared ready until the official Python dependencies are installed in local development or CI and the full/targeted pytest commands pass.
+Reason: Phase 3H could not create the required valid Python backend test environment because the package index/proxy still returns `403 Forbidden` when installing Flask from the official project requirements (`requirements.txt` and `backend/requirements.txt`). Frontend/structure checks and migration safety re-check passed, but backend regression cannot be declared ready until the official Python dependencies are installed in local development or CI and the full/targeted pytest commands pass.
 
 ## 7. Deferred Items
 
