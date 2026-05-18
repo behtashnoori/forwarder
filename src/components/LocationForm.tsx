@@ -18,6 +18,7 @@ import {
   RecommendedPort,
   TransportMethod,
   TransportMethodOptions,
+  ShipmentRequestPayload,
   fetchCities,
   fetchCounties,
   fetchProvinces,
@@ -698,7 +699,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     setIsSubmitting(true);
 
     try {
-      const payload: any = {
+      const payload: ShipmentRequestPayload = {
         shipping_type: shippingType,
         contact_phone: formData.phoneNumber,
         transport_method: formData.transportMethod,  // Legacy field
@@ -789,7 +790,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     setIsSubmitting(true);
 
     try {
-      const payload: any = {
+      const payload: ShipmentRequestPayload = {
         shipping_type: shippingType,
         contact_phone: formData.phoneNumber,
         transport_method: formData.transportMethod,  // Legacy field

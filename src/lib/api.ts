@@ -791,7 +791,7 @@ export interface AssignmentRule {
   name: string;
   description?: string;
   rule_type: string;
-  conditions: any;
+  conditions: Record<string, unknown>;
   priority: number;
   is_active: boolean;
   created_by: {
@@ -878,7 +878,7 @@ export function createAssignmentRule(ruleData: {
   name: string;
   description?: string;
   rule_type: string;
-  conditions: any;
+  conditions: Record<string, unknown>;
   priority?: number;
   is_active?: boolean;
 }): Promise<{ message: string; rule_id: number }> {

@@ -79,7 +79,7 @@ const ExpertConsole = () => {
     try {
       setLoading(true);
       
-      const params: any = {
+      const params: NonNullable<Parameters<typeof fetchExpertRequests>[0]> = {
         page: 1,
         per_page: 50,
         sort_by: "created_at",

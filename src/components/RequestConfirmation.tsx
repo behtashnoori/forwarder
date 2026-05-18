@@ -10,8 +10,34 @@ export interface LocationDisplayPayload {
   destination: string;
 }
 
+interface RequestConfirmationFormData {
+  phoneNumber: string;
+  customerFirstName?: string;
+  customerLastName?: string;
+  originCityName?: string;
+  originCountyName?: string;
+  originProvinceName?: string;
+  destinationCityName?: string;
+  destinationCountyName?: string;
+  destinationProvinceName?: string;
+  originCityInternationalName?: string;
+  originCountryName?: string;
+  destCityInternationalName?: string;
+  destCountryName?: string;
+  transportMethodPreference?: string;
+  domesticTransportMethodName?: string;
+  internationalTransportMethodName?: string;
+  cargoDescription?: string;
+  cargoWeight?: string;
+  cargoVolume?: string;
+  cargoValue?: string;
+  pickupDate?: string;
+  deliveryDate?: string;
+  specialInstructions?: string;
+}
+
 interface RequestConfirmationProps {
-  formData: any;
+  formData: RequestConfirmationFormData;
   shippingType: "domestic" | "international";
   onBack: () => void;
   onSubmit: () => void;
