@@ -14,7 +14,7 @@ from backend.models import (
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
-from backend.services import notification_service, quote_service
+from backend.services import message_service, notification_service, quote_service
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
@@ -529,62 +529,16 @@ def add_message(request_id: int):
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
-        
-        expert_id = current_user["id"]
-        data = request.get_json() or {}
-        message_type = data.get("type") or "internal_note"  # internal_note or customer_message
-        subject = data.get("subject", "")
-        content = data.get("content")
-        
-        if not content:
-            return jsonify({"error": "محتوای پیام الزامی است"}), 400
-        
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
-        if not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-        
-        expert = db.session.query(ExpertUser).get(expert_id)
-        if not expert:
-            return jsonify({"error": "کارشناس یافت نشد"}), 404
-        
-        # Create message
-        message = ExpertConsoleMessage(
-            shipment_request_id=request_id,
-            expert_user_id=expert_id,
-            message_type=message_type,
-            subject=subject,
-            content=content,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+
+        response_payload = message_service.create_message_for_request(
+            request_id,
+            request.get_json() or {},
+            current_user,
+            request.remote_addr,
         )
-        db.session.add(message)
-        
-        # Create log entry
-        log = ExpertConsoleLog(
-            shipment_request_id=request_id,
-            expert_user_id=expert_id,
-            action="message_added",
-            note=f"پیام {message_type} اضافه شد",
-            ip_address=request.remote_addr,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(log)
-        
-        # If customer message, update status and touch time
-        if message_type == "customer_message":
-            req.status = "waiting_for_customer"
-            req.last_customer_touch_at = datetime.utcnow()
-            req.has_unread_for_assignee = True
-        
-        db.session.commit()
-        
-        return jsonify({
-            "message": "پیام با موفقیت اضافه شد",
-            "message_id": message.id
-        })
-        
+        return jsonify(response_payload)
+    except message_service.MessageServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error adding message: {e}")

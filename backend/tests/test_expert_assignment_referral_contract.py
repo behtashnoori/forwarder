@@ -240,6 +240,69 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     }
 
 
+def test_expert_message_contracts_access_creation_and_listing(expert_contract_app):
+    """Message behavior keeps access checks, creation side effects, and request-detail listing shape."""
+    client = expert_contract_app["app"].test_client()
+    expert_headers = _auth_headers(expert_contract_app["expert_token"])
+    other_headers = _auth_headers(expert_contract_app["other_expert_token"])
+    request_id = expert_contract_app["request_id"]
+
+    forbidden_message = client.post(
+        f"/api/expert/requests/{request_id}/messages",
+        headers=other_headers,
+        json={"content": "Forbidden note"},
+    )
+    assert forbidden_message.status_code == 403
+    assert forbidden_message.get_json() == {"error": "شما به این درخواست دسترسی ندارید"}
+
+    missing_request_message = client.post(
+        "/api/expert/requests/999999/messages",
+        headers=expert_headers,
+        json={"content": "Missing request note"},
+    )
+    assert missing_request_message.status_code == 404
+    assert missing_request_message.get_json() == {"error": "درخواست یافت نشد"}
+
+    message_response = client.post(
+        f"/api/expert/requests/{request_id}/messages",
+        headers=expert_headers,
+        json={"type": "internal_note", "subject": "Internal subject", "content": "Internal content"},
+    )
+    assert message_response.status_code == 200
+    message_payload = message_response.get_json()
+    assert set(message_payload.keys()) == {"message", "message_id"}
+    assert message_payload["message"] == "پیام با موفقیت اضافه شد"
+
+    detail_response = client.get(f"/api/expert/requests/{request_id}", headers=expert_headers)
+    assert detail_response.status_code == 200
+    detail_messages = detail_response.get_json()["messages"]
+    assert detail_messages[0] == {
+        "id": message_payload["message_id"],
+        "type": "internal_note",
+        "subject": "Internal subject",
+        "content": "Internal content",
+        "is_read_by_customer": False,
+        "customer_response": None,
+        "created_at": detail_messages[0]["created_at"],
+        "created_by": "Phase 4H Expert",
+    }
+
+    with expert_contract_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert request_row.status == "new"
+        assert ExpertConsoleMessage.query.filter_by(
+            shipment_request_id=request_id,
+            message_type="internal_note",
+            subject="Internal subject",
+            content="Internal content",
+        ).count() == 1
+        assert ExpertConsoleLog.query.filter_by(
+            shipment_request_id=request_id,
+            action="message_added",
+            note="پیام internal_note اضافه شد",
+        ).count() == 1
+
+
 def test_expert_assignment_status_quote_message_notification_contracts(expert_contract_app):
     """Mutation endpoints keep assignment/status/quote/message/notification response and side-effect contracts."""
     client = expert_contract_app["app"].test_client()
