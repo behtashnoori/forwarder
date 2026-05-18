@@ -5,7 +5,10 @@ All runtime code must read host/port/debug/reload ONLY from this module.
 """
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import os
+
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DEV_DATABASE_URI = "sqlite:///forwarder_dev.db"
 _TEST_DATABASE_URI = "sqlite:///:memory:"
@@ -27,12 +30,37 @@ _PLACEHOLDER_SECRET_VALUES = {
 _PLACEHOLDER_ORIGIN_FRAGMENTS = ("yourdomain.com", "example.com", "localhost", "127.0.0.1")
 
 
+def _load_env_file(path: str) -> None:
+    """Load simple KEY=VALUE env files without requiring optional packages."""
+    if not os.path.isfile(path):
+        return
+    with open(path, encoding="utf-8") as env_file:
+        for raw_line in env_file:
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key:
+                os.environ[key] = value
+
+
 def _load_env() -> None:
     """Load .env and optionally .env.backend once."""
-    from dotenv import load_dotenv
+    dotenv_spec = importlib.util.find_spec("dotenv")
+    env_paths = [
+        os.path.join(_PROJECT_ROOT, ".env"),
+        os.path.join(_PROJECT_ROOT, ".env.backend"),
+    ]
+    if dotenv_spec is not None:
+        dotenv_module = importlib.import_module("dotenv")
+        for env_path in env_paths:
+            dotenv_module.load_dotenv(dotenv_path=env_path, override=True)
+    else:
+        for env_path in env_paths:
+            _load_env_file(env_path)
 
-    load_dotenv(dotenv_path=os.path.join(_PROJECT_ROOT, ".env"), override=True)
-    load_dotenv(dotenv_path=os.path.join(_PROJECT_ROOT, ".env.backend"), override=True)
     if os.path.isfile(os.path.join(_PROJECT_ROOT, ".env")):
         print("[startup] Loaded env from", os.path.join(_PROJECT_ROOT, ".env"))
     else:
