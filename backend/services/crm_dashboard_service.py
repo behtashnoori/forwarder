@@ -1,15 +1,31 @@
 """Read helpers for CRM dashboard payloads."""
+from datetime import UTC, datetime
+
 from sqlalchemy import and_, desc, func
 
 from backend.extensions import db
 from backend.models import Activity, Customer, ExpertUser, Opportunity
 
 
+def _current_month_bounds(now: datetime | None = None) -> tuple[datetime, datetime]:
+    """Return naive UTC datetime bounds for the current calendar month."""
+    now = now or datetime.now(UTC).replace(tzinfo=None)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if month_start.month == 12:
+        next_month_start = month_start.replace(year=month_start.year + 1, month=1)
+    else:
+        next_month_start = month_start.replace(month=month_start.month + 1)
+    return month_start, next_month_start
+
+
 def get_crm_dashboard_kpis() -> dict:
     """Return the CRM dashboard KPI payload."""
+    month_start, next_month_start = _current_month_bounds()
+
     total_customers = db.session.query(Customer).count()
     new_customers_this_month = db.session.query(Customer).filter(
-        func.date_trunc('month', Customer.created_at) == func.date_trunc('month', func.now())
+        Customer.created_at >= month_start,
+        Customer.created_at < next_month_start,
     ).count()
 
     total_opportunities = db.session.query(Opportunity).count()
@@ -38,8 +54,8 @@ def get_crm_dashboard_kpis() -> dict:
 
     recent_activities_data = []
     for activity in recent_activities:
-        customer = db.session.query(Customer).get(activity.customer_id) if activity.customer_id else None
-        expert = db.session.query(ExpertUser).get(activity.expert_user_id)
+        customer = db.session.get(Customer, activity.customer_id) if activity.customer_id else None
+        expert = db.session.get(ExpertUser, activity.expert_user_id)
 
         recent_activities_data.append({
             "id": activity.id,

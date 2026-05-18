@@ -94,7 +94,7 @@ def update_customer(customer_id: int):
     """Update customer information."""
     try:
         data = request.get_json()
-        customer = db.session.query(Customer).get(customer_id)
+        customer = db.session.get(Customer, customer_id)
         
         if not customer:
             return jsonify({"error": "مشتری یافت نشد"}), 404

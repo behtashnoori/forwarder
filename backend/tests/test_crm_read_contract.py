@@ -1,5 +1,5 @@
 """Characterization tests for CRM read endpoint response contracts."""
-from datetime import datetime
+from datetime import UTC, datetime
 
 import pytest
 
@@ -36,7 +36,7 @@ def crm_app():
             customer_type="customer",
             status="active",
             industry="Logistics",
-            created_at=datetime(2026, 5, 18, 10, 0, 0),
+            created_at=datetime.now(UTC).replace(tzinfo=None),
         )
         db.session.add_all([expert, customer])
         db.session.flush()
@@ -170,3 +170,31 @@ def test_crm_read_endpoints_preserve_response_contracts(crm_app):
         "expert",
         "created_at",
     }
+
+    dashboard_response = client.get("/api/crm/dashboard/kpis", headers=headers)
+    assert dashboard_response.status_code == 200
+    dashboard_data = dashboard_response.get_json()
+    assert set(dashboard_data.keys()) == {
+        "customers",
+        "opportunities",
+        "activities",
+        "recent_activities",
+    }
+    assert dashboard_data["customers"] == {"total": 1, "new_this_month": 1}
+    assert dashboard_data["opportunities"] == {
+        "total": 1,
+        "open": 1,
+        "won": 0,
+        "pipeline_value": 1000.0,
+    }
+    assert dashboard_data["activities"] == {"total": 1, "completed": 0}
+    assert dashboard_data["recent_activities"] == [
+        {
+            "id": activities_data["activities"][0]["id"],
+            "type": "call",
+            "subject": "Intro call",
+            "customer_name": "Ali Rahimi",
+            "expert_name": "CRM Read Expert",
+            "created_at": activities_data["activities"][0]["created_at"],
+        }
+    ]

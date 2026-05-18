@@ -86,7 +86,7 @@ def list_customers(filters: dict) -> dict:
 
 def get_customer_detail(customer_id: int):
     """Return detailed information about a customer, or None when absent."""
-    customer = db.session.query(Customer).get(customer_id)
+    customer = db.session.get(Customer, customer_id)
     if not customer:
         return None
 
@@ -200,8 +200,8 @@ def list_opportunities(filters: dict) -> dict:
 
 def build_opportunity_payload(opp: Opportunity) -> dict:
     """Build a CRM opportunity list payload."""
-    customer = db.session.query(Customer).get(opp.customer_id)
-    assigned_expert = db.session.query(ExpertUser).get(opp.assigned_to) if opp.assigned_to else None
+    customer = db.session.get(Customer, opp.customer_id)
+    assigned_expert = db.session.get(ExpertUser, opp.assigned_to) if opp.assigned_to else None
 
     return {
         "id": opp.id,
@@ -253,8 +253,8 @@ def list_activities(filters: dict) -> dict:
 
 def build_activity_payload(activity: Activity) -> dict:
     """Build a CRM activity list payload."""
-    customer = db.session.query(Customer).get(activity.customer_id) if activity.customer_id else None
-    expert = db.session.query(ExpertUser).get(activity.expert_user_id)
+    customer = db.session.get(Customer, activity.customer_id) if activity.customer_id else None
+    expert = db.session.get(ExpertUser, activity.expert_user_id)
 
     return {
         "id": activity.id,
