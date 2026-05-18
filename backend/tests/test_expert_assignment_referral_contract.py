@@ -177,6 +177,10 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     assert unauthenticated.status_code == 401
     assert unauthenticated.get_json() == {"error": "Token is missing"}
 
+    unauthenticated_detail = client.get(f"/api/expert/requests/{expert_contract_app['request_id']}")
+    assert unauthenticated_detail.status_code == 401
+    assert unauthenticated_detail.get_json() == {"error": "Token is missing"}
+
     list_response = client.get("/api/expert/requests?per_page=1", headers=expert_headers)
     assert list_response.status_code == 200
     list_data = list_response.get_json()
@@ -238,6 +242,19 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "has_unread",
         "latest_quote",
     }
+    assert set(detail_data["assigned_to"].keys()) == {"id", "name", "username"}
+    assert detail_data["assigned_to"]["id"] == expert_contract_app["expert_id"]
+    assert set(detail_data["customer"].keys()) == {"first_name", "last_name", "phone", "full_name"}
+    assert detail_data["customer"]["full_name"] == "Ali Rahimi"
+    assert set(detail_data["route"].keys()) == {"origin", "destination"}
+    assert set(detail_data["route"]["origin"].keys()) == {"province", "county", "city"}
+    assert set(detail_data["route"]["destination"].keys()) == {"province", "county", "city"}
+    assert set(detail_data["cargo"].keys()) == {"description", "weight", "volume", "value", "special_instructions"}
+    assert detail_data["cargo"]["description"] == "Phase 4H cargo"
+    assert set(detail_data["dates"].keys()) == {"pickup_date", "delivery_date"}
+    assert detail_data["latest_quote"] is None
+    assert detail_data["messages"] == []
+    assert detail_data["timeline"] == []
 
 
 def test_expert_message_contracts_access_creation_and_listing(expert_contract_app):

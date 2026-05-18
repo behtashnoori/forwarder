@@ -14,7 +14,7 @@ from backend.models import (
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
-from backend.services import assignment_service, message_service, notification_service, quote_service
+from backend.services import assignment_service, expert_request_detail_service, message_service, notification_service, quote_service
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
@@ -191,138 +191,11 @@ def get_shipment_requests():
 def get_shipment_request_detail(request_id: int):
     """Get detailed information about a specific shipment request."""
     try:
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
         current_user = get_current_user()
-        if not current_user or not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-        
-        # Get related data
-        origin_province = db.session.query(Province).get(req.origin_province_id)
-        origin_county = db.session.query(County).get(req.origin_county_id)
-        origin_city = db.session.query(City).get(req.origin_city_id)
-        dest_province = db.session.query(Province).get(req.dest_province_id)
-        dest_county = db.session.query(County).get(req.dest_county_id)
-        dest_city = db.session.query(City).get(req.dest_city_id)
-        assigned_expert = db.session.query(ExpertUser).get(req.assigned_to) if req.assigned_to else None
-        
-        # Get timeline logs
-        logs = db.session.query(ExpertConsoleLog).filter(
-            ExpertConsoleLog.shipment_request_id == request_id
-        ).order_by(ExpertConsoleLog.created_at.desc()).all()
-        
-        # Get messages
-        messages = db.session.query(ExpertConsoleMessage).filter(
-            ExpertConsoleMessage.shipment_request_id == request_id
-        ).order_by(ExpertConsoleMessage.created_at.desc()).all()
-        
-        # Get latest quote (if any) — safe if table does not exist yet
-        latest_quote = None
-        try:
-            latest_quote_row = (
-                db.session.query(ExpertQuote)
-                .filter(ExpertQuote.shipment_request_id == request_id)
-                .order_by(ExpertQuote.created_at.desc())
-                .first()
-            )
-            if latest_quote_row:
-                latest_quote = {
-                    "id": latest_quote_row.id,
-                    "amount": int(latest_quote_row.amount) if latest_quote_row.amount is not None else None,
-                    "currency": latest_quote_row.currency or "IRR",
-                    "note": latest_quote_row.note,
-                    "valid_until": latest_quote_row.valid_until.isoformat() if latest_quote_row.valid_until else None,
-                    "created_at": latest_quote_row.created_at.isoformat(),
-                    "created_by": latest_quote_row.created_by_expert.full_name if latest_quote_row.created_by_expert else None,
-                }
-        except Exception:
-            pass
-        
-        # Format timeline
-        timeline = []
-        for log in logs:
-            timeline.append({
-                "id": log.id,
-                "action": log.action,
-                "old_status": log.old_status,
-                "new_status": log.new_status,
-                "note": log.note,
-                "created_at": log.created_at.isoformat(),
-                "created_by": log.created_by_user.full_name if log.created_by_user else "سیستم"
-            })
-        
-        # Format messages
-        messages_data = []
-        for msg in messages:
-            messages_data.append({
-                "id": msg.id,
-                "type": msg.message_type,
-                "subject": msg.subject,
-                "content": msg.content,
-                "is_read_by_customer": msg.is_read_by_customer,
-                "customer_response": msg.customer_response,
-                "created_at": msg.created_at.isoformat(),
-                "created_by": msg.created_by_user.full_name if msg.created_by_user else "سیستم"
-            })
-        
-        # Calculate SLA status
-        sla_status = "on_time"
-        if req.sla_due_at:
-            if datetime.utcnow() > req.sla_due_at:
-                sla_status = "overdue"
-            elif datetime.utcnow() + timedelta(hours=2) > req.sla_due_at:
-                sla_status = "due_soon"
-        
-        return jsonify({
-            "id": req.id,
-            "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
-            "status": req.status,
-            "priority": req.priority,
-            "created_at": req.created_at.isoformat(),
-            "sla_due_at": req.sla_due_at.isoformat() if req.sla_due_at else None,
-            "sla_status": sla_status,
-            "assigned_to": {
-                "id": assigned_expert.id,
-                "name": assigned_expert.full_name,
-                "username": assigned_expert.username
-            } if assigned_expert else None,
-            "customer": {
-                "first_name": req.customer_first_name,
-                "last_name": req.customer_last_name,
-                "phone": req.contact_phone,
-                "full_name": f"{req.customer_first_name or ''} {req.customer_last_name or ''}".strip() or "نامشخص"
-            },
-            "route": {
-                "origin": {
-                    "province": origin_province.name_fa if origin_province else "نامشخص",
-                    "county": origin_county.name_fa if origin_county else "نامشخص",
-                    "city": origin_city.name_fa if origin_city else "نامشخص"
-                },
-                "destination": {
-                    "province": dest_province.name_fa if dest_province else "نامشخص",
-                    "county": dest_county.name_fa if dest_county else "نامشخص",
-                    "city": dest_city.name_fa if dest_city else "نامشخص"
-                }
-            },
-            "transport_method": req.transport_method,
-            "cargo": {
-                "description": req.cargo_description,
-                "weight": req.cargo_weight,
-                "volume": req.cargo_volume,
-                "value": req.cargo_value,
-                "special_instructions": req.special_instructions
-            },
-            "dates": {
-                "pickup_date": req.pickup_date.isoformat() if req.pickup_date else None,
-                "delivery_date": req.delivery_date.isoformat() if req.delivery_date else None
-            },
-            "timeline": timeline,
-            "messages": messages_data,
-            "has_unread": req.has_unread_for_assignee,
-            "latest_quote": latest_quote
-        })
-        
+        response_payload = expert_request_detail_service.get_expert_request_detail(request_id, current_user)
+        return jsonify(response_payload)
+    except expert_request_detail_service.ExpertRequestDetailServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         current_app.logger.error(f"Error getting shipment request detail: {e}")
         return jsonify({"error": "خطا در دریافت جزئیات درخواست"}), 500
