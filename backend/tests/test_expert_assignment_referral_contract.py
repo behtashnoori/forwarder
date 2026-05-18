@@ -244,6 +244,7 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
     """Mutation endpoints keep assignment/status/quote/message/notification response and side-effect contracts."""
     client = expert_contract_app["app"].test_client()
     admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    expert_headers = _auth_headers(expert_contract_app["expert_token"])
     other_headers = _auth_headers(expert_contract_app["other_expert_token"])
     request_id = expert_contract_app["request_id"]
     other_expert_id = expert_contract_app["other_expert_id"]
@@ -282,6 +283,38 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
     )
     assert status_response.status_code == 200
     assert status_response.get_json() == {"message": "وضعیت با موفقیت به‌روزرسانی شد", "status": "in_progress"}
+
+    forbidden_latest_quote = client.get(f"/api/expert/requests/{request_id}/quote/latest", headers=expert_headers)
+    assert forbidden_latest_quote.status_code == 403
+    assert forbidden_latest_quote.get_json() == {"error": "شما به این درخواست دسترسی ندارید"}
+
+    missing_quote_target = client.post(
+        "/api/expert/requests/999999/quote",
+        headers=other_headers,
+        json={"amount": "12345"},
+    )
+    assert missing_quote_target.status_code == 404
+    assert missing_quote_target.get_json() == {"error": "درخواست یافت نشد"}
+
+    missing_amount = client.post(f"/api/expert/requests/{request_id}/quote", headers=other_headers, json={})
+    assert missing_amount.status_code == 400
+    assert missing_amount.get_json() == {"error": "مبلغ الزامی است"}
+
+    non_numeric_amount = client.post(
+        f"/api/expert/requests/{request_id}/quote",
+        headers=other_headers,
+        json={"amount": "not-a-number"},
+    )
+    assert non_numeric_amount.status_code == 400
+    assert non_numeric_amount.get_json() == {"error": "مبلغ باید عدد باشد"}
+
+    negative_amount = client.post(
+        f"/api/expert/requests/{request_id}/quote",
+        headers=other_headers,
+        json={"amount": -1},
+    )
+    assert negative_amount.status_code == 400
+    assert negative_amount.get_json() == {"error": "مبلغ نامعتبر است"}
 
     quote_response = client.post(
         f"/api/expert/requests/{request_id}/quote",
