@@ -73,3 +73,7 @@ The following remain outside Phase 3H scope and are deferred to Phase 4 or later
 - CI/CD.
 - OpenAPI documentation.
 - DBA review for archived root-only migration `54ea21ea0d9f` if a production database reports that revision.
+
+## 8. Re-run Evidence
+
+The Phase 3H gate was re-run in the same container after the prior blocked result. The environment state and result remained unchanged: Flask and the other backend runtime dependencies were still missing, both official requirements installs were retried, and both failed with the same package-index/proxy `403 Forbidden` while resolving `/simple/flask/`. Backend pytest commands still fail during collection with `ModuleNotFoundError: No module named 'flask'`. Frontend/structure gates and the read-only migration safety check still pass.
