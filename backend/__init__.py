@@ -36,11 +36,19 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
 
     # Default configuration makes it easy to run the backend locally while still
     # allowing full override via environment variables or a provided config mapping.
-    default_config: MutableMapping[str, Any] = {
-        "SQLALCHEMY_DATABASE_URI": os.getenv(
+    # In test mode, never fall back to a developer/production DATABASE_URL; tests
+    # must use an isolated database unless they explicitly provide another URI.
+    is_testing_config = bool(config and config.get("TESTING"))
+    default_database_uri = (
+        os.getenv("TEST_DATABASE_URL", "sqlite:///:memory:")
+        if is_testing_config
+        else os.getenv(
             "DATABASE_URL",
             "postgresql+psycopg2://postgres:bagheri13@127.0.0.1:5432/forwarder_db",
-        ),
+        )
+    )
+    default_config: MutableMapping[str, Any] = {
+        "SQLALCHEMY_DATABASE_URI": default_database_uri,
         "SQLALCHEMY_TRACK_MODIFICATIONS": False,
         "CORS_ORIGIN": os.getenv("CORS_ORIGIN", "*"),
         "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
@@ -137,8 +145,14 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
             traceback.print_exc()
             sys.exit(1)
 
+    # Test apps should be self-contained and must not depend on external schema
+    # state, migrations, or developer databases. This is test-only and does not
+    # affect production startup behavior.
+    if app.config.get("TESTING"):
+        with app.app_context():
+            db.create_all()
     # When not testing and not skip_startup: run migrations, verify tables, seed (gunicorn/wsgi; run.py runs them itself to avoid double run with reloader)
-    if not app.config.get("TESTING") and not skip_startup:
+    elif not skip_startup:
         from backend.startup import run_migrations, verify_critical_tables
         from backend.startup_seed import run_startup_seed
         run_migrations(app)
