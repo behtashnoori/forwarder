@@ -193,3 +193,70 @@ def test_public_tracking_response_includes_workflow_steps_simple(app_with_tables
     assert len(simple) == 4
     assert simple[0]["name"] == "request_submitted"
     assert simple[3]["name"] == "final_decision"
+
+
+def test_public_tracking_response_contract_keys_and_public_not_found(app_with_tables):
+    """Public tracking endpoint preserves current response keys and public not-found contract."""
+    app = app_with_tables
+    created_at = datetime.utcnow()
+    req = _make_request(app, status="new", created_at=created_at)
+    with app.app_context():
+        rid = req.id
+    client = app.test_client()
+
+    missing = client.get("/api/public/track/999999")
+    assert missing.status_code == 404
+    assert json.loads(missing.data) == {"message": "درخواست یافت نشد"}
+
+    response = client.get(f"/api/public/track/{rid}")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert set(data.keys()) == {
+        "id",
+        "tracking_number",
+        "status",
+        "created_at",
+        "shipping_type",
+        "contact_phone",
+        "customer_first_name",
+        "customer_last_name",
+        "route",
+        "transport_method",
+        "domestic_transport_method",
+        "international_transport_method",
+        "transport_method_preference",
+        "cargo_description",
+        "cargo_weight",
+        "cargo_volume",
+        "cargo_value",
+        "special_instructions",
+        "pickup_date",
+        "delivery_date",
+        "assigned_expert",
+        "assigned_at",
+        "last_customer_touch_at",
+        "latest_quote",
+        "workflow_steps",
+        "workflow_steps_simple",
+    }
+    assert data["tracking_number"] == f"SR{rid:06d}"
+    assert data["status"] == "new"
+    assert data["shipping_type"] == "domestic"
+    assert data["assigned_expert"] is None
+    assert data["latest_quote"] is None
+    assert set(data["route"].keys()) == {"origin", "destination"}
+    assert [step["name"] for step in data["workflow_steps"]] == [
+        "request_submitted",
+        "expert_assigned",
+        "expert_contacted",
+        "quote_provided",
+        "contract_signed",
+        "shipment_picked_up",
+        "shipment_delivered",
+    ]
+    assert [step["name"] for step in data["workflow_steps_simple"]] == [
+        "request_submitted",
+        "expert_assigned",
+        "in_progress",
+        "final_decision",
+    ]
