@@ -1,22 +1,20 @@
 """User management API routes for CRM hierarchy system."""
-import json
-from datetime import datetime
 from typing import Any, Dict, List, Optional
 import bcrypt
 
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import and_, or_, desc, func
+from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from backend.extensions import db
 from backend.models import (
-    ExpertUser, TransportMethod, ExpertSpecialization, AssignmentRule, AssignmentLog,
+    ExpertUser, ExpertSpecialization, AssignmentRule, AssignmentLog,
     ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification,
     ShipmentRequest, Opportunity, Activity, Task, Report,
 )
 from backend.auth import require_auth, get_current_user
 from backend.security import require_role, validate_input, sanitize_input
-from backend.services import assignment_service
+from backend.services import assignment_rule_service, assignment_service, transport_method_service
 
 user_management_bp = Blueprint("user_management", __name__, url_prefix="/api/user-management")
 
@@ -27,20 +25,7 @@ user_management_bp = Blueprint("user_management", __name__, url_prefix="/api/use
 def get_transport_methods():
     """Get all transport methods."""
     try:
-        transport_methods = db.session.query(TransportMethod).filter(
-            TransportMethod.is_active == True
-        ).order_by(TransportMethod.name_fa).all()
-        
-        methods_data = []
-        for method in transport_methods:
-            methods_data.append({
-                "id": method.id,
-                "name": method.name,
-                "name_fa": method.name_fa,
-                "description": method.description,
-                "is_active": method.is_active,
-                "created_at": method.created_at.isoformat()
-            })
+        methods_data = transport_method_service.list_transport_methods()
         
         return jsonify({
             "transport_methods": methods_data
@@ -57,16 +42,7 @@ def create_transport_method():
     """Create a new transport method."""
     try:
         data = request.get_json()
-        
-        transport_method = TransportMethod(
-            name=data.get("name"),
-            name_fa=data.get("name_fa"),
-            description=data.get("description"),
-            is_active=data.get("is_active", True)
-        )
-        
-        db.session.add(transport_method)
-        db.session.commit()
+        transport_method = transport_method_service.create_transport_method(data)
         
         return jsonify({
             "message": "روش حمل با موفقیت ایجاد شد",
@@ -403,28 +379,7 @@ def delete_user(user_id: int):
 def get_assignment_rules():
     """Get all assignment rules."""
     try:
-        
-        rules = db.session.query(AssignmentRule).order_by(
-            desc(AssignmentRule.priority), AssignmentRule.name
-        ).all()
-        
-        rules_data = []
-        for rule in rules:
-            rules_data.append({
-                "id": rule.id,
-                "name": rule.name,
-                "description": rule.description,
-                "rule_type": rule.rule_type,
-                "conditions": json.loads(rule.conditions),
-                "priority": rule.priority,
-                "is_active": rule.is_active,
-                "created_by": {
-                    "id": rule.creator.id,
-                    "name": rule.creator.full_name
-                },
-                "created_at": rule.created_at.isoformat(),
-                "updated_at": rule.updated_at.isoformat()
-            })
+        rules_data = assignment_rule_service.list_assignment_rules()
         
         return jsonify({
             "assignment_rules": rules_data
@@ -442,19 +397,7 @@ def create_assignment_rule():
     try:
         current_user = get_current_user()
         data = request.get_json()
-        
-        rule = AssignmentRule(
-            name=data.get("name"),
-            description=data.get("description"),
-            rule_type=data.get("rule_type"),
-            conditions=json.dumps(data.get("conditions", {})),
-            priority=data.get("priority", 1),
-            is_active=data.get("is_active", True),
-            created_by=current_user.get("id")
-        )
-        
-        db.session.add(rule)
-        db.session.commit()
+        rule = assignment_rule_service.create_assignment_rule(data, current_user.get("id"))
         
         return jsonify({
             "message": "قانون ارجاع با موفقیت ایجاد شد",
@@ -472,25 +415,14 @@ def create_assignment_rule():
 def update_assignment_rule(rule_id: int):
     """Update an assignment rule."""
     try:
-        
-        rule = db.session.query(AssignmentRule).get(rule_id)
+        existing_rule = assignment_rule_service.get_assignment_rule_or_none(rule_id)
+        if not existing_rule:
+            return jsonify({"error": "قانون ارجاع یافت نشد"}), 404
+
+        data = request.get_json()
+        rule = assignment_rule_service.update_assignment_rule(rule_id, data)
         if not rule:
             return jsonify({"error": "قانون ارجاع یافت نشد"}), 404
-        
-        data = request.get_json()
-        
-        # Update fields
-        updatable_fields = ["name", "description", "rule_type", "priority", "is_active"]
-        for field in updatable_fields:
-            if field in data:
-                setattr(rule, field, data[field])
-        
-        if "conditions" in data:
-            rule.conditions = json.dumps(data["conditions"])
-        
-        rule.updated_at = datetime.utcnow()
-        
-        db.session.commit()
         
         return jsonify({
             "message": "قانون ارجاع به‌روزرسانی شد"

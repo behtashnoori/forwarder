@@ -257,6 +257,137 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     assert detail_data["timeline"] == []
 
 
+def test_expert_request_list_filters_visibility_and_order_contract(expert_contract_app):
+    """Request list keeps current visibility, filters, pagination, and ordering."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    expert_headers = _auth_headers(expert_contract_app["expert_token"])
+    other_headers = _auth_headers(expert_contract_app["other_expert_token"])
+    expert_id = expert_contract_app["expert_id"]
+    other_expert_id = expert_contract_app["other_expert_id"]
+    base_time = datetime(2026, 1, 1, 10, 0, 0)
+
+    with expert_contract_app["app"].app_context():
+        original_request = db.session.get(ShipmentRequest, expert_contract_app["request_id"])
+        original_request.created_at = base_time
+
+        other_request = ShipmentRequest(
+            tracking_code="SR-P4O002",
+            shipping_type="domestic",
+            contact_phone="09120000002",
+            customer_first_name="Sara",
+            customer_last_name="Karimi",
+            transport_method="air",
+            domestic_transport_method="air",
+            transport_method_preference="customer_choice",
+            cargo_description="Needle machinery",
+            cargo_weight=20.0,
+            cargo_volume=5.0,
+            cargo_value=2000.0,
+            status_request_status="won",
+            status="waiting_for_customer",
+            priority="high",
+            assigned_to=other_expert_id,
+            has_unread_for_assignee=False,
+            created_at=base_time + timedelta(minutes=2),
+            ready_at=base_time + timedelta(minutes=2),
+            sla_due_at=base_time + timedelta(hours=4),
+        )
+        unassigned_request = ShipmentRequest(
+            tracking_code="SR-P4O003",
+            shipping_type="domestic",
+            contact_phone="09120000003",
+            customer_first_name="Mina",
+            customer_last_name="Azadi",
+            transport_method="road",
+            domestic_transport_method="road",
+            transport_method_preference="forwarder_suggestion",
+            cargo_description="General cargo",
+            status_request_status="lost",
+            status="assigned",
+            priority="urgent",
+            assigned_to=None,
+            has_unread_for_assignee=True,
+            created_at=base_time + timedelta(minutes=1),
+            ready_at=base_time + timedelta(minutes=1),
+        )
+        db.session.add_all([other_request, unassigned_request])
+        db.session.commit()
+        other_request_id = other_request.id
+        unassigned_request_id = unassigned_request.id
+
+    expert_response = client.get("/api/expert/requests", headers=expert_headers)
+    assert expert_response.status_code == 200
+    expert_payload = expert_response.get_json()
+    assert [item["id"] for item in expert_payload["requests"]] == [expert_contract_app["request_id"]]
+    assert expert_payload["pagination"]["total"] == 1
+
+    other_response = client.get("/api/expert/requests", headers=other_headers)
+    assert other_response.status_code == 200
+    other_payload = other_response.get_json()
+    assert [item["id"] for item in other_payload["requests"]] == [other_request_id]
+    assert other_payload["requests"][0]["assigned_to"] == {
+        "id": other_expert_id,
+        "name": "Phase 4H Other Expert",
+    }
+    assert other_payload["requests"][0]["has_unread"] is False
+
+    admin_response = client.get("/api/expert/requests?per_page=1&page=1", headers=admin_headers)
+    assert admin_response.status_code == 200
+    admin_payload = admin_response.get_json()
+    assert [item["id"] for item in admin_payload["requests"]] == [other_request_id]
+    assert admin_payload["pagination"] == {
+        "page": 1,
+        "per_page": 1,
+        "total": 3,
+        "pages": 3,
+        "has_next": True,
+        "has_prev": False,
+    }
+
+    ascending_response = client.get(
+        "/api/expert/requests?sort_by=created_at&sort_order=asc",
+        headers=admin_headers,
+    )
+    assert ascending_response.status_code == 200
+    assert [item["id"] for item in ascending_response.get_json()["requests"]] == [
+        expert_contract_app["request_id"],
+        unassigned_request_id,
+        other_request_id,
+    ]
+
+    assigned_filter_response = client.get(
+        f"/api/expert/requests?assigned_to={expert_id}",
+        headers=admin_headers,
+    )
+    assert assigned_filter_response.status_code == 200
+    assert [item["id"] for item in assigned_filter_response.get_json()["requests"]] == [
+        expert_contract_app["request_id"]
+    ]
+
+    status_filter_response = client.get(
+        "/api/expert/requests?status=won,lost,closed",
+        headers=admin_headers,
+    )
+    assert status_filter_response.status_code == 200
+    assert [item["id"] for item in status_filter_response.get_json()["requests"]] == [
+        other_request_id,
+        unassigned_request_id,
+    ]
+
+    priority_search_response = client.get(
+        "/api/expert/requests?priority=high&search=Needle",
+        headers=admin_headers,
+    )
+    assert priority_search_response.status_code == 200
+    priority_search_payload = priority_search_response.get_json()
+    assert [item["id"] for item in priority_search_payload["requests"]] == [other_request_id]
+    assert priority_search_payload["requests"][0]["customer"] == {
+        "name": "Sara Karimi",
+        "phone": "09120000002",
+    }
+
+
 def test_expert_message_contracts_access_creation_and_listing(expert_contract_app):
     """Message behavior keeps access checks, creation side effects, and request-detail listing shape."""
     client = expert_contract_app["app"].test_client()

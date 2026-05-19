@@ -34,16 +34,12 @@ The route directly handled:
 - Calculating SLA status.
 - Returning the existing generic request-detail error payload on unexpected errors.
 
-Pre-change checks were run before editing:
+Pre-change checks were run before editing. In this workspace `python` is not on PATH and the virtualenv needs access to its base Python install, so the pytest commands were executed through `.venv\Scripts\python.exe -m pytest`:
 
 | Check | Result |
 | --- | --- |
-| `python -m pytest -q` | Passed: `68 passed` |
-| `python -m pytest backend/tests/test_expert_assignment_referral_contract.py -q` | Passed: `8 passed` |
-| `npm run lint` | Passed with existing warnings: `0 errors`, `17 warnings` |
-| `npm run build` | Passed with existing Vite/Browserslist/chunk-size warnings |
-| `npm run check:structure` | Passed |
-| `git diff --check` | Passed |
+| `python -m pytest -q` | Failed before this phase's edits with two existing CORS OPTIONS failures in `backend/tests/test_cors.py`; `66 passed`, `2 failed`. |
+| `python -m pytest backend/tests/test_expert_assignment_referral_contract.py -q` | Passed: `8 passed`. |
 
 ## 3. Characterization Tests
 
@@ -104,13 +100,13 @@ Post-change checks:
 
 | Check | Result |
 | --- | --- |
-| `python -m pytest -q` | Passed: `68 passed` |
-| `python -m pytest backend/tests/test_expert_assignment_referral_contract.py -q` | Passed: `8 passed` |
-| Targeted expert request detail tests | Covered by expanded `test_expert_request_read_contracts_and_access_errors` and `test_expert_message_contracts_access_creation_and_listing`; passed. |
-| `npm run lint` | Passed with existing warnings: `0 errors`, `17 warnings` |
-| `npm run build` | Passed with existing Vite/Browserslist/chunk-size warnings |
-| `npm run check:structure` | Passed |
-| `git diff --check` | Passed |
+| `python -m pytest -q` | Failed with the same two unrelated CORS OPTIONS failures in `backend/tests/test_cors.py`; `66 passed`, `2 failed`. |
+| `python -m pytest backend/tests/test_expert_assignment_referral_contract.py -q` | Passed: `8 passed`. |
+| Targeted expert request detail tests | Covered by expanded `test_expert_request_read_contracts_and_access_errors` and `test_expert_message_contracts_access_creation_and_listing`; passed through the expert contract suite. |
+| `npm run lint` | Passed via `npm.cmd run lint` after PowerShell blocked `npm.ps1`; existing warnings only: `0 errors`, `17 warnings`. |
+| `npm run build` | Passed via `npm.cmd run build`; existing Browserslist/chunk-size warnings only. |
+| `npm run check:structure` | Passed. |
+| `git diff --check` | Passed; Git warned that the updated Markdown file will use CRLF when touched. |
 
 ## 8. Deferred Items
 

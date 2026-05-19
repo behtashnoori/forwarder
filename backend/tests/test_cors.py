@@ -35,7 +35,7 @@ def client(app_with_cors):
     return app_with_cors.test_client()
 
 
-ORIGIN = "http://130.185.77.25:8080"
+ORIGIN = "http://127.0.0.1:8080"
 
 
 def test_options_provinces_returns_cors_headers(client):
@@ -53,6 +53,7 @@ def test_options_provinces_returns_cors_headers(client):
     assert response.headers["Access-Control-Allow-Origin"] == ORIGIN
     assert "Access-Control-Allow-Credentials" in response.headers
     assert "Access-Control-Allow-Methods" in response.headers
+    assert "GET" in response.headers["Access-Control-Allow-Methods"]
 
 
 def test_options_transport_methods_returns_cors_headers(client):
@@ -68,3 +69,6 @@ def test_options_transport_methods_returns_cors_headers(client):
     assert response.status_code == 200
     assert "Access-Control-Allow-Origin" in response.headers
     assert response.headers["Access-Control-Allow-Origin"] == ORIGIN
+    assert "Access-Control-Allow-Credentials" in response.headers
+    assert "Access-Control-Allow-Methods" in response.headers
+    assert "GET" in response.headers["Access-Control-Allow-Methods"]

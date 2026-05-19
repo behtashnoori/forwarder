@@ -3,18 +3,25 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request, current_app, g
-from sqlalchemy import and_, or_, desc, func
+from sqlalchemy import and_, or_, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import (
-    ShipmentRequest, ShipmentRequestLog, Province, County, City, ExpertUser,
+    ShipmentRequest, ShipmentRequestLog, ExpertUser,
     ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification, ExpertQuote
 )
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
-from backend.services import assignment_service, expert_request_detail_service, message_service, notification_service, quote_service
+from backend.services import (
+    assignment_service,
+    expert_request_detail_service,
+    expert_request_list_service,
+    message_service,
+    notification_service,
+    quote_service,
+)
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
@@ -37,150 +44,10 @@ def get_shipment_requests():
         if not current_user:
             return jsonify({"error": "احراز هویت نشده"}), 401
 
-        # Query parameters
-        page = request.args.get("page", 1, type=int)
-        per_page = min(request.args.get("per_page", 20, type=int), 100)
-        status = request.args.get("status")
-        assigned_to = request.args.get("assigned_to")
-        priority = request.args.get("priority")
-        search = request.args.get("search")
-        sort_by = request.args.get("sort_by", "created_at")
-        sort_order = request.args.get("sort_order", "desc")
-        
-        # Build query
-        query = db.session.query(ShipmentRequest)
-        
-        # Non-admin: only show requests assigned to current user
-        if current_user.get("role") != "admin":
-            query = query.filter(ShipmentRequest.assigned_to == current_user["id"])
-        elif assigned_to:
-            # Admin may filter by assigned_to
-            query = query.filter(ShipmentRequest.assigned_to == assigned_to)
-        
-        # Apply filters
-        if status:
-            # Handle comma-separated status values (e.g., "won,lost,closed")
-            if "," in status:
-                status_list = [s.strip() for s in status.split(",")]
-                query = query.filter(
-                    or_(
-                        ShipmentRequest.status.in_(status_list),
-                        ShipmentRequest.status_request_status.in_(status_list)
-                    )
-                )
-            else:
-                query = query.filter(
-                    or_(
-                        ShipmentRequest.status == status,
-                        ShipmentRequest.status_request_status == status
-                    )
-                )
-        if priority:
-            query = query.filter(ShipmentRequest.priority == priority)
-        if search:
-            search_term = f"%{search}%"
-            query = query.filter(
-                or_(
-                    ShipmentRequest.contact_phone.like(search_term),
-                    ShipmentRequest.customer_first_name.like(search_term),
-                    ShipmentRequest.customer_last_name.like(search_term),
-                    ShipmentRequest.cargo_description.like(search_term)
-                )
-            )
-        
-        # Apply sorting
-        if sort_by == "created_at":
-            sort_column = ShipmentRequest.created_at
-        elif sort_by == "sla_due_at":
-            sort_column = ShipmentRequest.sla_due_at
-        elif sort_by == "priority":
-            sort_column = ShipmentRequest.priority
-        else:
-            sort_column = ShipmentRequest.created_at
-            
-        if sort_order == "desc":
-            query = query.order_by(desc(sort_column))
-        else:
-            query = query.order_by(sort_column)
-        
-        # Get paginated results
-        pagination = query.paginate(
-            page=page, per_page=per_page, error_out=False
-        )
-        
-        # Format response
-        requests_data = []
-        for req in pagination.items:
-            # Get related data
-            origin_province = db.session.query(Province).get(req.origin_province_id)
-            origin_county = db.session.query(County).get(req.origin_county_id)
-            origin_city = db.session.query(City).get(req.origin_city_id)
-            dest_province = db.session.query(Province).get(req.dest_province_id)
-            dest_county = db.session.query(County).get(req.dest_county_id)
-            dest_city = db.session.query(City).get(req.dest_city_id)
-            assigned_expert = db.session.query(ExpertUser).get(req.assigned_to) if req.assigned_to else None
-            
-            # Calculate SLA status
-            sla_status = "on_time"
-            if req.sla_due_at:
-                if datetime.utcnow() > req.sla_due_at:
-                    sla_status = "overdue"
-                elif datetime.utcnow() + timedelta(hours=2) > req.sla_due_at:
-                    sla_status = "due_soon"
-            
-            requests_data.append({
-                "id": req.id,
-                "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
-                "status": req.status,
-                "priority": req.priority,
-                "created_at": req.created_at.isoformat(),
-                "sla_due_at": req.sla_due_at.isoformat() if req.sla_due_at else None,
-                "sla_status": sla_status,
-                "assigned_to": {
-                    "id": assigned_expert.id,
-                    "name": assigned_expert.full_name
-                } if assigned_expert else None,
-                "customer": {
-                    "name": f"{req.customer_first_name or ''} {req.customer_last_name or ''}".strip() or "نامشخص",
-                    "phone": req.contact_phone
-                },
-                "route": {
-                    "origin": {
-                        "province": origin_province.name_fa if origin_province else "نامشخص",
-                        "county": origin_county.name_fa if origin_county else "نامشخص", 
-                        "city": origin_city.name_fa if origin_city else "نامشخص"
-                    },
-                    "destination": {
-                        "province": dest_province.name_fa if dest_province else "نامشخص",
-                        "county": dest_county.name_fa if dest_county else "نامشخص",
-                        "city": dest_city.name_fa if dest_city else "نامشخص"
-                    }
-                },
-                "transport_method": req.transport_method,  # Legacy field
-                "international_transport_method": req.international_transport_method,
-                "domestic_transport_method": req.domestic_transport_method,
-                "transport_method_preference": req.transport_method_preference,
-                "cargo": {
-                    "description": req.cargo_description,
-                    "weight": req.cargo_weight,
-                    "volume": req.cargo_volume,
-                    "value": req.cargo_value
-                },
-                "has_unread": req.has_unread_for_assignee
-            })
-        
-        return jsonify({
-            "requests": requests_data,
-            "pagination": {
-                "page": page,
-                "per_page": per_page,
-                "total": pagination.total,
-                "pages": pagination.pages,
-                "has_next": pagination.has_next,
-                "has_prev": pagination.has_prev
-            }
-        })
-        
+        filters = expert_request_list_service.normalize_request_list_filters(request.args)
+        response_payload = expert_request_list_service.list_expert_requests(current_user, filters)
+        return jsonify(response_payload)
+
     except Exception as e:
         current_app.logger.error(f"Error getting shipment requests: {e}")
         return jsonify({"error": "خطا در دریافت درخواست‌ها"}), 500
