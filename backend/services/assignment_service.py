@@ -53,6 +53,8 @@ def assign_request_to_expert(
     expert = get_assignment_target_expert_or_none(target_expert_id)
     if not expert:
         raise AssignmentNotFoundError("کارشناس یافت نشد", 404)
+    if not expert.is_active:
+        raise AssignmentValidationError("کارشناس غیرفعال است")
 
     old_status = req.status
     req.assigned_to = target_expert_id
@@ -65,6 +67,34 @@ def assign_request_to_expert(
     db.session.commit()
 
     return build_assignment_response_payload(expert)
+
+
+def manual_assign_request(
+    payload: dict[str, Any],
+    actor: Optional[dict[str, Any]] = None,
+    remote_addr: Optional[str] = None,
+) -> dict[str, Any]:
+    """Validate the user-management manual assignment payload and use the shared assignment path."""
+    normalized = normalize_manual_assignment_payload(payload)
+    return assign_request_to_expert(
+        normalized["request_id"],
+        expert_id=normalized["expert_id"],
+        actor=actor,
+        remote_addr=remote_addr,
+    )
+
+
+def normalize_manual_assignment_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize the manual assignment payload."""
+    request_id = payload.get("request_id")
+    if not request_id:
+        raise AssignmentValidationError("شناسه درخواست الزامی است")
+
+    expert_id = payload.get("expert_id")
+    if not expert_id:
+        raise AssignmentValidationError("شناسه کارشناس الزامی است")
+
+    return {"request_id": request_id, "expert_id": expert_id}
 
 
 def normalize_assignment_payload(payload: dict[str, Any]) -> dict[str, Any]:

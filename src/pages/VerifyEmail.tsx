@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { env } from "@/lib/env";
+import { verifyCustomerEmail } from "@/lib/api";
 
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -21,9 +21,7 @@ const VerifyEmail: React.FC = () => {
     }
 
     setStatus("loading");
-    const url = `${env.API_URL}/api/customer/verify-email?token=${encodeURIComponent(token)}`;
-    fetch(url)
-      .then((res) => res.json().then((data) => ({ ok: res.ok, data })))
+    verifyCustomerEmail(token)
       .then(({ ok, data }) => {
         if (ok && data.customer_id) {
           setStatus("success");

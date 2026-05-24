@@ -1,96 +1,126 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
 import {
+  fetchPublicTracking,
+  PublicTrackingHttpError,
+  PublicTrackingNotFoundError,
+  type PublicTrackingData,
+} from "@/lib/api";
+import {
+  AlertCircle,
   ArrowLeft,
-  User,
-  Phone,
-  MapPin,
-  Package,
   Calendar,
   CheckCircle,
   Clock,
-  AlertCircle,
-  Truck,
-  FileText,
   DollarSign,
+  FileText,
+  Home,
+  MapPin,
+  Package,
+  Phone,
+  Route,
+  Truck,
+  User,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { env } from "@/lib/env";
-
-interface WorkflowStep {
-  name: string;
-  order: number;
-  title: string;
-  is_completed: boolean;
-  completed_at: string | null;
-  points_earned?: number;
-  meta?: { warning?: string };
-}
-
-interface PublicTrackingData {
-  id: number;
-  tracking_number: string;
-  status: string;
-  created_at: string;
-  shipping_type: string;
-  contact_phone: string;
-  customer_first_name?: string;
-  customer_last_name?: string;
-  route: {
-    origin: {
-      province?: string;
-      county?: string;
-      city?: string;
-      country?: string;
-      city_international?: string;
-      address?: string;
-    };
-    destination: {
-      province?: string;
-      county?: string;
-      city?: string;
-      country?: string;
-      city_international?: string;
-      address?: string;
-    };
-  };
-  transport_method?: string;
-  domestic_transport_method?: string;
-  international_transport_method?: string;
-  transport_method_preference?: string;
-  cargo_description?: string;
-  cargo_weight?: number;
-  cargo_volume?: number;
-  cargo_value?: number;
-  special_instructions?: string;
-  pickup_date?: string | null;
-  delivery_date?: string | null;
-  assigned_expert?: {
-    id: number;
-    full_name: string;
-    phone: string;
-    email?: string;
-  };
-  assigned_at?: string | null;
-  last_customer_touch_at?: string | null;
-  latest_quote?: {
-    id: number;
-    amount: number;
-    currency: string;
-    note?: string | null;
-    valid_until?: string | null;
-    created_at: string;
-    created_by?: string | null;
-  } | null;
-  workflow_steps?: WorkflowStep[];
-  workflow_steps_simple?: WorkflowStep[];
-}
 
 const showLatestQuoteCard: boolean = false;
+
+type StatusInfo = {
+  label: string;
+  variant: "secondary" | "default" | "destructive";
+  color: string;
+};
+
+const getStatusBadge = (status: string): StatusInfo => {
+  const statusMap: Record<string, StatusInfo> = {
+    new: { label: "جدید", variant: "secondary", color: "bg-gray-100 text-gray-800" },
+    assigned: { label: "اختصاص یافته", variant: "default", color: "bg-blue-100 text-blue-800" },
+    in_progress: { label: "در حال انجام", variant: "default", color: "bg-yellow-100 text-yellow-800" },
+    quoted: { label: "پیشنهاد ارائه شده", variant: "default", color: "bg-purple-100 text-purple-800" },
+    waiting_for_customer: { label: "در انتظار مشتری", variant: "default", color: "bg-orange-100 text-orange-800" },
+    won: { label: "تکمیل شده", variant: "default", color: "bg-green-100 text-green-800" },
+    lost: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
+    closed: { label: "بسته شده", variant: "secondary", color: "bg-gray-100 text-gray-800" },
+    cancelled: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
+  };
+  return statusMap[status] || { label: status, variant: "secondary", color: "bg-gray-100 text-gray-800" };
+};
+
+const getCurrentStatusLabel = (status: string): string => {
+  const map: Record<string, string> = {
+    in_progress: "در حال پیگیری",
+    waiting_for_customer: "منتظر پاسخ شما",
+    won: "پذیرفته شد",
+    lost: "پذیرفته نشد",
+    closed: "بسته شد",
+  };
+  return map[status] ?? "";
+};
+
+const formatDate = (
+  value?: string | null,
+  options?: Intl.DateTimeFormatOptions,
+  fallback = "—",
+) => {
+  if (!value) return fallback;
+  return new Date(value).toLocaleDateString("fa-IR", options);
+};
+
+const getLocationDisplay = (
+  location: PublicTrackingData["route"]["origin"],
+  isInternational: boolean,
+) => {
+  if (!location) return "—";
+  if (isInternational) {
+    const parts = [location.city_international, location.country].filter(Boolean);
+    return parts.length ? parts.join("، ") : "ثبت نشده";
+  }
+  const parts = [location.city, location.county, location.province].filter(Boolean);
+  return parts.length ? parts.join("، ") : "ثبت نشده";
+};
+
+const Section = ({
+  icon: Icon,
+  title,
+  children,
+  className = "",
+}: {
+  icon: React.ElementType;
+  title: string;
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <Card className={`overflow-hidden border-border/80 bg-card/95 shadow-sm ${className}`}>
+    <CardContent className="p-0">
+      <div className="flex items-center gap-3 border-b border-border/70 bg-muted/25 px-5 py-4">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </span>
+        <h2 className="text-base font-bold text-foreground">{title}</h2>
+      </div>
+      <div className="p-5">{children}</div>
+    </CardContent>
+  </Card>
+);
+
+const Field = ({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: React.ReactNode;
+  className?: string;
+}) => (
+  <div className={`rounded-md border border-border/70 bg-background/70 p-4 ${className}`}>
+    <p className="mb-1 text-xs font-medium text-muted-foreground">{label}</p>
+    <div className="break-words text-sm font-semibold leading-7 text-foreground">{value}</div>
+  </div>
+);
 
 const PublicTracking: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
@@ -101,115 +131,93 @@ const PublicTracking: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
-  useEffect(() => {
-    if (requestId) {
-      fetchRequestData();
-    }
-  }, [requestId]);
-
-  const fetchRequestData = async () => {
+  const fetchRequestData = useCallback(async () => {
     if (!requestId) return;
     try {
-      const url = `${env.API_URL}/api/public/track/${encodeURIComponent(requestId)}`;
-      const response = await fetch(url);
-
-      if (response.ok) {
-        const data = await response.json();
-        setRequestData(data);
-      } else if (response.status === 404) {
+      const data = await fetchPublicTracking(requestId);
+      setRequestData(data);
+    } catch (error) {
+      if (error instanceof PublicTrackingNotFoundError) {
         setNotFound(true);
-      } else {
+      } else if (error instanceof PublicTrackingHttpError) {
         toast({
           title: "خطا",
           description: "خطا در دریافت اطلاعات درخواست",
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "خطا",
+          description: "خطا در ارتباط با سرور",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      toast({
-        title: "خطا",
-        description: "خطا در ارتباط با سرور",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [requestId, toast]);
 
-  const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "secondary" | "default" | "destructive"; color: string }> = {
-      new: { label: "جدید", variant: "secondary", color: "bg-gray-100 text-gray-800" },
-      assigned: { label: "اختصاص یافته", variant: "default", color: "bg-blue-100 text-blue-800" },
-      in_progress: { label: "در حال انجام", variant: "default", color: "bg-yellow-100 text-yellow-800" },
-      quoted: { label: "پیشنهاد ارائه شده", variant: "default", color: "bg-purple-100 text-purple-800" },
-      waiting_for_customer: { label: "در انتظار مشتری", variant: "default", color: "bg-orange-100 text-orange-800" },
-      won: { label: "تکمیل شده", variant: "default", color: "bg-green-100 text-green-800" },
-      lost: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
-      closed: { label: "بسته شده", variant: "secondary", color: "bg-gray-100 text-gray-800" },
-      cancelled: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
-    };
-    return statusMap[status] || { label: status, variant: "secondary" as const, color: "bg-gray-100 text-gray-800" };
-  };
-
-  /** Optional "وضعیت فعلی" label for timeline section (plan-specified map). */
-  const getCurrentStatusLabel = (status: string): string => {
-    const map: Record<string, string> = {
-      in_progress: "در حال پیگیری",
-      waiting_for_customer: "منتظر پاسخ شما",
-      won: "پذیرفته شد",
-      lost: "پذیرفته نشد",
-      closed: "بسته شد",
-    };
-    return map[status] ?? "";
-  };
-
-  const getLocationDisplay = (location: PublicTrackingData["route"]["origin"], isInternational: boolean) => {
-    if (!location) return "—";
-    if (isInternational) {
-      const parts = [location.city_international, location.country].filter(Boolean);
-      return parts.length ? parts.join("، ") : "ثبت نشده";
+  useEffect(() => {
+    if (requestId) {
+      fetchRequestData();
     }
-    const parts = [location.city, location.county, location.province].filter(Boolean);
-    return parts.length ? parts.join("، ") : "ثبت نشده";
-  };
+  }, [fetchRequestData, requestId]);
+
+  const statusInfo = requestData ? getStatusBadge(requestData.status) : null;
+  const currentStatusLabel = requestData ? getCurrentStatusLabel(requestData.status) : "";
+  const isInternational = requestData?.shipping_type === "international";
+  const workflowSteps = useMemo(() => {
+    if (!requestData) return [];
+    const steps = requestData.workflow_steps_simple ?? requestData.workflow_steps ?? [];
+    return steps.filter((step) => (requestData.workflow_steps_simple ? true : step.name !== "quote_provided"));
+  }, [requestData]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
-        <div className="text-center">
-          <Clock className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">در حال بارگذاری...</p>
-        </div>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-gradient-background px-4">
+        <Card className="w-full max-w-md border-border/80 bg-card/95 shadow-md">
+          <CardContent className="p-8 text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Clock className="h-7 w-7 animate-spin" />
+            </div>
+            <h1 className="text-xl font-bold text-foreground">در حال بارگذاری وضعیت درخواست</h1>
+            <p className="mt-2 text-sm leading-7 text-muted-foreground">
+              لطفا چند لحظه صبر کنید تا اطلاعات رهگیری نمایش داده شود.
+            </p>
+          </CardContent>
+        </Card>
+      </main>
     );
   }
 
-  if (notFound || !requestData) {
+  if (notFound || !requestData || !statusInfo) {
     return (
-      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-6">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-foreground mb-2">درخواست یافت نشد</h1>
-          <p className="text-muted-foreground mb-6">
-            شماره پیگیری وارد شده معتبر نیست یا درخواست وجود ندارد.
-          </p>
-          <div className="space-y-3">
-            <Button onClick={() => navigate("/")} className="w-full">
-              <ArrowLeft className="w-4 h-4 ml-2" />
-              بازگشت به صفحه اصلی
-            </Button>
-            <Button onClick={() => navigate("/")} variant="outline" className="w-full">
-              <Package className="w-4 h-4 ml-2" />
-              ثبت درخواست جدید
-            </Button>
-          </div>
-        </div>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-gradient-background px-4 py-10">
+        <Card className="w-full max-w-lg border-border/80 bg-card/95 shadow-md">
+          <CardContent className="p-8 text-center">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <AlertCircle className="h-8 w-8" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">درخواست یافت نشد</h1>
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-7 text-muted-foreground">
+              شماره پیگیری وارد شده معتبر نیست یا درخواست وجود ندارد.
+            </p>
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
+              <Button onClick={() => navigate("/")} className="w-full">
+                <ArrowLeft className="h-4 w-4" />
+                بازگشت به صفحه اصلی
+              </Button>
+              <Button onClick={() => navigate("/")} variant="outline" className="w-full">
+                <Package className="h-4 w-4" />
+                ثبت درخواست جدید
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     );
   }
 
-  const statusInfo = getStatusBadge(requestData.status);
-  const isInternational = requestData.shipping_type === "international";
   const hasCargo =
     requestData.cargo_description ||
     requestData.cargo_weight != null ||
@@ -218,6 +226,7 @@ const PublicTracking: React.FC = () => {
     requestData.special_instructions ||
     requestData.pickup_date ||
     requestData.delivery_date;
+
   const transportLabel =
     requestData.domestic_transport_method ||
     requestData.international_transport_method ||
@@ -225,347 +234,289 @@ const PublicTracking: React.FC = () => {
     null;
 
   return (
-    <div className="min-h-screen bg-gradient-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Back button */}
-        <div className="mb-6">
+    <main className="min-h-screen bg-gradient-background">
+      <div className="container mx-auto max-w-7xl px-4 py-6 md:py-10">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Button onClick={() => navigate("/")} variant="outline" size="sm">
-            <ArrowLeft className="w-4 h-4 ml-2" />
+            <ArrowLeft className="h-4 w-4" />
             بازگشت
+          </Button>
+          <Button onClick={() => navigate("/")} variant="ghost" size="sm">
+            <Home className="h-4 w-4" />
+            صفحه اصلی
           </Button>
         </div>
 
-        {/* Summary box */}
-        <Card className="mb-8 bg-muted/30">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">شماره رهگیری</p>
-                <p className="text-xl font-mono font-bold text-foreground">{requestData.tracking_number}</p>
+        <section className="mb-6 overflow-hidden rounded-lg border border-border/80 bg-card/95 shadow-sm">
+          <div className="border-b border-border/70 bg-muted/25 p-5 md:p-7">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  <Badge variant={statusInfo.variant} className={statusInfo.color}>
+                    {statusInfo.label}
+                  </Badge>
+                  <Badge variant="outline">
+                    {isInternational ? "بین‌المللی" : "داخلی"}
+                  </Badge>
+                  {currentStatusLabel && (
+                    <Badge variant="outline">وضعیت فعلی: {currentStatusLabel}</Badge>
+                  )}
+                </div>
+                <h1 className="break-words font-mono text-2xl font-bold tracking-normal text-foreground md:text-3xl">
+                  {requestData.tracking_number}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
+                  جزئیات رهگیری، مسیر ارسال، وضعیت گردش کار و اطلاعات مرتبط با درخواست شما در این صفحه نمایش داده می‌شود.
+                </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">وضعیت فعلی</p>
+              <div className="grid gap-3 text-sm sm:grid-cols-2 lg:min-w-[360px]">
+                <Field
+                  label="تاریخ ثبت درخواست"
+                  value={formatDate(requestData.created_at, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                />
+                <Field
+                  label="تاریخ اختصاص کارشناس"
+                  value={formatDate(requestData.assigned_at, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-0 divide-y divide-border/70 md:grid-cols-3 md:divide-x md:divide-x-reverse md:divide-y-0">
+            <div className="p-5">
+              <p className="text-xs font-medium text-muted-foreground">شماره رهگیری</p>
+              <p className="mt-2 break-all font-mono text-lg font-bold text-foreground">{requestData.tracking_number}</p>
+            </div>
+            <div className="p-5">
+              <p className="text-xs font-medium text-muted-foreground">وضعیت فعلی</p>
+              <div className="mt-2">
                 <Badge variant={statusInfo.variant} className={statusInfo.color}>
                   {statusInfo.label}
                 </Badge>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">تاریخ ثبت درخواست</p>
-                <p className="text-sm font-medium">
-                  {requestData.created_at
-                    ? new Date(requestData.created_at).toLocaleDateString("fa-IR", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
-                    : "—"}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">تاریخ اختصاص کارشناس</p>
-                <p className="text-sm font-medium">
-                  {requestData.assigned_at
-                    ? new Date(requestData.assigned_at).toLocaleDateString("fa-IR", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                    : "—"}
-                </p>
-              </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="p-5">
+              <p className="text-xs font-medium text-muted-foreground">روش حمل</p>
+              <p className="mt-2 text-sm font-semibold text-foreground">{transportLabel || "—"}</p>
+            </div>
+          </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main: Request info, route, transport, cargo */}
-          <div className="lg:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  اطلاعات درخواست
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">تاریخ ثبت:</span>
-                    <span className="text-sm font-medium">
-                      {new Date(requestData.created_at).toLocaleDateString("fa-IR")}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="space-y-6">
+            <Section icon={Package} title="اطلاعات درخواست">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="تاریخ ثبت" value={formatDate(requestData.created_at)} />
+                <Field
+                  label="نوع ارسال"
+                  value={<Badge variant="outline">{isInternational ? "بین‌المللی" : "داخلی"}</Badge>}
+                />
+              </div>
+            </Section>
+
+            <Section icon={Route} title="مسیر ارسال">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-md border border-border/70 bg-background/70 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">مبدا</Badge>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="break-words text-sm font-semibold leading-7 text-foreground">
+                    {getLocationDisplay(requestData.route?.origin, isInternational)}
+                  </p>
+                </div>
+                <div className="rounded-md border border-border/70 bg-background/70 p-4">
+                  <div className="mb-3 flex items-center gap-2">
+                    <Badge variant="outline" className="text-xs">مقصد</Badge>
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <p className="break-words text-sm font-semibold leading-7 text-foreground">
+                    {getLocationDisplay(requestData.route?.destination, isInternational)}
+                  </p>
+                </div>
+              </div>
+              {transportLabel && (
+                <div className="mt-4 rounded-md border border-border/70 bg-muted/20 p-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Truck className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">روش حمل:</span>
+                    <span className="font-semibold text-foreground">{transportLabel}</span>
+                  </div>
+                </div>
+              )}
+            </Section>
+
+            <Section icon={User} title="اطلاعات تماس">
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field
+                  label="شماره تماس"
+                  value={
+                    <span className="inline-flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      {requestData.contact_phone}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">نوع ارسال:</span>
-                    <Badge variant="outline">{isInternational ? "بین‌المللی" : "داخلی"}</Badge>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <MapPin className="w-5 h-5" />
-                    مسیر ارسال
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Badge variant="outline" className="text-xs">مبدا</Badge>
-                      <p className="text-sm text-muted-foreground">
-                        {getLocationDisplay(requestData.route?.origin, isInternational)}
-                      </p>
-                    </div>
-                    <div className="space-y-2">
-                      <Badge variant="outline" className="text-xs">مقصد</Badge>
-                      <p className="text-sm text-muted-foreground">
-                        {getLocationDisplay(requestData.route?.destination, isInternational)}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {transportLabel && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <h3 className="font-semibold flex items-center gap-2">
-                        <Truck className="w-4 h-4" />
-                        روش حمل
-                      </h3>
-                      <p className="text-sm text-muted-foreground">{transportLabel}</p>
-                    </div>
-                  </>
+                  }
+                />
+                {(requestData.customer_first_name || requestData.customer_last_name) && (
+                  <Field
+                    label="نام مشتری"
+                    value={`${requestData.customer_first_name || ""} ${requestData.customer_last_name || ""}`.trim()}
+                  />
                 )}
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    اطلاعات تماس
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{requestData.contact_phone}</span>
-                  </div>
-                  {(requestData.customer_first_name || requestData.customer_last_name) && (
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        {requestData.customer_first_name} {requestData.customer_last_name}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+            </Section>
 
             {hasCargo && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    جزئیات مرسوله
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
+              <Section icon={FileText} title="جزئیات مرسوله">
+                <div className="space-y-4">
                   {requestData.cargo_description && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">توضیحات: </span>
-                      <span className="text-sm">{requestData.cargo_description}</span>
-                    </div>
+                    <Field label="توضیحات" value={requestData.cargo_description} />
                   )}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {requestData.cargo_weight != null && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">وزن (کیلوگرم): </span>
-                        <span className="text-sm font-medium">{requestData.cargo_weight}</span>
-                      </div>
+                      <Field label="وزن (کیلوگرم)" value={requestData.cargo_weight} />
                     )}
                     {requestData.cargo_volume != null && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">حجم (م³): </span>
-                        <span className="text-sm font-medium">{requestData.cargo_volume}</span>
-                      </div>
+                      <Field label="حجم (م³)" value={requestData.cargo_volume} />
                     )}
                     {requestData.cargo_value != null && (
-                      <div>
-                        <span className="text-sm text-muted-foreground">ارزش: </span>
-                        <span className="text-sm font-medium">{requestData.cargo_value}</span>
-                      </div>
+                      <Field label="ارزش" value={requestData.cargo_value} />
+                    )}
+                    {requestData.pickup_date && (
+                      <Field label="تاریخ تحویل مبدا" value={formatDate(requestData.pickup_date)} />
+                    )}
+                    {requestData.delivery_date && (
+                      <Field label="تاریخ تحویل مقصد" value={formatDate(requestData.delivery_date)} />
                     )}
                   </div>
                   {requestData.special_instructions && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">دستورالعمل‌های ویژه: </span>
-                      <p className="text-sm mt-1">{requestData.special_instructions}</p>
-                    </div>
+                    <Field label="دستورالعمل‌های ویژه" value={requestData.special_instructions} />
                   )}
-                  {(requestData.pickup_date || requestData.delivery_date) && (
-                    <div className="flex gap-4 text-sm">
-                      {requestData.pickup_date && (
-                        <span>
-                          <span className="text-muted-foreground">تاریخ تحویل مبدا: </span>
-                          {new Date(requestData.pickup_date).toLocaleDateString("fa-IR")}
-                        </span>
-                      )}
-                      {requestData.delivery_date && (
-                        <span>
-                          <span className="text-muted-foreground">تاریخ تحویل مقصد: </span>
-                          {new Date(requestData.delivery_date).toLocaleDateString("fa-IR")}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                </div>
+              </Section>
             )}
           </div>
 
-          {/* Sidebar: Expert + Timeline + Actions */}
-          <div className="space-y-6">
+          <aside className="space-y-6">
             {requestData.assigned_expert && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="w-5 h-5" />
-                    کارشناس مربوطه
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    <span className="font-medium">{requestData.assigned_expert.full_name}</span>
-                  </div>
+              <Section icon={User} title="کارشناس مربوطه">
+                <div className="space-y-4">
+                  <Field label="نام کارشناس" value={requestData.assigned_expert.full_name} />
                   {requestData.assigned_at && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4 shrink-0" />
-                      <span>
-                        تاریخ اختصاص:{" "}
-                        {new Date(requestData.assigned_at).toLocaleDateString("fa-IR", {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <a href={`tel:${requestData.assigned_expert.phone}`} className="text-sm hover:underline">
-                      {requestData.assigned_expert.phone}
-                    </a>
-                  </div>
-                  {requestData.assigned_expert.email && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">ایمیل:</span>
-                      <span className="text-sm">{requestData.assigned_expert.email}</span>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {showLatestQuoteCard && requestData.latest_quote && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" />
-                    پیشنهاد (قیمت)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">مبلغ</span>
-                    <span className="text-lg font-bold text-foreground">
-                      {requestData.latest_quote.amount?.toLocaleString("fa-IR")} {requestData.latest_quote.currency}
-                    </span>
-                  </div>
-                  {requestData.latest_quote.valid_until && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4 shrink-0" />
-                      <span>اعتبار تا: {new Date(requestData.latest_quote.valid_until).toLocaleDateString("fa-IR")}</span>
-                    </div>
-                  )}
-                  {requestData.latest_quote.note && (
-                    <p className="text-sm text-muted-foreground border-t pt-2">{requestData.latest_quote.note}</p>
-                  )}
-                  <div className="text-xs text-muted-foreground pt-1">
-                    {requestData.latest_quote.created_at &&
-                      new Date(requestData.latest_quote.created_at).toLocaleDateString("fa-IR", {
+                    <Field
+                      label="تاریخ اختصاص"
+                      value={formatDate(requestData.assigned_at, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
-                    {requestData.latest_quote.created_by && ` — ${requestData.latest_quote.created_by}`}
-                  </div>
-                </CardContent>
-              </Card>
+                    />
+                  )}
+                  <Field
+                    label="شماره تماس"
+                    value={
+                      <a href={`tel:${requestData.assigned_expert.phone}`} className="hover:underline">
+                        {requestData.assigned_expert.phone}
+                      </a>
+                    }
+                  />
+                  {requestData.assigned_expert.email && (
+                    <Field label="ایمیل" value={requestData.assigned_expert.email} />
+                  )}
+                </div>
+              </Section>
             )}
 
-            {(() => {
-              const steps = requestData.workflow_steps_simple ?? requestData.workflow_steps ?? [];
-              const currentStatusLabel = getCurrentStatusLabel(requestData.status);
-              if (steps.length === 0) return null;
-              return (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="w-5 h-5" />
-                      مراحل گردش کار
-                      {currentStatusLabel && (
-                        <span className="text-sm font-normal text-muted-foreground mr-2">— وضعیت فعلی: {currentStatusLabel}</span>
-                      )}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {steps
-                        .filter((step) => requestData.workflow_steps_simple ? true : step.name !== "quote_provided")
-                        .map((step, index) => (
-                        <div key={index} className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                              step.is_completed ? "bg-green-100 text-green-600" : "bg-gray-100 text-gray-400"
-                            }`}
-                          >
-                            {step.is_completed ? <CheckCircle className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{step.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {step.is_completed && step.completed_at
-                                ? new Date(step.completed_at).toLocaleDateString("fa-IR")
-                                : "در انتظار"}
-                              {step.meta?.warning === "closed_without_decision" && (
-                                <span className="block text-amber-600 mt-0.5">بسته شده بدون ثبت پذیرش/عدم پذیرش</span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })()}
+            {showLatestQuoteCard && requestData.latest_quote && (
+              <Section icon={DollarSign} title="پیشنهاد (قیمت)">
+                <div className="space-y-4">
+                  <Field
+                    label="مبلغ"
+                    value={`${requestData.latest_quote.amount?.toLocaleString("fa-IR")} ${requestData.latest_quote.currency}`}
+                  />
+                  {requestData.latest_quote.valid_until && (
+                    <Field
+                      label="اعتبار تا"
+                      value={formatDate(requestData.latest_quote.valid_until)}
+                    />
+                  )}
+                  {requestData.latest_quote.note && (
+                    <Field label="یادداشت" value={requestData.latest_quote.note} />
+                  )}
+                  <p className="text-xs leading-6 text-muted-foreground">
+                    {formatDate(requestData.latest_quote.created_at, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    }, "")}
+                    {requestData.latest_quote.created_by && ` — ${requestData.latest_quote.created_by}`}
+                  </p>
+                </div>
+              </Section>
+            )}
 
-            <div className="space-y-2">
-              <Button onClick={() => navigate("/")} variant="outline" className="w-full">
-                <Package className="w-4 h-4 ml-2" />
-                درخواست جدید
-              </Button>
-            </div>
-          </div>
+            {workflowSteps.length > 0 && (
+              <Section icon={CheckCircle} title="مراحل گردش کار">
+                {currentStatusLabel && (
+                  <div className="mb-4 rounded-md bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
+                    وضعیت فعلی: {currentStatusLabel}
+                  </div>
+                )}
+                <div className="space-y-4">
+                  {workflowSteps.map((step, index) => (
+                    <div key={index} className="flex gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border ${
+                          step.is_completed
+                            ? "border-green-200 bg-green-100 text-green-700"
+                            : "border-border bg-muted text-muted-foreground"
+                        }`}
+                      >
+                        {step.is_completed ? <CheckCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                      </div>
+                      <div className="min-w-0 flex-1 pb-3">
+                        <p className="break-words text-sm font-semibold leading-7 text-foreground">{step.title}</p>
+                        <p className="text-xs leading-6 text-muted-foreground">
+                          {step.is_completed && step.completed_at
+                            ? formatDate(step.completed_at)
+                            : "در انتظار"}
+                          {step.meta?.warning === "closed_without_decision" && (
+                            <span className="mt-1 block text-amber-600">
+                              بسته شده بدون ثبت پذیرش/عدم پذیرش
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            <Card className="border-border/80 bg-card/95 shadow-sm">
+              <CardContent className="p-5">
+                <Button onClick={() => navigate("/")} variant="outline" className="w-full">
+                  <Package className="h-4 w-4" />
+                  درخواست جدید
+                </Button>
+              </CardContent>
+            </Card>
+          </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

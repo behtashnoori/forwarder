@@ -880,20 +880,52 @@ def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(exper
         preview_response.get_json().keys()
     )
 
-    manual_missing = client.post("/api/user-management/manual-assignment", headers=admin_headers, json={})
-    assert manual_missing.status_code == 500
-    assert manual_missing.get_json() == {"error": "خطا در ارجاع دستی"}
+def test_user_management_manual_assignment_fix_contract(expert_contract_app):
+    """Manual assignment now uses the shared assignment path and side effects."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    request_id = expert_contract_app["request_id"]
+    other_expert_id = expert_contract_app["other_expert_id"]
+
+    missing_request = client.post("/api/user-management/manual-assignment", headers=admin_headers, json={})
+    assert missing_request.status_code == 400
+    assert missing_request.get_json() == {"error": "شناسه درخواست الزامی است"}
+
+    missing_expert = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={"request_id": request_id},
+    )
+    assert missing_expert.status_code == 400
+    assert missing_expert.get_json() == {"error": "شناسه کارشناس الزامی است"}
 
     manual_response = client.post(
         "/api/user-management/manual-assignment",
         headers=admin_headers,
-        json={"request_id": request_id, "expert_id": other_expert_id, "reason": "Phase 4H manual"},
+        json={"request_id": request_id, "expert_id": other_expert_id, "reason": "Phase 5I manual"},
     )
-    assert manual_response.status_code == 500
-    assert manual_response.get_json() == {"error": "خطا در ارجاع دستی"}
+    assert manual_response.status_code == 200
+    assert manual_response.get_json() == {
+        "message": "درخواست با موفقیت ارجاع داده شد",
+        "assigned_to": {"id": other_expert_id, "name": "Phase 4H Other Expert"},
+    }
 
     with expert_contract_app["app"].app_context():
         request_row = db.session.get(ShipmentRequest, request_id)
-        assert request_row.assigned_to == expert_contract_app["expert_id"]
-        assert request_row.status == "new"
+        assert request_row.assigned_to == other_expert_id
+        assert request_row.status == "assigned"
+        assert request_row.has_unread_for_assignee is True
         assert AssignmentLog.query.filter_by(shipment_request_id=request_id).count() == 0
+        assert ExpertConsoleLog.query.filter_by(
+            shipment_request_id=request_id,
+            expert_user_id=other_expert_id,
+            action="assignment",
+            old_status="new",
+            new_status="assigned",
+        ).count() == 1
+        assert ExpertConsoleNotification.query.filter_by(
+            shipment_request_id=request_id,
+            expert_user_id=other_expert_id,
+            notification_type="assignment",
+            is_read=False,
+        ).count() == 1

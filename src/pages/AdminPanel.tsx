@@ -1,87 +1,124 @@
-import { useState, useEffect } from "react";
+import { type ElementType, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RefreshCw, BarChart3, Users, Package, Clock, AlertCircle, TrendingUp, Scale, Settings } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertCircle,
+  BarChart3,
+  Clock,
+  Package,
+  RefreshCw,
+  Scale,
+  Settings,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { env } from "@/lib/env";
+import { AdminDashboardHttpError, fetchAdminDashboard, type AdminDashboardStats } from "@/lib/api";
 import UserManagement from "./UserManagement";
 import ReferralRulesTab from "@/components/ReferralRulesTab";
 import SiteSettingsTab from "@/components/SiteSettingsTab";
 import PageNav from "@/components/PageNav";
 
-interface DashboardStats {
-  total_requests: number;
-  requests_per_transport_method: Record<string, number>;
-  requests_per_status: Record<string, number>;
-  last_7_days_count: number;
-  last_24h_count: number;
-  unassigned_count: number;
-  top_provinces: Array<{ province: string; count: number }>;
-}
+type MetricCardProps = {
+  label: string;
+  value: number;
+  helper: string;
+  icon: ElementType;
+  tone: string;
+};
+
+const MetricCard = ({ label, value, helper, icon: Icon, tone }: MetricCardProps) => (
+  <Card className="overflow-hidden border-border/70 bg-card/95 shadow-sm">
+    <CardContent className="p-5">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="mt-2 text-3xl font-bold tracking-normal text-foreground">{value}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{helper}</p>
+        </div>
+        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${tone}`}>
+          <Icon className="h-6 w-6" />
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const EmptyDashboardState = () => (
+  <Card className="border-border/70 bg-card/95 shadow-sm">
+    <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+      <div className="rounded-full bg-muted p-4">
+        <BarChart3 className="h-8 w-8 text-muted-foreground" />
+      </div>
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-foreground">داده‌ای یافت نشد</h2>
+        <p className="text-sm leading-6 text-muted-foreground">
+          پس از ثبت درخواست‌ها، آمار مدیریتی در این بخش نمایش داده می‌شود.
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+);
 
 const AdminPanel = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
-  const loadDashboard = async () => {
-    const token = localStorage.getItem('expert_token');
-    if (!token || token === 'null') {
+  const loadDashboard = useCallback(async () => {
+    const token = localStorage.getItem("expert_token");
+    if (!token || token === "null") {
       toast({
         title: "ورود مجدد",
         description: "لطفاً دوباره وارد شوید",
-        variant: "destructive"
+        variant: "destructive",
       });
-      localStorage.removeItem('expert_user');
-      localStorage.removeItem('expert_token');
-      navigate('/', { replace: true });
+      localStorage.removeItem("expert_user");
+      localStorage.removeItem("expert_token");
+      navigate("/", { replace: true });
       return;
     }
 
     try {
       setLoading(true);
-      const response = await fetch(`${env.API_URL}/api/admin/dashboard`, {
-        headers: {
-          "Authorization": `Bearer ${token}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDashboardStats(data);
-      } else if (response.status === 401) {
+      const data = await fetchAdminDashboard(token);
+      setDashboardStats(data);
+    } catch (error) {
+      if (error instanceof AdminDashboardHttpError && error.status === 401) {
         toast({
           title: "نشست منقضی شده",
           description: "لطفاً دوباره وارد شوید",
-          variant: "destructive"
+          variant: "destructive",
         });
-        localStorage.removeItem('expert_user');
-        localStorage.removeItem('expert_token');
-        navigate('/', { replace: true });
-      } else {
+        localStorage.removeItem("expert_user");
+        localStorage.removeItem("expert_token");
+        navigate("/", { replace: true });
+      } else if (error instanceof AdminDashboardHttpError) {
         toast({
           title: "خطا",
           description: "خطا در دریافت آمار داشبورد",
-          variant: "destructive"
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "خطا",
+          description: "خطا در ارتباط با سرور",
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "خطا",
-        description: "خطا در ارتباط با سرور",
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate, toast]);
+
+  useEffect(() => {
+    loadDashboard();
+  }, [loadDashboard]);
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
@@ -92,7 +129,7 @@ const AdminPanel = () => {
       won: "پذیرش مشتری",
       lost: "عدم پذیرش مشتری",
       cancelled: "لغو شده",
-      waiting_for_customer: "در انتظار مشتری"
+      waiting_for_customer: "در انتظار مشتری",
     };
     return labels[status] || status;
   };
@@ -103,167 +140,190 @@ const AdminPanel = () => {
       rail: "ریلی",
       air: "هوایی",
       sea: "دریایی",
-      unknown: "نامشخص"
+      unknown: "نامشخص",
     };
     return labels[method] || method;
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <PageNav backTo="/" showLogout />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">پنل مدیریت</h1>
-              <p className="text-gray-600 mt-1">داشبورد و مدیریت کاربران</p>
+    <div className="min-h-screen bg-gradient-background">
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <section className="overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-sm">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+              <PageNav backTo="/" showLogout />
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="bg-background/70">
+                    پنل مدیریت
+                  </Badge>
+                  <Badge variant="secondary" className="gap-1">
+                    <BarChart3 className="h-3.5 w-3.5" />
+                    داشبورد عملیاتی
+                  </Badge>
+                </div>
+                <h1 className="break-words text-2xl font-bold tracking-normal text-foreground sm:text-3xl">
+                  پنل مدیریت
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  نمای مدیریتی برای پایش درخواست‌ها، وضعیت ارجاع و توزیع روش‌های حمل.
+                </p>
+              </div>
             </div>
+            <Button onClick={loadDashboard} disabled={loading} variant="outline" size="sm" className="w-fit">
+              <RefreshCw className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              به‌روزرسانی
+            </Button>
           </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={loadDashboard}
-              disabled={loading}
-              className="p-2 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <RefreshCw className={`w-5 h-5 ${loading ? "animate-spin" : ""}`} />
-            </button>
-          </div>
-        </div>
+        </section>
 
-        {/* Main Content Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="dashboard">
-              <BarChart3 className="w-4 h-4 ml-2" />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-2xl border border-border/70 bg-card/80 p-2 shadow-sm lg:grid-cols-4">
+            <TabsTrigger value="dashboard" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
               داشبورد
             </TabsTrigger>
-            <TabsTrigger value="users">
-              <Users className="w-4 h-4 ml-2" />
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="h-4 w-4" />
               مدیریت کاربران
             </TabsTrigger>
-            <TabsTrigger value="referral-rules">
-              <Scale className="w-4 h-4 ml-2" />
+            <TabsTrigger value="referral-rules" className="gap-2">
+              <Scale className="h-4 w-4" />
               قوانین ارجاع
             </TabsTrigger>
-            <TabsTrigger value="site-settings">
-              <Settings className="w-4 h-4 ml-2" />
+            <TabsTrigger value="site-settings" className="gap-2">
+              <Settings className="h-4 w-4" />
               تنظیمات سایت
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
             {loading ? (
-              <div className="flex justify-center py-12">
-                <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
-              </div>
+              <Card className="border-border/70 bg-card/95 shadow-sm">
+                <CardContent className="flex min-h-[260px] flex-col items-center justify-center gap-4 p-8 text-center">
+                  <div className="rounded-full bg-primary/10 p-4">
+                    <RefreshCw className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-semibold text-foreground">در حال بارگذاری داشبورد</h2>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      آمار درخواست‌ها و توزیع وضعیت‌ها دریافت می‌شود.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             ) : dashboardStats ? (
               <>
-                {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">کل درخواست‌ها</p>
-                          <p className="text-3xl font-bold text-blue-600">{dashboardStats.total_requests}</p>
-                        </div>
-                        <div className="p-3 bg-blue-100 rounded-lg">
-                          <Package className="w-8 h-8 text-blue-600" />
-                        </div>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <MetricCard
+                    label="کل درخواست‌ها"
+                    value={dashboardStats.total_requests}
+                    helper="تمام درخواست‌های ثبت شده"
+                    icon={Package}
+                    tone="bg-blue-100 text-blue-700"
+                  />
+                  <MetricCard
+                    label="۲۴ ساعت اخیر"
+                    value={dashboardStats.last_24h_count}
+                    helper="درخواست‌های جدید امروز"
+                    icon={Clock}
+                    tone="bg-green-100 text-green-700"
+                  />
+                  <MetricCard
+                    label="۷ روز اخیر"
+                    value={dashboardStats.last_7_days_count}
+                    helper="روند کوتاه‌مدت درخواست‌ها"
+                    icon={TrendingUp}
+                    tone="bg-purple-100 text-purple-700"
+                  />
+                  <MetricCard
+                    label="ارجاع نشده"
+                    value={dashboardStats.unassigned_count}
+                    helper="نیازمند بررسی یا ارجاع"
+                    icon={AlertCircle}
+                    tone="bg-orange-100 text-orange-700"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                  <Card className="border-border/70 bg-card/95 shadow-sm">
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <BarChart3 className="h-5 w-5 text-primary" />
+                        توزیع بر اساس وضعیت
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">نمای فشرده از وضعیت فعلی درخواست‌ها.</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {Object.entries(dashboardStats.requests_per_status).map(([status, count]) => (
+                          <div key={status} className="rounded-xl border border-border/70 bg-background/70 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="min-w-0 break-words text-sm text-muted-foreground">{getStatusLabel(status)}</p>
+                              <Badge variant="outline" className="shrink-0">
+                                {count}
+                              </Badge>
+                            </div>
+                            <p className="mt-2 text-2xl font-bold text-foreground">{count}</p>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">۲۴ ساعت اخیر</p>
-                          <p className="text-3xl font-bold text-green-600">{dashboardStats.last_24h_count}</p>
-                        </div>
-                        <div className="p-3 bg-green-100 rounded-lg">
-                          <Clock className="w-8 h-8 text-green-600" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">۷ روز اخیر</p>
-                          <p className="text-3xl font-bold text-purple-600">{dashboardStats.last_7_days_count}</p>
-                        </div>
-                        <div className="p-3 bg-purple-100 rounded-lg">
-                          <TrendingUp className="w-8 h-8 text-purple-600" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">ارجاع نشده</p>
-                          <p className="text-3xl font-bold text-orange-600">{dashboardStats.unassigned_count}</p>
-                        </div>
-                        <div className="p-3 bg-orange-100 rounded-lg">
-                          <AlertCircle className="w-8 h-8 text-orange-600" />
-                        </div>
+                  <Card className="border-border/70 bg-card/95 shadow-sm">
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Package className="h-5 w-5 text-primary" />
+                        توزیع بر اساس روش حمل
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">روش‌های حمل انتخاب شده در درخواست‌ها.</p>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        {Object.entries(dashboardStats.requests_per_transport_method).map(([method, count]) => (
+                          <div key={method} className="rounded-xl border border-border/70 bg-background/70 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="min-w-0 break-words text-sm text-muted-foreground">
+                                {getTransportMethodLabel(method)}
+                              </p>
+                              <Badge variant="outline" className="shrink-0">
+                                {count}
+                              </Badge>
+                            </div>
+                            <p className="mt-2 text-2xl font-bold text-foreground">{count}</p>
+                          </div>
+                        ))}
                       </div>
                     </CardContent>
                   </Card>
                 </div>
 
-                {/* Status Distribution */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>توزیع بر اساس وضعیت</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.entries(dashboardStats.requests_per_status).map(([status, count]) => (
-                        <div key={status} className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">{getStatusLabel(status)}</p>
-                          <p className="text-2xl font-bold">{count}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Transport Method Distribution */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>توزیع بر اساس روش حمل</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {Object.entries(dashboardStats.requests_per_transport_method).map(([method, count]) => (
-                        <div key={method} className="p-4 bg-gray-50 rounded-lg">
-                          <p className="text-sm text-gray-600">{getTransportMethodLabel(method)}</p>
-                          <p className="text-2xl font-bold">{count}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Top Provinces */}
                 {dashboardStats.top_provinces.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>استان‌های برتر</CardTitle>
+                  <Card className="border-border/70 bg-card/95 shadow-sm">
+                    <CardHeader className="space-y-1">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <TrendingUp className="h-5 w-5 text-primary" />
+                        استان‌های برتر
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">استان‌هایی با بیشترین تعداد درخواست ثبت شده.</p>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
                         {dashboardStats.top_provinces.map((province, index) => (
-                          <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <span className="font-medium">{province.province}</span>
-                            <span className="text-lg font-bold">{province.count}</span>
+                          <div
+                            key={index}
+                            className="flex flex-col gap-3 rounded-xl border border-border/70 bg-background/70 p-4 sm:flex-row sm:items-center sm:justify-between"
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                {index + 1}
+                              </span>
+                              <span className="min-w-0 break-words font-medium text-foreground">{province.province}</span>
+                            </div>
+                            <Badge variant="outline" className="w-fit">
+                              {province.count} درخواست
+                            </Badge>
                           </div>
                         ))}
                       </div>
@@ -272,11 +332,7 @@ const AdminPanel = () => {
                 )}
               </>
             ) : (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <p className="text-gray-600">داده‌ای یافت نشد</p>
-                </CardContent>
-              </Card>
+              <EmptyDashboardState />
             )}
           </TabsContent>
 

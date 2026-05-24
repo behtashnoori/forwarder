@@ -1,0 +1,1829 @@
+openapi: 3.0.3
+info:
+  title: Forwarder Backend API
+  version: 0.1.0
+  description: |
+    Initial OpenAPI documentation for the Forwarder backend.
+
+    This document is based on current Flask routes, service-layer behavior, and characterization tests.
+    It intentionally reflects current behavior, including imperfect or legacy response shapes.
+servers:
+  - url: http://localhost:5000
+    description: Local backend placeholder
+tags:
+  - name: Public Shipment
+  - name: Public Tracking
+  - name: Expert Auth
+  - name: Expert Console
+  - name: CRM
+  - name: User Management
+  - name: Admin Panel
+  - name: Customer Gamification
+  - name: Site Settings
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    PerPage:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        default: 20
+    RequestId:
+      name: request_id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    Message:
+      description: Message payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageResponse'
+    BadRequest:
+      description: Bad request using current route-specific localized payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing or invalid authentication.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated user lacks required role or request access.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found using current route-specific localized payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ServerError:
+      description: Internal server error using current route-specific localized payload.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token used by protected expert, CRM, admin, and user-management endpoints.
+  schemas:
+    ErrorResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      description: Current API uses both `error` and `message` depending on route.
+    MessageResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        message:
+          type: string
+    IdName:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    TransportMethodsPayload:
+      type: object
+      additionalProperties: true
+      properties:
+        domestic_methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdName'
+        international_methods:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdName'
+    ShipmentRequestCreate:
+      type: object
+      additionalProperties: true
+      description: Best-effort public shipment form payload. Exact optional fields depend on shipment type.
+      properties:
+        shipping_type:
+          type: string
+          example: domestic
+        customer_name:
+          type: string
+        customer_phone:
+          type: string
+        customer_email:
+          type: string
+        transport_method:
+          type: string
+        cargo_type:
+          type: string
+    ShipmentRequestCreated:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        tracking_code:
+          type: string
+        status:
+          type: string
+        message:
+          type: string
+    Pagination:
+      type: object
+      additionalProperties: true
+      properties:
+        page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+    ExpertLoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    ExpertLoginResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        success:
+          type: boolean
+        expert:
+          type: object
+          additionalProperties: true
+        tokens:
+          type: object
+          additionalProperties: true
+    QuoteRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+          example: IRR
+        note:
+          type: string
+        valid_until:
+          type: string
+          format: date
+    MessageRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        message:
+          type: string
+    AssignmentRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        expert_id:
+          type: integer
+    ExpertStatusUpdateRequest:
+      type: object
+      additionalProperties: true
+      properties:
+        status:
+          type: string
+          description: Requested shipment request status.
+          enum:
+            - new
+            - assigned
+            - in_progress
+            - quoted
+            - waiting_for_customer
+            - won
+            - lost
+            - closed
+        note:
+          type: string
+          description: Optional status-change note sent by the frontend.
+    UserPayload:
+      type: object
+      additionalProperties: true
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        department:
+          type: string
+    AssignmentRulePayload:
+      type: object
+      additionalProperties: true
+      properties:
+        name:
+          type: string
+        priority:
+          type: integer
+        conditions:
+          type: object
+          additionalProperties: true
+        assignment_strategy:
+          type: string
+        is_active:
+          type: boolean
+    ReferralRulePayload:
+      type: object
+      additionalProperties: true
+      properties:
+        name:
+          type: string
+        priority:
+          type: integer
+        conditions:
+          type: object
+          additionalProperties: true
+        is_active:
+          type: boolean
+    CustomerRegistrationRequest:
+      type: object
+      required:
+        - email
+        - phone
+      properties:
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          example: '09120000000'
+        first_name:
+          type: string
+        last_name:
+          type: string
+    CustomerRegistrationResponse:
+      type: object
+      additionalProperties: true
+      properties:
+        message:
+          type: string
+        customer_id:
+          type: integer
+        email_sent:
+          type: boolean
+        is_verified:
+          type: boolean
+    CompleteStepRequest:
+      type: object
+      required:
+        - customer_id
+        - request_id
+        - step_name
+      properties:
+        customer_id:
+          type: integer
+        request_id:
+          type: integer
+        step_name:
+          type: string
+          example: expert_assigned
+    SiteSettings:
+      type: object
+      additionalProperties: true
+paths:
+  /api/transport-methods:
+    get:
+      tags: [Public Shipment]
+      summary: List public transport methods
+      description: Public endpoint. Returns available domestic and international transport methods.
+      responses:
+        '200':
+          description: Transport methods payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransportMethodsPayload'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/shipment-request:
+    post:
+      tags: [Public Shipment]
+      summary: Create a public shipment request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentRequestCreate'
+      responses:
+        '201':
+          description: Shipment request created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentRequestCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/public/track/{identifier}:
+    get:
+      tags: [Public Tracking]
+      summary: Public shipment tracking by id or tracking code
+      parameters:
+        - name: identifier
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Public tracking payload. Best-effort schema from public tracking contract tests.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/auth/login:
+    post:
+      tags: [Expert Auth]
+      summary: Expert/admin login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpertLoginRequest'
+      responses:
+        '200':
+          description: Login success with expert data and tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExpertLoginResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    options:
+      tags: [Expert Auth]
+      summary: CORS preflight for login
+      responses:
+        '200':
+          description: Empty CORS preflight response.
+  /api/expert/auth/refresh:
+    post:
+      tags: [Expert Auth]
+      summary: Refresh expert access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        '200':
+          description: Refreshed token payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/auth/logout:
+    post:
+      tags: [Expert Auth]
+      summary: Logout authenticated expert
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests:
+    get:
+      tags: [Expert Console]
+      summary: List expert console shipment requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated request list.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_id}:
+    get:
+      tags: [Expert Console]
+      summary: Get expert shipment request detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Request detail payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_id}/assign:
+    post:
+      tags: [Expert Console]
+      summary: Assign or reassign a request to an expert
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentRequest'
+      responses:
+        '200':
+          description: Assignment response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_id}/status:
+    post:
+      tags: [Expert Console]
+      summary: Update expert shipment request status
+      description: |
+        Mutation endpoint used by the centralized `changeRequestStatus` frontend helper.
+        Current behavior updates the request status, marks it unread for the assignee,
+        writes an ExpertConsoleLog status_change entry, and creates a status-change
+        notification when the request has an assignee.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExpertStatusUpdateRequest'
+            examples:
+              default:
+                value:
+                  status: in_progress
+                  note: Started
+      responses:
+        '200':
+          description: Status update response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  message:
+                    type: string
+                  status:
+                    type: string
+              examples:
+                default:
+                  value:
+                    message: Status updated successfully
+                    status: in_progress
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_id}/quote:
+    post:
+      tags: [Expert Console]
+      summary: Create quote for a request
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteRequest'
+      responses:
+        '200':
+          description: Quote creation response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_id}/quote/latest:
+    get:
+      tags: [Expert Console]
+      summary: Get latest quote for a request
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Latest quote payload; current behavior may return null quote fields.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_id}/messages:
+    post:
+      tags: [Expert Console]
+      summary: Add message to a request
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageRequest'
+      responses:
+        '200':
+          description: Message creation response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/notifications:
+    get:
+      tags: [Expert Console]
+      summary: List notifications for current expert
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Notification list payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/notifications/mark-read:
+    post:
+      tags: [Expert Console]
+      summary: Mark notifications as read
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+              properties:
+                notification_ids:
+                  type: array
+                  items:
+                    type: integer
+                mark_all:
+                  type: boolean
+      responses:
+        '200':
+          description: Mark-read response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_id}/mark-read:
+    post:
+      tags: [Expert Console]
+      summary: Mark expert shipment request as read
+      description: |
+        Marks a shipment request as read for the authenticated expert context.
+        The existing frontend helper is `markRequestAsRead`, which sends
+        `expert_id` as a query parameter, although the backend currently uses
+        authenticated request access checks rather than a request body.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+        - name: expert_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Existing centralized frontend helper sends this query parameter.
+      responses:
+        '200':
+          description: Request marked as read.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  message:
+                    type: string
+              examples:
+                default:
+                  value:
+                    message: Request marked as read
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/dashboard/kpis:
+    get:
+      tags: [Expert Console]
+      summary: Get expert dashboard KPI counters
+      description: |
+        Read-only Expert Console KPI payload used by the current frontend `fetchKPIs` helper.
+        The response shape is documented from the current TypeScript client contract.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: expert_id
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Optional expert id currently passed by the frontend when loading KPI counters.
+      responses:
+        '200':
+          description: Expert dashboard KPI counters.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  counts:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      new:
+                        type: integer
+                      in_progress:
+                        type: integer
+                      waiting_for_customer:
+                        type: integer
+                      closed_today:
+                        type: integer
+                  sla:
+                    type: object
+                    additionalProperties: true
+                    properties:
+                      overdue:
+                        type: integer
+                      due_soon:
+                        type: integer
+              examples:
+                default:
+                  value:
+                    counts:
+                      new: 3
+                      in_progress: 5
+                      waiting_for_customer: 2
+                      closed_today: 1
+                    sla:
+                      overdue: 1
+                      due_soon: 2
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/experts:
+    get:
+      tags: [Expert Console]
+      summary: List available expert users
+      description: |
+        Read-only Expert Console expert list payload used by the current frontend `fetchExperts` helper.
+        The documented response shape is based on the current TypeScript client contract.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Expert list payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  experts:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                      properties:
+                        id:
+                          type: integer
+                        username:
+                          type: string
+                        full_name:
+                          type: string
+                        role:
+                          type: string
+              examples:
+                default:
+                  value:
+                    experts:
+                      - id: 1
+                        username: expert1
+                        full_name: Example Expert
+                        role: business_expert
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/crm/customers:
+    get:
+      tags: [CRM]
+      summary: List CRM customers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: customer_type
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CRM customer list.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [CRM]
+      summary: Create CRM customer
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Customer created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/crm/customers/{customer_id}:
+    get:
+      tags: [CRM]
+      summary: Get CRM customer detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Customer detail payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    put:
+      tags: [CRM]
+      summary: Update CRM customer
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          $ref: '#/components/responses/Message'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/crm/opportunities:
+    get:
+      tags: [CRM]
+      summary: List CRM opportunities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: stage
+          in: query
+          schema:
+            type: string
+        - name: assigned_to
+          in: query
+          schema:
+            type: integer
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Opportunity list payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [CRM]
+      summary: Create CRM opportunity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Opportunity created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/crm/activities:
+    get:
+      tags: [CRM]
+      summary: List CRM activities
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: activity_type
+          in: query
+          schema:
+            type: string
+        - name: expert_id
+          in: query
+          schema:
+            type: integer
+        - name: customer_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Activity list payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [CRM]
+      summary: Create CRM activity
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Activity created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/crm/dashboard/kpis:
+    get:
+      tags: [CRM]
+      summary: Get CRM dashboard KPI payload
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: KPI payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/user-management/users:
+    get:
+      tags: [User Management]
+      summary: List users
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User list payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [User Management]
+      summary: Create user
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPayload'
+      responses:
+        '201':
+          description: User created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/user-management/users/{user_id}:
+    put:
+      tags: [User Management]
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPayload'
+      responses:
+        '200':
+          description: User updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [User Management]
+      summary: Delete user with cleanup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          $ref: '#/components/responses/Message'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/user-management/transport-methods:
+    get:
+      tags: [User Management]
+      summary: List admin transport methods
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Transport method list.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [User Management]
+      summary: Create transport method
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Transport method created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/user-management/assignment-rules:
+    get:
+      tags: [User Management]
+      summary: List assignment rules
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Assignment rule list.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [User Management]
+      summary: Create assignment rule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentRulePayload'
+      responses:
+        '201':
+          description: Assignment rule created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/user-management/assignment-rules/{rule_id}:
+    put:
+      tags: [User Management]
+      summary: Update assignment rule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: rule_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentRulePayload'
+      responses:
+        '200':
+          description: Assignment rule updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/user-management/assignment-statistics:
+    get:
+      tags: [User Management]
+      summary: Get assignment statistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Assignment statistics including expert workloads.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/user-management/manual-assignment:
+    post:
+      tags: [User Management]
+      summary: Manually assign a request to an expert
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, expert_id]
+              properties:
+                request_id:
+                  type: integer
+                expert_id:
+                  type: integer
+      responses:
+        '200':
+          description: Assignment success payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/dashboard:
+    get:
+      tags: [Admin Panel]
+      summary: Get admin dashboard metrics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Dashboard metrics payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/reports/assignment-summary:
+    get:
+      tags: [Admin Panel]
+      summary: Get assignment summary report
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Assignment summary report with assignments_per_expert, overall_stats, and generated_at.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/shipment-requests:
+    get:
+      tags: [Admin Panel]
+      summary: List admin shipment requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: transport_method
+          in: query
+          schema:
+            type: string
+        - name: province_id
+          in: query
+          schema:
+            type: integer
+        - name: date_from
+          in: query
+          schema:
+            type: string
+        - name: date_to
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Admin request list payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/shipment-requests/{request_id}:
+    get:
+      tags: [Admin Panel]
+      summary: Get admin shipment request detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      responses:
+        '200':
+          description: Admin shipment request detail payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/referral-rules:
+    get:
+      tags: [Admin Panel]
+      summary: List referral rules
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Referral rules.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Admin Panel]
+      summary: Create referral rule
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferralRulePayload'
+      responses:
+        '201':
+          description: Referral rule created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/referral-rules/{rule_id}:
+    put:
+      tags: [Admin Panel]
+      summary: Update referral rule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: rule_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferralRulePayload'
+      responses:
+        '200':
+          description: Referral rule updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    delete:
+      tags: [Admin Panel]
+      summary: Delete referral rule
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: rule_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          $ref: '#/components/responses/Message'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/referral-rules/preview:
+    post:
+      tags: [Admin Panel]
+      summary: Preview referral assignment without DB mutation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id]
+              properties:
+                request_id:
+                  type: integer
+      responses:
+        '200':
+          description: Referral preview payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/customer/register:
+    post:
+      tags: [Customer Gamification]
+      summary: Register customer for gamification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistrationRequest'
+      responses:
+        '201':
+          description: Registration created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerRegistrationResponse'
+        '200':
+          description: Duplicate registration returns existing customer id and verified state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerRegistrationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/customer/verify-email:
+    get:
+      tags: [Customer Gamification]
+      summary: Verify customer email token
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email verification success with customer id, loyalty points, and level.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/customer/profile/{customer_id}:
+    get:
+      tags: [Customer Gamification]
+      summary: Get public customer gamification profile
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Customer, recent_steps, and recent_requests payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/customer/workflow/{customer_id}:
+    get:
+      tags: [Customer Gamification]
+      summary: Get customer workflow for a shipment request
+      parameters:
+        - name: customer_id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: request_id
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Workflow status and request detail payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/customer/complete-step:
+    post:
+      tags: [Customer Gamification]
+      summary: Complete a customer workflow step
+      description: Preserves current behavior, including successful fallback response when customer lookup misses.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteStepRequest'
+      responses:
+        '200':
+          description: Step completion or duplicate-completion response.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/customer/leaderboard:
+    get:
+      tags: [Customer Gamification]
+      summary: Get customer leaderboard
+      responses:
+        '200':
+          description: Verified customer leaderboard, ordered by loyalty points desc and limited to 20.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/site-settings:
+    get:
+      tags: [Site Settings]
+      summary: Get public site settings
+      responses:
+        '200':
+          description: Public settings object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettings'
+  /api/admin/site-settings:
+    get:
+      tags: [Site Settings]
+      summary: Get admin site settings
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Admin settings object.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteSettings'
+    put:
+      tags: [Site Settings]
+      summary: Update site settings
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated settings payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/upload:
+    post:
+      tags: [Site Settings]
+      summary: Upload site logo/image
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                logo:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Upload URL payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /api/uploads/{filename}:
+    get:
+      tags: [Site Settings]
+      summary: Serve uploaded file
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Binary uploaded file response.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'

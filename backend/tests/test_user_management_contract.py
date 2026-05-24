@@ -13,17 +13,20 @@ from backend.models import (
     Activity,
     AssignmentLog,
     AssignmentRule,
+    Customer,
     ExpertConsoleLog,
     ExpertConsoleMessage,
     ExpertConsoleNotification,
     ExpertSpecialization,
     ExpertUser,
+    Opportunity,
     Report,
     ShipmentRequest,
     Task,
     TransportMethod,
 )
 from backend.security import security
+from backend.services import assignment_service
 
 
 @pytest.fixture
@@ -305,11 +308,27 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
     with user_management_app["app"].app_context():
         created = db.session.get(ExpertUser, create_payload["user_id"])
         assert created is not None
+        assert created.password_hash != "test123"
+        assert bcrypt.checkpw(b"test123", created.password_hash.encode("utf-8"))
         assert created.email == "created@example.test"
         assert created.phone == "09120000000"
         assert created.department == "sales"
         assert len(created.specializations) == 1
         assert created.specializations[0].transport_method_id == user_management_app["air_id"]
+
+    duplicate_email = client.post(
+        "/api/user-management/users",
+        headers=admin_headers,
+        json={
+            "username": "phase5b_duplicate_email",
+            "password": "test123",
+            "full_name": "Duplicate Email",
+            "email": "created@example.test",
+            "role": "expert",
+        },
+    )
+    assert duplicate_email.status_code == 409
+    assert duplicate_email.get_json() == {"error": "ایمیل تکراری است یا قبلاً استفاده شده است."}
 
     missing_update = client.put(
         "/api/user-management/users/999999",
@@ -370,6 +389,23 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
     assert missing_delete.get_json() == {"error": "کاربر یافت نشد"}
 
     with user_management_app["app"].app_context():
+        protected_admin = ExpertUser(
+            username="phase5b_protected_admin",
+            password_hash=bcrypt.hashpw(b"test123", bcrypt.gensalt()).decode("utf-8"),
+            full_name="Phase 5B Protected Admin",
+            email="phase5b-protected-admin@example.test",
+            role="admin",
+            is_active=True,
+        )
+        db.session.add(protected_admin)
+        db.session.commit()
+        protected_admin_id = protected_admin.id
+
+    delete_admin = client.delete(f"/api/user-management/users/{protected_admin_id}", headers=admin_headers)
+    assert delete_admin.status_code == 400
+    assert delete_admin.get_json() == {"error": "امکان حذف کاربر با نقش مدیر وجود ندارد"}
+
+    with user_management_app["app"].app_context():
         request_row = db.session.get(ShipmentRequest, user_management_app["request_id"])
         user_rule = AssignmentRule(
             name="Expert-created rule",
@@ -416,7 +452,20 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
         )
         task = Task(title="Seed task", assigned_to=expert_id, created_by=expert_id)
         report = Report(name="Seed report", report_type="activity", created_by=expert_id)
-        db.session.add_all([user_rule, subordinate, log, message, notification, activity, task, report])
+        customer = Customer(
+            first_name="Phase 5B",
+            last_name="Customer",
+            email="phase5b-customer@example.test",
+        )
+        db.session.add(customer)
+        db.session.flush()
+        opportunity = Opportunity(
+            customer_id=customer.id,
+            title="Seed opportunity",
+            stage="qualified",
+            assigned_to=expert_id,
+        )
+        db.session.add_all([user_rule, subordinate, log, message, notification, activity, task, report, opportunity])
         db.session.flush()
         assignment_log = AssignmentLog(
             shipment_request_id=request_row.id,
@@ -429,6 +478,7 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
         db.session.commit()
         user_rule_id = user_rule.id
         subordinate_id = subordinate.id
+        opportunity_id = opportunity.id
 
     delete_response = client.delete(f"/api/user-management/users/{expert_id}", headers=admin_headers)
     assert delete_response.status_code == 200
@@ -438,6 +488,7 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
         assert db.session.get(ExpertUser, expert_id) is None
         assert db.session.get(ExpertUser, subordinate_id).manager_id is None
         assert db.session.get(ShipmentRequest, user_management_app["request_id"]).assigned_to is None
+        assert db.session.get(Opportunity, opportunity_id).assigned_to is None
         assert db.session.get(AssignmentRule, user_rule_id).created_by == user_management_app["admin_id"]
         assert ExpertSpecialization.query.filter_by(expert_user_id=expert_id).count() == 0
         assert AssignmentLog.query.filter_by(assigned_expert_id=expert_id).count() == 0
@@ -538,7 +589,7 @@ def test_assignment_rule_crud_and_no_delete_endpoint_contract(user_management_ap
         assert isinstance(created_rule.updated_at, datetime)
 
 
-def test_assignment_statistics_and_manual_assignment_failure_contract(user_management_app):
+def _legacy_assignment_statistics_and_manual_assignment_failure_contract(user_management_app, monkeypatch):
     """Stats read shape and preserved manual-assignment failure remain unchanged."""
     client = user_management_app["app"].test_client()
     admin_headers = _auth_headers(user_management_app["admin_token"])
@@ -590,3 +641,203 @@ def test_assignment_statistics_and_manual_assignment_failure_contract(user_manag
         assert request_row.assigned_to == user_management_app["expert_id"]
         assert request_row.status == "assigned"
         assert AssignmentLog.query.filter_by(shipment_request_id=user_management_app["request_id"]).count() == 0
+        assert ExpertConsoleLog.query.filter_by(
+            shipment_request_id=user_management_app["request_id"],
+            action="assignment",
+        ).count() == 0
+        assert ExpertConsoleNotification.query.filter_by(
+            shipment_request_id=user_management_app["request_id"],
+            notification_type="assignment",
+        ).count() == 0
+
+    def fail_after_staged_assignment_log() -> None:
+        db.session.add(
+            AssignmentLog(
+                shipment_request_id=user_management_app["request_id"],
+                assigned_expert_id=user_management_app["other_expert_id"],
+                assignment_method="manual",
+                assignment_reason="rollback probe",
+            )
+        )
+        db.session.flush()
+        raise RuntimeError("manual assignment staged rollback probe")
+
+    monkeypatch.setattr(
+        assignment_service,
+        "preserve_manual_assignment_failure",
+        fail_after_staged_assignment_log,
+    )
+
+    rollback_response = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={
+            "request_id": user_management_app["request_id"],
+            "expert_id": user_management_app["other_expert_id"],
+            "reason": "Phase 5H rollback probe",
+        },
+    )
+    assert rollback_response.status_code == 500
+    assert rollback_response.get_json() == {"error": "خطا در ارجاع دستی"}
+
+    with user_management_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, user_management_app["request_id"])
+        assert request_row.assigned_to == user_management_app["expert_id"]
+        assert request_row.status == "assigned"
+        assert AssignmentLog.query.filter_by(
+            shipment_request_id=user_management_app["request_id"],
+            assignment_method="manual",
+            assignment_reason="rollback probe",
+        ).count() == 0
+
+
+def test_assignment_statistics_and_manual_assignment_contract(user_management_app, monkeypatch):
+    """Stats read shape and manual-assignment validation, side effects, and rollback stay explicit."""
+    client = user_management_app["app"].test_client()
+    admin_headers = _auth_headers(user_management_app["admin_token"])
+
+    stats_response = client.get("/api/user-management/assignment-statistics", headers=admin_headers)
+    assert stats_response.status_code == 200
+    stats_payload = stats_response.get_json()
+    assert set(stats_payload.keys()) == {
+        "total_assignments",
+        "automatic_assignments",
+        "manual_assignments",
+        "expert_workloads",
+    }
+    assert stats_payload["total_assignments"] == 0
+    assert stats_payload["automatic_assignments"] == 0
+    assert stats_payload["manual_assignments"] == 0
+
+    missing_request_id = client.post("/api/user-management/manual-assignment", headers=admin_headers, json={})
+    assert missing_request_id.status_code == 400
+    assert missing_request_id.get_json() == {"error": "شناسه درخواست الزامی است"}
+
+    missing_expert_id = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={"request_id": user_management_app["request_id"]},
+    )
+    assert missing_expert_id.status_code == 400
+    assert missing_expert_id.get_json() == {"error": "شناسه کارشناس الزامی است"}
+
+    missing_request = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={"request_id": 999999, "expert_id": user_management_app["other_expert_id"]},
+    )
+    assert missing_request.status_code == 404
+    assert missing_request.get_json() == {"error": "درخواست یافت نشد"}
+
+    missing_expert = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={"request_id": user_management_app["request_id"], "expert_id": 999999},
+    )
+    assert missing_expert.status_code == 404
+    assert missing_expert.get_json() == {"error": "کارشناس یافت نشد"}
+
+    with user_management_app["app"].app_context():
+        inactive_expert = ExpertUser(
+            username="phase5i_inactive",
+            password_hash=bcrypt.hashpw(b"test123", bcrypt.gensalt()).decode("utf-8"),
+            full_name="Phase 5I Inactive",
+            email="phase5i-inactive@example.test",
+            role="expert",
+            is_active=False,
+        )
+        db.session.add(inactive_expert)
+        db.session.commit()
+        inactive_expert_id = inactive_expert.id
+
+    inactive_assignment = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={"request_id": user_management_app["request_id"], "expert_id": inactive_expert_id},
+    )
+    assert inactive_assignment.status_code == 400
+    assert inactive_assignment.get_json() == {"error": "کارشناس غیرفعال است"}
+
+    manual_response = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={
+            "request_id": user_management_app["request_id"],
+            "expert_id": user_management_app["other_expert_id"],
+            "reason": "Phase 5I manual",
+        },
+    )
+    assert manual_response.status_code == 200
+    assert manual_response.get_json() == {
+        "message": "درخواست با موفقیت ارجاع داده شد",
+        "assigned_to": {"id": user_management_app["other_expert_id"], "name": "Phase 5B Other"},
+    }
+
+    with user_management_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, user_management_app["request_id"])
+        assert request_row.assigned_to == user_management_app["other_expert_id"]
+        assert request_row.status == "assigned"
+        assert request_row.has_unread_for_assignee is True
+        assert AssignmentLog.query.filter_by(shipment_request_id=user_management_app["request_id"]).count() == 0
+        assignment_log = ExpertConsoleLog.query.filter_by(
+            shipment_request_id=user_management_app["request_id"],
+            expert_user_id=user_management_app["other_expert_id"],
+            action="assignment",
+        ).one()
+        assert assignment_log.old_status == "assigned"
+        assert assignment_log.new_status == "assigned"
+        assignment_notification = ExpertConsoleNotification.query.filter_by(
+            shipment_request_id=user_management_app["request_id"],
+            expert_user_id=user_management_app["other_expert_id"],
+            notification_type="assignment",
+        ).one()
+        assert assignment_notification.is_read is False
+
+    with user_management_app["app"].app_context():
+        rollback_request = ShipmentRequest(
+            tracking_code="UM-P5I-ROLLBACK",
+            shipping_type="domestic",
+            contact_phone="09120000001",
+            customer_first_name="Rollback",
+            customer_last_name="Probe",
+            transport_method="road",
+            domestic_transport_method="road",
+            status_request_status="new",
+            status="new",
+            assigned_to=user_management_app["expert_id"],
+        )
+        db.session.add(rollback_request)
+        db.session.commit()
+        rollback_request_id = rollback_request.id
+
+    def fail_after_staged_assignment_notification(request_id: int, expert_id: int):
+        db.session.flush()
+        raise RuntimeError("manual assignment staged rollback probe")
+
+    monkeypatch.setattr(
+        assignment_service,
+        "create_assignment_notification_if_needed",
+        fail_after_staged_assignment_notification,
+    )
+
+    rollback_response = client.post(
+        "/api/user-management/manual-assignment",
+        headers=admin_headers,
+        json={
+            "request_id": rollback_request_id,
+            "expert_id": user_management_app["other_expert_id"],
+            "reason": "Phase 5I rollback probe",
+        },
+    )
+    assert rollback_response.status_code == 500
+    assert rollback_response.get_json() == {"error": "خطا در ارجاع دستی"}
+
+    with user_management_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, rollback_request_id)
+        assert request_row.assigned_to == user_management_app["expert_id"]
+        assert request_row.status == "new"
+        assert ExpertConsoleLog.query.filter_by(shipment_request_id=rollback_request_id, action="assignment").count() == 0
+        assert ExpertConsoleNotification.query.filter_by(
+            shipment_request_id=rollback_request_id,
+            notification_type="assignment",
+        ).count() == 0

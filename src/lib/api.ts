@@ -233,6 +233,286 @@ export function submitShipmentRequest(
   });
 }
 
+export interface PublicTrackingWorkflowStep {
+  name: string;
+  order: number;
+  title: string;
+  is_completed: boolean;
+  completed_at: string | null;
+  points_earned?: number;
+  meta?: { warning?: string };
+}
+
+export interface PublicTrackingData {
+  id: number;
+  tracking_number: string;
+  status: string;
+  created_at: string;
+  shipping_type: string;
+  contact_phone: string;
+  customer_first_name?: string;
+  customer_last_name?: string;
+  route: {
+    origin: {
+      province?: string;
+      county?: string;
+      city?: string;
+      country?: string;
+      city_international?: string;
+      address?: string;
+    };
+    destination: {
+      province?: string;
+      county?: string;
+      city?: string;
+      country?: string;
+      city_international?: string;
+      address?: string;
+    };
+  };
+  transport_method?: string;
+  domestic_transport_method?: string;
+  international_transport_method?: string;
+  transport_method_preference?: string;
+  cargo_description?: string;
+  cargo_weight?: number;
+  cargo_volume?: number;
+  cargo_value?: number;
+  special_instructions?: string;
+  pickup_date?: string | null;
+  delivery_date?: string | null;
+  assigned_expert?: {
+    id: number;
+    full_name: string;
+    phone: string;
+    email?: string;
+  };
+  assigned_at?: string | null;
+  last_customer_touch_at?: string | null;
+  latest_quote?: {
+    id: number;
+    amount: number;
+    currency: string;
+    note?: string | null;
+    valid_until?: string | null;
+    created_at: string;
+    created_by?: string | null;
+  } | null;
+  workflow_steps?: PublicTrackingWorkflowStep[];
+  workflow_steps_simple?: PublicTrackingWorkflowStep[];
+}
+
+export class PublicTrackingNotFoundError extends Error {
+  constructor() {
+    super("Public tracking request not found");
+    this.name = "PublicTrackingNotFoundError";
+  }
+}
+
+export class PublicTrackingHttpError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super(`Public tracking request failed with status ${status}`);
+    this.name = "PublicTrackingHttpError";
+    this.status = status;
+  }
+}
+
+export async function fetchPublicTracking(identifier: string): Promise<PublicTrackingData> {
+  const path = `/api/public/track/${encodeURIComponent(identifier)}`;
+  const response = await fetch(`${API_BASE_URL}${buildPath(path)}`);
+
+  if (response.status === 404) {
+    throw new PublicTrackingNotFoundError();
+  }
+
+  if (!response.ok) {
+    throw new PublicTrackingHttpError(response.status);
+  }
+
+  return (await response.json()) as PublicTrackingData;
+}
+
+export interface CustomerProfile {
+  id: number;
+  email: string;
+  phone: string;
+  first_name: string;
+  last_name: string;
+  is_email_verified: boolean;
+  total_requests: number;
+  completed_requests: number;
+  loyalty_points: number;
+  customer_level: string;
+  created_at: string;
+}
+
+export interface CustomerProfileWorkflowStep {
+  step_name: string;
+  step_order: number;
+  is_completed: boolean;
+  completed_at: string | null;
+  points_earned: number;
+  created_at: string;
+}
+
+export interface CustomerProfileRecentRequest {
+  id: number;
+  shipping_type: string;
+  status: string;
+  created_at: string;
+  assigned_expert: {
+    id: number;
+    full_name: string;
+    phone: string;
+  } | null;
+}
+
+export interface CustomerProfileData {
+  customer: CustomerProfile;
+  recent_steps: CustomerProfileWorkflowStep[];
+  recent_requests: CustomerProfileRecentRequest[];
+}
+
+export class CustomerProfileHttpError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super(`Customer profile request failed with status ${status}`);
+    this.name = "CustomerProfileHttpError";
+    this.status = status;
+  }
+}
+
+export async function fetchCustomerProfile(customerId: string): Promise<CustomerProfileData> {
+  const path = `/api/customer/profile/${customerId}`;
+  const response = await fetch(`${API_BASE_URL}${buildPath(path)}`);
+
+  if (!response.ok) {
+    throw new CustomerProfileHttpError(response.status);
+  }
+
+  return (await response.json()) as CustomerProfileData;
+}
+
+export interface CustomerWorkflowStep {
+  name: string;
+  order: number;
+  title: string;
+  points?: number;
+  is_completed: boolean;
+  completed_at: string | null;
+  points_earned?: number;
+  meta?: { warning?: string };
+}
+
+export interface CustomerWorkflowData {
+  id: number;
+  shipping_type: string;
+  status: string;
+  created_at: string;
+  assigned_expert: {
+    id: number;
+    full_name: string;
+    phone: string;
+    email: string;
+  } | null;
+  workflow_steps: CustomerWorkflowStep[];
+  workflow_steps_simple?: CustomerWorkflowStep[];
+  total_points_earned: number;
+  completed_steps: number;
+  total_steps: number;
+  latest_quote?: {
+    id: number;
+    amount: number;
+    currency: string;
+    note?: string | null;
+    valid_until?: string | null;
+    created_at: string;
+    created_by?: string | null;
+  } | null;
+}
+
+export class CustomerWorkflowHttpError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super(`Customer workflow request failed with status ${status}`);
+    this.name = "CustomerWorkflowHttpError";
+    this.status = status;
+  }
+}
+
+export async function fetchCustomerWorkflow(
+  customerId: string,
+  requestId: string,
+): Promise<CustomerWorkflowData> {
+  const path = `/api/customer/workflow/${customerId}?request_id=${requestId}`;
+  const response = await fetch(`${API_BASE_URL}${buildPath(path)}`);
+
+  if (!response.ok) {
+    throw new CustomerWorkflowHttpError(response.status);
+  }
+
+  return (await response.json()) as CustomerWorkflowData;
+}
+
+export interface CustomerEmailVerificationResponse {
+  message?: string;
+  customer_id?: number;
+}
+
+export interface CustomerEmailVerificationResult {
+  ok: boolean;
+  data: CustomerEmailVerificationResponse;
+}
+
+export async function verifyCustomerEmail(token: string): Promise<CustomerEmailVerificationResult> {
+  const path = `/api/customer/verify-email?token=${encodeURIComponent(token)}`;
+  const response = await fetch(`${API_BASE_URL}${buildPath(path)}`);
+  const data = (await response.json()) as CustomerEmailVerificationResponse;
+
+  return {
+    ok: response.ok,
+    data,
+  };
+}
+
+export interface AdminDashboardStats {
+  total_requests: number;
+  requests_per_transport_method: Record<string, number>;
+  requests_per_status: Record<string, number>;
+  last_7_days_count: number;
+  last_24h_count: number;
+  unassigned_count: number;
+  top_provinces: Array<{ province: string; count: number }>;
+}
+
+export class AdminDashboardHttpError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super(`Admin dashboard request failed with status ${status}`);
+    this.name = "AdminDashboardHttpError";
+    this.status = status;
+  }
+}
+
+export async function fetchAdminDashboard(token: string): Promise<AdminDashboardStats> {
+  const response = await fetch(`${API_BASE_URL}${buildPath("/api/admin/dashboard")}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new AdminDashboardHttpError(response.status);
+  }
+
+  return (await response.json()) as AdminDashboardStats;
+}
+
 // Expert Console Interfaces
 export interface ExpertRequest {
   id: number;

@@ -1,9 +1,7 @@
 """User management API routes for CRM hierarchy system."""
 from typing import Any, Dict, List, Optional
-import bcrypt
 
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import and_
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from backend.extensions import db
@@ -14,7 +12,14 @@ from backend.models import (
 )
 from backend.auth import require_auth, get_current_user
 from backend.security import require_role, validate_input, sanitize_input
-from backend.services import assignment_rule_service, assignment_service, transport_method_service
+from backend.services import (
+    assignment_rule_service,
+    assignment_service,
+    assignment_statistics_service,
+    transport_method_service,
+    user_delete_service,
+    user_service,
+)
 
 user_management_bp = Blueprint("user_management", __name__, url_prefix="/api/user-management")
 
@@ -61,51 +66,7 @@ def create_transport_method():
 def get_users():
     """Get all users with hierarchy information."""
     try:
-        # Admins can see all users
-        users = db.session.query(ExpertUser).order_by(ExpertUser.full_name).all()
-        
-        users_data = []
-        for user in users:
-            # Get specializations
-            specializations = []
-            for spec in user.specializations:
-                specializations.append({
-                    "id": spec.id,
-                    "transport_method": {
-                        "id": spec.transport_method.id,
-                        "name": spec.transport_method.name_fa
-                    },
-                    "proficiency_level": spec.proficiency_level,
-                    "is_primary": spec.is_primary
-                })
-            
-            # Get manager info
-            manager_info = None
-            if user.manager:
-                manager_info = {
-                    "id": user.manager.id,
-                    "name": user.manager.full_name
-                }
-            
-            # Get subordinates count
-            subordinates_count = len(user.subordinates) if user.subordinates else 0
-            
-            users_data.append({
-                "id": user.id,
-                "username": user.username,
-                "full_name": user.full_name,
-                "email": user.email,
-                "phone": user.phone,
-                "role": user.role,
-                "department": user.department,
-                "is_active": user.is_active,
-                "created_at": user.created_at.isoformat(),
-                "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
-                "manager": manager_info,
-                "subordinates_count": subordinates_count,
-                "specializations": specializations,
-                "workload": user.get_workload()
-            })
+        users_data = user_service.list_users_payload()
         
         return jsonify({
             "users": users_data
@@ -122,68 +83,15 @@ def create_user():
     """Create a new user."""
     try:
         data = request.get_json()
-        
-        # Validate required fields
-        if not data.get("username"):
-            return jsonify({"error": "نام کاربری الزامی است"}), 400
-        if not data.get("password"):
-            return jsonify({"error": "رمز عبور الزامی است"}), 400
-        if not data.get("full_name"):
-            return jsonify({"error": "نام کامل الزامی است"}), 400
-        if not data.get("role"):
-            return jsonify({"error": "نقش کاربر الزامی است"}), 400
-        
-        # Check if username already exists
-        existing_user = ExpertUser.query.filter_by(username=data.get("username")).first()
-        if existing_user:
-            return jsonify({"error": "نام کاربری قبلاً استفاده شده است"}), 400
-        
-        # Hash password using bcrypt
-        password = data.get("password")
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-
-        # Normalize optional strings to None when empty so multiple users without email don't violate UNIQUE.
-        raw_email = data.get("email")
-        email = None if not raw_email or not str(raw_email).strip() else str(raw_email).strip().lower()
-        raw_phone = data.get("phone")
-        phone = None if not raw_phone or not str(raw_phone).strip() else str(raw_phone).strip()
-        raw_department = data.get("department")
-        department = None if not raw_department or not str(raw_department).strip() else str(raw_department).strip()
-
-        # Create user
-        user = ExpertUser(
-            username=data.get("username"),
-            password_hash=password_hash,
-            full_name=data.get("full_name"),
-            email=email,
-            phone=phone,
-            role=data.get("role"),
-            department=department,
-            manager_id=data.get("manager_id"),
-            is_active=data.get("is_active", True)
-        )
-        
-        db.session.add(user)
-        db.session.flush()
-        
-        # Add specializations
-        specializations = data.get("specializations", [])
-        for spec_data in specializations:
-            specialization = ExpertSpecialization(
-                expert_user_id=user.id,
-                transport_method_id=spec_data.get("transport_method_id"),
-                proficiency_level=spec_data.get("proficiency_level", "intermediate"),
-                is_primary=spec_data.get("is_primary", False)
-            )
-            db.session.add(specialization)
-        
-        db.session.commit()
+        user = user_service.create_user(data)
         
         return jsonify({
             "message": "کاربر با موفقیت ایجاد شد",
             "user_id": user.id
         }), 201
 
+    except user_service.UserValidationError as e:
+        return jsonify({"error": e.message}), 400
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "ایمیل تکراری است یا قبلاً استفاده شده است."}), 409
@@ -201,71 +109,17 @@ def create_user():
 def update_user(user_id: int):
     """Update user information."""
     try:
-        user = db.session.query(ExpertUser).get(user_id)
-        if not user:
-            return jsonify({"error": "کاربر یافت نشد"}), 404
-        
         data = request.get_json()
-        
-        # Update username (with uniqueness check)
-        if "username" in data:
-            new_username = data["username"]
-            if new_username != user.username:
-                # Check if username already exists (excluding current user)
-                existing_user = ExpertUser.query.filter(
-                    and_(
-                        ExpertUser.username == new_username,
-                        ExpertUser.id != user_id
-                    )
-                ).first()
-                if existing_user:
-                    return jsonify({"error": "نام کاربری قبلاً استفاده شده است"}), 400
-                user.username = new_username
-        
-        # Update password (optional - only if provided and not empty)
-        if "password" in data:
-            password = data["password"]
-            if password and password.strip():
-                password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-                user.password_hash = password_hash
-        
-        # Update basic fields
-        updatable_fields = ["full_name", "email", "phone", "department", "is_active"]
-        for field in updatable_fields:
-            if field in data:
-                setattr(user, field, data[field])
-        
-        # Update role (admins can update any role)
-        if "role" in data:
-            user.role = data["role"]
-        
-        # Update manager
-        if "manager_id" in data:
-            user.manager_id = data["manager_id"]
-        
-        # Update specializations
-        if "specializations" in data:
-            # Remove existing specializations
-            db.session.query(ExpertSpecialization).filter(
-                ExpertSpecialization.expert_user_id == user_id
-            ).delete()
-            
-            # Add new specializations
-            for spec_data in data["specializations"]:
-                specialization = ExpertSpecialization(
-                    expert_user_id=user_id,
-                    transport_method_id=spec_data.get("transport_method_id"),
-                    proficiency_level=spec_data.get("proficiency_level", "intermediate"),
-                    is_primary=spec_data.get("is_primary", False)
-                )
-                db.session.add(specialization)
-        
-        db.session.commit()
+        user_service.update_user(user_id, data)
         
         return jsonify({
             "message": "اطلاعات کاربر به‌روزرسانی شد"
         })
         
+    except user_service.UserNotFoundError:
+        return jsonify({"error": "کاربر یافت نشد"}), 404
+    except user_service.UserValidationError as e:
+        return jsonify({"error": e.message}), 400
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error updating user: {e}")
@@ -281,82 +135,17 @@ def delete_user(user_id: int):
     """
     try:
         current_user = get_current_user()
-        if not current_user:
-            return jsonify({"error": "احراز هویت نشده"}), 401
+        payload = user_delete_service.delete_user_with_cleanup(user_id, current_user)
+        return jsonify(payload)
 
-        if current_user["id"] == user_id:
-            return jsonify({"error": "امکان حذف حساب خودتان وجود ندارد"}), 400
-
-        user = db.session.query(ExpertUser).get(user_id)
-        if not user:
-            return jsonify({"error": "کاربر یافت نشد"}), 404
-
-        if user.role == "admin":
-            return jsonify({"error": "امکان حذف کاربر با نقش مدیر وجود ندارد"}), 400
-
-        # Order matters: remove FKs that reference this user, then delete user
-        expert_id = user.id
-        expert_username = user.username  # capture before delete (session will expire after commit)
-        admin_id = current_user["id"]
-
-        # 1. Subordinates: unset manager
-        db.session.query(ExpertUser).filter(ExpertUser.manager_id == expert_id).update(
-            {ExpertUser.manager_id: None}, synchronize_session=False
-        )
-
-        # 2. Delete expert-specific records (all references to this expert)
-        db.session.query(ExpertConsoleNotification).filter(
-            ExpertConsoleNotification.expert_user_id == expert_id
-        ).delete(synchronize_session=False)
-        db.session.query(ExpertConsoleMessage).filter(
-            ExpertConsoleMessage.expert_user_id == expert_id
-        ).delete(synchronize_session=False)
-        db.session.query(ExpertConsoleLog).filter(
-            ExpertConsoleLog.expert_user_id == expert_id
-        ).delete(synchronize_session=False)
-        db.session.query(AssignmentLog).filter(
-            AssignmentLog.assigned_expert_id == expert_id
-        ).delete(synchronize_session=False)
-        db.session.query(ExpertSpecialization).filter(
-            ExpertSpecialization.expert_user_id == expert_id
-        ).delete(synchronize_session=False)
-        db.session.query(Activity).filter(Activity.expert_user_id == expert_id).delete(
-            synchronize_session=False
-        )
-        db.session.query(Task).filter(
-            (Task.assigned_to == expert_id) | (Task.created_by == expert_id)
-        ).delete(synchronize_session=False)
-        db.session.query(Report).filter(Report.created_by == expert_id).delete(
-            synchronize_session=False
-        )
-        db.session.flush()
-
-        # 3. AssignmentRule: reassign creator to current admin (rule stays)
-        db.session.query(AssignmentRule).filter(
-            AssignmentRule.created_by == expert_id
-        ).update({AssignmentRule.created_by: int(admin_id)}, synchronize_session=False)
-        db.session.flush()
-
-        # 4. Unassign from shipment_requests and opportunities
-        db.session.query(ShipmentRequest).filter(
-            ShipmentRequest.assigned_to == expert_id
-        ).update({ShipmentRequest.assigned_to: None}, synchronize_session=False)
-        db.session.query(Opportunity).filter(Opportunity.assigned_to == expert_id).update(
-            {Opportunity.assigned_to: None}, synchronize_session=False
-        )
-        db.session.flush()
-
-        # 5. Subordinates already unset in step 1; now delete the user
-        db.session.delete(user)
-        db.session.commit()
-
-        current_app.logger.info(
-            f"Admin {current_user.get('username')} deleted user id={expert_id} ({expert_username}) and related data."
-        )
-        return jsonify({
-            "message": "کاربر و تمام داده‌های مرتبط با موفقیت حذف شدند"
-        })
-
+    except user_delete_service.DeleteAuthenticationRequired:
+        return jsonify({"error": "احراز هویت نشده"}), 401
+    except user_delete_service.SelfDeleteNotAllowed:
+        return jsonify({"error": "امکان حذف حساب خودتان وجود ندارد"}), 400
+    except user_delete_service.DeleteTargetNotFound:
+        return jsonify({"error": "کاربر یافت نشد"}), 404
+    except user_delete_service.AdminDeleteNotAllowed:
+        return jsonify({"error": "امکان حذف کاربر با نقش مدیر وجود ندارد"}), 400
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting user: {e}", exc_info=True)
@@ -440,9 +229,7 @@ def update_assignment_rule(rule_id: int):
 def get_assignment_statistics():
     """Get assignment statistics."""
     try:
-        
-        from backend.assignment_engine import assignment_engine
-        stats = assignment_engine.get_assignment_statistics()
+        stats = assignment_statistics_service.get_assignment_statistics_payload()
         
         return jsonify(stats)
         
@@ -457,8 +244,15 @@ def get_assignment_statistics():
 def manual_assignment():
     """Manually assign a request to an expert."""
     try:
-        assignment_service.preserve_manual_assignment_failure()
-        return jsonify({"message": "درخواست با موفقیت ارجاع داده شد"})
+        payload = assignment_service.manual_assign_request(
+            request.get_json(silent=True) or {},
+            actor=get_current_user(),
+            remote_addr=request.remote_addr,
+        )
+        return jsonify(payload)
+
+    except assignment_service.AssignmentServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
 
     except Exception as e:
         db.session.rollback()

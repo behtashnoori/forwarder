@@ -1,118 +1,90 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { 
-  User, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Package, 
-  Calendar, 
-  CheckCircle, 
-  Clock, 
+import {
+  ArrowLeft,
+  Award,
+  CheckCircle,
+  Clock,
+  Mail,
+  Package,
+  Phone,
+  RefreshCw,
   Star,
   Trophy,
-  Award,
   TrendingUp,
-  ArrowLeft,
-  RefreshCw
+  User,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { env } from "@/lib/env";
+import {
+  CustomerProfileHttpError,
+  fetchCustomerProfile,
+  type CustomerProfileData,
+} from "@/lib/api";
 
-interface CustomerProfile {
-  id: number;
-  email: string;
-  phone: string;
-  first_name: string;
-  last_name: string;
-  is_email_verified: boolean;
-  total_requests: number;
-  completed_requests: number;
-  loyalty_points: number;
-  customer_level: string;
-  created_at: string;
-}
+const STEP_LABELS: Record<string, string> = {
+  email_verified: "تایید ایمیل",
+  request_submitted: "ارسال درخواست",
+  expert_assigned: "اختصاص کارشناس",
+  expert_contacted: "تماس کارشناس",
+  quote_provided: "ارائه پیشنهاد",
+  contract_signed: "امضای قرارداد",
+  shipment_picked_up: "تحویل مرسوله",
+  shipment_delivered: "تحویل به مقصد",
+};
 
-interface WorkflowStep {
-  step_name: string;
-  step_order: number;
-  is_completed: boolean;
-  completed_at: string | null;
-  points_earned: number;
-  created_at: string;
-}
-
-interface RecentRequest {
-  id: number;
-  shipping_type: string;
-  status: string;
-  created_at: string;
-  assigned_expert: {
-    id: number;
-    full_name: string;
-    phone: string;
-  } | null;
-}
-
-interface CustomerDashboardData {
-  customer: CustomerProfile;
-  recent_steps: WorkflowStep[];
-  recent_requests: RecentRequest[];
+function formatDate(date: string | null | undefined): string {
+  return date ? new Date(date).toLocaleDateString("fa-IR") : "در انتظار";
 }
 
 const CustomerDashboard: React.FC = () => {
   const { customerId } = useParams<{ customerId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
-  const [data, setData] = useState<CustomerDashboardData | null>(null);
+
+  const [data, setData] = useState<CustomerProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchCustomerData = async () => {
+  const fetchCustomerData = useCallback(async () => {
     try {
-      const response = await fetch(
-        `${env.API_URL}/api/customer/profile/${customerId}`
-      );
-      
-      if (response.ok) {
-        const customerData = await response.json();
-        setData(customerData);
-        if (customerId) {
-          try {
-            localStorage.setItem("customer_panel_id", customerId);
-          } catch {
-            // ignore storage errors
-          }
+      const customerData = await fetchCustomerProfile(customerId ?? "");
+      setData(customerData);
+      if (customerId) {
+        try {
+          localStorage.setItem("customer_panel_id", customerId);
+        } catch {
+          // ignore storage errors
         }
-      } else {
+      }
+    } catch (error) {
+      if (error instanceof CustomerProfileHttpError) {
         toast({
           title: "خطا",
           description: "اطلاعات مشتری یافت نشد",
           variant: "destructive",
         });
+      } else {
+        toast({
+          title: "خطا",
+          description: "خطا در دریافت اطلاعات",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      toast({
-        title: "خطا",
-        description: "خطا در دریافت اطلاعات",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [customerId, toast]);
 
   useEffect(() => {
     if (customerId) {
       fetchCustomerData();
     }
-  }, [customerId]);
+  }, [customerId, fetchCustomerData]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -124,7 +96,7 @@ const CustomerDashboard: React.FC = () => {
       bronze: { name: "برنز", color: "bg-amber-500", icon: Award },
       silver: { name: "نقره", color: "bg-gray-400", icon: Star },
       gold: { name: "طلا", color: "bg-yellow-500", icon: Trophy },
-      platinum: { name: "پلاتین", color: "bg-purple-500", icon: TrendingUp }
+      platinum: { name: "پلاتین", color: "bg-purple-500", icon: TrendingUp },
     };
     return levels[level as keyof typeof levels] || levels.bronze;
   };
@@ -135,17 +107,33 @@ const CustomerDashboard: React.FC = () => {
       assigned: { label: "اختصاص یافته", variant: "default" as const },
       in_progress: { label: "در حال انجام", variant: "default" as const },
       completed: { label: "تکمیل شده", variant: "default" as const },
-      cancelled: { label: "لغو شده", variant: "destructive" as const }
+      cancelled: { label: "لغو شده", variant: "destructive" as const },
     };
     return statusMap[status as keyof typeof statusMap] || { label: status, variant: "secondary" as const };
   };
 
+  const customerName = useMemo(() => {
+    if (!data) {
+      return "";
+    }
+    return `${data.customer.first_name} ${data.customer.last_name}`.trim();
+  }, [data]);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">در حال بارگذاری...</p>
+      <div className="min-h-screen bg-gradient-background px-4 py-10">
+        <div className="mx-auto flex min-h-[70vh] max-w-md items-center justify-center">
+          <Card className="w-full border-border/70 bg-card/95 shadow-sm">
+            <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+              <div className="rounded-full bg-primary/10 p-4">
+                <RefreshCw className="h-7 w-7 animate-spin text-primary" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold text-foreground">در حال بارگذاری پنل مشتری</h2>
+                <p className="text-sm text-muted-foreground">اطلاعات درخواست‌ها و امتیازهای شما دریافت می‌شود.</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -153,13 +141,23 @@ const CustomerDashboard: React.FC = () => {
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">اطلاعات مشتری یافت نشد</p>
-          <Button onClick={() => navigate("/")} variant="outline">
-            <ArrowLeft className="w-4 h-4 ml-2" />
-            بازگشت به صفحه اصلی
-          </Button>
+      <div className="min-h-screen bg-gradient-background px-4 py-10">
+        <div className="mx-auto flex min-h-[70vh] max-w-md items-center justify-center">
+          <Card className="w-full border-border/70 bg-card/95 shadow-sm">
+            <CardContent className="flex flex-col items-center gap-5 p-8 text-center">
+              <div className="rounded-full bg-muted p-4">
+                <User className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-lg font-semibold text-foreground">اطلاعات مشتری یافت نشد</h2>
+                <p className="text-sm text-muted-foreground">برای ادامه می‌توانید به صفحه اصلی برگردید.</p>
+              </div>
+              <Button onClick={() => navigate("/")} variant="outline">
+                <ArrowLeft className="ml-2 h-4 w-4" />
+                بازگشت به صفحه اصلی
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -170,115 +168,149 @@ const CustomerDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-background">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button
-              onClick={() => navigate("/")}
-              variant="outline"
-              size="sm"
-            >
-              <ArrowLeft className="w-4 h-4 ml-2" />
-              بازگشت
+      <div className="container mx-auto max-w-7xl px-4 py-6 sm:py-8">
+        <section className="mb-6 overflow-hidden rounded-2xl border border-border/70 bg-card/95 shadow-sm">
+          <div className="flex flex-col gap-5 p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
+              <Button onClick={() => navigate("/")} variant="outline" size="sm" className="w-fit">
+                <ArrowLeft className="ml-2 h-4 w-4" />
+                بازگشت
+              </Button>
+              <div className="min-w-0">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <Badge variant="outline" className="bg-background/70">
+                    پنل مشتری
+                  </Badge>
+                  {data.customer.is_email_verified && (
+                    <Badge variant="secondary" className="gap-1">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      ایمیل تایید شده
+                    </Badge>
+                  )}
+                </div>
+                <h1 className="break-words text-2xl font-bold tracking-normal text-foreground sm:text-3xl">
+                  خوش آمدید {customerName}
+                </h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  وضعیت درخواست‌های اخیر، فعالیت‌های ثبت شده و امتیازهای وفاداری شما در یک نگاه.
+                </p>
+              </div>
+            </div>
+            <Button onClick={handleRefresh} variant="outline" size="sm" disabled={refreshing} className="w-fit">
+              <RefreshCw className={`ml-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+              به‌روزرسانی
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                پنل مشتری
-              </h1>
-              <p className="text-muted-foreground">
-                خوش آمدید {data.customer.first_name} {data.customer.last_name}
-              </p>
+          </div>
+
+          <div className="grid border-t border-border/70 bg-muted/20 sm:grid-cols-3">
+            <div className="border-b border-border/70 p-5 sm:border-b-0 sm:border-l">
+              <p className="text-xs text-muted-foreground">امتیاز فعلی</p>
+              <p className="mt-1 text-2xl font-bold text-primary">{data.customer.loyalty_points}</p>
+            </div>
+            <div className="border-b border-border/70 p-5 sm:border-b-0 sm:border-l">
+              <p className="text-xs text-muted-foreground">کل درخواست‌ها</p>
+              <p className="mt-1 text-2xl font-bold text-foreground">{data.customer.total_requests}</p>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-muted-foreground">درخواست‌های تکمیل شده</p>
+              <p className="mt-1 text-2xl font-bold text-green-600">{data.customer.completed_requests}</p>
             </div>
           </div>
-          <Button
-            onClick={handleRefresh}
-            variant="outline"
-            size="sm"
-            disabled={refreshing}
-          >
-            <RefreshCw className={`w-4 h-4 ml-2 ${refreshing ? 'animate-spin' : ''}`} />
-            به‌روزرسانی
-          </Button>
-        </div>
+        </section>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Customer Profile */}
-          <div className="lg:col-span-1">
-            <Card>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <aside className="space-y-6 lg:col-span-4">
+            <Card className="border-border/70 bg-card/95 shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <User className="h-5 w-5 text-primary" />
                   پروفایل مشتری
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-full ${levelInfo.color} flex items-center justify-center`}>
-                    <LevelIcon className="w-6 h-6 text-white" />
+              <CardContent className="space-y-5">
+                <div className="flex items-center gap-3 rounded-xl border bg-muted/20 p-4">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${levelInfo.color}`}>
+                    <LevelIcon className="h-6 w-6 text-white" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold">{levelInfo.name}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {data.customer.loyalty_points} امتیاز
-                    </p>
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-foreground">{levelInfo.name}</h3>
+                    <p className="text-sm text-muted-foreground">{data.customer.loyalty_points} امتیاز</p>
                   </div>
                 </div>
 
                 <Separator />
 
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{data.customer.email}</span>
-                    {data.customer.is_email_verified && (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    )}
+                  <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background/60 p-3">
+                    <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 break-all text-sm">{data.customer.email}</span>
+                    {data.customer.is_email_verified && <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">{data.customer.phone}</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-primary">
-                      {data.customer.total_requests}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      کل درخواست‌ها
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      {data.customer.completed_requests}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      تکمیل شده
-                    </div>
+                  <div className="flex min-w-0 items-center gap-2 rounded-lg bg-background/60 p-3">
+                    <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 break-words text-sm">{data.customer.phone}</span>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Recent Requests */}
-          <div className="lg:col-span-2">
-            <Card>
+            <Card className="border-border/70 bg-card/95 shadow-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  درخواست‌های اخیر
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Clock className="h-5 w-5 text-primary" />
+                  فعالیت‌های اخیر
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {data.recent_steps.length === 0 ? (
+                  <div className="rounded-xl border border-dashed bg-muted/20 p-6 text-center">
+                    <Clock className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+                    <p className="text-sm font-medium text-foreground">هنوز فعالیتی ثبت نشده است</p>
+                    <p className="mt-1 text-xs text-muted-foreground">پس از پیشرفت درخواست‌ها، رویدادها اینجا نمایش داده می‌شوند.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {data.recent_steps.map((step, index) => (
+                      <div key={index} className="flex gap-3">
+                        <div
+                          className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                            step.is_completed ? "bg-green-100 text-green-600" : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {step.is_completed ? <CheckCircle className="h-4 w-4" /> : <Clock className="h-4 w-4" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-foreground">{STEP_LABELS[step.step_name] ?? step.step_name}</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {formatDate(step.completed_at)}
+                            {step.points_earned > 0 && <span className="mr-2">• {step.points_earned} امتیاز</span>}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </aside>
+
+          <main className="lg:col-span-8">
+            <Card className="border-border/70 bg-card/95 shadow-sm">
+              <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Package className="h-5 w-5 text-primary" />
+                  درخواست‌های اخیر
+                </CardTitle>
+                <Badge variant="outline" className="w-fit">
+                  {data.recent_requests.length} درخواست
+                </Badge>
+              </CardHeader>
+              <CardContent>
                 {data.recent_requests.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">هنوز درخواستی ثبت نکرده‌اید</p>
+                  <div className="rounded-xl border border-dashed bg-muted/20 p-8 text-center">
+                    <Package className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
+                    <p className="font-medium text-foreground">هنوز درخواستی ثبت نکرده‌اید</p>
+                    <p className="mt-2 text-sm text-muted-foreground">بعد از ثبت درخواست حمل، وضعیت آن در همین بخش قابل پیگیری است.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -287,34 +319,27 @@ const CustomerDashboard: React.FC = () => {
                       return (
                         <div
                           key={request.id}
-                          className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                          className="rounded-xl border border-border/70 bg-background/70 p-4 transition-colors hover:bg-muted/40"
                         >
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <Badge variant={statusInfo.variant}>
-                                {statusInfo.label}
-                              </Badge>
-                              <Badge variant="outline">
-                                {request.shipping_type === "domestic" ? "داخلی" : "بین‌المللی"}
-                              </Badge>
-                            </div>
-                            <span className="text-sm text-muted-foreground">
-                              {new Date(request.created_at).toLocaleDateString("fa-IR")}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">درخواست #{request.id}</p>
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="min-w-0 space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                                <Badge variant="outline">
+                                  {request.shipping_type === "domestic" ? "داخلی" : "بین‌المللی"}
+                                </Badge>
+                                <span className="text-xs text-muted-foreground">{formatDate(request.created_at)}</span>
+                              </div>
+                              <p className="break-words font-semibold text-foreground">درخواست #{request.id}</p>
                               {request.assigned_expert && (
-                                <div className="flex items-center gap-2 mt-1">
-                                  <User className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">
-                                    کارشناس: {request.assigned_expert.full_name}
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                                  <span className="flex min-w-0 items-center gap-1">
+                                    <User className="h-4 w-4 shrink-0" />
+                                    <span className="break-words">کارشناس: {request.assigned_expert.full_name}</span>
                                   </span>
-                                  <Phone className="w-4 h-4 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">
-                                    {request.assigned_expert.phone}
+                                  <span className="flex min-w-0 items-center gap-1">
+                                    <Phone className="h-4 w-4 shrink-0" />
+                                    <span className="break-words">{request.assigned_expert.phone}</span>
                                   </span>
                                 </div>
                               )}
@@ -322,6 +347,7 @@ const CustomerDashboard: React.FC = () => {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="w-full sm:w-auto"
                               onClick={() => navigate(`/request/${request.id}?customer=${customerId}`)}
                             >
                               مشاهده جزئیات
@@ -334,58 +360,8 @@ const CustomerDashboard: React.FC = () => {
                 )}
               </CardContent>
             </Card>
-          </div>
+          </main>
         </div>
-
-        {/* Recent Activity */}
-        {data.recent_steps.length > 0 && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="w-5 h-5" />
-                فعالیت‌های اخیر
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {data.recent_steps.map((step, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      step.is_completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                    }`}>
-                      {step.is_completed ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        <Clock className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        {step.step_name === "email_verified" && "تایید ایمیل"}
-                        {step.step_name === "request_submitted" && "ارسال درخواست"}
-                        {step.step_name === "expert_assigned" && "اختصاص کارشناس"}
-                        {step.step_name === "expert_contacted" && "تماس کارشناس"}
-                        {step.step_name === "quote_provided" && "ارائه پیشنهاد"}
-                        {step.step_name === "contract_signed" && "امضای قرارداد"}
-                        {step.step_name === "shipment_picked_up" && "تحویل مرسوله"}
-                        {step.step_name === "shipment_delivered" && "تحویل به مقصد"}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {step.completed_at 
-                          ? new Date(step.completed_at).toLocaleDateString("fa-IR")
-                          : "در انتظار"
-                        }
-                        {step.points_earned > 0 && (
-                          <span className="mr-2">• {step.points_earned} امتیاز</span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );
