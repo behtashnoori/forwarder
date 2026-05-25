@@ -20,6 +20,7 @@ import {
   Send,
   Phone,
   Weight,
+  DollarSign,
 } from "lucide-react";
 import PageNav from "@/components/PageNav";
 import { useToast } from "@/hooks/use-toast";

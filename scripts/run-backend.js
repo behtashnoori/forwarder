@@ -25,7 +25,7 @@ function loadEnv() {
     let value = trimmed.slice(eq + 1).trim();
     if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'")))
       value = value.slice(1, -1);
-    if (key) process.env[key] = value;
+    if (key && process.env[key] === undefined) process.env[key] = value;
   }
 }
 

@@ -68,8 +68,9 @@ def main() -> None:
     print("[startup] PORT=%s, HOST=%s, DEBUG=%s, use_reloader=%s" % (port, host, debug, use_reloader))
 
     if not os.getenv("DATABASE_URL"):
-        print("[startup] DATABASE_URL is required. Set it in .env or environment.")
+        print("[startup] DATABASE_URL is required. Set it in project .env, backend/.env, or process env.")
         sys.exit(1)
+    print("[startup]", config.format_database_url_diagnostics())
     print("[startup] Environment OK.")
 
     # If configured port is in use, try next ports so the backend does not exit

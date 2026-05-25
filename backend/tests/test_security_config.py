@@ -1,8 +1,11 @@
 """Tests for Phase 2 security and runtime configuration hardening."""
 from __future__ import annotations
 
+import os
+
 import pytest
 
+from backend import config as runtime_config
 from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertUser
@@ -25,6 +28,60 @@ PRODUCTION_ENV_KEYS = (
 def _clear_runtime_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in PRODUCTION_ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
+
+
+def test_env_loader_respects_process_database_url(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    """Local env files must not override an explicit process DATABASE_URL."""
+    project_root = tmp_path / "project"
+    backend_dir = project_root / "backend"
+    backend_dir.mkdir(parents=True)
+    (project_root / ".env").write_text(
+        "DATABASE_URL=postgresql+psycopg2://file:secret@localhost:5432/filedb\n",
+        encoding="utf-8",
+    )
+    process_url = "postgresql+psycopg2://process:secret@localhost:5432/processdb"
+    monkeypatch.setenv("DATABASE_URL", process_url)
+
+    loaded = runtime_config.load_env_files(
+        project_root=str(project_root),
+        backend_dir=str(backend_dir),
+        emit_log=False,
+    )
+
+    assert loaded == (str(project_root / ".env"),)
+    assert os.environ["DATABASE_URL"] == process_url
+
+
+def test_env_loader_supports_backend_env(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    """backend/.env is supported when a root .env is absent."""
+    project_root = tmp_path / "project"
+    backend_dir = project_root / "backend"
+    backend_dir.mkdir(parents=True)
+    backend_url = "postgresql+psycopg2://backend:secret@localhost:5432/backenddb"
+    (backend_dir / ".env").write_text(f"DATABASE_URL={backend_url}\n", encoding="utf-8")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+
+    loaded = runtime_config.load_env_files(
+        project_root=str(project_root),
+        backend_dir=str(backend_dir),
+        emit_log=False,
+    )
+
+    assert loaded == (str(backend_dir / ".env"),)
+    assert os.environ["DATABASE_URL"] == backend_url
+
+
+def test_database_url_diagnostics_do_not_expose_password():
+    """Startup diagnostics should identify the DB without printing secrets."""
+    summary = runtime_config.format_database_url_diagnostics(
+        "postgresql+psycopg2://postgres:super-secret@localhost:5432/forwarder_db"
+    )
+
+    assert "super-secret" not in summary
+    assert "postgresql" in summary
+    assert "psycopg2" in summary
+    assert "localhost" in summary
+    assert "forwarder_db" in summary
 
 
 def test_production_requires_sensitive_environment(monkeypatch: pytest.MonkeyPatch):

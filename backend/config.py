@@ -8,7 +8,9 @@ from __future__ import annotations
 import importlib
 import importlib.util
 import os
+from urllib.parse import urlsplit
 
+_BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DEV_DATABASE_URI = "sqlite:///forwarder_dev.db"
 _TEST_DATABASE_URI = "sqlite:///:memory:"
@@ -28,12 +30,13 @@ _PLACEHOLDER_SECRET_VALUES = {
     "your-super-secret-key-change-this-in-production",
 }
 _PLACEHOLDER_ORIGIN_FRAGMENTS = ("yourdomain.com", "example.com", "localhost", "127.0.0.1")
+_LOADED_ENV_FILES: tuple[str, ...] = ()
 
 
-def _load_env_file(path: str) -> None:
+def _load_env_file(path: str) -> bool:
     """Load simple KEY=VALUE env files without requiring optional packages."""
     if not os.path.isfile(path):
-        return
+        return False
     with open(path, encoding="utf-8") as env_file:
         for raw_line in env_file:
             line = raw_line.strip()
@@ -42,33 +45,109 @@ def _load_env_file(path: str) -> None:
             key, value = line.split("=", 1)
             key = key.strip()
             value = value.strip().strip('"').strip("'")
-            if key:
+            if key and key not in os.environ:
                 os.environ[key] = value
+    return True
 
 
-def _load_env() -> None:
-    """Load .env and optionally .env.backend once."""
+def load_env_files(
+    *,
+    project_root: str | None = None,
+    backend_dir: str | None = None,
+    emit_log: bool = True,
+) -> tuple[str, ...]:
+    """Load local env files with process env taking precedence.
+
+    Root .env is preferred, backend/.env is supported for developers who run
+    commands from the backend directory, and .env.backend remains a legacy
+    fallback. Values already present in process env are never overwritten.
+    """
+    global _LOADED_ENV_FILES
+
+    resolved_project_root = os.path.abspath(project_root or _PROJECT_ROOT)
+    resolved_backend_dir = os.path.abspath(backend_dir or _BACKEND_DIR)
     dotenv_spec = importlib.util.find_spec("dotenv")
     env_paths = [
-        os.path.join(_PROJECT_ROOT, ".env"),
-        os.path.join(_PROJECT_ROOT, ".env.backend"),
+        os.path.join(resolved_project_root, ".env"),
+        os.path.join(resolved_backend_dir, ".env"),
+        os.path.join(resolved_project_root, ".env.backend"),
     ]
+    loaded: list[str] = []
     if dotenv_spec is not None:
         dotenv_module = importlib.import_module("dotenv")
         for env_path in env_paths:
-            dotenv_module.load_dotenv(dotenv_path=env_path, override=True)
+            if os.path.isfile(env_path):
+                dotenv_module.load_dotenv(dotenv_path=env_path, override=False)
+                loaded.append(env_path)
     else:
         for env_path in env_paths:
-            _load_env_file(env_path)
+            if _load_env_file(env_path):
+                loaded.append(env_path)
 
-    if os.path.isfile(os.path.join(_PROJECT_ROOT, ".env")):
-        print("[startup] Loaded env from", os.path.join(_PROJECT_ROOT, ".env"))
-    else:
-        print("[startup] No .env file - using process env only")
+    loaded_tuple = tuple(loaded)
+    if project_root is None and backend_dir is None:
+        _LOADED_ENV_FILES = loaded_tuple
+
+    if emit_log:
+        if loaded_tuple:
+            print("[startup] Loaded env from", ", ".join(loaded_tuple))
+        else:
+            print("[startup] No .env file found in project root or backend/ - using process env only")
+    return loaded_tuple
+
+
+def get_loaded_env_files() -> tuple[str, ...]:
+    """Return env files loaded during backend config import."""
+    return _LOADED_ENV_FILES
+
+
+def get_database_url_diagnostics(database_url: str | None = None) -> dict[str, str | bool | None]:
+    """Return safe DATABASE_URL diagnostics without credentials."""
+    value = database_url if database_url is not None else os.getenv("DATABASE_URL")
+    if not value:
+        return {
+            "detected": False,
+            "dialect": None,
+            "driver": None,
+            "host": None,
+            "database": None,
+        }
+
+    parsed = urlsplit(value)
+    scheme = parsed.scheme or "unknown"
+    dialect, _, driver = scheme.partition("+")
+    database = parsed.path.lstrip("/") or None
+    if database and "?" in database:
+        database = database.split("?", 1)[0]
+    return {
+        "detected": True,
+        "dialect": dialect or scheme,
+        "driver": driver or None,
+        "host": parsed.hostname,
+        "database": database,
+    }
+
+
+def format_database_url_diagnostics(database_url: str | None = None) -> str:
+    """Format safe DATABASE_URL diagnostics for startup logs."""
+    info = get_database_url_diagnostics(database_url)
+    if not info["detected"]:
+        return "DATABASE_URL detected=no"
+    details = [
+        "DATABASE_URL detected=yes",
+        f"dialect={info['dialect'] or 'unknown'}",
+    ]
+    if info["driver"]:
+        details.append(f"driver={info['driver']}")
+    if info["host"]:
+        details.append(f"host={info['host']}")
+    if info["database"]:
+        details.append(f"database={info['database']}")
+    return ", ".join(details)
 
 
 # Load once at import so any code using os.getenv (e.g. create_app) sees env
-_load_env()
+load_env_files()
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -122,9 +201,14 @@ def get_database_uri(*, testing: bool = False) -> str:
         return database_url
 
     if database_url:
+        print("[startup]", format_database_url_diagnostics(database_url))
         return database_url
 
-    print("[startup] DATABASE_URL is not set; using development-only local SQLite database.")
+    print(
+        "[startup] DATABASE_URL is not set. For local PostgreSQL, set DATABASE_URL "
+        "in project .env, backend/.env, or process env. Falling back to "
+        "development-only local SQLite database."
+    )
     return os.getenv("DEV_DATABASE_URL") or _DEV_DATABASE_URI
 
 
