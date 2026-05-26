@@ -7,12 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
+import {
   ArrowRight,
-  User, 
-  MapPin, 
-  Truck, 
-  Package, 
+  User,
+  MapPin,
+  Truck,
+  Package,
   Clock,
   FileText,
   AlertCircle,
@@ -24,13 +24,13 @@ import {
 } from "lucide-react";
 import PageNav from "@/components/PageNav";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  fetchExpertRequestDetail, 
+import {
+  fetchExpertRequestDetail,
   fetchExperts,
   assignRequest,
   changeRequestStatus,
   addMessage,
-  type ExpertUser 
+  type ExpertUser
 } from "@/lib/api";
 
 interface RequestDetail {
@@ -114,7 +114,7 @@ const RequestDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("details");
@@ -306,13 +306,13 @@ const RequestDetail = () => {
               <p className="text-gray-600">جزئیات درخواست حمل و نقل</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <Badge className={getStatusColor(request.status)}>
               {getStatusLabel(request.status)}
             </Badge>
             {request.sla_due_at && (
-              <Badge 
+              <Badge
                 variant={request.sla_status === "overdue" ? "destructive" : "secondary"}
                 className={request.sla_status === "due_soon" ? "bg-yellow-100 text-yellow-800" : ""}
               >
@@ -381,7 +381,7 @@ const RequestDetail = () => {
                         </div>
                       </div>
                     </div>
-                    
+
                     {(request.transport_method || request.international_transport_method || request.domestic_transport_method) && (
                       <div className="space-y-2 pt-3 border-t">
                         <div className="flex items-center gap-2">
@@ -430,7 +430,7 @@ const RequestDetail = () => {
                         <p className="text-gray-900">{request.cargo.description}</p>
                       </div>
                     )}
-                    
+
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {request.cargo.weight && (
                         <div className="flex items-center gap-2">
@@ -501,7 +501,7 @@ const RequestDetail = () => {
                         rows={4}
                       />
                     </div>
-                    <Button 
+                    <Button
                       onClick={handleSendMessage}
                       disabled={sendingMessage || !newMessage.content.trim()}
                     >
