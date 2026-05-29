@@ -14,6 +14,7 @@ from backend.models import (
     ShipmentRequestLog,
     TransportMethod,
 )
+from backend.services import priority_service
 from backend.referral_engine import referral_engine
 
 INTERNATIONAL_METHOD_NAMES = ["sea freight", "air freight", "land transport", "rail transport"]
@@ -190,7 +191,7 @@ def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime)
         "sla_due_at": None,
         "last_customer_touch_at": None,
         "has_unread_for_assignee": True,
-        "priority": "normal",
+        "priority": priority_service.determine_initial_priority(normalized, now=timestamp),
         "estimated_value": None,
         "customer_id": None,
         "gamification_customer_id": normalized["gamification_customer_id"],

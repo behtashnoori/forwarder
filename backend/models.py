@@ -682,6 +682,28 @@ class AssignmentLog(db.Model):
         return f"<AssignmentLog id={self.id} request={self.shipment_request_id} expert={self.assigned_expert_id}>"
 
 
+class SlaPolicy(db.Model):
+    """Admin-managed SLA policy definitions."""
+
+    __tablename__ = "sla_policy"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    priority_scope = db.Column(db.String(20), nullable=False, default="all")
+    request_status_scope = db.Column(db.Text, nullable=False)
+    transport_method_scope = db.Column(db.String(50), nullable=True)
+    shipping_type_scope = db.Column(db.String(20), nullable=True)
+    response_time_minutes = db.Column(db.Integer, nullable=False)
+    near_deadline_threshold_minutes = db.Column(db.Integer, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    sort_order = db.Column(db.Integer, default=100, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def __repr__(self) -> str:
+        return f"<SlaPolicy id={self.id} name={self.name!r}>"
+
+
 class ReferralRule(db.Model):
     """Rules for referral-based assignment with direct or pool actions."""
     __tablename__ = "referral_rule"

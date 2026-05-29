@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from backend.extensions import db
 from backend.models import ExpertConsoleLog, ExpertConsoleNotification, ExpertUser, ShipmentRequest
+from backend.services import sla_policy_service
 
 
 class AssignmentServiceError(Exception):
@@ -60,6 +61,7 @@ def assign_request_to_expert(
     req.assigned_to = target_expert_id
     req.status = "assigned"
     req.has_unread_for_assignee = True
+    sla_policy_service.assign_sla_due_at_if_needed(req, datetime.utcnow(), target_status="assigned")
 
     create_assignment_log(request_id, target_expert_id, old_status, expert.full_name, remote_addr)
     create_assignment_notification_if_needed(request_id, target_expert_id)

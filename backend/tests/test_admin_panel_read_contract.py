@@ -18,6 +18,7 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.security import security
+from backend.services.admin_report_service import calculate_sla_violations
 
 
 @pytest.fixture
@@ -302,3 +303,55 @@ def test_admin_dashboard_and_assignment_summary_contract(admin_panel_app):
         "sla_violations": 1,
     }
     assert "T" in summary_payload["generated_at"]
+
+
+def test_admin_assignment_summary_sla_violation_contract(admin_panel_app):
+    """Admin report SLA violation count keeps current active-status interpretation."""
+    now = datetime.utcnow()
+
+    with admin_panel_app["app"].app_context():
+        db.session.add_all([
+            ShipmentRequest(
+                tracking_code="AP-P11B-SLA-IN-PROGRESS",
+                shipping_type="domestic",
+                contact_phone="09125000001",
+                status_request_status="new",
+                status="in_progress",
+                priority="normal",
+                assigned_to=admin_panel_app["expert_id"],
+                sla_due_at=now - timedelta(minutes=5),
+            ),
+            ShipmentRequest(
+                tracking_code="AP-P11B-SLA-WAITING",
+                shipping_type="domestic",
+                contact_phone="09125000002",
+                status_request_status="new",
+                status="waiting_for_customer",
+                priority="high",
+                assigned_to=admin_panel_app["expert_id"],
+                sla_due_at=now - timedelta(minutes=10),
+            ),
+            ShipmentRequest(
+                tracking_code="AP-P11B-SLA-FUTURE",
+                shipping_type="domestic",
+                contact_phone="09125000003",
+                status_request_status="new",
+                status="assigned",
+                priority="urgent",
+                assigned_to=admin_panel_app["expert_id"],
+                sla_due_at=now + timedelta(hours=1),
+            ),
+            ShipmentRequest(
+                tracking_code="AP-P11B-SLA-CLOSED",
+                shipping_type="domestic",
+                contact_phone="09125000004",
+                status_request_status="new",
+                status="closed",
+                priority="low",
+                assigned_to=admin_panel_app["expert_id"],
+                sla_due_at=now - timedelta(hours=1),
+            ),
+        ])
+        db.session.commit()
+
+        assert calculate_sla_violations() == 3

@@ -513,6 +513,99 @@ export async function fetchAdminDashboard(token: string): Promise<AdminDashboard
   return (await response.json()) as AdminDashboardStats;
 }
 
+export type SlaPriorityScope = "low" | "normal" | "high" | "urgent" | "all";
+export type SlaShippingTypeScope = "domestic" | "international" | "all" | null;
+
+export interface SlaPolicy {
+  id: number;
+  name: string;
+  priority_scope: SlaPriorityScope;
+  request_status_scope: string[];
+  transport_method_scope: string | null;
+  shipping_type_scope: SlaShippingTypeScope;
+  response_time_minutes: number;
+  near_deadline_threshold_minutes: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface SlaPolicyPayload {
+  name: string;
+  priority_scope: SlaPriorityScope;
+  request_status_scope: string[];
+  transport_method_scope?: string | null;
+  shipping_type_scope?: SlaShippingTypeScope;
+  response_time_minutes: number;
+  near_deadline_threshold_minutes: number;
+  is_active: boolean;
+  sort_order: number;
+}
+
+export class AdminSlaPolicyHttpError extends Error {
+  status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "AdminSlaPolicyHttpError";
+    this.status = status;
+  }
+}
+
+async function adminSlaPolicyRequest<T>(token: string, path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${buildPath(path)}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(init?.headers ?? {}),
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    const message = typeof body?.error === "string" ? body.error : `SLA policy request failed with status ${response.status}`;
+    throw new AdminSlaPolicyHttpError(response.status, message);
+  }
+
+  return (await response.json()) as T;
+}
+
+export function fetchAdminSlaPolicies(token: string): Promise<{ sla_policies: SlaPolicy[] }> {
+  return adminSlaPolicyRequest(token, "/api/admin/sla-policies");
+}
+
+export function createAdminSlaPolicy(token: string, payload: SlaPolicyPayload): Promise<{ message: string; sla_policy: SlaPolicy }> {
+  return adminSlaPolicyRequest(token, "/api/admin/sla-policies", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAdminSlaPolicy(
+  token: string,
+  id: number,
+  payload: SlaPolicyPayload,
+): Promise<{ message: string; sla_policy: SlaPolicy }> {
+  return adminSlaPolicyRequest(token, `/api/admin/sla-policies/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function disableAdminSlaPolicy(token: string, id: number): Promise<{ message: string; sla_policy: SlaPolicy }> {
+  return adminSlaPolicyRequest(token, `/api/admin/sla-policies/${id}/disable`, {
+    method: "PATCH",
+  });
+}
+
+export function enableAdminSlaPolicy(token: string, id: number): Promise<{ message: string; sla_policy: SlaPolicy }> {
+  return adminSlaPolicyRequest(token, `/api/admin/sla-policies/${id}/enable`, {
+    method: "PATCH",
+  });
+}
+
 // Expert Console Interfaces
 export interface ExpertRequest {
   id: number;
@@ -520,8 +613,8 @@ export interface ExpertRequest {
   status: string;
   priority: string;
   created_at: string;
-  sla_due_at?: string;
-  sla_status: "on_time" | "due_soon" | "overdue";
+  sla_due_at?: string | null;
+  sla_status?: "on_time" | "due_soon" | "overdue" | null;
   assigned_to?: {
     id: number;
     name: string;

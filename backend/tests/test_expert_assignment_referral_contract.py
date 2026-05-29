@@ -19,8 +19,10 @@ from backend.models import (
     ExpertUser,
     ReferralRule,
     ShipmentRequest,
+    SlaPolicy,
 )
 from backend.security import security
+from backend.services.assignment_service import assign_request_to_expert
 
 
 @pytest.fixture
@@ -388,6 +390,273 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
     }
 
 
+def test_expert_request_priority_filter_exact_match_contract(expert_contract_app):
+    """Priority filter keeps exact-match behavior for observed priority values."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    base_time = datetime(2026, 1, 2, 10, 0, 0)
+
+    with expert_contract_app["app"].app_context():
+        for index, priority in enumerate(["low", "normal", "high", "urgent"]):
+            db.session.add(
+                ShipmentRequest(
+                    tracking_code=f"SR-P11B-PR-{priority}",
+                    shipping_type="domestic",
+                    contact_phone=f"0912100000{index}",
+                    customer_first_name=f"Priority {priority}",
+                    customer_last_name="Customer",
+                    status_request_status="new",
+                    status="new",
+                    priority=priority,
+                    created_at=base_time + timedelta(minutes=index),
+                    ready_at=base_time + timedelta(minutes=index),
+                    sla_due_at=None,
+                )
+            )
+        db.session.commit()
+
+    for priority in ["low", "normal", "high", "urgent"]:
+        response = client.get(f"/api/expert/requests?priority={priority}", headers=admin_headers)
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert all(item["priority"] == priority for item in payload["requests"])
+        assert f"SR-P11B-PR-{priority}" in {item["tracking_number"] for item in payload["requests"]}
+
+    unmatched_response = client.get("/api/expert/requests?priority=normal-ish", headers=admin_headers)
+    assert unmatched_response.status_code == 200
+    assert unmatched_response.get_json()["requests"] == []
+
+
+def test_expert_request_sla_status_serialization_contract(expert_contract_app):
+    """List/detail serialization keeps current computed SLA status behavior."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    now = datetime.utcnow()
+
+    rows = [
+        ("SR-P11B-SLA-NULL", None, "on_time"),
+        ("SR-P11B-SLA-ON-TIME", now + timedelta(hours=3), "on_time"),
+        ("SR-P11B-SLA-DUE-SOON", now + timedelta(hours=1), "due_soon"),
+        ("SR-P11B-SLA-OVERDUE", now - timedelta(minutes=30), "overdue"),
+    ]
+
+    with expert_contract_app["app"].app_context():
+        created_ids = {}
+        for index, (tracking_code, sla_due_at, _expected_status) in enumerate(rows):
+            row = ShipmentRequest(
+                tracking_code=tracking_code,
+                shipping_type="domestic",
+                contact_phone=f"0912200000{index}",
+                customer_first_name="SLA",
+                customer_last_name=str(index),
+                status_request_status="assigned",
+                status="assigned",
+                priority="normal",
+                assigned_to=expert_contract_app["expert_id"],
+                created_at=now + timedelta(minutes=index),
+                ready_at=now + timedelta(minutes=index),
+                sla_due_at=sla_due_at,
+            )
+            db.session.add(row)
+            db.session.flush()
+            created_ids[tracking_code] = row.id
+        db.session.commit()
+
+    list_response = client.get("/api/expert/requests?per_page=100", headers=admin_headers)
+    assert list_response.status_code == 200
+    by_tracking = {
+        item["tracking_number"]: item
+        for item in list_response.get_json()["requests"]
+        if item["tracking_number"].startswith("SR-P11B-SLA-")
+    }
+
+    for tracking_code, sla_due_at, expected_status in rows:
+        assert by_tracking[tracking_code]["sla_status"] == expected_status
+        if sla_due_at is None:
+            assert by_tracking[tracking_code]["sla_due_at"] is None
+
+        detail_response = client.get(f"/api/expert/requests/{created_ids[tracking_code]}", headers=admin_headers)
+        assert detail_response.status_code == 200
+        detail_payload = detail_response.get_json()
+        assert detail_payload["sla_status"] == expected_status
+        if sla_due_at is None:
+            assert detail_payload["sla_due_at"] is None
+
+
+def test_expert_request_sla_status_uses_policy_threshold_contract(expert_contract_app):
+    """List/detail SLA status uses the matching policy near-deadline threshold."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    now = datetime.utcnow()
+
+    with expert_contract_app["app"].app_context():
+        db.session.add(
+            SlaPolicy(
+                name="High assigned SLA",
+                priority_scope="high",
+                request_status_scope='["assigned"]',
+                response_time_minutes=60,
+                near_deadline_threshold_minutes=10,
+                is_active=True,
+                sort_order=1,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        on_time_request = ShipmentRequest(
+            tracking_code="SR-P11E-POLICY-ON-TIME",
+            shipping_type="domestic",
+            contact_phone="09122500001",
+            customer_first_name="Policy",
+            customer_last_name="OnTime",
+            status_request_status="assigned",
+            status="assigned",
+            priority="high",
+            assigned_to=expert_contract_app["expert_id"],
+            sla_due_at=now + timedelta(minutes=20),
+        )
+        due_soon_request = ShipmentRequest(
+            tracking_code="SR-P11E-POLICY-DUE-SOON",
+            shipping_type="domestic",
+            contact_phone="09122500002",
+            customer_first_name="Policy",
+            customer_last_name="DueSoon",
+            status_request_status="assigned",
+            status="assigned",
+            priority="high",
+            assigned_to=expert_contract_app["expert_id"],
+            sla_due_at=now + timedelta(minutes=5),
+        )
+        db.session.add_all([on_time_request, due_soon_request])
+        db.session.commit()
+        on_time_id = on_time_request.id
+        due_soon_id = due_soon_request.id
+
+    list_response = client.get("/api/expert/requests?per_page=100", headers=admin_headers)
+    assert list_response.status_code == 200
+    by_tracking = {
+        item["tracking_number"]: item
+        for item in list_response.get_json()["requests"]
+        if item["tracking_number"].startswith("SR-P11E-POLICY-")
+    }
+    assert by_tracking["SR-P11E-POLICY-ON-TIME"]["sla_status"] == "on_time"
+    assert by_tracking["SR-P11E-POLICY-DUE-SOON"]["sla_status"] == "due_soon"
+
+    on_time_detail = client.get(f"/api/expert/requests/{on_time_id}", headers=admin_headers)
+    due_soon_detail = client.get(f"/api/expert/requests/{due_soon_id}", headers=admin_headers)
+    assert on_time_detail.get_json()["sla_status"] == "on_time"
+    assert due_soon_detail.get_json()["sla_status"] == "due_soon"
+
+
+def test_expert_dashboard_sla_kpi_counts_contract(expert_contract_app):
+    """Expert dashboard KPI SLA counts keep current active-status and two-hour-window behavior."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    now = datetime.utcnow()
+
+    with expert_contract_app["app"].app_context():
+        db.session.add_all([
+            ShipmentRequest(
+                tracking_code="SR-P11B-KPI-OVERDUE",
+                shipping_type="domestic",
+                contact_phone="09123000001",
+                status_request_status="new",
+                status="assigned",
+                priority="normal",
+                assigned_to=expert_contract_app["expert_id"],
+                sla_due_at=now - timedelta(minutes=10),
+            ),
+            ShipmentRequest(
+                tracking_code="SR-P11B-KPI-DUE-SOON",
+                shipping_type="domestic",
+                contact_phone="09123000002",
+                status_request_status="new",
+                status="in_progress",
+                priority="high",
+                assigned_to=expert_contract_app["expert_id"],
+                sla_due_at=now + timedelta(minutes=45),
+            ),
+            ShipmentRequest(
+                tracking_code="SR-P11B-KPI-FUTURE",
+                shipping_type="domestic",
+                contact_phone="09123000003",
+                status_request_status="new",
+                status="assigned",
+                priority="urgent",
+                assigned_to=expert_contract_app["expert_id"],
+                sla_due_at=now + timedelta(hours=3),
+            ),
+            ShipmentRequest(
+                tracking_code="SR-P11B-KPI-CLOSED",
+                shipping_type="domestic",
+                contact_phone="09123000004",
+                status_request_status="new",
+                status="closed",
+                priority="normal",
+                assigned_to=expert_contract_app["expert_id"],
+                sla_due_at=now - timedelta(hours=1),
+            ),
+        ])
+        db.session.commit()
+
+    response = client.get("/api/expert/dashboard/kpis", headers=admin_headers)
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["sla"]["overdue"] == 1
+    assert payload["sla"]["due_soon"] == 1
+
+
+def test_expert_dashboard_sla_kpi_uses_policy_threshold_contract(expert_contract_app):
+    """Expert KPI due-soon count uses policy thresholds while preserving response shape."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    now = datetime.utcnow()
+
+    with expert_contract_app["app"].app_context():
+        db.session.add(
+            SlaPolicy(
+                name="High KPI SLA",
+                priority_scope="high",
+                request_status_scope='["assigned", "in_progress"]',
+                response_time_minutes=60,
+                near_deadline_threshold_minutes=10,
+                is_active=True,
+                sort_order=1,
+                created_at=now,
+                updated_at=now,
+            )
+        )
+        db.session.add_all([
+            ShipmentRequest(
+                tracking_code="SR-P11E-KPI-POLICY-ON-TIME",
+                shipping_type="domestic",
+                contact_phone="09123500001",
+                status_request_status="new",
+                status="assigned",
+                priority="high",
+                assigned_to=expert_contract_app["expert_id"],
+                sla_due_at=now + timedelta(minutes=20),
+            ),
+            ShipmentRequest(
+                tracking_code="SR-P11E-KPI-POLICY-DUE-SOON",
+                shipping_type="domestic",
+                contact_phone="09123500002",
+                status_request_status="new",
+                status="in_progress",
+                priority="high",
+                assigned_to=expert_contract_app["expert_id"],
+                sla_due_at=now + timedelta(minutes=5),
+            ),
+        ])
+        db.session.commit()
+
+    response = client.get("/api/expert/dashboard/kpis", headers=admin_headers)
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert set(payload["sla"].keys()) == {"overdue", "due_soon"}
+    assert payload["sla"]["due_soon"] == 1
+
+
 def test_expert_message_contracts_access_creation_and_listing(expert_contract_app):
     """Message behavior keeps access checks, creation side effects, and request-detail listing shape."""
     client = expert_contract_app["app"].test_client()
@@ -449,6 +718,222 @@ def test_expert_message_contracts_access_creation_and_listing(expert_contract_ap
             action="message_added",
             note="پیام internal_note اضافه شد",
         ).count() == 1
+
+
+def test_expert_status_update_assigned_uses_fallback_two_hour_sla_contract(expert_contract_app):
+    """Status update to assigned uses the SLA service fallback when no policy exists."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+
+    with expert_contract_app["app"].app_context():
+        request_row = ShipmentRequest(
+            tracking_code="SR-P11B-ASSIGNED-SLA",
+            shipping_type="domestic",
+            contact_phone="09124000001",
+            status_request_status="new",
+            status="new",
+            priority="normal",
+            assigned_to=expert_contract_app["expert_id"],
+            sla_due_at=None,
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+
+    before_call = datetime.utcnow()
+    response = client.post(
+        f"/api/expert/requests/{request_id}/status",
+        headers=admin_headers,
+        json={"status": "assigned"},
+    )
+    after_call = datetime.utcnow()
+
+    assert response.status_code == 200
+    with expert_contract_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert request_row.status == "assigned"
+        assert request_row.sla_due_at is not None
+        assert before_call + timedelta(hours=2) <= request_row.sla_due_at
+        assert request_row.sla_due_at <= after_call + timedelta(hours=2, seconds=2)
+
+
+def test_expert_status_update_preserves_existing_sla_due_at_contract(expert_contract_app):
+    """Status update to assigned preserves an existing SLA due date."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    existing_sla_due_at = datetime.utcnow() + timedelta(hours=5)
+
+    with expert_contract_app["app"].app_context():
+        request_row = ShipmentRequest(
+            tracking_code="SR-P11B-PRESERVE-SLA",
+            shipping_type="domestic",
+            contact_phone="09124000002",
+            status_request_status="new",
+            status="new",
+            priority="high",
+            assigned_to=expert_contract_app["expert_id"],
+            sla_due_at=existing_sla_due_at,
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+
+    response = client.post(
+        f"/api/expert/requests/{request_id}/status",
+        headers=admin_headers,
+        json={"status": "assigned"},
+    )
+
+    assert response.status_code == 200
+    with expert_contract_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert request_row.status == "assigned"
+        assert request_row.sla_due_at == existing_sla_due_at
+
+
+def test_expert_status_update_assigned_uses_matching_sla_policy_contract(expert_contract_app):
+    """Status update to assigned uses the matching active SLA policy when present."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+
+    with expert_contract_app["app"].app_context():
+        db.session.add(
+            SlaPolicy(
+                name="Urgent assigned SLA",
+                priority_scope="urgent",
+                request_status_scope='["assigned"]',
+                response_time_minutes=30,
+                near_deadline_threshold_minutes=10,
+                is_active=True,
+                sort_order=1,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+        )
+        request_row = ShipmentRequest(
+            tracking_code="SR-P11E-URGENT-SLA",
+            shipping_type="domestic",
+            contact_phone="09124000004",
+            status_request_status="new",
+            status="new",
+            priority="urgent",
+            assigned_to=expert_contract_app["expert_id"],
+            sla_due_at=None,
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+
+    before_call = datetime.utcnow()
+    response = client.post(
+        f"/api/expert/requests/{request_id}/status",
+        headers=admin_headers,
+        json={"status": "assigned"},
+    )
+    after_call = datetime.utcnow()
+
+    assert response.status_code == 200
+    with expert_contract_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert before_call + timedelta(minutes=30) <= request_row.sla_due_at
+        assert request_row.sla_due_at <= after_call + timedelta(minutes=30, seconds=2)
+
+
+def test_expert_status_update_ignores_disabled_sla_policy_contract(expert_contract_app):
+    """Disabled matching policies are ignored and fallback SLA behavior is used."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+
+    with expert_contract_app["app"].app_context():
+        db.session.add(
+            SlaPolicy(
+                name="Disabled urgent SLA",
+                priority_scope="urgent",
+                request_status_scope='["assigned"]',
+                response_time_minutes=30,
+                near_deadline_threshold_minutes=10,
+                is_active=False,
+                sort_order=1,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+        )
+        request_row = ShipmentRequest(
+            tracking_code="SR-P11E-DISABLED-SLA",
+            shipping_type="domestic",
+            contact_phone="09124000005",
+            status_request_status="new",
+            status="new",
+            priority="urgent",
+            assigned_to=expert_contract_app["expert_id"],
+            sla_due_at=None,
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+
+    before_call = datetime.utcnow()
+    response = client.post(
+        f"/api/expert/requests/{request_id}/status",
+        headers=admin_headers,
+        json={"status": "assigned"},
+    )
+    after_call = datetime.utcnow()
+
+    assert response.status_code == 200
+    with expert_contract_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert before_call + timedelta(hours=2) <= request_row.sla_due_at
+        assert request_row.sla_due_at <= after_call + timedelta(hours=2, seconds=2)
+
+
+def test_direct_assignment_sets_sla_due_at_through_policy_service_contract(expert_contract_app):
+    """Direct assignment now intentionally creates an SLA due date through the SLA policy service."""
+    with expert_contract_app["app"].app_context():
+        db.session.add(
+            SlaPolicy(
+                name="Urgent direct assignment SLA",
+                priority_scope="urgent",
+                request_status_scope='["assigned"]',
+                response_time_minutes=45,
+                near_deadline_threshold_minutes=15,
+                is_active=True,
+                sort_order=1,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+        )
+        request_row = ShipmentRequest(
+            tracking_code="SR-P11B-DIRECT-ASSIGN",
+            shipping_type="domestic",
+            contact_phone="09124000003",
+            status_request_status="new",
+            status="new",
+            priority="urgent",
+            assigned_to=None,
+            sla_due_at=None,
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+
+        before_call = datetime.utcnow()
+        payload = assign_request_to_expert(
+            request_id,
+            expert_id=expert_contract_app["other_expert_id"],
+            actor={"id": expert_contract_app["admin_id"], "role": "admin"},
+        )
+        after_call = datetime.utcnow()
+
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert payload["assigned_to"] == {
+            "id": expert_contract_app["other_expert_id"],
+            "name": "Phase 4H Other Expert",
+        }
+        assert request_row.status == "assigned"
+        assert request_row.assigned_to == expert_contract_app["other_expert_id"]
+        assert before_call + timedelta(minutes=45) <= request_row.sla_due_at
+        assert request_row.sla_due_at <= after_call + timedelta(minutes=45, seconds=2)
 
 
 def test_expert_assignment_contracts_access_not_found_and_side_effects(expert_contract_app):

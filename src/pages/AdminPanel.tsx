@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { AdminDashboardHttpError, fetchAdminDashboard, type AdminDashboardStats } from "@/lib/api";
 import ReferralRulesTab from "@/components/ReferralRulesTab";
+import SlaPoliciesTab from "@/components/admin/SlaPoliciesTab";
 import SiteSettingsTab from "@/components/SiteSettingsTab";
 import UserManagement from "./UserManagement";
 
@@ -259,7 +260,7 @@ const AdminPanel = () => {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm lg:grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm lg:grid-cols-5">
             <TabsTrigger
               value="dashboard"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
@@ -287,6 +288,13 @@ const AdminPanel = () => {
             >
               <Settings className="h-4 w-4" />
               تنظیمات سایت
+            </TabsTrigger>
+            <TabsTrigger
+              value="sla-policies"
+              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
+            >
+              <Clock className="h-4 w-4" />
+              SLA / مهلت پاسخ‌گویی
             </TabsTrigger>
           </TabsList>
 
@@ -458,6 +466,10 @@ const AdminPanel = () => {
 
           <TabsContent value="referral-rules" className="space-y-4">
             <ReferralRulesTab />
+          </TabsContent>
+
+          <TabsContent value="sla-policies" className="space-y-4">
+            <SlaPoliciesTab />
           </TabsContent>
 
           <TabsContent value="site-settings" className="space-y-4">

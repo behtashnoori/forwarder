@@ -3,34 +3,23 @@ import { useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   BarChart3,
-  Bell,
   CalendarDays,
   CheckCircle,
-  ChevronDown,
   Clock,
   Eye,
   Filter,
-  LogOut,
   MapPin,
   MessageSquare,
   Package,
   Plus,
   RefreshCw,
   Search,
-  Settings,
   Truck,
   User,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -85,6 +74,14 @@ const priorityItems = [
   { value: "low", label: "پایین" },
 ];
 
+const slaFilterItems = [
+  { value: "all", label: "همه مهلت‌ها" },
+  { value: "due_soon", label: "نزدیک به مهلت" },
+  { value: "overdue", label: "گذشته از مهلت" },
+] as const;
+
+type SlaFilter = (typeof slaFilterItems)[number]["value"];
+
 const ExpertConsole = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -95,6 +92,7 @@ const ExpertConsole = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [priorityFilter, setPriorityFilter] = useState("");
+  const [slaFilter, setSlaFilter] = useState<SlaFilter>("all");
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
 
   const loadRequests = useCallback(async () => {
@@ -266,7 +264,7 @@ const ExpertConsole = () => {
     }
   };
 
-  const getSLAStatusColor = (slaStatus: string) => {
+  const getSLAStatusColor = (slaStatus?: string | null) => {
     switch (slaStatus) {
       case "overdue":
         return "text-red-600";
@@ -277,6 +275,58 @@ const ExpertConsole = () => {
       default:
         return "text-slate-500";
     }
+  };
+
+  const getSlaLabel = (slaStatus?: string | null, slaDueAt?: string | null) => {
+    if (!slaDueAt) return "مهلت ثبت نشده";
+
+    const labels: Record<string, string> = {
+      overdue: "گذشته از مهلت",
+      due_soon: "نزدیک به مهلت",
+      on_time: "در محدوده مجاز",
+    };
+
+    return labels[slaStatus || "on_time"] || "در محدوده مجاز";
+  };
+
+  const getSlaBadgeClass = (slaStatus?: string | null, slaDueAt?: string | null) => {
+    if (!slaDueAt) return "border-slate-200 bg-slate-50 text-slate-500";
+
+    switch (slaStatus) {
+      case "overdue":
+        return "border-red-200 bg-red-50 text-red-700";
+      case "due_soon":
+        return "border-amber-200 bg-amber-50 text-amber-700";
+      case "on_time":
+        return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      default:
+        return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    }
+  };
+
+  const formatRemainingSlaTime = (slaDueAt?: string | null) => {
+    if (!slaDueAt) return null;
+
+    const dueAt = new Date(slaDueAt);
+    const dueAtTime = dueAt.getTime();
+
+    if (Number.isNaN(dueAtTime)) return null;
+
+    const remainingMinutes = Math.ceil((dueAtTime - Date.now()) / 60000);
+
+    if (remainingMinutes <= 0) return "از مهلت گذشته";
+    if (remainingMinutes < 60) return `زمان باقی‌مانده: ${remainingMinutes} دقیقه`;
+
+    return `زمان باقی‌مانده: ${Math.ceil(remainingMinutes / 60)} ساعت`;
+  };
+
+  const formatSlaDueAt = (slaDueAt?: string | null) => {
+    if (!slaDueAt) return "مهلت ثبت نشده";
+
+    const dueAt = new Date(slaDueAt);
+    if (Number.isNaN(dueAt.getTime())) return "مهلت نامعتبر";
+
+    return dueAt.toLocaleString("fa-IR");
   };
 
   const getStatusLabel = (status: string) => {
@@ -308,10 +358,16 @@ const ExpertConsole = () => {
     return kpis.counts.new + kpis.counts.in_progress + kpis.counts.waiting_for_customer + kpis.counts.closed_today;
   }, [kpis]);
 
+  const visibleRequests = useMemo(() => {
+    if (slaFilter === "all") return requests;
+    return requests.filter((request) => request.sla_status === slaFilter);
+  }, [requests, slaFilter]);
+
   const clearFilters = () => {
     setSearchTerm("");
     setStatusFilter("");
     setPriorityFilter("");
+    setSlaFilter("all");
   };
 
   const formatRoute = (request: ShipmentRequest) => {
@@ -379,62 +435,18 @@ const ExpertConsole = () => {
 
             <div className="flex flex-col gap-3 sm:items-end">
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="rounded-full border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100">
-                  داشبورد
-                </Button>
-                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
-                  درخواست‌ها
-                </Button>
-                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
-                  مشتریان
-                </Button>
-                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
-                  تعرفه‌ها
-                </Button>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full border-slate-200 bg-white">
-                  <Bell className="h-4 w-4 text-slate-600" />
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex h-9 items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 text-sm font-medium text-blue-700">
+                  <BarChart3 className="h-4 w-4" />
+                  داشبورد درخواست‌ها
+                </div>
                 <Button variant="outline" size="sm" onClick={loadRequests} disabled={loading} className="rounded-full">
                   <RefreshCw className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   به‌روزرسانی
                 </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="rounded-full">
-                      <User className="ml-2 h-4 w-4" />
-                      {currentExpert ? currentExpert.full_name : "کارشناس"}
-                      <ChevronDown className="mr-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
-                    <div className="border-b px-3 py-2">
-                      <p className="text-sm font-medium">{currentExpert?.full_name || "کارشناس"}</p>
-                      <p className="text-xs text-slate-500">{currentExpert?.role || "expert"}</p>
-                    </div>
-                    <DropdownMenuItem>
-                      <Settings className="ml-2 h-4 w-4" />
-                      تنظیمات پروفایل
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <User className="ml-2 h-4 w-4" />
-                      درخواست‌های من
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => {
-                        localStorage.removeItem("expert_user");
-                        window.location.href = "/";
-                      }}
-                    >
-                      <LogOut className="ml-2 h-4 w-4" />
-                      خروج
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 text-sm text-slate-700">
+                  <User className="h-4 w-4 text-slate-500" />
+                  {currentExpert ? currentExpert.full_name : "کارشناس"}
+                </div>
               </div>
             </div>
           </div>
@@ -475,7 +487,7 @@ const ExpertConsole = () => {
               <CardContent className="flex h-full flex-col justify-between gap-4 p-5 sm:p-6">
                 <div>
                   <p className="text-sm font-medium text-slate-500">پایش SLA</p>
-                  <h2 className="mt-1 text-xl font-bold text-slate-950">اولویت پاسخ‌گویی</h2>
+                  <h2 className="mt-1 text-xl font-bold text-slate-950">مهلت پاسخ‌گویی</h2>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700">
@@ -489,6 +501,11 @@ const ExpertConsole = () => {
                     <p className="mt-1 text-xs">نزدیک به مهلت</p>
                   </div>
                 </div>
+                {kpis.sla.overdue === 0 && kpis.sla.due_soon === 0 && (
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-medium leading-6 text-emerald-700">
+                    همه درخواست‌ها در محدوده مجاز پاسخ‌گویی هستند.
+                  </div>
+                )}
               </CardContent>
             </Card>
           </section>
@@ -552,6 +569,23 @@ const ExpertConsole = () => {
                 پاک کردن فیلترها
               </Button>
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-slate-500">فیلتر SLA:</span>
+              {slaFilterItems.map((item) => (
+                <Button
+                  key={item.value}
+                  type="button"
+                  variant={slaFilter === item.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSlaFilter(item.value)}
+                  className={`rounded-full ${
+                    slaFilter === item.value ? "bg-blue-600 text-white hover:bg-blue-700" : "border-slate-200 bg-white text-slate-600"
+                  }`}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </div>
           </CardContent>
         </Card>
 
@@ -592,7 +626,7 @@ const ExpertConsole = () => {
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-xl font-bold text-slate-950">درخواست‌های حمل</h2>
-                <p className="mt-1 text-sm text-slate-500">نمایش {requests.length} درخواست در فهرست فعلی</p>
+                <p className="mt-1 text-sm text-slate-500">نمایش {visibleRequests.length} درخواست در فهرست فعلی</p>
               </div>
               <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-500 shadow-sm">
                 مرتب‌سازی: جدیدترین درخواست‌ها
@@ -605,7 +639,7 @@ const ExpertConsole = () => {
                   <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
                 </CardContent>
               </Card>
-            ) : requests.length === 0 ? (
+            ) : visibleRequests.length === 0 ? (
               <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
                 <CardContent className="p-10 text-center">
                   <Package className="mx-auto mb-4 h-12 w-12 text-slate-300" />
@@ -615,8 +649,9 @@ const ExpertConsole = () => {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {requests.map((request) => {
+                {visibleRequests.map((request) => {
                   const route = formatRoute(request);
+                  const remainingSlaTime = formatRemainingSlaTime(request.sla_due_at);
                   return (
                     <Card
                       key={request.id}
@@ -638,6 +673,12 @@ const ExpertConsole = () => {
                                 اولویت {getPriorityLabel(request.priority)}
                               </Badge>
                               {request.has_unread && <Badge className="rounded-full bg-blue-600 text-white">خوانده نشده</Badge>}
+                              <Badge
+                                variant="outline"
+                                className={`rounded-full px-3 py-1 ${getSlaBadgeClass(request.sla_status, request.sla_due_at)}`}
+                              >
+                                {getSlaLabel(request.sla_status, request.sla_due_at)}
+                              </Badge>
                             </div>
 
                             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -682,10 +723,18 @@ const ExpertConsole = () => {
                                 <CalendarDays className="h-4 w-4" />
                                 ثبت: {new Date(request.created_at).toLocaleDateString("fa-IR")}
                               </span>
-                              {request.sla_due_at && (
+                              {request.sla_due_at ? (
                                 <span className={`flex items-center gap-1 ${getSLAStatusColor(request.sla_status)}`}>
                                   <Clock className="h-4 w-4" />
-                                  SLA: {new Date(request.sla_due_at).toLocaleDateString("fa-IR")}
+                                  <span>
+                                    مهلت پاسخ‌گویی: {formatSlaDueAt(request.sla_due_at)}
+                                    {remainingSlaTime ? ` - ${remainingSlaTime}` : ""}
+                                  </span>
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-slate-400">
+                                  <Clock className="h-4 w-4" />
+                                  مهلت ثبت نشده
                                 </span>
                               )}
                               {request.cargo.description && (
@@ -725,7 +774,7 @@ const ExpertConsole = () => {
 
             <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
               <CardContent className="flex flex-col gap-3 p-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-                <span>نمایش {requests.length} مورد از صفحه فعلی</span>
+                <span>نمایش {visibleRequests.length} مورد از صفحه فعلی</span>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" className="rounded-full" disabled>
                     قبلی

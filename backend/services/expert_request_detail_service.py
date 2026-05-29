@@ -1,5 +1,4 @@
 """Service helpers for expert console request detail responses."""
-from datetime import datetime, timedelta
 from typing import Any, Optional
 
 from backend.extensions import db
@@ -13,7 +12,7 @@ from backend.models import (
     Province,
     ShipmentRequest,
 )
-from backend.services import message_service, quote_service
+from backend.services import message_service, quote_service, sla_policy_service
 
 
 class ExpertRequestDetailServiceError(Exception):
@@ -191,11 +190,5 @@ def build_latest_quote_payload(request_id: int) -> dict[str, Any] | None:
 
 
 def build_sla_status(req: ShipmentRequest) -> str:
-    """Calculate the current request-detail SLA status."""
-    sla_status = "on_time"
-    if req.sla_due_at:
-        if datetime.utcnow() > req.sla_due_at:
-            sla_status = "overdue"
-        elif datetime.utcnow() + timedelta(hours=2) > req.sla_due_at:
-            sla_status = "due_soon"
-    return sla_status
+    """Calculate request-detail SLA status through the centralized SLA service."""
+    return sla_policy_service.calculate_request_sla_status(req)

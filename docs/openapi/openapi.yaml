@@ -278,6 +278,70 @@ components:
           additionalProperties: true
         is_active:
           type: boolean
+    SlaPolicy:
+      type: object
+      additionalProperties: true
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        priority_scope:
+          type: string
+          enum: [low, normal, high, urgent, all]
+        request_status_scope:
+          type: array
+          items:
+            type: string
+        transport_method_scope:
+          type: string
+          nullable: true
+        shipping_type_scope:
+          type: string
+          nullable: true
+          enum: [domestic, international, all]
+        response_time_minutes:
+          type: integer
+        near_deadline_threshold_minutes:
+          type: integer
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
+        created_at:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          nullable: true
+    SlaPolicyPayload:
+      type: object
+      additionalProperties: true
+      properties:
+        name:
+          type: string
+        priority_scope:
+          type: string
+          enum: [low, normal, high, urgent, all]
+        request_status_scope:
+          type: array
+          items:
+            type: string
+        transport_method_scope:
+          type: string
+          nullable: true
+        shipping_type_scope:
+          type: string
+          nullable: true
+          enum: [domestic, international, all]
+        response_time_minutes:
+          type: integer
+        near_deadline_threshold_minutes:
+          type: integer
+        is_active:
+          type: boolean
+        sort_order:
+          type: integer
     CustomerRegistrationRequest:
       type: object
       required:
@@ -1463,6 +1527,126 @@ paths:
       responses:
         '200':
           description: Admin shipment request detail payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/sla-policies:
+    get:
+      tags: [Admin Panel]
+      summary: List admin SLA policies
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: SLA policies ordered by sort_order, name, and id.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+                properties:
+                  sla_policies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SlaPolicy'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags: [Admin Panel]
+      summary: Create admin SLA policy
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlaPolicyPayload'
+      responses:
+        '201':
+          description: SLA policy created.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/sla-policies/{policy_id}:
+    put:
+      tags: [Admin Panel]
+      summary: Update admin SLA policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policy_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SlaPolicyPayload'
+      responses:
+        '200':
+          description: SLA policy updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/admin/sla-policies/{policy_id}/disable:
+    patch:
+      tags: [Admin Panel]
+      summary: Disable admin SLA policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policy_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: SLA policy disabled.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/admin/sla-policies/{policy_id}/enable:
+    patch:
+      tags: [Admin Panel]
+      summary: Enable admin SLA policy
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: policy_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: SLA policy enabled.
           content:
             application/json:
               schema:

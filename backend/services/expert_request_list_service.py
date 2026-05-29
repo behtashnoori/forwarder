@@ -1,13 +1,13 @@
 """Service helpers for expert console request list responses."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta
 from typing import Any, Mapping
 
 from sqlalchemy import desc, or_
 
 from backend.extensions import db
 from backend.models import City, County, ExpertUser, Province, ShipmentRequest
+from backend.services import sla_policy_service
 
 
 def normalize_request_list_filters(args: Mapping[str, Any]) -> dict[str, Any]:
@@ -94,12 +94,7 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
     dest_city = db.session.query(City).get(req.dest_city_id)
     assigned_expert = db.session.query(ExpertUser).get(req.assigned_to) if req.assigned_to else None
 
-    sla_status = "on_time"
-    if req.sla_due_at:
-        if datetime.utcnow() > req.sla_due_at:
-            sla_status = "overdue"
-        elif datetime.utcnow() + timedelta(hours=2) > req.sla_due_at:
-            sla_status = "due_soon"
+    sla_status = sla_policy_service.calculate_request_sla_status(req)
 
     return {
         "id": req.id,

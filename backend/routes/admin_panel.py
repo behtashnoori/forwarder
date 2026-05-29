@@ -8,6 +8,7 @@ from backend.services import (
     admin_report_service,
     admin_shipment_request_service,
     referral_service,
+    sla_policy_service,
 )
 
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api/admin")
@@ -92,6 +93,79 @@ def get_assignment_summary():
 
 
 # --- Referral rules (قوانین ارجاع) ---
+
+# --- SLA policies ---
+
+@admin_bp.get("/sla-policies")
+@require_role('admin')
+def get_sla_policies():
+    """List all SLA policies."""
+    try:
+        return jsonify(sla_policy_service.list_sla_policies())
+    except Exception as e:
+        current_app.logger.error(f"Error getting SLA policies: {e}")
+        return jsonify({"error": "خطا در دریافت سیاست‌های SLA"}), 500
+
+
+@admin_bp.post("/sla-policies")
+@require_role('admin')
+def create_sla_policy():
+    """Create a new SLA policy."""
+    try:
+        return jsonify(sla_policy_service.create_sla_policy(request.get_json() or {})), 201
+    except sla_policy_service.SlaPolicyServiceError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating SLA policy: {e}")
+        return jsonify({"error": "خطا در ایجاد سیاست SLA"}), 500
+
+
+@admin_bp.put("/sla-policies/<int:policy_id>")
+@require_role('admin')
+def update_sla_policy(policy_id: int):
+    """Update an SLA policy."""
+    try:
+        return jsonify(sla_policy_service.update_sla_policy(policy_id, request.get_json() or {}))
+    except sla_policy_service.SlaPolicyServiceError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating SLA policy: {e}")
+        return jsonify({"error": "خطا در به‌روزرسانی سیاست SLA"}), 500
+
+
+@admin_bp.patch("/sla-policies/<int:policy_id>/disable")
+@require_role('admin')
+def disable_sla_policy(policy_id: int):
+    """Disable an SLA policy without deleting it."""
+    try:
+        return jsonify(sla_policy_service.set_sla_policy_active(policy_id, False))
+    except sla_policy_service.SlaPolicyServiceError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error disabling SLA policy: {e}")
+        return jsonify({"error": "خطا در غیرفعال‌سازی سیاست SLA"}), 500
+
+
+@admin_bp.patch("/sla-policies/<int:policy_id>/enable")
+@require_role('admin')
+def enable_sla_policy(policy_id: int):
+    """Enable an SLA policy."""
+    try:
+        return jsonify(sla_policy_service.set_sla_policy_active(policy_id, True))
+    except sla_policy_service.SlaPolicyServiceError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error enabling SLA policy: {e}")
+        return jsonify({"error": "خطا در فعال‌سازی سیاست SLA"}), 500
+
 
 @admin_bp.get("/referral-rules")
 @require_role('admin')

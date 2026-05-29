@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import pytest
+from datetime import datetime, timedelta
 
 from backend import create_app
 from backend.extensions import db
@@ -46,7 +47,7 @@ def _domestic_payload(**overrides):
         "cargo_volume": "bad-volume",
         "cargo_value": "5000",
         "special_instructions": " Keep dry ",
-        "pickup_date": "2026-06-01",
+        "pickup_date": "2099-06-01",
         "delivery_date": "bad-date",
     }
     payload.update(overrides)
@@ -123,17 +124,67 @@ def test_create_domestic_shipment_request_preserves_response_defaults_and_commit
         assert shipment_request.cargo_volume is None
         assert shipment_request.cargo_value == 5000.0
         assert shipment_request.special_instructions == "Keep dry"
-        assert shipment_request.pickup_date.isoformat() == "2026-06-01"
+        assert shipment_request.pickup_date.isoformat() == "2099-06-01"
         assert shipment_request.delivery_date is None
         assert shipment_request.status_request_status == "new"
         assert shipment_request.status == "new"
         assert shipment_request.assigned_to is None
         assert shipment_request.has_unread_for_assignee is True
         assert shipment_request.priority == "normal"
+        assert shipment_request.sla_due_at is None
         assert shipment_request.tracking_code == data["tracking_code"]
 
         log_entry = ShipmentRequestLog.query.filter_by(shipment_request_id=data["id"]).one()
         assert log_entry.note == "ثبت اولیه درخواست"
+
+
+def test_public_shipment_request_sla_defaults_contract(shipment_app, client):
+    """Public shipment creation keeps current SLA/priority defaults without persisted sla_status."""
+    response = client.post("/api/shipment-request", json=_domestic_payload())
+
+    assert response.status_code == 201
+    request_id = response.get_json()["id"]
+
+    with shipment_app.app_context():
+        shipment_request = db.session.get(ShipmentRequest, request_id)
+        assert shipment_request.priority == "normal"
+        assert shipment_request.sla_due_at is None
+        assert shipment_request.status == "new"
+        assert shipment_request.status_request_status == "new"
+        assert "sla_status" not in ShipmentRequest.__table__.columns.keys()
+
+
+def test_public_shipment_request_without_pickup_date_keeps_normal_priority_contract(shipment_app, client):
+    """No-date public shipment creation keeps normal priority and response shape."""
+    response = client.post("/api/shipment-request", json=_domestic_payload(pickup_date=None))
+
+    assert response.status_code == 201
+    assert set(response.get_json().keys()) == {"message", "id", "tracking_code"}
+
+    with shipment_app.app_context():
+        shipment_request = db.session.get(ShipmentRequest, response.get_json()["id"])
+        assert shipment_request.pickup_date is None
+        assert shipment_request.priority == "normal"
+
+
+def test_public_shipment_request_near_pickup_date_sets_automatic_priority_contract(shipment_app, client):
+    """Public shipment creation assigns initial priority from pickup date urgency."""
+    urgent_date = datetime.utcnow().date().isoformat()
+    high_date = (datetime.utcnow() + timedelta(hours=48)).date().isoformat()
+
+    urgent_response = client.post("/api/shipment-request", json=_domestic_payload(pickup_date=urgent_date))
+    high_response = client.post("/api/shipment-request", json=_domestic_payload(pickup_date=high_date))
+
+    assert urgent_response.status_code == 201
+    assert high_response.status_code == 201
+    assert set(urgent_response.get_json().keys()) == {"message", "id", "tracking_code"}
+    assert set(high_response.get_json().keys()) == {"message", "id", "tracking_code"}
+
+    with shipment_app.app_context():
+        urgent_request = db.session.get(ShipmentRequest, urgent_response.get_json()["id"])
+        high_request = db.session.get(ShipmentRequest, high_response.get_json()["id"])
+        assert urgent_request.priority == "urgent"
+        assert high_request.priority == "high"
 
 
 def test_create_domestic_shipment_request_accepts_province_only_locations(shipment_app, client):

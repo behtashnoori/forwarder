@@ -1,5 +1,5 @@
 """Expert console API routes."""
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request, current_app, g
@@ -21,6 +21,7 @@ from backend.services import (
     message_service,
     notification_service,
     quote_service,
+    sla_policy_service,
 )
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
@@ -126,7 +127,7 @@ def update_request_status(request_id: int):
         
         # Set SLA due date for new requests
         if new_status == "assigned" and not req.sla_due_at:
-            req.sla_due_at = datetime.utcnow() + timedelta(hours=2)  # 2 hour SLA
+            sla_policy_service.assign_sla_due_at_if_needed(req, datetime.utcnow(), target_status="assigned")
         
         # Create log entry
         log = ExpertConsoleLog(
@@ -430,26 +431,26 @@ def get_dashboard_kpis():
         ).count()
         
         # SLA metrics
-        overdue_count = query.filter(
+        now = datetime.utcnow()
+        sla_candidates = query.filter(
             and_(
-                ShipmentRequest.sla_due_at < datetime.utcnow(),
+                ShipmentRequest.sla_due_at.isnot(None),
                 or_(
                     ShipmentRequest.status.in_(["assigned", "in_progress"]),
                     ShipmentRequest.status_request_status.in_(["assigned", "in_progress"])
                 )
             )
-        ).count()
-        
-        due_soon_count = query.filter(
-            and_(
-                ShipmentRequest.sla_due_at <= datetime.utcnow() + timedelta(hours=2),
-                ShipmentRequest.sla_due_at > datetime.utcnow(),
-                or_(
-                    ShipmentRequest.status.in_(["assigned", "in_progress"]),
-                    ShipmentRequest.status_request_status.in_(["assigned", "in_progress"])
-                )
-            )
-        ).count()
+        ).all()
+        overdue_count = sum(
+            1
+            for req in sla_candidates
+            if sla_policy_service.calculate_request_sla_status(req, now=now) == "overdue"
+        )
+        due_soon_count = sum(
+            1
+            for req in sla_candidates
+            if sla_policy_service.calculate_request_sla_status(req, now=now) == "due_soon"
+        )
         
         return jsonify({
             "counts": {
