@@ -24,6 +24,7 @@ PREFERENCE_OPTIONS = [
 ]
 VALID_SHIPPING_TYPES = ["domestic", "international"]
 VALID_TRANSPORT_PREFERENCES = ["customer_choice", "forwarder_suggestion"]
+DOMESTIC_LOCATION_ERROR = "اطلاعات مبدا و مقصد داخلی نامعتبر است."
 
 
 class ShipmentValidationError(ValueError):
@@ -101,15 +102,15 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if shipping_type == "domestic":
         try:
             normalized.update({
-                "origin_province_id": int(payload["origin_province_id"]),
-                "origin_county_id": int(payload["origin_county_id"]),
-                "origin_city_id": int(payload["origin_city_id"]),
-                "dest_province_id": int(payload["dest_province_id"]),
-                "dest_county_id": int(payload["dest_county_id"]),
-                "dest_city_id": int(payload["dest_city_id"]),
+                "origin_province_id": parse_required_int(payload.get("origin_province_id")),
+                "origin_county_id": parse_optional_int(payload.get("origin_county_id")),
+                "origin_city_id": parse_optional_int(payload.get("origin_city_id")),
+                "dest_province_id": parse_required_int(payload.get("dest_province_id")),
+                "dest_county_id": parse_optional_int(payload.get("dest_county_id")),
+                "dest_city_id": parse_optional_int(payload.get("dest_city_id")),
             })
         except (KeyError, TypeError, ValueError):
-            raise ShipmentValidationError("اطلاعات مبدا و مقصد داخلی نامعتبر است.") from None
+            raise ShipmentValidationError(DOMESTIC_LOCATION_ERROR) from None
     else:
         origin_country = payload.get("origin_country", "").strip()
         origin_city_international = payload.get("origin_city_international", "").strip()
@@ -292,6 +293,20 @@ def parse_float_or_none(value):
         except (ValueError, TypeError):
             return None
     return value
+
+
+def parse_required_int(value):
+    """Parse required integer IDs and reject blank values."""
+    if value in (None, ""):
+        raise ValueError
+    return int(value)
+
+
+def parse_optional_int(value):
+    """Parse optional integer IDs; blank values are stored as NULL."""
+    if value in (None, ""):
+        return None
+    return int(value)
 
 
 def parse_date_or_none(value):

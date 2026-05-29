@@ -136,6 +136,32 @@ def test_create_domestic_shipment_request_preserves_response_defaults_and_commit
         assert log_entry.note == "ثبت اولیه درخواست"
 
 
+def test_create_domestic_shipment_request_accepts_province_only_locations(shipment_app, client):
+    """Domestic POST /api/shipment-request accepts province-only origin and destination."""
+    response = client.post(
+        "/api/shipment-request",
+        json=_domestic_payload(
+            origin_county_id=None,
+            origin_city_id=None,
+            dest_county_id="",
+            dest_city_id="",
+        ),
+    )
+
+    assert response.status_code == 201
+    data = response.get_json()
+    assert set(data.keys()) == {"message", "id", "tracking_code"}
+
+    with shipment_app.app_context():
+        shipment_request = db.session.get(ShipmentRequest, data["id"])
+        assert shipment_request.origin_province_id == 1
+        assert shipment_request.origin_county_id is None
+        assert shipment_request.origin_city_id is None
+        assert shipment_request.dest_province_id == 4
+        assert shipment_request.dest_county_id is None
+        assert shipment_request.dest_city_id is None
+
+
 def test_create_international_shipment_request_preserves_location_and_transport_behavior(shipment_app, client):
     """International POST /api/shipment-request keeps location trimming and transport behavior."""
     response = client.post("/api/shipment-request", json=_international_payload())

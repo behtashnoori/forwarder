@@ -87,11 +87,11 @@ export interface ShipmentRequestPayload {
   shipping_type: "domestic" | "international";
   // Domestic shipping fields
   origin_province_id?: number;
-  origin_county_id?: number;
-  origin_city_id?: number;
+  origin_county_id?: number | null;
+  origin_city_id?: number | null;
   dest_province_id?: number;
-  dest_county_id?: number;
-  dest_city_id?: number;
+  dest_county_id?: number | null;
+  dest_city_id?: number | null;
   // International shipping fields
   origin_country?: string;
   origin_city_international?: string;

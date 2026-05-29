@@ -134,6 +134,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCargoDetails, setShowCargoDetails] = useState(false);
+  const [showOriginLocationDetails, setShowOriginLocationDetails] = useState(false);
+  const [showDestinationLocationDetails, setShowDestinationLocationDetails] = useState(false);
   const [submittedTrackingCode, setSubmittedTrackingCode] = useState<string | null>(null);
 
   // Fetch transport method options on component mount
@@ -654,10 +656,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     }
     
     if (isValid && shippingType === "domestic") {
-      if (!formData.originProvince || !formData.originCounty || !formData.originCity ||
-          !formData.destinationProvince || !formData.destinationCounty || !formData.destinationCity) {
+      if (!formData.originProvince || !formData.destinationProvince) {
         isValid = false;
-        errorMessage = "لطفاً همه فیلدهای مبدا و مقصد را انتخاب کنید";
+        errorMessage = "لطفاً استان مبدا و مقصد را انتخاب کنید";
       }
     } else if (shippingType === "international") {
       if (!formData.originCountry || !formData.originCityInternational ||
@@ -711,11 +712,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       // Add location data based on shipping type
       if (shippingType === "domestic") {
         payload.origin_province_id = Number(formData.originProvince);
-        payload.origin_county_id = Number(formData.originCounty);
-        payload.origin_city_id = Number(formData.originCity);
+        payload.origin_county_id = formData.originCounty ? Number(formData.originCounty) : null;
+        payload.origin_city_id = formData.originCity ? Number(formData.originCity) : null;
         payload.dest_province_id = Number(formData.destinationProvince);
-        payload.dest_county_id = Number(formData.destinationCounty);
-        payload.dest_city_id = Number(formData.destinationCity);
+        payload.dest_county_id = formData.destinationCounty ? Number(formData.destinationCounty) : null;
+        payload.dest_city_id = formData.destinationCity ? Number(formData.destinationCity) : null;
       } else {
         // Get country names from selected IDs
         const originCountry = countries.find(c => c.id.toString() === formData.originCountry);
@@ -802,11 +803,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       // Add location data based on shipping type
       if (shippingType === "domestic") {
         payload.origin_province_id = Number(formData.originProvince);
-        payload.origin_county_id = Number(formData.originCounty);
-        payload.origin_city_id = Number(formData.originCity);
+        payload.origin_county_id = formData.originCounty ? Number(formData.originCounty) : null;
+        payload.origin_city_id = formData.originCity ? Number(formData.originCity) : null;
         payload.dest_province_id = Number(formData.destinationProvince);
-        payload.dest_county_id = Number(formData.destinationCounty);
-        payload.dest_city_id = Number(formData.destinationCity);
+        payload.dest_county_id = formData.destinationCounty ? Number(formData.destinationCounty) : null;
+        payload.dest_city_id = formData.destinationCity ? Number(formData.destinationCity) : null;
       } else {
         // Get country names from selected IDs
         const originCountry = countries.find(c => c.id.toString() === formData.originCountry);
@@ -918,6 +919,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     });
     setIsSubmitted(false);
     setShowCargoDetails(false);
+    setShowOriginLocationDetails(false);
+    setShowDestinationLocationDetails(false);
     setSubmittedTrackingCode(null);
     // Reset international cities arrays
     setOriginInternationalCities([]);
@@ -1040,76 +1043,93 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectContent>
                 </Select>
 
-                <Select
-                  value={formData.originCounty}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData,
-                      originCounty: value,
-                      originCity: "",
-                    });
-                  }}
-                  disabled={!formData.originProvince || isLoadingOriginCounties}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        !formData.originProvince
-                          ? "ابتدا استان را انتخاب کنید"
-                          : isLoadingOriginCounties
-                            ? "در حال بارگذاری..."
-                            : "انتخاب شهرستان"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {originCountyOptions.map((county) => (
-                      <SelectItem key={county.id} value={county.id.toString()}>
-                        {county.name}
-                      </SelectItem>
-                    ))}
-                    {originCountyOptions.length === 0 && formData.originProvince && !isLoadingOriginCounties && (
-                      <SelectItem value="no-origin-county" disabled>
-                        شهرستانی یافت نشد
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                {formData.originProvince && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowOriginLocationDetails((value) => !value)}
+                    className="h-auto px-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
+                  >
+                    {showOriginLocationDetails ? "پنهان کردن جزئیات" : "+ جزئیات بیشتر (شهر و شهرستان)"}
+                  </Button>
+                )}
 
-                <Select
-                  value={formData.originCity}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData,
-                      originCity: value,
-                    });
-                  }}
-                  disabled={!formData.originCounty || isLoadingOriginCities}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        !formData.originCounty
-                          ? "ابتدا شهرستان را انتخاب کنید"
-                          : isLoadingOriginCities
-                            ? "در حال بارگذاری..."
-                            : "انتخاب شهر"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {originCityOptions.map((city) => (
-                      <SelectItem key={city.id} value={city.id.toString()}>
-                        {city.name}
-                      </SelectItem>
-                    ))}
-                    {originCityOptions.length === 0 && formData.originCounty && !isLoadingOriginCities && (
-                      <SelectItem value="no-origin-city" disabled>
-                        شهری یافت نشد
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                {showOriginLocationDetails && (
+                  <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">انتخاب شهرستان و شهر اختیاری است.</p>
+                    <Select
+                      value={formData.originCounty}
+                      onValueChange={(value) => {
+                        setFormData({
+                          ...formData,
+                          originCounty: value,
+                          originCity: "",
+                        });
+                      }}
+                      disabled={!formData.originProvince || isLoadingOriginCounties}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !formData.originProvince
+                              ? "ابتدا استان را انتخاب کنید"
+                              : isLoadingOriginCounties
+                                ? "در حال بارگذاری..."
+                                : "انتخاب شهرستان (اختیاری)"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {originCountyOptions.map((county) => (
+                          <SelectItem key={county.id} value={county.id.toString()}>
+                            {county.name}
+                          </SelectItem>
+                        ))}
+                        {originCountyOptions.length === 0 && formData.originProvince && !isLoadingOriginCounties && (
+                          <SelectItem value="no-origin-county" disabled>
+                            شهرستانی یافت نشد
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={formData.originCity}
+                      onValueChange={(value) => {
+                        setFormData({
+                          ...formData,
+                          originCity: value,
+                        });
+                      }}
+                      disabled={!formData.originCounty || isLoadingOriginCities}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !formData.originCounty
+                              ? "ابتدا شهرستان را انتخاب کنید"
+                              : isLoadingOriginCities
+                                ? "در حال بارگذاری..."
+                                : "انتخاب شهر (اختیاری)"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {originCityOptions.map((city) => (
+                          <SelectItem key={city.id} value={city.id.toString()}>
+                            {city.name}
+                          </SelectItem>
+                        ))}
+                        {originCityOptions.length === 0 && formData.originCounty && !isLoadingOriginCities && (
+                          <SelectItem value="no-origin-city" disabled>
+                            شهری یافت نشد
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1157,76 +1177,93 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectContent>
                 </Select>
 
-                <Select
-                  value={formData.destinationCounty}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData,
-                      destinationCounty: value,
-                      destinationCity: "",
-                    });
-                  }}
-                  disabled={!formData.destinationProvince || isLoadingDestinationCounties}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        !formData.destinationProvince
-                          ? "ابتدا استان را انتخاب کنید"
-                          : isLoadingDestinationCounties
-                            ? "در حال بارگذاری..."
-                            : "انتخاب شهرستان"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {destinationCountyOptions.map((county) => (
-                      <SelectItem key={county.id} value={county.id.toString()}>
-                        {county.name}
-                      </SelectItem>
-                    ))}
-                    {destinationCountyOptions.length === 0 && formData.destinationProvince && !isLoadingDestinationCounties && (
-                      <SelectItem value="no-destination-county" disabled>
-                        شهرستانی یافت نشد
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                {formData.destinationProvince && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowDestinationLocationDetails((value) => !value)}
+                    className="h-auto px-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
+                  >
+                    {showDestinationLocationDetails ? "پنهان کردن جزئیات" : "+ جزئیات بیشتر (شهر و شهرستان)"}
+                  </Button>
+                )}
 
-                <Select
-                  value={formData.destinationCity}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData,
-                      destinationCity: value,
-                    });
-                  }}
-                  disabled={!formData.destinationCounty || isLoadingDestinationCities}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        !formData.destinationCounty
-                          ? "ابتدا شهرستان را انتخاب کنید"
-                          : isLoadingDestinationCities
-                            ? "در حال بارگذاری..."
-                            : "انتخاب شهر"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {destinationCityOptions.map((city) => (
-                      <SelectItem key={city.id} value={city.id.toString()}>
-                        {city.name}
-                      </SelectItem>
-                    ))}
-                    {destinationCityOptions.length === 0 && formData.destinationCounty && !isLoadingDestinationCities && (
-                      <SelectItem value="no-destination-city" disabled>
-                        شهری یافت نشد
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                {showDestinationLocationDetails && (
+                  <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground">انتخاب شهرستان و شهر اختیاری است.</p>
+                    <Select
+                      value={formData.destinationCounty}
+                      onValueChange={(value) => {
+                        setFormData({
+                          ...formData,
+                          destinationCounty: value,
+                          destinationCity: "",
+                        });
+                      }}
+                      disabled={!formData.destinationProvince || isLoadingDestinationCounties}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !formData.destinationProvince
+                              ? "ابتدا استان را انتخاب کنید"
+                              : isLoadingDestinationCounties
+                                ? "در حال بارگذاری..."
+                                : "انتخاب شهرستان (اختیاری)"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {destinationCountyOptions.map((county) => (
+                          <SelectItem key={county.id} value={county.id.toString()}>
+                            {county.name}
+                          </SelectItem>
+                        ))}
+                        {destinationCountyOptions.length === 0 && formData.destinationProvince && !isLoadingDestinationCounties && (
+                          <SelectItem value="no-destination-county" disabled>
+                            شهرستانی یافت نشد
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+
+                    <Select
+                      value={formData.destinationCity}
+                      onValueChange={(value) => {
+                        setFormData({
+                          ...formData,
+                          destinationCity: value,
+                        });
+                      }}
+                      disabled={!formData.destinationCounty || isLoadingDestinationCities}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !formData.destinationCounty
+                              ? "ابتدا شهرستان را انتخاب کنید"
+                              : isLoadingDestinationCities
+                                ? "در حال بارگذاری..."
+                                : "انتخاب شهر (اختیاری)"
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {destinationCityOptions.map((city) => (
+                          <SelectItem key={city.id} value={city.id.toString()}>
+                            {city.name}
+                          </SelectItem>
+                        ))}
+                        {destinationCityOptions.length === 0 && formData.destinationCounty && !isLoadingDestinationCities && (
+                          <SelectItem value="no-destination-city" disabled>
+                            شهری یافت نشد
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             </div>
           </>

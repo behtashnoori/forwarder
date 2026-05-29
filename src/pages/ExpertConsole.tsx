@@ -1,46 +1,89 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Search, 
-  Filter, 
-  Clock, 
-  User, 
-  MapPin, 
-  Truck, 
-  Package, 
+import {
   AlertCircle,
+  BarChart3,
+  Bell,
+  CalendarDays,
   CheckCircle,
+  ChevronDown,
+  Clock,
   Eye,
+  Filter,
+  LogOut,
+  MapPin,
   MessageSquare,
+  Package,
   Plus,
   RefreshCw,
+  Search,
   Settings,
-  LogOut,
-  ChevronDown,
+  Truck,
+  User,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageNav from "@/components/PageNav";
-import { 
-  fetchExpertRequests, 
-  fetchKPIs, 
-  fetchExperts,
+import { useToast } from "@/hooks/use-toast";
+import {
   assignRequest,
   changeRequestStatus,
-  type ExpertRequest, 
+  fetchExpertRequests,
+  fetchExperts,
+  fetchKPIs,
+  type ExpertRequest,
+  type ExpertUser,
   type KPIs,
-  type ExpertUser 
 } from "@/lib/api";
 
-// Use types from API
-type ShipmentRequest = ExpertRequest;
+type ShipmentRequest = ExpertRequest & {
+  international_transport_method?: string;
+  domestic_transport_method?: string;
+  transport_method_preference?: string;
+};
 type KPI = KPIs;
+
+const expertId = 1;
+
+const statusItems = [
+  { value: "all", label: "همه" },
+  { value: "new", label: "جدید" },
+  { value: "assigned", label: "ارجاع شده" },
+  { value: "in_progress", label: "در حال بررسی" },
+  { value: "waiting_for_customer", label: "منتظر مشتری" },
+  { value: "closed", label: "تکمیل شده" },
+];
+
+const statusFilterItems = [
+  { value: "all", label: "همه وضعیت‌ها" },
+  { value: "new", label: "جدید" },
+  { value: "assigned", label: "ارجاع شده" },
+  { value: "in_progress", label: "در حال بررسی" },
+  { value: "quoted", label: "پیشنهاد ارسال شده" },
+  { value: "waiting_for_customer", label: "منتظر مشتری" },
+  { value: "won", label: "پذیرش مشتری" },
+  { value: "lost", label: "عدم پذیرش مشتری" },
+  { value: "closed", label: "مختومه" },
+];
+
+const priorityItems = [
+  { value: "all", label: "همه اولویت‌ها" },
+  { value: "urgent", label: "فوری" },
+  { value: "high", label: "بالا" },
+  { value: "normal", label: "عادی" },
+  { value: "low", label: "پایین" },
+];
 
 const ExpertConsole = () => {
   const navigate = useNavigate();
@@ -54,56 +97,29 @@ const ExpertConsole = () => {
   const [priorityFilter, setPriorityFilter] = useState("");
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
 
-  // Mock expert ID
-  const expertId = 1;
-
-  useEffect(() => {
-    loadRequests();
-    loadKPIs();
-    loadCurrentExpert();
-  }, [activeTab, searchTerm, statusFilter, priorityFilter]);
-
-  // وقتی کاربر از تب جزئیات برمی‌گردد لیست با وضعیت واقعی از سرور به‌روز شود
-  useEffect(() => {
-    const onVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        loadRequests();
-        loadKPIs();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
-  }, []);
-
-  const loadRequests = async () => {
+  const loadRequests = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       const params: NonNullable<Parameters<typeof fetchExpertRequests>[0]> = {
         page: 1,
         per_page: 50,
         sort_by: "created_at",
-        sort_order: "desc"
+        sort_order: "desc",
       };
 
-      // Set status based on active tab first
       if (activeTab !== "all" && activeTab !== "closed") {
         params.status = activeTab;
       } else if (activeTab === "closed") {
-        // For closed tab, show won, lost, and closed statuses
         params.status = "won,lost,closed";
       }
-      
-      // Apply additional filters
+
       if (searchTerm) {
         params.search = searchTerm;
       }
       if (priorityFilter && priorityFilter !== "all") {
         params.priority = priorityFilter;
       }
-      
-      // Status filter should only apply when no specific tab is selected
-      // or when "all" tab is active
       if (statusFilter && statusFilter !== "all" && activeTab === "all") {
         params.status = statusFilter;
       }
@@ -114,40 +130,56 @@ const ExpertConsole = () => {
       toast({
         title: "خطا",
         description: "خطا در دریافت درخواست‌ها",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, priorityFilter, searchTerm, statusFilter, toast]);
 
-  const loadKPIs = async () => {
+  const loadKPIs = useCallback(async () => {
     try {
       const data = await fetchKPIs(expertId);
       setKpis(data);
     } catch (error) {
       console.error("Error loading KPIs:", error);
     }
-  };
+  }, []);
 
-  const loadCurrentExpert = async () => {
+  const loadCurrentExpert = useCallback(async () => {
     try {
-      // Try to get expert from localStorage first
-      const storedExpert = localStorage.getItem('expert_user');
+      const storedExpert = localStorage.getItem("expert_user");
       if (storedExpert) {
         const expert = JSON.parse(storedExpert);
         setCurrentExpert(expert);
         return;
       }
 
-      // Fallback to API
-      const experts = await fetchExperts();
-      const expert = experts.find(e => e.id === expertId) || experts[0];
+      const expertsResponse = await fetchExperts();
+      const experts = Array.isArray(expertsResponse) ? expertsResponse : expertsResponse.experts;
+      const expert = experts.find((item) => item.id === expertId) || experts[0];
       setCurrentExpert(expert);
     } catch (error) {
       console.error("Error loading current expert:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadRequests();
+    loadKPIs();
+    loadCurrentExpert();
+  }, [loadCurrentExpert, loadKPIs, loadRequests]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadRequests();
+        loadKPIs();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [loadKPIs, loadRequests]);
 
   const handleAssignToMe = async (requestId: number) => {
     try {
@@ -155,7 +187,7 @@ const ExpertConsole = () => {
 
       toast({
         title: "موفق",
-        description: "درخواست به شما ارجاع داده شد"
+        description: "درخواست به شما ارجاع داده شد",
       });
 
       loadRequests();
@@ -164,7 +196,7 @@ const ExpertConsole = () => {
       toast({
         title: "خطا",
         description: "خطا در ارجاع درخواست",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
@@ -175,58 +207,75 @@ const ExpertConsole = () => {
 
       toast({
         title: "موفق",
-        description: "وضعیت درخواست به‌روزرسانی شد"
+        description: "وضعیت درخواست به‌روزرسانی شد",
       });
 
       loadKPIs();
 
-      // Switch to appropriate tab based on new status (useEffect will loadRequests for new tab)
       if (newStatus === "in_progress") {
         setActiveTab("in_progress");
       } else if (newStatus === "waiting_for_customer") {
         setActiveTab("waiting_for_customer");
       } else if (newStatus === "closed" || newStatus === "won" || newStatus === "lost") {
-        setActiveTab("all"); // Show all requests including closed ones
+        setActiveTab("all");
       }
     } catch (error) {
       toast({
         title: "خطا",
         description: "خطا در تغییر وضعیت",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "new": return "bg-blue-100 text-blue-800";
-      case "assigned": return "bg-yellow-100 text-yellow-800";
-      case "in_progress": return "bg-purple-100 text-purple-800";
-      case "quoted": return "bg-indigo-100 text-indigo-800";
-      case "waiting_for_customer": return "bg-orange-100 text-orange-800";
-      case "won": return "bg-green-100 text-green-800";
-      case "lost": return "bg-red-100 text-red-800";
-      case "closed": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "new":
+        return "border-blue-200 bg-blue-50 text-blue-700";
+      case "assigned":
+        return "border-amber-200 bg-amber-50 text-amber-700";
+      case "in_progress":
+        return "border-violet-200 bg-violet-50 text-violet-700";
+      case "quoted":
+        return "border-indigo-200 bg-indigo-50 text-indigo-700";
+      case "waiting_for_customer":
+        return "border-orange-200 bg-orange-50 text-orange-700";
+      case "won":
+        return "border-emerald-200 bg-emerald-50 text-emerald-700";
+      case "lost":
+        return "border-rose-200 bg-rose-50 text-rose-700";
+      case "closed":
+        return "border-slate-200 bg-slate-100 text-slate-700";
+      default:
+        return "border-slate-200 bg-slate-100 text-slate-700";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case "urgent": return "bg-red-100 text-red-800";
-      case "high": return "bg-orange-100 text-orange-800";
-      case "normal": return "bg-blue-100 text-blue-800";
-      case "low": return "bg-gray-100 text-gray-800";
-      default: return "bg-gray-100 text-gray-800";
+      case "urgent":
+        return "border-red-200 bg-red-50 text-red-700";
+      case "high":
+        return "border-orange-200 bg-orange-50 text-orange-700";
+      case "normal":
+        return "border-blue-200 bg-blue-50 text-blue-700";
+      case "low":
+        return "border-slate-200 bg-slate-100 text-slate-700";
+      default:
+        return "border-slate-200 bg-slate-100 text-slate-700";
     }
   };
 
   const getSLAStatusColor = (slaStatus: string) => {
     switch (slaStatus) {
-      case "overdue": return "text-red-600";
-      case "due_soon": return "text-yellow-600";
-      case "on_time": return "text-green-600";
-      default: return "text-gray-600";
+      case "overdue":
+        return "text-red-600";
+      case "due_soon":
+        return "text-amber-600";
+      case "on_time":
+        return "text-emerald-600";
+      default:
+        return "text-slate-500";
     }
   };
 
@@ -234,12 +283,12 @@ const ExpertConsole = () => {
     const labels: Record<string, string> = {
       new: "جدید",
       assigned: "ارجاع شده",
-      in_progress: "در حال پیگیری",
+      in_progress: "در حال بررسی",
       quoted: "پیشنهاد ارسال شده",
       waiting_for_customer: "منتظر مشتری",
       won: "پذیرش مشتری",
       lost: "عدم پذیرش مشتری",
-      closed: "مختومه"
+      closed: "مختومه",
     };
     return labels[status] || status;
   };
@@ -249,414 +298,445 @@ const ExpertConsole = () => {
       urgent: "فوری",
       high: "بالا",
       normal: "عادی",
-      low: "پایین"
+      low: "پایین",
     };
     return labels[priority] || priority;
   };
 
+  const totalKpiCount = useMemo(() => {
+    if (!kpis) return 0;
+    return kpis.counts.new + kpis.counts.in_progress + kpis.counts.waiting_for_customer + kpis.counts.closed_today;
+  }, [kpis]);
+
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("");
+    setPriorityFilter("");
+  };
+
+  const formatRoute = (request: ShipmentRequest) => {
+    const origin = [request.route.origin.city, request.route.origin.county, request.route.origin.province].filter(Boolean).join("، ");
+    const destination = [request.route.destination.city, request.route.destination.county, request.route.destination.province].filter(Boolean).join("، ");
+    return {
+      origin: origin || "مبدا نامشخص",
+      destination: destination || "مقصد نامشخص",
+    };
+  };
+
+  const formatTransport = (request: ShipmentRequest) => {
+    if (request.international_transport_method) return `بین‌المللی: ${request.international_transport_method}`;
+    if (request.domestic_transport_method) return `داخلی: ${request.domestic_transport_method}`;
+    if (request.transport_method) return request.transport_method;
+    return "روش حمل ثبت نشده";
+  };
+
+  const metricCards = kpis
+    ? [
+        {
+          label: "درخواست‌های جدید",
+          value: kpis.counts.new,
+          icon: Plus,
+          tone: "text-blue-700 bg-blue-50 border-blue-100",
+        },
+        {
+          label: "در حال بررسی",
+          value: kpis.counts.in_progress,
+          icon: Clock,
+          tone: "text-violet-700 bg-violet-50 border-violet-100",
+        },
+        {
+          label: "منتظر مشتری",
+          value: kpis.counts.waiting_for_customer,
+          icon: MessageSquare,
+          tone: "text-orange-700 bg-orange-50 border-orange-100",
+        },
+        {
+          label: "مختومه امروز",
+          value: kpis.counts.closed_today,
+          icon: CheckCircle,
+          tone: "text-emerald-700 bg-emerald-50 border-emerald-100",
+        },
+      ]
+    : [];
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <PageNav backTo="/" showLogout />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">کنسول کارشناس</h1>
-              <p className="text-gray-600 mt-1">مدیریت درخواست‌های حمل و نقل</p>
+    <div className="min-h-screen bg-slate-50" dir="rtl">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
+        <section className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
+          <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-7">
+            <div className="flex min-w-0 flex-col gap-4">
+              <PageNav backTo="/" showLogout className="flex-wrap" />
+              <div className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
+                  <BarChart3 className="h-7 w-7" />
+                </div>
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-bold text-slate-950 sm:text-3xl">کنسول کارشناس</h1>
+                  <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">مدیریت حرفه‌ای درخواست‌های حمل و نقل</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:items-end">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" className="rounded-full border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100">
+                  داشبورد
+                </Button>
+                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
+                  درخواست‌ها
+                </Button>
+                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
+                  مشتریان
+                </Button>
+                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
+                  تعرفه‌ها
+                </Button>
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full border-slate-200 bg-white">
+                  <Bell className="h-4 w-4 text-slate-600" />
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button variant="outline" size="sm" onClick={loadRequests} disabled={loading} className="rounded-full">
+                  <RefreshCw className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  به‌روزرسانی
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="rounded-full">
+                      <User className="ml-2 h-4 w-4" />
+                      {currentExpert ? currentExpert.full_name : "کارشناس"}
+                      <ChevronDown className="mr-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="border-b px-3 py-2">
+                      <p className="text-sm font-medium">{currentExpert?.full_name || "کارشناس"}</p>
+                      <p className="text-xs text-slate-500">{currentExpert?.role || "expert"}</p>
+                    </div>
+                    <DropdownMenuItem>
+                      <Settings className="ml-2 h-4 w-4" />
+                      تنظیمات پروفایل
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <User className="ml-2 h-4 w-4" />
+                      درخواست‌های من
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => {
+                        localStorage.removeItem("expert_user");
+                        window.location.href = "/";
+                      }}
+                    >
+                      <LogOut className="ml-2 h-4 w-4" />
+                      خروج
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadRequests}
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 ml-2 ${loading ? "animate-spin" : ""}`} />
-              به‌روزرسانی
-            </Button>
-            {/* Expert Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm">
-                  <User className="w-4 h-4 ml-2" />
-                  {currentExpert ? currentExpert.full_name : "کارشناس"}
-                  <ChevronDown className="w-4 h-4 mr-2" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <div className="px-3 py-2 border-b">
-                  <p className="text-sm font-medium">{currentExpert?.full_name || "کارشناس"}</p>
-                  <p className="text-xs text-gray-500">{currentExpert?.email || "email@example.com"}</p>
-                </div>
-                <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" />
-                  تنظیمات پروفایل
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <User className="w-4 h-4 mr-2" />
-                  درخواست‌های من
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => {
-                  localStorage.removeItem('expert_user');
-                  window.location.href = '/';
-                }}>
-                  <LogOut className="w-4 h-4 mr-2" />
-                  خروج
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
+        </section>
 
-        {/* Status Summary Card */}
         {kpis && (
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
+          <section className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+            <Card className="rounded-3xl border-blue-100 bg-white shadow-sm">
+              <CardContent className="p-5 sm:p-6">
+                <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-blue-700">خلاصه وضعیت درخواست‌ها</p>
+                    <h2 className="mt-1 text-xl font-bold text-slate-950">نمای عملیاتی امروز</h2>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 px-4 py-3 text-right">
+                    <p className="text-xs text-slate-500">کل درخواست‌های قابل مشاهده</p>
+                    <p className="text-2xl font-bold text-slate-950">{totalKpiCount}</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  {metricCards.map((metric) => {
+                    const Icon = metric.icon;
+                    return (
+                      <div key={metric.label} className={`rounded-2xl border p-4 ${metric.tone}`}>
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                          <span className="text-xs font-medium">{metric.label}</span>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <p className="text-2xl font-bold">{metric.value}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+              <CardContent className="flex h-full flex-col justify-between gap-4 p-5 sm:p-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">خلاصه وضعیت درخواست‌ها</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-600">{kpis.counts.new}</div>
-                      <div className="text-sm text-gray-600">جدید</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-600">{kpis.counts.in_progress}</div>
-                      <div className="text-sm text-gray-600">در حال پیگیری</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-orange-600">{kpis.counts.waiting_for_customer}</div>
-                      <div className="text-sm text-gray-600">منتظر مشتری</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">{kpis.counts.closed_today}</div>
-                      <div className="text-sm text-gray-600">مختومه امروز</div>
-                    </div>
+                  <p className="text-sm font-medium text-slate-500">پایش SLA</p>
+                  <h2 className="mt-1 text-xl font-bold text-slate-950">اولویت پاسخ‌گویی</h2>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700">
+                    <AlertCircle className="mb-3 h-5 w-5" />
+                    <p className="text-2xl font-bold">{kpis.sla.overdue}</p>
+                    <p className="mt-1 text-xs">گذشته از مهلت</p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-700">
+                    <Clock className="mb-3 h-5 w-5" />
+                    <p className="text-2xl font-bold">{kpis.sla.due_soon}</p>
+                    <p className="mt-1 text-xs">نزدیک به مهلت</p>
                   </div>
                 </div>
-                <div className="hidden md:block">
-                  <div className="text-right">
-                    <div className="text-sm text-gray-500 mb-1">کل درخواست‌ها</div>
-                    <div className="text-3xl font-bold text-gray-800">
-                      {kpis.counts.new + kpis.counts.in_progress + kpis.counts.waiting_for_customer + kpis.counts.closed_today}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </section>
         )}
 
-        {/* KPI Cards */}
-        {kpis && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">درخواست‌های جدید</p>
-                    <p className="text-2xl font-bold text-blue-600">{kpis.counts.new}</p>
-                  </div>
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Plus className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">در حال پیگیری</p>
-                    <p className="text-2xl font-bold text-purple-600">{kpis.counts.in_progress}</p>
-                  </div>
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Clock className="w-6 h-6 text-purple-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">منتظر مشتری</p>
-                    <p className="text-2xl font-bold text-orange-600">{kpis.counts.waiting_for_customer}</p>
-                  </div>
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <MessageSquare className="w-6 h-6 text-orange-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">مختومه امروز</p>
-                    <p className="text-2xl font-bold text-green-600">{kpis.counts.closed_today}</p>
-                  </div>
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <CheckCircle className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* SLA Alert */}
         {(kpis?.sla.overdue || 0) > 0 && (
-          <Card className="border-red-200 bg-red-50">
+          <Card className="rounded-2xl border-red-200 bg-red-50 shadow-sm">
             <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+              <div className="flex items-start gap-3">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
                 <div>
-                  <p className="font-medium text-red-800">
-                    {kpis?.sla.overdue} درخواست از مهلت SLA گذشته است
-                  </p>
-                  <p className="text-sm text-red-600">
-                    لطفاً درخواست‌های عقب‌افتاده را اولویت دهید
-                  </p>
+                  <p className="font-medium text-red-800">{kpis?.sla.overdue} درخواست از مهلت SLA گذشته است</p>
+                  <p className="mt-1 text-sm text-red-600">لطفاً درخواست‌های عقب‌افتاده را اولویت دهید.</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute right-3 top-3 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="جستجو در درخواست‌ها..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pr-10"
-                  />
-                </div>
+        <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+          <CardContent className="space-y-4 p-4 sm:p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <Filter className="h-4 w-4 text-blue-600" />
+              جستجو و فیلتر درخواست‌ها
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_auto]">
+              <div className="relative min-w-0">
+                <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  placeholder="جستجو در کد، مشتری یا مسیر..."
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className="h-11 rounded-2xl border-slate-200 bg-slate-50 pr-10"
+                />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="فیلتر وضعیت" />
+                <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-slate-50">
+                  <SelectValue placeholder="وضعیت" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">همه وضعیت‌ها</SelectItem>
-                  <SelectItem value="new">جدید</SelectItem>
-                  <SelectItem value="assigned">ارجاع شده</SelectItem>
-                  <SelectItem value="in_progress">در حال پیگیری</SelectItem>
-                  <SelectItem value="quoted">پیشنهاد ارسال شده</SelectItem>
-                  <SelectItem value="waiting_for_customer">منتظر مشتری</SelectItem>
-                  <SelectItem value="won">پذیرش مشتری</SelectItem>
-                  <SelectItem value="lost">عدم پذیرش مشتری</SelectItem>
-                  <SelectItem value="closed">مختومه</SelectItem>
+                  {statusFilterItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="w-full md:w-48">
-                  <SelectValue placeholder="فیلتر اولویت" />
+                <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-slate-50">
+                  <SelectValue placeholder="اولویت" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">همه اولویت‌ها</SelectItem>
-                  <SelectItem value="urgent">فوری</SelectItem>
-                  <SelectItem value="high">بالا</SelectItem>
-                  <SelectItem value="normal">عادی</SelectItem>
-                  <SelectItem value="low">پایین</SelectItem>
+                  {priorityItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <Button variant="outline" onClick={clearFilters} className="h-11 rounded-2xl">
+                پاک کردن فیلترها
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="new">
-              جدید
-              {kpis?.counts.new && (
-                <Badge variant="secondary" className="mr-2">
-                  {kpis.counts.new}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="assigned">
-              ارجاع شده
-            </TabsTrigger>
-            <TabsTrigger value="in_progress">
-              در حال پیگیری
-              {kpis?.counts.in_progress && (
-                <Badge variant="secondary" className="mr-2">
-                  {kpis.counts.in_progress}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="waiting_for_customer">
-              منتظر مشتری
-              {kpis?.counts.waiting_for_customer && (
-                <Badge variant="secondary" className="mr-2">
-                  {kpis.counts.waiting_for_customer}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="closed">
-              مختومه
-              {kpis?.counts.closed_today && (
-                <Badge variant="secondary" className="mr-2">
-                  {kpis.counts.closed_today}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="all">همه</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+            {statusItems.map((item) => (
+              <TabsTrigger
+                key={item.value}
+                value={item.value}
+                className="rounded-2xl px-4 py-2 text-sm text-slate-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
+              >
+                {item.label}
+                {item.value === "new" && Boolean(kpis?.counts.new) && (
+                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
+                    {kpis?.counts.new}
+                  </Badge>
+                )}
+                {item.value === "in_progress" && Boolean(kpis?.counts.in_progress) && (
+                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
+                    {kpis?.counts.in_progress}
+                  </Badge>
+                )}
+                {item.value === "waiting_for_customer" && Boolean(kpis?.counts.waiting_for_customer) && (
+                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
+                    {kpis?.counts.waiting_for_customer}
+                  </Badge>
+                )}
+                {item.value === "closed" && Boolean(kpis?.counts.closed_today) && (
+                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
+                    {kpis?.counts.closed_today}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-4">
-            {loading ? (
-              <div className="flex justify-center py-8">
-                <RefreshCw className="w-8 h-8 animate-spin text-gray-400" />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-950">درخواست‌های حمل</h2>
+                <p className="mt-1 text-sm text-slate-500">نمایش {requests.length} درخواست در فهرست فعلی</p>
               </div>
+              <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-500 shadow-sm">
+                مرتب‌سازی: جدیدترین درخواست‌ها
+              </div>
+            </div>
+
+            {loading ? (
+              <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+                <CardContent className="flex justify-center py-12">
+                  <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+                </CardContent>
+              </Card>
             ) : requests.length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">درخواستی یافت نشد</p>
+              <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+                <CardContent className="p-10 text-center">
+                  <Package className="mx-auto mb-4 h-12 w-12 text-slate-300" />
+                  <p className="font-medium text-slate-700">درخواستی یافت نشد</p>
+                  <p className="mt-1 text-sm text-slate-500">فیلترها را تغییر دهید یا فهرست را به‌روزرسانی کنید.</p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid gap-4">
-                {requests.map((request) => (
-                  <Card key={request.id} className={`${request.has_unread ? "border-blue-300 bg-blue-50" : ""}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1 space-y-3">
-                          {/* Header */}
-                          <div className="flex items-center gap-3">
-                            <h3 className="font-semibold text-lg">
-                              {request.tracking_number}
-                            </h3>
-                            {/* Status Badge - More Prominent */}
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${
-                                request.status === 'new' ? 'bg-blue-500' :
-                                request.status === 'in_progress' ? 'bg-purple-500' :
-                                request.status === 'waiting_for_customer' ? 'bg-orange-500' :
-                                request.status === 'won' ? 'bg-green-500' :
-                                request.status === 'lost' ? 'bg-red-500' :
-                                request.status === 'closed' ? 'bg-gray-500' :
-                                'bg-blue-500'
-                              }`}></div>
-                              <Badge className={`${getStatusColor(request.status)} font-semibold`}>
+                {requests.map((request) => {
+                  const route = formatRoute(request);
+                  return (
+                    <Card
+                      key={request.id}
+                      className={`rounded-3xl border bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${
+                        request.has_unread ? "border-blue-200 ring-1 ring-blue-100" : "border-slate-200"
+                      }`}
+                    >
+                      <CardContent className="p-4 sm:p-5">
+                        <div className="grid gap-5 xl:grid-cols-[1fr_auto]">
+                          <div className="min-w-0 space-y-4">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="rounded-2xl bg-slate-950 px-3 py-2 text-sm font-bold text-white">
+                                {request.tracking_number}
+                              </div>
+                              <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
                                 {getStatusLabel(request.status)}
                               </Badge>
-                            </div>
-                            <Badge className={getPriorityColor(request.priority)}>
-                              {getPriorityLabel(request.priority)}
-                            </Badge>
-                            {request.has_unread && (
-                              <Badge className="bg-blue-500 text-white animate-pulse">
-                                جدید
+                              <Badge variant="outline" className={`rounded-full px-3 py-1 ${getPriorityColor(request.priority)}`}>
+                                اولویت {getPriorityLabel(request.priority)}
                               </Badge>
-                            )}
-                          </div>
-
-                          {/* Customer Info */}
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <User className="w-4 h-4" />
-                            <span>{request.customer.name}</span>
-                            <span>•</span>
-                            <span>{request.customer.phone}</span>
-                          </div>
-
-                          {/* Route */}
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <MapPin className="w-4 h-4" />
-                            <span>
-                              {request.route.origin.city} → {request.route.destination.city}
-                            </span>
-                            {(request.transport_method || request.international_transport_method || request.domestic_transport_method) && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <Truck className="w-4 h-4" />
-                                  {request.international_transport_method && `بین‌المللی: ${request.international_transport_method}`}
-                                  {request.domestic_transport_method && `داخلی: ${request.domestic_transport_method}`}
-                                  {request.transport_method && !request.international_transport_method && !request.domestic_transport_method && request.transport_method}
-                                  {request.transport_method_preference === "forwarder_suggestion" && " (پیشنهاد فورواردر)"}
-                                </span>
-                              </>
-                            )}
-                          </div>
-
-                          {/* Cargo Info */}
-                          {request.cargo.description && (
-                            <div className="text-sm text-gray-600">
-                              <Package className="w-4 h-4 inline ml-1" />
-                              {request.cargo.description}
+                              {request.has_unread && <Badge className="rounded-full bg-blue-600 text-white">خوانده نشده</Badge>}
                             </div>
-                          )}
 
-                          {/* Timestamps */}
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span>
-                              ثبت: {new Date(request.created_at).toLocaleDateString("fa-IR")}
-                            </span>
-                            {request.sla_due_at && (
-                              <span className={getSLAStatusColor(request.sla_status)}>
-                                SLA: {new Date(request.sla_due_at).toLocaleDateString("fa-IR")}
+                            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                              <div className="rounded-2xl bg-slate-50 p-3">
+                                <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                                  <User className="h-4 w-4" />
+                                  مشتری
+                                </div>
+                                <p className="truncate text-sm font-semibold text-slate-900">{request.customer.name}</p>
+                                <p className="mt-1 text-xs text-slate-500" dir="ltr">
+                                  {request.customer.phone}
+                                </p>
+                              </div>
+
+                              <div className="rounded-2xl bg-slate-50 p-3">
+                                <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                                  <MapPin className="h-4 w-4" />
+                                  مبدا
+                                </div>
+                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">{route.origin}</p>
+                              </div>
+
+                              <div className="rounded-2xl bg-slate-50 p-3">
+                                <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                                  <MapPin className="h-4 w-4" />
+                                  مقصد
+                                </div>
+                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">{route.destination}</p>
+                              </div>
+
+                              <div className="rounded-2xl bg-slate-50 p-3">
+                                <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
+                                  <Truck className="h-4 w-4" />
+                                  روش حمل
+                                </div>
+                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">{formatTransport(request)}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
+                              <span className="flex items-center gap-1">
+                                <CalendarDays className="h-4 w-4" />
+                                ثبت: {new Date(request.created_at).toLocaleDateString("fa-IR")}
                               </span>
+                              {request.sla_due_at && (
+                                <span className={`flex items-center gap-1 ${getSLAStatusColor(request.sla_status)}`}>
+                                  <Clock className="h-4 w-4" />
+                                  SLA: {new Date(request.sla_due_at).toLocaleDateString("fa-IR")}
+                                </span>
+                              )}
+                              {request.cargo.description && (
+                                <span className="flex min-w-0 items-center gap-1">
+                                  <Package className="h-4 w-4 shrink-0" />
+                                  <span className="truncate">{request.cargo.description}</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col gap-2 sm:flex-row xl:w-40 xl:flex-col xl:justify-center">
+                            <Button className="rounded-2xl bg-blue-600 hover:bg-blue-700" onClick={() => navigate(`/expert/requests/${request.id}`)}>
+                              <Eye className="ml-2 h-4 w-4" />
+                              مشاهده / خلاصه
+                            </Button>
+                            {request.status === "new" && (
+                              <Button variant="outline" className="rounded-2xl" onClick={() => handleAssignToMe(request.id)}>
+                                <User className="ml-2 h-4 w-4" />
+                                ارجاع به من
+                              </Button>
+                            )}
+                            {request.status === "assigned" && (
+                              <Button variant="outline" className="rounded-2xl" onClick={() => handleStatusChange(request.id, "in_progress")}>
+                                <Clock className="ml-2 h-4 w-4" />
+                                شروع پیگیری
+                              </Button>
                             )}
                           </div>
                         </div>
-
-                        {/* Actions */}
-                        <div className="flex flex-col gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => navigate(`/expert/requests/${request.id}`)}
-                          >
-                            <Eye className="w-4 h-4 ml-2" />
-                            مشاهده
-                          </Button>
-                          <p className="text-sm text-gray-600 text-center">
-                            {getStatusLabel(request.status)}
-                          </p>
-                          {request.status === "new" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleAssignToMe(request.id)}
-                            >
-                              <User className="w-4 h-4 ml-2" />
-                              ارجاع به من
-                            </Button>
-                          )}
-                          
-                          {request.status === "assigned" && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleStatusChange(request.id, "in_progress")}
-                            >
-                              <Clock className="w-4 h-4 ml-2" />
-                              شروع پیگیری
-                            </Button>
-                          )}
-                          
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
+
+            <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+              <CardContent className="flex flex-col gap-3 p-4 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                <span>نمایش {requests.length} مورد از صفحه فعلی</span>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" className="rounded-full" disabled>
+                    قبلی
+                  </Button>
+                  <span className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">صفحه ۱</span>
+                  <Button variant="outline" size="sm" className="rounded-full" disabled>
+                    بعدی
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
