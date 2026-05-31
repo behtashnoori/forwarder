@@ -513,6 +513,53 @@ export async function fetchAdminDashboard(token: string): Promise<AdminDashboard
   return (await response.json()) as AdminDashboardStats;
 }
 
+export type AdminReportPeriod = "weekly" | "monthly" | "yearly";
+
+export interface AdminReportDownload {
+  blob: Blob;
+  filename: string;
+}
+
+export class AdminReportDownloadHttpError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super(`Admin report download failed with status ${status}`);
+    this.name = "AdminReportDownloadHttpError";
+    this.status = status;
+  }
+}
+
+export async function downloadAdminReportXlsx(token: string, period: AdminReportPeriod): Promise<AdminReportDownload> {
+  const response = await fetch(`${API_BASE_URL}${buildPath(`/api/admin/reports/export.xlsx?period=${period}`)}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new AdminReportDownloadHttpError(response.status);
+  }
+
+  const contentDisposition = response.headers.get("Content-Disposition") || "";
+  const filename = getFilenameFromContentDisposition(contentDisposition) || `forwarder-report-${period}.xlsx`;
+
+  return {
+    blob: await response.blob(),
+    filename,
+  };
+}
+
+function getFilenameFromContentDisposition(contentDisposition: string): string | null {
+  const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1].replace(/"/g, ""));
+  }
+
+  const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+  return filenameMatch?.[1] || null;
+}
+
 // Expert Console Interfaces
 export interface ExpertRequest {
   id: number;

@@ -93,10 +93,8 @@ def run_tests():
                 ).first()
                 if not log:
                     errors.append("ReferralAssignmentLog not created")
-                elif log.rule_id is not None:
-                    errors.append("Expected rule_id=None for auto-assign")
-                elif log.strategy_used != "round_robin":
-                    errors.append(f"Expected strategy_used=round_robin got {log.strategy_used}")
+                elif log.strategy_used not in ("direct", "round_robin", "least_workload"):
+                    errors.append(f"Unexpected strategy_used={log.strategy_used}")
                 # Auto-assign must create ExpertConsoleLog for timeline consistency
                 console_log = db.session.query(ExpertConsoleLog).filter(
                     ExpertConsoleLog.shipment_request_id == request_id,
@@ -113,8 +111,8 @@ def run_tests():
         preview = referral_engine.preview_assignment(request_id)
         if preview.get("error") == "request_not_found":
             errors.append("preview returned request_not_found for existing request")
-        if not preview.get("error") and preview.get("strategy_used") != "round_robin":
-            errors.append(f"Preview expected strategy_used=round_robin got {preview.get('strategy_used')}")
+        if not preview.get("error") and preview.get("strategy_used") not in ("direct", "round_robin", "least_workload"):
+            errors.append(f"Preview returned unexpected strategy_used={preview.get('strategy_used')}")
 
         # Admin API: GET referral-rules (may be empty), POST preview
         admin = db.session.query(ExpertUser).filter(ExpertUser.role == "admin").first()

@@ -55,7 +55,7 @@ const expertId = 1;
 const statusItems = [
   { value: "all", label: "همه" },
   { value: "new", label: "جدید" },
-  { value: "assigned", label: "ارجاع شده" },
+  { value: "assigned", label: "در انتظار بررسی" },
   { value: "in_progress", label: "در حال بررسی" },
   { value: "waiting_for_customer", label: "منتظر مشتری" },
   { value: "closed", label: "تکمیل شده" },
@@ -64,12 +64,12 @@ const statusItems = [
 const statusFilterItems = [
   { value: "all", label: "همه وضعیت‌ها" },
   { value: "new", label: "جدید" },
-  { value: "assigned", label: "ارجاع شده" },
+  { value: "assigned", label: "در انتظار بررسی" },
   { value: "in_progress", label: "در حال بررسی" },
-  { value: "quoted", label: "پیشنهاد ارسال شده" },
+  { value: "quoted", label: "پیشنهاد ارسال‌شده" },
   { value: "waiting_for_customer", label: "منتظر مشتری" },
-  { value: "won", label: "پذیرش مشتری" },
-  { value: "lost", label: "عدم پذیرش مشتری" },
+  { value: "won", label: "پذیرفته‌شده" },
+  { value: "lost", label: "ردشده / از دست‌رفته" },
   { value: "closed", label: "مختومه" },
 ];
 
@@ -171,7 +171,7 @@ const ExpertConsole = () => {
 
       toast({
         title: "موفق",
-        description: "درخواست به شما ارجاع داده شد",
+        description: "درخواست به شما اختصاص داده شد",
       });
 
       loadRequests();
@@ -179,7 +179,7 @@ const ExpertConsole = () => {
     } catch (error) {
       toast({
         title: "خطا",
-        description: "خطا در ارجاع درخواست",
+        description: "خطا در اختصاص درخواست",
         variant: "destructive",
       });
     }
@@ -238,12 +238,12 @@ const ExpertConsole = () => {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       new: "جدید",
-      assigned: "ارجاع شده",
+      assigned: "در انتظار بررسی",
       in_progress: "در حال بررسی",
-      quoted: "پیشنهاد ارسال شده",
+      quoted: "پیشنهاد ارسال‌شده",
       waiting_for_customer: "منتظر مشتری",
-      won: "پذیرش مشتری",
-      lost: "عدم پذیرش مشتری",
+      won: "پذیرفته‌شده",
+      lost: "ردشده / از دست‌رفته",
       closed: "مختومه",
     };
     return labels[status] || status;
@@ -567,7 +567,7 @@ const ExpertConsole = () => {
                             {request.status === "new" && (
                               <Button variant="outline" className="rounded-2xl" onClick={() => handleAssignToMe(request.id)}>
                                 <User className="ml-2 h-4 w-4" />
-                                ارجاع به من
+                                اختصاص به من
                               </Button>
                             )}
                             {request.status === "assigned" && (

@@ -1,10 +1,12 @@
 ﻿"""Characterization tests for admin panel read/report route contracts."""
 from __future__ import annotations
 
+from io import BytesIO
 from datetime import datetime, timedelta
 
 import bcrypt
 import pytest
+from openpyxl import load_workbook
 
 from backend import create_app
 from backend.extensions import db
@@ -12,6 +14,7 @@ from backend.models import (
     AssignmentLog,
     City,
     County,
+    Customer,
     ExpertConsoleLog,
     ExpertUser,
     Province,
@@ -139,6 +142,72 @@ def admin_panel_app():
 
 def _auth_headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def admin_empty_report_app():
+    """App with an admin user and no shipment requests for empty report coverage."""
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SECRET_KEY": "test-secret",
+        },
+        skip_startup=True,
+    )
+    with app.app_context():
+        db.create_all()
+        password_hash = bcrypt.hashpw(b"test123", bcrypt.gensalt()).decode("utf-8")
+        admin = ExpertUser(
+            username="phase12b_empty_admin",
+            password_hash=password_hash,
+            full_name="Phase 12B Empty Admin",
+            email="phase12b-empty-admin@example.test",
+            role="admin",
+            is_active=True,
+        )
+        db.session.add(admin)
+        db.session.commit()
+
+        return {
+            "app": app,
+            "admin_token": security.generate_token(admin.id, "access"),
+        }
+
+
+def _assert_report_exclusions(payload):
+    serialized = str(payload)
+    assert "ارجاع شده" not in serialized
+    assert "ارجاع‌شده" not in serialized
+
+    def walk(value):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                assert "sla" not in key.lower()
+                assert "priority" not in key.lower()
+                assert "deadline" not in key.lower()
+                assert "overdue" not in key.lower()
+                assert "due_soon" not in key.lower()
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+
+    walk(payload)
+
+
+def _assert_workbook_exclusions(workbook):
+    visible_values = []
+    for sheet in workbook.worksheets:
+        for row in sheet.iter_rows(values_only=True):
+            visible_values.extend(str(value) for value in row if value is not None)
+    serialized = " ".join(visible_values)
+    assert "ارجاع شده" not in serialized
+    assert "ارجاع‌شده" not in serialized
+    assert "SLA" not in serialized
+    assert "sla" not in serialized
+    assert "اولویت" not in serialized
+    assert "priority" not in serialized
 
 
 def test_admin_shipment_request_detail_and_list_contract(admin_panel_app):
@@ -302,3 +371,296 @@ def test_admin_dashboard_and_assignment_summary_contract(admin_panel_app):
         "sla_violations": 1,
     }
     assert "T" in summary_payload["generated_at"]
+
+
+def test_admin_report_overview_auth_periods_sections_and_exclusions(admin_panel_app):
+    """Admin report overview is admin-only, validates periods, and keeps the planned JSON shape."""
+    client = admin_panel_app["app"].test_client()
+    admin_headers = _auth_headers(admin_panel_app["admin_token"])
+    expert_headers = _auth_headers(admin_panel_app["expert_token"])
+
+    unauthenticated = client.get("/api/admin/reports/overview?period=weekly")
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.get_json() == {"error": "Token is missing"}
+
+    forbidden = client.get("/api/admin/reports/overview?period=weekly", headers=expert_headers)
+    assert forbidden.status_code == 403
+    assert forbidden.get_json() == {
+        "error": "دسترسی غیرمجاز",
+        "required_roles": ["admin"],
+        "user_role": "expert",
+    }
+
+    invalid = client.get("/api/admin/reports/overview?period=invalid", headers=admin_headers)
+    assert invalid.status_code == 400
+    assert invalid.get_json() == {"error": "دوره گزارش نامعتبر است"}
+
+    for period in ("weekly", "monthly", "yearly"):
+        response = client.get(f"/api/admin/reports/overview?period={period}", headers=admin_headers)
+        assert response.status_code == 200
+        payload = response.get_json()
+        assert set(payload.keys()) == {
+            "metadata",
+            "summary",
+            "requests_by_status",
+            "transport_distribution",
+            "location_distribution",
+            "expert_performance",
+            "customer_concentration",
+            "trends",
+            "request_details",
+        }
+        assert payload["metadata"]["period"] == period
+        assert payload["metadata"]["timezone_basis"] == "UTC"
+        assert "T" in payload["metadata"]["generated_at"]
+        _assert_report_exclusions(payload)
+
+
+def test_admin_report_overview_summary_labels_and_details(admin_panel_app):
+    """Report overview returns status counts, labels, missing values, and detail rows without SLA/priority fields."""
+    client = admin_panel_app["app"].test_client()
+    admin_headers = _auth_headers(admin_panel_app["admin_token"])
+
+    with admin_panel_app["app"].app_context():
+        now = datetime.utcnow()
+        customer = Customer(
+            first_name="Linked",
+            last_name="Customer",
+            company_name="Acme Logistics",
+            phone="09121111111",
+        )
+        db.session.add(customer)
+        db.session.flush()
+
+        in_progress_request = ShipmentRequest(
+            tracking_code="AP-P12B-004",
+            shipping_type="international",
+            contact_phone="09121111111",
+            customer_first_name="Linked",
+            customer_last_name="Customer",
+            customer_id=customer.id,
+            international_transport_method="air",
+            origin_country="Turkey",
+            origin_city_international="Istanbul",
+            dest_country="Iran",
+            dest_city_international="Tehran",
+            status_request_status="new",
+            status="in_progress",
+            assigned_to=admin_panel_app["expert_id"],
+            created_at=now - timedelta(hours=3),
+            cargo_description="International cargo",
+            cargo_weight=12.5,
+            cargo_volume=4.0,
+            cargo_value=5000.0,
+            has_unread_for_assignee=False,
+        )
+        lost_request = ShipmentRequest(
+            tracking_code="AP-P12B-005",
+            shipping_type="domestic",
+            contact_phone="09122222222",
+            status_request_status="new",
+            status="lost",
+            assigned_to=admin_panel_app["expert_id"],
+            created_at=now - timedelta(hours=4),
+        )
+        missing_request = ShipmentRequest(
+            tracking_code="AP-P12B-006",
+            shipping_type="domestic",
+            contact_phone="09123333333",
+            status_request_status="new",
+            status="new",
+            assigned_to=None,
+            created_at=now - timedelta(hours=5),
+        )
+        db.session.add_all([in_progress_request, lost_request, missing_request])
+        db.session.commit()
+
+    response = client.get("/api/admin/reports/overview?period=weekly", headers=admin_headers)
+    assert response.status_code == 200
+    payload = response.get_json()
+    _assert_report_exclusions(payload)
+
+    assert payload["summary"] == {
+        "total_requests": 5,
+        "new_requests": 1,
+        "pending_review_requests": 1,
+        "in_progress_requests": 1,
+        "completed_requests": 1,
+        "lost_or_rejected_requests": 1,
+        "unassigned_requests": 1,
+        "requests_last_24h": 4,
+        "requests_last_7d": 5,
+    }
+
+    status_rows = {row["status"]: row for row in payload["requests_by_status"]}
+    assert status_rows["assigned"]["label_fa"] == "در انتظار بررسی"
+    assert status_rows["new"]["label_fa"] == "جدید"
+    assert status_rows["in_progress"]["label_fa"] == "در حال بررسی"
+    assert status_rows["lost"]["label_fa"] == "ردشده / از دست‌رفته"
+
+    details_by_tracking = {row["tracking_number"]: row for row in payload["request_details"]}
+    assert details_by_tracking["AP-P12B-006"]["expert_name"] == "بدون کارشناس"
+    assert details_by_tracking["AP-P12B-006"]["customer_name"] == "ثبت نشده"
+    assert details_by_tracking["AP-P12B-006"]["origin_province"] == "ثبت نشده"
+    assert details_by_tracking["AP-P12B-006"]["transport_method"] == "unknown"
+    assert details_by_tracking["AP-P12B-004"]["origin_province"] == "Turkey"
+    assert details_by_tracking["AP-P12B-004"]["origin_city"] == "Istanbul"
+    assert details_by_tracking["AP-P12B-004"]["destination_province"] == "Iran"
+    assert details_by_tracking["AP-P12B-004"]["destination_city"] == "Tehran"
+
+    expert_rows = {row["expert_name"]: row for row in payload["expert_performance"]}
+    assert expert_rows["بدون کارشناس"]["assigned_count"] == 1
+    assert expert_rows["Phase 5M Expert"]["assigned_count"] == 4
+
+    customer_rows = {(row["customer_name"], row["phone"]): row for row in payload["customer_concentration"]}
+    assert customer_rows[("Linked Customer", "09121111111")]["company"] == "Acme Logistics"
+
+    assert len(payload["trends"]) == 7
+    assert payload["request_details"][0]["created_at"] >= payload["request_details"][-1]["created_at"]
+
+
+def test_admin_report_overview_empty_report(admin_empty_report_app):
+    """Report overview handles periods with no shipment requests safely."""
+    client = admin_empty_report_app["app"].test_client()
+    headers = _auth_headers(admin_empty_report_app["admin_token"])
+
+    response = client.get("/api/admin/reports/overview?period=weekly", headers=headers)
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["summary"] == {
+        "total_requests": 0,
+        "new_requests": 0,
+        "pending_review_requests": 0,
+        "in_progress_requests": 0,
+        "completed_requests": 0,
+        "lost_or_rejected_requests": 0,
+        "unassigned_requests": 0,
+        "requests_last_24h": 0,
+        "requests_last_7d": 0,
+    }
+    assert payload["requests_by_status"] == []
+    assert payload["transport_distribution"] == []
+    assert payload["location_distribution"] == []
+    assert payload["expert_performance"] == []
+    assert payload["customer_concentration"] == []
+    assert payload["request_details"] == []
+    assert len(payload["trends"]) == 7
+    _assert_report_exclusions(payload)
+
+
+def test_admin_report_xlsx_export_auth_periods_headers_and_workbook(admin_panel_app):
+    """Admin XLSX export is protected, validates periods, and returns a valid workbook."""
+    client = admin_panel_app["app"].test_client()
+    admin_headers = _auth_headers(admin_panel_app["admin_token"])
+    expert_headers = _auth_headers(admin_panel_app["expert_token"])
+
+    unauthenticated = client.get("/api/admin/reports/export.xlsx?period=weekly")
+    assert unauthenticated.status_code == 401
+    assert unauthenticated.get_json() == {"error": "Token is missing"}
+
+    forbidden = client.get("/api/admin/reports/export.xlsx?period=weekly", headers=expert_headers)
+    assert forbidden.status_code == 403
+    assert forbidden.get_json() == {
+        "error": "دسترسی غیرمجاز",
+        "required_roles": ["admin"],
+        "user_role": "expert",
+    }
+
+    invalid = client.get("/api/admin/reports/export.xlsx?period=invalid", headers=admin_headers)
+    assert invalid.status_code == 400
+    assert invalid.get_json() == {"error": "دوره گزارش نامعتبر است"}
+
+    for period in ("weekly", "monthly", "yearly"):
+        response = client.get(f"/api/admin/reports/export.xlsx?period={period}", headers=admin_headers)
+        assert response.status_code == 200
+        assert response.content_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        assert "attachment" in response.headers["Content-Disposition"]
+        assert f"forwarder-report-{period}.xlsx" in response.headers["Content-Disposition"]
+        assert load_workbook(BytesIO(response.data))
+
+
+def test_admin_report_xlsx_export_workbook_content(admin_panel_app):
+    """XLSX export contains expected sheets, headers, labels, and summary metrics."""
+    client = admin_panel_app["app"].test_client()
+    admin_headers = _auth_headers(admin_panel_app["admin_token"])
+
+    response = client.get("/api/admin/reports/export.xlsx?period=weekly", headers=admin_headers)
+
+    assert response.status_code == 200
+    workbook = load_workbook(BytesIO(response.data))
+    expected_sheets = [
+        "خلاصه مدیریتی",
+        "وضعیت درخواست‌ها",
+        "توزیع نوع حمل",
+        "توزیع مبدا و مقصد",
+        "عملکرد کارشناسان",
+        "مشتریان و درخواست‌ها",
+        "روند زمانی",
+        "جزئیات درخواست‌ها",
+    ]
+    assert workbook.sheetnames == expected_sheets
+    _assert_workbook_exclusions(workbook)
+
+    summary = workbook["خلاصه مدیریتی"]
+    summary_values = {
+        summary.cell(row=row_index, column=1).value: summary.cell(row=row_index, column=2).value
+        for row_index in range(1, summary.max_row + 1)
+    }
+    assert summary_values["کل درخواست‌ها"] == 2
+    assert summary_values["در انتظار بررسی"] == 1
+    assert summary_values["تکمیل‌شده"] == 1
+    assert summary.freeze_panes == "A9"
+
+    status_sheet = workbook["وضعیت درخواست‌ها"]
+    assert [cell.value for cell in status_sheet[1]] == [
+        "وضعیت",
+        "برچسب فارسی وضعیت",
+        "تعداد درخواست",
+        "درصد از کل",
+        "آخرین تاریخ ثبت در این وضعیت",
+    ]
+    status_rows = list(status_sheet.iter_rows(min_row=2, values_only=True))
+    assert ("assigned", "در انتظار بررسی", 1, 50, status_rows[0][4]) in status_rows
+
+    transport_sheet = workbook["توزیع نوع حمل"]
+    assert [cell.value for cell in transport_sheet[1]] == [
+        "نوع حمل",
+        "برچسب فارسی نوع حمل",
+        "تعداد درخواست",
+        "درصد از کل",
+        "تعداد تکمیل‌شده",
+        "تعداد در حال بررسی",
+    ]
+
+    details_sheet = workbook["جزئیات درخواست‌ها"]
+    assert "کارشناس" in [cell.value for cell in details_sheet[1]]
+    assert "خوانده‌نشده برای کارشناس" in [cell.value for cell in details_sheet[1]]
+    assert "sla_due_at" not in [cell.value for cell in details_sheet[1]]
+    assert "priority" not in [cell.value for cell in details_sheet[1]]
+    assert all(sheet.sheet_view.rightToLeft for sheet in workbook.worksheets)
+
+
+def test_admin_report_xlsx_export_empty_report(admin_empty_report_app):
+    """XLSX export creates all sheets with headers when there is no report data."""
+    client = admin_empty_report_app["app"].test_client()
+    headers = _auth_headers(admin_empty_report_app["admin_token"])
+
+    response = client.get("/api/admin/reports/export.xlsx?period=weekly", headers=headers)
+
+    assert response.status_code == 200
+    workbook = load_workbook(BytesIO(response.data))
+    assert workbook.sheetnames == [
+        "خلاصه مدیریتی",
+        "وضعیت درخواست‌ها",
+        "توزیع نوع حمل",
+        "توزیع مبدا و مقصد",
+        "عملکرد کارشناسان",
+        "مشتریان و درخواست‌ها",
+        "روند زمانی",
+        "جزئیات درخواست‌ها",
+    ]
+    assert workbook["خلاصه مدیریتی"]["B9"].value == 0
+    assert workbook["وضعیت درخواست‌ها"].max_row == 1
+    assert workbook["جزئیات درخواست‌ها"].max_row == 1
+    _assert_workbook_exclusions(workbook)

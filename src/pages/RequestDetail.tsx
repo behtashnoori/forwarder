@@ -167,12 +167,12 @@ const RequestDetail = () => {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       new: "جدید",
-      assigned: "ارجاع شده",
-      in_progress: "در حال پیگیری",
-      quoted: "پیشنهاد ارسال شده",
+      assigned: "در انتظار بررسی",
+      in_progress: "در حال بررسی",
+      quoted: "پیشنهاد ارسال‌شده",
       waiting_for_customer: "منتظر مشتری",
-      won: "پذیرش مشتری",
-      lost: "عدم پذیرش مشتری",
+      won: "پذیرفته‌شده",
+      lost: "ردشده / از دست‌رفته",
       closed: "مختومه",
     };
     return labels[status] || status;
@@ -262,7 +262,7 @@ const RequestDetail = () => {
   const getActionLabel = (action: string) => {
     const labels: Record<string, string> = {
       status_change: "تغییر وضعیت",
-      assignment: "ارجاع",
+      assignment: "تخصیص",
       message_added: "پیام اضافه شد",
       note: "یادداشت",
     };
@@ -601,10 +601,10 @@ const OperationsCard = ({ handleStatusChange }: { handleStatusChange: (newStatus
           <SelectValue placeholder="تغییر وضعیت" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="in_progress">در حال پیگیری</SelectItem>
+          <SelectItem value="in_progress">در حال بررسی</SelectItem>
           <SelectItem value="waiting_for_customer">منتظر مشتری</SelectItem>
-          <SelectItem value="won">پذیرش مشتری</SelectItem>
-          <SelectItem value="lost">عدم پذیرش مشتری</SelectItem>
+          <SelectItem value="won">پذیرفته‌شده</SelectItem>
+          <SelectItem value="lost">ردشده / از دست‌رفته</SelectItem>
           <SelectItem value="closed">بستن</SelectItem>
         </SelectContent>
       </Select>

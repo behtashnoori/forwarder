@@ -1,11 +1,15 @@
 """Admin panel routes for shipment request insights."""
-from flask import Blueprint, jsonify, request, current_app
+from io import BytesIO
+
+from flask import Blueprint, jsonify, request, current_app, send_file
 from backend.extensions import db
 from backend.security import require_role
 from backend.auth import get_current_user
 from backend.services import (
     admin_dashboard_service,
+    admin_report_overview_service,
     admin_report_service,
+    admin_report_xlsx_service,
     admin_shipment_request_service,
     referral_service,
 )
@@ -89,6 +93,38 @@ def get_assignment_summary():
     except Exception as e:
         current_app.logger.error(f"Error generating assignment summary: {e}")
         return jsonify({"error": "خطا در تولید گزارش"}), 500
+
+
+@admin_bp.get("/reports/overview")
+@require_role('admin')
+def get_report_overview():
+    """Return admin report overview JSON for a supported reporting period."""
+    try:
+        return jsonify(admin_report_overview_service.get_report_overview_payload(request.args.get("period")))
+    except admin_report_overview_service.AdminReportOverviewError as e:
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"Error generating report overview: {e}")
+        return jsonify({"error": "خطا در تولید گزارش"}), 500
+
+
+@admin_bp.get("/reports/export.xlsx")
+@require_role('admin')
+def export_report_xlsx():
+    """Return admin report overview as an XLSX workbook download."""
+    try:
+        workbook_bytes, filename = admin_report_xlsx_service.build_report_xlsx(request.args.get("period"))
+        return send_file(
+            BytesIO(workbook_bytes),
+            mimetype=admin_report_xlsx_service.XLSX_MIME_TYPE,
+            as_attachment=True,
+            download_name=filename,
+        )
+    except admin_report_overview_service.AdminReportOverviewError as e:
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"Error exporting report XLSX: {e}")
+        return jsonify({"error": "خطا در تولید خروجی گزارش"}), 500
 
 
 # --- Referral rules (قوانین ارجاع) ---

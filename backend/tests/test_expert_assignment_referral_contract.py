@@ -17,6 +17,8 @@ from backend.models import (
     ExpertConsoleNotification,
     ExpertQuote,
     ExpertUser,
+    Province,
+    ReferralAssignmentLog,
     ReferralRule,
     ShipmentRequest,
 )
@@ -59,6 +61,10 @@ def expert_contract_app():
             is_active=True,
         )
         db.session.add_all([admin, expert, other_expert])
+        db.session.flush()
+
+        province = Province(code="phase4h", name_fa="Phase 4H Province")
+        db.session.add(province)
         db.session.flush()
 
         request_row = ShipmentRequest(
@@ -124,7 +130,9 @@ def expert_contract_app():
             "admin_id": admin.id,
             "expert_id": expert.id,
             "other_expert_id": other_expert.id,
+            "province_id": province.id,
             "request_id": request_row.id,
+            "referral_rule_id": referral_rule.id,
             "admin_token": security.generate_token(admin.id, "access"),
             "expert_token": security.generate_token(expert.id, "access"),
             "other_expert_token": security.generate_token(other_expert.id, "access"),
@@ -133,6 +141,22 @@ def expert_contract_app():
 
 def _auth_headers(token: str) -> dict:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _international_request_payload(phone: str, cargo_description: str) -> dict:
+    return {
+        "shipping_type": "international",
+        "origin_country": "Turkey",
+        "origin_city_international": "Istanbul",
+        "dest_country": "Iran",
+        "dest_city_international": "Tehran",
+        "contact_phone": phone,
+        "customer_first_name": "Public",
+        "customer_last_name": "RoundRobin",
+        "international_transport_method": "air",
+        "transport_method_preference": "customer_choice",
+        "cargo_description": cargo_description,
+    }
 
 
 def test_expert_auth_login_refresh_logout_contract(expert_contract_app):
@@ -815,6 +839,237 @@ def test_referral_rule_crud_contracts(expert_contract_app):
 
     with expert_contract_app["app"].app_context():
         assert db.session.get(ReferralRule, rule_id) is None
+
+
+def test_referral_engine_uses_matching_active_referral_rule(expert_contract_app):
+    """A matching active referral rule drives auto-assignment before global fallback."""
+    from backend.referral_engine import referral_engine
+
+    app = expert_contract_app["app"]
+    with app.app_context():
+        request_row = ShipmentRequest(
+            tracking_code="SR-P4H-RULE",
+            shipping_type="domestic",
+            contact_phone="09123456780",
+            customer_first_name="Rule",
+            customer_last_name="Match",
+            transport_method="road",
+            domestic_transport_method="road",
+            transport_method_preference="customer_choice",
+            status_request_status="new",
+            status="new",
+            priority="normal",
+            assigned_to=None,
+            has_unread_for_assignee=True,
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+
+        selected_expert_id = referral_engine.auto_assign_request(request_id)
+
+        updated_request = db.session.get(ShipmentRequest, request_id)
+        assert selected_expert_id in {
+            expert_contract_app["expert_id"],
+            expert_contract_app["other_expert_id"],
+        }
+        assert updated_request.assigned_to == selected_expert_id
+        assert updated_request.status == "assigned"
+
+        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
+        assert referral_log.rule_id == expert_contract_app["referral_rule_id"]
+        assert referral_log.strategy_used == "round_robin"
+        assert json.loads(referral_log.candidate_expert_ids) == [
+            expert_contract_app["expert_id"],
+            expert_contract_app["other_expert_id"],
+        ]
+
+        console_log = db.session.query(ExpertConsoleLog).filter_by(
+            shipment_request_id=request_id,
+            action="assignment",
+            new_status="assigned",
+        ).one()
+        assert console_log.expert_user_id == selected_expert_id
+
+
+def test_referral_engine_falls_back_when_no_referral_rule_matches(expert_contract_app):
+    """No matching referral rule preserves the existing global round-robin assignment behavior."""
+    from backend.referral_engine import referral_engine
+
+    app = expert_contract_app["app"]
+    with app.app_context():
+        request_row = ShipmentRequest(
+            tracking_code="SR-P4H-FALLBACK",
+            shipping_type="international",
+            contact_phone="09123456781",
+            customer_first_name="Rule",
+            customer_last_name="Fallback",
+            origin_country="Turkey",
+            origin_city_international="Istanbul",
+            dest_country="Iran",
+            dest_city_international="Tehran",
+            international_transport_method="air",
+            transport_method_preference="customer_choice",
+            status_request_status="new",
+            status="new",
+            priority="normal",
+            assigned_to=None,
+            has_unread_for_assignee=True,
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+
+        selected_expert_id = referral_engine.auto_assign_request(request_id)
+
+        updated_request = db.session.get(ShipmentRequest, request_id)
+        assert selected_expert_id in {
+            expert_contract_app["expert_id"],
+            expert_contract_app["other_expert_id"],
+        }
+        assert updated_request.assigned_to == selected_expert_id
+        assert updated_request.status == "assigned"
+
+        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
+        assert referral_log.rule_id is None
+        assert referral_log.strategy_used == "round_robin"
+
+
+def test_public_request_creation_distributes_between_active_experts_round_robin(expert_contract_app):
+    """Public request creation uses global round-robin when no referral rule matches."""
+    client = expert_contract_app["app"].test_client()
+
+    first_response = client.post(
+        "/api/shipment-request",
+        json=_international_request_payload("09123456782", "Round robin public request 1"),
+    )
+    second_response = client.post(
+        "/api/shipment-request",
+        json=_international_request_payload("09123456783", "Round robin public request 2"),
+    )
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 201
+    assert set(first_response.get_json().keys()) == {"message", "id", "tracking_code"}
+    assert set(second_response.get_json().keys()) == {"message", "id", "tracking_code"}
+
+    first_request_id = first_response.get_json()["id"]
+    second_request_id = second_response.get_json()["id"]
+
+    with expert_contract_app["app"].app_context():
+        first_request = db.session.get(ShipmentRequest, first_request_id)
+        second_request = db.session.get(ShipmentRequest, second_request_id)
+
+        assert first_request.assigned_to == expert_contract_app["expert_id"]
+        assert second_request.assigned_to == expert_contract_app["other_expert_id"]
+        assert first_request.status == "assigned"
+        assert second_request.status == "assigned"
+
+        first_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=first_request_id).one()
+        second_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=second_request_id).one()
+        assert first_log.rule_id is None
+        assert second_log.rule_id is None
+        assert first_log.strategy_used == "round_robin"
+        assert second_log.strategy_used == "round_robin"
+
+        assert db.session.query(ExpertConsoleLog).filter_by(
+            shipment_request_id=first_request_id,
+            action="assignment",
+            new_status="assigned",
+        ).one()
+        assert db.session.query(ExpertConsoleNotification).filter_by(
+            shipment_request_id=first_request_id,
+            expert_user_id=expert_contract_app["expert_id"],
+            notification_type="request_assigned",
+        ).one()
+
+
+def test_public_request_creation_skips_inactive_experts(expert_contract_app):
+    """Inactive experts are excluded from automatic round-robin assignment."""
+    client = expert_contract_app["app"].test_client()
+
+    with expert_contract_app["app"].app_context():
+        other_expert = db.session.get(ExpertUser, expert_contract_app["other_expert_id"])
+        other_expert.is_active = False
+        db.session.commit()
+
+    response = client.post(
+        "/api/shipment-request",
+        json=_international_request_payload("09123456784", "Inactive expert skip request"),
+    )
+
+    assert response.status_code == 201
+    request_id = response.get_json()["id"]
+
+    with expert_contract_app["app"].app_context():
+        created_request = db.session.get(ShipmentRequest, request_id)
+        assert created_request.assigned_to == expert_contract_app["expert_id"]
+        assert created_request.status == "assigned"
+
+        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
+        assert json.loads(referral_log.candidate_expert_ids) == [expert_contract_app["expert_id"]]
+
+
+def test_public_request_creation_remains_unassigned_when_no_active_expert_exists(expert_contract_app):
+    """No active expert leaves the created request unassigned without changing the API response shape."""
+    client = expert_contract_app["app"].test_client()
+
+    with expert_contract_app["app"].app_context():
+        db.session.get(ExpertUser, expert_contract_app["expert_id"]).is_active = False
+        db.session.get(ExpertUser, expert_contract_app["other_expert_id"]).is_active = False
+        db.session.commit()
+
+    response = client.post(
+        "/api/shipment-request",
+        json=_international_request_payload("09123456785", "No active expert request"),
+    )
+
+    assert response.status_code == 201
+    assert set(response.get_json().keys()) == {"message", "id", "tracking_code"}
+    request_id = response.get_json()["id"]
+
+    with expert_contract_app["app"].app_context():
+        created_request = db.session.get(ShipmentRequest, request_id)
+        assert created_request.assigned_to is None
+        assert created_request.status == "new"
+        assert db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).count() == 0
+        assert db.session.query(ExpertConsoleNotification).filter_by(shipment_request_id=request_id).count() == 0
+
+
+def test_public_request_creation_triggers_matching_referral_rule(expert_contract_app):
+    """Public request creation runs the referral engine and applies matching rules."""
+    client = expert_contract_app["app"].test_client()
+
+    response = client.post(
+        "/api/shipment-request",
+        json={
+            "shipping_type": "domestic",
+            "origin_province_id": expert_contract_app["province_id"],
+            "dest_province_id": expert_contract_app["province_id"],
+            "contact_phone": "09123456782",
+            "customer_first_name": "Public",
+            "customer_last_name": "Referral",
+            "transport_method": "road",
+            "domestic_transport_method": "road",
+            "transport_method_preference": "customer_choice",
+            "cargo_description": "Public request referral test",
+        },
+    )
+
+    assert response.status_code == 201
+    payload = response.get_json()
+    request_id = payload["id"]
+
+    with expert_contract_app["app"].app_context():
+        created_request = db.session.get(ShipmentRequest, request_id)
+        assert created_request.assigned_to in {
+            expert_contract_app["expert_id"],
+            expert_contract_app["other_expert_id"],
+        }
+        assert created_request.status == "assigned"
+
+        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
+        assert referral_log.rule_id == expert_contract_app["referral_rule_id"]
 
 
 def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(expert_contract_app):

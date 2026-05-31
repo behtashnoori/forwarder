@@ -1,4 +1,4 @@
-"""Auto-assignment engine: round-robin among all active experts by last assignment time. No rules to define."""
+"""Auto-assignment engine for referral rules with round-robin fallback."""
 import json
 import logging
 from datetime import datetime, timezone
@@ -10,6 +10,8 @@ from sqlalchemy.orm import Session
 from backend.models import (
     ShipmentRequest,
     ExpertUser,
+    ReferralRule,
+    ReferralRuleState,
     ReferralAssignmentLog,
     ReferralAutoAssignState,
     ExpertConsoleLog,
@@ -69,8 +71,113 @@ def _select_expert_by_last_assignment(session: Session) -> Optional[ExpertUser]:
     return first
 
 
+def _json_object(value: str | None) -> Dict[str, Any]:
+    try:
+        parsed = json.loads(value or "{}")
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
+
+
+def _request_transport_values(request: ShipmentRequest) -> set[str]:
+    return {
+        value.strip().lower()
+        for value in (
+            request.transport_method,
+            request.domestic_transport_method,
+            request.international_transport_method,
+        )
+        if isinstance(value, str) and value.strip()
+    }
+
+
+def _condition_matches(actual: Any, expected: Any) -> bool:
+    if expected in (None, "", []):
+        return True
+    if isinstance(expected, list):
+        return str(actual) in {str(item) for item in expected}
+    return str(actual) == str(expected)
+
+
+def _rule_matches_request(rule: ReferralRule, request: ShipmentRequest) -> bool:
+    conditions = _json_object(rule.conditions)
+    if not _condition_matches(request.shipping_type, conditions.get("shipping_type")):
+        return False
+
+    transport_method = conditions.get("transport_method")
+    if transport_method not in (None, "", []):
+        transport_values = _request_transport_values(request)
+        expected_values = transport_method if isinstance(transport_method, list) else [transport_method]
+        if not transport_values.intersection({str(value).strip().lower() for value in expected_values}):
+            return False
+
+    if not _condition_matches(request.origin_province_id, conditions.get("origin_province")):
+        return False
+    if not _condition_matches(request.dest_province_id, conditions.get("destination_province")):
+        return False
+
+    return True
+
+
+def _active_assignment_count(session: Session, expert_id: int) -> int:
+    return (
+        session.query(func.count(ShipmentRequest.id))
+        .filter(
+            and_(
+                ShipmentRequest.assigned_to == expert_id,
+                ShipmentRequest.status.in_(["assigned", "in_progress", "quoted", "waiting_for_customer"]),
+            )
+        )
+        .scalar()
+        or 0
+    )
+
+
+def _assignable_pool(session: Session, expert_ids: list[int], max_active: Any = None) -> list[ExpertUser]:
+    if not expert_ids:
+        return []
+
+    experts = (
+        session.query(ExpertUser)
+        .filter(
+            and_(
+                ExpertUser.id.in_(expert_ids),
+                ExpertUser.is_active == True,
+                ExpertUser.role.in_(["expert", "business_expert"]),
+            )
+        )
+        .all()
+    )
+    by_id = {expert.id: expert for expert in experts}
+    ordered = [by_id[expert_id] for expert_id in expert_ids if expert_id in by_id]
+
+    if max_active in (None, ""):
+        return ordered
+
+    try:
+        max_active_count = int(max_active)
+    except (TypeError, ValueError):
+        return ordered
+
+    return [
+        expert
+        for expert in ordered
+        if _active_assignment_count(session, expert.id) < max_active_count
+    ]
+
+
+def _parse_expert_ids(value: Any) -> list[int]:
+    expert_ids = []
+    for item in value or []:
+        try:
+            expert_ids.append(int(item))
+        except (TypeError, ValueError):
+            continue
+    return expert_ids
+
+
 class ReferralEngine:
-    """Auto-assigns each new request to the expert with oldest last-assignment time (round-robin). No rules."""
+    """Auto-assigns new requests using active referral rules, then global round-robin fallback."""
 
     def __init__(self, db_session: Optional[Session] = None):
         self.db = db_session or db.session
@@ -94,6 +201,19 @@ class ReferralEngine:
             if not experts:
                 logger.warning("No active experts for auto-assignment")
                 return None
+
+            rule_assignment = self._select_matching_rule_assignment(request)
+            if rule_assignment:
+                self._advance_rule_state(rule_assignment)
+                self._assign_and_log(
+                    request=request,
+                    expert_id=rule_assignment["expert_id"],
+                    candidate_expert_ids=rule_assignment["candidate_expert_ids"],
+                    debug=rule_assignment["debug"],
+                    rule_id=rule_assignment["rule_id"],
+                    strategy_used=rule_assignment["strategy_used"],
+                )
+                return rule_assignment["expert_id"]
 
             # Ensure lock row exists, then take row lock for concurrency
             state = self.db.query(ReferralAutoAssignState).filter(ReferralAutoAssignState.id == 1).first()
@@ -149,6 +269,15 @@ class ReferralEngine:
             if not experts:
                 result["error"] = "no_experts"
                 return result
+            rule_assignment = self._select_matching_rule_assignment(request, dry_run=True)
+            if rule_assignment:
+                expert = self.db.get(ExpertUser, rule_assignment["expert_id"])
+                result["matched_rule"] = rule_assignment["matched_rule"]
+                result["candidates"] = rule_assignment["candidate_expert_ids"]
+                result["selected_expert"] = {"id": expert.id, "full_name": expert.full_name} if expert else None
+                result["strategy_used"] = rule_assignment["strategy_used"]
+                result["debug_trace"] = rule_assignment["debug"]
+                return result
             expert_ids = [e.id for e in experts]
             selected = _select_expert_by_last_assignment(self.db)
             if not selected:
@@ -165,12 +294,100 @@ class ReferralEngine:
             result["error"] = str(e)
             return result
 
+    def _select_matching_rule_assignment(self, request: ShipmentRequest, dry_run: bool = False) -> Optional[Dict[str, Any]]:
+        rules = (
+            self.db.query(ReferralRule)
+            .filter(ReferralRule.is_active == True)
+            .order_by(ReferralRule.priority.asc(), ReferralRule.name.asc())
+            .all()
+        )
+
+        for rule in rules:
+            if not _rule_matches_request(rule, request):
+                continue
+
+            action = _json_object(rule.action)
+            action_type = action.get("type")
+            if action_type == "direct_assign":
+                expert = self.db.get(ExpertUser, action.get("expert_id"))
+                if not expert or not expert.is_active or expert.role not in ("expert", "business_expert"):
+                    if getattr(rule, "stop_on_match", True):
+                        return None
+                    continue
+                return {
+                    "rule_id": rule.id,
+                    "matched_rule": {"id": rule.id, "name": rule.name, "priority": rule.priority},
+                    "expert_id": expert.id,
+                    "candidate_expert_ids": [expert.id],
+                    "strategy_used": "direct",
+                    "debug": {
+                        "matched_rule": rule.name,
+                        "action_type": action_type,
+                        "conditions": _json_object(rule.conditions),
+                        "dry_run": dry_run,
+                    },
+                }
+
+            if action_type == "pool_assign":
+                candidate_ids = _parse_expert_ids(action.get("expert_ids", []))
+                candidates = _assignable_pool(
+                    self.db,
+                    candidate_ids,
+                    action.get("max_active_assignments_per_expert"),
+                )
+                if not candidates:
+                    if getattr(rule, "stop_on_match", True):
+                        return None
+                    continue
+
+                strategy = action.get("strategy") or "round_robin"
+                selected_index = 0
+                if strategy == "least_workload":
+                    selected = min(candidates, key=lambda expert: (_active_assignment_count(self.db, expert.id), expert.id))
+                else:
+                    state = self.db.query(ReferralRuleState).filter(ReferralRuleState.rule_id == rule.id).first()
+                    rr_index = state.rr_index if state else 0
+                    selected_index = rr_index % len(candidates)
+                    selected = candidates[selected_index]
+                    strategy = "round_robin"
+
+                return {
+                    "rule_id": rule.id,
+                    "matched_rule": {"id": rule.id, "name": rule.name, "priority": rule.priority},
+                    "expert_id": selected.id,
+                    "candidate_expert_ids": [expert.id for expert in candidates],
+                    "strategy_used": strategy,
+                    "selected_index": selected_index,
+                    "debug": {
+                        "matched_rule": rule.name,
+                        "action_type": action_type,
+                        "conditions": _json_object(rule.conditions),
+                        "dry_run": dry_run,
+                    },
+                }
+
+        return None
+
+    def _advance_rule_state(self, assignment: Dict[str, Any]) -> None:
+        if assignment.get("strategy_used") != "round_robin" or not assignment.get("rule_id"):
+            return
+        state = self.db.query(ReferralRuleState).filter(ReferralRuleState.rule_id == assignment["rule_id"]).first()
+        if not state:
+            state = ReferralRuleState(rule_id=assignment["rule_id"], rr_index=0)
+            self.db.add(state)
+            self.db.flush()
+        candidate_count = max(len(assignment.get("candidate_expert_ids") or []), 1)
+        state.rr_index = (int(assignment.get("selected_index", 0)) + 1) % candidate_count
+        state.updated_at = datetime.now(timezone.utc)
+
     def _assign_and_log(
         self,
         request: ShipmentRequest,
         expert_id: int,
         candidate_expert_ids: List[int],
         debug: Dict[str, Any],
+        rule_id: Optional[int] = None,
+        strategy_used: str = "round_robin",
     ) -> None:
         """Update request, create ReferralAssignmentLog, ExpertConsoleLog, notification, gamification. Commits."""
         expert = self.db.get(ExpertUser, expert_id)
@@ -181,9 +398,9 @@ class ReferralEngine:
         request.has_unread_for_assignee = True
         log = ReferralAssignmentLog(
             request_id=request.id,
-            rule_id=None,
+            rule_id=rule_id,
             selected_expert_id=expert_id,
-            strategy_used="round_robin",
+            strategy_used=strategy_used,
             candidate_expert_ids=json.dumps(candidate_expert_ids),
             debug=json.dumps(debug, ensure_ascii=False),
             assigned_at=datetime.now(timezone.utc),
@@ -196,7 +413,7 @@ class ReferralEngine:
             action="assignment",
             old_status="new",
             new_status="assigned",
-            note="ارجاع خودکار (Round Robin)",
+            note=f"ارجاع خودکار ({strategy_used})",
             created_at=datetime.now(timezone.utc),
         )
         self.db.add(console_log)
@@ -221,7 +438,7 @@ class ReferralEngine:
             except Exception as e:
                 logger.error(f"Gamification on referral assign: {e}")
         self.db.commit()
-        logger.info(f"Auto-assign: request {request.id} -> expert {expert_id} (round_robin)")
+        logger.info(f"Auto-assign: request {request.id} -> expert {expert_id} ({strategy_used})")
 
     def _create_assignment_notification(self, expert_id: int, request_id: int) -> None:
         from backend.models import ExpertConsoleNotification

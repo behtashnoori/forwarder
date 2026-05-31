@@ -5,6 +5,7 @@ import {
   BarChart3,
   Bell,
   Clock,
+  FileSpreadsheet,
   Gauge,
   LogOut,
   Package,
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { AdminDashboardHttpError, fetchAdminDashboard, type AdminDashboardStats } from "@/lib/api";
+import AdminReportsTab from "@/components/AdminReportsTab";
 import ReferralRulesTab from "@/components/ReferralRulesTab";
 import SiteSettingsTab from "@/components/SiteSettingsTab";
 import UserManagement from "./UserManagement";
@@ -161,12 +163,12 @@ const AdminPanel = () => {
     const labels: Record<string, string> = {
       new: "جدید",
       pending: "در انتظار",
-      assigned: "ارجاع شده",
-      in_progress: "در حال انجام",
-      won: "پذیرش مشتری",
-      lost: "عدم پذیرش مشتری",
+      assigned: "در انتظار بررسی",
+      in_progress: "در حال بررسی",
+      won: "پذیرفته‌شده",
+      lost: "ردشده / از دست‌رفته",
       cancelled: "لغو شده",
-      waiting_for_customer: "در انتظار مشتری",
+      waiting_for_customer: "منتظر مشتری",
       closed: "مختومه",
     };
     return labels[status] || status;
@@ -208,7 +210,7 @@ const AdminPanel = () => {
           tone: "bg-violet-50 text-violet-700",
         },
         {
-          label: "نیازمند ارجاع",
+          label: "در انتظار تخصیص",
           value: dashboardStats.unassigned_count,
           icon: AlertCircle,
           tone: "bg-orange-50 text-orange-700",
@@ -233,7 +235,7 @@ const AdminPanel = () => {
                 </div>
                 <h1 className="text-2xl font-bold tracking-normal text-slate-950 sm:text-3xl">پنل مدیریت</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">
-                  نمای مدیریتی برای پایش درخواست‌ها، وضعیت ارجاع و توزیع روش‌های حمل
+                  نمای مدیریتی برای پایش درخواست‌ها، تخصیص خودکار و توزیع روش‌های حمل
                 </p>
               </div>
             </div>
@@ -259,13 +261,20 @@ const AdminPanel = () => {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm lg:grid-cols-4">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-3 xl:grid-cols-5">
             <TabsTrigger
               value="dashboard"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <BarChart3 className="h-4 w-4" />
               داشبورد
+            </TabsTrigger>
+            <TabsTrigger
+              value="reports"
+              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
+            >
+              <FileSpreadsheet className="h-4 w-4" />
+              گزارش‌ها
             </TabsTrigger>
             <TabsTrigger
               value="users"
@@ -279,7 +288,7 @@ const AdminPanel = () => {
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <Scale className="h-4 w-4" />
-              قوانین ارجاع
+              توزیع خودکار درخواست‌ها
             </TabsTrigger>
             <TabsTrigger
               value="site-settings"
@@ -330,9 +339,9 @@ const AdminPanel = () => {
                     tone="bg-violet-50 text-violet-700"
                   />
                   <MetricCard
-                    label="ارجاع نشده"
+                    label="بدون کارشناس"
                     value={dashboardStats.unassigned_count}
-                    helper="نیازمند بررسی یا ارجاع"
+                    helper="در انتظار تخصیص خودکار یا دستی"
                     icon={AlertCircle}
                     tone="bg-orange-50 text-orange-700"
                   />
@@ -450,6 +459,10 @@ const AdminPanel = () => {
             ) : (
               <EmptyDashboardState />
             )}
+          </TabsContent>
+
+          <TabsContent value="reports" className="space-y-4">
+            <AdminReportsTab />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
