@@ -1,9 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  AlertCircle,
   BarChart3,
-  Bell,
   CalendarDays,
   CheckCircle,
   ChevronDown,
@@ -17,7 +15,6 @@ import {
   Plus,
   RefreshCw,
   Search,
-  Settings,
   Truck,
   User,
 } from "lucide-react";
@@ -28,7 +25,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -77,14 +73,6 @@ const statusFilterItems = [
   { value: "closed", label: "مختومه" },
 ];
 
-const priorityItems = [
-  { value: "all", label: "همه اولویت‌ها" },
-  { value: "urgent", label: "فوری" },
-  { value: "high", label: "بالا" },
-  { value: "normal", label: "عادی" },
-  { value: "low", label: "پایین" },
-];
-
 const ExpertConsole = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -94,7 +82,6 @@ const ExpertConsole = () => {
   const [activeTab, setActiveTab] = useState("new");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState("");
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
 
   const loadRequests = useCallback(async () => {
@@ -117,9 +104,6 @@ const ExpertConsole = () => {
       if (searchTerm) {
         params.search = searchTerm;
       }
-      if (priorityFilter && priorityFilter !== "all") {
-        params.priority = priorityFilter;
-      }
       if (statusFilter && statusFilter !== "all" && activeTab === "all") {
         params.status = statusFilter;
       }
@@ -135,7 +119,7 @@ const ExpertConsole = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, priorityFilter, searchTerm, statusFilter, toast]);
+  }, [activeTab, searchTerm, statusFilter, toast]);
 
   const loadKPIs = useCallback(async () => {
     try {
@@ -251,34 +235,6 @@ const ExpertConsole = () => {
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "urgent":
-        return "border-red-200 bg-red-50 text-red-700";
-      case "high":
-        return "border-orange-200 bg-orange-50 text-orange-700";
-      case "normal":
-        return "border-blue-200 bg-blue-50 text-blue-700";
-      case "low":
-        return "border-slate-200 bg-slate-100 text-slate-700";
-      default:
-        return "border-slate-200 bg-slate-100 text-slate-700";
-    }
-  };
-
-  const getSLAStatusColor = (slaStatus: string) => {
-    switch (slaStatus) {
-      case "overdue":
-        return "text-red-600";
-      case "due_soon":
-        return "text-amber-600";
-      case "on_time":
-        return "text-emerald-600";
-      default:
-        return "text-slate-500";
-    }
-  };
-
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       new: "جدید",
@@ -293,16 +249,6 @@ const ExpertConsole = () => {
     return labels[status] || status;
   };
 
-  const getPriorityLabel = (priority: string) => {
-    const labels: Record<string, string> = {
-      urgent: "فوری",
-      high: "بالا",
-      normal: "عادی",
-      low: "پایین",
-    };
-    return labels[priority] || priority;
-  };
-
   const totalKpiCount = useMemo(() => {
     if (!kpis) return 0;
     return kpis.counts.new + kpis.counts.in_progress + kpis.counts.waiting_for_customer + kpis.counts.closed_today;
@@ -311,7 +257,6 @@ const ExpertConsole = () => {
   const clearFilters = () => {
     setSearchTerm("");
     setStatusFilter("");
-    setPriorityFilter("");
   };
 
   const formatRoute = (request: ShipmentRequest) => {
@@ -379,24 +324,6 @@ const ExpertConsole = () => {
 
             <div className="flex flex-col gap-3 sm:items-end">
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" className="rounded-full border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100">
-                  داشبورد
-                </Button>
-                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
-                  درخواست‌ها
-                </Button>
-                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
-                  مشتریان
-                </Button>
-                <Button variant="ghost" size="sm" className="rounded-full text-slate-600 hover:bg-slate-100">
-                  تعرفه‌ها
-                </Button>
-                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full border-slate-200 bg-white">
-                  <Bell className="h-4 w-4 text-slate-600" />
-                </Button>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
                 <Button variant="outline" size="sm" onClick={loadRequests} disabled={loading} className="rounded-full">
                   <RefreshCw className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   به‌روزرسانی
@@ -415,15 +342,6 @@ const ExpertConsole = () => {
                       <p className="text-sm font-medium">{currentExpert?.full_name || "کارشناس"}</p>
                       <p className="text-xs text-slate-500">{currentExpert?.role || "expert"}</p>
                     </div>
-                    <DropdownMenuItem>
-                      <Settings className="ml-2 h-4 w-4" />
-                      تنظیمات پروفایل
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <User className="ml-2 h-4 w-4" />
-                      درخواست‌های من
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => {
                         localStorage.removeItem("expert_user");
@@ -441,7 +359,7 @@ const ExpertConsole = () => {
         </section>
 
         {kpis && (
-          <section className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+          <section>
             <Card className="rounded-3xl border-blue-100 bg-white shadow-sm">
               <CardContent className="p-5 sm:p-6">
                 <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -470,42 +388,7 @@ const ExpertConsole = () => {
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
-              <CardContent className="flex h-full flex-col justify-between gap-4 p-5 sm:p-6">
-                <div>
-                  <p className="text-sm font-medium text-slate-500">پایش SLA</p>
-                  <h2 className="mt-1 text-xl font-bold text-slate-950">اولویت پاسخ‌گویی</h2>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-2xl border border-red-100 bg-red-50 p-4 text-red-700">
-                    <AlertCircle className="mb-3 h-5 w-5" />
-                    <p className="text-2xl font-bold">{kpis.sla.overdue}</p>
-                    <p className="mt-1 text-xs">گذشته از مهلت</p>
-                  </div>
-                  <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-700">
-                    <Clock className="mb-3 h-5 w-5" />
-                    <p className="text-2xl font-bold">{kpis.sla.due_soon}</p>
-                    <p className="mt-1 text-xs">نزدیک به مهلت</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </section>
-        )}
-
-        {(kpis?.sla.overdue || 0) > 0 && (
-          <Card className="rounded-2xl border-red-200 bg-red-50 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-                <div>
-                  <p className="font-medium text-red-800">{kpis?.sla.overdue} درخواست از مهلت SLA گذشته است</p>
-                  <p className="mt-1 text-sm text-red-600">لطفاً درخواست‌های عقب‌افتاده را اولویت دهید.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         )}
 
         <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
@@ -514,7 +397,7 @@ const ExpertConsole = () => {
               <Filter className="h-4 w-4 text-blue-600" />
               جستجو و فیلتر درخواست‌ها
             </div>
-            <div className="grid gap-3 lg:grid-cols-[1fr_12rem_12rem_auto]">
+            <div className="grid gap-3 lg:grid-cols-[1fr_12rem_auto]">
               <div className="relative min-w-0">
                 <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <Input
@@ -530,18 +413,6 @@ const ExpertConsole = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {statusFilterItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                <SelectTrigger className="h-11 rounded-2xl border-slate-200 bg-slate-50">
-                  <SelectValue placeholder="اولویت" />
-                </SelectTrigger>
-                <SelectContent>
-                  {priorityItems.map((item) => (
                     <SelectItem key={item.value} value={item.value}>
                       {item.label}
                     </SelectItem>
@@ -634,9 +505,6 @@ const ExpertConsole = () => {
                               <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
                                 {getStatusLabel(request.status)}
                               </Badge>
-                              <Badge variant="outline" className={`rounded-full px-3 py-1 ${getPriorityColor(request.priority)}`}>
-                                اولویت {getPriorityLabel(request.priority)}
-                              </Badge>
                               {request.has_unread && <Badge className="rounded-full bg-blue-600 text-white">خوانده نشده</Badge>}
                             </div>
 
@@ -682,12 +550,6 @@ const ExpertConsole = () => {
                                 <CalendarDays className="h-4 w-4" />
                                 ثبت: {new Date(request.created_at).toLocaleDateString("fa-IR")}
                               </span>
-                              {request.sla_due_at && (
-                                <span className={`flex items-center gap-1 ${getSLAStatusColor(request.sla_status)}`}>
-                                  <Clock className="h-4 w-4" />
-                                  SLA: {new Date(request.sla_due_at).toLocaleDateString("fa-IR")}
-                                </span>
-                              )}
                               {request.cargo.description && (
                                 <span className="flex min-w-0 items-center gap-1">
                                   <Package className="h-4 w-4 shrink-0" />
