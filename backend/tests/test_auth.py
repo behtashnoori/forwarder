@@ -1,8 +1,11 @@
 """Tests for authentication system."""
 import pytest
+import bcrypt
+from datetime import datetime
 from unittest.mock import patch, MagicMock
 from flask import Flask
 
+from backend import create_app
 from backend.auth import AuthManager, auth_manager
 from backend.models import ExpertUser
 
@@ -12,12 +15,22 @@ class TestAuthManager:
     
     def setup_method(self):
         """Setup test environment."""
-        self.app = Flask(__name__)
-        self.app.config['TESTING'] = True
-        self.app.config['SECRET_KEY'] = 'test-secret-key'
-        self.app.config['JWT_SECRET_KEY'] = 'test-jwt-secret'
-        
+        self.app = create_app({
+            'TESTING': True,
+            'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+            'SECRET_KEY': 'test-secret-key',
+            'JWT_SECRET_KEY': 'test-jwt-secret-key-for-pytest-only-32',
+        })
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.request_context = self.app.test_request_context('/', environ_base={'REMOTE_ADDR': '127.0.0.1'})
+        self.request_context.push()
         self.auth_manager = AuthManager()
+
+    def teardown_method(self):
+        """Cleanup test environment."""
+        self.request_context.pop()
+        self.app_context.pop()
     
     def test_authenticate_user_success(self):
         """Test successful user authentication."""
@@ -30,6 +43,7 @@ class TestAuthManager:
             mock_user_instance.full_name = 'Test User'
             mock_user_instance.email = 'test@example.com'
             mock_user_instance.role = 'expert'
+            mock_user_instance.password_hash = bcrypt.hashpw(b'expert123', bcrypt.gensalt()).decode('utf-8')
             
             mock_user.query.filter_by.return_value.first.return_value = mock_user_instance
             
@@ -61,12 +75,11 @@ class TestAuthManager:
         # Simulate lockout
         self.auth_manager.login_attempts['127.0.0.1'] = {
             'count': 5,
-            'last_attempt': '2024-01-01T00:00:00'
+            'last_attempt': datetime(2024, 1, 1, 0, 0, 0)
         }
         
         with patch('backend.auth.datetime') as mock_datetime:
-            mock_datetime.utcnow.return_value = '2024-01-01T00:05:00'
-            mock_datetime.strptime.return_value = '2024-01-01T00:00:00'
+            mock_datetime.utcnow.return_value = datetime(2024, 1, 1, 0, 5, 0)
             
             result = self.auth_manager.authenticate_user('testuser', 'expert123')
             
@@ -139,10 +152,12 @@ class TestSecurityDecorators:
 @pytest.fixture
 def app():
     """Create test Flask app."""
-    app = Flask(__name__)
-    app.config['TESTING'] = True
-    app.config['SECRET_KEY'] = 'test-secret-key'
-    return app
+    return create_app({
+        'TESTING': True,
+        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
+        'SECRET_KEY': 'test-secret-key',
+        'JWT_SECRET_KEY': 'test-jwt-secret-key-for-pytest-only-32',
+    })
 
 
 @pytest.fixture

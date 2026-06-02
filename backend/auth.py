@@ -133,7 +133,7 @@ def get_current_user() -> Optional[Dict[str, Any]]:
         return None
     
     try:
-        user = ExpertUser.query.get(g.current_user_id)
+        user = db.session.get(ExpertUser, g.current_user_id)
         if not user or not user.is_active:
             return None
         

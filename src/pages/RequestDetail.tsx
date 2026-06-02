@@ -132,7 +132,9 @@ const RequestDetail = () => {
         const expert = JSON.parse(stored) as { id?: number };
         if (typeof expert?.id === "number") return expert.id;
       }
-    } catch (_) {}
+    } catch {
+      // Ignore malformed stored expert data and fall back to the default expert id.
+    }
     return 1;
   })();
 

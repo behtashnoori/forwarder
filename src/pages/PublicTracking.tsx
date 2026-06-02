@@ -90,6 +90,8 @@ interface PublicTrackingData {
   workflow_steps_simple?: WorkflowStep[];
 }
 
+const showLatestQuoteCard: boolean = false;
+
 const PublicTracking: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
@@ -470,7 +472,7 @@ const PublicTracking: React.FC = () => {
               </Card>
             )}
 
-            {requestData.latest_quote && false && (
+            {showLatestQuoteCard && requestData.latest_quote && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

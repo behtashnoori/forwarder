@@ -16,6 +16,7 @@ from backend.models import (
 )
 from backend.auth import require_auth, get_current_user
 from backend.security import require_role, validate_input, sanitize_input
+from backend.services import assignment_service
 
 user_management_bp = Blueprint("user_management", __name__, url_prefix="/api/user-management")
 
@@ -524,47 +525,9 @@ def get_assignment_statistics():
 def manual_assignment():
     """Manually assign a request to an expert."""
     try:
-        data = request.get_json()
-        request_id = data.get("request_id")
-        expert_id = data.get("expert_id")
-        reason = data.get("reason", "Manual assignment")
-        
-        if not request_id or not expert_id:
-            return jsonify({"error": "شناسه درخواست و کارشناس الزامی است"}), 400
-        
-        from backend.assignment_engine import assignment_engine
-        
-        # Get the request
-        from backend.models import ShipmentRequest
-        request = db.session.query(ShipmentRequest).get(request_id)
-        if not request:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
-        
-        # Get the expert
-        expert = db.session.query(ExpertUser).get(expert_id)
-        if not expert:
-            return jsonify({"error": "کارشناس یافت نشد"}), 404
-        
-        # Manual assignment
-        request.assigned_to = expert_id
-        request.status = "assigned"
-        request.has_unread_for_assignee = True
-        
-        # Create assignment log
-        log = AssignmentLog(
-            shipment_request_id=request_id,
-            assigned_expert_id=expert_id,
-            assignment_method="manual",
-            assignment_reason=reason,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(log)
-        db.session.commit()
-        
-        return jsonify({
-            "message": "درخواست با موفقیت ارجاع داده شد"
-        })
-        
+        assignment_service.preserve_manual_assignment_failure()
+        return jsonify({"message": "درخواست با موفقیت ارجاع داده شد"})
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error in manual assignment: {e}")

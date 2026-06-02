@@ -60,6 +60,7 @@ interface RequestDetail {
 }
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
+const showLatestQuoteCard: boolean = false;
 
 const CustomerRequestDetail: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
@@ -384,7 +385,7 @@ const CustomerRequestDetail: React.FC = () => {
               </CardContent>
             </Card>
 
-            {requestDetail.latest_quote && false && (
+            {showLatestQuoteCard && requestDetail.latest_quote && (
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

@@ -1,10 +1,12 @@
 """Tests for API endpoints."""
 import pytest
 import json
+import bcrypt
 from unittest.mock import patch, MagicMock
 from flask import Flask
 
 from backend import create_app
+from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 
 
@@ -17,11 +19,21 @@ class TestAPIEndpoints:
             'TESTING': True,
             'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
             'SECRET_KEY': 'test-secret-key',
-            'JWT_SECRET_KEY': 'test-jwt-secret'
+            'JWT_SECRET_KEY': 'test-jwt-secret-key-for-pytest-only-32'
         })
         self.client = self.app.test_client()
         self.app_context = self.app.app_context()
         self.app_context.push()
+        password_hash = bcrypt.hashpw(b'expert123', bcrypt.gensalt()).decode('utf-8')
+        db.session.add(ExpertUser(
+            username='expert',
+            password_hash=password_hash,
+            full_name='Test Expert',
+            email='expert@test.com',
+            role='expert',
+            is_active=True,
+        ))
+        db.session.commit()
     
     def teardown_method(self):
         """Cleanup test environment."""
@@ -146,10 +158,16 @@ class TestAPIEndpoints:
             assert response.status_code in [200, 401]  # 401 if auth required
     
     def test_cors_headers(self):
-        """Test CORS headers are present."""
-        response = self.client.options('/api/health/ping')
+        """Test CORS headers are present for a valid preflight request."""
+        response = self.client.options(
+            '/api/health/ping',
+            headers={
+                'Origin': 'http://127.0.0.1:3000',
+                'Access-Control-Request-Method': 'GET',
+            },
+        )
         
-        # Check for CORS headers
+        # CORS method metadata is part of preflight responses, not bare OPTIONS probes.
         assert 'Access-Control-Allow-Origin' in response.headers
         assert 'Access-Control-Allow-Methods' in response.headers
     

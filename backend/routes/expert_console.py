@@ -14,6 +14,7 @@ from backend.models import (
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
+from backend.services import assignment_service, expert_request_detail_service, message_service, notification_service, quote_service
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
@@ -190,138 +191,11 @@ def get_shipment_requests():
 def get_shipment_request_detail(request_id: int):
     """Get detailed information about a specific shipment request."""
     try:
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
         current_user = get_current_user()
-        if not current_user or not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-        
-        # Get related data
-        origin_province = db.session.query(Province).get(req.origin_province_id)
-        origin_county = db.session.query(County).get(req.origin_county_id)
-        origin_city = db.session.query(City).get(req.origin_city_id)
-        dest_province = db.session.query(Province).get(req.dest_province_id)
-        dest_county = db.session.query(County).get(req.dest_county_id)
-        dest_city = db.session.query(City).get(req.dest_city_id)
-        assigned_expert = db.session.query(ExpertUser).get(req.assigned_to) if req.assigned_to else None
-        
-        # Get timeline logs
-        logs = db.session.query(ExpertConsoleLog).filter(
-            ExpertConsoleLog.shipment_request_id == request_id
-        ).order_by(ExpertConsoleLog.created_at.desc()).all()
-        
-        # Get messages
-        messages = db.session.query(ExpertConsoleMessage).filter(
-            ExpertConsoleMessage.shipment_request_id == request_id
-        ).order_by(ExpertConsoleMessage.created_at.desc()).all()
-        
-        # Get latest quote (if any) — safe if table does not exist yet
-        latest_quote = None
-        try:
-            latest_quote_row = (
-                db.session.query(ExpertQuote)
-                .filter(ExpertQuote.shipment_request_id == request_id)
-                .order_by(ExpertQuote.created_at.desc())
-                .first()
-            )
-            if latest_quote_row:
-                latest_quote = {
-                    "id": latest_quote_row.id,
-                    "amount": int(latest_quote_row.amount) if latest_quote_row.amount is not None else None,
-                    "currency": latest_quote_row.currency or "IRR",
-                    "note": latest_quote_row.note,
-                    "valid_until": latest_quote_row.valid_until.isoformat() if latest_quote_row.valid_until else None,
-                    "created_at": latest_quote_row.created_at.isoformat(),
-                    "created_by": latest_quote_row.created_by_expert.full_name if latest_quote_row.created_by_expert else None,
-                }
-        except Exception:
-            pass
-        
-        # Format timeline
-        timeline = []
-        for log in logs:
-            timeline.append({
-                "id": log.id,
-                "action": log.action,
-                "old_status": log.old_status,
-                "new_status": log.new_status,
-                "note": log.note,
-                "created_at": log.created_at.isoformat(),
-                "created_by": log.created_by_user.full_name if log.created_by_user else "سیستم"
-            })
-        
-        # Format messages
-        messages_data = []
-        for msg in messages:
-            messages_data.append({
-                "id": msg.id,
-                "type": msg.message_type,
-                "subject": msg.subject,
-                "content": msg.content,
-                "is_read_by_customer": msg.is_read_by_customer,
-                "customer_response": msg.customer_response,
-                "created_at": msg.created_at.isoformat(),
-                "created_by": msg.created_by_user.full_name if msg.created_by_user else "سیستم"
-            })
-        
-        # Calculate SLA status
-        sla_status = "on_time"
-        if req.sla_due_at:
-            if datetime.utcnow() > req.sla_due_at:
-                sla_status = "overdue"
-            elif datetime.utcnow() + timedelta(hours=2) > req.sla_due_at:
-                sla_status = "due_soon"
-        
-        return jsonify({
-            "id": req.id,
-            "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
-            "status": req.status,
-            "priority": req.priority,
-            "created_at": req.created_at.isoformat(),
-            "sla_due_at": req.sla_due_at.isoformat() if req.sla_due_at else None,
-            "sla_status": sla_status,
-            "assigned_to": {
-                "id": assigned_expert.id,
-                "name": assigned_expert.full_name,
-                "username": assigned_expert.username
-            } if assigned_expert else None,
-            "customer": {
-                "first_name": req.customer_first_name,
-                "last_name": req.customer_last_name,
-                "phone": req.contact_phone,
-                "full_name": f"{req.customer_first_name or ''} {req.customer_last_name or ''}".strip() or "نامشخص"
-            },
-            "route": {
-                "origin": {
-                    "province": origin_province.name_fa if origin_province else "نامشخص",
-                    "county": origin_county.name_fa if origin_county else "نامشخص",
-                    "city": origin_city.name_fa if origin_city else "نامشخص"
-                },
-                "destination": {
-                    "province": dest_province.name_fa if dest_province else "نامشخص",
-                    "county": dest_county.name_fa if dest_county else "نامشخص",
-                    "city": dest_city.name_fa if dest_city else "نامشخص"
-                }
-            },
-            "transport_method": req.transport_method,
-            "cargo": {
-                "description": req.cargo_description,
-                "weight": req.cargo_weight,
-                "volume": req.cargo_volume,
-                "value": req.cargo_value,
-                "special_instructions": req.special_instructions
-            },
-            "dates": {
-                "pickup_date": req.pickup_date.isoformat() if req.pickup_date else None,
-                "delivery_date": req.delivery_date.isoformat() if req.delivery_date else None
-            },
-            "timeline": timeline,
-            "messages": messages_data,
-            "has_unread": req.has_unread_for_assignee,
-            "latest_quote": latest_quote
-        })
-        
+        response_payload = expert_request_detail_service.get_expert_request_detail(request_id, current_user)
+        return jsonify(response_payload)
+    except expert_request_detail_service.ExpertRequestDetailServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         current_app.logger.error(f"Error getting shipment request detail: {e}")
         return jsonify({"error": "خطا در دریافت جزئیات درخواست"}), 500
@@ -335,65 +209,16 @@ def assign_request(request_id: int):
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "احراز هویت نشده"}), 401
-        data = request.get_json() or {}
-        expert_id = data.get("expert_id")
-        
-        if not expert_id:
-            return jsonify({"error": "شناسه کارشناس الزامی است"}), 400
-        
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
-        if not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-        
-        expert = db.session.query(ExpertUser).get(expert_id)
-        if not expert:
-            return jsonify({"error": "کارشناس یافت نشد"}), 404
-        
-        old_assigned_to = req.assigned_to
-        old_status = req.status
-        
-        # Update request
-        req.assigned_to = expert_id
-        req.status = "assigned"
-        req.has_unread_for_assignee = True
-        
-        # Create log entry
-        log = ExpertConsoleLog(
-            shipment_request_id=request_id,
-            expert_user_id=expert_id,
-            action="assignment",
-            old_status=old_status,
-            new_status="assigned",
-            note=f"ارجاع به کارشناس: {expert.full_name}",
-            ip_address=request.remote_addr,
-            created_at=datetime.utcnow()
+
+        response_payload = assignment_service.assign_request_to_expert(
+            request_id,
+            actor=current_user,
+            payload=request.get_json() or {},
+            remote_addr=request.remote_addr,
         )
-        db.session.add(log)
-        
-        # Create notification
-        notification = ExpertConsoleNotification(
-            expert_user_id=expert_id,
-            shipment_request_id=request_id,
-            notification_type="assignment",
-            title="ارجاع درخواست جدید",
-            message=f"درخواست {request_id} به شما ارجاع داده شد",
-            is_read=False,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(notification)
-        
-        db.session.commit()
-        
-        return jsonify({
-            "message": "درخواست با موفقیت ارجاع داده شد",
-            "assigned_to": {
-                "id": expert.id,
-                "name": expert.full_name
-            }
-        })
-        
+        return jsonify(response_payload)
+    except assignment_service.AssignmentServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error assigning request: {e}")
@@ -483,97 +308,17 @@ def create_quote(request_id: int):
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
-        expert_id = current_user["id"]
 
         data = request.get_json() or {}
-        amount = data.get("amount")
-        currency = (data.get("currency") or "IRR").strip() or "IRR"
-        note = (data.get("note") or "").strip() or None
-        valid_until = data.get("valid_until")  # optional ISO date string
-
-        if amount is None:
-            return jsonify({"error": "مبلغ الزامی است"}), 400
-        try:
-            amount_int = int(amount)
-        except (TypeError, ValueError):
-            return jsonify({"error": "مبلغ باید عدد باشد"}), 400
-        if amount_int < 0:
-            return jsonify({"error": "مبلغ نامعتبر است"}), 400
-
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
-        if not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-
-        expert = db.session.query(ExpertUser).get(expert_id)
-        if not expert:
-            return jsonify({"error": "کارشناس یافت نشد"}), 404
-
-        valid_until_date = None
-        if valid_until:
-            try:
-                from datetime import date
-                valid_until_date = date.fromisoformat(valid_until.replace("Z", "").split("T")[0])
-            except Exception:
-                pass
-
-        quote = ExpertQuote(
-            shipment_request_id=request_id,
-            amount=amount_int,
-            currency=currency,
-            note=note,
-            valid_until=valid_until_date,
-            created_by_expert_id=expert_id,
-            created_at=datetime.utcnow(),
+        response_payload = quote_service.create_quote_for_request(
+            request_id,
+            data,
+            current_user,
+            request.remote_addr,
         )
-        db.session.add(quote)
-        db.session.flush()
-
-        old_status = req.status
-        req.status = "waiting_for_customer"
-        req.last_customer_touch_at = datetime.utcnow()
-        req.has_unread_for_assignee = True
-
-        log = ExpertConsoleLog(
-            shipment_request_id=request_id,
-            expert_user_id=expert_id,
-            action="status_change",
-            old_status=old_status,
-            new_status="waiting_for_customer",
-            note="ارسال پیشنهاد و انتظار پاسخ مشتری",
-            ip_address=request.remote_addr,
-            created_at=datetime.utcnow(),
-        )
-        db.session.add(log)
-
-        if req.assigned_to:
-            notification = ExpertConsoleNotification(
-                expert_user_id=req.assigned_to,
-                shipment_request_id=request_id,
-                notification_type="quote_sent",
-                title="پیشنهاد ارسال شد",
-                message=f"پیشنهاد برای درخواست {request_id} ثبت و وضعیت به منتظر مشتری تغییر یافت",
-                is_read=False,
-                created_at=datetime.utcnow(),
-            )
-            db.session.add(notification)
-
-        db.session.commit()
-
-        quote_data = {
-            "id": quote.id,
-            "amount": amount_int,
-            "currency": currency,
-            "note": note,
-            "valid_until": valid_until_date.isoformat() if valid_until_date else None,
-            "created_at": quote.created_at.isoformat(),
-        }
-        return jsonify({
-            "ok": True,
-            "quote": quote_data,
-            "request": {"id": req.id, "status": req.status},
-        })
+        return jsonify(response_payload)
+    except quote_service.QuoteServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Error creating quote: %s", e)
@@ -591,30 +336,10 @@ def get_latest_quote(request_id: int):
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "احراز هویت نشده"}), 401
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
-        if not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-        latest = (
-            db.session.query(ExpertQuote)
-            .filter(ExpertQuote.shipment_request_id == request_id)
-            .order_by(ExpertQuote.created_at.desc())
-            .first()
-        )
-        if not latest:
-            return jsonify({"quote": None})
-        return jsonify({
-            "quote": {
-                "id": latest.id,
-                "amount": int(latest.amount) if latest.amount is not None else None,
-                "currency": latest.currency or "IRR",
-                "note": latest.note,
-                "valid_until": latest.valid_until.isoformat() if latest.valid_until else None,
-                "created_at": latest.created_at.isoformat(),
-                "created_by": latest.created_by_expert.full_name if latest.created_by_expert else None,
-            }
-        })
+        latest = quote_service.get_latest_quote_for_request(request_id, current_user)
+        return jsonify(quote_service.build_latest_quote_response_payload(latest))
+    except quote_service.QuoteServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         current_app.logger.error(f"Error getting latest quote: {e}")
         return jsonify({"error": "خطا در دریافت پیشنهاد"}), 500
@@ -628,62 +353,16 @@ def add_message(request_id: int):
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
-        
-        expert_id = current_user["id"]
-        data = request.get_json() or {}
-        message_type = data.get("type") or "internal_note"  # internal_note or customer_message
-        subject = data.get("subject", "")
-        content = data.get("content")
-        
-        if not content:
-            return jsonify({"error": "محتوای پیام الزامی است"}), 400
-        
-        req = db.session.query(ShipmentRequest).get(request_id)
-        if not req:
-            return jsonify({"error": "درخواست یافت نشد"}), 404
-        if not _can_access_request(req, current_user):
-            return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
-        
-        expert = db.session.query(ExpertUser).get(expert_id)
-        if not expert:
-            return jsonify({"error": "کارشناس یافت نشد"}), 404
-        
-        # Create message
-        message = ExpertConsoleMessage(
-            shipment_request_id=request_id,
-            expert_user_id=expert_id,
-            message_type=message_type,
-            subject=subject,
-            content=content,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+
+        response_payload = message_service.create_message_for_request(
+            request_id,
+            request.get_json() or {},
+            current_user,
+            request.remote_addr,
         )
-        db.session.add(message)
-        
-        # Create log entry
-        log = ExpertConsoleLog(
-            shipment_request_id=request_id,
-            expert_user_id=expert_id,
-            action="message_added",
-            note=f"پیام {message_type} اضافه شد",
-            ip_address=request.remote_addr,
-            created_at=datetime.utcnow()
-        )
-        db.session.add(log)
-        
-        # If customer message, update status and touch time
-        if message_type == "customer_message":
-            req.status = "waiting_for_customer"
-            req.last_customer_touch_at = datetime.utcnow()
-            req.has_unread_for_assignee = True
-        
-        db.session.commit()
-        
-        return jsonify({
-            "message": "پیام با موفقیت اضافه شد",
-            "message_id": message.id
-        })
-        
+        return jsonify(response_payload)
+    except message_service.MessageServiceError as e:
+        return jsonify({"error": e.message}), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error adding message: {e}")
@@ -698,47 +377,17 @@ def get_notifications():
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
-        
-        expert_id = current_user['id']
-        unread_only = request.args.get("unread_only", "false").lower() == "true"
-        limit = min(int(request.args.get("limit", 50)), 200)
-        
-        query = db.session.query(ExpertConsoleNotification).filter(
-            ExpertConsoleNotification.expert_user_id == expert_id
+
+        payload = notification_service.list_notifications_for_expert(
+            current_user["id"],
+            {
+                "unread_only": request.args.get("unread_only", "false").lower() == "true",
+                "limit": request.args.get("limit", 50),
+            },
         )
-        
-        if unread_only:
-            query = query.filter(ExpertConsoleNotification.is_read == False)
-        
-        notifications = query.order_by(
-            desc(ExpertConsoleNotification.created_at)
-        ).limit(limit).all()
-        
-        # Get total unread count
-        total_unread = db.session.query(func.count(ExpertConsoleNotification.id)).filter(
-            and_(
-                ExpertConsoleNotification.expert_user_id == expert_id,
-                ExpertConsoleNotification.is_read == False
-            )
-        ).scalar() or 0
-        
-        notifications_data = []
-        for notif in notifications:
-            notifications_data.append({
-                "id": notif.id,
-                "type": notif.notification_type,
-                "title": notif.title,
-                "message": notif.message,
-                "is_read": notif.is_read,
-                "created_at": notif.created_at.isoformat(),
-                "shipment_request_id": notif.shipment_request_id
-            })
-        
-        return jsonify({
-            "notifications": notifications_data,
-            "unread_count": total_unread
-        })
-        
+
+        return jsonify(payload)
+
     except Exception as e:
         current_app.logger.error(f"Error getting notifications: {e}")
         return jsonify({"error": "خطا در دریافت اعلان‌ها"}), 500
@@ -752,48 +401,16 @@ def mark_notifications_read():
         current_user = get_current_user()
         if not current_user:
             return jsonify({"error": "کاربر احراز هویت نشده است"}), 401
-        
-        expert_id = current_user['id']
-        data = request.get_json() or {}
-        
-        notification_ids = data.get("notification_ids", [])
-        mark_all = data.get("mark_all", False)
-        
-        if mark_all:
-            # Mark all notifications as read for this expert
-            updated = db.session.query(ExpertConsoleNotification).filter(
-                and_(
-                    ExpertConsoleNotification.expert_user_id == expert_id,
-                    ExpertConsoleNotification.is_read == False
-                )
-            ).update({"is_read": True}, synchronize_session=False)
-            
-            db.session.commit()
-            
-            return jsonify({
-                "message": f"{updated} اعلان به عنوان خوانده شده علامت‌گذاری شد",
-                "marked_count": updated
-            })
-        
-        elif notification_ids:
-            # Mark specific notifications as read
-            updated = db.session.query(ExpertConsoleNotification).filter(
-                and_(
-                    ExpertConsoleNotification.id.in_(notification_ids),
-                    ExpertConsoleNotification.expert_user_id == expert_id
-                )
-            ).update({"is_read": True}, synchronize_session=False)
-            
-            db.session.commit()
-            
-            return jsonify({
-                "message": f"{updated} اعلان به عنوان خوانده شده علامت‌گذاری شد",
-                "marked_count": updated
-            })
-        
-        else:
+
+        payload = notification_service.mark_notifications_read(
+            current_user["id"],
+            request.get_json() or {},
+        )
+        if payload is None:
             return jsonify({"error": "شناسه اعلان‌ها یا mark_all الزامی است"}), 400
-        
+
+        return jsonify(payload)
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error marking notifications as read: {e}")
