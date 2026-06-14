@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, Weight, DollarSign, FileText, ChevronDown, ChevronUp, User, Copy } from "lucide-react";
+import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, Weight, DollarSign, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import RequestConfirmation from "./RequestConfirmation";
 import {
@@ -76,6 +77,297 @@ const helperTextClass = "text-xs leading-6 text-muted-foreground";
 
 const getTransportLabel = (method: TransportMethod) => method.name_fa || method.name;
 const getTransportDescription = (method: TransportMethod, fallback: string) => method.description || fallback;
+const RequiredAsterisk = () => <span className="text-red-600" aria-hidden="true">*</span>;
+
+interface JalaliDate {
+  year: number;
+  month: number;
+  day: number;
+}
+
+interface JalaliDateInputProps {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+const jalaliMonthNames = [
+  "فروردین",
+  "اردیبهشت",
+  "خرداد",
+  "تیر",
+  "مرداد",
+  "شهریور",
+  "مهر",
+  "آبان",
+  "آذر",
+  "دی",
+  "بهمن",
+  "اسفند",
+];
+
+const jalaliWeekDays = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const padDatePart = (value: number) => String(value).padStart(2, "0");
+const div = (a: number, b: number) => Math.trunc(a / b);
+
+const formatGregorianDate = ({ year, month, day }: JalaliDate) =>
+  `${year}-${padDatePart(month)}-${padDatePart(day)}`;
+
+const formatJalaliDate = ({ year, month, day }: JalaliDate) =>
+  `${year}/${padDatePart(month)}/${padDatePart(day)}`;
+
+const parseGregorianDate = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  if (!year || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null;
+  }
+
+  return { year, month, day };
+};
+
+const gregorianToJalali = (gy: number, gm: number, gd: number): JalaliDate => {
+  const gDayMonth = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+  let jy;
+
+  if (gy > 1600) {
+    jy = 979;
+    gy -= 1600;
+  } else {
+    jy = 0;
+    gy -= 621;
+  }
+
+  const gy2 = gm > 2 ? gy + 1 : gy;
+  let days =
+    365 * gy +
+    div(gy2 + 3, 4) -
+    div(gy2 + 99, 100) +
+    div(gy2 + 399, 400) -
+    80 +
+    gd +
+    gDayMonth[gm - 1];
+
+  jy += 33 * div(days, 12053);
+  days %= 12053;
+  jy += 4 * div(days, 1461);
+  days %= 1461;
+
+  if (days > 365) {
+    jy += div(days - 1, 365);
+    days = (days - 1) % 365;
+  }
+
+  const jm = days < 186 ? 1 + div(days, 31) : 7 + div(days - 186, 30);
+  const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+
+  return { year: jy, month: jm, day: jd };
+};
+
+const jalaliToGregorian = (jy: number, jm: number, jd: number): JalaliDate => {
+  jy += 1595;
+  let days =
+    -355668 +
+    365 * jy +
+    div(jy, 33) * 8 +
+    div((jy % 33) + 3, 4) +
+    jd +
+    (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
+
+  let gy = 400 * div(days, 146097);
+  days %= 146097;
+
+  if (days > 36524) {
+    gy += 100 * div(--days, 36524);
+    days %= 36524;
+
+    if (days >= 365) {
+      days++;
+    }
+  }
+
+  gy += 4 * div(days, 1461);
+  days %= 1461;
+
+  if (days > 365) {
+    gy += div(days - 1, 365);
+    days = (days - 1) % 365;
+  }
+
+  let gd = days + 1;
+  const leap = (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0;
+  const gregorianMonthLengths = [0, 31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  let gm = 0;
+
+  for (gm = 1; gm <= 12 && gd > gregorianMonthLengths[gm]; gm++) {
+    gd -= gregorianMonthLengths[gm];
+  }
+
+  return { year: gy, month: gm, day: gd };
+};
+
+const getTodayJalali = () => {
+  const today = new Date();
+  return gregorianToJalali(today.getFullYear(), today.getMonth() + 1, today.getDate());
+};
+
+const getJalaliMonthLength = (year: number, month: number) => {
+  if (month <= 6) {
+    return 31;
+  }
+
+  if (month <= 11) {
+    return 30;
+  }
+
+  const start = jalaliToGregorian(year, 1, 1);
+  const nextStart = jalaliToGregorian(year + 1, 1, 1);
+  const startTime = Date.UTC(start.year, start.month - 1, start.day);
+  const nextStartTime = Date.UTC(nextStart.year, nextStart.month - 1, nextStart.day);
+
+  return (nextStartTime - startTime) / 86400000 === 366 ? 30 : 29;
+};
+
+const getJalaliFromGregorianValue = (value: string) => {
+  const parsedValue = parseGregorianDate(value);
+
+  if (!parsedValue) {
+    return null;
+  }
+
+  return gregorianToJalali(parsedValue.year, parsedValue.month, parsedValue.day);
+};
+
+const JalaliDateInput = ({ id, label, value, onChange }: JalaliDateInputProps) => {
+  const [open, setOpen] = useState(false);
+  const selectedDate = getJalaliFromGregorianValue(value);
+  const initialViewDate = selectedDate ?? getTodayJalali();
+  const [viewMonth, setViewMonth] = useState({ year: initialViewDate.year, month: initialViewDate.month });
+  const monthLength = getJalaliMonthLength(viewMonth.year, viewMonth.month);
+  const firstDayGregorian = jalaliToGregorian(viewMonth.year, viewMonth.month, 1);
+  const firstDayDate = new Date(firstDayGregorian.year, firstDayGregorian.month - 1, firstDayGregorian.day);
+  const firstDayOffset = (firstDayDate.getDay() + 1) % 7;
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const nextViewDate = getJalaliFromGregorianValue(value) ?? getTodayJalali();
+    setViewMonth({ year: nextViewDate.year, month: nextViewDate.month });
+  }, [open, value]);
+
+  const changeMonth = (direction: -1 | 1) => {
+    setViewMonth((current) => {
+      const nextMonth = current.month + direction;
+
+      if (nextMonth < 1) {
+        return { year: current.year - 1, month: 12 };
+      }
+
+      if (nextMonth > 12) {
+        return { year: current.year + 1, month: 1 };
+      }
+
+      return { ...current, month: nextMonth };
+    });
+  };
+
+  const handleSelectDay = (day: number) => {
+    const gregorianDate = jalaliToGregorian(viewMonth.year, viewMonth.month, day);
+    onChange(formatGregorianDate(gregorianDate));
+    setOpen(false);
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id} className="flex items-center gap-2 text-sm font-medium">
+        <Calendar className="w-4 h-4 text-muted-foreground" />
+        {label}
+      </Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            id={id}
+            type="button"
+            variant="outline"
+            className="h-10 w-full justify-between text-right font-normal"
+            dir="rtl"
+          >
+            <span className={selectedDate ? "text-foreground" : "text-muted-foreground"}>
+              {selectedDate ? formatJalaliDate(selectedDate) : "انتخاب تاریخ شمسی"}
+            </span>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-72 p-3 text-right" align="end" dir="rtl">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Button type="button" variant="ghost" size="icon" onClick={() => changeMonth(1)} aria-label="ماه بعد">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <div className="text-sm font-medium">
+                {jalaliMonthNames[viewMonth.month - 1]} {viewMonth.year}
+              </div>
+              <Button type="button" variant="ghost" size="icon" onClick={() => changeMonth(-1)} aria-label="ماه قبل">
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1 text-center text-xs text-muted-foreground">
+              {jalaliWeekDays.map((dayName) => (
+                <div key={dayName} className="h-7 leading-7">
+                  {dayName}
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {Array.from({ length: firstDayOffset }).map((_, index) => (
+                <div key={`empty-${index}`} className="h-8" />
+              ))}
+              {Array.from({ length: monthLength }).map((_, index) => {
+                const day = index + 1;
+                const isSelected =
+                  selectedDate?.year === viewMonth.year &&
+                  selectedDate.month === viewMonth.month &&
+                  selectedDate.day === day;
+
+                return (
+                  <Button
+                    key={day}
+                    type="button"
+                    variant={isSelected ? "default" : "ghost"}
+                    size="icon"
+                    className="h-8 w-8 text-sm"
+                    onClick={() => handleSelectDay(day)}
+                  >
+                    {day}
+                  </Button>
+                );
+              })}
+            </div>
+
+            {value && (
+              <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange("")}>
+                پاک کردن تاریخ
+              </Button>
+            )}
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+};
 
 const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const { toast } = useToast();
@@ -1056,6 +1348,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               </div>
               
               <div className="space-y-3 pr-5">
+                <Label className="flex items-center gap-1 text-sm font-medium">
+                  استان مبدا
+                  <RequiredAsterisk />
+                </Label>
                 <Select
                   value={formData.originProvince}
                   onValueChange={(value) => {
@@ -1190,6 +1486,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               </div>
               
               <div className="space-y-3 pr-5">
+                <Label className="flex items-center gap-1 text-sm font-medium">
+                  استان مقصد
+                  <RequiredAsterisk />
+                </Label>
                 <Select
                   value={formData.destinationProvince}
                   onValueChange={(value) => {
@@ -1319,6 +1619,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               </div>
               
               <div className="space-y-3 pr-5">
+                <Label className="flex items-center gap-1 text-sm font-medium">
+                  کشور مبدا
+                  <RequiredAsterisk />
+                </Label>
                 <Select
                   value={formData.originCountry}
                   onValueChange={(value) => {
@@ -1347,6 +1651,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectContent>
                 </Select>
 
+                <Label className="flex items-center gap-1 text-sm font-medium">
+                  شهر/بندر مبدا
+                  <RequiredAsterisk />
+                </Label>
                 <Select
                   value={formData.originCityInternational}
                   onValueChange={(value) => {
@@ -1417,6 +1725,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               </div>
               
               <div className="space-y-3 pr-5">
+                <Label className="flex items-center gap-1 text-sm font-medium">
+                  کشور مقصد
+                  <RequiredAsterisk />
+                </Label>
                 <Select
                   value={formData.destCountry}
                   onValueChange={(value) => {
@@ -1445,6 +1757,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectContent>
                 </Select>
 
+                <Label className="flex items-center gap-1 text-sm font-medium">
+                  شهر/بندر مقصد
+                  <RequiredAsterisk />
+                </Label>
                 <Select
                   value={formData.destCityInternational}
                   onValueChange={(value) => {
@@ -1517,6 +1833,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </div>
                   
                   <div className="space-y-3 pr-5">
+                    <Label className="flex items-center gap-1 text-sm font-medium">
+                      بندر ورود
+                      <RequiredAsterisk />
+                    </Label>
                     <Select
                       value={formData.iranEntryPort}
                       onValueChange={(value) => {
@@ -1568,6 +1888,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       </div>
                     )}
 
+                    <Label className="flex items-center gap-1 text-sm font-medium">
+                      استان ورود
+                      <RequiredAsterisk />
+                    </Label>
                     <Select
                       value={formData.iranEntryProvince}
                       onValueChange={(value) => {
@@ -1684,6 +2008,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Phone className="w-4 h-4 text-primary" />
             شماره تماس
+            <RequiredAsterisk />
           </Label>
           <Input
             id="phone"
@@ -1751,7 +2076,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               </p>
               {shippingType === "international" && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">روش حمل برای مسیر بین‌المللی</Label>
+                  <Label className="flex items-center gap-1 text-sm font-medium">
+                    روش حمل برای مسیر بین‌المللی
+                    <RequiredAsterisk />
+                  </Label>
                   <Select
                     value={formData.internationalTransportMethod}
                     onValueChange={(value) => {
@@ -1782,7 +2110,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               
               {shippingType === "domestic" && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">روش حمل برای مسیر داخلی</Label>
+                  <Label className="flex items-center gap-1 text-sm font-medium">
+                    روش حمل برای مسیر داخلی
+                    <RequiredAsterisk />
+                  </Label>
                   <Select
                     value={formData.domesticTransportMethod}
                     onValueChange={(value) => {
@@ -1966,7 +2297,34 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
             {/* Dates Row */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
+              {shippingType === "domestic" && (
+                <>
+                  <JalaliDateInput
+                    id="pickupDate"
+                    label="تاریخ تحویل"
+                    value={formData.pickupDate}
+                    onChange={(pickupDate) => {
+                      setFormData({
+                        ...formData,
+                        pickupDate,
+                      });
+                    }}
+                  />
+                  <JalaliDateInput
+                    id="deliveryDate"
+                    label="تاریخ تحویل"
+                    value={formData.deliveryDate}
+                    onChange={(deliveryDate) => {
+                      setFormData({
+                        ...formData,
+                        deliveryDate,
+                      });
+                    }}
+                  />
+                </>
+              )}
+              {shippingType !== "domestic" && (
+                <div className="space-y-2">
                 <Label htmlFor="pickupDate" className="flex items-center gap-2 text-sm font-medium">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   تاریخ تحویل
@@ -1982,8 +2340,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     });
                   }}
                 />
-              </div>
-              <div className="space-y-2">
+                </div>
+              )}
+              {shippingType !== "domestic" && (
+                <div className="space-y-2">
                 <Label htmlFor="deliveryDate" className="flex items-center gap-2 text-sm font-medium">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
                   تاریخ تحویل
@@ -1999,9 +2359,15 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     });
                   }}
                 />
-              </div>
+                </div>
+              )}
             </div>
-            <p className={helperTextClass}>
+            {shippingType === "domestic" && (
+              <p className={helperTextClass}>
+                تاریخ‌ها اختیاری هستند و برای درخواست داخلی با تقویم شمسی انتخاب می‌شوند.
+              </p>
+            )}
+            <p className={shippingType === "domestic" ? "hidden" : helperTextClass}>
               تاریخ‌ها اختیاری هستند و با تقویم پیش‌فرض مرورگر ثبت می‌شوند. تقویم شمسی برای درخواست داخلی به مرحله بعدی موکول شد.
             </p>
           </div>
