@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Menu, Phone, Info, Shield } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Menu, Phone, Info } from "lucide-react";
+import { useState } from "react";
 import ExpertLogin from "./ExpertLogin";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { getLogoDisplayUrl } from "@/lib/api";
@@ -9,31 +8,6 @@ import { getLogoDisplayUrl } from "@/lib/api";
 const Header = () => {
   const settings = useSiteSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const location = useLocation();
-
-  useEffect(() => {
-    const checkAdmin = () => {
-      try {
-        const expertUser = localStorage.getItem("expert_user");
-        if (!expertUser) {
-          setIsAdmin(false);
-          return;
-        }
-        const user = JSON.parse(expertUser);
-        setIsAdmin(user?.role === "admin");
-      } catch {
-        setIsAdmin(false);
-      }
-    };
-    checkAdmin();
-    window.addEventListener("storage", checkAdmin);
-    const interval = setInterval(checkAdmin, 1000);
-    return () => {
-      window.removeEventListener("storage", checkAdmin);
-      clearInterval(interval);
-    };
-  }, [location.pathname]);
 
   return (
     <header className="w-full bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -66,14 +40,6 @@ const Header = () => {
                 {settings.nav_contact || "تماس با ما"}
               </a>
             </Button>
-            {isAdmin && (
-              <Button variant="ghost" className="text-sm font-medium" asChild>
-                <Link to="/admin">
-                  <Shield className="w-4 h-4 ml-2" />
-                  {settings.nav_admin || "پنل ادمین"}
-                </Link>
-              </Button>
-            )}
             <ExpertLogin />
           </nav>
 
@@ -102,14 +68,6 @@ const Header = () => {
                   {settings.nav_contact || "تماس با ما"}
                 </a>
               </Button>
-              {isAdmin && (
-                <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                  <Link to="/admin" onClick={() => setIsMenuOpen(false)}>
-                    <Shield className="w-4 h-4 ml-2" />
-                    {settings.nav_admin || "پنل ادمین"}
-                  </Link>
-                </Button>
-              )}
               <div className="px-3 py-2">
                 <ExpertLogin />
               </div>
