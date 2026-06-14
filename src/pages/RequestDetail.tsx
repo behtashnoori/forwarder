@@ -16,6 +16,7 @@ import {
   Truck,
   User,
   Weight,
+  type LucideIcon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,13 +48,13 @@ interface RequestDetail {
     phone: string;
     full_name: string;
   };
-  route: {
-    origin: {
+  route?: {
+    origin?: {
       province?: string | null;
       county?: string | null;
       city?: string | null;
     };
-    destination: {
+    destination?: {
       province?: string | null;
       county?: string | null;
       city?: string | null;
@@ -63,7 +64,7 @@ interface RequestDetail {
   international_transport_method?: string;
   domestic_transport_method?: string;
   transport_method_preference?: string;
-  cargo: {
+  cargo?: {
     description?: string | null;
     weight?: number | null;
     volume?: number | null;
@@ -105,14 +106,23 @@ interface RequestDetail {
   } | null;
 }
 
-type RouteLocation = RequestDetail["route"]["origin"];
+type RouteLocation = NonNullable<NonNullable<RequestDetail["route"]>["origin"]>;
 
 const missingValue = "ثبت نشده";
+const emptyLocation: RouteLocation = {};
 
 const formatDate = (value?: string) => (value ? new Date(value).toLocaleDateString("fa-IR") : missingValue);
 const displayValue = (value?: string | number | null) => {
   if (value === null || value === undefined || value === "") return missingValue;
   return String(value);
+};
+const formatMeasurement = (value: number | null | undefined, unit: string) => {
+  if (value === null || value === undefined) return missingValue;
+  return `${value.toLocaleString("fa-IR")} ${unit}`;
+};
+const formatMoney = (value: number | null | undefined) => {
+  if (value === null || value === undefined) return missingValue;
+  return `${value.toLocaleString("fa-IR")} تومان`;
 };
 
 const RequestDetail = () => {
@@ -168,7 +178,7 @@ const RequestDetail = () => {
     const labels: Record<string, string> = {
       new: "جدید",
       assigned: "در انتظار بررسی",
-      in_progress: "در حال بررسی",
+      in_progress: "در حال پیگیری",
       quoted: "پیشنهاد ارسال‌شده",
       waiting_for_customer: "منتظر مشتری",
       won: "پذیرفته‌شده",
@@ -269,15 +279,6 @@ const RequestDetail = () => {
     return labels[action] || action;
   };
 
-  const getSlaLabel = (slaStatus: string) => {
-    const labels: Record<string, string> = {
-      overdue: "گذشته از مهلت",
-      due_soon: "نزدیک به مهلت",
-      on_time: "به‌موقع",
-    };
-    return labels[slaStatus] || slaStatus;
-  };
-
   const transportLabel = useMemo(() => {
     if (!request) return missingValue;
     if (request.international_transport_method) return `بین‌المللی: ${request.international_transport_method}`;
@@ -335,6 +336,9 @@ const RequestDetail = () => {
   }
 
   const internalNotes = request.messages.filter((message) => message.type === "internal_note");
+  const cargo = request.cargo ?? {};
+  const origin = request.route?.origin ?? emptyLocation;
+  const destination = request.route?.destination ?? emptyLocation;
 
   return (
     <div className="min-h-screen bg-slate-50" dir="rtl">
@@ -350,14 +354,6 @@ const RequestDetail = () => {
                   <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
                     {getStatusLabel(request.status)}
                   </Badge>
-                  {request.sla_due_at && (
-                    <Badge
-                      variant={request.sla_status === "overdue" ? "destructive" : "secondary"}
-                      className={request.sla_status === "due_soon" ? "bg-amber-100 text-amber-800" : ""}
-                    >
-                      SLA: {formatDate(request.sla_due_at)}
-                    </Badge>
-                  )}
                 </div>
                 <h1 className="break-words text-2xl font-bold text-slate-950 sm:text-3xl">{request.tracking_number}</h1>
                 <p className="mt-2 text-sm text-slate-500 sm:text-base">جزئیات درخواست حمل و نقل</p>
@@ -412,11 +408,11 @@ const RequestDetail = () => {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid gap-4 md:grid-cols-[1fr_auto_1fr] md:items-center">
-                      {renderLocationBox("مبدا", request.route.origin, "origin")}
+                      {renderLocationBox("مبدا", origin, "origin")}
                       <div className="hidden h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500 md:flex">
                         <ArrowLeft className="h-5 w-5" />
                       </div>
-                      {renderLocationBox("مقصد", request.route.destination, "destination")}
+                      {renderLocationBox("مقصد", destination, "destination")}
                     </div>
 
                     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
@@ -448,20 +444,20 @@ const RequestDetail = () => {
                   <CardContent className="space-y-4">
                     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                       <p className="text-xs text-slate-500">توضیحات</p>
-                      <p className="mt-2 text-sm font-medium leading-7 text-slate-900">{displayValue(request.cargo.description)}</p>
+                      <p className="mt-2 text-sm font-medium leading-7 text-slate-900">{displayValue(cargo.description)}</p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <InfoPanel icon={Weight} label="وزن" value={request.cargo.weight ? `${request.cargo.weight} کیلوگرم` : missingValue} />
-                      <InfoPanel icon={Package} label="حجم" value={request.cargo.volume ? `${request.cargo.volume} متر مکعب` : missingValue} />
+                      <InfoPanel icon={Weight} label="وزن" value={formatMeasurement(cargo.weight, "کیلوگرم")} />
+                      <InfoPanel icon={Package} label="حجم" value={formatMeasurement(cargo.volume, "متر مکعب")} />
                       <InfoPanel
                         icon={DollarSign}
                         label="ارزش"
-                        value={request.cargo.value ? `${request.cargo.value.toLocaleString("fa-IR")} تومان` : missingValue}
+                        value={formatMoney(cargo.value)}
                       />
                     </div>
                     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                       <p className="text-xs text-slate-500">دستورالعمل‌های خاص</p>
-                      <p className="mt-2 text-sm font-medium leading-7 text-slate-900">{displayValue(request.cargo.special_instructions)}</p>
+                      <p className="mt-2 text-sm font-medium leading-7 text-slate-900">{displayValue(cargo.special_instructions)}</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -482,8 +478,6 @@ const RequestDetail = () => {
                     <InfoRow label="شماره پیگیری" value={request.tracking_number} />
                     <InfoRow label="تاریخ ثبت" value={formatDate(request.created_at)} />
                     <InfoRow label="مسئول" value={request.assigned_to?.name || missingValue} />
-                    <InfoRow label="مهلت SLA" value={formatDate(request.sla_due_at)} />
-                    <InfoRow label="وضعیت SLA" value={getSlaLabel(request.sla_status)} />
                   </CardContent>
                 </Card>
               </aside>
@@ -562,7 +556,7 @@ const RequestDetail = () => {
 };
 
 type InfoPanelProps = {
-  icon: typeof User;
+  icon: LucideIcon;
   label: string;
   value: string;
   ltr?: boolean;
@@ -596,12 +590,15 @@ const OperationsCard = ({ handleStatusChange }: { handleStatusChange: (newStatus
       </CardTitle>
     </CardHeader>
     <CardContent>
+      <p className="mb-3 text-sm leading-6 text-slate-500">
+        وضعیت را فقط زمانی تغییر دهید که مرحله عملیاتی درخواست واقعاً تغییر کرده باشد.
+      </p>
       <Select onValueChange={handleStatusChange}>
         <SelectTrigger className="rounded-2xl bg-slate-50">
           <SelectValue placeholder="تغییر وضعیت" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="in_progress">در حال بررسی</SelectItem>
+          <SelectItem value="in_progress">در حال پیگیری</SelectItem>
           <SelectItem value="waiting_for_customer">منتظر مشتری</SelectItem>
           <SelectItem value="won">پذیرفته‌شده</SelectItem>
           <SelectItem value="lost">ردشده / از دست‌رفته</SelectItem>
@@ -629,34 +626,38 @@ const TimelineCard = ({
       </CardTitle>
     </CardHeader>
     <CardContent>
-      <div className="space-y-0">
-        {timeline.map((event, index) => (
-          <div key={event.id} className="grid grid-cols-[auto_1fr] gap-3">
-            <div className="flex flex-col items-center">
-              <div className="mt-1 h-3 w-3 rounded-full bg-blue-600 ring-4 ring-blue-50" />
-              {index < timeline.length - 1 && <div className="mt-2 h-full min-h-12 w-px bg-slate-200" />}
-            </div>
-            <div className="pb-5">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-semibold text-slate-950">{getActionLabel(event.action)}</span>
-                  {event.old_status && event.new_status && (
-                    <Badge variant="outline" className="rounded-full bg-white">
-                      {getStatusLabel(event.old_status)} ← {getStatusLabel(event.new_status)}
-                    </Badge>
-                  )}
-                </div>
-                {event.note && <p className="mb-2 text-sm leading-6 text-slate-600">{event.note}</p>}
-                <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span>{formatDate(event.created_at)}</span>
-                  <span>•</span>
-                  <span>{event.created_by}</span>
+      {timeline.length === 0 ? (
+        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">هنوز رویدادی ثبت نشده است.</div>
+      ) : (
+        <div className="space-y-0">
+          {timeline.map((event, index) => (
+            <div key={event.id} className="grid grid-cols-[auto_1fr] gap-3">
+              <div className="flex flex-col items-center">
+                <div className="mt-1 h-3 w-3 rounded-full bg-blue-600 ring-4 ring-blue-50" />
+                {index < timeline.length - 1 && <div className="mt-2 h-full min-h-12 w-px bg-slate-200" />}
+              </div>
+              <div className="pb-5">
+                <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="text-sm font-semibold text-slate-950">{getActionLabel(event.action)}</span>
+                    {event.old_status && event.new_status && (
+                      <Badge variant="outline" className="rounded-full bg-white">
+                        {getStatusLabel(event.old_status)} ← {getStatusLabel(event.new_status)}
+                      </Badge>
+                    )}
+                  </div>
+                  {event.note && <p className="mb-2 text-sm leading-6 text-slate-600">{event.note}</p>}
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                    <span>{formatDate(event.created_at)}</span>
+                    <span>•</span>
+                    <span>{event.created_by}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </CardContent>
   </Card>
 );

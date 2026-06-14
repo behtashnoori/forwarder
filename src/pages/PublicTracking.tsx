@@ -37,9 +37,9 @@ type StatusInfo = {
 
 const getStatusBadge = (status: string): StatusInfo => {
   const statusMap: Record<string, StatusInfo> = {
-    new: { label: "جدید", variant: "secondary", color: "bg-gray-100 text-gray-800" },
-    assigned: { label: "اختصاص یافته", variant: "default", color: "bg-blue-100 text-blue-800" },
-    in_progress: { label: "در حال انجام", variant: "default", color: "bg-yellow-100 text-yellow-800" },
+    new: { label: "ثبت شده", variant: "secondary", color: "bg-gray-100 text-gray-800" },
+    assigned: { label: "در انتظار بررسی", variant: "default", color: "bg-blue-100 text-blue-800" },
+    in_progress: { label: "در حال پیگیری", variant: "default", color: "bg-yellow-100 text-yellow-800" },
     quoted: { label: "پیشنهاد ارائه شده", variant: "default", color: "bg-purple-100 text-purple-800" },
     waiting_for_customer: { label: "در انتظار مشتری", variant: "default", color: "bg-orange-100 text-orange-800" },
     won: { label: "تکمیل شده", variant: "default", color: "bg-green-100 text-green-800" },
@@ -52,6 +52,7 @@ const getStatusBadge = (status: string): StatusInfo => {
 
 const getCurrentStatusLabel = (status: string): string => {
   const map: Record<string, string> = {
+    assigned: "در انتظار بررسی",
     in_progress: "در حال پیگیری",
     waiting_for_customer: "منتظر پاسخ شما",
     won: "پذیرفته شد",
@@ -200,7 +201,7 @@ const PublicTracking: React.FC = () => {
             </div>
             <h1 className="text-2xl font-bold text-foreground">درخواست یافت نشد</h1>
             <p className="mx-auto mt-3 max-w-sm text-sm leading-7 text-muted-foreground">
-              شماره پیگیری وارد شده معتبر نیست یا درخواست وجود ندارد.
+              کد پیگیری واردشده پیدا نشد. لطفاً کد را بررسی کنید و دوباره وارد کنید.
             </p>
             <div className="mt-7 grid gap-3 sm:grid-cols-2">
               <Button onClick={() => navigate("/")} className="w-full">
@@ -266,7 +267,7 @@ const PublicTracking: React.FC = () => {
                   {requestData.tracking_number}
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
-                  جزئیات رهگیری، مسیر ارسال، وضعیت گردش کار و اطلاعات مرتبط با درخواست شما در این صفحه نمایش داده می‌شود.
+                  آخرین وضعیت ثبت‌شده برای درخواست شما در این صفحه نمایش داده می‌شود. برای اطلاع از وضعیت جدیدتر، همین کد پیگیری را دوباره در بخش پیگیری درخواست وارد کنید.
                 </p>
               </div>
               <div className="grid gap-3 text-sm sm:grid-cols-2 lg:min-w-[360px]">

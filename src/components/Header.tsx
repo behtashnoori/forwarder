@@ -39,7 +39,6 @@ const Header = () => {
     <header className="w-full bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo & Brand */}
           <div className="flex items-center gap-3">
             {settings.logo_url?.trim() ? (
               <img src={getLogoDisplayUrl(settings.logo_url)} alt="" className="h-10 w-10 object-contain rounded-lg" />
@@ -49,20 +48,23 @@ const Header = () => {
               </div>
             )}
             <div className="text-right">
-              <h1 className="text-lg font-bold text-foreground">{settings.site_name || "فورواردری سریع"}</h1>
-              <p className="text-xs text-muted-foreground">{settings.site_tagline || "ارسال آسان و مطمئن"}</p>
+              <h1 className="text-lg font-bold text-foreground">{settings.site_name || "فورواردر"}</h1>
+              <p className="text-xs text-muted-foreground">{settings.site_tagline || "ثبت و پیگیری درخواست حمل"}</p>
             </div>
           </div>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" className="text-sm font-medium">
-              <Info className="w-4 h-4 ml-2" />
-              {settings.nav_about || "درباره ما"}
+            <Button variant="ghost" className="text-sm font-medium" asChild>
+              <a href="/#about">
+                <Info className="w-4 h-4 ml-2" />
+                {settings.nav_about || "درباره ما"}
+              </a>
             </Button>
-            <Button variant="ghost" className="text-sm font-medium">
-              <Phone className="w-4 h-4 ml-2" />
-              {settings.nav_contact || "تماس با ما"}
+            <Button variant="ghost" className="text-sm font-medium" asChild>
+              <a href="/#contact">
+                <Phone className="w-4 h-4 ml-2" />
+                {settings.nav_contact || "تماس با ما"}
+              </a>
             </Button>
             {isAdmin && (
               <Button variant="ghost" className="text-sm font-medium" asChild>
@@ -75,9 +77,8 @@ const Header = () => {
             <ExpertLogin />
           </nav>
 
-          {/* Mobile Menu Button */}
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
             className="md:hidden"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -86,21 +87,24 @@ const Header = () => {
           </Button>
         </div>
 
-        {/* Mobile Navigation */}
         {isMenuOpen && (
           <div className="md:hidden py-4 border-t border-border bg-card/95">
             <nav className="flex flex-col gap-2">
-              <Button variant="ghost" className="justify-start text-sm font-medium">
-                <Info className="w-4 h-4 ml-2" />
-                {settings.nav_about || "درباره ما"}
+              <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
+                <a href="/#about" onClick={() => setIsMenuOpen(false)}>
+                  <Info className="w-4 h-4 ml-2" />
+                  {settings.nav_about || "درباره ما"}
+                </a>
               </Button>
-              <Button variant="ghost" className="justify-start text-sm font-medium">
-                <Phone className="w-4 h-4 ml-2" />
-                {settings.nav_contact || "تماس با ما"}
+              <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
+                <a href="/#contact" onClick={() => setIsMenuOpen(false)}>
+                  <Phone className="w-4 h-4 ml-2" />
+                  {settings.nav_contact || "تماس با ما"}
+                </a>
               </Button>
               {isAdmin && (
                 <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                  <Link to="/admin">
+                  <Link to="/admin" onClick={() => setIsMenuOpen(false)}>
                     <Shield className="w-4 h-4 ml-2" />
                     {settings.nav_admin || "پنل ادمین"}
                   </Link>

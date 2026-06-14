@@ -56,7 +56,7 @@ const statusItems = [
   { value: "all", label: "همه" },
   { value: "new", label: "جدید" },
   { value: "assigned", label: "در انتظار بررسی" },
-  { value: "in_progress", label: "در حال بررسی" },
+  { value: "in_progress", label: "در حال پیگیری" },
   { value: "waiting_for_customer", label: "منتظر مشتری" },
   { value: "closed", label: "تکمیل شده" },
 ];
@@ -65,7 +65,7 @@ const statusFilterItems = [
   { value: "all", label: "همه وضعیت‌ها" },
   { value: "new", label: "جدید" },
   { value: "assigned", label: "در انتظار بررسی" },
-  { value: "in_progress", label: "در حال بررسی" },
+  { value: "in_progress", label: "در حال پیگیری" },
   { value: "quoted", label: "پیشنهاد ارسال‌شده" },
   { value: "waiting_for_customer", label: "منتظر مشتری" },
   { value: "won", label: "پذیرفته‌شده" },
@@ -239,7 +239,7 @@ const ExpertConsole = () => {
     const labels: Record<string, string> = {
       new: "جدید",
       assigned: "در انتظار بررسی",
-      in_progress: "در حال بررسی",
+      in_progress: "در حال پیگیری",
       quoted: "پیشنهاد ارسال‌شده",
       waiting_for_customer: "منتظر مشتری",
       won: "پذیرفته‌شده",
@@ -284,7 +284,7 @@ const ExpertConsole = () => {
           tone: "text-blue-700 bg-blue-50 border-blue-100",
         },
         {
-          label: "در حال بررسی",
+          label: "در حال پیگیری",
           value: kpis.counts.in_progress,
           icon: Clock,
           tone: "text-violet-700 bg-violet-50 border-violet-100",
@@ -562,7 +562,7 @@ const ExpertConsole = () => {
                           <div className="flex flex-col gap-2 sm:flex-row xl:w-40 xl:flex-col xl:justify-center">
                             <Button className="rounded-2xl bg-blue-600 hover:bg-blue-700" onClick={() => navigate(`/expert/requests/${request.id}`)}>
                               <Eye className="ml-2 h-4 w-4" />
-                              مشاهده / خلاصه
+                              مشاهده جزئیات
                             </Button>
                             {request.status === "new" && (
                               <Button variant="outline" className="rounded-2xl" onClick={() => handleAssignToMe(request.id)}>

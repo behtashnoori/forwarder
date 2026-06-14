@@ -164,7 +164,7 @@ const AdminPanel = () => {
       new: "جدید",
       pending: "در انتظار",
       assigned: "در انتظار بررسی",
-      in_progress: "در حال بررسی",
+      in_progress: "در حال پیگیری",
       won: "پذیرفته‌شده",
       lost: "ردشده / از دست‌رفته",
       cancelled: "لغو شده",
@@ -192,25 +192,25 @@ const AdminPanel = () => {
   const secondaryMetrics = dashboardStats
     ? [
         {
-          label: "درخواست‌های ثبت شده",
+          label: "کل درخواست‌ها",
           value: dashboardStats.total_requests,
           icon: Package,
           tone: "bg-blue-50 text-blue-700",
         },
         {
-          label: "درخواست‌های روز اخیر",
+          label: "درخواست‌های جدید",
           value: dashboardStats.last_24h_count,
           icon: Clock,
           tone: "bg-emerald-50 text-emerald-700",
         },
         {
-          label: "روند هفته اخیر",
+          label: "حجم هفته اخیر",
           value: dashboardStats.last_7_days_count,
           icon: Gauge,
           tone: "bg-violet-50 text-violet-700",
         },
         {
-          label: "در انتظار تخصیص",
+          label: "بدون کارشناس",
           value: dashboardStats.unassigned_count,
           icon: AlertCircle,
           tone: "bg-orange-50 text-orange-700",
@@ -235,7 +235,7 @@ const AdminPanel = () => {
                 </div>
                 <h1 className="text-2xl font-bold tracking-normal text-slate-950 sm:text-3xl">پنل مدیریت</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">
-                  نمای مدیریتی برای پایش درخواست‌ها، تخصیص خودکار و توزیع روش‌های حمل
+                  این داشبورد نمای کلی وضعیت درخواست‌های حمل، حجم ورودی، درخواست‌های فعال و توزیع خودکار درخواست‌ها را نشان می‌دهد.
                 </p>
               </div>
             </div>
@@ -325,23 +325,23 @@ const AdminPanel = () => {
                     tone="bg-blue-50 text-blue-700"
                   />
                   <MetricCard
-                    label="روز اخیر"
+                    label="درخواست‌های جدید"
                     value={dashboardStats.last_24h_count}
                     helper="درخواست‌های ثبت شده در ۲۴ ساعت اخیر"
                     icon={Clock}
                     tone="bg-emerald-50 text-emerald-700"
                   />
                   <MetricCard
-                    label="هفته اخیر"
+                    label="حجم هفته اخیر"
                     value={dashboardStats.last_7_days_count}
-                    helper="روند کوتاه‌مدت درخواست‌ها"
+                    helper="تعداد درخواست‌های ثبت‌شده در ۷ روز اخیر"
                     icon={Gauge}
                     tone="bg-violet-50 text-violet-700"
                   />
                   <MetricCard
                     label="بدون کارشناس"
                     value={dashboardStats.unassigned_count}
-                    helper="در انتظار تخصیص خودکار یا دستی"
+                    helper="درخواست‌هایی که هنوز کارشناس مشخص ندارند"
                     icon={AlertCircle}
                     tone="bg-orange-50 text-orange-700"
                   />

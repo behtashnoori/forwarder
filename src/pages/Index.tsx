@@ -31,26 +31,36 @@ const Index = () => {
     <div className="min-h-screen bg-[#FAFAFA]">
       <Header />
 
-      <section className="px-4 py-16 md:py-20">
+      <section className="px-4 py-8 md:py-12">
         <div className="container mx-auto max-w-5xl">
           {!shippingType ? (
-            <div className="space-y-10">
-              <div className="mx-auto max-w-2xl text-center">
+            <div className="space-y-7">
+              <div id="about" className="scroll-mt-24 mx-auto max-w-3xl text-center">
                 <h1 className="text-3xl font-bold tracking-normal text-[#1F2937] md:text-4xl">
-                  خدمات فوروارد
+                  سرویس مدیریت درخواست حمل فورواردر
                 </h1>
                 <p className="mt-4 text-base leading-7 text-[#6B7280] md:text-lg">
-                  نوع ارسال خود را انتخاب کنید
+                  درخواست حمل خود را ثبت کنید؛ تیم فورواردر بررسی، هماهنگی و پیگیری وضعیت درخواست را انجام می‌دهد.
+                  وضعیت درخواست نیز با شماره پیگیری قابل مشاهده است.
                 </p>
               </div>
 
               <ShippingTypeSelector onSelect={handleShippingTypeSelect} />
 
-              <TrackingSection
-                trackingNumber={trackingNumber}
-                setTrackingNumber={setTrackingNumber}
-                onTrack={handleTrackRequest}
-              />
+              <div id="tracking" className="scroll-mt-24">
+                <TrackingSection
+                  trackingNumber={trackingNumber}
+                  setTrackingNumber={setTrackingNumber}
+                  onTrack={handleTrackRequest}
+                />
+              </div>
+
+              <section id="contact" className="scroll-mt-24 rounded-2xl border border-border/70 bg-white p-5 text-center shadow-sm md:p-6">
+                <h2 className="text-lg font-bold text-[#1F2937]">تماس و هماهنگی با فورواردر</h2>
+                <p className="mx-auto mt-2 max-w-2xl text-sm leading-7 text-[#6B7280]">
+                  پس از ثبت درخواست، تیم فورواردر اطلاعات شما را بررسی می‌کند و برای هماهنگی جزئیات حمل با شما تماس می‌گیرد.
+                </p>
+              </section>
             </div>
           ) : (
             <div className="flex justify-center">
@@ -81,9 +91,11 @@ const TrackingSection = ({
           <div>
             <h2 className="flex items-center justify-center gap-2 text-base font-semibold text-[#1F2937] sm:justify-start">
               <Search className="h-5 w-5 text-primary" />
-              پیگیری درخواست
+              پیگیری وضعیت درخواست حمل
             </h2>
-            <p className="mt-1 text-sm text-[#6B7280]">شماره پیگیری خود را وارد کنید.</p>
+            <p className="mt-1 text-sm leading-6 text-[#6B7280]">
+              شماره پیگیری درخواست را وارد کنید تا وضعیت ثبت و پیگیری آن را ببینید.
+            </p>
           </div>
         </div>
 
@@ -110,15 +122,15 @@ const ShippingTypeSelector = ({ onSelect }: { onSelect: (type: "domestic" | "int
   const options = [
     {
       type: "domestic" as const,
-      title: "حمل داخلی",
-      description: "ارسال مرسوله در مسیرهای داخل کشور با ثبت سریع درخواست.",
+      title: "ثبت درخواست حمل داخلی",
+      description: "درخواست حمل داخل کشور را ثبت کنید تا تیم فورواردر پیگیری و هماهنگی مسیر را انجام دهد.",
       detail: "مناسب برای مبدا و مقصد در استان‌های ایران",
       icon: MapPin,
     },
     {
       type: "international" as const,
-      title: "حمل بین‌المللی",
-      description: "ثبت درخواست ارسال بین ایران و کشورهای دیگر.",
+      title: "ثبت درخواست حمل بین‌المللی",
+      description: "درخواست حمل بین ایران و کشورهای دیگر را ثبت کنید تا مراحل بررسی و هماهنگی آغاز شود.",
       detail: "مناسب برای مسیرهای واردات، صادرات و حمل خارجی",
       icon: Globe2,
     },
@@ -137,7 +149,7 @@ const ShippingTypeSelector = ({ onSelect }: { onSelect: (type: "domestic" | "int
             <p className="mt-3 text-xs leading-5 text-[#6B7280]">{detail}</p>
             <Button className="mt-6 w-full" onClick={() => onSelect(type)}>
               <Truck className="h-4 w-4" />
-              درخواست ارسال
+              ثبت درخواست حمل
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </CardContent>

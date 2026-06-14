@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, Weight, DollarSign, FileText, ChevronDown, ChevronUp, User } from "lucide-react";
+import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, Weight, DollarSign, FileText, ChevronDown, ChevronUp, User, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import RequestConfirmation from "./RequestConfirmation";
 import {
@@ -71,6 +71,11 @@ interface LocationFormProps {
   shippingType: "domestic" | "international";
   onBack?: () => void;
 }
+
+const helperTextClass = "text-xs leading-6 text-muted-foreground";
+
+const getTransportLabel = (method: TransportMethod) => method.name_fa || method.name;
+const getTransportDescription = (method: TransportMethod, fallback: string) => method.description || fallback;
 
 const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const { toast } = useToast();
@@ -927,6 +932,33 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     setDestinationInternationalCities([]);
   };
 
+  const returnToLanding = () => {
+    setIsSubmitted(false);
+    setSubmittedTrackingCode(null);
+    onBack();
+  };
+
+  const handleCopyTrackingCode = async () => {
+    if (!submittedTrackingCode) return;
+
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard is not available");
+      }
+      await navigator.clipboard.writeText(submittedTrackingCode);
+      toast({
+        title: "کد پیگیری کپی شد",
+        description: "کد را نگه دارید تا بعداً وضعیت درخواست را پیگیری کنید.",
+      });
+    } catch {
+      toast({
+        title: "کپی خودکار انجام نشد",
+        description: "لطفاً کد پیگیری را به صورت دستی ذخیره کنید.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isSubmitted) {
     return (
       <Card className="w-full max-w-md bg-gradient-card shadow-lg border-0">
@@ -934,15 +966,22 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           <div className="mb-4">
             <CheckCircle2 className="w-16 h-16 text-secondary mx-auto" />
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2">درخواست شما ثبت شد!</h3>
+          <h3 className="text-xl font-bold text-foreground mb-2">درخواست شما با موفقیت ثبت شد</h3>
           {submittedTrackingCode && (
             <div className="mb-4 p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground mb-1">شماره پیگیری</p>
-              <p className="text-xl font-mono font-bold text-foreground">{submittedTrackingCode}</p>
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <p className="break-all text-xl font-mono font-bold text-foreground">{submittedTrackingCode}</p>
+                <Button type="button" variant="outline" size="sm" onClick={handleCopyTrackingCode}>
+                  <Copy className="h-4 w-4" />
+                  کپی کد
+                </Button>
+              </div>
             </div>
           )}
-          <p className="text-muted-foreground mb-6">
-            کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت و جزئیات ارسال را هماهنگ خواهد کرد.
+          <p className="text-muted-foreground mb-6 leading-7">
+            این کد را ذخیره کنید. برای اطلاع از آخرین وضعیت درخواست، کد پیگیری را در بخش پیگیری درخواست وارد کنید.
+            تیم فورواردر درخواست شما را بررسی و هماهنگی‌های لازم را انجام می‌دهد.
           </p>
           <div className="space-y-2">
             <Button
@@ -954,6 +993,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             </Button>
             <Button onClick={resetForm} variant="outline" className="w-full">
               ثبت درخواست جدید
+            </Button>
+            <Button onClick={returnToLanding} variant="ghost" className="w-full">
+              بازگشت به خانه
             </Button>
           </div>
         </CardContent>
@@ -1051,13 +1093,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     onClick={() => setShowOriginLocationDetails((value) => !value)}
                     className="h-auto px-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
                   >
-                    {showOriginLocationDetails ? "پنهان کردن جزئیات" : "+ جزئیات بیشتر (شهر و شهرستان)"}
+                    {showOriginLocationDetails ? "پنهان کردن جزئیات اختیاری" : "+ جزئیات بیشتر مبدا (شهرستان و شهر، اختیاری)"}
                   </Button>
                 )}
 
                 {showOriginLocationDetails && (
                   <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">انتخاب شهرستان و شهر اختیاری است.</p>
+                    <p className={helperTextClass}>اگر شهر یا شهرستان را نمی‌دانید، انتخاب استان برای ثبت درخواست کافی است.</p>
                     <Select
                       value={formData.originCounty}
                       onValueChange={(value) => {
@@ -1185,13 +1227,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     onClick={() => setShowDestinationLocationDetails((value) => !value)}
                     className="h-auto px-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
                   >
-                    {showDestinationLocationDetails ? "پنهان کردن جزئیات" : "+ جزئیات بیشتر (شهر و شهرستان)"}
+                    {showDestinationLocationDetails ? "پنهان کردن جزئیات اختیاری" : "+ جزئیات بیشتر مقصد (شهرستان و شهر، اختیاری)"}
                   </Button>
                 )}
 
                 {showDestinationLocationDetails && (
                   <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground">انتخاب شهرستان و شهر اختیاری است.</p>
+                    <p className={helperTextClass}>اگر شهر یا شهرستان را نمی‌دانید، انتخاب استان برای ثبت درخواست کافی است.</p>
                     <Select
                       value={formData.destinationCounty}
                       onValueChange={(value) => {
@@ -1673,7 +1715,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           
           {/* Transport Method Preference */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">نحوه انتخاب روش حمل</Label>
+            <Label className="text-sm text-muted-foreground">انتخاب روش حمل</Label>
             <Select
               value={formData.transportMethodPreference}
               onValueChange={(value) => {
@@ -1691,7 +1733,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               <SelectContent>
                 {transportMethodOptions?.preference_options.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <div>
+                    <div className="space-y-1 text-right">
                       <div className="font-medium">{option.label}</div>
                       <div className="text-xs text-muted-foreground">{option.description}</div>
                     </div>
@@ -1704,9 +1746,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           {/* Customer Choice Transport Methods */}
           {formData.transportMethodPreference === "customer_choice" && (
             <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <p className={helperTextClass}>
+                فقط روش‌های مناسب همین نوع درخواست نمایش داده می‌شود و مقدار ارسالی به سیستم تغییر نمی‌کند.
+              </p>
               {shippingType === "international" && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">روش حمل بین‌المللی</Label>
+                  <Label className="text-sm font-medium">روش حمل برای مسیر بین‌المللی</Label>
                   <Select
                     value={formData.internationalTransportMethod}
                     onValueChange={(value) => {
@@ -1722,10 +1767,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     <SelectContent>
                       {transportMethodOptions?.international_methods.map((method) => (
                         <SelectItem key={method.id} value={method.name}>
-                          <div>
-                            <div className="font-medium">{method.name_fa}</div>
+                          <div className="space-y-1 text-right">
+                            <div className="font-medium">{getTransportLabel(method)}</div>
                             {method.description && (
-                              <div className="text-xs text-muted-foreground">{method.description}</div>
+                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, "مناسب برای مسیرهای بین‌المللی")}</div>
                             )}
                           </div>
                         </SelectItem>
@@ -1737,7 +1782,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               
               {shippingType === "domestic" && (
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">روش حمل داخلی</Label>
+                  <Label className="text-sm font-medium">روش حمل برای مسیر داخلی</Label>
                   <Select
                     value={formData.domesticTransportMethod}
                     onValueChange={(value) => {
@@ -1753,10 +1798,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     <SelectContent>
                       {transportMethodOptions?.domestic_methods.map((method) => (
                         <SelectItem key={method.id} value={method.name}>
-                          <div>
-                            <div className="font-medium">{method.name_fa}</div>
+                          <div className="space-y-1 text-right">
+                            <div className="font-medium">{getTransportLabel(method)}</div>
                             {method.description && (
-                              <div className="text-xs text-muted-foreground">{method.description}</div>
+                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, "مناسب برای مسیرهای داخلی")}</div>
                             )}
                           </div>
                         </SelectItem>
@@ -1804,8 +1849,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               <ChevronDown className="w-4 h-4" />
             )}
           </Button>
-          <p className="text-xs text-muted-foreground">
+          <p className={helperTextClass}>
             برای اطلاعات دقیق‌تر در مورد کالای خود، مشخصات را وارد کنید
+          </p>
+          <p className={helperTextClass}>
+            این بخش اختیاری است؛ اگر وزن، حجم، ارزش یا زمان دقیق را نمی‌دانید می‌توانید خالی بگذارید.
           </p>
         </div>
 
@@ -1953,6 +2001,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 />
               </div>
             </div>
+            <p className={helperTextClass}>
+              تاریخ‌ها اختیاری هستند و با تقویم پیش‌فرض مرورگر ثبت می‌شوند. تقویم شمسی برای درخواست داخلی به مرحله بعدی موکول شد.
+            </p>
           </div>
         )}
 
