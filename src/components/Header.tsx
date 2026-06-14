@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Menu, Phone, Info } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { getLogoDisplayUrl } from "@/lib/api";
@@ -29,16 +30,16 @@ const Header = () => {
 
           <nav className="hidden md:flex items-center gap-4">
             <Button variant="ghost" className="text-sm font-medium" asChild>
-              <a href="/#about">
+              <Link to="/#about">
                 <Info className="w-4 h-4 ml-2" />
                 {settings.nav_about || "درباره ما"}
-              </a>
+              </Link>
             </Button>
             <Button variant="ghost" className="text-sm font-medium" asChild>
-              <a href="/#contact">
+              <Link to="/#contact">
                 <Phone className="w-4 h-4 ml-2" />
                 {settings.nav_contact || "تماس با ما"}
-              </a>
+              </Link>
             </Button>
             <ExpertLogin />
           </nav>
@@ -57,16 +58,16 @@ const Header = () => {
           <div className="md:hidden py-4 border-t border-border bg-card/95">
             <nav className="flex flex-col gap-2">
               <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                <a href="/#about" onClick={() => setIsMenuOpen(false)}>
+                <Link to="/#about" onClick={() => setIsMenuOpen(false)}>
                   <Info className="w-4 h-4 ml-2" />
                   {settings.nav_about || "درباره ما"}
-                </a>
+                </Link>
               </Button>
               <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                <a href="/#contact" onClick={() => setIsMenuOpen(false)}>
+                <Link to="/#contact" onClick={() => setIsMenuOpen(false)}>
                   <Phone className="w-4 h-4 ml-2" />
                   {settings.nav_contact || "تماس با ما"}
-                </a>
+                </Link>
               </Button>
               <div className="px-3 py-2">
                 <ExpertLogin />

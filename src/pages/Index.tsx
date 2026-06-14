@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "@/components/Header";
 import LocationForm from "@/components/LocationForm";
 import Footer from "@/components/Footer";
@@ -6,12 +6,31 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Globe2, MapPin, Search, Truck } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const Index = () => {
   const [shippingType, setShippingType] = useState<"domestic" | "international" | null>(null);
   const [trackingNumber, setTrackingNumber] = useState("");
   const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const sectionId = location.hash === "#about" || location.hash === "#contact"
+      ? location.hash.slice(1)
+      : "";
+
+    if (!sectionId) {
+      return;
+    }
+
+    setShippingType(null);
+
+    const scrollTimer = window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+
+    return () => window.clearTimeout(scrollTimer);
+  }, [location.hash]);
 
   const handleShippingTypeSelect = (type: "domestic" | "international") => {
     setShippingType(type);
