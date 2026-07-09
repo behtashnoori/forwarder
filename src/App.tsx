@@ -20,6 +20,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import AdminPanel from "./pages/AdminPanel";
 import { env } from "./lib/env";
 import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
+import { I18nProvider } from "./i18n";
 
 const queryClient = new QueryClient();
 
@@ -57,68 +58,70 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <SiteSettingsProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/expert" element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <ExpertConsole />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            } />
-            <Route path="/expert/requests/:id" element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <RequestDetail />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            } />
-            <Route path="/crm" element={
-              <ProtectedRoute>
-                <ErrorBoundary>
-                  <CRMDashboard />
-                </ErrorBoundary>
-              </ProtectedRoute>
-            } />
-            <Route path="/admin" element={
-              <AdminRoute>
-                <ErrorBoundary>
-                  <AdminPanel />
-                </ErrorBoundary>
-              </AdminRoute>
-            } />
-            <Route path="/user-management" element={
-              <AdminRoute>
-                <ErrorBoundary>
-                  <AdminPanel />
-                </ErrorBoundary>
-              </AdminRoute>
-            } />
-            <Route path="/customer/:customerId" element={
-              <ErrorBoundary>
-                <CustomerDashboard />
-              </ErrorBoundary>
-            } />
-            <Route path="/request/:requestId" element={
-              <ErrorBoundary>
-                <CustomerRequestDetail />
-              </ErrorBoundary>
-            } />
-            <Route path="/customer/track/:requestId" element={
-              <ErrorBoundary>
-                <PublicTracking />
-              </ErrorBoundary>
-            } />
-            <Route path="/verify-email" element={
-              <ErrorBoundary>
-                <VerifyEmail />
-              </ErrorBoundary>
-            } />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          </SiteSettingsProvider>
+          <I18nProvider>
+            <SiteSettingsProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/expert" element={
+                  <ProtectedRoute>
+                    <ErrorBoundary>
+                      <ExpertConsole />
+                    </ErrorBoundary>
+                  </ProtectedRoute>
+                } />
+                <Route path="/expert/requests/:id" element={
+                  <ProtectedRoute>
+                    <ErrorBoundary>
+                      <RequestDetail />
+                    </ErrorBoundary>
+                  </ProtectedRoute>
+                } />
+                <Route path="/crm" element={
+                  <ProtectedRoute>
+                    <ErrorBoundary>
+                      <CRMDashboard />
+                    </ErrorBoundary>
+                  </ProtectedRoute>
+                } />
+                <Route path="/admin" element={
+                  <AdminRoute>
+                    <ErrorBoundary>
+                      <AdminPanel />
+                    </ErrorBoundary>
+                  </AdminRoute>
+                } />
+                <Route path="/user-management" element={
+                  <AdminRoute>
+                    <ErrorBoundary>
+                      <AdminPanel />
+                    </ErrorBoundary>
+                  </AdminRoute>
+                } />
+                <Route path="/customer/:customerId" element={
+                  <ErrorBoundary>
+                    <CustomerDashboard />
+                  </ErrorBoundary>
+                } />
+                <Route path="/request/:requestId" element={
+                  <ErrorBoundary>
+                    <CustomerRequestDetail />
+                  </ErrorBoundary>
+                } />
+                <Route path="/customer/track/:requestId" element={
+                  <ErrorBoundary>
+                    <PublicTracking />
+                  </ErrorBoundary>
+                } />
+                <Route path="/verify-email" element={
+                  <ErrorBoundary>
+                    <VerifyEmail />
+                  </ErrorBoundary>
+                } />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </SiteSettingsProvider>
+          </I18nProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

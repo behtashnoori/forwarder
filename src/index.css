@@ -152,6 +152,10 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
     font-family: 'Vazirmatn', 'Vazir', Tahoma, system-ui, sans-serif;
   }
 
+  html[dir="ltr"] {
+    direction: ltr;
+  }
+
   body {
     @apply bg-gradient-to-br from-background to-background-secondary text-foreground;
     @apply font-medium leading-normal;
@@ -173,6 +177,12 @@ All colors MUST be HSL. Mobile-first design with professional aesthetics.
   /* Form elements RTL optimization */
   input, select, textarea {
     text-align: right;
+  }
+
+  html[dir="ltr"] input,
+  html[dir="ltr"] select,
+  html[dir="ltr"] textarea {
+    text-align: left;
   }
 
   /* Custom scrollbar */
