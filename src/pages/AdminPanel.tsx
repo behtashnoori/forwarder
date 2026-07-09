@@ -27,6 +27,7 @@ import AdminReportsTab from "@/components/AdminReportsTab";
 import ReferralRulesTab from "@/components/ReferralRulesTab";
 import SiteSettingsTab from "@/components/SiteSettingsTab";
 import UserManagement from "./UserManagement";
+import { useI18n } from "@/i18n";
 
 type MetricCardProps = {
   label: string;
@@ -42,16 +43,14 @@ type DistributionTone = {
   icon: string;
 };
 
-const numberFormatter = new Intl.NumberFormat("fa-IR");
+const formatNumber = (value: number, locale: string) => new Intl.NumberFormat(locale).format(value);
 
-const formatNumber = (value: number) => numberFormatter.format(value);
-
-const MetricCard = ({ label, value, helper, icon: Icon, tone }: MetricCardProps) => (
+const MetricCard = ({ label, value, helper, icon: Icon, tone, locale }: MetricCardProps & { locale: string }) => (
   <Card className="h-full rounded-3xl border-slate-200 bg-white shadow-sm">
     <CardContent className="flex h-full items-start justify-between gap-4 p-5">
       <div className="min-w-0">
         <p className="text-sm font-medium text-slate-500">{label}</p>
-        <p className="mt-3 text-3xl font-bold tracking-normal text-slate-950">{formatNumber(value)}</p>
+        <p className="mt-3 text-3xl font-bold tracking-normal text-slate-950">{formatNumber(value, locale)}</p>
         <p className="mt-2 text-xs leading-5 text-slate-500">{helper}</p>
       </div>
       <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${tone}`}>
@@ -61,16 +60,16 @@ const MetricCard = ({ label, value, helper, icon: Icon, tone }: MetricCardProps)
   </Card>
 );
 
-const EmptyDashboardState = () => (
+const EmptyDashboardState = ({ title, description }: { title: string; description: string }) => (
   <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
     <CardContent className="flex flex-col items-center gap-4 p-10 text-center">
       <div className="rounded-2xl bg-slate-100 p-4">
         <BarChart3 className="h-8 w-8 text-slate-400" />
       </div>
       <div className="space-y-1">
-        <h2 className="text-lg font-semibold text-slate-900">داده‌ای یافت نشد</h2>
+        <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
         <p className="max-w-xl text-sm leading-6 text-slate-500">
-          پس از ثبت درخواست‌ها، آمار مدیریتی در این بخش نمایش داده می‌شود.
+          {description}
         </p>
       </div>
     </CardContent>
@@ -88,6 +87,7 @@ const distributionTones: DistributionTone[] = [
 const AdminPanel = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { locale, statusLabel, t, tf, transportLabel } = useI18n();
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -95,13 +95,13 @@ const AdminPanel = () => {
   const adminLabel = useMemo(() => {
     try {
       const storedUser = localStorage.getItem("expert_user");
-      if (!storedUser) return "مدیر سیستم";
+      if (!storedUser) return t("common.systemAdmin");
       const user = JSON.parse(storedUser) as { full_name?: string; username?: string; role?: string };
-      return user.full_name || user.username || "مدیر سیستم";
+      return user.full_name || user.username || t("common.systemAdmin");
     } catch (error) {
-      return "مدیر سیستم";
+      return t("common.systemAdmin");
     }
-  }, []);
+  }, [t]);
 
   const handleLogout = () => {
     localStorage.removeItem("expert_user");
@@ -113,8 +113,8 @@ const AdminPanel = () => {
     const token = localStorage.getItem("expert_token");
     if (!token || token === "null") {
       toast({
-        title: "ورود مجدد",
-        description: "لطفاً دوباره وارد شوید",
+        title: t("admin.loginAgain"),
+        description: t("admin.loginAgainDescription"),
         variant: "destructive",
       });
       localStorage.removeItem("expert_user");
@@ -130,8 +130,8 @@ const AdminPanel = () => {
     } catch (error) {
       if (error instanceof AdminDashboardHttpError && error.status === 401) {
         toast({
-          title: "نشست منقضی شده",
-          description: "لطفاً دوباره وارد شوید",
+          title: t("admin.sessionExpired"),
+          description: t("admin.loginAgainDescription"),
           variant: "destructive",
         });
         localStorage.removeItem("expert_user");
@@ -139,78 +139,48 @@ const AdminPanel = () => {
         navigate("/", { replace: true });
       } else if (error instanceof AdminDashboardHttpError) {
         toast({
-          title: "خطا",
-          description: "خطا در دریافت آمار داشبورد",
+          title: t("common.error"),
+          description: t("admin.dashboardFetchError"),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "خطا",
-          description: "خطا در ارتباط با سرور",
+          title: t("common.error"),
+          description: t("admin.serverError"),
           variant: "destructive",
         });
       }
     } finally {
       setLoading(false);
     }
-  }, [navigate, toast]);
+  }, [navigate, t, toast]);
 
   useEffect(() => {
     loadDashboard();
   }, [loadDashboard]);
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      new: "جدید",
-      pending: "در انتظار",
-      assigned: "در انتظار بررسی",
-      in_progress: "در حال پیگیری",
-      won: "پذیرفته‌شده",
-      lost: "ردشده / از دست‌رفته",
-      cancelled: "لغو شده",
-      waiting_for_customer: "منتظر مشتری",
-      closed: "مختومه",
-    };
-    return labels[status] || status;
-  };
-
-  const getTransportMethodLabel = (method: string) => {
-    const labels: Record<string, string> = {
-      road: "جاده‌ای",
-      rail: "ریلی",
-      air: "هوایی",
-      sea: "دریایی",
-      "road transport": "حمل جاده‌ای",
-      "rail transport": "حمل ریلی",
-      "air transport": "حمل هوایی",
-      "sea freight": "حمل دریایی",
-      unknown: "نامشخص",
-    };
-    return labels[method] || method;
-  };
-
   const secondaryMetrics = dashboardStats
     ? [
         {
-          label: "کل درخواست‌ها",
+          label: t("admin.totalRequests"),
           value: dashboardStats.total_requests,
           icon: Package,
           tone: "bg-blue-50 text-blue-700",
         },
         {
-          label: "درخواست‌های جدید",
+          label: t("admin.last24h"),
           value: dashboardStats.last_24h_count,
           icon: Clock,
           tone: "bg-emerald-50 text-emerald-700",
         },
         {
-          label: "حجم هفته اخیر",
+          label: t("admin.last7Days"),
           value: dashboardStats.last_7_days_count,
           icon: Gauge,
           tone: "bg-violet-50 text-violet-700",
         },
         {
-          label: "بدون کارشناس",
+          label: t("status.unassigned"),
           value: dashboardStats.unassigned_count,
           icon: AlertCircle,
           tone: "bg-orange-50 text-orange-700",
@@ -230,12 +200,12 @@ const AdminPanel = () => {
               <div className="min-w-0">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Badge className="rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-emerald-700 hover:bg-emerald-50">
-                    داشبورد مدیریتی
+                    {t("admin.badge")}
                   </Badge>
                 </div>
-                <h1 className="text-2xl font-bold tracking-normal text-slate-950 sm:text-3xl">پنل مدیریت</h1>
+                <h1 className="text-2xl font-bold tracking-normal text-slate-950 sm:text-3xl">{t("admin.title")}</h1>
                 <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-500">
-                  این داشبورد نمای کلی وضعیت درخواست‌های حمل، حجم ورودی، درخواست‌های فعال و توزیع خودکار درخواست‌ها را نشان می‌دهد.
+                  {t("admin.description")}
                 </p>
               </div>
             </div>
@@ -250,11 +220,11 @@ const AdminPanel = () => {
               </div>
               <Button onClick={loadDashboard} disabled={loading} variant="outline" size="sm" className="h-10 rounded-full">
                 <RefreshCw className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                به‌روزرسانی
+                {t("common.refresh")}
               </Button>
               <Button onClick={handleLogout} variant="outline" size="sm" className="h-10 rounded-full text-red-600 hover:bg-red-50 hover:text-red-700">
                 <LogOut className="ml-2 h-4 w-4" />
-                خروج
+                {t("common.logout")}
               </Button>
             </div>
           </div>
@@ -267,35 +237,35 @@ const AdminPanel = () => {
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <BarChart3 className="h-4 w-4" />
-              داشبورد
+              {t("admin.dashboard")}
             </TabsTrigger>
             <TabsTrigger
               value="reports"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <FileSpreadsheet className="h-4 w-4" />
-              گزارش‌ها
+              {t("admin.reports")}
             </TabsTrigger>
             <TabsTrigger
               value="users"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <Users className="h-4 w-4" />
-              مدیریت کاربران
+              {t("admin.userManagement")}
             </TabsTrigger>
             <TabsTrigger
               value="referral-rules"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <Scale className="h-4 w-4" />
-              توزیع خودکار درخواست‌ها
+              {t("admin.referralRules")}
             </TabsTrigger>
             <TabsTrigger
               value="site-settings"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <Settings className="h-4 w-4" />
-              تنظیمات سایت
+              {t("admin.siteSettings")}
             </TabsTrigger>
           </TabsList>
 
@@ -307,9 +277,9 @@ const AdminPanel = () => {
                     <RefreshCw className="h-8 w-8 animate-spin text-blue-600" />
                   </div>
                   <div className="space-y-1">
-                    <h2 className="text-lg font-semibold text-slate-900">در حال بارگذاری داشبورد</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">{t("admin.loadingTitle")}</h2>
                     <p className="text-sm leading-6 text-slate-500">
-                      آمار درخواست‌ها و توزیع وضعیت‌ها دریافت می‌شود.
+                      {t("admin.loadingDescription")}
                     </p>
                   </div>
                 </CardContent>
@@ -318,31 +288,35 @@ const AdminPanel = () => {
               <>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <MetricCard
-                    label="کل درخواست‌ها"
+                    label={t("admin.totalRequests")}
                     value={dashboardStats.total_requests}
-                    helper="تمام درخواست‌های ثبت شده"
+                    helper={t("admin.totalRequestsHelper")}
                     icon={Package}
+                    locale={locale}
                     tone="bg-blue-50 text-blue-700"
                   />
                   <MetricCard
-                    label="درخواست‌های جدید"
+                    label={t("admin.last24h")}
                     value={dashboardStats.last_24h_count}
-                    helper="درخواست‌های ثبت شده در ۲۴ ساعت اخیر"
+                    helper={t("admin.last24hHelper")}
                     icon={Clock}
+                    locale={locale}
                     tone="bg-emerald-50 text-emerald-700"
                   />
                   <MetricCard
-                    label="حجم هفته اخیر"
+                    label={t("admin.last7Days")}
                     value={dashboardStats.last_7_days_count}
-                    helper="تعداد درخواست‌های ثبت‌شده در ۷ روز اخیر"
+                    helper={t("admin.last7DaysHelper")}
                     icon={Gauge}
+                    locale={locale}
                     tone="bg-violet-50 text-violet-700"
                   />
                   <MetricCard
-                    label="بدون کارشناس"
+                    label={t("status.unassigned")}
                     value={dashboardStats.unassigned_count}
-                    helper="درخواست‌هایی که هنوز کارشناس مشخص ندارند"
+                    helper={t("admin.unassignedHelper")}
                     icon={AlertCircle}
+                    locale={locale}
                     tone="bg-orange-50 text-orange-700"
                   />
                 </div>
@@ -355,7 +329,7 @@ const AdminPanel = () => {
                         <CardContent className="flex items-center justify-between gap-4 p-5">
                           <div>
                             <p className="text-sm text-slate-500">{metric.label}</p>
-                            <p className="mt-2 text-2xl font-bold text-slate-950">{formatNumber(metric.value)}</p>
+                            <p className="mt-2 text-2xl font-bold text-slate-950">{formatNumber(metric.value, locale)}</p>
                           </div>
                           <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${metric.tone}`}>
                             <Icon className="h-5 w-5" />
@@ -371,9 +345,9 @@ const AdminPanel = () => {
                     <CardHeader className="space-y-1 p-5 pb-3">
                       <CardTitle className="flex items-center gap-2 text-base text-slate-950">
                         <BarChart3 className="h-5 w-5 text-blue-600" />
-                        توزیع بر اساس وضعیت
+                        {t("admin.statusDistribution")}
                       </CardTitle>
-                      <p className="text-sm text-slate-500">نمای فشرده از وضعیت فعلی درخواست‌ها.</p>
+                      <p className="text-sm text-slate-500">{t("admin.statusDistributionDescription")}</p>
                     </CardHeader>
                     <CardContent className="space-y-3 p-5 pt-2">
                       {Object.entries(dashboardStats.requests_per_status).map(([status, count], index) => {
@@ -382,10 +356,10 @@ const AdminPanel = () => {
                           <div key={status} className={`flex items-center justify-between gap-3 rounded-2xl border p-4 ${tone.row}`}>
                             <div className="flex min-w-0 items-center gap-3">
                               <span className={`h-3 w-3 shrink-0 rounded-full ${tone.dot}`} />
-                              <span className="min-w-0 break-words text-sm font-medium text-slate-800">{getStatusLabel(status)}</span>
+                              <span className="min-w-0 break-words text-sm font-medium text-slate-800">{status === "closed" ? t("status.closedOperational") : statusLabel(status)}</span>
                             </div>
                             <Badge variant="outline" className="shrink-0 rounded-full bg-white px-3 py-1">
-                              {formatNumber(count)}
+                              {formatNumber(count, locale)}
                             </Badge>
                           </div>
                         );
@@ -397,9 +371,9 @@ const AdminPanel = () => {
                     <CardHeader className="space-y-1 p-5 pb-3">
                       <CardTitle className="flex items-center gap-2 text-base text-slate-950">
                         <Truck className="h-5 w-5 text-blue-600" />
-                        توزیع بر اساس روش حمل
+                        {t("admin.transportDistribution")}
                       </CardTitle>
-                      <p className="text-sm text-slate-500">روش‌های حمل انتخاب شده در درخواست‌ها.</p>
+                      <p className="text-sm text-slate-500">{t("admin.transportDistributionDescription")}</p>
                     </CardHeader>
                     <CardContent className="space-y-3 p-5 pt-2">
                       {Object.entries(dashboardStats.requests_per_transport_method).map(([method, count], index) => {
@@ -411,11 +385,11 @@ const AdminPanel = () => {
                                 <Truck className="h-5 w-5" />
                               </span>
                               <span className="min-w-0 break-words text-sm font-medium text-slate-800">
-                                {getTransportMethodLabel(method)}
+                                {transportLabel(method)}
                               </span>
                             </div>
                             <Badge variant="outline" className="shrink-0 rounded-full bg-white px-3 py-1">
-                              {formatNumber(count)}
+                              {formatNumber(count, locale)}
                             </Badge>
                           </div>
                         );
@@ -429,9 +403,9 @@ const AdminPanel = () => {
                     <CardHeader className="space-y-1 p-5 pb-3">
                       <CardTitle className="flex items-center gap-2 text-base text-slate-950">
                         <Trophy className="h-5 w-5 text-amber-500" />
-                        استان‌های برتر
+                        {t("admin.topProvinces")}
                       </CardTitle>
-                      <p className="text-sm text-slate-500">استان‌هایی با بیشترین تعداد درخواست ثبت شده.</p>
+                      <p className="text-sm text-slate-500">{t("admin.topProvincesDescription")}</p>
                     </CardHeader>
                     <CardContent className="p-5 pt-2">
                       <div className="grid gap-3">
@@ -442,12 +416,12 @@ const AdminPanel = () => {
                           >
                             <div className="flex min-w-0 items-center gap-3">
                               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-600 text-sm font-bold text-white">
-                                {formatNumber(index + 1)}
+                                {formatNumber(index + 1, locale)}
                               </span>
                               <span className="min-w-0 break-words font-medium text-slate-900">{province.province}</span>
                             </div>
                             <Badge variant="outline" className="w-fit rounded-full bg-white px-3 py-1">
-                              {formatNumber(province.count)} درخواست
+                              {tf("admin.provinceRequestCount", { count: formatNumber(province.count, locale) })}
                             </Badge>
                           </div>
                         ))}
@@ -457,7 +431,7 @@ const AdminPanel = () => {
                 )}
               </>
             ) : (
-              <EmptyDashboardState />
+              <EmptyDashboardState title={t("common.noDataTitle")} description={t("common.noDataDescription")} />
             )}
           </TabsContent>
 
