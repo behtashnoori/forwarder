@@ -125,8 +125,9 @@ def test_create_domestic_shipment_request_preserves_response_defaults_and_commit
         assert shipment_request.special_instructions == "Keep dry"
         assert shipment_request.pickup_date.isoformat() == "2026-06-01"
         assert shipment_request.delivery_date is None
-        assert shipment_request.status_request_status == "new"
         assert shipment_request.status == "new"
+        # Legacy compatibility field remains creation-only and is not operational lifecycle state.
+        assert shipment_request.status_request_status == "new"
         assert shipment_request.assigned_to is None
         assert shipment_request.has_unread_for_assignee is True
         assert shipment_request.priority == "normal"

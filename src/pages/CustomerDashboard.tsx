@@ -106,6 +106,11 @@ const CustomerDashboard: React.FC = () => {
       new: { label: "جدید", variant: "secondary" as const },
       assigned: { label: "اختصاص یافته", variant: "default" as const },
       in_progress: { label: "در حال انجام", variant: "default" as const },
+      quoted: { label: "پیشنهاد ارائه شده", variant: "default" as const },
+      waiting_for_customer: { label: "منتظر پاسخ شما", variant: "default" as const },
+      won: { label: "پذیرفته شد", variant: "default" as const },
+      lost: { label: "پذیرفته نشد", variant: "destructive" as const },
+      closed: { label: "بسته شد", variant: "secondary" as const },
       completed: { label: "تکمیل شده", variant: "default" as const },
       cancelled: { label: "لغو شده", variant: "destructive" as const },
     };

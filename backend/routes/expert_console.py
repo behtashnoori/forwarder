@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request, current_app, g
-from sqlalchemy import and_, or_, func
+from sqlalchemy import and_, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
@@ -409,22 +409,13 @@ def get_dashboard_kpis():
         # Today's date
         today = datetime.utcnow().date()
         
-        # Count by status - use both status fields
-        new_count = query.filter(
-            or_(ShipmentRequest.status == "new", ShipmentRequest.status_request_status == "new")
-        ).count()
-        in_progress_count = query.filter(
-            or_(ShipmentRequest.status == "in_progress", ShipmentRequest.status_request_status == "in_progress")
-        ).count()
-        waiting_count = query.filter(
-            or_(ShipmentRequest.status == "waiting_for_customer", ShipmentRequest.status_request_status == "waiting_for_customer")
-        ).count()
+        # ShipmentRequest.status is the canonical lifecycle field.
+        new_count = query.filter(ShipmentRequest.status == "new").count()
+        in_progress_count = query.filter(ShipmentRequest.status == "in_progress").count()
+        waiting_count = query.filter(ShipmentRequest.status == "waiting_for_customer").count()
         closed_today = query.filter(
             and_(
-                or_(
-                    ShipmentRequest.status.in_(["won", "lost", "closed"]),
-                    ShipmentRequest.status_request_status.in_(["won", "lost", "closed"])
-                ),
+                ShipmentRequest.status.in_(["won", "lost", "closed"]),
                 func.date(ShipmentRequest.created_at) == today
             )
         ).count()
@@ -433,10 +424,7 @@ def get_dashboard_kpis():
         overdue_count = query.filter(
             and_(
                 ShipmentRequest.sla_due_at < datetime.utcnow(),
-                or_(
-                    ShipmentRequest.status.in_(["assigned", "in_progress"]),
-                    ShipmentRequest.status_request_status.in_(["assigned", "in_progress"])
-                )
+                ShipmentRequest.status.in_(["assigned", "in_progress"])
             )
         ).count()
         
@@ -444,10 +432,7 @@ def get_dashboard_kpis():
             and_(
                 ShipmentRequest.sla_due_at <= datetime.utcnow() + timedelta(hours=2),
                 ShipmentRequest.sla_due_at > datetime.utcnow(),
-                or_(
-                    ShipmentRequest.status.in_(["assigned", "in_progress"]),
-                    ShipmentRequest.status_request_status.in_(["assigned", "in_progress"])
-                )
+                ShipmentRequest.status.in_(["assigned", "in_progress"])
             )
         ).count()
         

@@ -54,6 +54,7 @@ const getCurrentStatusLabel = (status: string): string => {
   const map: Record<string, string> = {
     assigned: "در انتظار بررسی",
     in_progress: "در حال پیگیری",
+    quoted: "پیشنهاد ارائه شده",
     waiting_for_customer: "منتظر پاسخ شما",
     won: "پذیرفته شد",
     lost: "پذیرفته نشد",

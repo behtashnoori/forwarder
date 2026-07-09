@@ -308,7 +308,7 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
             cargo_weight=20.0,
             cargo_volume=5.0,
             cargo_value=2000.0,
-            status_request_status="won",
+            status_request_status="new",
             status="waiting_for_customer",
             priority="high",
             assigned_to=other_expert_id,
@@ -394,9 +394,24 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
         headers=admin_headers,
     )
     assert status_filter_response.status_code == 200
-    assert [item["id"] for item in status_filter_response.get_json()["requests"]] == [
-        other_request_id,
-        unassigned_request_id,
+    assert status_filter_response.get_json()["requests"] == []
+
+    stale_legacy_new_response = client.get(
+        "/api/expert/requests?status=new",
+        headers=admin_headers,
+    )
+    assert stale_legacy_new_response.status_code == 200
+    assert [item["id"] for item in stale_legacy_new_response.get_json()["requests"]] == [
+        expert_contract_app["request_id"]
+    ]
+
+    canonical_waiting_response = client.get(
+        "/api/expert/requests?status=waiting_for_customer",
+        headers=admin_headers,
+    )
+    assert canonical_waiting_response.status_code == 200
+    assert [item["id"] for item in canonical_waiting_response.get_json()["requests"]] == [
+        other_request_id
     ]
 
     priority_search_response = client.get(
@@ -410,6 +425,57 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
         "name": "Sara Karimi",
         "phone": "09120000002",
     }
+
+
+def test_expert_request_filters_and_kpis_use_canonical_status_only(expert_contract_app):
+    """Stale legacy status_request_status must not drive lifecycle filters or KPIs."""
+    client = expert_contract_app["app"].test_client()
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+    expert_id = expert_contract_app["expert_id"]
+
+    with expert_contract_app["app"].app_context():
+        stale_legacy_request = ShipmentRequest(
+            tracking_code="SR-CANON001",
+            shipping_type="domestic",
+            contact_phone="09129999999",
+            customer_first_name="Canonical",
+            customer_last_name="Status",
+            transport_method="road",
+            domestic_transport_method="road",
+            transport_method_preference="customer_choice",
+            cargo_description="Canonical status cargo",
+            status_request_status="new",
+            status="waiting_for_customer",
+            priority="normal",
+            assigned_to=expert_id,
+            has_unread_for_assignee=True,
+            created_at=datetime(2026, 1, 2, 10, 0, 0),
+            ready_at=datetime(2026, 1, 2, 10, 0, 0),
+        )
+        db.session.add(stale_legacy_request)
+        db.session.commit()
+        stale_legacy_request_id = stale_legacy_request.id
+
+    new_filter_response = client.get("/api/expert/requests?status=new", headers=admin_headers)
+    assert new_filter_response.status_code == 200
+    assert stale_legacy_request_id not in [
+        item["id"] for item in new_filter_response.get_json()["requests"]
+    ]
+
+    waiting_filter_response = client.get(
+        "/api/expert/requests?status=waiting_for_customer",
+        headers=admin_headers,
+    )
+    assert waiting_filter_response.status_code == 200
+    assert [item["id"] for item in waiting_filter_response.get_json()["requests"]] == [
+        stale_legacy_request_id
+    ]
+
+    kpi_response = client.get("/api/expert/dashboard/kpis", headers=admin_headers)
+    assert kpi_response.status_code == 200
+    kpi_payload = kpi_response.get_json()
+    assert kpi_payload["counts"]["new"] == 1
+    assert kpi_payload["counts"]["waiting_for_customer"] == 1
 
 
 def test_expert_message_contracts_access_creation_and_listing(expert_contract_app):

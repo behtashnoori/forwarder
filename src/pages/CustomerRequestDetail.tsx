@@ -88,6 +88,11 @@ const CustomerRequestDetail: React.FC = () => {
       new: { label: "جدید", variant: "secondary" as const, color: "bg-gray-100 text-gray-800" },
       assigned: { label: "اختصاص یافته", variant: "default" as const, color: "bg-blue-100 text-blue-800" },
       in_progress: { label: "در حال انجام", variant: "default" as const, color: "bg-yellow-100 text-yellow-800" },
+      quoted: { label: "پیشنهاد ارائه شده", variant: "default" as const, color: "bg-purple-100 text-purple-800" },
+      waiting_for_customer: { label: "منتظر پاسخ شما", variant: "default" as const, color: "bg-orange-100 text-orange-800" },
+      won: { label: "پذیرفته شد", variant: "default" as const, color: "bg-green-100 text-green-800" },
+      lost: { label: "پذیرفته نشد", variant: "destructive" as const, color: "bg-red-100 text-red-800" },
+      closed: { label: "بسته شد", variant: "secondary" as const, color: "bg-gray-100 text-gray-800" },
       completed: { label: "تکمیل شده", variant: "default" as const, color: "bg-green-100 text-green-800" },
       cancelled: { label: "لغو شده", variant: "destructive" as const, color: "bg-red-100 text-red-800" },
     };
@@ -117,6 +122,7 @@ const CustomerRequestDetail: React.FC = () => {
   const getCurrentStatusLabel = (status: string): string => {
     const map: Record<string, string> = {
       in_progress: "در حال پیگیری",
+      quoted: "پیشنهاد ارائه شده",
       waiting_for_customer: "منتظر پاسخ شما",
       won: "پذیرفته شد",
       lost: "پذیرفته نشد",

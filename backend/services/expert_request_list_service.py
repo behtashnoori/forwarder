@@ -39,19 +39,9 @@ def apply_request_list_filters(query, filters: dict[str, Any]):
     if status:
         if "," in status:
             status_list = [s.strip() for s in status.split(",")]
-            query = query.filter(
-                or_(
-                    ShipmentRequest.status.in_(status_list),
-                    ShipmentRequest.status_request_status.in_(status_list),
-                )
-            )
+            query = query.filter(ShipmentRequest.status.in_(status_list))
         else:
-            query = query.filter(
-                or_(
-                    ShipmentRequest.status == status,
-                    ShipmentRequest.status_request_status == status,
-                )
-            )
+            query = query.filter(ShipmentRequest.status == status)
 
     priority = filters.get("priority")
     if priority:
