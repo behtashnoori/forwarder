@@ -1,8 +1,14 @@
 """CRM API routes for customer, sales, and activity management."""
 from flask import Blueprint, jsonify, request, current_app
 from backend.extensions import db
+from backend.auth import get_current_user
 from backend.security import require_role
-from backend.services import crm_dashboard_service, crm_service, crm_write_service
+from backend.services import (
+    crm_customer_link_service,
+    crm_dashboard_service,
+    crm_service,
+    crm_write_service,
+)
 
 crm_bp = Blueprint("crm", __name__, url_prefix="/api/crm")
 
@@ -81,6 +87,82 @@ def update_customer(customer_id: int):
         db.session.rollback()
         current_app.logger.error(f"Error updating customer: {e}")
         return jsonify({"error": "خطا در به‌روزرسانی مشتری"}), 500
+
+
+# Manual ShipmentRequest <-> CRM Customer Linking Routes
+@crm_bp.get("/customer-link/customers")
+@require_role("business_expert")
+def search_customer_link_candidates():
+    """Search CRM customers for manual shipment request linking."""
+    try:
+        filters = {
+            "page": request.args.get("page", 1, type=int),
+            "per_page": min(request.args.get("per_page", 20, type=int), 100),
+            "search": request.args.get("search"),
+        }
+        return jsonify(crm_customer_link_service.search_linkable_customers(filters))
+    except Exception as e:
+        current_app.logger.error(f"Error searching CRM link customers: {e}")
+        return jsonify({"error": "Error searching CRM customers"}), 500
+
+
+@crm_bp.get("/shipment-requests/<int:request_id>/customer-link")
+@require_role("business_expert")
+def get_shipment_request_customer_link(request_id: int):
+    """Return the CRM customer link state for one shipment request."""
+    try:
+        return jsonify(crm_customer_link_service.get_request_customer_link(request_id))
+    except crm_customer_link_service.CrmCustomerLinkError as e:
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"Error getting CRM customer link: {e}")
+        return jsonify({"error": "Error getting CRM customer link"}), 500
+
+
+@crm_bp.put("/shipment-requests/<int:request_id>/customer-link")
+@require_role("business_expert")
+def link_shipment_request_customer(request_id: int):
+    """Manually link a shipment request to an existing CRM customer."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        return jsonify(
+            crm_customer_link_service.link_customer_to_request(
+                request_id,
+                payload,
+                get_current_user(),
+                request.remote_addr,
+            )
+        )
+    except crm_customer_link_service.CrmCustomerLinkError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error linking CRM customer: {e}")
+        return jsonify({"error": "Error linking CRM customer"}), 500
+
+
+@crm_bp.delete("/shipment-requests/<int:request_id>/customer-link")
+@require_role("business_expert")
+def unlink_shipment_request_customer(request_id: int):
+    """Remove the CRM customer link from a shipment request."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        return jsonify(
+            crm_customer_link_service.unlink_customer_from_request(
+                request_id,
+                payload,
+                get_current_user(),
+                request.remote_addr,
+            )
+        )
+    except crm_customer_link_service.CrmCustomerLinkError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error unlinking CRM customer: {e}")
+        return jsonify({"error": "Error unlinking CRM customer"}), 500
 
 
 # Opportunity Management Routes
