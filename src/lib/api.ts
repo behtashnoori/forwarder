@@ -975,14 +975,14 @@ export function createCustomer(customerData: {
 }
 
 export function fetchCustomerDetail(customerId: number): Promise<CustomerDetail> {
-  return request(`/crm/customers/${customerId}`);
+  return request(`/api/crm/customers/${customerId}`);
 }
 
 export function updateCustomer(
   customerId: number,
   customerData: Partial<CustomerDetail>
 ): Promise<{ message: string }> {
-  return request(`/crm/customers/${customerId}`, {
+  return request(`/api/crm/customers/${customerId}`, {
     method: "PUT",
     body: JSON.stringify(customerData),
   });

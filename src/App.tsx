@@ -23,6 +23,7 @@ import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
 import { I18nProvider } from "./i18n";
 
 const queryClient = new QueryClient();
+const CRM_ALLOWED_ROLES = ["admin", "crm_manager", "supervisor", "business_expert"];
 
 function DevHealthCheck() {
   useEffect(() => {
@@ -77,7 +78,7 @@ const App = () => (
                   </ProtectedRoute>
                 } />
                 <Route path="/crm" element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowedRoles={CRM_ALLOWED_ROLES}>
                     <ErrorBoundary>
                       <CRMDashboard />
                     </ErrorBoundary>

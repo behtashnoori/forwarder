@@ -20,6 +20,7 @@ const ExpertLogin = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const crmPrimaryRoles = new Set(['crm_manager', 'business_expert']);
 
   // Logout function
   const handleLogout = () => {
@@ -60,6 +61,8 @@ const ExpertLogin = () => {
         // Redirect based on role
         if (data.expert.role === 'admin') {
           navigate('/admin');
+        } else if (crmPrimaryRoles.has(data.expert.role)) {
+          navigate('/crm');
         } else {
           navigate('/expert');
         }
