@@ -26,63 +26,52 @@ import {
   Truck,
   User,
 } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 const showLatestQuoteCard: boolean = false;
 
 type StatusInfo = {
-  label: string;
   variant: "secondary" | "default" | "destructive";
   color: string;
 };
 
 const getStatusBadge = (status: string): StatusInfo => {
   const statusMap: Record<string, StatusInfo> = {
-    new: { label: "ثبت شده", variant: "secondary", color: "bg-gray-100 text-gray-800" },
-    assigned: { label: "در انتظار بررسی", variant: "default", color: "bg-blue-100 text-blue-800" },
-    in_progress: { label: "در حال پیگیری", variant: "default", color: "bg-yellow-100 text-yellow-800" },
-    quoted: { label: "پیشنهاد ارائه شده", variant: "default", color: "bg-purple-100 text-purple-800" },
-    waiting_for_customer: { label: "در انتظار مشتری", variant: "default", color: "bg-orange-100 text-orange-800" },
-    won: { label: "تکمیل شده", variant: "default", color: "bg-green-100 text-green-800" },
-    lost: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
-    closed: { label: "بسته شده", variant: "secondary", color: "bg-gray-100 text-gray-800" },
-    cancelled: { label: "لغو شده", variant: "destructive", color: "bg-red-100 text-red-800" },
+    new: { variant: "secondary", color: "bg-gray-100 text-gray-800" },
+    assigned: { variant: "default", color: "bg-blue-100 text-blue-800" },
+    in_progress: { variant: "default", color: "bg-yellow-100 text-yellow-800" },
+    quoted: { variant: "default", color: "bg-purple-100 text-purple-800" },
+    waiting_for_customer: { variant: "default", color: "bg-orange-100 text-orange-800" },
+    won: { variant: "default", color: "bg-green-100 text-green-800" },
+    lost: { variant: "destructive", color: "bg-red-100 text-red-800" },
+    closed: { variant: "secondary", color: "bg-gray-100 text-gray-800" },
+    cancelled: { variant: "destructive", color: "bg-red-100 text-red-800" },
   };
-  return statusMap[status] || { label: status, variant: "secondary", color: "bg-gray-100 text-gray-800" };
-};
-
-const getCurrentStatusLabel = (status: string): string => {
-  const map: Record<string, string> = {
-    assigned: "در انتظار بررسی",
-    in_progress: "در حال پیگیری",
-    quoted: "پیشنهاد ارائه شده",
-    waiting_for_customer: "منتظر پاسخ شما",
-    won: "پذیرفته شد",
-    lost: "پذیرفته نشد",
-    closed: "بسته شد",
-  };
-  return map[status] ?? "";
+  return statusMap[status] || { variant: "secondary", color: "bg-gray-100 text-gray-800" };
 };
 
 const formatDate = (
   value?: string | null,
   options?: Intl.DateTimeFormatOptions,
   fallback = "—",
+  locale = "fa-IR",
 ) => {
   if (!value) return fallback;
-  return new Date(value).toLocaleDateString("fa-IR", options);
+  return new Date(value).toLocaleDateString(locale, options);
 };
 
 const getLocationDisplay = (
   location: PublicTrackingData["route"]["origin"],
   isInternational: boolean,
+  fallback: string,
 ) => {
   if (!location) return "—";
   if (isInternational) {
     const parts = [location.city_international, location.country].filter(Boolean);
-    return parts.length ? parts.join("، ") : "ثبت نشده";
+    return parts.length ? parts.join("، ") : fallback;
   }
   const parts = [location.city, location.county, location.province].filter(Boolean);
-  return parts.length ? parts.join("، ") : "ثبت نشده";
+  return parts.length ? parts.join("، ") : fallback;
 };
 
 const Section = ({
@@ -128,6 +117,7 @@ const PublicTracking: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { locale, statusLabel, shippingTypeLabel, t } = useI18n();
 
   const [requestData, setRequestData] = useState<PublicTrackingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,21 +133,21 @@ const PublicTracking: React.FC = () => {
         setNotFound(true);
       } else if (error instanceof PublicTrackingHttpError) {
         toast({
-          title: "خطا",
-          description: "خطا در دریافت اطلاعات درخواست",
+          title: t("common.notRegistered"),
+          description: t("publicTracking.notFoundDescription"),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "خطا",
-          description: "خطا در ارتباط با سرور",
+          title: t("common.notRegistered"),
+          description: t("publicTracking.notFoundDescription"),
           variant: "destructive",
         });
       }
     } finally {
       setLoading(false);
     }
-  }, [requestId, toast]);
+  }, [requestId, t, toast]);
 
   useEffect(() => {
     if (requestId) {
@@ -166,7 +156,7 @@ const PublicTracking: React.FC = () => {
   }, [fetchRequestData, requestId]);
 
   const statusInfo = requestData ? getStatusBadge(requestData.status) : null;
-  const currentStatusLabel = requestData ? getCurrentStatusLabel(requestData.status) : "";
+  const currentStatusLabel = requestData ? statusLabel(requestData.status) : "";
   const isInternational = requestData?.shipping_type === "international";
   const workflowSteps = useMemo(() => {
     if (!requestData) return [];
@@ -182,9 +172,9 @@ const PublicTracking: React.FC = () => {
             <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
               <Clock className="h-7 w-7 animate-spin" />
             </div>
-            <h1 className="text-xl font-bold text-foreground">در حال بارگذاری وضعیت درخواست</h1>
+            <h1 className="text-xl font-bold text-foreground">{t("publicTracking.loadingTitle")}</h1>
             <p className="mt-2 text-sm leading-7 text-muted-foreground">
-              لطفا چند لحظه صبر کنید تا اطلاعات رهگیری نمایش داده شود.
+              {t("publicTracking.loadingDescription")}
             </p>
           </CardContent>
         </Card>
@@ -200,18 +190,18 @@ const PublicTracking: React.FC = () => {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 text-destructive">
               <AlertCircle className="h-8 w-8" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">درخواست یافت نشد</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t("publicTracking.notFoundTitle")}</h1>
             <p className="mx-auto mt-3 max-w-sm text-sm leading-7 text-muted-foreground">
-              کد پیگیری واردشده پیدا نشد. لطفاً کد را بررسی کنید و دوباره وارد کنید.
+              {t("publicTracking.notFoundDescription")}
             </p>
             <div className="mt-7 grid gap-3 sm:grid-cols-2">
               <Button onClick={() => navigate("/")} className="w-full">
                 <ArrowLeft className="h-4 w-4" />
-                بازگشت به صفحه اصلی
+                {t("common.backHome")}
               </Button>
               <Button onClick={() => navigate("/")} variant="outline" className="w-full">
                 <Package className="h-4 w-4" />
-                ثبت درخواست جدید
+                {t("common.createNewRequest")}
               </Button>
             </div>
           </CardContent>
@@ -241,11 +231,11 @@ const PublicTracking: React.FC = () => {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <Button onClick={() => navigate("/")} variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4" />
-            بازگشت
+            {t("common.back")}
           </Button>
           <Button onClick={() => navigate("/")} variant="ghost" size="sm">
             <Home className="h-4 w-4" />
-            صفحه اصلی
+            {t("common.home")}
           </Button>
         </div>
 
@@ -255,40 +245,40 @@ const PublicTracking: React.FC = () => {
               <div className="min-w-0">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Badge variant={statusInfo.variant} className={statusInfo.color}>
-                    {statusInfo.label}
+                    {statusLabel(requestData.status)}
                   </Badge>
                   <Badge variant="outline">
-                    {isInternational ? "بین‌المللی" : "داخلی"}
+                    {shippingTypeLabel(requestData.shipping_type)}
                   </Badge>
                   {currentStatusLabel && (
-                    <Badge variant="outline">وضعیت فعلی: {currentStatusLabel}</Badge>
+                    <Badge variant="outline">{t("common.currentStatus")}: {currentStatusLabel}</Badge>
                   )}
                 </div>
                 <h1 className="break-words font-mono text-2xl font-bold tracking-normal text-foreground md:text-3xl">
                   {requestData.tracking_number}
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-muted-foreground">
-                  آخرین وضعیت ثبت‌شده برای درخواست شما در این صفحه نمایش داده می‌شود. برای اطلاع از وضعیت جدیدتر، همین کد پیگیری را دوباره در بخش پیگیری درخواست وارد کنید.
+                  {t("publicTracking.heroDescription")}
                 </p>
               </div>
               <div className="grid gap-3 text-sm sm:grid-cols-2 lg:min-w-[360px]">
                 <Field
-                  label="تاریخ ثبت درخواست"
+                  label={t("common.createdAt")}
                   value={formatDate(requestData.created_at, {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
-                  })}
+                  }, "—", locale)}
                 />
                 <Field
-                  label="تاریخ اختصاص کارشناس"
+                  label={t("publicTracking.assignedAt")}
                   value={formatDate(requestData.assigned_at, {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
                     hour: "2-digit",
                     minute: "2-digit",
-                  })}
+                  }, "—", locale)}
                 />
               </div>
             </div>
@@ -296,19 +286,19 @@ const PublicTracking: React.FC = () => {
 
           <div className="grid gap-0 divide-y divide-border/70 md:grid-cols-3 md:divide-x md:divide-x-reverse md:divide-y-0">
             <div className="p-5">
-              <p className="text-xs font-medium text-muted-foreground">شماره رهگیری</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("common.trackingNumber")}</p>
               <p className="mt-2 break-all font-mono text-lg font-bold text-foreground">{requestData.tracking_number}</p>
             </div>
             <div className="p-5">
-              <p className="text-xs font-medium text-muted-foreground">وضعیت فعلی</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("common.currentStatus")}</p>
               <div className="mt-2">
                 <Badge variant={statusInfo.variant} className={statusInfo.color}>
-                  {statusInfo.label}
+                  {statusLabel(requestData.status)}
                 </Badge>
               </div>
             </div>
             <div className="p-5">
-              <p className="text-xs font-medium text-muted-foreground">روش حمل</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("common.transportMethod")}</p>
               <p className="mt-2 text-sm font-semibold text-foreground">{transportLabel || "—"}</p>
             </div>
           </div>
@@ -316,34 +306,34 @@ const PublicTracking: React.FC = () => {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-6">
-            <Section icon={Package} title="اطلاعات درخواست">
+            <Section icon={Package} title={t("publicTracking.requestInfo")}>
               <div className="grid gap-4 md:grid-cols-2">
-                <Field label="تاریخ ثبت" value={formatDate(requestData.created_at)} />
+                <Field label={t("common.createdAt")} value={formatDate(requestData.created_at, undefined, "—", locale)} />
                 <Field
-                  label="نوع ارسال"
-                  value={<Badge variant="outline">{isInternational ? "بین‌المللی" : "داخلی"}</Badge>}
+                  label={t("common.shippingType")}
+                  value={<Badge variant="outline">{shippingTypeLabel(requestData.shipping_type)}</Badge>}
                 />
               </div>
             </Section>
 
-            <Section icon={Route} title="مسیر ارسال">
+            <Section icon={Route} title={t("publicTracking.route")}>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-md border border-border/70 bg-background/70 p-4">
                   <div className="mb-3 flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">مبدا</Badge>
+                    <Badge variant="outline" className="text-xs">{t("common.origin")}</Badge>
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <p className="break-words text-sm font-semibold leading-7 text-foreground">
-                    {getLocationDisplay(requestData.route?.origin, isInternational)}
+                    {getLocationDisplay(requestData.route?.origin, isInternational, t("common.notRegistered"))}
                   </p>
                 </div>
                 <div className="rounded-md border border-border/70 bg-background/70 p-4">
                   <div className="mb-3 flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">مقصد</Badge>
+                    <Badge variant="outline" className="text-xs">{t("common.destination")}</Badge>
                     <MapPin className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <p className="break-words text-sm font-semibold leading-7 text-foreground">
-                    {getLocationDisplay(requestData.route?.destination, isInternational)}
+                    {getLocationDisplay(requestData.route?.destination, isInternational, t("common.notRegistered"))}
                   </p>
                 </div>
               </div>
@@ -351,17 +341,17 @@ const PublicTracking: React.FC = () => {
                 <div className="mt-4 rounded-md border border-border/70 bg-muted/20 p-4">
                   <div className="flex items-center gap-2 text-sm">
                     <Truck className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">روش حمل:</span>
+                    <span className="text-muted-foreground">{t("common.transportMethod")}:</span>
                     <span className="font-semibold text-foreground">{transportLabel}</span>
                   </div>
                 </div>
               )}
             </Section>
 
-            <Section icon={User} title="اطلاعات تماس">
+            <Section icon={User} title={t("publicTracking.contactInfo")}>
               <div className="grid gap-4 md:grid-cols-2">
                 <Field
-                  label="شماره تماس"
+                  label={t("common.phone")}
                   value={
                     <span className="inline-flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -371,7 +361,7 @@ const PublicTracking: React.FC = () => {
                 />
                 {(requestData.customer_first_name || requestData.customer_last_name) && (
                   <Field
-                    label="نام مشتری"
+                    label={t("common.customerName")}
                     value={`${requestData.customer_first_name || ""} ${requestData.customer_last_name || ""}`.trim()}
                   />
                 )}
@@ -379,30 +369,30 @@ const PublicTracking: React.FC = () => {
             </Section>
 
             {hasCargo && (
-              <Section icon={FileText} title="جزئیات مرسوله">
+              <Section icon={FileText} title={t("common.cargoDetails")}>
                 <div className="space-y-4">
                   {requestData.cargo_description && (
-                    <Field label="توضیحات" value={requestData.cargo_description} />
+                    <Field label={t("common.description")} value={requestData.cargo_description} />
                   )}
                   <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {requestData.cargo_weight != null && (
-                      <Field label="وزن (کیلوگرم)" value={requestData.cargo_weight} />
+                      <Field label={t("common.weightKg")} value={requestData.cargo_weight} />
                     )}
                     {requestData.cargo_volume != null && (
-                      <Field label="حجم (م³)" value={requestData.cargo_volume} />
+                      <Field label={t("common.volumeM3")} value={requestData.cargo_volume} />
                     )}
                     {requestData.cargo_value != null && (
-                      <Field label="ارزش" value={requestData.cargo_value} />
+                      <Field label={t("common.value")} value={requestData.cargo_value} />
                     )}
                     {requestData.pickup_date && (
-                      <Field label="تاریخ تحویل مبدا" value={formatDate(requestData.pickup_date)} />
+                      <Field label={t("common.createdAt")} value={formatDate(requestData.pickup_date, undefined, "—", locale)} />
                     )}
                     {requestData.delivery_date && (
-                      <Field label="تاریخ تحویل مقصد" value={formatDate(requestData.delivery_date)} />
+                      <Field label={t("common.createdAt")} value={formatDate(requestData.delivery_date, undefined, "—", locale)} />
                     )}
                   </div>
                   {requestData.special_instructions && (
-                    <Field label="دستورالعمل‌های ویژه" value={requestData.special_instructions} />
+                    <Field label={t("common.specialInstructions")} value={requestData.special_instructions} />
                   )}
                 </div>
               </Section>
@@ -411,23 +401,23 @@ const PublicTracking: React.FC = () => {
 
           <aside className="space-y-6">
             {requestData.assigned_expert && (
-              <Section icon={User} title="کارشناس مربوطه">
+              <Section icon={User} title={t("publicTracking.assignedExpert")}>
                 <div className="space-y-4">
-                  <Field label="نام کارشناس" value={requestData.assigned_expert.full_name} />
+                  <Field label={t("common.expert")} value={requestData.assigned_expert.full_name} />
                   {requestData.assigned_at && (
                     <Field
-                      label="تاریخ اختصاص"
+                      label={t("publicTracking.assignedAt")}
                       value={formatDate(requestData.assigned_at, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                         hour: "2-digit",
                         minute: "2-digit",
-                      })}
+                      }, "—", locale)}
                     />
                   )}
                   <Field
-                    label="شماره تماس"
+                    label={t("common.phone")}
                     value={
                       <a href={`tel:${requestData.assigned_expert.phone}`} className="hover:underline">
                         {requestData.assigned_expert.phone}
@@ -435,7 +425,7 @@ const PublicTracking: React.FC = () => {
                     }
                   />
                   {requestData.assigned_expert.email && (
-                    <Field label="ایمیل" value={requestData.assigned_expert.email} />
+                    <Field label={t("common.email")} value={requestData.assigned_expert.email} />
                   )}
                 </div>
               </Section>
@@ -446,12 +436,12 @@ const PublicTracking: React.FC = () => {
                 <div className="space-y-4">
                   <Field
                     label="مبلغ"
-                    value={`${requestData.latest_quote.amount?.toLocaleString("fa-IR")} ${requestData.latest_quote.currency}`}
+                    value={`${requestData.latest_quote.amount?.toLocaleString(locale)} ${requestData.latest_quote.currency}`}
                   />
                   {requestData.latest_quote.valid_until && (
                     <Field
                       label="اعتبار تا"
-                      value={formatDate(requestData.latest_quote.valid_until)}
+                      value={formatDate(requestData.latest_quote.valid_until, undefined, "—", locale)}
                     />
                   )}
                   {requestData.latest_quote.note && (
@@ -462,7 +452,7 @@ const PublicTracking: React.FC = () => {
                       year: "numeric",
                       month: "short",
                       day: "numeric",
-                    }, "")}
+                    }, "", locale)}
                     {requestData.latest_quote.created_by && ` — ${requestData.latest_quote.created_by}`}
                   </p>
                 </div>
@@ -470,10 +460,10 @@ const PublicTracking: React.FC = () => {
             )}
 
             {workflowSteps.length > 0 && (
-              <Section icon={CheckCircle} title="مراحل گردش کار">
+              <Section icon={CheckCircle} title={t("publicTracking.workflow")}>
                 {currentStatusLabel && (
                   <div className="mb-4 rounded-md bg-muted/30 px-3 py-2 text-xs font-medium text-muted-foreground">
-                    وضعیت فعلی: {currentStatusLabel}
+                    {t("common.currentStatus")}: {currentStatusLabel}
                   </div>
                 )}
                 <div className="space-y-4">
@@ -492,11 +482,11 @@ const PublicTracking: React.FC = () => {
                         <p className="break-words text-sm font-semibold leading-7 text-foreground">{step.title}</p>
                         <p className="text-xs leading-6 text-muted-foreground">
                           {step.is_completed && step.completed_at
-                            ? formatDate(step.completed_at)
-                            : "در انتظار"}
+                            ? formatDate(step.completed_at, undefined, "—", locale)
+                            : t("common.pending")}
                           {step.meta?.warning === "closed_without_decision" && (
                             <span className="mt-1 block text-amber-600">
-                              بسته شده بدون ثبت پذیرش/عدم پذیرش
+                              {t("publicTracking.closedWithoutDecision")}
                             </span>
                           )}
                         </p>
@@ -511,7 +501,7 @@ const PublicTracking: React.FC = () => {
               <CardContent className="p-5">
                 <Button onClick={() => navigate("/")} variant="outline" className="w-full">
                   <Package className="h-4 w-4" />
-                  درخواست جدید
+                  {t("common.newRequest")}
                 </Button>
               </CardContent>
             </Card>

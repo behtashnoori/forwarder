@@ -23,12 +23,13 @@ import {
   fetchCustomerWorkflow,
   type CustomerWorkflowData,
 } from "@/lib/api";
+import { useI18n } from "@/i18n";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
 const showLatestQuoteCard: boolean = false;
 
-function formatDate(date: string | null | undefined): string {
-  return date ? new Date(date).toLocaleDateString("fa-IR") : "در انتظار";
+function formatDate(date: string | null | undefined, locale: string, fallback: string): string {
+  return date ? new Date(date).toLocaleDateString(locale) : fallback;
 }
 
 const CustomerRequestDetail: React.FC = () => {
@@ -41,6 +42,7 @@ const CustomerRequestDetail: React.FC = () => {
     undefined;
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { locale, shippingTypeLabel, statusLabel, stepLabel, t } = useI18n();
 
   const [requestDetail, setRequestDetail] = useState<CustomerWorkflowData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,14 +55,14 @@ const CustomerRequestDetail: React.FC = () => {
     } catch (error) {
       if (error instanceof CustomerWorkflowHttpError) {
         toast({
-          title: "خطا",
-          description: "اطلاعات درخواست یافت نشد",
+          title: t("customer.requestNotFoundTitle"),
+          description: t("customer.requestNotFoundDescription"),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "خطا",
-          description: "خطا در دریافت اطلاعات",
+          title: t("customer.requestNotFoundTitle"),
+          description: t("customer.requestNotFoundDescription"),
           variant: "destructive",
         });
       }
@@ -68,7 +70,7 @@ const CustomerRequestDetail: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [customer, requestId, toast]);
+  }, [customer, requestId, t, toast]);
 
   useEffect(() => {
     if (requestId && customer) {
@@ -85,50 +87,21 @@ const CustomerRequestDetail: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     const statusMap = {
-      new: { label: "جدید", variant: "secondary" as const, color: "bg-gray-100 text-gray-800" },
-      assigned: { label: "اختصاص یافته", variant: "default" as const, color: "bg-blue-100 text-blue-800" },
-      in_progress: { label: "در حال انجام", variant: "default" as const, color: "bg-yellow-100 text-yellow-800" },
-      quoted: { label: "پیشنهاد ارائه شده", variant: "default" as const, color: "bg-purple-100 text-purple-800" },
-      waiting_for_customer: { label: "منتظر پاسخ شما", variant: "default" as const, color: "bg-orange-100 text-orange-800" },
-      won: { label: "پذیرفته شد", variant: "default" as const, color: "bg-green-100 text-green-800" },
-      lost: { label: "پذیرفته نشد", variant: "destructive" as const, color: "bg-red-100 text-red-800" },
-      closed: { label: "بسته شد", variant: "secondary" as const, color: "bg-gray-100 text-gray-800" },
-      completed: { label: "تکمیل شده", variant: "default" as const, color: "bg-green-100 text-green-800" },
-      cancelled: { label: "لغو شده", variant: "destructive" as const, color: "bg-red-100 text-red-800" },
+      new: { variant: "secondary" as const, color: "bg-gray-100 text-gray-800" },
+      assigned: { variant: "default" as const, color: "bg-blue-100 text-blue-800" },
+      in_progress: { variant: "default" as const, color: "bg-yellow-100 text-yellow-800" },
+      quoted: { variant: "default" as const, color: "bg-purple-100 text-purple-800" },
+      waiting_for_customer: { variant: "default" as const, color: "bg-orange-100 text-orange-800" },
+      won: { variant: "default" as const, color: "bg-green-100 text-green-800" },
+      lost: { variant: "destructive" as const, color: "bg-red-100 text-red-800" },
+      closed: { variant: "secondary" as const, color: "bg-gray-100 text-gray-800" },
+      completed: { variant: "default" as const, color: "bg-green-100 text-green-800" },
+      cancelled: { variant: "destructive" as const, color: "bg-red-100 text-red-800" },
     };
     return statusMap[status as keyof typeof statusMap] || {
-      label: status,
       variant: "secondary" as const,
       color: "bg-gray-100 text-gray-800",
     };
-  };
-
-  const getStepTitle = (stepName: string) => {
-    const stepMap = {
-      email_verified: "تایید ایمیل",
-      request_submitted: "ارسال درخواست",
-      expert_assigned: "اختصاص کارشناس",
-      expert_contacted: "تماس کارشناس",
-      quote_provided: "ارائه پیشنهاد",
-      contract_signed: "امضای قرارداد",
-      shipment_picked_up: "تحویل مرسوله",
-      shipment_delivered: "تحویل به مقصد",
-      in_progress: "در حال پیگیری",
-      final_decision: "پذیرش / عدم پذیرش",
-    };
-    return stepMap[stepName as keyof typeof stepMap] || stepName;
-  };
-
-  const getCurrentStatusLabel = (status: string): string => {
-    const map: Record<string, string> = {
-      in_progress: "در حال پیگیری",
-      quoted: "پیشنهاد ارائه شده",
-      waiting_for_customer: "منتظر پاسخ شما",
-      won: "پذیرفته شد",
-      lost: "پذیرفته نشد",
-      closed: "بسته شد",
-    };
-    return map[status] ?? "";
   };
 
   const backDestination = customer ? `/customer/${customer}` : "/";
@@ -152,8 +125,8 @@ const CustomerRequestDetail: React.FC = () => {
                 <RefreshCw className="h-7 w-7 animate-spin text-primary" />
               </div>
               <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-foreground">در حال بارگذاری جزئیات درخواست</h2>
-                <p className="text-sm text-muted-foreground">وضعیت، مراحل و اطلاعات کارشناس دریافت می‌شود.</p>
+                <h2 className="text-lg font-semibold text-foreground">{t("customer.requestDetailsLoadingTitle")}</h2>
+                <p className="text-sm text-muted-foreground">{t("customer.requestDetailsLoadingDescription")}</p>
               </div>
             </CardContent>
           </Card>
@@ -173,17 +146,17 @@ const CustomerRequestDetail: React.FC = () => {
               </div>
               <div className="space-y-1">
                 <h2 className="text-lg font-semibold text-foreground">
-                  {customer ? "اطلاعات درخواست یافت نشد" : "ورود به پنل مشتری لازم است"}
+                  {customer ? t("customer.requestNotFoundTitle") : t("customer.loginRequiredTitle")}
                 </h2>
                 <p className="text-sm leading-6 text-muted-foreground">
                   {customer
-                    ? "برای مشاهده درخواست‌های دیگر می‌توانید به پنل مشتری برگردید."
-                    : "لطفا از پنل مشتری وارد شوید یا ابتدا وارد پنل خود شوید."}
+                    ? t("customer.requestNotFoundDescription")
+                    : t("customer.loginRequiredDescription")}
                 </p>
               </div>
               <Button onClick={() => navigate(backDestination)} variant="outline">
                 <ArrowLeft className="ml-2 h-4 w-4" />
-                {customer ? "بازگشت به پنل مشتری" : "بازگشت به صفحه اصلی"}
+                {customer ? t("customer.backToPanel") : t("common.backHome")}
               </Button>
             </CardContent>
           </Card>
@@ -193,7 +166,7 @@ const CustomerRequestDetail: React.FC = () => {
   }
 
   const statusInfo = getStatusBadge(requestDetail.status);
-  const currentStatusLabel = getCurrentStatusLabel(requestDetail.status);
+  const currentStatusLabel = statusLabel(requestDetail.status);
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -203,42 +176,42 @@ const CustomerRequestDetail: React.FC = () => {
             <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center">
               <Button onClick={() => navigate(backDestination)} variant="outline" size="sm" className="w-fit">
                 <ArrowLeft className="ml-2 h-4 w-4" />
-                بازگشت
+                {t("common.back")}
               </Button>
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Badge variant={statusInfo.variant} className={statusInfo.color}>
-                    {statusInfo.label}
+                    {statusLabel(requestDetail.status)}
                   </Badge>
                   <Badge variant="outline" className="bg-background/70">
-                    {requestDetail.shipping_type === "domestic" ? "حمل داخلی" : "حمل بین‌المللی"}
+                    {shippingTypeLabel(requestDetail.shipping_type, { full: true })}
                   </Badge>
                 </div>
                 <h1 className="break-words text-2xl font-bold tracking-normal text-foreground sm:text-3xl">
-                  جزئیات درخواست #{requestDetail.id}
+                  {t("customer.requestDetails")} #{requestDetail.id}
                 </h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  نمای خلاصه از وضعیت فعلی، مراحل انجام کار و اطلاعات ارتباطی کارشناس مربوطه.
+                  {t("customer.requestDetailsDescription")}
                 </p>
               </div>
             </div>
             <Button onClick={handleRefresh} variant="outline" size="sm" disabled={refreshing} className="w-fit">
               <RefreshCw className={`ml-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              به‌روزرسانی
+              {t("common.refresh")}
             </Button>
           </div>
 
           <div className="grid border-t border-border/70 bg-muted/20 sm:grid-cols-3">
             <div className="border-b border-border/70 p-5 sm:border-b-0 sm:border-l">
-              <p className="text-xs text-muted-foreground">تاریخ ثبت</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{formatDate(requestDetail.created_at)}</p>
+              <p className="text-xs text-muted-foreground">{t("common.createdAt")}</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{formatDate(requestDetail.created_at, locale, t("common.pending"))}</p>
             </div>
             <div className="border-b border-border/70 p-5 sm:border-b-0 sm:border-l">
-              <p className="text-xs text-muted-foreground">امتیاز کسب شده</p>
+              <p className="text-xs text-muted-foreground">{t("customer.pointsEarned")}</p>
               <p className="mt-1 text-2xl font-bold text-primary">{requestDetail.total_points_earned}</p>
             </div>
             <div className="p-5">
-              <p className="text-xs text-muted-foreground">پیشرفت مراحل</p>
+              <p className="text-xs text-muted-foreground">{t("customer.progress")}</p>
               <p className="mt-1 text-2xl font-bold text-green-600">
                 {requestDetail.completed_steps}/{requestDetail.total_steps}
               </p>
@@ -252,21 +225,21 @@ const CustomerRequestDetail: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <FileText className="h-5 w-5 text-primary" />
-                  اطلاعات درخواست
+                  {t("publicTracking.requestInfo")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 rounded-lg bg-background/60 p-3">
                     <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">تاریخ ثبت:</span>
-                    <span className="text-sm font-medium text-foreground">{formatDate(requestDetail.created_at)}</span>
+                    <span className="text-sm text-muted-foreground">{t("common.createdAt")}:</span>
+                    <span className="text-sm font-medium text-foreground">{formatDate(requestDetail.created_at, locale, t("common.pending"))}</span>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 rounded-lg bg-background/60 p-3">
                     <Package className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">نوع ارسال:</span>
+                    <span className="text-sm text-muted-foreground">{t("common.shippingType")}:</span>
                     <Badge variant="outline">
-                      {requestDetail.shipping_type === "domestic" ? "داخلی" : "بین‌المللی"}
+                      {shippingTypeLabel(requestDetail.shipping_type)}
                     </Badge>
                   </div>
                 </div>
@@ -275,17 +248,17 @@ const CustomerRequestDetail: React.FC = () => {
 
                 <div className="rounded-xl border bg-muted/20 p-4 text-center">
                   <div className="text-2xl font-bold text-primary">{requestDetail.total_points_earned}</div>
-                  <div className="mt-1 text-sm text-muted-foreground">امتیاز کسب شده</div>
+                  <div className="mt-1 text-sm text-muted-foreground">{t("customer.pointsEarned")}</div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl border bg-background/60 p-4 text-center">
                     <div className="text-xl font-bold text-green-600">{requestDetail.completed_steps}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">تکمیل شده</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{t("customer.completed")}</div>
                   </div>
                   <div className="rounded-xl border bg-background/60 p-4 text-center">
                     <div className="text-xl font-bold text-muted-foreground">{requestDetail.total_steps}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">کل مراحل</div>
+                    <div className="mt-1 text-xs text-muted-foreground">{t("customer.totalSteps")}</div>
                   </div>
                 </div>
               </CardContent>
@@ -296,7 +269,7 @@ const CustomerRequestDetail: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <User className="h-5 w-5 text-primary" />
-                    کارشناس مربوطه
+                    {t("publicTracking.assignedExpert")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-5">
@@ -306,7 +279,7 @@ const CustomerRequestDetail: React.FC = () => {
                     </div>
                     <div className="min-w-0">
                       <h3 className="break-words font-semibold text-foreground">{requestDetail.assigned_expert.full_name}</h3>
-                      <p className="text-sm text-muted-foreground">کارشناس فورواردر</p>
+                      <p className="text-sm text-muted-foreground">{t("customer.forwarderExpert")}</p>
                     </div>
                   </div>
 
@@ -325,7 +298,7 @@ const CustomerRequestDetail: React.FC = () => {
 
                   <div className="rounded-xl border border-blue-200/70 bg-blue-50 p-3 dark:border-blue-900/40 dark:bg-blue-950/20">
                     <p className="text-sm leading-6 text-blue-800 dark:text-blue-200">
-                      کارشناس ما در اسرع وقت با شما تماس خواهد گرفت تا جزئیات ارسال را هماهنگ کند.
+                      {t("customer.expertWillCall")}
                     </p>
                   </div>
                 </CardContent>
@@ -338,9 +311,9 @@ const CustomerRequestDetail: React.FC = () => {
               <CardHeader>
                 <CardTitle className="flex flex-wrap items-center gap-2 text-base">
                   <CheckCircle className="h-5 w-5 text-primary" />
-                  پیشرفت کار
+                  {t("customer.workProgress")}
                   {currentStatusLabel && (
-                    <span className="text-sm font-normal text-muted-foreground">— وضعیت فعلی: {currentStatusLabel}</span>
+                    <span className="text-sm font-normal text-muted-foreground">— {t("common.currentStatus")}: {currentStatusLabel}</span>
                   )}
                 </CardTitle>
               </CardHeader>
@@ -358,19 +331,19 @@ const CustomerRequestDetail: React.FC = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                           <p className="break-words text-sm font-semibold text-foreground">
-                            {requestDetail.workflow_steps_simple ? step.title : getStepTitle(step.name)}
+                            {requestDetail.workflow_steps_simple ? step.title : stepLabel(step.name)}
                           </p>
                           {step.points_earned != null && step.points_earned > 0 && (
                             <Badge variant="outline" className="w-fit">
-                              {step.points_earned} امتیاز
+                              {step.points_earned} {t("common.points")}
                             </Badge>
                           )}
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          {step.is_completed && step.completed_at ? formatDate(step.completed_at) : "در انتظار"}
+                          {step.is_completed && step.completed_at ? formatDate(step.completed_at, locale, t("common.pending")) : t("common.pending")}
                         </p>
                         {step.meta?.warning === "closed_without_decision" && (
-                          <p className="mt-2 text-sm text-amber-600">بسته شده بدون ثبت پذیرش/عدم پذیرش</p>
+                          <p className="mt-2 text-sm text-amber-600">{t("publicTracking.closedWithoutDecision")}</p>
                         )}
                       </div>
                     </div>
@@ -391,13 +364,13 @@ const CustomerRequestDetail: React.FC = () => {
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="text-sm text-muted-foreground">مبلغ</span>
                     <span className="text-lg font-bold text-foreground">
-                      {requestDetail.latest_quote.amount?.toLocaleString("fa-IR")} {requestDetail.latest_quote.currency}
+                      {requestDetail.latest_quote.amount?.toLocaleString(locale)} {requestDetail.latest_quote.currency}
                     </span>
                   </div>
                   {requestDetail.latest_quote.valid_until && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Calendar className="h-4 w-4 shrink-0" />
-                      <span>اعتبار تا: {formatDate(requestDetail.latest_quote.valid_until)}</span>
+                      <span>{formatDate(requestDetail.latest_quote.valid_until, locale, t("common.pending"))}</span>
                     </div>
                   )}
                   {requestDetail.latest_quote.note && (
@@ -405,7 +378,7 @@ const CustomerRequestDetail: React.FC = () => {
                   )}
                   <div className="pt-1 text-xs text-muted-foreground">
                     {requestDetail.latest_quote.created_at &&
-                      new Date(requestDetail.latest_quote.created_at).toLocaleDateString("fa-IR", {
+                      new Date(requestDetail.latest_quote.created_at).toLocaleDateString(locale, {
                         year: "numeric",
                         month: "short",
                         day: "numeric",

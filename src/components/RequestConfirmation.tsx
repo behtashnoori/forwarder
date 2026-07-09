@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Send, User, Phone, MapPin, Package, Calendar, FileText } from "lucide-react";
+import { useI18n } from "@/i18n";
 
 export interface LocationDisplayPayload {
   origin: string;
@@ -54,6 +55,8 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
   isSubmitting,
   locationDisplay: locationDisplayProp,
 }) => {
+  const { t, shippingTypeLabel } = useI18n();
+
   useEffect(() => {
     if (typeof window !== "undefined") {
       console.log("[RequestConfirmation] formData received:", formData);
@@ -84,10 +87,10 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
       {/* Header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-foreground mb-2">
-          تایید و ارسال درخواست
+          {t("requestFlow.confirmTitle")}
         </h2>
         <p className="text-muted-foreground">
-          لطفاً اطلاعات زیر را بررسی کرده و درخواست خود را تایید کنید
+          {t("requestFlow.confirmDescription")}
         </p>
       </div>
 
@@ -96,7 +99,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5" />
-            خلاصه درخواست
+            {t("requestFlow.summary")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -104,18 +107,18 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
           <div className="space-y-3">
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <User className="w-5 h-5" />
-              اطلاعات تماس
+              {t("requestFlow.contactInfo")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm">شماره تماس:</span>
+                <span className="text-sm">{t("common.phone")}:</span>
                 <span className="font-medium">{formData.phoneNumber}</span>
               </div>
               {(formData.customerFirstName || formData.customerLastName) && (
                 <div className="flex items-center gap-2">
                   <User className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">نام:</span>
+                  <span className="text-sm">{t("common.customerName")}:</span>
                   <span className="font-medium">
                     {formData.customerFirstName} {formData.customerLastName}
                   </span>
@@ -130,18 +133,18 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
           <div className="space-y-3">
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <MapPin className="w-5 h-5" />
-              اطلاعات مبدا و مقصد
+              {t("requestFlow.routeInfo")}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">مبدا</Badge>
+                  <Badge variant="outline" className="text-xs">{t("common.origin")}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">{locationDisplay.origin}</p>
               </div>
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">مقصد</Badge>
+                  <Badge variant="outline" className="text-xs">{t("common.destination")}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">{locationDisplay.destination}</p>
               </div>
@@ -154,18 +157,18 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
           <div className="space-y-3">
             <h3 className="font-semibold text-lg flex items-center gap-2">
               <Package className="w-5 h-5" />
-              روش حمل
+              {t("common.transportMethod")}
             </h3>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <span className="text-sm">نوع ارسال:</span>
+                <span className="text-sm">{t("common.shippingType")}:</span>
                 <Badge variant="secondary">
-                  {shippingType === "domestic" ? "حمل داخلی" : "حمل بین‌المللی"}
+                  {shippingTypeLabel(shippingType, { full: true })}
                 </Badge>
               </div>
               {formData.transportMethodPreference === "customer_choice" && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">روش انتخابی:</span>
+                  <span className="text-sm">{t("requestFlow.selectedMethod")}:</span>
                   <span className="font-medium">
                     {shippingType === "domestic" 
                       ? formData.domesticTransportMethodName 
@@ -175,7 +178,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
               )}
               {formData.transportMethodPreference === "forwarder_suggestion" && (
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">پیشنهاد فورواردر</span>
+                  <span className="text-sm">{t("requestFlow.forwarderSuggestion")}</span>
                 </div>
               )}
             </div>
@@ -188,30 +191,30 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Package className="w-5 h-5" />
-                  جزئیات مرسوله
+                  {t("common.cargoDetails")}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {formData.cargoDescription && (
                     <div>
-                      <span className="text-sm text-muted-foreground">توضیحات:</span>
+                      <span className="text-sm text-muted-foreground">{t("common.description")}:</span>
                       <p className="text-sm font-medium">{formData.cargoDescription}</p>
                     </div>
                   )}
                   {formData.cargoWeight && (
                     <div>
-                      <span className="text-sm text-muted-foreground">وزن (کیلوگرم):</span>
+                      <span className="text-sm text-muted-foreground">{t("common.weightKg")}:</span>
                       <p className="text-sm font-medium">{formData.cargoWeight}</p>
                     </div>
                   )}
                   {formData.cargoVolume && (
                     <div>
-                      <span className="text-sm text-muted-foreground">حجم (متر مکعب):</span>
+                      <span className="text-sm text-muted-foreground">{t("common.volumeM3")}:</span>
                       <p className="text-sm font-medium">{formData.cargoVolume}</p>
                     </div>
                   )}
                   {formData.cargoValue && (
                     <div>
-                      <span className="text-sm text-muted-foreground">ارزش (ریال):</span>
+                      <span className="text-sm text-muted-foreground">{t("common.value")}:</span>
                       <p className="text-sm font-medium">{formData.cargoValue}</p>
                     </div>
                   )}
@@ -227,18 +230,18 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Calendar className="w-5 h-5" />
-                  تاریخ‌های مهم
+                  {t("common.createdAt")}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {formData.pickupDate && (
                     <div>
-                      <span className="text-sm text-muted-foreground">تاریخ تحویل:</span>
+                      <span className="text-sm text-muted-foreground">{t("common.createdAt")}:</span>
                       <p className="text-sm font-medium">{formData.pickupDate}</p>
                     </div>
                   )}
                   {formData.deliveryDate && (
                     <div>
-                      <span className="text-sm text-muted-foreground">تاریخ تحویل:</span>
+                      <span className="text-sm text-muted-foreground">{t("common.createdAt")}:</span>
                       <p className="text-sm font-medium">{formData.deliveryDate}</p>
                     </div>
                   )}
@@ -252,7 +255,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
             <>
               <Separator />
               <div className="space-y-3">
-                <h3 className="font-semibold text-lg">دستورالعمل‌های ویژه</h3>
+                <h3 className="font-semibold text-lg">{t("common.specialInstructions")}</h3>
                 <p className="text-sm text-muted-foreground">{formData.specialInstructions}</p>
               </div>
             </>
@@ -269,7 +272,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
           disabled={isSubmitting}
         >
           <ArrowLeft className="w-4 h-4 ml-2" />
-          بازگشت و ویرایش
+          {t("requestFlow.backAndEdit")}
         </Button>
         <Button
           onClick={handleFinalSubmit}
@@ -277,7 +280,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
           disabled={isSubmitting}
         >
           <Send className="w-4 h-4 ml-2" />
-          {isSubmitting ? "در حال ارسال..." : "تایید و ارسال درخواست"}
+          {isSubmitting ? t("requestFlow.sending") : t("requestFlow.confirmAndSend")}
         </Button>
       </div>
     </div>

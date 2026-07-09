@@ -30,6 +30,7 @@ import {
   fetchTransportMethodOptions,
   submitShipmentRequest,
 } from "@/lib/api";
+import { useI18n } from "@/i18n";
 
 interface LocationFormData {
   // Domestic shipping fields
@@ -372,6 +373,7 @@ const JalaliDateInput = ({ id, label, value, onChange }: JalaliDateInputProps) =
 const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [originCounties, setOriginCounties] = useState<County[]>([]);
   const [destinationCounties, setDestinationCounties] = useState<County[]>([]);
@@ -1258,10 +1260,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           <div className="mb-4">
             <CheckCircle2 className="w-16 h-16 text-secondary mx-auto" />
           </div>
-          <h3 className="text-xl font-bold text-foreground mb-2">درخواست شما با موفقیت ثبت شد</h3>
+          <h3 className="text-xl font-bold text-foreground mb-2">{t("requestFlow.confirmAndSend")}</h3>
           {submittedTrackingCode && (
             <div className="mb-4 p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm text-muted-foreground mb-1">شماره پیگیری</p>
+              <p className="text-sm text-muted-foreground mb-1">{t("common.trackingNumber")}</p>
               <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 <p className="break-all text-xl font-mono font-bold text-foreground">{submittedTrackingCode}</p>
                 <Button type="button" variant="outline" size="sm" onClick={handleCopyTrackingCode}>
@@ -1281,13 +1283,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               className="w-full bg-gradient-primary hover:shadow-primary"
               disabled={!submittedTrackingCode}
             >
-              پیگیری درخواست
+              {t("tracking.title")}
             </Button>
             <Button onClick={resetForm} variant="outline" className="w-full">
-              ثبت درخواست جدید
+              {t("common.createNewRequest")}
             </Button>
             <Button onClick={returnToLanding} variant="ghost" className="w-full">
-              بازگشت به خانه
+              {t("common.home")}
             </Button>
           </div>
         </CardContent>
@@ -1320,7 +1322,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               className="flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />
-              بازگشت
+              {t("common.back")}
             </Button>
           )}
           <div className="flex-1"></div>
@@ -2381,7 +2383,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           disabled={isSubmitting}
         >
           <Send className="w-4 h-4 ml-2" />
-          {isSubmitting ? "در حال ارسال..." : "درخواست ارسال"}
+          {isSubmitting ? t("requestFlow.sending") : t("shipping.submit")}
         </Button>
       </CardContent>
     </Card>
