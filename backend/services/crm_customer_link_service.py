@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy import or_
 
 from backend.extensions import db
-from backend.models import Customer, ExpertConsoleLog, ShipmentRequest
+from backend.models import CRMCustomerLinkAudit, Customer, ExpertConsoleLog, ShipmentRequest
 
 
 class CrmCustomerLinkError(Exception):
@@ -140,7 +140,7 @@ def link_customer_to_request(
     else:
         operation = "link" if old_customer_id is None else "relink"
         shipment_request.customer_id = customer_id
-        add_customer_link_audit_log(
+        add_customer_link_audit_records(
             shipment_request=shipment_request,
             user=user,
             operation=operation,
@@ -171,7 +171,7 @@ def unlink_customer_from_request(
     else:
         operation = "unlink"
         shipment_request.customer_id = None
-        add_customer_link_audit_log(
+        add_customer_link_audit_records(
             shipment_request=shipment_request,
             user=user,
             operation=operation,
@@ -185,7 +185,7 @@ def unlink_customer_from_request(
     return build_request_link_payload(shipment_request, operation)
 
 
-def add_customer_link_audit_log(
+def add_customer_link_audit_records(
     shipment_request: ShipmentRequest,
     user: dict[str, Any],
     operation: str,
@@ -194,7 +194,66 @@ def add_customer_link_audit_log(
     note: str | None,
     remote_addr: str | None,
 ) -> None:
-    """Add a minimal audit record using the existing request log table."""
+    """Add structured CRM audit and existing console timeline records."""
+    add_structured_customer_link_audit(
+        shipment_request=shipment_request,
+        user=user,
+        operation=operation,
+        old_customer_id=old_customer_id,
+        new_customer_id=new_customer_id,
+        note=note,
+        remote_addr=remote_addr,
+    )
+    add_customer_link_console_log(
+        shipment_request=shipment_request,
+        user=user,
+        operation=operation,
+        old_customer_id=old_customer_id,
+        new_customer_id=new_customer_id,
+        note=note,
+        remote_addr=remote_addr,
+    )
+
+
+def add_structured_customer_link_audit(
+    shipment_request: ShipmentRequest,
+    user: dict[str, Any],
+    operation: str,
+    old_customer_id: int | None,
+    new_customer_id: int | None,
+    note: str | None,
+    remote_addr: str | None,
+) -> None:
+    """Add the durable structured CRM customer-link audit record."""
+    db.session.add(
+        CRMCustomerLinkAudit(
+            shipment_request_id=shipment_request.id,
+            old_customer_id=old_customer_id,
+            new_customer_id=new_customer_id,
+            operation=operation,
+            performed_by_user_id=user.get("id"),
+            performed_by_role=user.get("role"),
+            source="crm_api",
+            reason=note,
+            request_status_at_time=shipment_request.status,
+            assigned_to_at_time=shipment_request.assigned_to,
+            gamification_customer_id_at_time=shipment_request.gamification_customer_id,
+            ip_address=remote_addr,
+            created_at=datetime.utcnow(),
+        )
+    )
+
+
+def add_customer_link_console_log(
+    shipment_request: ShipmentRequest,
+    user: dict[str, Any],
+    operation: str,
+    old_customer_id: int | None,
+    new_customer_id: int | None,
+    note: str | None,
+    remote_addr: str | None,
+) -> None:
+    """Add a minimal timeline record using the existing request log table."""
     audit_note = (
         f"CRM customer link {operation}: "
         f"old_customer_id={old_customer_id}; new_customer_id={new_customer_id}"

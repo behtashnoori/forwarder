@@ -8,6 +8,7 @@ import pytest
 from backend import create_app
 from backend.extensions import db
 from backend.models import (
+    CRMCustomerLinkAudit,
     Customer,
     CustomerGamification,
     ExpertConsoleLog,
@@ -255,6 +256,22 @@ def test_link_relink_and_unlink_preserve_shipment_operational_state(crm_customer
         assert link_log.old_status == "assigned"
         assert link_log.new_status == "assigned"
         assert "old_customer_id=None" in link_log.note
+        link_audit = CRMCustomerLinkAudit.query.filter_by(
+            shipment_request_id=crm_customer_link_app["request_id"],
+            operation="link",
+        ).one()
+        assert link_audit.old_customer_id is None
+        assert link_audit.new_customer_id == crm_customer_link_app["customer_id"]
+        assert link_audit.performed_by_user_id == crm_customer_link_app["business_expert_id"]
+        assert link_audit.performed_by_role == "business_expert"
+        assert link_audit.source == "crm_api"
+        assert link_audit.reason == "verified manually"
+        assert link_audit.request_status_at_time == "assigned"
+        assert link_audit.assigned_to_at_time == crm_customer_link_app["business_expert_id"]
+        assert (
+            link_audit.gamification_customer_id_at_time
+            == crm_customer_link_app["gamification_customer_id"]
+        )
 
     noop_response = client.put(
         f"/api/crm/shipment-requests/{crm_customer_link_app['request_id']}/customer-link",
@@ -294,6 +311,17 @@ def test_link_relink_and_unlink_preserve_shipment_operational_state(crm_customer
             shipment_request_id=crm_customer_link_app["request_id"],
             action="crm_customer_link",
         ).count() == 3
+        audits = CRMCustomerLinkAudit.query.filter_by(
+            shipment_request_id=crm_customer_link_app["request_id"],
+        ).order_by(CRMCustomerLinkAudit.created_at.asc(), CRMCustomerLinkAudit.id.asc()).all()
+        assert [audit.operation for audit in audits] == ["link", "relink", "unlink"]
+        assert audits[0].old_customer_id is None
+        assert audits[0].new_customer_id == crm_customer_link_app["customer_id"]
+        assert audits[1].old_customer_id == crm_customer_link_app["customer_id"]
+        assert audits[1].new_customer_id == crm_customer_link_app["other_customer_id"]
+        assert audits[2].old_customer_id == crm_customer_link_app["other_customer_id"]
+        assert audits[2].new_customer_id is None
+        assert audits[2].reason == "wrong customer"
 
 
 def test_crm_customer_link_rejects_invalid_and_missing_targets(crm_customer_link_app):
@@ -346,6 +374,7 @@ def test_crm_customer_link_rejects_invalid_and_missing_targets(crm_customer_link
         request_row = db.session.get(ShipmentRequest, crm_customer_link_app["request_id"])
         assert request_row.customer_id is None
         assert ExpertConsoleLog.query.filter_by(action="crm_customer_link").count() == 0
+        assert CRMCustomerLinkAudit.query.count() == 0
 
 
 def test_crm_customer_unlink_is_idempotent(crm_customer_link_app):
@@ -366,3 +395,4 @@ def test_crm_customer_unlink_is_idempotent(crm_customer_link_app):
 
     with app.app_context():
         assert ExpertConsoleLog.query.filter_by(action="crm_customer_link").count() == 0
+        assert CRMCustomerLinkAudit.query.count() == 0

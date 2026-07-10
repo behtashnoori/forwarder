@@ -354,6 +354,46 @@ class ExpertConsoleLog(db.Model):
         return f"<ExpertConsoleLog id={self.id} action={self.action}>"
 
 
+class CRMCustomerLinkAudit(db.Model):
+    """Append-only audit trail for CRM customer links on shipment requests."""
+
+    __tablename__ = "crm_customer_link_audit"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    shipment_request_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
+    )
+    old_customer_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True
+    )
+    new_customer_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True
+    )
+    operation = db.Column(db.String(32), nullable=False)
+    performed_by_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=True
+    )
+    performed_by_role = db.Column(db.String(32), nullable=True)
+    source = db.Column(db.String(64), nullable=False, default="crm_api")
+    reason = db.Column(db.Text, nullable=True)
+    request_status_at_time = db.Column(db.String(32), nullable=True)
+    assigned_to_at_time = db.Column(SQLITE_COMPAT_BIGINT, nullable=True)
+    gamification_customer_id_at_time = db.Column(SQLITE_COMPAT_BIGINT, nullable=True)
+    ip_address = db.Column(db.String(45), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    shipment_request = db.relationship("ShipmentRequest", backref="crm_customer_link_audits")
+    old_customer = db.relationship("Customer", foreign_keys=[old_customer_id])
+    new_customer = db.relationship("Customer", foreign_keys=[new_customer_id])
+    performed_by_user = db.relationship("ExpertUser", foreign_keys=[performed_by_user_id])
+
+    def __repr__(self) -> str:
+        return (
+            "<CRMCustomerLinkAudit "
+            f"id={self.id} request={self.shipment_request_id} operation={self.operation}>"
+        )
+
+
 class ExpertConsoleMessage(db.Model):
     """Messages and notes for expert console."""
     
@@ -812,6 +852,7 @@ __all__ = [
     "ShipmentRequest",
     "ShipmentRequestLog",
     "ExpertConsoleLog",
+    "CRMCustomerLinkAudit",
     "ExpertConsoleMessage",
     "ExpertConsoleNotification",
     "ExpertQuote",
