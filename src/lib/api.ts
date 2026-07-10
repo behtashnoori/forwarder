@@ -924,6 +924,29 @@ export interface CRMDashboardKPIs {
   }>;
 }
 
+export interface CRMLinkCustomer {
+  id: number;
+  name: string;
+  company_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  customer_type?: string | null;
+  status?: string | null;
+}
+
+export interface CRMShipmentRequestLinkState {
+  operation: "read" | "link" | "relink" | "unlink" | "noop";
+  shipment_request: {
+    id: number;
+    customer_id: number | null;
+    status: string;
+    assigned_to?: number | null;
+    gamification_customer_id?: number | null;
+  };
+  customer: CRMLinkCustomer | null;
+}
+
 // CRM API Functions
 export function fetchCustomers(params?: {
   page?: number;
@@ -1071,6 +1094,50 @@ export function createActivity(activityData: {
 
 export function fetchCRMDashboardKPIs(): Promise<CRMDashboardKPIs> {
   return request("/api/crm/dashboard/kpis");
+}
+
+export function searchCRMLinkCustomers(params?: {
+  page?: number;
+  per_page?: number;
+  search?: string;
+}): Promise<{
+  customers: CRMLinkCustomer[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}> {
+  const path = withQuery("/api/crm/customer-link/customers", params);
+  return request(path);
+}
+
+export function fetchShipmentRequestCustomerLink(requestId: number): Promise<CRMShipmentRequestLinkState> {
+  return request(`/api/crm/shipment-requests/${requestId}/customer-link`);
+}
+
+export function linkShipmentRequestCustomer(
+  requestId: number,
+  customerId: number,
+  note?: string
+): Promise<CRMShipmentRequestLinkState> {
+  return request(`/api/crm/shipment-requests/${requestId}/customer-link`, {
+    method: "PUT",
+    body: JSON.stringify({ customer_id: customerId, note: note?.trim() || undefined }),
+  });
+}
+
+export function unlinkShipmentRequestCustomer(
+  requestId: number,
+  note?: string
+): Promise<CRMShipmentRequestLinkState> {
+  return request(`/api/crm/shipment-requests/${requestId}/customer-link`, {
+    method: "DELETE",
+    body: JSON.stringify({ note: note?.trim() || undefined }),
+  });
 }
 
 // User Management Interfaces

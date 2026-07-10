@@ -8,12 +8,16 @@ import {
   Clock,
   DollarSign,
   FileText,
+  Link2,
+  Loader2,
   MapPin,
   MessageSquare,
   Package,
   Phone,
+  Search,
   Send,
   Truck,
+  Unlink,
   User,
   Weight,
   type LucideIcon,
@@ -27,7 +31,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PageNav from "@/components/PageNav";
 import { useToast } from "@/hooks/use-toast";
-import { addMessage, changeRequestStatus, fetchExpertRequestDetail } from "@/lib/api";
+import {
+  addMessage,
+  changeRequestStatus,
+  fetchExpertRequestDetail,
+  fetchShipmentRequestCustomerLink,
+  linkShipmentRequestCustomer,
+  searchCRMLinkCustomers,
+  unlinkShipmentRequestCustomer,
+  type CRMLinkCustomer,
+  type CRMShipmentRequestLinkState,
+} from "@/lib/api";
 import { useI18n } from "@/i18n";
 
 interface RequestDetail {
@@ -125,6 +139,7 @@ const formatMoney = (value: number | null | undefined, locale: string, fallback:
   if (value === null || value === undefined) return fallback;
   return `${value.toLocaleString(locale)} ${unit}`;
 };
+const crmLinkAllowedRoles = new Set(["admin", "crm_manager", "supervisor", "business_expert"]);
 
 const RequestDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -141,19 +156,28 @@ const RequestDetail = () => {
     content: "",
   });
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [crmLinkState, setCrmLinkState] = useState<CRMShipmentRequestLinkState | null>(null);
+  const [crmLinkLoading, setCrmLinkLoading] = useState(false);
+  const [crmSearch, setCrmSearch] = useState("");
+  const [crmCandidates, setCrmCandidates] = useState<CRMLinkCustomer[]>([]);
+  const [crmSearchLoading, setCrmSearchLoading] = useState(false);
+  const [crmSaving, setCrmSaving] = useState(false);
+  const [selectedCrmCustomerId, setSelectedCrmCustomerId] = useState<number | null>(null);
+  const [crmLinkNote, setCrmLinkNote] = useState("");
 
-  const expertId = (() => {
+  const storedExpert = useMemo(() => {
     try {
       const stored = localStorage.getItem("expert_user");
       if (stored) {
-        const expert = JSON.parse(stored) as { id?: number };
-        if (typeof expert?.id === "number") return expert.id;
+        return JSON.parse(stored) as { id?: number; role?: string };
       }
     } catch {
       // Ignore malformed stored expert data and fall back to the default expert id.
     }
-    return 1;
-  })();
+    return null;
+  }, []);
+  const expertId = typeof storedExpert?.id === "number" ? storedExpert.id : 1;
+  const canUseCrmLink = !!storedExpert?.role && crmLinkAllowedRoles.has(storedExpert.role);
 
   const loadRequestDetail = useCallback(async () => {
     try {
@@ -171,11 +195,100 @@ const RequestDetail = () => {
     }
   }, [id, t, toast]);
 
+  const loadCrmLinkState = useCallback(async () => {
+    if (!id || !canUseCrmLink) return;
+    try {
+      setCrmLinkLoading(true);
+      const data = await fetchShipmentRequestCustomerLink(Number(id));
+      setCrmLinkState(data);
+    } catch (error) {
+      toast({
+        title: "CRM",
+        description: "وضعیت لینک مشتری CRM دریافت نشد",
+        variant: "destructive",
+      });
+    } finally {
+      setCrmLinkLoading(false);
+    }
+  }, [canUseCrmLink, id, toast]);
+
   useEffect(() => {
     if (id) {
       loadRequestDetail();
     }
   }, [id, loadRequestDetail]);
+
+  useEffect(() => {
+    if (id && canUseCrmLink) {
+      loadCrmLinkState();
+    }
+  }, [canUseCrmLink, id, loadCrmLinkState]);
+
+  const handleCrmCustomerSearch = async () => {
+    if (!canUseCrmLink) return;
+    try {
+      setCrmSearchLoading(true);
+      setSelectedCrmCustomerId(null);
+      const data = await searchCRMLinkCustomers({
+        search: crmSearch.trim() || undefined,
+        per_page: 8,
+      });
+      setCrmCandidates(data.customers);
+    } catch (error) {
+      toast({
+        title: "CRM",
+        description: "جستجوی مشتری CRM انجام نشد",
+        variant: "destructive",
+      });
+    } finally {
+      setCrmSearchLoading(false);
+    }
+  };
+
+  const handleCrmLink = async () => {
+    if (!id || !selectedCrmCustomerId) return;
+    try {
+      setCrmSaving(true);
+      const data = await linkShipmentRequestCustomer(Number(id), selectedCrmCustomerId, crmLinkNote);
+      setCrmLinkState(data);
+      setSelectedCrmCustomerId(null);
+      setCrmLinkNote("");
+      toast({
+        title: "CRM",
+        description: "مشتری CRM به درخواست لینک شد",
+      });
+    } catch (error) {
+      toast({
+        title: "CRM",
+        description: "لینک مشتری CRM انجام نشد",
+        variant: "destructive",
+      });
+    } finally {
+      setCrmSaving(false);
+    }
+  };
+
+  const handleCrmUnlink = async () => {
+    if (!id) return;
+    try {
+      setCrmSaving(true);
+      const data = await unlinkShipmentRequestCustomer(Number(id), crmLinkNote);
+      setCrmLinkState(data);
+      setCrmLinkNote("");
+      toast({
+        title: "CRM",
+        description: "لینک مشتری CRM حذف شد",
+      });
+    } catch (error) {
+      toast({
+        title: "CRM",
+        description: "حذف لینک مشتری CRM انجام نشد",
+        variant: "destructive",
+      });
+    } finally {
+      setCrmSaving(false);
+    }
+  };
 
   const handleStatusChange = async (newStatus: string) => {
     try {
@@ -443,6 +556,23 @@ const RequestDetail = () => {
               </main>
 
               <aside className="min-w-0 space-y-6">
+                <CrmCustomerLinkCard
+                  canUseCrmLink={canUseCrmLink}
+                  candidates={crmCandidates}
+                  linkState={crmLinkState}
+                  loading={crmLinkLoading}
+                  note={crmLinkNote}
+                  onLink={handleCrmLink}
+                  onNoteChange={setCrmLinkNote}
+                  onSearch={handleCrmCustomerSearch}
+                  onSearchChange={setCrmSearch}
+                  onSelectCustomer={setSelectedCrmCustomerId}
+                  onUnlink={handleCrmUnlink}
+                  saving={crmSaving}
+                  search={crmSearch}
+                  searchLoading={crmSearchLoading}
+                  selectedCustomerId={selectedCrmCustomerId}
+                />
                 <OperationsCard handleStatusChange={handleStatusChange} statusLabel={statusLabel} t={t} />
                 <TimelineCard
                   timeline={request.timeline}
@@ -561,6 +691,172 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
     <span className="min-w-0 break-words text-left font-medium text-slate-900">{value}</span>
   </div>
 );
+
+const CrmCustomerLinkCard = ({
+  canUseCrmLink,
+  candidates,
+  linkState,
+  loading,
+  note,
+  onLink,
+  onNoteChange,
+  onSearch,
+  onSearchChange,
+  onSelectCustomer,
+  onUnlink,
+  saving,
+  search,
+  searchLoading,
+  selectedCustomerId,
+}: {
+  canUseCrmLink: boolean;
+  candidates: CRMLinkCustomer[];
+  linkState: CRMShipmentRequestLinkState | null;
+  loading: boolean;
+  note: string;
+  onLink: () => void;
+  onNoteChange: (value: string) => void;
+  onSearch: () => void;
+  onSearchChange: (value: string) => void;
+  onSelectCustomer: (customerId: number) => void;
+  onUnlink: () => void;
+  saving: boolean;
+  search: string;
+  searchLoading: boolean;
+  selectedCustomerId: number | null;
+}) => {
+  const linkedCustomer = linkState?.customer ?? null;
+  const isRelinking = !!linkedCustomer && !!selectedCustomerId && selectedCustomerId !== linkedCustomer.id;
+
+  return (
+    <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg text-slate-950">
+          <Link2 className="h-5 w-5 text-blue-600" />
+          لینک مشتری CRM
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {!canUseCrmLink ? (
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
+            دسترسی لینک CRM برای نقش فعلی فعال نیست.
+          </div>
+        ) : loading ? (
+          <div className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            در حال دریافت وضعیت لینک CRM
+          </div>
+        ) : (
+          <>
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+              <p className="mb-3 text-xs text-slate-500">وضعیت فعلی</p>
+              {linkedCustomer ? (
+                <div className="space-y-3">
+                  <div>
+                    <p className="font-semibold text-slate-950">{linkedCustomer.name}</p>
+                    <p className="text-sm text-slate-600">{linkedCustomer.company_name || "شرکت ثبت نشده"}</p>
+                  </div>
+                  <div className="grid gap-2 text-sm text-slate-600">
+                    <InfoRow label="تلفن" value={linkedCustomer.phone || linkedCustomer.mobile || "ثبت نشده"} />
+                    <InfoRow label="ایمیل" value={linkedCustomer.email || "ثبت نشده"} />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onUnlink}
+                    disabled={saving}
+                    className="w-full rounded-2xl border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                  >
+                    {saving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Unlink className="ml-2 h-4 w-4" />}
+                    حذف لینک CRM
+                  </Button>
+                </div>
+              ) : (
+                <p className="text-sm leading-6 text-slate-600">این درخواست هنوز به مشتری CRM لینک نشده است.</p>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                <Input
+                  value={search}
+                  onChange={(event) => onSearchChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      onSearch();
+                    }
+                  }}
+                  placeholder="جستجوی نام، شرکت، تلفن یا ایمیل"
+                  className="rounded-2xl bg-slate-50"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onSearch}
+                  disabled={searchLoading || saving}
+                  className="shrink-0 rounded-2xl"
+                  aria-label="جستجوی مشتری CRM"
+                >
+                  {searchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+
+              {candidates.length > 0 && (
+                <div className="space-y-2">
+                  {candidates.map((customer) => {
+                    const selected = selectedCustomerId === customer.id;
+                    return (
+                      <button
+                        key={customer.id}
+                        type="button"
+                        onClick={() => onSelectCustomer(customer.id)}
+                        className={`w-full rounded-2xl border p-3 text-right transition ${
+                          selected
+                            ? "border-blue-300 bg-blue-50 text-blue-950"
+                            : "border-slate-100 bg-white text-slate-800 hover:border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        <span className="block text-sm font-semibold">{customer.name}</span>
+                        <span className="mt-1 block text-xs text-slate-500">
+                          {customer.company_name || "بدون شرکت"} · {customer.phone || customer.mobile || "بدون تلفن"}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Textarea
+                value={note}
+                onChange={(event) => onNoteChange(event.target.value)}
+                rows={2}
+                placeholder="یادداشت لینک CRM (اختیاری)"
+                className="rounded-2xl bg-slate-50"
+              />
+
+              {isRelinking && (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+                  این درخواست از قبل به یک مشتری CRM لینک شده است. با ادامه، لینک قبلی فقط به مشتری انتخاب‌شده تغییر می‌کند و وضعیت عملیاتی درخواست تغییر نمی‌کند.
+                </div>
+              )}
+
+              <Button
+                type="button"
+                onClick={onLink}
+                disabled={!selectedCustomerId || saving}
+                className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700"
+              >
+                {saving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Link2 className="ml-2 h-4 w-4" />}
+                {isRelinking ? "تغییر لینک به مشتری انتخاب‌شده" : "لینک به مشتری انتخاب‌شده"}
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const OperationsCard = ({
   handleStatusChange,
