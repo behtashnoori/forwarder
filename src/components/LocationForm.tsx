@@ -76,7 +76,8 @@ interface LocationFormProps {
 
 const helperTextClass = "text-xs leading-6 text-muted-foreground";
 
-const getTransportLabel = (method: TransportMethod) => method.name_fa || method.name;
+const getTransportLabel = (method: TransportMethod, language: "fa" | "en") =>
+  language === "fa" ? method.name_fa || method.name : method.name || method.name_fa;
 const getTransportDescription = (method: TransportMethod, fallback: string) => method.description || fallback;
 const RequiredAsterisk = () => <span className="text-red-600" aria-hidden="true">*</span>;
 
@@ -89,6 +90,10 @@ interface JalaliDate {
 interface JalaliDateInputProps {
   id: string;
   label: string;
+  selectLabel: string;
+  nextMonthLabel: string;
+  previousMonthLabel: string;
+  clearLabel: string;
   value: string;
   onChange: (value: string) => void;
 }
@@ -248,7 +253,16 @@ const getJalaliFromGregorianValue = (value: string) => {
   return gregorianToJalali(parsedValue.year, parsedValue.month, parsedValue.day);
 };
 
-const JalaliDateInput = ({ id, label, value, onChange }: JalaliDateInputProps) => {
+const JalaliDateInput = ({
+  clearLabel,
+  id,
+  label,
+  nextMonthLabel,
+  onChange,
+  previousMonthLabel,
+  selectLabel,
+  value,
+}: JalaliDateInputProps) => {
   const [open, setOpen] = useState(false);
   const selectedDate = getJalaliFromGregorianValue(value);
   const initialViewDate = selectedDate ?? getTodayJalali();
@@ -305,7 +319,7 @@ const JalaliDateInput = ({ id, label, value, onChange }: JalaliDateInputProps) =
             dir="rtl"
           >
             <span className={selectedDate ? "text-foreground" : "text-muted-foreground"}>
-              {selectedDate ? formatJalaliDate(selectedDate) : "انتخاب تاریخ شمسی"}
+              {selectedDate ? formatJalaliDate(selectedDate) : selectLabel}
             </span>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </Button>
@@ -313,13 +327,13 @@ const JalaliDateInput = ({ id, label, value, onChange }: JalaliDateInputProps) =
         <PopoverContent className="w-72 p-3 text-right" align="end" dir="rtl">
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Button type="button" variant="ghost" size="icon" onClick={() => changeMonth(1)} aria-label="ماه بعد">
+              <Button type="button" variant="ghost" size="icon" onClick={() => changeMonth(1)} aria-label={nextMonthLabel}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
               <div className="text-sm font-medium">
                 {jalaliMonthNames[viewMonth.month - 1]} {viewMonth.year}
               </div>
-              <Button type="button" variant="ghost" size="icon" onClick={() => changeMonth(-1)} aria-label="ماه قبل">
+              <Button type="button" variant="ghost" size="icon" onClick={() => changeMonth(-1)} aria-label={previousMonthLabel}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </div>
@@ -360,7 +374,7 @@ const JalaliDateInput = ({ id, label, value, onChange }: JalaliDateInputProps) =
 
             {value && (
               <Button type="button" variant="ghost" size="sm" className="w-full" onClick={() => onChange("")}>
-                پاک کردن تاریخ
+                {clearLabel}
               </Button>
             )}
           </div>
@@ -373,7 +387,7 @@ const JalaliDateInput = ({ id, label, value, onChange }: JalaliDateInputProps) =
 const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { language, t, tf } = useI18n();
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [originCounties, setOriginCounties] = useState<County[]>([]);
   const [destinationCounties, setDestinationCounties] = useState<County[]>([]);
@@ -446,15 +460,15 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         console.error("Error fetching transport method options:", error);
         toast({
-          title: "خطا",
-          description: "خطا در دریافت اطلاعات پایه (استان‌ها/روش‌های حمل). لطفاً بک‌اند را بررسی کنید.",
+          title: t("common.error"),
+          description: t("requestForm.loadBaseError"),
           variant: "destructive",
         });
       }
     };
 
     fetchTransportOptions();
-  }, [toast]);
+  }, [t, toast]);
 
   // Legacy transport method options (fallback)
   const transportMethods = [
@@ -478,8 +492,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         if (active) {
           console.error("Error fetching provinces:", error);
           toast({
-            title: "خطا",
-            description: "خطا در دریافت اطلاعات پایه (استان‌ها/روش‌های حمل). لطفاً بک‌اند را بررسی کنید.",
+          title: t("common.error"),
+          description: t("requestForm.loadBaseError"),
             variant: "destructive",
           });
         }
@@ -500,8 +514,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت کشورها",
-            description: error instanceof Error ? error.message : "دریافت اطلاعات کشورها با خطا مواجه شد.",
+            title: t("requestForm.loadCountriesErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadCountriesError"),
             variant: "destructive",
           });
         }
@@ -522,8 +536,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت بنادر ایران",
-            description: error instanceof Error ? error.message : "دریافت اطلاعات بنادر با خطا مواجه شد.",
+            title: t("requestForm.loadIranPortsErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadIranPortsError"),
             variant: "destructive",
           });
         }
@@ -544,7 +558,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [toast, shippingType]);
+  }, [t, toast, shippingType]);
 
   useEffect(() => {
     let active = true;
@@ -571,8 +585,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت شهرستان‌های مبدا",
-            description: error instanceof Error ? error.message : "دریافت شهرستان‌ها با خطا مواجه شد.",
+            title: t("requestForm.loadOriginCountiesErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadCountiesError"),
             variant: "destructive",
           });
         }
@@ -588,7 +602,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.originProvince, toast]);
+  }, [formData.originProvince, t, toast]);
 
   useEffect(() => {
     let active = true;
@@ -615,8 +629,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت شهرستان‌های مقصد",
-            description: error instanceof Error ? error.message : "دریافت شهرستان‌ها با خطا مواجه شد.",
+            title: t("requestForm.loadDestinationCountiesErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadCountiesError"),
             variant: "destructive",
           });
         }
@@ -632,7 +646,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.destinationProvince, toast]);
+  }, [formData.destinationProvince, t, toast]);
 
   useEffect(() => {
     let active = true;
@@ -657,8 +671,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت شهرهای مبدا",
-            description: error instanceof Error ? error.message : "دریافت شهرها با خطا مواجه شد.",
+            title: t("requestForm.loadOriginCitiesErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadCitiesError"),
             variant: "destructive",
           });
         }
@@ -674,7 +688,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.originCounty, toast]);
+  }, [formData.originCounty, t, toast]);
 
   useEffect(() => {
     let active = true;
@@ -699,8 +713,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت شهرهای مقصد",
-            description: error instanceof Error ? error.message : "دریافت شهرها با خطا مواجه شد.",
+            title: t("requestForm.loadDestinationCitiesErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadCitiesError"),
             variant: "destructive",
           });
         }
@@ -716,7 +730,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.destinationCounty, toast]);
+  }, [formData.destinationCounty, t, toast]);
 
   // Load international cities for origin country
   useEffect(() => {
@@ -742,8 +756,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت شهرهای مبدا",
-            description: error instanceof Error ? error.message : "دریافت شهرها با خطا مواجه شد.",
+            title: t("requestForm.loadOriginCitiesErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadCitiesError"),
             variant: "destructive",
           });
         }
@@ -759,7 +773,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.originCountry, toast]);
+  }, [formData.originCountry, t, toast]);
 
   // Load international cities for destination country
   useEffect(() => {
@@ -785,8 +799,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت شهرهای مقصد",
-            description: error instanceof Error ? error.message : "دریافت شهرها با خطا مواجه شد.",
+            title: t("requestForm.loadDestinationCitiesErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadCitiesError"),
             variant: "destructive",
           });
         }
@@ -802,7 +816,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.destCountry, toast]);
+  }, [formData.destCountry, t, toast]);
 
   // Load recommended ports when Iran entry port is selected
   useEffect(() => {
@@ -839,8 +853,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       } catch (error) {
         if (active) {
           toast({
-            title: "خطا در دریافت بنادر پیشنهادی",
-            description: error instanceof Error ? error.message : "دریافت بنادر پیشنهادی با خطا مواجه شد.",
+            title: t("requestForm.loadRecommendedPortsErrorTitle"),
+            description: error instanceof Error ? error.message : t("requestForm.loadRecommendedPortsError"),
             variant: "destructive",
           });
         }
@@ -856,7 +870,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.iranEntryPort, iranPorts, formData.iranEntryProvince, toast]);
+  }, [formData.iranEntryPort, iranPorts, formData.iranEntryProvince, t, toast]);
 
   const provinceOptions = useMemo(
     () => [...provinces].sort((a, b) => a.name.localeCompare(b.name)),
@@ -938,32 +952,32 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const handleSubmit = async () => {
     // Validate required fields based on shipping type
     let isValid = true;
-    let errorMessage = "";
+    let errorMessage = t("requestForm.validation.phoneRequired");
 
     if (!formData.phoneNumber) {
       isValid = false;
-      errorMessage = "لطفاً شماره تماس را وارد کنید";
+      errorMessage = t("requestForm.validation.phoneRequired");
     } else if (formData.transportMethodPreference === "customer_choice") {
       // If customer wants to choose, validate that they've selected methods
       if (shippingType === "international" && !formData.internationalTransportMethod) {
         isValid = false;
-        errorMessage = "لطفاً روش حمل بین‌المللی را انتخاب کنید";
+        errorMessage = t("requestForm.validation.internationalMethodRequired");
       } else if (shippingType === "domestic" && !formData.domesticTransportMethod) {
         isValid = false;
-        errorMessage = "لطفاً روش حمل داخلی را انتخاب کنید";
+        errorMessage = t("requestForm.validation.domesticMethodRequired");
       }
     }
     
     if (isValid && shippingType === "domestic") {
       if (!formData.originProvince || !formData.destinationProvince) {
         isValid = false;
-        errorMessage = "لطفاً استان مبدا و مقصد را انتخاب کنید";
+        errorMessage = t("requestForm.validation.domesticRouteRequired");
       }
     } else if (shippingType === "international") {
       if (!formData.originCountry || !formData.originCityInternational ||
           !formData.destCountry || !formData.destCityInternational) {
         isValid = false;
-        errorMessage = "لطفاً کشور و شهر/بندر مبدا و مقصد را انتخاب کنید";
+        errorMessage = t("requestForm.validation.internationalRouteRequired");
       }
       
       // Check if destination is Iran and validate Iran entry point
@@ -971,14 +985,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       if (destCountry?.name === "ایران") {
         if (!formData.iranEntryPort || !formData.iranEntryProvince) {
           isValid = false;
-          errorMessage = "برای ارسال به ایران، لطفاً بندر و استان ورود را انتخاب کنید";
+          errorMessage = t("requestForm.validation.iranEntryRequired");
         }
       }
     }
 
     if (!isValid) {
       toast({
-        title: "خطا",
+        title: t("common.error"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -989,8 +1003,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     const phoneRegex = /^09\d{9}$/;
     if (!phoneRegex.test(formData.phoneNumber)) {
       toast({
-        title: "خطا",
-        description: "شماره تماس باید با 09 شروع شده و 11 رقم باشد",
+        title: t("common.error"),
+        description: t("requestForm.validation.phoneInvalid"),
         variant: "destructive",
       });
       return;
@@ -1077,8 +1091,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       setShowConfirmation(true);
     } catch (error) {
       toast({
-        title: "ثبت درخواست ناموفق بود",
-        description: error instanceof Error ? error.message : "خطایی در ثبت درخواست رخ داد.",
+        title: t("requestForm.submitErrorTitle"),
+        description: error instanceof Error ? error.message : t("requestForm.submitError"),
         variant: "destructive",
       });
     } finally {
@@ -1170,13 +1184,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       setIsSubmitted(true);
       setShowConfirmation(false);
       toast({
-        title: "درخواست ثبت شد",
-        description: `شماره پیگیری شما: ${trackingCode}. کارشناس ما ظرف ۲ ساعت با شما تماس خواهد گرفت.`,
+        title: t("requestForm.submitSuccessTitle"),
+        description: tf("requestForm.submitSuccessDescription", { trackingCode }),
       });
     } catch (error) {
       toast({
-        title: "ثبت درخواست ناموفق بود",
-        description: error instanceof Error ? error.message : "خطایی در ثبت درخواست رخ داد.",
+        title: t("requestForm.submitErrorTitle"),
+        description: error instanceof Error ? error.message : t("requestForm.submitError"),
         variant: "destructive",
       });
     } finally {
@@ -1241,13 +1255,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       }
       await navigator.clipboard.writeText(submittedTrackingCode);
       toast({
-        title: "کد پیگیری کپی شد",
-        description: "کد را نگه دارید تا بعداً وضعیت درخواست را پیگیری کنید.",
+        title: t("requestForm.copySuccessTitle"),
+        description: t("requestForm.copySuccessDescription"),
       });
     } catch {
       toast({
-        title: "کپی خودکار انجام نشد",
-        description: "لطفاً کد پیگیری را به صورت دستی ذخیره کنید.",
+        title: t("requestForm.copyErrorTitle"),
+        description: t("requestForm.copyErrorDescription"),
         variant: "destructive",
       });
     }
@@ -1268,15 +1282,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <p className="break-all text-xl font-mono font-bold text-foreground">{submittedTrackingCode}</p>
                 <Button type="button" variant="outline" size="sm" onClick={handleCopyTrackingCode}>
                   <Copy className="h-4 w-4" />
-                  کپی کد
+                  {t("requestForm.copyCode")}
                 </Button>
               </div>
             </div>
           )}
-          <p className="text-muted-foreground mb-6 leading-7">
-            این کد را ذخیره کنید. برای اطلاع از آخرین وضعیت درخواست، کد پیگیری را در بخش پیگیری درخواست وارد کنید.
-            تیم فورواردر درخواست شما را بررسی و هماهنگی‌های لازم را انجام می‌دهد.
-          </p>
+          <p className="text-muted-foreground mb-6 leading-7">{t("requestForm.successHelp")}</p>
           <div className="space-y-2">
             <Button
               onClick={() => submittedTrackingCode && navigate(`/customer/track/${submittedTrackingCode}`)}
@@ -1329,12 +1340,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         </div>
         <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
           <MapPin className="w-5 h-5 text-primary" />
-          {shippingType === "domestic" ? "انتخاب مبدا و مقصد داخلی" : "انتخاب مبدا و مقصد بین‌المللی"}
+          {shippingType === "domestic" ? t("requestForm.domesticRouteTitle") : t("requestForm.internationalRouteTitle")}
         </CardTitle>
         <p className="text-muted-foreground text-sm">
           {shippingType === "domestic" 
-            ? "برای ارسال مرسوله خود، مبدا و مقصد را انتخاب کنید"
-            : "برای ارسال بین‌المللی، کشور و شهر مبدا و مقصد را وارد کنید"
+            ? t("requestForm.domesticRouteDescription")
+            : t("requestForm.internationalRouteDescription")
           }
         </p>
       </CardHeader>
@@ -1346,12 +1357,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <div className="w-3 h-3 bg-primary rounded-full"></div>
-                مبدا ارسال
+                {t("requestForm.originSection")}
               </div>
               
               <div className="space-y-3 pr-5">
                 <Label className="flex items-center gap-1 text-sm font-medium">
-                  استان مبدا
+                  {t("requestForm.originProvince")}
                   <RequiredAsterisk />
                 </Label>
                 <Select
@@ -1367,7 +1378,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   disabled={isLoadingProvinces && provinceOptions.length === 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={isLoadingProvinces ? "در حال بارگذاری..." : "انتخاب استان"} />
+                    <SelectValue placeholder={isLoadingProvinces ? t("requestForm.loading") : t("requestForm.selectProvince")} />
                   </SelectTrigger>
                   <SelectContent>
                     {provinceOptions.map((province) => (
@@ -1377,7 +1388,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     ))}
                     {provinceOptions.length === 0 && !isLoadingProvinces && (
                       <SelectItem value="no-origin-province" disabled>
-                        استان موجود نیست
+                        {t("requestForm.noProvince")}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -1391,13 +1402,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     onClick={() => setShowOriginLocationDetails((value) => !value)}
                     className="h-auto px-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
                   >
-                    {showOriginLocationDetails ? "پنهان کردن جزئیات اختیاری" : "+ جزئیات بیشتر مبدا (شهرستان و شهر، اختیاری)"}
+                    {showOriginLocationDetails ? t("requestForm.hideOptionalDetails") : t("requestForm.showOriginDetails")}
                   </Button>
                 )}
 
                 {showOriginLocationDetails && (
                   <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-                    <p className={helperTextClass}>اگر شهر یا شهرستان را نمی‌دانید، انتخاب استان برای ثبت درخواست کافی است.</p>
+                    <p className={helperTextClass}>{t("requestForm.provinceEnough")}</p>
                     <Select
                       value={formData.originCounty}
                       onValueChange={(value) => {
@@ -1413,10 +1424,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         <SelectValue
                           placeholder={
                             !formData.originProvince
-                              ? "ابتدا استان را انتخاب کنید"
+                              ? t("requestForm.selectProvinceFirst")
                               : isLoadingOriginCounties
-                                ? "در حال بارگذاری..."
-                                : "انتخاب شهرستان (اختیاری)"
+                                ? t("requestForm.loading")
+                                : t("requestForm.selectCountyOptional")
                           }
                         />
                       </SelectTrigger>
@@ -1428,7 +1439,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         ))}
                         {originCountyOptions.length === 0 && formData.originProvince && !isLoadingOriginCounties && (
                           <SelectItem value="no-origin-county" disabled>
-                            شهرستانی یافت نشد
+                            {t("requestForm.noCounty")}
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -1448,10 +1459,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         <SelectValue
                           placeholder={
                             !formData.originCounty
-                              ? "ابتدا شهرستان را انتخاب کنید"
+                              ? t("requestForm.selectCountyFirst")
                               : isLoadingOriginCities
-                                ? "در حال بارگذاری..."
-                                : "انتخاب شهر (اختیاری)"
+                                ? t("requestForm.loading")
+                                : t("requestForm.selectCityOptional")
                           }
                         />
                       </SelectTrigger>
@@ -1463,7 +1474,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         ))}
                         {originCityOptions.length === 0 && formData.originCounty && !isLoadingOriginCities && (
                           <SelectItem value="no-origin-city" disabled>
-                            شهری یافت نشد
+                            {t("requestForm.noCity")}
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -1484,12 +1495,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-secondary">
                 <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                مقصد ارسال
+                {t("requestForm.destinationSection")}
               </div>
               
               <div className="space-y-3 pr-5">
                 <Label className="flex items-center gap-1 text-sm font-medium">
-                  استان مقصد
+                  {t("requestForm.destinationProvince")}
                   <RequiredAsterisk />
                 </Label>
                 <Select
@@ -1505,7 +1516,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   disabled={isLoadingProvinces && provinceOptions.length === 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={isLoadingProvinces ? "در حال بارگذاری..." : "انتخاب استان"} />
+                    <SelectValue placeholder={isLoadingProvinces ? t("requestForm.loading") : t("requestForm.selectProvince")} />
                   </SelectTrigger>
                   <SelectContent>
                     {provinceOptions.map((province) => (
@@ -1515,7 +1526,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     ))}
                     {provinceOptions.length === 0 && !isLoadingProvinces && (
                       <SelectItem value="no-destination-province" disabled>
-                        استان موجود نیست
+                        {t("requestForm.noProvince")}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -1529,13 +1540,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     onClick={() => setShowDestinationLocationDetails((value) => !value)}
                     className="h-auto px-0 text-xs font-medium text-primary hover:bg-transparent hover:text-primary/80"
                   >
-                    {showDestinationLocationDetails ? "پنهان کردن جزئیات اختیاری" : "+ جزئیات بیشتر مقصد (شهرستان و شهر، اختیاری)"}
+                    {showDestinationLocationDetails ? t("requestForm.hideOptionalDetails") : t("requestForm.showDestinationDetails")}
                   </Button>
                 )}
 
                 {showDestinationLocationDetails && (
                   <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-                    <p className={helperTextClass}>اگر شهر یا شهرستان را نمی‌دانید، انتخاب استان برای ثبت درخواست کافی است.</p>
+                    <p className={helperTextClass}>{t("requestForm.provinceEnough")}</p>
                     <Select
                       value={formData.destinationCounty}
                       onValueChange={(value) => {
@@ -1551,10 +1562,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         <SelectValue
                           placeholder={
                             !formData.destinationProvince
-                              ? "ابتدا استان را انتخاب کنید"
+                              ? t("requestForm.selectProvinceFirst")
                               : isLoadingDestinationCounties
-                                ? "در حال بارگذاری..."
-                                : "انتخاب شهرستان (اختیاری)"
+                                ? t("requestForm.loading")
+                                : t("requestForm.selectCountyOptional")
                           }
                         />
                       </SelectTrigger>
@@ -1566,7 +1577,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         ))}
                         {destinationCountyOptions.length === 0 && formData.destinationProvince && !isLoadingDestinationCounties && (
                           <SelectItem value="no-destination-county" disabled>
-                            شهرستانی یافت نشد
+                            {t("requestForm.noCounty")}
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -1586,10 +1597,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         <SelectValue
                           placeholder={
                             !formData.destinationCounty
-                              ? "ابتدا شهرستان را انتخاب کنید"
+                              ? t("requestForm.selectCountyFirst")
                               : isLoadingDestinationCities
-                                ? "در حال بارگذاری..."
-                                : "انتخاب شهر (اختیاری)"
+                                ? t("requestForm.loading")
+                                : t("requestForm.selectCityOptional")
                           }
                         />
                       </SelectTrigger>
@@ -1601,7 +1612,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         ))}
                         {destinationCityOptions.length === 0 && formData.destinationCounty && !isLoadingDestinationCities && (
                           <SelectItem value="no-destination-city" disabled>
-                            شهری یافت نشد
+                            {t("requestForm.noCity")}
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -1617,12 +1628,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                 <div className="w-3 h-3 bg-primary rounded-full"></div>
-                مبدا ارسال (بین‌المللی)
+                {t("requestForm.originInternationalSection")}
               </div>
               
               <div className="space-y-3 pr-5">
                 <Label className="flex items-center gap-1 text-sm font-medium">
-                  کشور مبدا
+                  {t("requestForm.originCountry")}
                   <RequiredAsterisk />
                 </Label>
                 <Select
@@ -1637,7 +1648,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   disabled={isLoadingCountries && countryOptions.length === 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={isLoadingCountries ? "در حال بارگذاری..." : "انتخاب کشور مبدا"} />
+                    <SelectValue placeholder={isLoadingCountries ? t("requestForm.loading") : t("requestForm.selectOriginCountry")} />
                   </SelectTrigger>
                   <SelectContent>
                     {countryOptions.map((country) => (
@@ -1647,14 +1658,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     ))}
                     {countryOptions.length === 0 && !isLoadingCountries && (
                       <SelectItem value="no-origin-country" disabled>
-                        کشوری موجود نیست
+                        {t("requestForm.noCountry")}
                       </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
 
                 <Label className="flex items-center gap-1 text-sm font-medium">
-                  شهر/بندر مبدا
+                  {t("requestForm.originCityPort")}
                   <RequiredAsterisk />
                 </Label>
                 <Select
@@ -1671,10 +1682,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     <SelectValue
                       placeholder={
                         !formData.originCountry
-                          ? "ابتدا کشور را انتخاب کنید"
+                          ? t("requestForm.selectCountryFirst")
                           : isLoadingOriginInternationalCities
-                            ? "در حال بارگذاری..."
-                            : "انتخاب شهر/بندر مبدا"
+                            ? t("requestForm.loading")
+                            : t("requestForm.selectOriginCityPort")
                       }
                     />
                   </SelectTrigger>
@@ -1686,7 +1697,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     ))}
                     {originInternationalCityOptions.length === 0 && formData.originCountry && !isLoadingOriginInternationalCities && (
                       <SelectItem value="no-origin-city" disabled>
-                        شهری یافت نشد
+                        {t("requestForm.noCity")}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -1695,11 +1706,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <div className="space-y-2">
                   <Label htmlFor="originAddressInternational" className="flex items-center gap-2 text-sm font-medium">
                     <FileText className="w-4 h-4 text-muted-foreground" />
-                    آدرس مبدا (اختیاری)
+                    {t("requestForm.originAddressOptional")}
                   </Label>
                   <Input
                     id="originAddressInternational"
-                    placeholder="آدرس کامل مبدا را وارد کنید"
+                    placeholder={t("requestForm.originAddressPlaceholder")}
                     value={formData.originAddressInternational}
                     onChange={(e) => {
                       setFormData({
@@ -1723,12 +1734,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-semibold text-secondary">
                 <div className="w-3 h-3 bg-secondary rounded-full"></div>
-                مقصد ارسال (بین‌المللی)
+                {t("requestForm.destinationInternationalSection")}
               </div>
               
               <div className="space-y-3 pr-5">
                 <Label className="flex items-center gap-1 text-sm font-medium">
-                  کشور مقصد
+                  {t("requestForm.destinationCountry")}
                   <RequiredAsterisk />
                 </Label>
                 <Select
@@ -1743,7 +1754,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   disabled={isLoadingCountries && countryOptions.length === 0}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder={isLoadingCountries ? "در حال بارگذاری..." : "انتخاب کشور مقصد"} />
+                    <SelectValue placeholder={isLoadingCountries ? t("requestForm.loading") : t("requestForm.selectDestinationCountry")} />
                   </SelectTrigger>
                   <SelectContent>
                     {countryOptions.map((country) => (
@@ -1753,14 +1764,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     ))}
                     {countryOptions.length === 0 && !isLoadingCountries && (
                       <SelectItem value="no-dest-country" disabled>
-                        کشوری موجود نیست
+                        {t("requestForm.noCountry")}
                       </SelectItem>
                     )}
                   </SelectContent>
                 </Select>
 
                 <Label className="flex items-center gap-1 text-sm font-medium">
-                  شهر/بندر مقصد
+                  {t("requestForm.destinationCityPort")}
                   <RequiredAsterisk />
                 </Label>
                 <Select
@@ -1777,10 +1788,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     <SelectValue
                       placeholder={
                         !formData.destCountry
-                          ? "ابتدا کشور را انتخاب کنید"
+                          ? t("requestForm.selectCountryFirst")
                           : isLoadingDestinationInternationalCities
-                            ? "در حال بارگذاری..."
-                            : "انتخاب شهر/بندر مقصد"
+                            ? t("requestForm.loading")
+                            : t("requestForm.selectDestinationCityPort")
                       }
                     />
                   </SelectTrigger>
@@ -1792,7 +1803,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     ))}
                     {destinationInternationalCityOptions.length === 0 && formData.destCountry && !isLoadingDestinationInternationalCities && (
                       <SelectItem value="no-dest-city" disabled>
-                        شهری یافت نشد
+                        {t("requestForm.noCity")}
                       </SelectItem>
                     )}
                   </SelectContent>
@@ -1801,11 +1812,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <div className="space-y-2">
                   <Label htmlFor="destAddressInternational" className="flex items-center gap-2 text-sm font-medium">
                     <FileText className="w-4 h-4 text-muted-foreground" />
-                    آدرس مقصد (اختیاری)
+                    {t("requestForm.destinationAddressOptional")}
                   </Label>
                   <Input
                     id="destAddressInternational"
-                    placeholder="آدرس کامل مقصد را وارد کنید"
+                    placeholder={t("requestForm.destinationAddressPlaceholder")}
                     value={formData.destAddressInternational}
                     onChange={(e) => {
                       setFormData({
@@ -1831,12 +1842,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <div className="space-y-4">
                   <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                     <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    مرحله ۳: تعیین نقطه ورود به ایران
+                    {t("requestForm.iranEntryStepTitle")}
                   </div>
                   
                   <div className="space-y-3 pr-5">
                     <Label className="flex items-center gap-1 text-sm font-medium">
-                      بندر ورود
+                      {t("requestForm.entryPort")}
                       <RequiredAsterisk />
                     </Label>
                     <Select
@@ -1851,18 +1862,18 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       disabled={isLoadingIranPorts && iranPorts.length === 0}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={isLoadingIranPorts ? "در حال بارگذاری..." : "انتخاب بندر ورود"} />
+                        <SelectValue placeholder={isLoadingIranPorts ? t("requestForm.loading") : t("requestForm.selectEntryPort")} />
                       </SelectTrigger>
                       <SelectContent>
                         {iranPorts.map((port) => (
                           <SelectItem key={port.id} value={port.id.toString()}>
-                            {port.name_fa} ({port.port_type === "sea" ? "دریایی" : port.port_type === "air" ? "هوایی" : "زمینی"})
+                            {port.name_fa} ({port.port_type === "sea" ? t("requestForm.portSea") : port.port_type === "air" ? t("requestForm.portAir") : t("requestForm.portLand")})
                             {port.is_major_port && " ⭐"}
                           </SelectItem>
                         ))}
                         {iranPorts.length === 0 && !isLoadingIranPorts && (
                           <SelectItem value="no-port" disabled>
-                            بندری موجود نیست
+                            {t("requestForm.noPort")}
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -1872,17 +1883,17 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     {formData.iranEntryPort && recommendedPorts.length > 0 && (
                       <div className="space-y-2">
                         <Label className="text-sm font-medium text-muted-foreground">
-                          بنادر پیشنهادی برای این استان:
+                          {t("requestForm.recommendedPorts")}
                         </Label>
                         <div className="space-y-1">
                           {recommendedPorts.slice(0, 3).map((port, index) => (
                             <div key={port.port_id} className="flex items-center justify-between p-2 bg-accent rounded-md text-sm">
                               <span className="flex items-center gap-2">
                                 {index === 0 && "🥇"} {index === 1 && "🥈"} {index === 2 && "🥉"}
-                                {port.port_name_fa} ({port.port_type === "sea" ? "دریایی" : port.port_type === "air" ? "هوایی" : "زمینی"})
+                                {port.port_name_fa} ({port.port_type === "sea" ? t("requestForm.portSea") : port.port_type === "air" ? t("requestForm.portAir") : t("requestForm.portLand")})
                               </span>
                               <span className="text-xs text-muted-foreground">
-                                {port.estimated_days} روز
+                                {port.estimated_days} {t("requestForm.dayUnit")}
                               </span>
                             </div>
                           ))}
@@ -1891,7 +1902,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     )}
 
                     <Label className="flex items-center gap-1 text-sm font-medium">
-                      استان ورود
+                      {t("requestForm.entryProvince")}
                       <RequiredAsterisk />
                     </Label>
                     <Select
@@ -1908,10 +1919,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         <SelectValue
                           placeholder={
                             !formData.iranEntryPort
-                              ? "ابتدا بندر را انتخاب کنید"
+                              ? t("requestForm.selectPortFirst")
                               : isLoadingRecommendedPorts
-                                ? "در حال بارگذاری..."
-                                : "انتخاب استان ورود"
+                                ? t("requestForm.loading")
+                                : t("requestForm.selectEntryProvince")
                           }
                         />
                       </SelectTrigger>
@@ -1923,7 +1934,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                         ))}
                         {provinceOptions.length === 0 && !isLoadingProvinces && (
                           <SelectItem value="no-province" disabled>
-                            استانی موجود نیست
+                            {t("requestForm.noProvince")}
                           </SelectItem>
                         )}
                       </SelectContent>
@@ -1942,7 +1953,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                                   {selectedPort.description}
                                 </div>
                                 <div className="text-muted-foreground text-xs">
-                                  نوع: {selectedPort.port_type === "sea" ? "بندر دریایی" : selectedPort.port_type === "air" ? "فرودگاه" : "بندر زمینی"}
+                                  {t("requestForm.portType")}: {selectedPort.port_type === "sea" ? t("requestForm.portSea") : selectedPort.port_type === "air" ? t("requestForm.portAir") : t("requestForm.portLand")}
                                 </div>
                               </div>
                             ) : null;
@@ -1961,18 +1972,18 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         <div className="space-y-3">
           <Label className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <User className="w-4 h-4 text-primary" />
-            اطلاعات مشتری (اختیاری)
+                {t("requestForm.customerInfoOptional")}
           </Label>
           
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="customerFirstName" className="flex items-center gap-2 text-sm font-medium">
                 <User className="w-4 h-4 text-muted-foreground" />
-                نام
+                {t("requestForm.firstName")}
               </Label>
               <Input
                 id="customerFirstName"
-                placeholder="نام خود را وارد کنید"
+                placeholder={t("requestForm.firstNamePlaceholder")}
                 value={formData.customerFirstName}
                 onChange={(e) => {
                   setFormData({
@@ -1985,11 +1996,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-2">
               <Label htmlFor="customerLastName" className="flex items-center gap-2 text-sm font-medium">
                 <User className="w-4 h-4 text-muted-foreground" />
-                نام خانوادگی
+                {t("requestForm.lastName")}
               </Label>
               <Input
                 id="customerLastName"
-                placeholder="نام خانوادگی خود را وارد کنید"
+                placeholder={t("requestForm.lastNamePlaceholder")}
                 value={formData.customerLastName}
                 onChange={(e) => {
                   setFormData({
@@ -2001,7 +2012,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            برای خدمات بهتر، نام خود را وارد کنید (اختیاری)
+            {t("requestForm.customerInfoHelp")}
           </p>
         </div>
 
@@ -2009,7 +2020,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         <div className="space-y-3">
           <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Phone className="w-4 h-4 text-primary" />
-            شماره تماس
+            {t("common.phone")}
             <RequiredAsterisk />
           </Label>
           <Input
@@ -2029,7 +2040,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             dir="ltr"
           />
           <p className="text-xs text-muted-foreground">
-            شماره موبایل خود را وارد کنید تا کارشناس با شما تماس بگیرد
+            {t("requestForm.phoneHelp")}
           </p>
         </div>
 
@@ -2037,12 +2048,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         <div className="space-y-4">
           <Label className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Truck className="w-4 h-4 text-primary" />
-            روش حمل
+            {t("common.transportMethod")}
           </Label>
           
           {/* Transport Method Preference */}
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">انتخاب روش حمل</Label>
+            <Label className="text-sm text-muted-foreground">{t("requestForm.transportPreference")}</Label>
             <Select
               value={formData.transportMethodPreference}
               onValueChange={(value) => {
@@ -2055,7 +2066,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               }}
             >
               <SelectTrigger>
-                <SelectValue placeholder="انتخاب نحوه تعیین روش حمل" />
+                <SelectValue placeholder={t("requestForm.transportPreferencePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {transportMethodOptions?.preference_options.map((option) => (
@@ -2074,12 +2085,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           {formData.transportMethodPreference === "customer_choice" && (
             <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
               <p className={helperTextClass}>
-                فقط روش‌های مناسب همین نوع درخواست نمایش داده می‌شود و مقدار ارسالی به سیستم تغییر نمی‌کند.
+                {t("requestForm.transportChoiceHelp")}
               </p>
               {shippingType === "international" && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1 text-sm font-medium">
-                    روش حمل برای مسیر بین‌المللی
+                    {t("requestForm.internationalMethod")}
                     <RequiredAsterisk />
                   </Label>
                   <Select
@@ -2092,15 +2103,15 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="انتخاب روش حمل بین‌المللی" />
+                      <SelectValue placeholder={t("requestForm.selectInternationalMethod")} />
                     </SelectTrigger>
                     <SelectContent>
                       {transportMethodOptions?.international_methods.map((method) => (
                         <SelectItem key={method.id} value={method.name}>
                           <div className="space-y-1 text-right">
-                            <div className="font-medium">{getTransportLabel(method)}</div>
+                            <div className="font-medium">{getTransportLabel(method, language)}</div>
                             {method.description && (
-                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, "مناسب برای مسیرهای بین‌المللی")}</div>
+                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.internationalMethodFallback"))}</div>
                             )}
                           </div>
                         </SelectItem>
@@ -2113,7 +2124,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               {shippingType === "domestic" && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-1 text-sm font-medium">
-                    روش حمل برای مسیر داخلی
+                    {t("requestForm.domesticMethod")}
                     <RequiredAsterisk />
                   </Label>
                   <Select
@@ -2126,15 +2137,15 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="انتخاب روش حمل داخلی" />
+                      <SelectValue placeholder={t("requestForm.selectDomesticMethod")} />
                     </SelectTrigger>
                     <SelectContent>
                       {transportMethodOptions?.domestic_methods.map((method) => (
                         <SelectItem key={method.id} value={method.name}>
                           <div className="space-y-1 text-right">
-                            <div className="font-medium">{getTransportLabel(method)}</div>
+                            <div className="font-medium">{getTransportLabel(method, language)}</div>
                             {method.description && (
-                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, "مناسب برای مسیرهای داخلی")}</div>
+                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.domesticMethodFallback"))}</div>
                             )}
                           </div>
                         </SelectItem>
@@ -2153,10 +2164,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-blue-900">
-                    پیشنهاد فورواردر انتخاب شده
+                    {t("requestForm.forwarderSuggestionSelected")}
                   </p>
                   <p className="text-xs text-blue-700 mt-1">
-                    کارشناسان ما بر اساس مشخصات کالا و مسیر، بهترین روش حمل را به شما پیشنهاد خواهند داد.
+                    {t("requestForm.forwarderSuggestionHelp")}
                   </p>
                 </div>
               </div>
@@ -2174,7 +2185,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           >
             <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-primary" />
-              <span>مشخصات کالا (اختیاری)</span>
+              <span>{t("requestForm.cargoOptional")}</span>
             </div>
             {showCargoDetails ? (
               <ChevronUp className="w-4 h-4" />
@@ -2183,10 +2194,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             )}
           </Button>
           <p className={helperTextClass}>
-            برای اطلاعات دقیق‌تر در مورد کالای خود، مشخصات را وارد کنید
+            {t("requestForm.cargoHelp")}
           </p>
           <p className={helperTextClass}>
-            این بخش اختیاری است؛ اگر وزن، حجم، ارزش یا زمان دقیق را نمی‌دانید می‌توانید خالی بگذارید.
+            {t("requestForm.cargoOptionalHelp")}
           </p>
         </div>
 
@@ -2195,18 +2206,18 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
               <Package className="w-4 h-4 text-primary" />
-              جزئیات کالا
+              {t("requestForm.cargoDetails")}
             </div>
 
             {/* Cargo Description */}
             <div className="space-y-2">
               <Label htmlFor="cargoDescription" className="flex items-center gap-2 text-sm font-medium">
                 <FileText className="w-4 h-4 text-muted-foreground" />
-                توضیحات کالا
+                {t("requestForm.cargoDescription")}
               </Label>
               <Input
                 id="cargoDescription"
-                placeholder="مثال: لوازم الکترونیکی، پوشاک، مواد غذایی..."
+                placeholder={t("requestForm.cargoDescriptionPlaceholder")}
                 value={formData.cargoDescription}
                 onChange={(e) => {
                   setFormData({
@@ -2222,7 +2233,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               <div className="space-y-2">
                 <Label htmlFor="cargoWeight" className="flex items-center gap-2 text-sm font-medium">
                   <Weight className="w-4 h-4 text-muted-foreground" />
-                  وزن (کیلوگرم)
+                  {t("common.weightKg")}
                 </Label>
                 <Input
                   id="cargoWeight"
@@ -2240,7 +2251,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               <div className="space-y-2">
                 <Label htmlFor="cargoVolume" className="flex items-center gap-2 text-sm font-medium">
                   <Package className="w-4 h-4 text-muted-foreground" />
-                  حجم (متر مکعب)
+                  {t("common.volumeM3")}
                 </Label>
                 <Input
                   id="cargoVolume"
@@ -2262,7 +2273,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-2">
               <Label htmlFor="cargoValue" className="flex items-center gap-2 text-sm font-medium">
                 <DollarSign className="w-4 h-4 text-muted-foreground" />
-                ارزش کالا (تومان)
+                {t("requestForm.cargoValueToman")}
               </Label>
               <Input
                 id="cargoValue"
@@ -2282,11 +2293,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-2">
               <Label htmlFor="specialInstructions" className="flex items-center gap-2 text-sm font-medium">
                 <FileText className="w-4 h-4 text-muted-foreground" />
-                دستورالعمل‌های خاص
+                {t("requestForm.specialInstructions")}
               </Label>
               <Input
                 id="specialInstructions"
-                placeholder="مثال: مراقبت ویژه، دمای خاص، و..."
+                placeholder={t("requestForm.specialInstructionsPlaceholder")}
                 value={formData.specialInstructions}
                 onChange={(e) => {
                   setFormData({
@@ -2303,7 +2314,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <>
                   <JalaliDateInput
                     id="pickupDate"
-                    label="تاریخ تحویل"
+                    label={t("requestForm.pickupDate")}
+                    selectLabel={t("requestForm.selectJalaliDate")}
+                    nextMonthLabel={t("requestForm.nextMonth")}
+                    previousMonthLabel={t("requestForm.previousMonth")}
+                    clearLabel={t("requestForm.clearDate")}
                     value={formData.pickupDate}
                     onChange={(pickupDate) => {
                       setFormData({
@@ -2314,7 +2329,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   />
                   <JalaliDateInput
                     id="deliveryDate"
-                    label="تاریخ تحویل"
+                    label={t("requestForm.deliveryDate")}
+                    selectLabel={t("requestForm.selectJalaliDate")}
+                    nextMonthLabel={t("requestForm.nextMonth")}
+                    previousMonthLabel={t("requestForm.previousMonth")}
+                    clearLabel={t("requestForm.clearDate")}
                     value={formData.deliveryDate}
                     onChange={(deliveryDate) => {
                       setFormData({
@@ -2329,7 +2348,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <div className="space-y-2">
                 <Label htmlFor="pickupDate" className="flex items-center gap-2 text-sm font-medium">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
-                  تاریخ تحویل
+                  {t("requestForm.pickupDate")}
                 </Label>
                 <Input
                   id="pickupDate"
@@ -2348,7 +2367,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 <div className="space-y-2">
                 <Label htmlFor="deliveryDate" className="flex items-center gap-2 text-sm font-medium">
                   <Calendar className="w-4 h-4 text-muted-foreground" />
-                  تاریخ تحویل
+                  {t("requestForm.deliveryDate")}
                 </Label>
                 <Input
                   id="deliveryDate"
@@ -2366,11 +2385,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             </div>
             {shippingType === "domestic" && (
               <p className={helperTextClass}>
-                تاریخ‌ها اختیاری هستند و برای درخواست داخلی با تقویم شمسی انتخاب می‌شوند.
+                {t("requestForm.domesticDateHelp")}
               </p>
             )}
             <p className={shippingType === "domestic" ? "hidden" : helperTextClass}>
-              تاریخ‌ها اختیاری هستند و با تقویم پیش‌فرض مرورگر ثبت می‌شوند. تقویم شمسی برای درخواست داخلی به مرحله بعدی موکول شد.
+              {t("requestForm.browserDateHelp")}
             </p>
           </div>
         )}

@@ -9,10 +9,12 @@ import { useI18n } from "@/i18n";
 
 const Header = () => {
   const settings = useSiteSettings();
-  const { direction, t, toggleLanguage } = useI18n();
+  const { direction, language, t, toggleLanguage } = useI18n();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const textAlignClass = direction === "rtl" ? "text-right" : "text-left";
   const iconSpacingClass = direction === "rtl" ? "ml-2" : "mr-2";
+  const localizedSetting = (value: string | undefined, fallback: string) =>
+    language === "fa" ? value || fallback : fallback;
 
   return (
     <header className="w-full bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-50">
@@ -27,8 +29,8 @@ const Header = () => {
               </div>
             )}
             <div className={textAlignClass}>
-              <h1 className="text-lg font-bold text-foreground">{settings.site_name || t("brand.name")}</h1>
-              <p className="text-xs text-muted-foreground">{settings.site_tagline || t("brand.tagline")}</p>
+              <h1 className="text-lg font-bold text-foreground">{localizedSetting(settings.site_name, t("brand.name"))}</h1>
+              <p className="text-xs text-muted-foreground">{localizedSetting(settings.site_tagline, t("brand.tagline"))}</p>
             </div>
           </div>
 
@@ -36,13 +38,13 @@ const Header = () => {
             <Button variant="ghost" className="text-sm font-medium" asChild>
               <Link to="/#about">
                 <Info className={`w-4 h-4 ${iconSpacingClass}`} />
-                {settings.nav_about || t("nav.about")}
+                {localizedSetting(settings.nav_about, t("nav.about"))}
               </Link>
             </Button>
             <Button variant="ghost" className="text-sm font-medium" asChild>
               <Link to="/#contact">
                 <Phone className={`w-4 h-4 ${iconSpacingClass}`} />
-                {settings.nav_contact || t("nav.contact")}
+                {localizedSetting(settings.nav_contact, t("nav.contact"))}
               </Link>
             </Button>
             <Button
@@ -75,13 +77,13 @@ const Header = () => {
               <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
                 <Link to="/#about" onClick={() => setIsMenuOpen(false)}>
                   <Info className={`w-4 h-4 ${iconSpacingClass}`} />
-                  {settings.nav_about || t("nav.about")}
+                  {localizedSetting(settings.nav_about, t("nav.about"))}
                 </Link>
               </Button>
               <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
                 <Link to="/#contact" onClick={() => setIsMenuOpen(false)}>
                   <Phone className={`w-4 h-4 ${iconSpacingClass}`} />
-                  {settings.nav_contact || t("nav.contact")}
+                  {localizedSetting(settings.nav_contact, t("nav.contact"))}
                 </Link>
               </Button>
               <Button

@@ -432,20 +432,20 @@ const PublicTracking: React.FC = () => {
             )}
 
             {showLatestQuoteCard && requestData.latest_quote && (
-              <Section icon={DollarSign} title="پیشنهاد (قیمت)">
+              <Section icon={DollarSign} title={t("customer.quoteTitle")}>
                 <div className="space-y-4">
                   <Field
-                    label="مبلغ"
+                    label={t("common.amount")}
                     value={`${requestData.latest_quote.amount?.toLocaleString(locale)} ${requestData.latest_quote.currency}`}
                   />
                   {requestData.latest_quote.valid_until && (
                     <Field
-                      label="اعتبار تا"
+                      label={t("common.validUntil")}
                       value={formatDate(requestData.latest_quote.valid_until, undefined, "—", locale)}
                     />
                   )}
                   {requestData.latest_quote.note && (
-                    <Field label="یادداشت" value={requestData.latest_quote.note} />
+                    <Field label={t("common.notes")} value={requestData.latest_quote.note} />
                   )}
                   <p className="text-xs leading-6 text-muted-foreground">
                     {formatDate(requestData.latest_quote.created_at, {

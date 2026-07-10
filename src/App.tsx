@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,7 +20,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import AdminPanel from "./pages/AdminPanel";
 import { env } from "./lib/env";
 import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
-import { I18nProvider } from "./i18n";
+import { I18nProvider, useI18n } from "./i18n";
 
 const queryClient = new QueryClient();
 const CRM_ALLOWED_ROLES = ["admin", "crm_manager", "supervisor", "business_expert"];
@@ -51,6 +51,22 @@ function DevHealthCheck() {
   return null;
 }
 
+function PersianOnlyRoute({ children }: { children: ReactNode }) {
+  const { language, setLanguage } = useI18n();
+
+  useEffect(() => {
+    if (language !== "fa") {
+      setLanguage("fa");
+    }
+  }, [language, setLanguage]);
+
+  if (language !== "fa") {
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -65,37 +81,47 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/expert" element={
                   <ProtectedRoute>
-                    <ErrorBoundary>
-                      <ExpertConsole />
-                    </ErrorBoundary>
+                    <PersianOnlyRoute>
+                      <ErrorBoundary>
+                        <ExpertConsole />
+                      </ErrorBoundary>
+                    </PersianOnlyRoute>
                   </ProtectedRoute>
                 } />
                 <Route path="/expert/requests/:id" element={
                   <ProtectedRoute>
-                    <ErrorBoundary>
-                      <RequestDetail />
-                    </ErrorBoundary>
+                    <PersianOnlyRoute>
+                      <ErrorBoundary>
+                        <RequestDetail />
+                      </ErrorBoundary>
+                    </PersianOnlyRoute>
                   </ProtectedRoute>
                 } />
                 <Route path="/crm" element={
                   <ProtectedRoute allowedRoles={CRM_ALLOWED_ROLES}>
-                    <ErrorBoundary>
-                      <CRMDashboard />
-                    </ErrorBoundary>
+                    <PersianOnlyRoute>
+                      <ErrorBoundary>
+                        <CRMDashboard />
+                      </ErrorBoundary>
+                    </PersianOnlyRoute>
                   </ProtectedRoute>
                 } />
                 <Route path="/admin" element={
                   <AdminRoute>
-                    <ErrorBoundary>
-                      <AdminPanel />
-                    </ErrorBoundary>
+                    <PersianOnlyRoute>
+                      <ErrorBoundary>
+                        <AdminPanel />
+                      </ErrorBoundary>
+                    </PersianOnlyRoute>
                   </AdminRoute>
                 } />
                 <Route path="/user-management" element={
                   <AdminRoute>
-                    <ErrorBoundary>
-                      <AdminPanel />
-                    </ErrorBoundary>
+                    <PersianOnlyRoute>
+                      <ErrorBoundary>
+                        <AdminPanel />
+                      </ErrorBoundary>
+                    </PersianOnlyRoute>
                   </AdminRoute>
                 } />
                 <Route path="/customer/:customerId" element={

@@ -357,12 +357,12 @@ const CustomerRequestDetail: React.FC = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <DollarSign className="h-5 w-5 text-primary" />
-                    پیشنهاد (قیمت)
+                    {t("customer.quoteTitle")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">مبلغ</span>
+                    <span className="text-sm text-muted-foreground">{t("common.amount")}</span>
                     <span className="text-lg font-bold text-foreground">
                       {requestDetail.latest_quote.amount?.toLocaleString(locale)} {requestDetail.latest_quote.currency}
                     </span>
