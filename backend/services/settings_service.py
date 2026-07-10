@@ -6,11 +6,11 @@ from backend.models import SiteSetting
 
 # Default values for all editable keys (used when DB has no value)
 DEFAULT_SITE_SETTINGS = {
-    "site_name": "فورواردری سریع",
-    "site_tagline": "ارسال آسان و مطمئن",
+    "site_name": "فورواردرت",
+    "site_tagline": "مسیر روشن درخواست حمل",
     "logo_url": "",
     "favicon_url": "",
-    "page_title": "فورواردری سریع - ارسال آسان و مطمئن در سراسر کشور",
+    "page_title": "فورواردرت | ثبت و پیگیری درخواست حمل",
     "meta_description": "سرویس حرفه‌ای فورواردری و ارسال مرسوله در سراسر ایران. ارسال سریع، مطمئن و با بیمه کامل.",
     "meta_author": "فورواردری سریع",
     "meta_keywords": "فورواردری, ارسال مرسوله, حمل و نقل, ارسال سریع, ایران",

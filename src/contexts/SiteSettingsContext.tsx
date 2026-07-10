@@ -4,13 +4,13 @@ import { fetchSiteSettings } from "@/lib/api";
 export type SiteSettings = Record<string, string>;
 
 const defaultSettings: SiteSettings = {
-  site_name: "فورواردری سریع",
-  site_tagline: "ارسال آسان و مطمئن",
+  site_name: "فورواردرت",
+  site_tagline: "مسیر روشن درخواست حمل",
   logo_url: "",
   favicon_url: "",
-  page_title: "فورواردری سریع - ارسال آسان و مطمئن در سراسر کشور",
-  meta_description: "سرویس حرفه‌ای فورواردری و ارسال مرسوله در سراسر ایران. ارسال سریع، مطمئن و با بیمه کامل.",
-  meta_author: "فورواردری سریع",
+  page_title: "فورواردرت | ثبت و پیگیری درخواست حمل",
+  meta_description: "فورواردرت، سامانه ثبت، بررسی و پیگیری شفاف درخواست‌های حمل داخلی و بین‌المللی.",
+  meta_author: "فورواردرت",
   meta_keywords: "فورواردری, ارسال مرسوله, حمل و نقل, ارسال سریع, ایران",
   footer_company_name: "فورواردری سریع",
   footer_description: "ارائه دهنده خدمات حمل و نقل و فورواردری با بیش از ۱۰ سال تجربه در سراسر کشور",
@@ -63,7 +63,9 @@ export function SiteSettingsProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (settings.page_title) {
-      document.title = settings.page_title;
+      document.title = settings.page_title.startsWith("فورواردری سریع")
+        ? defaultSettings.page_title
+        : settings.page_title;
     }
     const favicon = settings.favicon_url?.trim();
     if (favicon) {

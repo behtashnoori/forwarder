@@ -5,7 +5,25 @@ import Footer from "@/components/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Globe2, MapPin, Search, Truck } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  ClipboardCheck,
+  Clock3,
+  Database,
+  Eye,
+  FileText,
+  Globe2,
+  MapPin,
+  MapPinned,
+  PackageCheck,
+  PhoneCall,
+  Search,
+  Sparkles,
+  Truck,
+  UserRoundCheck,
+  FileSignature,
+} from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useI18n } from "@/i18n";
 
@@ -55,17 +73,20 @@ const Index = () => {
       <section className="px-4 py-8 md:py-12">
         <div className="container mx-auto max-w-5xl">
           {!shippingType ? (
-            <div className="space-y-7">
-              <div id="about" className="scroll-mt-24 mx-auto max-w-3xl text-center">
-                <h1 className="text-3xl font-bold tracking-normal text-[#1F2937] md:text-4xl">
-                  {t("home.title")}
-                </h1>
-                <p className="mt-4 text-base leading-7 text-[#6B7280] md:text-lg">
-                  {t("home.description")}
-                </p>
-              </div>
+            <div className="space-y-14 md:space-y-20">
+              <Hero direction={direction} />
 
-              <ShippingTypeSelector onSelect={handleShippingTypeSelect} />
+              <WorkflowSection />
+
+              <ValueSection />
+
+              <section id="services" className="scroll-mt-24 space-y-7">
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-primary">{t("services.eyebrow")}</p>
+                  <h2 className="mt-2 text-2xl font-bold text-[#1F2937] md:text-3xl">{t("services.title")}</h2>
+                </div>
+                <ShippingTypeSelector onSelect={handleShippingTypeSelect} />
+              </section>
 
               <div id="tracking" className="scroll-mt-24">
                 <TrackingSection
@@ -93,6 +114,155 @@ const Index = () => {
 
       <Footer />
     </div>
+  );
+};
+
+const Hero = ({ direction }: { direction: "rtl" | "ltr" }) => {
+  const { t } = useI18n();
+  const arrowClass = direction === "rtl" ? "" : "rotate-180";
+
+  return (
+    <section id="about" className="scroll-mt-24 overflow-hidden rounded-3xl border border-primary/10 bg-white px-5 py-9 shadow-sm md:px-10 md:py-12">
+      <div className="grid items-center gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:gap-14">
+        <div className={direction === "rtl" ? "text-right" : "text-left"}>
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+            <Sparkles className="h-4 w-4" />
+            {t("hero.newEyebrow")}
+          </div>
+          <h1 className="mt-5 text-3xl font-bold leading-[1.35] text-[#172033] md:text-5xl md:leading-[1.25]">
+            {t("hero.newTitle")}
+          </h1>
+          <p className="mt-5 max-w-2xl text-base leading-8 text-[#667085] md:text-lg">
+            {t("hero.newDescription")}
+          </p>
+          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+            <Button size="lg" className="h-12 px-6" asChild>
+              <a href="#services">
+                <Truck className="h-4 w-4" />
+                {t("hero.primaryCta")}
+                <ArrowLeft className={`h-4 w-4 ${arrowClass}`} />
+              </a>
+            </Button>
+            <Button size="lg" variant="outline" className="h-12 px-6" asChild>
+              <a href="#tracking">
+                <Search className="h-4 w-4" />
+                {t("hero.secondaryCta")}
+              </a>
+            </Button>
+          </div>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-md">
+          <div className="absolute -inset-4 rounded-[2rem] bg-primary/5 blur-2xl" />
+          <div className="relative rounded-2xl border border-border/70 bg-[#FCFCFD] p-5 shadow-md md:p-6">
+            <div className="flex items-start justify-between gap-4 border-b border-border/70 pb-4">
+              <div>
+                <p className="text-xs text-muted-foreground">{t("hero.sampleLabel")}</p>
+                <p className="mt-1 font-bold text-[#1F2937]" dir="ltr">SR-10234</p>
+              </div>
+              <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                {t("hero.sampleStatus")}
+              </span>
+            </div>
+            <div className="mt-5 space-y-0">
+              {["hero.statusRegistered", "hero.statusAssigned", "hero.statusContacted", "hero.statusQuoted"].map((key, index) => (
+                <div key={key} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full ${index < 2 ? "bg-primary text-white" : "border-2 border-border bg-white text-muted-foreground"}`}>
+                      {index < 2 ? <Check className="h-4 w-4" /> : <Clock3 className="h-3.5 w-3.5" />}
+                    </div>
+                    {index < 3 && <div className={`h-8 w-px ${index < 1 ? "bg-primary/25" : "bg-border"}`} />}
+                  </div>
+                  <div className="pt-1 text-sm font-medium text-[#344054]">{t(key)}</div>
+                </div>
+              ))}
+              <div className="mt-1 flex items-center gap-3 text-xs font-semibold text-primary">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10">+3</div>
+                <span>{t("hero.moreSteps")}</span>
+              </div>
+            </div>
+            <div className="mt-5 flex items-center gap-2 rounded-xl bg-primary/5 p-3 text-xs leading-6 text-primary">
+              <Eye className="h-4 w-4 shrink-0" />
+              {t("hero.sampleHint")}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+const WorkflowSection = () => {
+  const { t } = useI18n();
+  const steps = [
+    { icon: FileText, title: "workflow.step1.title", description: "workflow.step1.description" },
+    { icon: UserRoundCheck, title: "workflow.step2.title", description: "workflow.step2.description" },
+    { icon: PhoneCall, title: "workflow.step3.title", description: "workflow.step3.description" },
+    { icon: ClipboardCheck, title: "workflow.step4.title", description: "workflow.step4.description" },
+    { icon: FileSignature, title: "workflow.step5.title", description: "workflow.step5.description" },
+    { icon: PackageCheck, title: "workflow.step6.title", description: "workflow.step6.description" },
+    { icon: MapPinned, title: "workflow.step7.title", description: "workflow.step7.description" },
+  ];
+
+  return (
+    <section aria-labelledby="workflow-title">
+      <div className="text-center">
+        <p className="text-sm font-semibold text-primary">{t("workflow.eyebrow")}</p>
+        <h2 id="workflow-title" className="mt-2 text-2xl font-bold text-[#1F2937] md:text-3xl">{t("workflow.title")}</h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[#667085]">{t("workflow.description")}</p>
+      </div>
+      <div className="relative mt-9 grid gap-4 md:grid-cols-2 lg:grid-cols-4 md:gap-5">
+        {steps.map(({ icon: Icon, title, description }, index) => (
+          <div key={title} className={`relative rounded-2xl border border-border/60 bg-white p-5 shadow-sm ${index === 6 ? "lg:col-start-2" : ""}`}>
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Icon className="h-6 w-6" />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-primary">{t("workflow.stepLabel")} {index + 1}</span>
+                <h3 className="mt-1 font-bold text-[#1F2937]">{t(title)}</h3>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-7 text-[#667085]">{t(description)}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const ValueSection = () => {
+  const { t } = useI18n();
+  const values = [
+    { icon: Sparkles, title: "value.fast.title", description: "value.fast.description" },
+    { icon: UserRoundCheck, title: "value.expert.title", description: "value.expert.description" },
+    { icon: Eye, title: "value.clear.title", description: "value.clear.description" },
+    { icon: Database, title: "value.focused.title", description: "value.focused.description" },
+  ];
+
+  return (
+    <section className="rounded-3xl bg-[#172033] px-5 py-8 text-white md:px-8 md:py-10" aria-labelledby="value-title">
+      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+        <div>
+          <p className="text-sm font-semibold text-blue-300">{t("value.eyebrow")}</p>
+          <h2 id="value-title" className="mt-2 text-2xl font-bold md:text-3xl">{t("value.title")}</h2>
+        </div>
+        <p className="max-w-lg text-sm leading-7 text-slate-300">{t("value.description")}</p>
+      </div>
+      <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+        {values.map(({ icon: Icon, title, description }) => (
+          <div key={title} className="flex gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-blue-300">
+              <Icon className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold">{t(title)}</h3>
+              <p className="mt-1 text-xs leading-6 text-slate-300">{t(description)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 };
 

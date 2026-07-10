@@ -13,8 +13,9 @@ const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const textAlignClass = direction === "rtl" ? "text-right" : "text-left";
   const iconSpacingClass = direction === "rtl" ? "ml-2" : "mr-2";
+  const legacyBrandValues = new Set(["فورواردری سریع", "ارسال آسان و مطمئن"]);
   const localizedSetting = (value: string | undefined, fallback: string) =>
-    language === "fa" ? value || fallback : fallback;
+    language === "fa" && value && !legacyBrandValues.has(value.trim()) ? value : fallback;
 
   return (
     <header className="w-full bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-50">
