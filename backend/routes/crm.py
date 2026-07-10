@@ -4,6 +4,7 @@ from backend.extensions import db
 from backend.auth import get_current_user
 from backend.security import require_role
 from backend.services import (
+    crm_customer_create_from_request_service,
     crm_customer_link_service,
     crm_dashboard_service,
     crm_service,
@@ -117,6 +118,21 @@ def get_shipment_request_customer_link(request_id: int):
     except Exception as e:
         current_app.logger.error(f"Error getting CRM customer link: {e}")
         return jsonify({"error": "Error getting CRM customer link"}), 500
+
+
+@crm_bp.get("/shipment-requests/<int:request_id>/customer-create-preview")
+@require_role("business_expert")
+def get_shipment_request_customer_create_preview(request_id: int):
+    """Return a read-only preview for creating a CRM customer from a request."""
+    try:
+        return jsonify(
+            crm_customer_create_from_request_service.get_customer_create_preview(request_id)
+        )
+    except crm_customer_create_from_request_service.CrmCustomerCreatePreviewError as e:
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        current_app.logger.error(f"Error building CRM customer create preview: {e}")
+        return jsonify({"error": "Error building CRM customer create preview"}), 500
 
 
 @crm_bp.put("/shipment-requests/<int:request_id>/customer-link")
