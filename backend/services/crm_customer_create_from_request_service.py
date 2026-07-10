@@ -1,8 +1,4 @@
-"""Preview helpers for creating CRM customers from shipment requests.
-
-This module is intentionally read-only. It must not create CRM customers,
-link shipment requests, write audit rows, or mutate request lifecycle data.
-"""
+"""Helpers for CRM customer creation workflows from shipment requests."""
 from __future__ import annotations
 
 from typing import Any
@@ -11,7 +7,11 @@ from sqlalchemy import or_
 
 from backend.extensions import db
 from backend.models import Customer, ShipmentRequest
-from backend.services.crm_customer_link_service import build_customer_summary
+from backend.services.crm_customer_link_service import (
+    add_customer_link_audit_records,
+    build_customer_summary,
+    build_request_link_payload,
+)
 
 
 class CrmCustomerCreatePreviewError(Exception):
@@ -27,12 +27,70 @@ class CrmCustomerCreatePreviewNotFoundError(CrmCustomerCreatePreviewError):
     """Raised when the target shipment request is missing."""
 
 
+class CrmCustomerCreateValidationError(CrmCustomerCreatePreviewError):
+    """Raised when create-and-link input is invalid."""
+
+    def __init__(self, message: str):
+        super().__init__(message, 400)
+
+
+class CrmCustomerCreateConflictError(CrmCustomerCreatePreviewError):
+    """Raised when controlled creation needs explicit user acknowledgement."""
+
+    def __init__(self, message: str):
+        super().__init__(message, 409)
+
+
+CUSTOMER_CREATE_FIELDS = {
+    "company_name",
+    "first_name",
+    "last_name",
+    "email",
+    "phone",
+    "mobile",
+    "website",
+    "industry",
+    "company_size",
+    "customer_type",
+    "status",
+    "source",
+    "notes",
+    "address",
+    "city",
+    "province",
+    "postal_code",
+    "country",
+}
+
+
 def _clean_text(value: Any) -> str | None:
     """Return a trimmed string, or None when the value has no useful text."""
     if value is None:
         return None
     text = str(value).strip()
     return text or None
+
+
+def _clean_customer_payload(customer_payload: dict[str, Any]) -> dict[str, Any]:
+    """Keep only CRM Customer fields and trim string values."""
+    cleaned: dict[str, Any] = {}
+    for field in CUSTOMER_CREATE_FIELDS:
+        if field not in customer_payload:
+            continue
+        value = customer_payload[field]
+        cleaned[field] = _clean_text(value) if isinstance(value, str) or value is None else value
+    return cleaned
+
+
+def _validate_customer_payload(customer_payload: dict[str, Any]) -> None:
+    """Validate the minimum fields needed by the current Customer model."""
+    missing = [
+        field for field in ("first_name", "last_name") if not customer_payload.get(field)
+    ]
+    if missing:
+        raise CrmCustomerCreateValidationError(
+            f"Missing required customer fields: {', '.join(missing)}"
+        )
 
 
 def build_suggested_customer_fields(shipment_request: ShipmentRequest) -> dict[str, Any]:
@@ -186,5 +244,96 @@ def get_customer_create_preview(request_id: int) -> dict[str, Any]:
             "missing_fields": get_missing_fields(suggested_fields),
             "can_create_without_user_review": False,
             "mutation_allowed": False,
+        },
+    }
+
+
+def create_customer_from_request(
+    request_id: int,
+    payload: dict[str, Any],
+    user: dict[str, Any],
+    remote_addr: str | None = None,
+) -> dict[str, Any]:
+    """Create a CRM Customer from reviewed request data and optionally link it."""
+    shipment_request = db.session.get(ShipmentRequest, request_id)
+    if shipment_request is None:
+        raise CrmCustomerCreatePreviewNotFoundError("Shipment request not found", 404)
+
+    link_to_request = payload.get("link", True)
+    if not isinstance(link_to_request, bool):
+        raise CrmCustomerCreateValidationError("link must be a boolean")
+
+    if link_to_request and shipment_request.customer_id is not None:
+        raise CrmCustomerCreateConflictError("Shipment request already has a CRM customer")
+
+    suggested_fields = build_suggested_customer_fields(shipment_request)
+    submitted_customer = payload.get("customer") or {}
+    if not isinstance(submitted_customer, dict):
+        raise CrmCustomerCreateValidationError("customer must be an object")
+
+    reviewed_customer = dict(suggested_fields)
+    reviewed_customer.update(_clean_customer_payload(submitted_customer))
+    _validate_customer_payload(reviewed_customer)
+
+    duplicate_candidates = find_duplicate_candidates(reviewed_customer)
+    strong_matches = [
+        candidate
+        for candidate in duplicate_candidates
+        if candidate["match_strength"] == "strong"
+    ]
+    duplicate_acknowledged = payload.get("duplicate_acknowledged", False)
+    if strong_matches and duplicate_acknowledged is not True:
+        raise CrmCustomerCreateConflictError("Strong duplicate candidates require acknowledgement")
+
+    customer = Customer(
+        company_name=reviewed_customer.get("company_name"),
+        first_name=reviewed_customer.get("first_name"),
+        last_name=reviewed_customer.get("last_name"),
+        email=reviewed_customer.get("email"),
+        phone=reviewed_customer.get("phone"),
+        mobile=reviewed_customer.get("mobile"),
+        website=reviewed_customer.get("website"),
+        industry=reviewed_customer.get("industry"),
+        company_size=reviewed_customer.get("company_size"),
+        customer_type=reviewed_customer.get("customer_type") or "prospect",
+        status=reviewed_customer.get("status") or "active",
+        source=reviewed_customer.get("source") or "shipment_request",
+        notes=reviewed_customer.get("notes"),
+        address=reviewed_customer.get("address"),
+        city=reviewed_customer.get("city"),
+        province=reviewed_customer.get("province"),
+        postal_code=reviewed_customer.get("postal_code"),
+        country=reviewed_customer.get("country") or "Iran",
+    )
+    db.session.add(customer)
+    db.session.flush()
+
+    operation = "create"
+    if link_to_request:
+        old_customer_id = shipment_request.customer_id
+        shipment_request.customer_id = customer.id
+        operation = "create_and_link"
+        add_customer_link_audit_records(
+            shipment_request=shipment_request,
+            user=user,
+            operation=operation,
+            old_customer_id=old_customer_id,
+            new_customer_id=customer.id,
+            note=payload.get("reason"),
+            remote_addr=remote_addr,
+        )
+
+    db.session.commit()
+    link_payload = build_request_link_payload(shipment_request, operation)
+    return {
+        "operation": operation,
+        "created_customer": build_customer_summary(customer),
+        "shipment_request": link_payload["shipment_request"],
+        "customer": link_payload["customer"],
+        "duplicate_candidates": duplicate_candidates,
+        "metadata": {
+            "linked": link_to_request,
+            "strong_duplicate_count": len(strong_matches),
+            "duplicate_acknowledged": duplicate_acknowledged,
         },
     }

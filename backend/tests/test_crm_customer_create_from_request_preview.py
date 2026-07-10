@@ -330,3 +330,229 @@ def test_customer_create_preview_returns_404_for_missing_request(
         assert Customer.query.count() == before_customer_count
         assert CRMCustomerLinkAudit.query.count() == before_audit_count
         assert ExpertConsoleLog.query.count() == before_console_log_count
+
+
+def test_create_customer_from_request_requires_duplicate_acknowledgement(
+    crm_customer_create_preview_app,
+):
+    """Strong duplicate candidates block creation until explicitly acknowledged."""
+    app = crm_customer_create_preview_app["app"]
+    client = app.test_client()
+    headers = _auth_headers(crm_customer_create_preview_app["token"])
+
+    with app.app_context():
+        before_customer_count = Customer.query.count()
+        before_audit_count = CRMCustomerLinkAudit.query.count()
+        before_console_log_count = ExpertConsoleLog.query.count()
+
+    response = client.post(
+        f"/api/crm/shipment-requests/{crm_customer_create_preview_app['request_id']}"
+        "/create-customer",
+        headers=headers,
+        json={
+            "customer": {
+                "first_name": "Reviewed",
+                "last_name": "Customer",
+                "phone": "09125555555",
+            },
+            "link": True,
+        },
+    )
+
+    assert response.status_code == 409
+    assert response.get_json() == {
+        "error": "Strong duplicate candidates require acknowledgement"
+    }
+    with app.app_context():
+        request_row = db.session.get(
+            ShipmentRequest,
+            crm_customer_create_preview_app["request_id"],
+        )
+        assert request_row.customer_id is None
+        assert Customer.query.count() == before_customer_count
+        assert CRMCustomerLinkAudit.query.count() == before_audit_count
+        assert ExpertConsoleLog.query.count() == before_console_log_count
+
+
+def test_create_customer_from_request_can_create_and_link_with_audit(
+    crm_customer_create_preview_app,
+):
+    """Acknowledged create-and-link creates one Customer and link audit only."""
+    app = crm_customer_create_preview_app["app"]
+    client = app.test_client()
+    headers = _auth_headers(crm_customer_create_preview_app["token"])
+
+    with app.app_context():
+        request_row = db.session.get(
+            ShipmentRequest,
+            crm_customer_create_preview_app["request_id"],
+        )
+        before_snapshot = _request_snapshot(request_row)
+        before_customer_count = Customer.query.count()
+        before_audit_count = CRMCustomerLinkAudit.query.count()
+        before_console_log_count = ExpertConsoleLog.query.count()
+        before_quote_count = ExpertQuote.query.count()
+        before_opportunity_count = Opportunity.query.count()
+        before_gamification_count = CustomerGamification.query.count()
+        before_points = db.session.get(
+            CustomerGamification,
+            crm_customer_create_preview_app["gamification_customer_id"],
+        ).loyalty_points
+
+    response = client.post(
+        f"/api/crm/shipment-requests/{crm_customer_create_preview_app['request_id']}"
+        "/create-customer",
+        headers=headers,
+        json={
+            "customer": {
+                "first_name": "Reviewed",
+                "last_name": "Customer",
+                "company_name": "Reviewed Co",
+                "email": "reviewed@example.test",
+                "phone": "09125555555",
+                "mobile": "09120000000",
+            },
+            "duplicate_acknowledged": True,
+            "link": True,
+            "reason": "confirmed new legal entity",
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data["operation"] == "create_and_link"
+    assert data["created_customer"]["company_name"] == "Reviewed Co"
+    assert data["created_customer"]["phone"] == "09125555555"
+    assert data["metadata"]["linked"] is True
+    assert data["metadata"]["strong_duplicate_count"] == 1
+    assert data["metadata"]["duplicate_acknowledged"] is True
+    created_customer_id = data["created_customer"]["id"]
+    assert data["shipment_request"]["customer_id"] == created_customer_id
+
+    with app.app_context():
+        request_row = db.session.get(
+            ShipmentRequest,
+            crm_customer_create_preview_app["request_id"],
+        )
+        after_snapshot = _request_snapshot(request_row)
+        assert after_snapshot == {**before_snapshot, "customer_id": created_customer_id}
+        assert Customer.query.count() == before_customer_count + 1
+        assert ExpertQuote.query.count() == before_quote_count
+        assert Opportunity.query.count() == before_opportunity_count
+        assert CustomerGamification.query.count() == before_gamification_count
+        assert db.session.get(
+            CustomerGamification,
+            crm_customer_create_preview_app["gamification_customer_id"],
+        ).loyalty_points == before_points
+        created_customer = db.session.get(Customer, created_customer_id)
+        assert created_customer.first_name == "Reviewed"
+        assert created_customer.last_name == "Customer"
+        assert created_customer.customer_type == "prospect"
+        assert created_customer.status == "active"
+        assert CRMCustomerLinkAudit.query.count() == before_audit_count + 1
+        audit = CRMCustomerLinkAudit.query.filter_by(
+            shipment_request_id=crm_customer_create_preview_app["request_id"],
+            operation="create_and_link",
+        ).one()
+        assert audit.old_customer_id is None
+        assert audit.new_customer_id == created_customer_id
+        assert audit.reason == "confirmed new legal entity"
+        assert audit.request_status_at_time == "assigned"
+        assert audit.assigned_to_at_time == crm_customer_create_preview_app["business_expert_id"]
+        assert (
+            audit.gamification_customer_id_at_time
+            == crm_customer_create_preview_app["gamification_customer_id"]
+        )
+        assert ExpertConsoleLog.query.count() == before_console_log_count + 1
+        console_log = ExpertConsoleLog.query.filter_by(
+            shipment_request_id=crm_customer_create_preview_app["request_id"],
+            action="crm_customer_link",
+        ).one()
+        assert console_log.old_status == "assigned"
+        assert console_log.new_status == "assigned"
+        assert "CRM customer link create_and_link" in console_log.note
+
+
+def test_create_customer_from_request_can_create_without_link_or_audit(
+    crm_customer_create_preview_app,
+):
+    """Optional link=false creates a Customer without touching the request link."""
+    app = crm_customer_create_preview_app["app"]
+    client = app.test_client()
+    headers = _auth_headers(crm_customer_create_preview_app["token"])
+
+    with app.app_context():
+        request_row = db.session.get(
+            ShipmentRequest,
+            crm_customer_create_preview_app["incomplete_request_id"],
+        )
+        before_snapshot = _request_snapshot(request_row)
+        before_customer_count = Customer.query.count()
+        before_audit_count = CRMCustomerLinkAudit.query.count()
+        before_console_log_count = ExpertConsoleLog.query.count()
+
+    response = client.post(
+        f"/api/crm/shipment-requests/{crm_customer_create_preview_app['incomplete_request_id']}"
+        "/create-customer",
+        headers=headers,
+        json={
+            "customer": {
+                "first_name": "Standalone",
+                "last_name": "Customer",
+                "phone": "09129999999",
+            },
+            "link": False,
+        },
+    )
+
+    assert response.status_code == 201
+    data = response.get_json()
+    assert data["operation"] == "create"
+    assert data["metadata"]["linked"] is False
+    assert data["shipment_request"]["customer_id"] is None
+    assert data["customer"] is None
+
+    with app.app_context():
+        request_row = db.session.get(
+            ShipmentRequest,
+            crm_customer_create_preview_app["incomplete_request_id"],
+        )
+        assert _request_snapshot(request_row) == before_snapshot
+        assert Customer.query.count() == before_customer_count + 1
+        assert CRMCustomerLinkAudit.query.count() == before_audit_count
+        assert ExpertConsoleLog.query.count() == before_console_log_count
+
+
+def test_create_customer_from_request_rejects_invalid_payload_without_writes(
+    crm_customer_create_preview_app,
+):
+    """Invalid reviewed data fails before Customer creation or link writes."""
+    app = crm_customer_create_preview_app["app"]
+    client = app.test_client()
+    headers = _auth_headers(crm_customer_create_preview_app["token"])
+
+    with app.app_context():
+        before_customer_count = Customer.query.count()
+        before_audit_count = CRMCustomerLinkAudit.query.count()
+        before_console_log_count = ExpertConsoleLog.query.count()
+
+    response = client.post(
+        f"/api/crm/shipment-requests/{crm_customer_create_preview_app['incomplete_request_id']}"
+        "/create-customer",
+        headers=headers,
+        json={"customer": {"phone": "09129999999"}, "link": True},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json() == {
+        "error": "Missing required customer fields: first_name, last_name"
+    }
+    with app.app_context():
+        request_row = db.session.get(
+            ShipmentRequest,
+            crm_customer_create_preview_app["incomplete_request_id"],
+        )
+        assert request_row.customer_id is None
+        assert Customer.query.count() == before_customer_count
+        assert CRMCustomerLinkAudit.query.count() == before_audit_count
+        assert ExpertConsoleLog.query.count() == before_console_log_count

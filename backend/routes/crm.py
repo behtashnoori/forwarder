@@ -135,6 +135,29 @@ def get_shipment_request_customer_create_preview(request_id: int):
         return jsonify({"error": "Error building CRM customer create preview"}), 500
 
 
+@crm_bp.post("/shipment-requests/<int:request_id>/create-customer")
+@require_role("business_expert")
+def create_customer_from_shipment_request(request_id: int):
+    """Create a CRM customer from reviewed request data and optionally link it."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        return jsonify(
+            crm_customer_create_from_request_service.create_customer_from_request(
+                request_id,
+                payload,
+                get_current_user(),
+                request.remote_addr,
+            )
+        ), 201
+    except crm_customer_create_from_request_service.CrmCustomerCreatePreviewError as e:
+        db.session.rollback()
+        return jsonify({"error": e.message}), e.status_code
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating CRM customer from request: {e}")
+        return jsonify({"error": "Error creating CRM customer from request"}), 500
+
+
 @crm_bp.put("/shipment-requests/<int:request_id>/customer-link")
 @require_role("business_expert")
 def link_shipment_request_customer(request_id: int):
