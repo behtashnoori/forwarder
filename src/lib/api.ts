@@ -933,10 +933,13 @@ export interface CRMLinkCustomer {
   mobile?: string | null;
   customer_type?: string | null;
   status?: string | null;
+  match_strength?: "strong" | "weak" | "possible";
+  match_score?: number;
+  match_reasons?: string[];
 }
 
 export interface CRMShipmentRequestLinkState {
-  operation: "read" | "link" | "relink" | "unlink" | "noop";
+  operation: "read" | "link" | "relink" | "unlink" | "noop" | "create" | "create_and_link";
   shipment_request: {
     id: number;
     customer_id: number | null;
@@ -945,6 +948,51 @@ export interface CRMShipmentRequestLinkState {
     gamification_customer_id?: number | null;
   };
   customer: CRMLinkCustomer | null;
+}
+
+export interface CRMCreateCustomerFields {
+  first_name?: string | null;
+  last_name?: string | null;
+  company_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  mobile?: string | null;
+  customer_type?: string | null;
+  status?: string | null;
+  source?: string | null;
+  notes?: string | null;
+  city?: string | null;
+  province?: string | null;
+  country?: string | null;
+}
+
+export interface CRMCustomerCreatePreview {
+  operation: "preview";
+  preview_only: true;
+  shipment_request: CRMShipmentRequestLinkState["shipment_request"];
+  suggested_customer: CRMCreateCustomerFields;
+  duplicate_candidates: CRMLinkCustomer[];
+  metadata: {
+    match_policy: string;
+    strong_duplicate_count: number;
+    missing_fields: {
+      required: string[];
+      recommended: string[];
+    };
+    can_create_without_user_review: boolean;
+    mutation_allowed: boolean;
+  };
+}
+
+export interface CRMCustomerCreateResult extends CRMShipmentRequestLinkState {
+  operation: "create" | "create_and_link";
+  created_customer: CRMLinkCustomer;
+  duplicate_candidates: CRMLinkCustomer[];
+  metadata: {
+    linked: boolean;
+    strong_duplicate_count: number;
+    duplicate_acknowledged: boolean;
+  };
 }
 
 // CRM API Functions
@@ -1117,6 +1165,27 @@ export function searchCRMLinkCustomers(params?: {
 
 export function fetchShipmentRequestCustomerLink(requestId: number): Promise<CRMShipmentRequestLinkState> {
   return request(`/api/crm/shipment-requests/${requestId}/customer-link`);
+}
+
+export function fetchShipmentRequestCustomerCreatePreview(
+  requestId: number
+): Promise<CRMCustomerCreatePreview> {
+  return request(`/api/crm/shipment-requests/${requestId}/customer-create-preview`);
+}
+
+export function createCustomerFromShipmentRequest(
+  requestId: number,
+  payload: {
+    customer: CRMCreateCustomerFields;
+    link: boolean;
+    duplicate_acknowledged?: boolean;
+    reason?: string;
+  }
+): Promise<CRMCustomerCreateResult> {
+  return request(`/api/crm/shipment-requests/${requestId}/create-customer`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function linkShipmentRequestCustomer(
