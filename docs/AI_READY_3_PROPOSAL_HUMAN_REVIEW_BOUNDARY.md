@@ -15,6 +15,8 @@ This document defines how a future AI-generated proposal may cross into human re
 
 AI-READY-3 does **not** implement proposal storage, database models, migrations, routes, frontend components, provider connectivity, email, configuration, or deployment. Every schema, state, endpoint, permission, UI element, and transaction described below is conceptual unless explicitly listed as current repository behavior.
 
+The final governance decisions that constrain any future implementation are recorded in `AI_READY_3G_PROPOSAL_GOVERNANCE_DECISIONS.md`. Where this architecture document presents options, the 3G decision record is authoritative.
+
 ## 2. Multi-agent Codex design process
 
 The Lead/Coordinator assigned five read-only specialist roles:
