@@ -6,6 +6,7 @@ from datetime import datetime
 
 import bcrypt
 import pytest
+from sqlalchemy.exc import SQLAlchemyError
 
 from backend import create_app
 from backend.extensions import db
@@ -13,20 +14,25 @@ from backend.models import (
     Activity,
     AssignmentLog,
     AssignmentRule,
+    CRMCustomerLinkAudit,
     Customer,
     ExpertConsoleLog,
     ExpertConsoleMessage,
     ExpertConsoleNotification,
+    ExpertQuote,
     ExpertSpecialization,
     ExpertUser,
     Opportunity,
+    ReferralAssignmentLog,
+    ReferralRule,
+    ReferralRuleState,
     Report,
     ShipmentRequest,
     Task,
     TransportMethod,
 )
 from backend.security import security
-from backend.services import assignment_service
+from backend.services import assignment_service, user_delete_service
 
 
 @pytest.fixture
@@ -374,8 +380,8 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
         assert updated.specializations[0].is_primary is True
 
 
-def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
-    """Delete keeps self/admin guards, cleanup side effects, reassignment, and commit behavior."""
+def test_user_delete_cleanup_and_hard_delete_contract(user_management_app):
+    """Hard delete removes owned rows and clears only nullable references."""
     client = user_management_app["app"].test_client()
     admin_headers = _auth_headers(user_management_app["admin_token"])
     expert_id = user_management_app["expert_id"]
@@ -465,7 +471,39 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
             stage="qualified",
             assigned_to=expert_id,
         )
-        db.session.add_all([user_rule, subordinate, log, message, notification, activity, task, report, opportunity])
+        quote = ExpertQuote(
+            shipment_request_id=request_row.id,
+            amount=125000,
+            currency="IRR",
+            created_by_expert_id=expert_id,
+        )
+        crm_audit = CRMCustomerLinkAudit(
+            shipment_request_id=request_row.id,
+            operation="link",
+            performed_by_user_id=expert_id,
+            performed_by_role="expert",
+            source="test",
+        )
+        referral_rule = ReferralRule(
+            name="Expert-owned referral rule",
+            conditions=json.dumps({}),
+            action=json.dumps({"type": "direct_assign", "expert_id": expert_id}),
+            created_by=expert_id,
+        )
+        db.session.add_all([
+            user_rule,
+            subordinate,
+            log,
+            message,
+            notification,
+            activity,
+            task,
+            report,
+            opportunity,
+            quote,
+            crm_audit,
+            referral_rule,
+        ])
         db.session.flush()
         assignment_log = AssignmentLog(
             shipment_request_id=request_row.id,
@@ -474,11 +512,43 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
             assignment_method="automatic",
             assignment_reason="Seed assignment",
         )
-        db.session.add(assignment_log)
+        preserved_assignment_log = AssignmentLog(
+            shipment_request_id=request_row.id,
+            assigned_expert_id=user_management_app["other_expert_id"],
+            assignment_rule_id=user_rule.id,
+            assignment_method="automatic",
+            assignment_reason="Preserved assignment history",
+        )
+        referral_state = ReferralRuleState(rule_id=referral_rule.id, rr_index=1)
+        deleted_referral_log = ReferralAssignmentLog(
+            request_id=request_row.id,
+            rule_id=referral_rule.id,
+            selected_expert_id=expert_id,
+            strategy_used="direct",
+        )
+        preserved_referral_log = ReferralAssignmentLog(
+            request_id=request_row.id,
+            rule_id=referral_rule.id,
+            selected_expert_id=user_management_app["other_expert_id"],
+            strategy_used="direct",
+        )
+        db.session.add_all([
+            assignment_log,
+            preserved_assignment_log,
+            referral_state,
+            deleted_referral_log,
+            preserved_referral_log,
+        ])
         db.session.commit()
         user_rule_id = user_rule.id
         subordinate_id = subordinate.id
         opportunity_id = opportunity.id
+        quote_id = quote.id
+        crm_audit_id = crm_audit.id
+        referral_rule_id = referral_rule.id
+        deleted_referral_log_id = deleted_referral_log.id
+        preserved_referral_log_id = preserved_referral_log.id
+        preserved_assignment_log_id = preserved_assignment_log.id
 
     delete_response = client.delete(f"/api/user-management/users/{expert_id}", headers=admin_headers)
     assert delete_response.status_code == 200
@@ -489,7 +559,15 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
         assert db.session.get(ExpertUser, subordinate_id).manager_id is None
         assert db.session.get(ShipmentRequest, user_management_app["request_id"]).assigned_to is None
         assert db.session.get(Opportunity, opportunity_id).assigned_to is None
-        assert db.session.get(AssignmentRule, user_rule_id).created_by == user_management_app["admin_id"]
+        assert db.session.get(AssignmentRule, user_rule_id) is None
+        assert db.session.get(AssignmentLog, preserved_assignment_log_id).assignment_rule_id is None
+        assert db.session.get(ExpertQuote, quote_id) is None
+        assert ExpertQuote.query.filter_by(created_by_expert_id=expert_id).count() == 0
+        assert db.session.get(CRMCustomerLinkAudit, crm_audit_id).performed_by_user_id is None
+        assert db.session.get(ReferralRule, referral_rule_id) is None
+        assert ReferralRuleState.query.filter_by(rule_id=referral_rule_id).count() == 0
+        assert db.session.get(ReferralAssignmentLog, deleted_referral_log_id) is None
+        assert db.session.get(ReferralAssignmentLog, preserved_referral_log_id).rule_id is None
         assert ExpertSpecialization.query.filter_by(expert_user_id=expert_id).count() == 0
         assert AssignmentLog.query.filter_by(assigned_expert_id=expert_id).count() == 0
         assert ExpertConsoleLog.query.filter_by(expert_user_id=expert_id).count() == 0
@@ -500,6 +578,73 @@ def test_user_delete_cleanup_and_reassignment_contract(user_management_app):
             (Task.assigned_to == expert_id) | (Task.created_by == expert_id)
         ).count() == 0
         assert Report.query.filter_by(created_by=expert_id).count() == 0
+
+
+def test_user_without_dependencies_is_permanently_deleted(user_management_app):
+    """A plain non-admin user is removed rather than deactivated."""
+    client = user_management_app["app"].test_client()
+    admin_headers = _auth_headers(user_management_app["admin_token"])
+
+    with user_management_app["app"].app_context():
+        plain_user = ExpertUser(
+            username="plain_delete_user",
+            password_hash=bcrypt.hashpw(b"test123", bcrypt.gensalt()).decode("utf-8"),
+            full_name="Plain Delete User",
+            role="expert",
+            is_active=True,
+        )
+        db.session.add(plain_user)
+        db.session.commit()
+        plain_user_id = plain_user.id
+
+    response = client.delete(
+        f"/api/user-management/users/{plain_user_id}", headers=admin_headers
+    )
+    assert response.status_code == 200
+
+    with user_management_app["app"].app_context():
+        assert db.session.get(ExpertUser, plain_user_id) is None
+
+
+def test_user_delete_failure_rolls_back_and_hides_database_details(
+    user_management_app, monkeypatch
+):
+    """A mid-cleanup database error restores all rows and returns a safe error."""
+    client = user_management_app["app"].test_client()
+    admin_headers = _auth_headers(user_management_app["admin_token"])
+    expert_id = user_management_app["expert_id"]
+
+    with user_management_app["app"].app_context():
+        quote = ExpertQuote(
+            shipment_request_id=user_management_app["request_id"],
+            amount=250000,
+            currency="IRR",
+            created_by_expert_id=expert_id,
+        )
+        db.session.add(quote)
+        db.session.commit()
+        quote_id = quote.id
+
+    def fail_after_related_cleanup(_target_user):
+        raise SQLAlchemyError(
+            'NotNullViolation expert_quote.created_by_expert_id params="secret"'
+        )
+
+    monkeypatch.setattr(
+        user_delete_service, "cleanup_user_owned_rules", fail_after_related_cleanup
+    )
+    response = client.delete(
+        f"/api/user-management/users/{expert_id}", headers=admin_headers
+    )
+
+    assert response.status_code == 500
+    assert response.get_json() == {"error": "خطا در حذف کاربر"}
+    assert "NotNullViolation" not in response.get_data(as_text=True)
+    assert "expert_quote" not in response.get_data(as_text=True)
+
+    with user_management_app["app"].app_context():
+        assert db.session.get(ExpertUser, expert_id) is not None
+        assert db.session.get(ExpertQuote, quote_id) is not None
 
 
 def test_assignment_rule_crud_and_no_delete_endpoint_contract(user_management_app):

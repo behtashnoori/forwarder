@@ -149,17 +149,11 @@ def delete_user(user_id: int):
     except SQLAlchemyError as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting user: {e}", exc_info=True)
-        err_msg = "خطا در حذف کاربر"
-        if current_app.debug or current_app.config.get("TESTING"):
-            err_msg += f": {str(e)}"
-        return jsonify({"error": err_msg}), 500
+        return jsonify({"error": "خطا در حذف کاربر"}), 500
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error deleting user: {e}", exc_info=True)
-        err_msg = "خطا در حذف کاربر"
-        if current_app.debug or current_app.config.get("TESTING"):
-            err_msg += f": {str(e)}"
-        return jsonify({"error": err_msg}), 500
+        return jsonify({"error": "خطا در حذف کاربر"}), 500
 
 
 # Assignment Rules Management (admin only for consistency)

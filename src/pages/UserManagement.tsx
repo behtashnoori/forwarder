@@ -360,7 +360,7 @@ const UserManagement = () => {
       if (response.ok) {
         toast({
           title: "موفق",
-          description: data.message || "کاربر و داده‌های مرتبط حذف شدند"
+          description: data.message || "کاربر با موفقیت حذف شد"
         });
         setDeleteDialogOpen(false);
         setUserToDelete(null);
@@ -368,7 +368,7 @@ const UserManagement = () => {
       } else {
         toast({
           title: "خطا",
-          description: data.error || "خطا در حذف کاربر",
+          description: "خطا در حذف کاربر",
           variant: "destructive"
         });
       }
@@ -1015,10 +1015,9 @@ const UserManagement = () => {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>حذف کارشناس</AlertDialogTitle>
+            <AlertDialogTitle>حذف کاربر</AlertDialogTitle>
             <AlertDialogDescription>
-              آیا از حذف <strong>{userToDelete?.full_name}</strong> (@{userToDelete?.username}) اطمینان دارید؟
-              با حذف این کاربر، تمام داده‌های مرتبط (ارجاعات، لاگ‌ها، پیام‌ها، اعلان‌ها، تخصص‌ها، فعالیت‌ها و وظایف) نیز از دیتابیس حذف می‌شوند. این عمل قابل بازگشت نیست.
+              آیا از حذف دائمی این کاربر و اطلاعات وابسته به او اطمینان دارید؟
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-0">

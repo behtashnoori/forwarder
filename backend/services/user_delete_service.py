@@ -10,12 +10,17 @@ from backend.models import (
     Activity,
     AssignmentLog,
     AssignmentRule,
+    CRMCustomerLinkAudit,
     ExpertConsoleLog,
     ExpertConsoleMessage,
     ExpertConsoleNotification,
+    ExpertQuote,
     ExpertSpecialization,
     ExpertUser,
     Opportunity,
+    ReferralAssignmentLog,
+    ReferralRule,
+    ReferralRuleState,
     Report,
     ShipmentRequest,
     Task,
@@ -74,6 +79,9 @@ def cleanup_user_related_records(target_user: ExpertUser) -> None:
     db.session.query(ExpertConsoleNotification).filter(
         ExpertConsoleNotification.expert_user_id == expert_id
     ).delete(synchronize_session=False)
+    db.session.query(ExpertQuote).filter(
+        ExpertQuote.created_by_expert_id == expert_id
+    ).delete(synchronize_session=False)
     db.session.query(ExpertConsoleMessage).filter(
         ExpertConsoleMessage.expert_user_id == expert_id
     ).delete(synchronize_session=False)
@@ -95,13 +103,37 @@ def cleanup_user_related_records(target_user: ExpertUser) -> None:
     db.session.query(Report).filter(Report.created_by == expert_id).delete(
         synchronize_session=False
     )
+    db.session.query(ReferralAssignmentLog).filter(
+        ReferralAssignmentLog.selected_expert_id == expert_id
+    ).delete(synchronize_session=False)
 
 
-def reassign_assignment_rules_created_by(target_user: ExpertUser, current_user: dict[str, Any]) -> None:
-    """Reassign assignment rules created by the target user to the current admin."""
+def cleanup_user_owned_rules(target_user: ExpertUser) -> None:
+    """Delete rules owned by the user while preserving nullable history links."""
+    expert_id = target_user.id
+
+    assignment_rule_ids = db.session.query(AssignmentRule.id).filter(
+        AssignmentRule.created_by == expert_id
+    )
+    db.session.query(AssignmentLog).filter(
+        AssignmentLog.assignment_rule_id.in_(assignment_rule_ids)
+    ).update({AssignmentLog.assignment_rule_id: None}, synchronize_session=False)
     db.session.query(AssignmentRule).filter(
-        AssignmentRule.created_by == target_user.id
-    ).update({AssignmentRule.created_by: int(current_user["id"])}, synchronize_session=False)
+        AssignmentRule.created_by == expert_id
+    ).delete(synchronize_session=False)
+
+    referral_rule_ids = db.session.query(ReferralRule.id).filter(
+        ReferralRule.created_by == expert_id
+    )
+    db.session.query(ReferralAssignmentLog).filter(
+        ReferralAssignmentLog.rule_id.in_(referral_rule_ids)
+    ).update({ReferralAssignmentLog.rule_id: None}, synchronize_session=False)
+    db.session.query(ReferralRuleState).filter(
+        ReferralRuleState.rule_id.in_(referral_rule_ids)
+    ).delete(synchronize_session=False)
+    db.session.query(ReferralRule).filter(
+        ReferralRule.created_by == expert_id
+    ).delete(synchronize_session=False)
 
 
 def unassign_user_shipments_and_opportunities(target_user: ExpertUser) -> None:
@@ -114,6 +146,9 @@ def unassign_user_shipments_and_opportunities(target_user: ExpertUser) -> None:
     db.session.query(Opportunity).filter(Opportunity.assigned_to == expert_id).update(
         {Opportunity.assigned_to: None}, synchronize_session=False
     )
+    db.session.query(CRMCustomerLinkAudit).filter(
+        CRMCustomerLinkAudit.performed_by_user_id == expert_id
+    ).update({CRMCustomerLinkAudit.performed_by_user_id: None}, synchronize_session=False)
 
 
 def build_delete_user_response_payload(target_user: ExpertUser) -> dict[str, str]:
@@ -122,7 +157,7 @@ def build_delete_user_response_payload(target_user: ExpertUser) -> dict[str, str
 
 
 def delete_user_with_cleanup(user_id: int, current_user: dict[str, Any] | None) -> dict[str, str]:
-    """Delete a user and preserve the current cleanup, flush, and commit ordering."""
+    """Permanently delete a user and all non-nullable owned dependencies."""
     target_user = get_delete_target_user_or_none(user_id)
     target_user = validate_user_delete_allowed(target_user, current_user, user_id)
 
@@ -131,13 +166,8 @@ def delete_user_with_cleanup(user_id: int, current_user: dict[str, Any] | None) 
 
     cleanup_user_subordinates(target_user)
     cleanup_user_related_records(target_user)
-    db.session.flush()
-
-    reassign_assignment_rules_created_by(target_user, current_user)
-    db.session.flush()
-
+    cleanup_user_owned_rules(target_user)
     unassign_user_shipments_and_opportunities(target_user)
-    db.session.flush()
 
     payload = build_delete_user_response_payload(target_user)
     db.session.delete(target_user)
