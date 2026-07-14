@@ -21,7 +21,9 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <img src="/brand-icon.png" alt="" className="h-10 w-10 object-contain" />
+            <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-white">
+              <img src="/brand-icon.png" alt="" className="h-full w-full scale-[1.4] object-cover" />
+            </div>
             <div className={textAlignClass}>
               <h1 className="text-lg font-bold text-foreground">{localizedSetting(settings.site_name, t("brand.name"))}</h1>
               <p className="text-xs text-muted-foreground">{localizedSetting(settings.site_tagline, t("brand.tagline"))}</p>
