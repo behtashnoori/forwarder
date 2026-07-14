@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import ExpertLogin from "./ExpertLogin";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
-import { getLogoDisplayUrl } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
 const Header = () => {
@@ -22,13 +21,7 @@ const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            {settings.logo_url?.trim() ? (
-              <img src={getLogoDisplayUrl(settings.logo_url)} alt="" className="h-10 w-10 object-contain rounded-lg" />
-            ) : (
-              <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <div className="w-6 h-6 bg-primary-foreground rounded-sm transform rotate-45"></div>
-              </div>
-            )}
+            <img src="/brand-icon.png" alt="" className="h-10 w-10 object-contain" />
             <div className={textAlignClass}>
               <h1 className="text-lg font-bold text-foreground">{localizedSetting(settings.site_name, t("brand.name"))}</h1>
               <p className="text-xs text-muted-foreground">{localizedSetting(settings.site_tagline, t("brand.tagline"))}</p>
