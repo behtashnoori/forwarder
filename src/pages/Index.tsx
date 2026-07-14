@@ -194,6 +194,7 @@ const Hero = ({ direction }: { direction: "rtl" | "ltr" }) => {
 
 const WorkflowSection = () => {
   const { t } = useI18n();
+  const desktopPlacements = ["", "", "", "", "lg:col-start-2", "lg:col-start-4", "lg:col-start-6"];
   const steps = [
     { icon: FileText, title: "workflow.step1.title", description: "workflow.step1.description" },
     { icon: UserRoundCheck, title: "workflow.step2.title", description: "workflow.step2.description" },
@@ -211,9 +212,9 @@ const WorkflowSection = () => {
         <h2 id="workflow-title" className="mt-2 text-2xl font-bold text-[#1F2937] md:text-3xl">{t("workflow.title")}</h2>
         <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[#667085]">{t("workflow.description")}</p>
       </div>
-      <div className="relative mt-9 grid gap-4 md:grid-cols-2 lg:grid-cols-4 md:gap-5">
+      <div className="relative mt-9 grid gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-8">
         {steps.map(({ icon: Icon, title, description }, index) => (
-          <div key={title} className={`relative rounded-2xl border border-border/60 bg-white p-5 shadow-sm ${index === 6 ? "lg:col-start-2" : ""}`}>
+          <div key={title} className={`relative h-full rounded-2xl border border-border/60 bg-white p-5 shadow-sm lg:col-span-2 ${desktopPlacements[index]}`}>
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Icon className="h-6 w-6" />
