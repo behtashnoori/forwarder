@@ -36,9 +36,13 @@ import PageNav from "@/components/PageNav";
 import { useToast } from "@/hooks/use-toast";
 import {
   addMessage,
+  addTrackingUnit,
+  addTrackingUnitUpdate,
   changeRequestStatus,
   createCustomerFromShipmentRequest,
   fetchExpertRequestDetail,
+  fetchTrackingManagement,
+  enableTrackingManagement,
   fetchShipmentRequestCustomerLink,
   fetchShipmentRequestCustomerCreatePreview,
   linkShipmentRequestCustomer,
@@ -48,6 +52,7 @@ import {
   type CRMCustomerCreatePreview,
   type CRMLinkCustomer,
   type CRMShipmentRequestLinkState,
+  type TrackingManagementData,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
@@ -574,6 +579,12 @@ const RequestDetail = () => {
             >
               {t("common.notes")}
             </TabsTrigger>
+            <TabsTrigger
+              value="tracking"
+              className="rounded-2xl px-5 py-2 text-slate-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+            >
+              {t("multiTracking.internalTitle")}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-0">
@@ -779,6 +790,9 @@ const RequestDetail = () => {
                 ))
               )}
             </div>
+          </TabsContent>
+          <TabsContent value="tracking">
+            <TrackingManagementCard requestId={request.id} locale={locale} t={t} toast={toast} />
           </TabsContent>
         </Tabs>
       </div>
@@ -1122,6 +1136,76 @@ const CrmCustomerLinkCard = ({
         )}
       </CardContent>
     </Card>
+  );
+};
+
+const TrackingManagementCard = ({ requestId, locale, t, toast }: {
+  requestId: number;
+  locale: string;
+  t: (key: string) => string;
+  toast: ReturnType<typeof useToast>["toast"];
+}) => {
+  const [data, setData] = useState<TrackingManagementData | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [unit, setUnit] = useState({ unit_code: "", unit_type: "truck", display_name: "" });
+  const [updateUnitId, setUpdateUnitId] = useState("");
+  const [update, setUpdate] = useState({ status: "in_transit", location: "", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: new Date().toISOString().slice(0, 16) });
+
+  const load = useCallback(async () => {
+    try { setData(await fetchTrackingManagement(requestId)); }
+    catch { toast({ title: t("common.error"), description: t("multiTracking.fetchError"), variant: "destructive" }); }
+  }, [requestId, t, toast]);
+  useEffect(() => { load(); }, [load]);
+
+  const run = async (operation: () => Promise<TrackingManagementData>, success: string) => {
+    try {
+      setBusy(true);
+      setData(await operation());
+      toast({ title: success });
+    } catch { toast({ title: t("common.error"), description: t("multiTracking.saveError"), variant: "destructive" }); }
+    finally { setBusy(false); }
+  };
+
+  if (!data) return <Card><CardContent className="p-8 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></CardContent></Card>;
+  return (
+    <div className="space-y-5">
+      <Card className="rounded-3xl border-slate-200 shadow-sm">
+        <CardHeader><CardTitle>{t("multiTracking.internalTitle")}</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge variant={data.enabled ? "default" : "outline"}>{data.enabled ? t("multiTracking.enabled") : t("multiTracking.disabled")}</Badge>
+            <span className="text-sm text-slate-500">{data.tracking_code}</span>
+          </div>
+          {!data.enabled && <Button disabled={!data.eligible || busy} onClick={() => run(() => enableTrackingManagement(requestId), t("multiTracking.enabledSuccess"))}>{t("multiTracking.enable")}</Button>}
+          {!data.eligible && !data.enabled && <p className="text-sm text-amber-700">{t("multiTracking.notEligible")}</p>}
+        </CardContent>
+      </Card>
+      {data.enabled && <>
+        <Card className="rounded-3xl border-slate-200 shadow-sm">
+          <CardHeader><CardTitle>{t("multiTracking.addUnit")}</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-4">
+            <Input value={unit.unit_code} onChange={(e) => setUnit({ ...unit, unit_code: e.target.value })} placeholder={t("multiTracking.unitCode")} />
+            <Select value={unit.unit_type} onValueChange={(value) => setUnit({ ...unit, unit_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["truck","container","wagon","other"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.type.${v}`)}</SelectItem>)}</SelectContent></Select>
+            <Input value={unit.display_name} onChange={(e) => setUnit({ ...unit, display_name: e.target.value })} placeholder={t("multiTracking.displayName")} />
+            <Button disabled={busy || !unit.unit_code.trim()} onClick={() => run(() => addTrackingUnit(requestId, unit), t("multiTracking.unitAdded"))}><Plus className="h-4 w-4" />{t("multiTracking.addUnit")}</Button>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl border-slate-200 shadow-sm">
+          <CardHeader><CardTitle>{t("multiTracking.addUpdate")}</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2">
+            <Select value={updateUnitId} onValueChange={setUpdateUnitId}><SelectTrigger><SelectValue placeholder={t("multiTracking.selectUnit")} /></SelectTrigger><SelectContent>{data.unit_tracking?.units.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.display_name || u.unit_code}</SelectItem>)}</SelectContent></Select>
+            <Select value={update.status} onValueChange={(status) => setUpdate({ ...update, status })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["pending","ready_for_dispatch","departed","in_transit","arrived","delivered","delayed","exception"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.status.${v}`)}</SelectItem>)}</SelectContent></Select>
+            <Input value={update.location} onChange={(e) => setUpdate({ ...update, location: e.target.value })} placeholder={t("multiTracking.location")} />
+            <Input type="datetime-local" value={update.occurred_at} onChange={(e) => setUpdate({ ...update, occurred_at: e.target.value })} />
+            <Textarea value={update.customer_message} onChange={(e) => setUpdate({ ...update, customer_message: e.target.value })} placeholder={t("multiTracking.customerMessage")} />
+            <Textarea value={update.internal_note} onChange={(e) => setUpdate({ ...update, internal_note: e.target.value })} placeholder={t("multiTracking.internalNote")} />
+            <label className="flex items-center gap-2 text-sm"><Checkbox checked={update.is_customer_visible} onCheckedChange={(checked) => setUpdate({ ...update, is_customer_visible: checked === true })} />{t("multiTracking.customerVisible")}</label>
+            <Button disabled={busy || !updateUnitId || !update.occurred_at} onClick={() => run(() => addTrackingUnitUpdate(requestId, Number(updateUnitId), { ...update, occurred_at: new Date(update.occurred_at).toISOString() }), t("multiTracking.updateAdded"))}>{t("multiTracking.addUpdate")}</Button>
+          </CardContent>
+        </Card>
+        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p><p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_update_at ? new Date(u.latest_update_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
+      </>}
+    </div>
   );
 };
 

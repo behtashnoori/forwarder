@@ -2,6 +2,7 @@
 from backend.extensions import db
 from backend.models import City, County, ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.services import timeline_service
+from backend.services.multi_unit_tracking_service import build_public_unit_tracking
 
 
 def resolve_request(identifier: str):
@@ -102,7 +103,7 @@ def build_route_summary(req):
     }
 
 
-def build_tracking_response(req):
+def build_tracking_response(req, *, include_unit_tracking: bool = False):
     """Build the public tracking response payload for a shipment request."""
     tracking_number = req.tracking_code if req.tracking_code else f"SR{req.id:06d}"
 
@@ -114,7 +115,7 @@ def build_tracking_response(req):
 
     latest_quote = get_latest_quote(req)
 
-    return {
+    response = {
         "id": req.id,
         "tracking_number": tracking_number,
         "status": req.status or "new",
@@ -147,6 +148,9 @@ def build_tracking_response(req):
         ),
         "workflow_steps_simple": timeline_service.build_workflow_steps_simple_4(req, assigned_at=assigned_at),
     }
+    if include_unit_tracking:
+        response["unit_tracking"] = build_public_unit_tracking(req)
+    return response
 
 
 def get_public_tracking_payload(identifier: str):
@@ -154,4 +158,6 @@ def get_public_tracking_payload(identifier: str):
     req = resolve_request(identifier)
     if not req:
         return None
-    return build_tracking_response(req)
+    normalized_identifier = (identifier or "").strip()
+    include_unit_tracking = bool(req.tracking_code and normalized_identifier == req.tracking_code)
+    return build_tracking_response(req, include_unit_tracking=include_unit_tracking)

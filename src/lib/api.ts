@@ -243,6 +243,38 @@ export interface PublicTrackingWorkflowStep {
   meta?: { warning?: string };
 }
 
+export interface TransportUnitUpdate {
+  status: string;
+  location: string | null;
+  message: string | null;
+  occurred_at: string;
+}
+
+export interface TransportUnitTracking {
+  id: number;
+  unit_code: string;
+  unit_type: string;
+  display_name: string | null;
+  latest_status: string;
+  latest_location: string | null;
+  latest_update_at: string | null;
+  history: TransportUnitUpdate[];
+}
+
+export interface MultiUnitTracking {
+  enabled: true;
+  enabled_at: string | null;
+  aggregate_status: string;
+  progress_percent: number;
+  unit_count: number;
+  delivered_unit_count: number;
+  arrived_unit_count: number;
+  is_partially_delivered: boolean;
+  is_complete: boolean;
+  latest_update_at: string | null;
+  units: TransportUnitTracking[];
+}
+
 export interface PublicTrackingData {
   id: number;
   tracking_number: string;
@@ -300,6 +332,7 @@ export interface PublicTrackingData {
   } | null;
   workflow_steps?: PublicTrackingWorkflowStep[];
   workflow_steps_simple?: PublicTrackingWorkflowStep[];
+  unit_tracking?: MultiUnitTracking | null;
 }
 
 export class PublicTrackingNotFoundError extends Error {
@@ -698,6 +731,43 @@ export function fetchExpertRequestDetail(requestId: number): Promise<ExpertReque
 }> {
   return request(`/api/expert/requests/${requestId}`);
 }
+
+export interface TrackingManagementData {
+  eligible: boolean;
+  request_status: string;
+  tracking_code: string | null;
+  enabled: boolean;
+  unit_tracking: MultiUnitTracking | null;
+}
+
+export const fetchTrackingManagement = (requestId: number): Promise<TrackingManagementData> =>
+  request(`/api/expert/requests/${requestId}/tracking`);
+
+export const enableTrackingManagement = (requestId: number): Promise<TrackingManagementData> =>
+  request(`/api/expert/requests/${requestId}/tracking/enable`, { method: "POST" });
+
+export const addTrackingUnit = (
+  requestId: number,
+  payload: { unit_code: string; unit_type: string; display_name?: string },
+): Promise<TrackingManagementData> =>
+  request(`/api/expert/requests/${requestId}/tracking/units`, { method: "POST", body: JSON.stringify(payload) });
+
+export const addTrackingUnitUpdate = (
+  requestId: number,
+  unitId: number,
+  payload: {
+    status: string;
+    location?: string;
+    customer_message?: string;
+    internal_note?: string;
+    is_customer_visible: boolean;
+    occurred_at: string;
+  },
+): Promise<TrackingManagementData> =>
+  request(`/api/expert/requests/${requestId}/tracking/units/${unitId}/updates`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 
 export interface SubmitQuotePayload {
   amount: number;

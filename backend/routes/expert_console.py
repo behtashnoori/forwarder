@@ -21,9 +21,42 @@ from backend.services import (
     message_service,
     notification_service,
     quote_service,
+    multi_unit_tracking_service,
 )
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
+
+
+def _parse_tracking_datetime(value: Any, field: str) -> datetime:
+    if not isinstance(value, str) or not value.strip():
+        raise multi_unit_tracking_service.TrackingValidationError(f"{field} is required")
+    try:
+        return datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise multi_unit_tracking_service.TrackingValidationError(
+            f"{field} must be an ISO-8601 datetime"
+        ) from exc
+
+
+def _tracking_target(request_id: int, current_user: Optional[Dict]):
+    req = db.session.get(ShipmentRequest, request_id)
+    if not req:
+        return None, (jsonify({"error": "shipment request not found"}), 404)
+    if not _can_access_request(req, current_user):
+        return None, (jsonify({"error": "access denied"}), 403)
+    return req, None
+
+
+def _tracking_management_payload(req: ShipmentRequest) -> Dict[str, Any]:
+    tracking = req.shipment_tracking
+    return {
+        "eligible": req.status in multi_unit_tracking_service.TRACKING_ELIGIBLE_REQUEST_STATUSES
+        and bool(req.tracking_code),
+        "request_status": req.status,
+        "tracking_code": req.tracking_code,
+        "enabled": bool(tracking and tracking.is_enabled),
+        "unit_tracking": multi_unit_tracking_service.build_public_unit_tracking(req),
+    }
 
 
 def _can_access_request(req: ShipmentRequest, current_user: Optional[Dict]) -> bool:
@@ -66,6 +99,99 @@ def get_shipment_request_detail(request_id: int):
     except Exception as e:
         current_app.logger.error(f"Error getting shipment request detail: {e}")
         return jsonify({"error": "خطا در دریافت جزئیات درخواست"}), 500
+
+
+@expert_console_bp.get("/requests/<int:request_id>/tracking")
+@require_auth
+def get_multi_unit_tracking(request_id: int):
+    current_user = get_current_user()
+    req, error = _tracking_target(request_id, current_user)
+    if error:
+        return error
+    return jsonify(_tracking_management_payload(req)), 200
+
+
+@expert_console_bp.post("/requests/<int:request_id>/tracking/enable")
+@require_auth
+def enable_multi_unit_tracking(request_id: int):
+    current_user = get_current_user()
+    req, error = _tracking_target(request_id, current_user)
+    if error:
+        return error
+    try:
+        multi_unit_tracking_service.enable_tracking(req, current_user["id"])
+        db.session.commit()
+        return jsonify(_tracking_management_payload(req)), 200
+    except multi_unit_tracking_service.TrackingValidationError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Failed to enable multi-unit tracking")
+        return jsonify({"error": "tracking could not be enabled"}), 500
+
+
+@expert_console_bp.post("/requests/<int:request_id>/tracking/units")
+@require_auth
+def create_tracking_unit(request_id: int):
+    current_user = get_current_user()
+    req, error = _tracking_target(request_id, current_user)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    try:
+        if not req.shipment_tracking:
+            raise multi_unit_tracking_service.TrackingValidationError("tracking is not enabled")
+        multi_unit_tracking_service.add_unit(
+            req.shipment_tracking,
+            current_user["id"],
+            unit_code=data.get("unit_code"),
+            unit_type=data.get("unit_type"),
+            display_name=data.get("display_name"),
+            sort_order=data.get("sort_order", 0),
+        )
+        db.session.commit()
+        return jsonify(_tracking_management_payload(req)), 201
+    except multi_unit_tracking_service.TrackingValidationError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Failed to create tracking unit")
+        return jsonify({"error": "tracking unit could not be created"}), 409
+
+
+@expert_console_bp.post("/requests/<int:request_id>/tracking/units/<int:unit_id>/updates")
+@require_auth
+def create_tracking_unit_update(request_id: int, unit_id: int):
+    current_user = get_current_user()
+    req, error = _tracking_target(request_id, current_user)
+    if error:
+        return error
+    data = request.get_json(silent=True) or {}
+    unit = db.session.get(multi_unit_tracking_service.ShipmentTransportUnit, unit_id)
+    if not unit or not req.shipment_tracking or unit.tracking_id != req.shipment_tracking.id:
+        return jsonify({"error": "tracking unit not found"}), 404
+    try:
+        multi_unit_tracking_service.add_update(
+            unit,
+            current_user["id"],
+            status=data.get("status"),
+            location=data.get("location"),
+            customer_message=data.get("customer_message"),
+            internal_note=data.get("internal_note"),
+            is_customer_visible=data.get("is_customer_visible", True),
+            occurred_at=_parse_tracking_datetime(data.get("occurred_at"), "occurred_at"),
+        )
+        db.session.commit()
+        return jsonify(_tracking_management_payload(req)), 201
+    except multi_unit_tracking_service.TrackingValidationError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Failed to append tracking update")
+        return jsonify({"error": "tracking update could not be created"}), 500
 
 
 @expert_console_bp.post("/requests/<int:request_id>/assign")

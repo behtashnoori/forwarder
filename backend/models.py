@@ -304,9 +304,121 @@ class ShipmentRequest(db.Model):
     assigned_expert = db.relationship("ExpertUser", back_populates="assigned_requests")
     customer = db.relationship("Customer", back_populates="requests")
     gamification_customer = db.relationship("CustomerGamification", back_populates="requests")
+    shipment_tracking = db.relationship(
+        "ShipmentTracking",
+        back_populates="shipment_request",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<ShipmentRequest id={self.id}>"
+
+
+class ShipmentTracking(db.Model):
+    """Customer tracking enablement and audit state for one shipment."""
+
+    __tablename__ = "shipment_tracking"
+    __table_args__ = (
+        db.UniqueConstraint("shipment_request_id", name="uq_shipment_tracking_request"),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    shipment_request_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("shipment_request.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    is_enabled = db.Column(db.Boolean, nullable=False, default=False)
+    enabled_at = db.Column(db.DateTime, nullable=True)
+    enabled_by_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
+    )
+    disabled_at = db.Column(db.DateTime, nullable=True)
+    disabled_by_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    shipment_request = db.relationship("ShipmentRequest", back_populates="shipment_tracking")
+    enabled_by_user = db.relationship("ExpertUser", foreign_keys=[enabled_by_user_id])
+    disabled_by_user = db.relationship("ExpertUser", foreign_keys=[disabled_by_user_id])
+    units = db.relationship(
+        "ShipmentTransportUnit",
+        back_populates="tracking",
+        cascade="all, delete-orphan",
+        order_by="ShipmentTransportUnit.sort_order, ShipmentTransportUnit.id",
+    )
+
+
+class ShipmentTransportUnit(db.Model):
+    """A manually tracked truck, container, wagon, or other transport unit."""
+
+    __tablename__ = "shipment_transport_unit"
+    __table_args__ = (
+        db.UniqueConstraint("tracking_id", "unit_code", name="uq_tracking_unit_code"),
+        db.CheckConstraint("sort_order >= 0", name="ck_tracking_unit_sort_order_nonnegative"),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    tracking_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("shipment_tracking.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    unit_code = db.Column(db.String(64), nullable=False)
+    unit_type = db.Column(db.String(32), nullable=False)
+    display_name = db.Column(db.String(100), nullable=True)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_by_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    tracking = db.relationship("ShipmentTracking", back_populates="units")
+    created_by_user = db.relationship("ExpertUser", foreign_keys=[created_by_user_id])
+    updates = db.relationship(
+        "ShipmentTransportUnitUpdate",
+        back_populates="unit",
+        cascade="all, delete-orphan",
+        order_by="ShipmentTransportUnitUpdate.occurred_at, ShipmentTransportUnitUpdate.id",
+    )
+
+
+class ShipmentTransportUnitUpdate(db.Model):
+    """Append-only manually entered status for one transport unit."""
+
+    __tablename__ = "shipment_transport_unit_update"
+    __table_args__ = (
+        db.Index("idx_tracking_update_unit_occurred", "unit_id", "occurred_at"),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    unit_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("shipment_transport_unit.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    status = db.Column(db.String(32), nullable=False)
+    location = db.Column(db.String(255), nullable=True)
+    customer_message = db.Column(db.Text, nullable=True)
+    internal_note = db.Column(db.Text, nullable=True)
+    is_customer_visible = db.Column(db.Boolean, nullable=False, default=True)
+    occurred_at = db.Column(db.DateTime, nullable=False)
+    created_by_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    unit = db.relationship("ShipmentTransportUnit", back_populates="updates")
+    created_by_user = db.relationship("ExpertUser", foreign_keys=[created_by_user_id])
 
 
 class ShipmentRequestLog(db.Model):
@@ -851,6 +963,9 @@ __all__ = [
     "ExpertUser",
     "ShipmentRequest",
     "ShipmentRequestLog",
+    "ShipmentTracking",
+    "ShipmentTransportUnit",
+    "ShipmentTransportUnitUpdate",
     "ExpertConsoleLog",
     "CRMCustomerLinkAudit",
     "ExpertConsoleMessage",
