@@ -15,11 +15,14 @@ from backend.migrations.version_table import (
 
 
 class _Result:
-    def __init__(self, value=0):
-        self.value = value
+    def __init__(self, values=()):
+        self.values = tuple(values)
 
-    def scalar_one(self):
-        return self.value
+    def scalars(self):
+        return self
+
+    def all(self):
+        return list(self.values)
 
 
 class _Dialect:
@@ -29,8 +32,8 @@ class _Dialect:
 class _Connection:
     dialect = _Dialect()
 
-    def __init__(self, row_count=0, fail_on_alter=False):
-        self.row_count = row_count
+    def __init__(self, revisions=(), fail_on_alter=False):
+        self.revisions = tuple(revisions)
         self.fail_on_alter = fail_on_alter
         self.statements = []
 
@@ -39,7 +42,7 @@ class _Connection:
         self.statements.append(sql)
         if self.fail_on_alter and sql.startswith("ALTER TABLE"):
             raise RuntimeError("synthetic DDL failure")
-        return _Result(self.row_count)
+        return _Result(self.revisions)
 
 
 class _Inspector:
@@ -105,35 +108,47 @@ def test_empty_postgresql_creates_only_a_wide_empty_version_table():
 
 
 def test_existing_short_version_column_is_widened_without_changing_revision():
-    connection = _Connection(row_count=1)
+    connection = _Connection(revisions=("synthetic_parent",))
     ensure_version_table_capacity(connection, inspector_factory=_factory(_Inspector(length=32)))
     assert connection.statements == [
-        "SELECT COUNT(*) FROM alembic_version",
+        "SELECT version_num FROM alembic_version",
         "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)",
     ]
     assert not any("INSERT" in sql or "DELETE" in sql for sql in connection.statements)
 
 
 def test_repeated_execution_is_idempotent_when_capacity_is_sufficient():
-    connection = _Connection(row_count=1)
+    connection = _Connection(revisions=("synthetic_parent",))
     inspector = _Inspector(length=VERSION_COLUMN_CAPACITY)
     ensure_version_table_capacity(connection, inspector_factory=_factory(inspector))
     ensure_version_table_capacity(connection, inspector_factory=_factory(inspector))
     assert connection.statements == [
-        "SELECT COUNT(*) FROM alembic_version",
-        "SELECT COUNT(*) FROM alembic_version",
+        "SELECT version_num FROM alembic_version",
+        "SELECT version_num FROM alembic_version",
     ]
 
 
 def test_multiple_revisions_and_incompatible_schema_fail_closed():
     with pytest.raises(AlembicVersionTableError, match="more than one"):
         ensure_version_table_capacity(
-            _Connection(row_count=2), inspector_factory=_factory(_Inspector())
+            _Connection(revisions=("branch_a", "branch_b")),
+            inspector_factory=_factory(_Inspector()),
         )
     with pytest.raises(AlembicVersionTableError, match="NOT NULL"):
         ensure_version_table_capacity(
             _Connection(), inspector_factory=_factory(_Inspector(nullable=True))
         )
+
+
+def test_valid_parallel_revision_rows_are_preserved():
+    connection = _Connection(revisions=("branch_a", "branch_b"))
+    ensure_version_table_capacity(
+        connection,
+        inspector_factory=_factory(_Inspector(length=VERSION_COLUMN_CAPACITY)),
+        multiple_revision_validator=lambda revisions: set(revisions)
+        == {"branch_a", "branch_b"},
+    )
+    assert connection.statements == ["SELECT version_num FROM alembic_version"]
 
 
 def test_sqlite_is_untouched_and_postgresql_ddl_errors_are_not_swallowed():
@@ -144,7 +159,7 @@ def test_sqlite_is_untouched_and_postgresql_ddl_errors_are_not_swallowed():
 
     with pytest.raises(RuntimeError, match="synthetic DDL failure"):
         ensure_version_table_capacity(
-            _Connection(row_count=1, fail_on_alter=True),
+            _Connection(revisions=("synthetic_parent",), fail_on_alter=True),
             inspector_factory=_factory(_Inspector(length=32)),
         )
 

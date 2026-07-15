@@ -20,6 +20,7 @@ def ensure_version_table_capacity(
     connection,
     *,
     inspector_factory: Callable = inspect,
+    multiple_revision_validator: Callable[[tuple[str, ...]], bool] | None = None,
 ) -> None:
     """Create or widen Alembic's PostgreSQL version column without changing revisions.
 
@@ -61,8 +62,13 @@ def ensure_version_table_capacity(
     if constrained_columns not in ([], [VERSION_COLUMN_NAME]):
         raise AlembicVersionTableError("alembic_version has an incompatible primary key")
 
-    row_count = connection.execute(text("SELECT COUNT(*) FROM alembic_version")).scalar_one()
-    if row_count > 1:
+    stored_revisions = tuple(
+        connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
+    )
+    if len(stored_revisions) > 1 and (
+        multiple_revision_validator is None
+        or not multiple_revision_validator(stored_revisions)
+    ):
         raise AlembicVersionTableError(
             "alembic_version unexpectedly contains more than one stored revision"
         )

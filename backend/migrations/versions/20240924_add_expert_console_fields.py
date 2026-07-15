@@ -6,6 +6,45 @@ Create Date: 2024-09-24 00:00:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy import inspect
+
+
+def _column_exists(conn, table, column):
+    return column in [item["name"] for item in inspect(conn).get_columns(table)]
+
+
+def _table_exists(conn, table):
+    return inspect(conn).has_table(table)
+
+
+def _foreign_key_exists(conn, table, name):
+    return name in [item["name"] for item in inspect(conn).get_foreign_keys(table)]
+
+
+def _create_assigned_to_foreign_key(conn):
+    if conn.dialect.name == "sqlite":
+        with op.batch_alter_table("shipment_request") as batch_op:
+            batch_op.create_foreign_key(
+                "fk_shipment_request_assigned_to", "expert_user", ["assigned_to"], ["id"]
+            )
+        return
+    op.create_foreign_key(
+        "fk_shipment_request_assigned_to",
+        "shipment_request",
+        "expert_user",
+        ["assigned_to"],
+        ["id"],
+    )
+
+
+def _drop_assigned_to_foreign_key(conn):
+    if conn.dialect.name == "sqlite":
+        with op.batch_alter_table("shipment_request") as batch_op:
+            batch_op.drop_constraint("fk_shipment_request_assigned_to", type_="foreignkey")
+        return
+    op.drop_constraint(
+        "fk_shipment_request_assigned_to", "shipment_request", type_="foreignkey"
+    )
 
 
 # revision identifiers, used by Alembic.
@@ -16,39 +55,48 @@ depends_on = None
 
 
 def upgrade() -> None:
-    """Add expert console fields to shipment_request."""
+    """Add expert console fields and tables in either sibling-branch order."""
+    conn = op.get_bind()
     # Add expert console fields
-    op.add_column(
+    if not _column_exists(conn, "shipment_request", "assigned_to"):
+        op.add_column(
         "shipment_request",
         sa.Column("assigned_to", sa.BigInteger(), nullable=True),
-    )
-    op.add_column(
+        )
+    if not _column_exists(conn, "shipment_request", "status"):
+        op.add_column(
         "shipment_request",
         sa.Column("status", sa.String(length=32), nullable=False, server_default="new"),
-    )
-    op.add_column(
+        )
+    if not _column_exists(conn, "shipment_request", "sla_due_at"):
+        op.add_column(
         "shipment_request",
         sa.Column("sla_due_at", sa.DateTime(), nullable=True),
-    )
-    op.add_column(
+        )
+    if not _column_exists(conn, "shipment_request", "last_customer_touch_at"):
+        op.add_column(
         "shipment_request",
         sa.Column("last_customer_touch_at", sa.DateTime(), nullable=True),
-    )
-    op.add_column(
+        )
+    if not _column_exists(conn, "shipment_request", "has_unread_for_assignee"):
+        op.add_column(
         "shipment_request",
         sa.Column("has_unread_for_assignee", sa.Boolean(), nullable=False, server_default="true"),
-    )
-    op.add_column(
+        )
+    if not _column_exists(conn, "shipment_request", "priority"):
+        op.add_column(
         "shipment_request",
         sa.Column("priority", sa.String(length=10), nullable=False, server_default="normal"),
-    )
-    op.add_column(
+        )
+    if not _column_exists(conn, "shipment_request", "estimated_value"):
+        op.add_column(
         "shipment_request",
         sa.Column("estimated_value", sa.Float(), nullable=True),
-    )
+        )
     
     # Create expert_user table
-    op.create_table(
+    if not _table_exists(conn, "expert_user"):
+        op.create_table(
         "expert_user",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("username", sa.String(length=50), nullable=False),
@@ -65,7 +113,8 @@ def upgrade() -> None:
     )
     
     # Create expert_console_log table
-    op.create_table(
+    if not _table_exists(conn, "expert_console_log"):
+        op.create_table(
         "expert_console_log",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("shipment_request_id", sa.BigInteger(), nullable=False),
@@ -82,7 +131,8 @@ def upgrade() -> None:
     )
     
     # Create expert_console_message table
-    op.create_table(
+    if not _table_exists(conn, "expert_console_message"):
+        op.create_table(
         "expert_console_message",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("shipment_request_id", sa.BigInteger(), nullable=False),
@@ -100,7 +150,8 @@ def upgrade() -> None:
     )
     
     # Create expert_console_notification table
-    op.create_table(
+    if not _table_exists(conn, "expert_console_notification"):
+        op.create_table(
         "expert_console_notification",
         sa.Column("id", sa.BigInteger(), nullable=False),
         sa.Column("expert_user_id", sa.BigInteger(), nullable=False),
@@ -116,32 +167,39 @@ def upgrade() -> None:
     )
     
     # Add foreign key constraint for assigned_to
-    op.create_foreign_key(
-        "fk_shipment_request_assigned_to",
-        "shipment_request", "expert_user",
-        ["assigned_to"], ["id"]
-    )
+    if not _foreign_key_exists(conn, "shipment_request", "fk_shipment_request_assigned_to"):
+        _create_assigned_to_foreign_key(conn)
 
 
 def downgrade() -> None:
-    """Remove expert console fields and tables."""
+    """Remove expert console objects safely after either sibling branch."""
+    conn = op.get_bind()
     # Drop foreign key constraint
-    op.drop_constraint("fk_shipment_request_assigned_to", "shipment_request", type_="foreignkey")
+    if _foreign_key_exists(conn, "shipment_request", "fk_shipment_request_assigned_to"):
+        _drop_assigned_to_foreign_key(conn)
     
     # Drop tables
-    op.drop_table("expert_console_notification")
-    op.drop_table("expert_console_message")
-    op.drop_table("expert_console_log")
-    op.drop_table("expert_user")
+    for table in (
+        "expert_console_notification",
+        "expert_console_message",
+        "expert_console_log",
+        "expert_user",
+    ):
+        if _table_exists(conn, table):
+            op.drop_table(table)
     
     # Drop columns from shipment_request
-    op.drop_column("shipment_request", "estimated_value")
-    op.drop_column("shipment_request", "priority")
-    op.drop_column("shipment_request", "has_unread_for_assignee")
-    op.drop_column("shipment_request", "last_customer_touch_at")
-    op.drop_column("shipment_request", "sla_due_at")
-    op.drop_column("shipment_request", "status")
-    op.drop_column("shipment_request", "assigned_to")
+    for column in (
+        "estimated_value",
+        "priority",
+        "has_unread_for_assignee",
+        "last_customer_touch_at",
+        "sla_due_at",
+        "status",
+        "assigned_to",
+    ):
+        if _column_exists(conn, "shipment_request", column):
+            op.drop_column("shipment_request", column)
 
 
 

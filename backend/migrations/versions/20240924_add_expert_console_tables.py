@@ -23,6 +23,39 @@ def _table_exists(conn, table):
         return False
 
 
+def _foreign_key_exists(conn, table, name):
+    try:
+        return name in [item["name"] for item in inspect(conn).get_foreign_keys(table)]
+    except Exception:
+        return False
+
+
+def _create_assigned_to_foreign_key(conn):
+    if conn.dialect.name == "sqlite":
+        with op.batch_alter_table("shipment_request") as batch_op:
+            batch_op.create_foreign_key(
+                "fk_shipment_request_assigned_to", "expert_user", ["assigned_to"], ["id"]
+            )
+        return
+    op.create_foreign_key(
+        "fk_shipment_request_assigned_to",
+        "shipment_request",
+        "expert_user",
+        ["assigned_to"],
+        ["id"],
+    )
+
+
+def _drop_assigned_to_foreign_key(conn):
+    if conn.dialect.name == "sqlite":
+        with op.batch_alter_table("shipment_request") as batch_op:
+            batch_op.drop_constraint("fk_shipment_request_assigned_to", type_="foreignkey")
+        return
+    op.drop_constraint(
+        "fk_shipment_request_assigned_to", "shipment_request", type_="foreignkey"
+    )
+
+
 # revision identifiers, used by Alembic.
 revision = "20240924_add_expert_console_tables"
 down_revision = "20240924_add_customer_name_fields"
@@ -146,32 +179,38 @@ def upgrade() -> None:
     insp = inspect(conn)
     fks = [fk["name"] for fk in insp.get_foreign_keys("shipment_request")]
     if "fk_shipment_request_assigned_to" not in fks:
-        op.create_foreign_key(
-            "fk_shipment_request_assigned_to",
-            "shipment_request", "expert_user",
-            ["assigned_to"], ["id"]
-        )
+        _create_assigned_to_foreign_key(conn)
 
 
 def downgrade() -> None:
-    """Remove expert console tables and fields."""
+    """Remove expert console objects safely after either sibling branch."""
+    conn = op.get_bind()
     # Drop foreign key constraint
-    op.drop_constraint("fk_shipment_request_assigned_to", "shipment_request", type_="foreignkey")
+    if _foreign_key_exists(conn, "shipment_request", "fk_shipment_request_assigned_to"):
+        _drop_assigned_to_foreign_key(conn)
     
     # Drop tables
-    op.drop_table("expert_console_notification")
-    op.drop_table("expert_console_message")
-    op.drop_table("expert_console_log")
-    op.drop_table("expert_user")
+    for table in (
+        "expert_console_notification",
+        "expert_console_message",
+        "expert_console_log",
+        "expert_user",
+    ):
+        if _table_exists(conn, table):
+            op.drop_table(table)
     
     # Drop columns from shipment_request
-    op.drop_column("shipment_request", "estimated_value")
-    op.drop_column("shipment_request", "priority")
-    op.drop_column("shipment_request", "has_unread_for_assignee")
-    op.drop_column("shipment_request", "last_customer_touch_at")
-    op.drop_column("shipment_request", "sla_due_at")
-    op.drop_column("shipment_request", "status")
-    op.drop_column("shipment_request", "assigned_to")
+    for column in (
+        "estimated_value",
+        "priority",
+        "has_unread_for_assignee",
+        "last_customer_touch_at",
+        "sla_due_at",
+        "status",
+        "assigned_to",
+    ):
+        if _column_exists(conn, "shipment_request", column):
+            op.drop_column("shipment_request", column)
 
 
 
