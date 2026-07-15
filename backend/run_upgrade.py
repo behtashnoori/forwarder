@@ -24,52 +24,13 @@ def main():
     from alembic.util import CommandError
     app = create_app()
     with app.app_context():
-        from backend.extensions import db
-        from sqlalchemy import text
         migration_dir = os.path.join(os.path.dirname(__file__), "migrations")
         print("Running upgrade, directory:", migration_dir, flush=True)
         try:
-            # Widen alembic_version.version_num if needed (revision IDs can be >32 chars)
-            try:
-                with db.engine.connect() as conn:
-                    with conn.begin():
-                        conn.execute(
-                            text(
-                                "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
-                            )
-                        )
-            except Exception:
-                pass  # column may already be wide or table not exist
             config = current_app.extensions["migrate"].migrate.get_config(
                 migration_dir
             )
-            try:
-                command.upgrade(config, "head")
-            except Exception as upgrade_err:
-                # If upgrade fails due to already-applied schema (multiple branches),
-                # set DB to head and ensure tracking_code column exists
-                err_str = str(upgrade_err).lower()
-                if "duplicatecolumn" in err_str or "duplicatetable" in err_str or "already exists" in err_str:
-                    head_rev = "20250220_merge_final"
-                    print("Setting alembic_version to", head_rev, "and ensuring tracking_code.", flush=True)
-                    try:
-                        with db.engine.connect() as conn:
-                            with conn.begin():
-                                conn.execute(text("DELETE FROM alembic_version"))
-                                conn.execute(text(
-                                    "INSERT INTO alembic_version (version_num) VALUES (:rev)"
-                                ), {"rev": head_rev})
-                                conn.execute(text(
-                                    "ALTER TABLE shipment_request ADD COLUMN IF NOT EXISTS tracking_code VARCHAR(32)"
-                                ))
-                                conn.execute(text(
-                                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_shipment_request_tracking_code ON shipment_request (tracking_code)"
-                                ))
-                    except Exception as e:
-                        print("Recovery step failed:", e, file=sys.stderr)
-                        raise
-                else:
-                    raise
+            command.upgrade(config, "head")
             print("Migrations applied successfully.", flush=True)
             return 0
         except CommandError as e:
