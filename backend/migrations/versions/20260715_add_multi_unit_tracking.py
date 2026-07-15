@@ -19,7 +19,7 @@ SQLITE_BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 def upgrade():
     op.create_table(
         "shipment_tracking",
-        sa.Column("id", SQLITE_BIGINT, nullable=False),
+        sa.Column("id", SQLITE_BIGINT, sa.Identity(), nullable=False),
         sa.Column("shipment_request_id", SQLITE_BIGINT, nullable=False),
         sa.Column("is_enabled", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("enabled_at", sa.DateTime(), nullable=True),
@@ -38,11 +38,12 @@ def upgrade():
 
     op.create_table(
         "shipment_transport_unit",
-        sa.Column("id", SQLITE_BIGINT, nullable=False),
+        sa.Column("id", SQLITE_BIGINT, sa.Identity(), nullable=False),
         sa.Column("tracking_id", SQLITE_BIGINT, nullable=False),
         sa.Column("unit_code", sa.String(length=64), nullable=False),
         sa.Column("unit_type", sa.String(length=32), nullable=False),
         sa.Column("display_name", sa.String(length=100), nullable=True),
+        sa.Column("vehicle_reference", sa.String(length=100), nullable=True),
         sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.Column("created_by_user_id", SQLITE_BIGINT, nullable=True),
@@ -58,7 +59,7 @@ def upgrade():
 
     op.create_table(
         "shipment_transport_unit_update",
-        sa.Column("id", SQLITE_BIGINT, nullable=False),
+        sa.Column("id", SQLITE_BIGINT, sa.Identity(), nullable=False),
         sa.Column("unit_id", SQLITE_BIGINT, nullable=False),
         sa.Column("status", sa.String(length=32), nullable=False),
         sa.Column("location", sa.String(length=255), nullable=True),

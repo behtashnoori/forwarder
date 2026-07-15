@@ -372,6 +372,7 @@ class ShipmentTransportUnit(db.Model):
     unit_code = db.Column(db.String(64), nullable=False)
     unit_type = db.Column(db.String(32), nullable=False)
     display_name = db.Column(db.String(100), nullable=True)
+    vehicle_reference = db.Column(db.String(100), nullable=True)
     sort_order = db.Column(db.Integer, nullable=False, default=0)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_by_user_id = db.Column(

@@ -16,25 +16,48 @@ TRACKING_ELIGIBLE_REQUEST_STATUSES = frozenset({"won"})
 UNIT_TYPES = frozenset({"truck", "container", "wagon", "other"})
 UNIT_STATUSES = frozenset(
     {
-        "pending",
-        "ready_for_dispatch",
+        "not_started",
+        "loading",
         "departed",
         "in_transit",
+        "at_checkpoint",
         "delayed",
-        "arrived",
+        "arrived_destination",
         "delivered",
-        "exception",
+        "cancelled",
+    }
+)
+AGGREGATE_STATUSES = frozenset(
+    {
+        "not_started",
+        "in_progress",
+        "partially_delivered",
+        "attention_required",
+        "completed",
+        "cancelled",
     }
 )
 STATUS_PROGRESS = {
-    "pending": 0,
-    "ready_for_dispatch": 10,
+    "not_started": 0,
+    "loading": 10,
     "departed": 25,
     "in_transit": 55,
+    "at_checkpoint": 65,
     "delayed": 55,
-    "exception": 55,
-    "arrived": 90,
+    "arrived_destination": 90,
     "delivered": 100,
+    "cancelled": 0,
+}
+SUMMARY_CATEGORIES = {
+    "not_started": "not_started",
+    "loading": "loading",
+    "departed": "in_transit",
+    "in_transit": "in_transit",
+    "at_checkpoint": "in_transit",
+    "delayed": "delayed",
+    "arrived_destination": "arrived",
+    "delivered": "delivered",
+    "cancelled": "cancelled",
 }
 
 
@@ -47,6 +70,15 @@ def _clean_required(value: str | None, field: str, maximum: int) -> str:
     if not cleaned:
         raise TrackingValidationError(f"{field} is required")
     if len(cleaned) > maximum:
+        raise TrackingValidationError(f"{field} must be at most {maximum} characters")
+    return cleaned
+
+
+def _clean_optional(value: str | None, field: str, maximum: int) -> str | None:
+    if value is not None and not isinstance(value, str):
+        raise TrackingValidationError(f"{field} must be a string")
+    cleaned = (value or "").strip() or None
+    if cleaned and len(cleaned) > maximum:
         raise TrackingValidationError(f"{field} must be at most {maximum} characters")
     return cleaned
 
@@ -94,6 +126,7 @@ def add_unit(
     unit_code: str,
     unit_type: str,
     display_name: str | None = None,
+    vehicle_reference: str | None = None,
     sort_order: int = 0,
 ):
     if not tracking.is_enabled:
@@ -104,19 +137,33 @@ def add_unit(
         raise TrackingValidationError("unsupported unit_type")
     if not isinstance(sort_order, int) or isinstance(sort_order, bool) or sort_order < 0:
         raise TrackingValidationError("sort_order must be a non-negative integer")
-    name = (display_name or "").strip() or None
-    if name and len(name) > 100:
-        raise TrackingValidationError("display_name must be at most 100 characters")
+    name = _clean_optional(display_name, "display_name", 100)
+    reference = _clean_optional(vehicle_reference, "vehicle_reference", 100)
     unit = ShipmentTransportUnit(
         tracking=tracking,
         unit_code=code,
         unit_type=kind,
         display_name=name,
+        vehicle_reference=reference,
         sort_order=sort_order,
         is_active=True,
         created_by_user_id=actor_id,
     )
     db.session.add(unit)
+    return unit
+
+
+def update_unit_metadata(
+    unit: ShipmentTransportUnit,
+    *,
+    display_name: str | None = None,
+    vehicle_reference: str | None = None,
+):
+    """Update customer-safe optional metadata without changing the business key."""
+    unit.display_name = _clean_optional(display_name, "display_name", 100)
+    unit.vehicle_reference = _clean_optional(
+        vehicle_reference, "vehicle_reference", 100
+    )
     return unit
 
 
@@ -172,45 +219,109 @@ def _iso(value):
     return value.isoformat() if value and hasattr(value, "isoformat") else None
 
 
+def _latest_visible_updates(tracking: ShipmentTracking):
+    rows = []
+    for unit in tracking.units:
+        if not unit.is_active:
+            continue
+        history = [row for row in unit.updates if row.is_customer_visible]
+        history.sort(key=lambda row: (row.occurred_at, row.id or 0), reverse=True)
+        rows.append((unit, history, history[0] if history else None))
+    return rows
+
+
+def _aggregate(latest_rows):
+    summary = {key: 0 for key in (
+        "without_updates", "not_started", "loading", "in_transit", "delayed",
+        "arrived", "delivered", "cancelled",
+    )}
+    summary["total_units"] = len(latest_rows)
+    latest_events = []
+    for _unit, _history, latest in latest_rows:
+        if latest is None:
+            summary["without_updates"] += 1
+            continue
+        latest_events.append(latest)
+        summary[SUMMARY_CATEGORIES[latest.status]] += 1
+
+    total = summary["total_units"]
+    with_updates = total - summary["without_updates"]
+    if total == 0 or with_updates == 0:
+        status = "not_started"
+    elif with_updates == total and summary["delivered"] == total:
+        status = "completed"
+    elif with_updates == total and summary["cancelled"] == total:
+        status = "cancelled"
+    elif summary["delayed"] or summary["cancelled"]:
+        status = "attention_required"
+    elif summary["delivered"]:
+        status = "partially_delivered"
+    else:
+        status = "in_progress"
+    assert status in AGGREGATE_STATUSES
+    last_updated = max((row.occurred_at for row in latest_events), default=None)
+    return status, summary, last_updated
+
+
+def build_internal_unit_tracking(req: ShipmentRequest):
+    """Return authenticated management data, including IDs required by mutations."""
+    tracking = req.shipment_tracking
+    if tracking is None or not tracking.is_enabled:
+        return None
+    latest_rows = _latest_visible_updates(tracking)
+    aggregate_status, summary, last_updated = _aggregate(latest_rows)
+    return {
+        "enabled": True,
+        "enabled_at": _iso(tracking.enabled_at),
+        "aggregate_status": aggregate_status,
+        "summary": summary,
+        "last_updated_at": _iso(last_updated),
+        "units": [
+            {
+                "id": unit.id,
+                "unit_code": unit.unit_code,
+                "unit_type": unit.unit_type,
+                "display_name": unit.display_name,
+                "vehicle_reference": unit.vehicle_reference,
+                "is_active": unit.is_active,
+                "latest_status": latest.status if latest else "not_started",
+                "latest_location": latest.location if latest else None,
+                "latest_event_at": _iso(latest.occurred_at) if latest else None,
+            }
+            for unit, _history, latest in latest_rows
+        ],
+    }
+
+
 def build_public_unit_tracking(req: ShipmentRequest):
-    """Return a privacy-allowlisted customer projection, or None when disabled."""
+    """Build a customer-safe response from an explicit field allowlist."""
     tracking = req.shipment_tracking
     if tracking is None or not tracking.is_enabled:
         return None
 
     public_units = []
     progress_values = []
-    delivered_count = 0
-    arrived_count = 0
-    shipment_last_updated = None
-    for unit in tracking.units:
-        if not unit.is_active:
-            continue
-        history_rows = [row for row in unit.updates if row.is_customer_visible]
-        history_rows.sort(key=lambda row: (row.occurred_at, row.id or 0), reverse=True)
-        latest = history_rows[0] if history_rows else None
+    latest_rows = _latest_visible_updates(tracking)
+    aggregate_status, summary, last_updated = _aggregate(latest_rows)
+    for unit, history_rows, latest in latest_rows:
         latest_location_row = next((row for row in history_rows if row.location), None)
-        latest_status = latest.status if latest else "pending"
+        latest_status = latest.status if latest else "not_started"
         progress_values.append(STATUS_PROGRESS.get(latest_status, 0))
-        delivered_count += int(latest_status == "delivered")
-        arrived_count += int(latest_status in {"arrived", "delivered"})
-        if latest and (shipment_last_updated is None or latest.occurred_at > shipment_last_updated):
-            shipment_last_updated = latest.occurred_at
         public_units.append(
             {
-                "id": unit.id,
                 "unit_code": unit.unit_code,
                 "unit_type": unit.unit_type,
                 "display_name": unit.display_name,
+                "vehicle_reference": unit.vehicle_reference,
                 "latest_status": latest_status,
                 "latest_location": latest_location_row.location if latest_location_row else None,
-                "latest_update_at": _iso(latest.occurred_at) if latest else None,
-                "history": [
+                "latest_event_at": _iso(latest.occurred_at) if latest else None,
+                "timeline": [
                     {
                         "status": row.status,
                         "location": row.location,
-                        "message": row.customer_message,
-                        "occurred_at": _iso(row.occurred_at),
+                        "customer_note": row.customer_message,
+                        "event_at": _iso(row.occurred_at),
                     }
                     for row in history_rows
                 ],
@@ -218,26 +329,12 @@ def build_public_unit_tracking(req: ShipmentRequest):
         )
 
     total = len(public_units)
-    if total == 0:
-        aggregate_status = "awaiting_units"
-    elif delivered_count == total:
-        aggregate_status = "delivered"
-    elif delivered_count:
-        aggregate_status = "partially_delivered"
-    elif arrived_count == total:
-        aggregate_status = "arrived"
-    else:
-        aggregate_status = "in_progress"
     return {
         "enabled": True,
         "enabled_at": _iso(tracking.enabled_at),
         "aggregate_status": aggregate_status,
         "progress_percent": round(sum(progress_values) / total) if total else 0,
-        "unit_count": total,
-        "delivered_unit_count": delivered_count,
-        "arrived_unit_count": arrived_count,
-        "is_partially_delivered": 0 < delivered_count < total,
-        "is_complete": total > 0 and delivered_count == total,
-        "latest_update_at": _iso(shipment_last_updated),
+        "summary": summary,
+        "last_updated_at": _iso(last_updated),
         "units": public_units,
     }

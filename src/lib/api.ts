@@ -246,33 +246,45 @@ export interface PublicTrackingWorkflowStep {
 export interface TransportUnitUpdate {
   status: string;
   location: string | null;
-  message: string | null;
-  occurred_at: string;
+  customer_note: string | null;
+  event_at: string;
 }
 
-export interface TransportUnitTracking {
-  id: number;
+export interface PublicTransportUnitTracking {
   unit_code: string;
   unit_type: string;
   display_name: string | null;
+  vehicle_reference: string | null;
   latest_status: string;
   latest_location: string | null;
-  latest_update_at: string | null;
-  history: TransportUnitUpdate[];
+  latest_event_at: string | null;
+  timeline: TransportUnitUpdate[];
+}
+
+export type TrackingAggregateStatus = "not_started" | "in_progress" | "partially_delivered" | "attention_required" | "completed" | "cancelled";
+export interface TrackingSummary {
+  total_units: number; without_updates: number; not_started: number; loading: number;
+  in_transit: number; delayed: number; arrived: number; delivered: number; cancelled: number;
 }
 
 export interface MultiUnitTracking {
   enabled: true;
   enabled_at: string | null;
-  aggregate_status: string;
+  aggregate_status: TrackingAggregateStatus;
   progress_percent: number;
-  unit_count: number;
-  delivered_unit_count: number;
-  arrived_unit_count: number;
-  is_partially_delivered: boolean;
-  is_complete: boolean;
-  latest_update_at: string | null;
-  units: TransportUnitTracking[];
+  summary: TrackingSummary;
+  last_updated_at: string | null;
+  units: PublicTransportUnitTracking[];
+}
+
+export interface InternalTransportUnitTracking {
+  id: number; unit_code: string; unit_type: string; display_name: string | null;
+  vehicle_reference: string | null; is_active: boolean; latest_status: string;
+  latest_location: string | null; latest_event_at: string | null;
+}
+export interface InternalMultiUnitTracking {
+  enabled: true; enabled_at: string | null; aggregate_status: TrackingAggregateStatus;
+  summary: TrackingSummary; last_updated_at: string | null; units: InternalTransportUnitTracking[];
 }
 
 export interface PublicTrackingData {
@@ -737,7 +749,7 @@ export interface TrackingManagementData {
   request_status: string;
   tracking_code: string | null;
   enabled: boolean;
-  unit_tracking: MultiUnitTracking | null;
+  unit_tracking: InternalMultiUnitTracking | null;
 }
 
 export const fetchTrackingManagement = (requestId: number): Promise<TrackingManagementData> =>
@@ -748,9 +760,19 @@ export const enableTrackingManagement = (requestId: number): Promise<TrackingMan
 
 export const addTrackingUnit = (
   requestId: number,
-  payload: { unit_code: string; unit_type: string; display_name?: string },
+  payload: { unit_code: string; unit_type: string; display_name?: string; vehicle_reference?: string },
 ): Promise<TrackingManagementData> =>
   request(`/api/expert/requests/${requestId}/tracking/units`, { method: "POST", body: JSON.stringify(payload) });
+
+export const updateTrackingUnitMetadata = (
+  requestId: number,
+  unitId: number,
+  payload: { display_name?: string; vehicle_reference?: string },
+): Promise<TrackingManagementData> =>
+  request(`/api/expert/requests/${requestId}/tracking/units/${unitId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 
 export const addTrackingUnitUpdate = (
   requestId: number,

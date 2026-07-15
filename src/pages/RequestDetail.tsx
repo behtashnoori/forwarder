@@ -43,6 +43,7 @@ import {
   fetchExpertRequestDetail,
   fetchTrackingManagement,
   enableTrackingManagement,
+  updateTrackingUnitMetadata,
   fetchShipmentRequestCustomerLink,
   fetchShipmentRequestCustomerCreatePreview,
   linkShipmentRequestCustomer,
@@ -1147,7 +1148,9 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
 }) => {
   const [data, setData] = useState<TrackingManagementData | null>(null);
   const [busy, setBusy] = useState(false);
-  const [unit, setUnit] = useState({ unit_code: "", unit_type: "truck", display_name: "" });
+  const [unit, setUnit] = useState({ unit_code: "", unit_type: "truck", display_name: "", vehicle_reference: "" });
+  const [editUnitId, setEditUnitId] = useState("");
+  const [editUnit, setEditUnit] = useState({ display_name: "", vehicle_reference: "" });
   const [updateUnitId, setUpdateUnitId] = useState("");
   const [update, setUpdate] = useState({ status: "in_transit", location: "", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: new Date().toISOString().slice(0, 16) });
 
@@ -1183,18 +1186,28 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
       {data.enabled && <>
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader><CardTitle>{t("multiTracking.addUnit")}</CardTitle></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-4">
+          <CardContent className="grid gap-3 md:grid-cols-5">
             <Input value={unit.unit_code} onChange={(e) => setUnit({ ...unit, unit_code: e.target.value })} placeholder={t("multiTracking.unitCode")} />
             <Select value={unit.unit_type} onValueChange={(value) => setUnit({ ...unit, unit_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["truck","container","wagon","other"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.type.${v}`)}</SelectItem>)}</SelectContent></Select>
             <Input value={unit.display_name} onChange={(e) => setUnit({ ...unit, display_name: e.target.value })} placeholder={t("multiTracking.displayName")} />
+            <Input value={unit.vehicle_reference} onChange={(e) => setUnit({ ...unit, vehicle_reference: e.target.value })} placeholder={t("multiTracking.vehicleReference")} title={t("multiTracking.vehicleReferenceHelp")} />
             <Button disabled={busy || !unit.unit_code.trim()} onClick={() => run(() => addTrackingUnit(requestId, unit), t("multiTracking.unitAdded"))}><Plus className="h-4 w-4" />{t("multiTracking.addUnit")}</Button>
+          </CardContent>
+        </Card>
+        <Card className="rounded-3xl border-slate-200 shadow-sm">
+          <CardHeader><CardTitle>{t("multiTracking.editUnit")}</CardTitle></CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-4">
+            <Select value={editUnitId} onValueChange={(value) => { const selected = data.unit_tracking?.units.find(u => String(u.id) === value); setEditUnitId(value); setEditUnit({ display_name: selected?.display_name || "", vehicle_reference: selected?.vehicle_reference || "" }); }}><SelectTrigger><SelectValue placeholder={t("multiTracking.selectUnit")} /></SelectTrigger><SelectContent>{data.unit_tracking?.units.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.display_name || u.unit_code}</SelectItem>)}</SelectContent></Select>
+            <Input value={editUnit.display_name} onChange={(e) => setEditUnit({ ...editUnit, display_name: e.target.value })} placeholder={t("multiTracking.displayName")} />
+            <Input value={editUnit.vehicle_reference} onChange={(e) => setEditUnit({ ...editUnit, vehicle_reference: e.target.value })} placeholder={t("multiTracking.vehicleReference")} title={t("multiTracking.vehicleReferenceHelp")} />
+            <Button disabled={busy || !editUnitId} onClick={() => run(() => updateTrackingUnitMetadata(requestId, Number(editUnitId), editUnit), t("multiTracking.unitUpdated"))}>{t("multiTracking.save")}</Button>
           </CardContent>
         </Card>
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader><CardTitle>{t("multiTracking.addUpdate")}</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-2">
             <Select value={updateUnitId} onValueChange={setUpdateUnitId}><SelectTrigger><SelectValue placeholder={t("multiTracking.selectUnit")} /></SelectTrigger><SelectContent>{data.unit_tracking?.units.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.display_name || u.unit_code}</SelectItem>)}</SelectContent></Select>
-            <Select value={update.status} onValueChange={(status) => setUpdate({ ...update, status })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["pending","ready_for_dispatch","departed","in_transit","arrived","delivered","delayed","exception"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.status.${v}`)}</SelectItem>)}</SelectContent></Select>
+            <Select value={update.status} onValueChange={(status) => setUpdate({ ...update, status })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["not_started","loading","departed","in_transit","at_checkpoint","delayed","arrived_destination","delivered","cancelled"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.status.${v}`)}</SelectItem>)}</SelectContent></Select>
             <Input value={update.location} onChange={(e) => setUpdate({ ...update, location: e.target.value })} placeholder={t("multiTracking.location")} />
             <Input type="datetime-local" value={update.occurred_at} onChange={(e) => setUpdate({ ...update, occurred_at: e.target.value })} />
             <Textarea value={update.customer_message} onChange={(e) => setUpdate({ ...update, customer_message: e.target.value })} placeholder={t("multiTracking.customerMessage")} />
@@ -1203,7 +1216,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
             <Button disabled={busy || !updateUnitId || !update.occurred_at} onClick={() => run(() => addTrackingUnitUpdate(requestId, Number(updateUnitId), { ...update, occurred_at: new Date(update.occurred_at).toISOString() }), t("multiTracking.updateAdded"))}>{t("multiTracking.addUpdate")}</Button>
           </CardContent>
         </Card>
-        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p><p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_update_at ? new Date(u.latest_update_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
+        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: {u.vehicle_reference}</p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
       </>}
     </div>
   );

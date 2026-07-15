@@ -309,9 +309,9 @@ const PublicTracking: React.FC = () => {
           <Section icon={Truck} title={t("multiTracking.customerTitle")} className="mb-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label={t("multiTracking.aggregateStatus")} value={t(`multiTracking.status.${unitTracking.aggregate_status}`)} />
-              <Field label={t("multiTracking.unitCount")} value={unitTracking.unit_count.toLocaleString(locale)} />
-              <Field label={t("multiTracking.deliveredCount")} value={unitTracking.delivered_unit_count.toLocaleString(locale)} />
-              <Field label={t("multiTracking.latestUpdate")} value={formatDate(unitTracking.latest_update_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
+              <Field label={t("multiTracking.unitCount")} value={unitTracking.summary.total_units.toLocaleString(locale)} />
+              <Field label={t("multiTracking.deliveredCount")} value={unitTracking.summary.delivered.toLocaleString(locale)} />
+              <Field label={t("multiTracking.latestUpdate")} value={formatDate(unitTracking.last_updated_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
             </div>
             <div className="mt-5">
               <div className="mb-2 flex items-center justify-between text-sm font-medium">
@@ -322,35 +322,36 @@ const PublicTracking: React.FC = () => {
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${unitTracking.progress_percent}%` }} />
               </div>
             </div>
-            {unitTracking.is_partially_delivered && (
+            {unitTracking.aggregate_status === "partially_delivered" && (
               <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-900">
                 {t("multiTracking.partialDelivery")}
               </div>
             )}
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               {unitTracking.units.map((unit) => (
-                <Card key={unit.id} className="border-border/80 shadow-none">
+                <Card key={unit.unit_code} className="border-border/80 shadow-none">
                   <CardContent className="p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
                         <p className="font-bold text-foreground">{unit.display_name || unit.unit_code}</p>
                         <p className="mt-1 font-mono text-xs text-muted-foreground">{unit.unit_code} · {unit.unit_type}</p>
+                        {unit.vehicle_reference && <p className="mt-1 text-xs text-muted-foreground">{t("multiTracking.vehicleReference")}: {unit.vehicle_reference}</p>}
                       </div>
                       <Badge variant="outline">{t(`multiTracking.status.${unit.latest_status}`)}</Badge>
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <Field label={t("multiTracking.latestLocation")} value={unit.latest_location || "—"} />
-                      <Field label={t("multiTracking.latestUpdate")} value={formatDate(unit.latest_update_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
+                      <Field label={t("multiTracking.latestUpdate")} value={formatDate(unit.latest_event_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
                     </div>
                     <div className="mt-4">
                       <p className="mb-3 text-sm font-bold">{t("multiTracking.customerHistory")}</p>
-                      {unit.history.length === 0 ? <p className="text-sm text-muted-foreground">{t("multiTracking.noUpdates")}</p> : (
+                      {unit.timeline.length === 0 ? <p className="text-sm text-muted-foreground">{t("multiTracking.noUpdates")}</p> : (
                         <ol className="space-y-3 border-s border-border ps-4">
-                          {unit.history.map((update, index) => (
-                            <li key={`${update.occurred_at}-${index}`} className="text-sm">
+                          {unit.timeline.map((update, index) => (
+                            <li key={`${update.event_at}-${index}`} className="text-sm">
                               <p className="font-semibold">{t(`multiTracking.status.${update.status}`)}</p>
-                              <p className="text-muted-foreground">{[update.location, update.message].filter(Boolean).join(" · ") || "—"}</p>
-                              <time className="text-xs text-muted-foreground">{formatDate(update.occurred_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)}</time>
+                              <p className="text-muted-foreground">{[update.location, update.customer_note].filter(Boolean).join(" · ") || "—"}</p>
+                              <time className="text-xs text-muted-foreground">{formatDate(update.event_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)}</time>
                             </li>
                           ))}
                         </ol>

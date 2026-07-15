@@ -55,7 +55,7 @@ def _tracking_management_payload(req: ShipmentRequest) -> Dict[str, Any]:
         "request_status": req.status,
         "tracking_code": req.tracking_code,
         "enabled": bool(tracking and tracking.is_enabled),
-        "unit_tracking": multi_unit_tracking_service.build_public_unit_tracking(req),
+        "unit_tracking": multi_unit_tracking_service.build_internal_unit_tracking(req),
     }
 
 
@@ -148,6 +148,7 @@ def create_tracking_unit(request_id: int):
             unit_code=data.get("unit_code"),
             unit_type=data.get("unit_type"),
             display_name=data.get("display_name"),
+            vehicle_reference=data.get("vehicle_reference"),
             sort_order=data.get("sort_order", 0),
         )
         db.session.commit()
@@ -159,6 +160,34 @@ def create_tracking_unit(request_id: int):
         db.session.rollback()
         current_app.logger.exception("Failed to create tracking unit")
         return jsonify({"error": "tracking unit could not be created"}), 409
+
+
+@expert_console_bp.patch("/requests/<int:request_id>/tracking/units/<int:unit_id>")
+@require_auth
+def update_tracking_unit_metadata(request_id: int, unit_id: int):
+    current_user = get_current_user()
+    req, error = _tracking_target(request_id, current_user)
+    if error:
+        return error
+    unit = db.session.get(multi_unit_tracking_service.ShipmentTransportUnit, unit_id)
+    if not unit or not req.shipment_tracking or unit.tracking_id != req.shipment_tracking.id:
+        return jsonify({"error": "tracking unit not found"}), 404
+    data = request.get_json(silent=True) or {}
+    try:
+        multi_unit_tracking_service.update_unit_metadata(
+            unit,
+            display_name=data.get("display_name"),
+            vehicle_reference=data.get("vehicle_reference"),
+        )
+        db.session.commit()
+        return jsonify(_tracking_management_payload(req)), 200
+    except multi_unit_tracking_service.TrackingValidationError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Failed to update tracking unit metadata")
+        return jsonify({"error": "tracking unit could not be updated"}), 500
 
 
 @expert_console_bp.post("/requests/<int:request_id>/tracking/units/<int:unit_id>/updates")
