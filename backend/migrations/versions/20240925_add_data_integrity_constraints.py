@@ -15,8 +15,21 @@ branch_labels = None
 depends_on = None
 
 
+def _boolean_predicates(dialect_name):
+    if dialect_name == "postgresql":
+        return "is_active IN (TRUE, FALSE)", "is_active IS TRUE"
+    return "is_active IN (0, 1)", "is_active = 1"
+
+
+def _create_partial_unique_index(name, table_name, columns, predicate, dialect_name):
+    dialect_options = {f"{dialect_name}_where": sa.text(predicate)}
+    op.create_index(name, table_name, columns, unique=True, **dialect_options)
+
+
 def upgrade():
     # Add check constraints for data integrity
+    dialect_name = op.get_bind().dialect.name
+    active_check, active_predicate = _boolean_predicates(dialect_name)
     
     # Customer constraints
     op.create_check_constraint(
@@ -159,22 +172,24 @@ def upgrade():
     op.create_check_constraint(
         'ck_expert_user_is_active',
         'expert_user',
-        "is_active IN (0, 1)"
+        active_check
     )
     
     # Add unique constraints where needed
-    op.create_unique_constraint(
+    _create_partial_unique_index(
         'uq_customer_email_active',
         'customer',
         ['email'],
-        postgresql_where=sa.text("email IS NOT NULL AND status = 'active'")
+        "email IS NOT NULL AND status = 'active'",
+        dialect_name,
     )
     
-    op.create_unique_constraint(
+    _create_partial_unique_index(
         'uq_expert_user_username_active',
         'expert_user',
         ['username'],
-        postgresql_where=sa.text("is_active = 1")
+        active_predicate,
+        dialect_name,
     )
     
     # Add foreign key constraints with proper actions
@@ -352,8 +367,8 @@ def downgrade():
     op.drop_constraint('fk_customer_contact_customer_id', 'customer_contact')
     
     # Drop unique constraints
-    op.drop_constraint('uq_expert_user_username_active', 'expert_user')
-    op.drop_constraint('uq_customer_email_active', 'customer')
+    op.drop_index('uq_expert_user_username_active', table_name='expert_user')
+    op.drop_index('uq_customer_email_active', table_name='customer')
     
     # Drop check constraints
     op.drop_constraint('ck_expert_user_is_active', 'expert_user')
