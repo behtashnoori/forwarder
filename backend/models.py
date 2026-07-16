@@ -944,6 +944,69 @@ class PortProvinceMapping(db.Model):
         return f"<PortProvinceMapping port={self.port_id} province={self.province_id}>"
 
 
+CUSTOMS_OFFICE_TYPES = frozenset({
+    "seaport", "road_border", "rail", "airport", "inland",
+    "free_zone", "special_economic_zone", "other",
+})
+PORT_CUSTOMS_RELATIONSHIP_TYPES = frozenset({
+    "located_at", "serves_port", "associated", "other",
+})
+
+
+class CustomsOffice(db.Model):
+    """Canonical customs master data; geography is referenced, never created."""
+
+    __tablename__ = "customs_office"
+    __table_args__ = (
+        db.CheckConstraint(
+            "customs_type IN ('seaport','road_border','rail','airport','inland','free_zone','special_economic_zone','other')",
+            name="ck_customs_office_type",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    code = db.Column(db.String(64), nullable=False, unique=True)
+    name_fa = db.Column(db.String(160), nullable=False)
+    name_en = db.Column(db.String(160), nullable=True)
+    customs_type = db.Column(db.String(32), nullable=False)
+    country_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id", ondelete="RESTRICT"), nullable=False)
+    province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id", ondelete="RESTRICT"), nullable=True)
+    county_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id", ondelete="RESTRICT"), nullable=True)
+    city_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id", ondelete="RESTRICT"), nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    country = db.relationship("Country")
+    province = db.relationship("Province")
+    county = db.relationship("County")
+    city = db.relationship("City")
+
+
+class PortCustomsOffice(db.Model):
+    """Explicit association between a port and a customs office."""
+
+    __tablename__ = "port_customs_office"
+    __table_args__ = (
+        db.UniqueConstraint("port_id", "customs_office_id", "relationship_type", name="uq_port_customs_relationship"),
+        db.CheckConstraint(
+            "relationship_type IN ('located_at','serves_port','associated','other')",
+            name="ck_port_customs_relationship_type",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    port_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("iran_port.id", ondelete="CASCADE"), nullable=False)
+    customs_office_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customs_office.id", ondelete="CASCADE"), nullable=False)
+    relationship_type = db.Column(db.String(32), nullable=False)
+    is_primary = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    port = db.relationship("IranPort")
+    customs_office = db.relationship("CustomsOffice")
+
+
 class SiteSetting(db.Model):
     """Key-value store for site-wide editable settings (name, logo, footer, nav labels, etc.)."""
     __tablename__ = "site_setting"
@@ -991,5 +1054,9 @@ __all__ = [
     # Iran Ports Models
     "IranPort",
     "PortProvinceMapping",
+    "CustomsOffice",
+    "PortCustomsOffice",
+    "CUSTOMS_OFFICE_TYPES",
+    "PORT_CUSTOMS_RELATIONSHIP_TYPES",
     "SiteSetting",
 ]
