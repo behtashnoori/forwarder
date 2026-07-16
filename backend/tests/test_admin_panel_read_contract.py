@@ -21,6 +21,7 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.security import security
+from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture
@@ -131,8 +132,8 @@ def admin_panel_app():
 
         return {
             "app": app,
-            "admin_token": security.generate_token(admin.id, "access"),
-            "expert_token": security.generate_token(expert.id, "access"),
+            "admin_token": create_session_tokens(admin.id)["access_token"],
+            "expert_token": create_session_tokens(expert.id)["access_token"],
             "expert_id": expert.id,
             "assigned_request_id": assigned_request.id,
             "new_request_id": new_request.id,
@@ -171,7 +172,7 @@ def admin_empty_report_app():
 
         return {
             "app": app,
-            "admin_token": security.generate_token(admin.id, "access"),
+            "admin_token": create_session_tokens(admin.id)["access_token"],
         }
 
 

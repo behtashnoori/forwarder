@@ -157,6 +157,9 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
     """Update and commit a user using the current route behavior."""
     user = get_user_or_raise(user_id)
     data = payload
+    password_changed = False
+    deactivated = False
+    role_changed = False
 
     if "username" in data:
         new_username = data["username"]
@@ -175,12 +178,16 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
         password = data["password"]
         if password and password.strip():
             user.password_hash = hash_password(password)
+            password_changed = True
 
     for field in ["full_name", "email", "phone", "department", "is_active"]:
         if field in data:
+            if field == "is_active" and user.is_active and data[field] is False:
+                deactivated = True
             setattr(user, field, data[field])
 
     if "role" in data:
+        role_changed = data["role"] != user.role
         user.role = data["role"]
 
     if "manager_id" in data:
@@ -189,5 +196,9 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
     if "specializations" in data:
         replace_user_specializations(user_id, data["specializations"])
 
+    if password_changed or deactivated or role_changed:
+        from backend.services.auth_session_service import revoke_all_user_sessions
+        reason = "password_changed" if password_changed else "account_deactivated" if deactivated else "admin_revoked"
+        revoke_all_user_sessions(user_id, reason, commit=False)
     db.session.commit()
     return user

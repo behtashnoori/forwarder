@@ -8,6 +8,7 @@ export async function logoutAndClearExpertSession(): Promise<boolean> {
   } finally {
     localStorage.removeItem("expert_user");
     localStorage.removeItem("expert_token");
+    localStorage.removeItem("expert_refresh_token");
   }
   return serverConfirmed;
 }

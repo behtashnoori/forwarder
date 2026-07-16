@@ -159,7 +159,8 @@ def test_crm_customers_rejects_expert_role():
         )
         db.session.commit()
         user_id = ExpertUser.query.filter_by(username="expert_role_check").first().id
-        token = security.generate_token(user_id, "access")
+        from backend.services.auth_session_service import create_session_tokens
+        token = create_session_tokens(user_id)["access_token"]
 
     client = app.test_client()
     response = client.get("/api/crm/customers", headers={"Authorization": f"Bearer {token}"})
@@ -183,7 +184,8 @@ def test_monitoring_metrics_rejects_expert_role():
         )
         db.session.commit()
         user_id = ExpertUser.query.filter_by(username="monitoring_expert_role_check").first().id
-        token = security.generate_token(user_id, "access")
+        from backend.services.auth_session_service import create_session_tokens
+        token = create_session_tokens(user_id)["access_token"]
 
     client = app.test_client()
     response = client.get("/api/monitoring/metrics", headers={"Authorization": f"Bearer {token}"})

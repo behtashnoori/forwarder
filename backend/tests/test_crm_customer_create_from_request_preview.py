@@ -18,6 +18,7 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.security import security
+from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture
@@ -130,8 +131,8 @@ def crm_customer_create_preview_app():
         db.session.commit()
         return {
             "app": app,
-            "token": security.generate_token(business_expert.id, "access"),
-            "expert_token": security.generate_token(basic_expert.id, "access"),
+            "token": create_session_tokens(business_expert.id)["access_token"],
+            "expert_token": create_session_tokens(basic_expert.id)["access_token"],
             "request_id": shipment_request.id,
             "incomplete_request_id": incomplete_request.id,
             "phone_match_customer_id": phone_match_customer.id,

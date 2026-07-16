@@ -21,9 +21,11 @@ def test_disposable_postgresql_tracking_contract():
     url = os.environ.get("FORWARDER_POSTGRES_TRACKING_TEST_URL")
     if not url:
         pytest.skip("explicit disposable PostgreSQL URL not provided")
-    assert url.rstrip("/").endswith(
-        "/forwarder_security_test_20260718"
-    ), "refusing to mutate a non-approved disposable database"
+    database_name = url.rstrip("/").rsplit("/", 1)[-1]
+    assert database_name in {
+        "forwarder_security_test_20260718",
+        "forwarder_session_test_20260719",
+    }, "refusing to mutate a non-approved disposable database"
 
     app = create_app(
         {"TESTING": True, "SQLALCHEMY_DATABASE_URI": url, "SECRET_KEY": "synthetic-only"},

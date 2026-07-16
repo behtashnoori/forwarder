@@ -10,7 +10,7 @@
 هر توکن یک UUID تصادفی و یکتا دارد. توکن‌های قدیمی بدون `jti` به‌صورت fail-closed رد می‌شوند.
 
 ## 4. رفتار Logout
-`POST /api/expert/auth/logout` فقط access-token ارائه‌شده را لغو می‌کند. تکرار درخواست نتیجه کنترل‌شده 401 دارد و نشست مستقل باقی می‌ماند.
+`POST /api/expert/auth/logout` نشست منطقی متعلق به access-token ارائه‌شده را لغو می‌کند؛ access و refresh همان نشست دیگر معتبر نیستند و نشست مستقل باقی می‌ماند. تکرار درخواست نتیجه کنترل‌شده 401 دارد.
 
 ## 5. ذخیره لغو
 جدول `revoked_token` شامل jti، کاربر، نوع، دلیل و زمان‌هاست؛ lookup بر jti index و unique است.
@@ -28,7 +28,7 @@
 مسیر مرکزی احراز هویت در هر درخواست وجود و active بودن کاربر را کنترل می‌کند.
 
 ## 10. تغییر رمز
-ابطال همگانی نشست‌ها پس از تغییر رمز هنوز پیاده‌سازی نشده و محدودیت شناخته‌شده است.
+تغییر موفق رمز تمام نشست‌های فعال کاربر هدف را با دلیل `password_changed` در همان transaction لغو می‌کند.
 
 ## 11. پاسخ API
 قرارداد login/refresh/logout حفظ شده و خطاهای token با 401 کنترل‌شده برمی‌گردند؛ نقش ناکافی 403 باقی می‌ماند.
@@ -49,4 +49,19 @@ downgrade جدول revocation را حذف می‌کند؛ در این حالت �
 فقط شمار aggregate cleanup و نرخ پاسخ‌های 401 پایش شود؛ jti و bearer ثبت نشود.
 
 ## 17. محدودیت‌های امنیتی
-refresh-token در frontend فعلی نگهداری نمی‌شود و تغییر رمز هنوز نشست‌های قبلی را یکجا لغو نمی‌کند.
+نشست‌های صادرشده پیش از migration فاقد `sid` هستند و عمداً fail-closed می‌شوند؛ کاربران باید دوباره وارد شوند. endpoint اجباری برای logout کاربر دیگر اضافه نشده است، زیرا سیاست فعلی مدیریت کاربران audit مستقل لازم برای آن را ندارد.
+## 18. AuthSession و Refresh Rotation
+هر login یک `AuthSession` با شناسه opaque می‌سازد. access و refresh دارای `sid` مشترک و `jti` مستقل هستند. refresh موفق، JTI قبلی را مصرف و یک جفت token جدید صادر می‌کند. استفاده دوباره از refresh مصرف‌شده به‌عنوان replay تلقی و فقط همان نشست را لغو می‌کند.
+
+هیچ access-token یا refresh-token خام و هیچ token hash در پایگاه داده ذخیره نمی‌شود. امضای JWT، `sid` و JTI جاری نشست verifier کافی را فراهم می‌کنند.
+
+## 19. چرخه حساب
+`logout-all` تمام نشست‌های فعال کاربر جاری را می‌بندد. تغییر رمز، غیرفعال‌سازی حساب و تغییر نقش مدیریتی نیز نشست‌های فعال کاربر هدف را در همان transaction لغو می‌کنند. حذف کاربر به‌دلیل FK با `ON DELETE CASCADE` نشست‌ها را حذف می‌کند و tokenهای قبلی fail-closed می‌شوند.
+
+## 20. Frontend
+frontend هر دو token را نگه می‌دارد، refresh را به‌صورت single-flight اجرا می‌کند، جفت token چرخیده را با هم جایگزین می‌کند و در شکست refresh تمام state احراز هویت را پاک می‌کند. هر درخواست حداکثر یک‌بار پس از refresh تکرار می‌شود.
+
+## 21. Migration و Cleanup
+revision `20260719_add_auth_sessions` جدول نشست و constraintهای lifecycle را اضافه می‌کند. بررسی catalog PostgreSQL ثابت کرد index غیرunique روی `revoked_token.jti` با unique-index constraint تکراری است؛ migration فقط index تکراری را حذف می‌کند و uniqueness حفظ می‌شود.
+
+`python scripts/cleanup_auth_sessions.py` به‌طور پیش‌فرض dry-run است و فقط sessionهای منقضی یا لغوشده‌ی خارج از retention را حذف می‌کند.

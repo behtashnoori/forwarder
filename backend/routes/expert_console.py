@@ -540,14 +540,28 @@ def refresh_token():
 def logout():
     """Logout user (invalidate tokens)."""
     try:
-        from backend.services.token_revocation_service import revoke_payload
-        revoke_payload(g.current_token_payload, reason="logout")
+        from backend.services.auth_session_service import revoke_session_from_access
+        revoke_session_from_access(g.current_token_payload, reason="logout")
         return jsonify({"message": "با موفقیت خارج شدید"})
         
     except Exception:
         db.session.rollback()
         current_app.logger.error("Logout token revocation failed")
         return jsonify({"error": "خطا در خروج"}), 500
+
+
+@expert_console_bp.post("/auth/logout-all")
+@require_auth
+def logout_all():
+    """Revoke every active session belonging to the current user."""
+    try:
+        from backend.services.auth_session_service import revoke_all_user_sessions
+        count = revoke_all_user_sessions(g.current_user_id, "logout_all")
+        return jsonify({"message": "همه نشست‌ها با موفقیت بسته شدند", "revoked_sessions": count})
+    except Exception:
+        db.session.rollback()
+        current_app.logger.error("Logout-all session revocation failed")
+        return jsonify({"error": "خطا در خروج از همه نشست‌ها"}), 500
 
 
 @expert_console_bp.get("/dashboard/kpis")

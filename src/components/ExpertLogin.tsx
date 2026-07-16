@@ -52,6 +52,7 @@ const ExpertLogin = () => {
         // Store expert info and token in localStorage
         localStorage.setItem('expert_user', JSON.stringify(data.expert));
         localStorage.setItem('expert_token', data.tokens.access_token);
+        localStorage.setItem('expert_refresh_token', data.tokens.refresh_token);
         
         toast({
           title: "ورود موفق",

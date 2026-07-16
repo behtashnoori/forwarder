@@ -18,6 +18,7 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.security import security
+from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture
@@ -118,8 +119,8 @@ def crm_customer_link_app():
         db.session.commit()
         return {
             "app": app,
-            "token": security.generate_token(business_expert.id, "access"),
-            "expert_token": security.generate_token(basic_expert.id, "access"),
+            "token": create_session_tokens(business_expert.id)["access_token"],
+            "expert_token": create_session_tokens(basic_expert.id)["access_token"],
             "request_id": shipment_request.id,
             "customer_id": customer.id,
             "other_customer_id": other_customer.id,

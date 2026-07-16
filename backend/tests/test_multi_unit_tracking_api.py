@@ -7,6 +7,7 @@ from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 from backend.security import security
+from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture()
@@ -50,8 +51,8 @@ def tracking_api_app():
             "app": app,
             "request_id": request_row.id,
             "tracking_code": request_row.tracking_code,
-            "assignee_token": security.generate_token(assignee.id, "access"),
-            "outsider_token": security.generate_token(outsider.id, "access"),
+            "assignee_token": create_session_tokens(assignee.id)["access_token"],
+            "outsider_token": create_session_tokens(outsider.id)["access_token"],
         }
         db.session.remove()
         db.drop_all()

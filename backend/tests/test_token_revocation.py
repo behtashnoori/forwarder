@@ -9,6 +9,7 @@ from backend.extensions import db
 from backend.models import ExpertUser, RevokedToken
 from backend.security import security
 from backend.services.token_revocation_service import cleanup_expired
+from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture()
@@ -33,8 +34,8 @@ def test_unique_jti_and_logout_revokes_only_presented_token(revocation_app):
     app, user_id = revocation_app
     client = app.test_client()
     with app.app_context():
-        first = security.generate_token(user_id)
-        second = security.generate_token(user_id)
+        first = create_session_tokens(user_id)["access_token"]
+        second = create_session_tokens(user_id)["access_token"]
         first_payload = security.verify_token(first)
         second_payload = security.verify_token(second)
         assert first_payload["jti"] != second_payload["jti"]
@@ -56,7 +57,7 @@ def test_missing_jti_inactive_and_missing_users_are_rejected(revocation_app):
     with app.app_context():
         now = datetime.utcnow()
         without_jti = jwt.encode({"user_id": user_id, "token_type": "access", "iat": now, "exp": now + timedelta(hours=1)}, app.config["JWT_SECRET_KEY"], algorithm="HS256")
-        active_token = security.generate_token(user_id)
+        active_token = create_session_tokens(user_id)["access_token"]
     assert client.get("/api/expert/dashboard/kpis", headers=_headers(without_jti)).status_code == 401
     with app.app_context():
         db.session.get(ExpertUser, user_id).is_active = False

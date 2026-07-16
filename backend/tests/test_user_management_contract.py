@@ -32,6 +32,7 @@ from backend.models import (
     TransportMethod,
 )
 from backend.security import security
+from backend.services.auth_session_service import create_session_tokens
 from backend.services import assignment_service, user_delete_service
 
 
@@ -147,8 +148,8 @@ def user_management_app():
             "request_id": assigned_request.id,
             "high_rule_id": high_rule.id,
             "low_rule_id": low_rule.id,
-            "admin_token": security.generate_token(admin.id, "access"),
-            "expert_token": security.generate_token(expert.id, "access"),
+            "admin_token": create_session_tokens(admin.id)["access_token"],
+            "expert_token": create_session_tokens(expert.id)["access_token"],
         }
 
 

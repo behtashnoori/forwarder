@@ -88,18 +88,27 @@ class SecurityManager:
         """Verify a password against its hash."""
         return check_password_hash(hashed, password)
     
-    def generate_token(self, user_id: int, token_type: str = 'access') -> str:
+    def generate_token(
+        self,
+        user_id: int,
+        token_type: str = 'access',
+        *,
+        session_id: str | None = None,
+        jti: str | None = None,
+    ) -> str:
         """Generate JWT token for user."""
         payload = {
             'user_id': user_id,
             'token_type': token_type,
             'iat': datetime.utcnow(),
-            'jti': str(uuid4()),
+            'jti': jti or str(uuid4()),
             'exp': datetime.utcnow() + (
                 self.app.config['JWT_ACCESS_TOKEN_EXPIRES'] if token_type == 'access'
                 else self.app.config['JWT_REFRESH_TOKEN_EXPIRES']
             )
         }
+        if session_id:
+            payload['sid'] = session_id
         return jwt.encode(payload, self.app.config['JWT_SECRET_KEY'], algorithm='HS256')
     
     def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
@@ -146,13 +155,16 @@ def require_auth(f):
             payload = security.verify_token(token)
             if not payload:
                 return jsonify({'error': 'Invalid token'}), 401
-            if payload.get('token_type') != 'access' or not payload.get('jti'):
+            if payload.get('token_type') != 'access' or not payload.get('jti') or not payload.get('sid'):
                 return jsonify({'error': 'Invalid token'}), 401
 
             from backend.extensions import db
             from backend.models import ExpertUser
             from backend.services.token_revocation_service import is_token_revoked
             if is_token_revoked(payload['jti']):
+                return jsonify({'error': 'Invalid token'}), 401
+            from backend.services.auth_session_service import is_session_active
+            if not is_session_active(payload['sid'], payload.get('user_id')):
                 return jsonify({'error': 'Invalid token'}), 401
             user = ExpertUser.query.filter_by(id=payload.get('user_id'), is_active=True).first()
             if not user or not user.is_active:

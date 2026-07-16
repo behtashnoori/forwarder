@@ -87,7 +87,7 @@ Authenticate expert user.
 ```
 
 #### POST /expert/auth/refresh
-Refresh access token.
+Rotate the refresh token and return a new access/refresh pair. The submitted refresh token is consumed immediately; replay revokes the affected logical session.
 
 **Request Body:**
 ```json
@@ -97,7 +97,10 @@ Refresh access token.
 ```
 
 #### POST /expert/auth/logout
-Logout user (requires authentication).
+Logout the current logical session (requires authentication). Its access and refresh tokens become invalid while independent sessions remain valid.
+
+#### POST /expert/auth/logout-all
+Revoke all active sessions belonging to the authenticated user. The response contains only an aggregate count and never exposes session identifiers.
 
 ### Expert Console
 

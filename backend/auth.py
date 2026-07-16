@@ -86,33 +86,14 @@ class AuthManager:
             del self.login_attempts[client_ip]
     
     def generate_tokens(self, user_id: int) -> Dict[str, str]:
-        """Generate access and refresh tokens for user."""
-        access_token = security.generate_token(user_id, 'access')
-        refresh_token = security.generate_token(user_id, 'refresh')
-        
-        return {
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-            'token_type': 'Bearer',
-            'expires_in': int(current_app.config['JWT_ACCESS_TOKEN_EXPIRES'].total_seconds())
-        }
+        """Create one logical session and its compatible token response."""
+        from backend.services.auth_session_service import create_session_tokens
+        return create_session_tokens(user_id)
     
     def refresh_access_token(self, refresh_token: str) -> Optional[Dict[str, str]]:
         """Generate new access token using refresh token."""
-        payload = security.verify_token(refresh_token)
-        if not payload or payload.get('token_type') != 'refresh':
-            return None
-        if not payload.get('jti'):
-            return None
-        from backend.services.token_revocation_service import is_token_revoked
-        if is_token_revoked(payload['jti']):
-            return None
-        
-        user_id = payload['user_id']
-        user = db.session.get(ExpertUser, user_id)
-        if not user or not user.is_active:
-            return None
-        return self.generate_tokens(user_id)
+        from backend.services.auth_session_service import rotate_refresh_token
+        return rotate_refresh_token(refresh_token)
 
 
 # Global auth manager instance

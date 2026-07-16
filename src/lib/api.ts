@@ -177,7 +177,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   };
-  const response = await fetch(url, requestInit);
+  let response = await fetch(url, requestInit);
+
+  if (response.status === 401 && !path.includes("/auth/") && localStorage.getItem("expert_refresh_token")) {
+    const refreshed = await refreshExpertSession();
+    if (refreshed) {
+      requestInit.headers = {
+        ...(requestInit.headers ?? {}),
+        Authorization: `Bearer ${localStorage.getItem("expert_token")}`,
+      };
+      response = await fetch(url, requestInit);
+    }
+  }
 
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
@@ -250,6 +261,36 @@ export interface TransportUnitUpdate {
   event_at: string;
 }
 
+let refreshPromise: Promise<boolean> | null = null;
+
+export function refreshExpertSession(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    const refreshToken = localStorage.getItem("expert_refresh_token");
+    if (!refreshToken) return false;
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/expert/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refresh_token: refreshToken }),
+      });
+      if (!response.ok) throw new Error("refresh rejected");
+      const tokens = await response.json();
+      localStorage.setItem("expert_token", tokens.access_token);
+      localStorage.setItem("expert_refresh_token", tokens.refresh_token);
+      return true;
+    } catch {
+      localStorage.removeItem("expert_user");
+      localStorage.removeItem("expert_token");
+      localStorage.removeItem("expert_refresh_token");
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+}
+
 export async function logoutExpert(token: string): Promise<boolean> {
   const url = `${API_BASE_URL}/api/expert/auth/logout`;
   const controller = new AbortController();
@@ -265,6 +306,18 @@ export async function logoutExpert(token: string): Promise<boolean> {
     return false;
   } finally {
     window.clearTimeout(timeout);
+  }
+}
+
+export async function logoutAllExpertSessions(token: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/expert/auth/logout-all`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.ok;
+  } catch {
+    return false;
   }
 }
 

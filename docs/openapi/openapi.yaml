@@ -412,6 +412,7 @@ paths:
     post:
       tags: [Expert Auth]
       summary: Refresh expert access token
+      description: Rotates the submitted refresh token. Reuse of a consumed refresh token revokes the affected logical session.
       requestBody:
         required: true
         content:
@@ -424,7 +425,7 @@ paths:
                   type: string
       responses:
         '200':
-          description: Refreshed token payload.
+          description: A compatible rotated access and refresh token payload.
           content:
             application/json:
               schema:
@@ -438,11 +439,36 @@ paths:
     post:
       tags: [Expert Auth]
       summary: Logout authenticated expert
+      description: Revokes the current logical session, including its refresh token.
       security:
         - bearerAuth: []
       responses:
         '200':
           $ref: '#/components/responses/Message'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/ServerError'
+  /api/expert/auth/logout-all:
+    post:
+      tags: [Expert Auth]
+      summary: Logout all sessions for the authenticated expert
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Aggregate revocation result without internal session identifiers.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, revoked_sessions]
+                properties:
+                  message:
+                    type: string
+                  revoked_sessions:
+                    type: integer
+                    minimum: 0
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':

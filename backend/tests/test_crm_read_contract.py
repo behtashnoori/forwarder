@@ -7,6 +7,7 @@ from backend import create_app
 from backend.extensions import db
 from backend.models import Activity, Customer, ExpertUser, Opportunity
 from backend.security import security
+from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture
@@ -63,7 +64,7 @@ def crm_app():
         )
         db.session.add_all([opportunity, activity])
         db.session.commit()
-        token = security.generate_token(expert.id, "access")
+        token = create_session_tokens(expert.id)["access_token"]
         return {"app": app, "token": token, "customer_id": customer.id}
 
 

@@ -23,6 +23,7 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.security import security
+from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture
@@ -133,9 +134,9 @@ def expert_contract_app():
             "province_id": province.id,
             "request_id": request_row.id,
             "referral_rule_id": referral_rule.id,
-            "admin_token": security.generate_token(admin.id, "access"),
-            "expert_token": security.generate_token(expert.id, "access"),
-            "other_expert_token": security.generate_token(other_expert.id, "access"),
+            "admin_token": create_session_tokens(admin.id)["access_token"],
+            "expert_token": create_session_tokens(expert.id)["access_token"],
+            "other_expert_token": create_session_tokens(other_expert.id)["access_token"],
         }
 
 

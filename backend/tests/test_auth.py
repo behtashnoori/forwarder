@@ -8,6 +8,8 @@ from flask import Flask
 from backend import create_app
 from backend.auth import AuthManager, auth_manager
 from backend.models import ExpertUser
+from backend.extensions import db
+from backend.security import security
 
 
 class TestAuthManager:
@@ -26,6 +28,15 @@ class TestAuthManager:
         self.request_context = self.app.test_request_context('/', environ_base={'REMOTE_ADDR': '127.0.0.1'})
         self.request_context.push()
         self.auth_manager = AuthManager()
+        db.session.add(ExpertUser(
+            id=1,
+            username="auth-manager-user",
+            password_hash=bcrypt.hashpw(b"unused", bcrypt.gensalt()).decode(),
+            full_name="Auth Manager User",
+            role="expert",
+            is_active=True,
+        ))
+        db.session.commit()
 
     def teardown_method(self):
         """Cleanup test environment."""
@@ -87,43 +98,23 @@ class TestAuthManager:
     
     def test_generate_tokens(self):
         """Test token generation."""
-        with patch('backend.auth.security') as mock_security:
-            mock_security.generate_token.return_value = 'test-token'
-            
-            tokens = self.auth_manager.generate_tokens(1)
-            
-            assert 'access_token' in tokens
-            assert 'refresh_token' in tokens
-            assert tokens['access_token'] == 'test-token'
-            assert tokens['refresh_token'] == 'test-token'
+        tokens = self.auth_manager.generate_tokens(1)
+        access = security.verify_token(tokens['access_token'])
+        refresh = security.verify_token(tokens['refresh_token'])
+        assert access['sid'] == refresh['sid']
+        assert access['jti'] != refresh['jti']
     
     def test_refresh_access_token_valid(self):
         """Test valid refresh token."""
-        with patch('backend.auth.security') as mock_security:
-            mock_security.verify_token.return_value = {
-                'user_id': 1,
-                'token_type': 'refresh',
-                'jti': '00000000-0000-4000-8000-000000000001'
-            }
-            
-            with patch('backend.services.token_revocation_service.is_token_revoked', return_value=False), \
-                 patch('backend.auth.db.session.get', return_value=MagicMock(is_active=True)), \
-                 patch.object(self.auth_manager, 'generate_tokens') as mock_generate:
-                mock_generate.return_value = {'access_token': 'new-token'}
-                
-                result = self.auth_manager.refresh_access_token('valid-refresh-token')
-                
-                assert result is not None
-                assert result['access_token'] == 'new-token'
+        original = self.auth_manager.generate_tokens(1)
+        result = self.auth_manager.refresh_access_token(original['refresh_token'])
+        assert result is not None
+        assert result['access_token'] != original['access_token']
+        assert result['refresh_token'] != original['refresh_token']
     
     def test_refresh_access_token_invalid(self):
         """Test invalid refresh token."""
-        with patch('backend.auth.security') as mock_security:
-            mock_security.verify_token.return_value = None
-            
-            result = self.auth_manager.refresh_access_token('invalid-token')
-            
-            assert result is None
+        assert self.auth_manager.refresh_access_token('invalid-token') is None
 
 
 class TestSecurityDecorators:

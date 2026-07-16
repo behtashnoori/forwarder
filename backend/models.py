@@ -156,7 +156,8 @@ class RevokedToken(db.Model):
     __table_args__ = (
         db.CheckConstraint("token_type IN ('access', 'refresh')", name="ck_revoked_token_type"),
         db.CheckConstraint(
-            "reason IN ('logout', 'password_changed', 'account_deactivated', 'admin_revoked', 'security_event')",
+            "reason IN ('logout', 'logout_all', 'refresh_rotated', 'refresh_reuse_detected', "
+            "'password_changed', 'account_deactivated', 'account_deleted', 'admin_revoked', 'expired', 'security_event')",
             name="ck_revoked_token_reason",
         ),
     )
@@ -169,6 +170,35 @@ class RevokedToken(db.Model):
     expires_at = db.Column(db.DateTime, nullable=False, index=True)
     reason = db.Column(db.String(32), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class AuthSession(db.Model):
+    """Server-side lifecycle state shared by one access/refresh token family."""
+
+    __tablename__ = "auth_session"
+    __table_args__ = (
+        db.CheckConstraint(
+            "revoked_reason IS NULL OR revoked_reason IN ('logout', 'logout_all', 'refresh_reuse_detected', "
+            "'password_changed', 'account_deactivated', 'account_deleted', 'admin_revoked', 'expired', 'security_event')",
+            name="ck_auth_session_revoked_reason",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    session_id = db.Column(db.String(36), nullable=False, unique=True, index=True)
+    user_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("expert_user.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    refresh_jti = db.Column(db.String(36), nullable=False, unique=True, index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    last_rotated_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    revoked_at = db.Column(db.DateTime, nullable=True)
+    revoked_reason = db.Column(db.String(32), nullable=True)
+    is_active = db.Column(db.Boolean, default=True, nullable=False, index=True)
 
 
 class CustomerGamification(db.Model):
