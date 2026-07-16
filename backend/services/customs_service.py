@@ -63,6 +63,12 @@ def create_office(data):
 
 
 def update_office(office, data):
+    if "name_fa" in data:
+        data = dict(data)
+        data["name_fa"] = _required(data, "name_fa")
+    if "is_active" in data:
+        data = dict(data)
+        data["is_active"] = _optional_bool(data, "is_active", office.is_active)
     merged = {k: data.get(k, getattr(office, k)) for k in ("country_id", "province_id", "county_id", "city_id")}
     _validate_geography(**merged)
     if "customs_type" in data and data["customs_type"] not in CUSTOMS_OFFICE_TYPES:

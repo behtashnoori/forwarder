@@ -56,3 +56,13 @@ def test_customs_validation_and_explicit_relationship(app):
 def test_zero_customs_is_valid_empty_state(app):
     with app.app_context():
         assert CustomsOffice.query.count() == 0
+
+
+def test_customs_update_rejects_blank_name_and_non_boolean_active(app):
+    with app.app_context():
+        country, _, _, _ = _geography()
+        office = customs_service.create_office({"code": "SYN-UPDATE", "name_fa": "آزمایشی", "customs_type": "other", "country_id": country.id})
+        with pytest.raises(customs_service.CustomsValidationError):
+            customs_service.update_office(office, {"name_fa": "   "})
+        with pytest.raises(customs_service.CustomsValidationError):
+            customs_service.update_office(office, {"is_active": "false"})
