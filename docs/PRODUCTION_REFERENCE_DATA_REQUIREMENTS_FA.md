@@ -1,5 +1,7 @@
 # الزامات داده‌های مرجع Production سامانه فورواردری
 
+> تکامل Schema و سیاست مرحله‌ای در `REFERENCE_DATA_SCHEMA_EVOLUTION_FA.md` و قرارداد Backfill آینده در `REFERENCE_DATA_BACKFILL_POLICY_FA.md` تعریف شده‌اند. فاز Expand مجوز Backfill یا import نیست.
+
 ## 1. هدف
 تعریف قرارداد fail-closed برای دریافت، تأیید و ورود آینده داده مرجع؛ این سند مجوز import نیست.
 
