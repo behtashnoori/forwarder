@@ -1,5 +1,6 @@
 """Database models for the shipment request service."""
 from datetime import datetime
+from sqlalchemy import event, select
 
 from backend.extensions import db
 
@@ -16,8 +17,21 @@ class Province(db.Model):
     __tablename__ = "province"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
-    code = db.Column(db.String(10), nullable=True)
+    code = db.Column(db.String(10), nullable=True, index=True)
     name_fa = db.Column(db.Text, nullable=False)
+    country_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id", ondelete="RESTRICT"), nullable=True, index=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
+
+    __table_args__ = (
+        db.UniqueConstraint("country_id", "code", name="uq_province_country_code"),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_province_effective_range"),
+    )
 
     counties = db.relationship("County", back_populates="province", lazy=True)
     cities = db.relationship("City", back_populates="province", lazy=True)
@@ -32,9 +46,22 @@ class County(db.Model):
     __tablename__ = "county"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    code = db.Column(db.String(64), nullable=True, index=True)
     name_fa = db.Column(db.Text, nullable=False)
     province_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
+    )
+
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
+    __table_args__ = (
+        db.UniqueConstraint("province_id", "code", name="uq_county_province_code"),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_county_effective_range"),
     )
 
     province = db.relationship("Province", back_populates="counties")
@@ -50,12 +77,25 @@ class City(db.Model):
     __tablename__ = "city"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    code = db.Column(db.String(64), nullable=True, index=True)
     name_fa = db.Column(db.Text, nullable=False)
     county_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=False
     )
     province_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
+    )
+
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
+    __table_args__ = (
+        db.UniqueConstraint("county_id", "code", name="uq_city_county_code"),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_city_effective_range"),
     )
 
     county = db.relationship("County", back_populates="cities")
@@ -69,12 +109,21 @@ class Country(db.Model):
     """Represents a country for international shipping."""
 
     __tablename__ = "country"
+    __table_args__ = (
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_country_effective_range"),
+    )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     name_en = db.Column(db.String(100), nullable=False)
     name_fa = db.Column(db.String(100), nullable=False)
     code = db.Column(db.String(3), nullable=False, unique=True)  # ISO country code
     is_active = db.Column(db.Boolean, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     cities = db.relationship("InternationalCity", back_populates="country", lazy=True)
@@ -958,17 +1007,31 @@ class IranPort(db.Model):
     __tablename__ = "iran_port"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    code = db.Column(db.String(64), nullable=True, index=True)
     name_fa = db.Column(db.String(100), nullable=False)
     name_en = db.Column(db.String(100), nullable=False)
     port_type = db.Column(db.String(20), nullable=False, default="sea")  # sea, air, land
     province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False)
+    country_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id", ondelete="RESTRICT"), nullable=True, index=True)
     is_major_port = db.Column(db.Boolean, default=True)
     is_active = db.Column(db.Boolean, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
     description = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # Relationships
     province = db.relationship("Province", backref="ports")
+    country = db.relationship("Country")
+
+    __table_args__ = (
+        db.UniqueConstraint("country_id", "code", name="uq_iran_port_country_code"),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_iran_port_effective_range"),
+    )
     
     def __repr__(self) -> str:
         return f"<IranPort id={self.id} name_fa={self.name_fa!r}>"
@@ -986,7 +1049,21 @@ class PortProvinceMapping(db.Model):
     transport_method = db.Column(db.String(50), nullable=True)  # road, rail, air, sea
     estimated_days = db.Column(db.Integer, nullable=True)  # estimated transport days
     is_recommended = db.Column(db.Boolean, default=False)
+    is_preferred = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("port_id", "province_id", name="uq_port_province_mapping"),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_port_province_mapping_effective_range"),
+    )
     
     # Relationships
     port = db.relationship("IranPort", backref="province_mappings")
@@ -1014,6 +1091,7 @@ class CustomsOffice(db.Model):
             "customs_type IN ('seaport','road_border','rail','airport','inland','free_zone','special_economic_zone','other')",
             name="ck_customs_office_type",
         ),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_customs_office_effective_range"),
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
@@ -1026,6 +1104,12 @@ class CustomsOffice(db.Model):
     county_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id", ondelete="RESTRICT"), nullable=True)
     city_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id", ondelete="RESTRICT"), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -1045,6 +1129,7 @@ class PortCustomsOffice(db.Model):
             "relationship_type IN ('located_at','serves_port','associated','other')",
             name="ck_port_customs_relationship_type",
         ),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_port_customs_effective_range"),
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
@@ -1053,10 +1138,93 @@ class PortCustomsOffice(db.Model):
     relationship_type = db.Column(db.String(32), nullable=False)
     is_primary = db.Column(db.Boolean, nullable=False, default=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     port = db.relationship("IranPort")
     customs_office = db.relationship("CustomsOffice")
+
+
+PORT_LOCATION_STATUSES = frozenset({"confirmed", "provisional", "historical", "unknown"})
+
+
+class PortLocation(db.Model):
+    """Versionable physical location for a port; never inferred from names."""
+    __tablename__ = "port_location"
+    __table_args__ = (
+        db.CheckConstraint("location_status IN ('confirmed','provisional','historical','unknown')", name="ck_port_location_status"),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_port_location_effective_range"),
+        db.Index("uq_port_location_active_port", "port_id", unique=True, postgresql_where=db.text("is_active IS TRUE"), sqlite_where=db.text("is_active = 1")),
+    )
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    port_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("iran_port.id", ondelete="RESTRICT"), nullable=False, index=True)
+    country_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id", ondelete="RESTRICT"), nullable=True, index=True)
+    province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id", ondelete="RESTRICT"), nullable=True, index=True)
+    county_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id", ondelete="RESTRICT"), nullable=True, index=True)
+    city_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id", ondelete="RESTRICT"), nullable=True, index=True)
+    location_status = db.Column(db.String(20), nullable=False, default="unknown")
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    port = db.relationship("IranPort")
+    country = db.relationship("Country")
+    province = db.relationship("Province")
+    county = db.relationship("County")
+    city = db.relationship("City")
+
+
+class CustomsProvinceMapping(db.Model):
+    """Explicit Customs service coverage for a Province."""
+    __tablename__ = "customs_province_mapping"
+    __table_args__ = (
+        db.UniqueConstraint("customs_office_id", "province_id", name="uq_customs_province_mapping"),
+        db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_customs_province_mapping_effective_range"),
+    )
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    customs_office_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customs_office.id", ondelete="RESTRICT"), nullable=False, index=True)
+    province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id", ondelete="RESTRICT"), nullable=False, index=True)
+    is_preferred = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.Date, nullable=True)
+    effective_to = db.Column(db.Date, nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(255), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    customs_office = db.relationship("CustomsOffice")
+    province = db.relationship("Province")
+
+
+@event.listens_for(PortLocation, "before_insert")
+@event.listens_for(PortLocation, "before_update")
+def _validate_port_location_before_write(_mapper, connection, target) -> None:
+    """Reject inconsistent supplied hierarchy without creating or inferring rows."""
+    if target.province_id is not None:
+        province_country = connection.execute(select(Province.country_id).where(Province.id == target.province_id)).scalar_one_or_none()
+        if province_country is not None and target.country_id != province_country:
+            raise ValueError("port location province/country hierarchy is inconsistent")
+    if target.county_id is not None:
+        county_province = connection.execute(select(County.province_id).where(County.id == target.county_id)).scalar_one_or_none()
+        if target.province_id is None or county_province != target.province_id:
+            raise ValueError("port location county/province hierarchy is inconsistent")
+    if target.city_id is not None:
+        city_parent = connection.execute(select(City.county_id, City.province_id).where(City.id == target.city_id)).one_or_none()
+        if city_parent is None or target.county_id is None or tuple(city_parent) != (target.county_id, target.province_id):
+            raise ValueError("port location city hierarchy is inconsistent")
 
 
 class SiteSetting(db.Model):
@@ -1108,6 +1276,9 @@ __all__ = [
     "PortProvinceMapping",
     "CustomsOffice",
     "PortCustomsOffice",
+    "PortLocation",
+    "CustomsProvinceMapping",
+    "PORT_LOCATION_STATUSES",
     "CUSTOMS_OFFICE_TYPES",
     "PORT_CUSTOMS_RELATIONSHIP_TYPES",
     "SiteSetting",

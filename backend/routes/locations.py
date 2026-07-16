@@ -14,7 +14,7 @@ location_bp = Blueprint("location", __name__, url_prefix="/api")
 def list_provinces():
     """Return a list of all provinces. Empty list if no rows; 500 with JSON only on real DB error."""
     try:
-        provinces = Province.query.all()
+        provinces = Province.query.filter_by(is_active=True).all()
         return jsonify(
             [
                 {"id": p.id, "name": p.name_fa, "code": p.code}
@@ -77,7 +77,7 @@ def list_counties():
             400,
         )
 
-    counties = County.query.filter_by(province_id=province_id).all()
+    counties = County.query.filter_by(province_id=province_id, is_active=True).all()
     return jsonify(
         [
             {
@@ -99,7 +99,7 @@ def list_cities():
             400,
         )
 
-    cities = City.query.filter_by(county_id=county_id).all()
+    cities = City.query.filter_by(county_id=county_id, is_active=True).all()
     return jsonify(
         [
             {
@@ -198,7 +198,7 @@ def list_port_province_mappings():
             400,
         )
     
-    query = PortProvinceMapping.query
+    query = PortProvinceMapping.query.filter_by(is_active=True)
     if port_id:
         query = query.filter_by(port_id=port_id)
     if province_id:
@@ -237,12 +237,14 @@ def get_recommended_ports():
     # Get recommended ports for the province
     mappings = PortProvinceMapping.query.filter_by(
         province_id=province_id,
-        is_recommended=True
+        is_recommended=True,
+        is_active=True,
     ).order_by(PortProvinceMapping.suitability_score.desc()).all()
     
     # Also get top 3 ports by suitability score even if not marked as recommended
     top_mappings = PortProvinceMapping.query.filter_by(
-        province_id=province_id
+        province_id=province_id,
+        is_active=True,
     ).order_by(PortProvinceMapping.suitability_score.desc()).limit(3).all()
     
     # Combine and deduplicate

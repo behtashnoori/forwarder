@@ -33,6 +33,8 @@ def _validate_geography(country_id, province_id=None, county_id=None, city_id=No
     city = db.session.get(City, city_id) if city_id else None
     if province_id and province is None:
         raise CustomsValidationError("province_id is invalid")
+    if province is not None and province.country_id is not None and province.country_id != country.id:
+        raise CustomsValidationError("province does not belong to country")
     if county_id and (county is None or province is None or county.province_id != province.id):
         raise CustomsValidationError("county does not belong to province")
     if city_id and (city is None or county is None or city.county_id != county.id or (province and city.province_id != province.id)):

@@ -3,9 +3,14 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import json
+import re
 import sys
 from collections.abc import Callable, Sequence
+from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from backend import create_app
@@ -13,6 +18,8 @@ from backend.extensions import db
 from backend.models import ExpertUser
 from backend.security import sanitize_input
 from backend.services.user_service import hash_password
+from backend.services.reference_schema_service import build_readiness_report, export_backfill_inventory, write_json_report
+from backend.config import get_database_uri
 
 
 ADMIN_ROLE = "admin"
@@ -149,7 +156,50 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="فرمان‌های مدیریتی محلی Forwarder")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("create-admin", help="ایجاد مدیر اولیه شرکت")
+    readiness = subparsers.add_parser("reference-schema-readiness", help="read-only reference schema readiness report")
+    readiness.add_argument("--database", help="authorized database name; credentials come from secure configuration")
+    readiness.add_argument("--json-report", type=Path, help="external JSON report path")
+    readiness.add_argument("--strict", action="store_true", help="return non-zero when backfill is required")
+    inventory = subparsers.add_parser("export-reference-backfill-inventory", help="read-only owner-review inventory; generates no codes")
+    inventory.add_argument("--database", help="authorized database name; credentials come from secure configuration")
+    inventory.add_argument("--output", type=Path, required=True, help="external CSV output path")
     return parser
+
+
+def _database_config(database: str | None):
+    if database is None:
+        return None
+    if "://" in database or not re.fullmatch(r"[A-Za-z0-9_]+", database):
+        raise ValueError("--database accepts a database name only; credentials must come from secure configuration")
+    current = urlsplit(get_database_uri())
+    return {"SQLALCHEMY_DATABASE_URI": urlunsplit((current.scheme, current.netloc, "/" + database, current.query, current.fragment))}
+
+
+def _run_reference_command(args) -> int:
+    try:
+        config = _database_config(args.database)
+    except ValueError as exc:
+        print(f"BLOCKED: {exc}")
+        return 2
+    app = create_app(config, skip_startup=True)
+    with app.app_context():
+        try:
+            if db.engine.dialect.name == "postgresql":
+                db.session.execute(text("SET TRANSACTION READ ONLY"))
+                if db.session.execute(text("SHOW transaction_read_only")).scalar_one() != "on":
+                    print("BLOCKED: database transaction is not read-only")
+                    return 2
+            if args.command == "reference-schema-readiness":
+                report = build_readiness_report()
+                if args.json_report:
+                    write_json_report(report, args.json_report)
+                print(json.dumps(report, ensure_ascii=False, sort_keys=True))
+                return 1 if args.strict and report["status"] != "SCHEMA_READY" else 0
+            count = export_backfill_inventory(args.output)
+            print(f"BACKFILL_REQUIRED: exported {count} reconciliation rows; generated codes=0")
+            return 0
+        finally:
+            db.session.rollback()
 
 
 def configure_console_encoding() -> None:
@@ -166,6 +216,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "create-admin":
         return run_create_admin()
+    if args.command in {"reference-schema-readiness", "export-reference-backfill-inventory"}:
+        return _run_reference_command(args)
     return 2
 
 
