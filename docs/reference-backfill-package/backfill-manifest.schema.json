@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forwarder.local/schemas/backfill-manifest-1.0.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["package_schema_version", "package_type", "dataset_id", "dataset_version", "target_schema_revision", "exported_from_database", "exported_at", "effective_date", "source_organization", "source_reference", "normalization_profile", "checksum_algorithm", "files", "package_notes"],
+  "properties": {
+    "package_schema_version": {"const": "1.0"},
+    "package_type": {"const": "reference_identity_backfill"},
+    "dataset_id": {"type": "string", "minLength": 1}, "dataset_version": {"type": "string", "minLength": 1},
+    "target_schema_revision": {"const": "20260720_expand_reference_data_identity"},
+    "exported_from_database": {"type": "string", "minLength": 1}, "exported_at": {"type": "string", "format": "date-time"},
+    "effective_date": {"type": "string", "format": "date"}, "source_organization": {"type": "string"},
+    "source_reference": {"type": "string"}, "normalization_profile": {"const": "forwarder-reference-nfc-fa-v1"},
+    "checksum_algorithm": {"const": "SHA-256"}, "package_notes": {"type": "string"},
+    "files": {"type": "array", "minItems": 10, "maxItems": 10, "items": {"type": "object", "additionalProperties": false,
+      "required": ["path", "domain", "supplied_status", "row_count", "sha256", "encoding", "delimiter", "header_version", "apply_semantics"],
+      "properties": {"path": {"type": "string", "pattern": "^mappings/[a-z_]+\\.csv$"},
+        "domain": {"enum": ["countries", "provinces", "counties", "cities", "ports", "port_locations", "port_coverage", "customs_offices", "port_customs_relationships", "customs_coverage"]},
+        "supplied_status": {"enum": ["supplied", "not_supplied", "intentionally_empty", "not_applicable"]},
+        "row_count": {"type": "integer", "minimum": 0}, "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "encoding": {"const": "UTF-8"}, "delimiter": {"const": ","}, "header_version": {"const": "1.0"},
+        "apply_semantics": {"enum": ["assign_missing_identity", "assign_missing_parent", "create_port_location", "update_provenance", "validate_only"]}}}}
+  }
+}

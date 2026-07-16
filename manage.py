@@ -19,6 +19,7 @@ from backend.models import ExpertUser
 from backend.security import sanitize_input
 from backend.services.user_service import hash_password
 from backend.services.reference_schema_service import build_readiness_report, export_backfill_inventory, write_json_report
+from backend.services.reference_backfill_service import apply_package, diff_package, export_inventory_package, validate_package
 from backend.config import get_database_uri
 
 
@@ -162,7 +163,18 @@ def build_parser() -> argparse.ArgumentParser:
     readiness.add_argument("--strict", action="store_true", help="return non-zero when backfill is required")
     inventory = subparsers.add_parser("export-reference-backfill-inventory", help="read-only owner-review inventory; generates no codes")
     inventory.add_argument("--database", help="authorized database name; credentials come from secure configuration")
-    inventory.add_argument("--output", type=Path, required=True, help="external CSV output path")
+    inventory.add_argument("--output", type=Path, help="legacy external CSV output path")
+    inventory.add_argument("--output-directory", type=Path, help="external versioned package directory")
+    inventory.add_argument("--domains", help="comma-separated domain names")
+    inventory.add_argument("--json-summary", type=Path)
+    inventory.add_argument("--strict", action="store_true")
+    validator = subparsers.add_parser("validate-reference-backfill", help="validate a Backfill package without writes")
+    validator.add_argument("--path", type=Path, required=True); validator.add_argument("--against-database")
+    validator.add_argument("--strict", action="store_true"); validator.add_argument("--json-report", type=Path); validator.add_argument("--markdown-report", type=Path)
+    diff = subparsers.add_parser("diff-reference-backfill", help="deterministic read-only Backfill diff")
+    diff.add_argument("--path", type=Path, required=True); diff.add_argument("--database", required=True)
+    apply_cmd = subparsers.add_parser("apply-reference-backfill", help="guarded Backfill dry-run/apply")
+    apply_cmd.add_argument("--path", type=Path, required=True); apply_cmd.add_argument("--database", required=True); apply_cmd.add_argument("--apply", action="store_true")
     return parser
 
 
@@ -195,6 +207,12 @@ def _run_reference_command(args) -> int:
                     write_json_report(report, args.json_report)
                 print(json.dumps(report, ensure_ascii=False, sort_keys=True))
                 return 1 if args.strict and report["status"] != "SCHEMA_READY" else 0
+            if args.output_directory:
+                domains=set(args.domains.split(",")) if args.domains else None
+                summary=export_inventory_package(args.output_directory,database_name=db.session.execute(text("select current_database()" )).scalar_one() if db.engine.dialect.name=="postgresql" else "sqlite",domains=domains)
+                if args.json_summary: write_json_report(summary,args.json_summary)
+                print(json.dumps(summary,sort_keys=True)); return 3
+            if not args.output: print("BLOCKED: --output or --output-directory is required"); return 2
             count = export_backfill_inventory(args.output)
             print(f"BACKFILL_REQUIRED: exported {count} reconciliation rows; generated codes=0")
             return 0
@@ -218,6 +236,35 @@ def main(argv: Sequence[str] | None = None) -> int:
         return run_create_admin()
     if args.command in {"reference-schema-readiness", "export-reference-backfill-inventory"}:
         return _run_reference_command(args)
+    def result_exit(payload: dict) -> int:
+        if payload.get("code") == "FORBIDDEN_TARGET": return 4
+        if payload.get("code") == "TRANSACTION_ROLLED_BACK": return 5
+        return {"PASS":0,"PASS_WITH_WARNINGS":0,"REJECTED":1,"BLOCKED":2,"AWAITING_OWNER_INPUT":3}.get(payload.get("status"),6)
+    if args.command == "validate-reference-backfill" and not args.against_database:
+        result=validate_package(args.path); payload=result.as_dict()
+        if args.json_report: write_json_report(payload,args.json_report)
+        if args.markdown_report:
+            args.markdown_report.write_text("# Backfill validation\n\nStatus: " + payload["status"] + "\n",encoding="utf-8")
+        print(json.dumps(payload,sort_keys=True)); return result_exit(payload)
+    if args.command in {"validate-reference-backfill","diff-reference-backfill","apply-reference-backfill"}:
+        database=args.against_database if args.command=="validate-reference-backfill" else args.database
+        try: config=_database_config(database)
+        except ValueError as exc: print(f"BLOCKED: {exc}"); return 2
+        app=create_app(config,skip_startup=True)
+        with app.app_context():
+            try:
+                if db.engine.dialect.name=="postgresql" and not (args.command=="apply-reference-backfill" and args.apply):
+                    db.session.execute(text("SET TRANSACTION READ ONLY"))
+                    if db.session.execute(text("SHOW transaction_read_only")).scalar_one()!="on":
+                        print(json.dumps({"status":"BLOCKED","code":"READ_ONLY_NOT_ENFORCED"})); return 2
+                if args.command=="validate-reference-backfill": payload=validate_package(args.path,against_database=True).as_dict()
+                elif args.command=="diff-reference-backfill": payload=diff_package(args.path)
+                else: payload=apply_package(args.path,database_name=database,apply=args.apply)
+                if args.command=="validate-reference-backfill":
+                    if args.json_report: write_json_report(payload,args.json_report)
+                    if args.markdown_report: args.markdown_report.write_text("# Backfill validation\n\nStatus: " + payload["status"] + "\n",encoding="utf-8")
+                print(json.dumps(payload,sort_keys=True)); return result_exit(payload)
+            finally: db.session.rollback()
     return 2
 
 

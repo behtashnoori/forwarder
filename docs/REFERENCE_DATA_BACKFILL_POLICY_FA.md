@@ -16,3 +16,5 @@
 14. Production approval مستقل و همچنان الزامی است.
 
 این فاز command اعمال Backfill ندارد. inventory خروجی نیز هیچ کدی پیشنهاد یا تولید نمی‌کند و نباید commit شود.
+
+ابزار کنترل‌شده validator/diff/apply در `REFERENCE_DATA_BACKFILL_WORKFLOW_FA.md` مستند شده است. وجود ابزار به‌معنای مجوز Apply روی Candidate یا Production نیست.

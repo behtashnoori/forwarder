@@ -8,6 +8,13 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+/reference-backfill-package/
+/reference-backfill-reports/
+*backfill-inventory*.csv
+/forwarder_backfill_test_*.dump
+/forwarder_backfill_test_*.sql
+/backfill-validation-*.json
+/backfill-validation-*.md
 dist
 dist-ssr
 *.local
