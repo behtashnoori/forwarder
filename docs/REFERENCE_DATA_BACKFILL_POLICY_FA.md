@@ -16,4 +16,3 @@
 14. Production approval مستقل و همچنان الزامی است.
 
 این فاز command اعمال Backfill ندارد. inventory خروجی نیز هیچ کدی پیشنهاد یا تولید نمی‌کند و نباید commit شود.
-
