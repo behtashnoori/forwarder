@@ -28,6 +28,7 @@ import ReferralRulesTab from "@/components/ReferralRulesTab";
 import SiteSettingsTab from "@/components/SiteSettingsTab";
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
+import { logoutAndClearExpertSession } from "@/lib/authSession";
 
 type MetricCardProps = {
   label: string;
@@ -103,10 +104,12 @@ const AdminPanel = () => {
     }
   }, [t]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("expert_user");
-    localStorage.removeItem("expert_token");
-    window.location.href = "/";
+  const handleLogout = async () => {
+    const confirmed = await logoutAndClearExpertSession();
+    if (!confirmed) {
+      toast({ title: t("common.error"), description: t("admin.serverError"), variant: "destructive" });
+    }
+    navigate("/", { replace: true });
   };
 
   const loadDashboard = useCallback(async () => {

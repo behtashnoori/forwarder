@@ -102,8 +102,16 @@ class AuthManager:
         payload = security.verify_token(refresh_token)
         if not payload or payload.get('token_type') != 'refresh':
             return None
+        if not payload.get('jti'):
+            return None
+        from backend.services.token_revocation_service import is_token_revoked
+        if is_token_revoked(payload['jti']):
+            return None
         
         user_id = payload['user_id']
+        user = db.session.get(ExpertUser, user_id)
+        if not user or not user.is_active:
+            return None
         return self.generate_tokens(user_id)
 
 

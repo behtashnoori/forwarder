@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Home, LogOut } from "lucide-react";
+import { logoutAndClearExpertSession } from "@/lib/authSession";
 
 interface PageNavProps {
   /** مسیر بازگشت؛ اگر نباشد از history برمی‌گردد */
@@ -10,7 +11,7 @@ interface PageNavProps {
   backLabel?: string;
   /** نمایش دکمه خروج (پاک کردن توکن و رفتن به صفحه اصلی) */
   showLogout?: boolean;
-  /** اگر مقدار داشته باشد، با زدن خروج به این مسیر برمی‌گردد (بدون پاک کردن توکن؛ برای بازگشت به پنل کارشناس) */
+  /** مسیر مقصد پس از لغو نشست و پاک‌سازی state محلی */
   logoutTo?: string;
   /** کلاس اضافی برای کانتینر */
   className?: string;
@@ -24,14 +25,9 @@ const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, logou
     else navigate(-1);
   };
 
-  const handleLogout = () => {
-    if (logoutTo) {
-      navigate(logoutTo);
-      return;
-    }
-    localStorage.removeItem("expert_user");
-    localStorage.removeItem("expert_token");
-    window.location.href = "/";
+  const handleLogout = async () => {
+    await logoutAndClearExpertSession();
+    navigate(logoutTo || "/", { replace: true });
   };
 
   return (

@@ -43,6 +43,7 @@ import {
   type KPIs,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { logoutAndClearExpertSession } from "@/lib/authSession";
 
 type ShipmentRequest = ExpertRequest & {
   international_transport_method?: string;
@@ -331,9 +332,9 @@ const ExpertConsole = () => {
                       <p className="text-xs text-slate-500">{currentExpert?.role || t("common.roleExpert")}</p>
                     </div>
                     <DropdownMenuItem
-                      onClick={() => {
-                        localStorage.removeItem("expert_user");
-                        window.location.href = "/";
+                      onClick={async () => {
+                        await logoutAndClearExpertSession();
+                        navigate("/", { replace: true });
                       }}
                     >
                       <LogOut className="ml-2 h-4 w-4" />

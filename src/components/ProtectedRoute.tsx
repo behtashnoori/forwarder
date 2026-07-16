@@ -9,8 +9,9 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles, unauthorizedTo = "/expert" }) => {
   const expertUser = localStorage.getItem('expert_user');
+  const expertToken = localStorage.getItem('expert_token');
   
-  if (!expertUser) {
+  if (!expertUser || !expertToken || expertToken === 'null') {
     return <Navigate to="/" replace />;
   }
 

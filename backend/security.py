@@ -8,6 +8,7 @@ from functools import wraps
 from flask import request, jsonify, current_app, g
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
+from uuid import uuid4
 
 
 class SecurityManager:
@@ -93,6 +94,7 @@ class SecurityManager:
             'user_id': user_id,
             'token_type': token_type,
             'iat': datetime.utcnow(),
+            'jti': str(uuid4()),
             'exp': datetime.utcnow() + (
                 self.app.config['JWT_ACCESS_TOKEN_EXPIRES'] if token_type == 'access'
                 else self.app.config['JWT_REFRESH_TOKEN_EXPIRES']
@@ -144,9 +146,21 @@ def require_auth(f):
             payload = security.verify_token(token)
             if not payload:
                 return jsonify({'error': 'Invalid token'}), 401
+            if payload.get('token_type') != 'access' or not payload.get('jti'):
+                return jsonify({'error': 'Invalid token'}), 401
+
+            from backend.extensions import db
+            from backend.models import ExpertUser
+            from backend.services.token_revocation_service import is_token_revoked
+            if is_token_revoked(payload['jti']):
+                return jsonify({'error': 'Invalid token'}), 401
+            user = ExpertUser.query.filter_by(id=payload.get('user_id'), is_active=True).first()
+            if not user or not user.is_active:
+                return jsonify({'error': 'Invalid token'}), 401
             
             g.current_user_id = payload['user_id']
             g.current_user_token_type = payload['token_type']
+            g.current_token_payload = payload
             
         except Exception as e:
             return jsonify({'error': 'Token verification failed'}), 401

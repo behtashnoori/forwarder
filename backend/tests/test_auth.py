@@ -102,10 +102,13 @@ class TestAuthManager:
         with patch('backend.auth.security') as mock_security:
             mock_security.verify_token.return_value = {
                 'user_id': 1,
-                'token_type': 'refresh'
+                'token_type': 'refresh',
+                'jti': '00000000-0000-4000-8000-000000000001'
             }
             
-            with patch.object(self.auth_manager, 'generate_tokens') as mock_generate:
+            with patch('backend.services.token_revocation_service.is_token_revoked', return_value=False), \
+                 patch('backend.auth.db.session.get', return_value=MagicMock(is_active=True)), \
+                 patch.object(self.auth_manager, 'generate_tokens') as mock_generate:
                 mock_generate.return_value = {'access_token': 'new-token'}
                 
                 result = self.auth_manager.refresh_access_token('valid-refresh-token')

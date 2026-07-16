@@ -149,6 +149,28 @@ class ExpertUser(db.Model):
         return len([req for req in self.assigned_requests if req.status in ['assigned', 'in_progress']])
 
 
+class RevokedToken(db.Model):
+    """Stores revocable JWT identifiers without retaining bearer credentials."""
+
+    __tablename__ = "revoked_token"
+    __table_args__ = (
+        db.CheckConstraint("token_type IN ('access', 'refresh')", name="ck_revoked_token_type"),
+        db.CheckConstraint(
+            "reason IN ('logout', 'password_changed', 'account_deactivated', 'admin_revoked', 'security_event')",
+            name="ck_revoked_token_reason",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    jti = db.Column(db.String(36), nullable=False, unique=True, index=True)
+    user_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True, index=True)
+    token_type = db.Column(db.String(16), nullable=False)
+    revoked_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    reason = db.Column(db.String(32), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
 class CustomerGamification(db.Model):
     """Represents a customer who can track their requests with gamification."""
     

@@ -250,6 +250,24 @@ export interface TransportUnitUpdate {
   event_at: string;
 }
 
+export async function logoutExpert(token: string): Promise<boolean> {
+  const url = `${API_BASE_URL}/api/expert/auth/logout`;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+    return response.ok;
+  } catch {
+    return false;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 export interface PublicTransportUnitTracking {
   unit_code: string;
   unit_type: string;

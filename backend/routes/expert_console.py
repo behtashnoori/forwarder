@@ -540,11 +540,13 @@ def refresh_token():
 def logout():
     """Logout user (invalidate tokens)."""
     try:
-        # In production, add token to blacklist
+        from backend.services.token_revocation_service import revoke_payload
+        revoke_payload(g.current_token_payload, reason="logout")
         return jsonify({"message": "با موفقیت خارج شدید"})
         
-    except Exception as e:
-        current_app.logger.error(f"Logout error: {str(e)}")
+    except Exception:
+        db.session.rollback()
+        current_app.logger.error("Logout token revocation failed")
         return jsonify({"error": "خطا در خروج"}), 500
 
 
