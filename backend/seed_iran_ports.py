@@ -8,50 +8,18 @@ from backend.__init__ import create_app
 from backend.models import Province, IranPort, PortProvinceMapping
 from backend.extensions import db
 
+PORT_PROVINCE_CODES = {
+    "Bandar Abbas": "HOR", "Bushehr": "BUS", "Imam Khomeini": "KHU",
+    "Khorramshahr": "KHU", "Mahshahr": "KHU", "Chabahar": "SIS",
+    "Anzali": "GIL", "Tehran": "TEH", "Mashhad": "KHO",
+    "Shiraz": "FAR", "Isfahan": "ISF", "Tabriz": "EAZ",
+}
+
 def seed_iran_ports():
     """Create Iran ports and port-province mapping data."""
     app = create_app()
     
     with app.app_context():
-        # Check if Iran ports already exist
-        try:
-            if IranPort.query.count() > 0:
-                print("Iran ports data already exists. Skipping seed.")
-                return
-        except Exception as e:
-            print(f"Tables not created yet, proceeding with seed: {e}")
-        
-        # First, ensure we have Iran provinces
-        iran_provinces = {
-            "تهران": {"code": "TEH", "id": None},
-            "اصفهان": {"code": "ISF", "id": None},
-            "شیراز": {"code": "FAR", "id": None},
-            "مشهد": {"code": "KHO", "id": None},
-            "تبریز": {"code": "EAZ", "id": None},
-            "اهواز": {"code": "KHU", "id": None},
-            "کرمان": {"code": "KER", "id": None},
-            "رشت": {"code": "GIL", "id": None},
-            "بندرعباس": {"code": "HOR", "id": None},
-            "بوشهر": {"code": "BUS", "id": None},
-            "خرمشهر": {"code": "KHU", "id": None},
-            "چابهار": {"code": "SIS", "id": None},
-            "انزلی": {"code": "GIL", "id": None},
-            "ماهشهر": {"code": "KHU", "id": None},
-            "امام خمینی": {"code": "KHU", "id": None},
-        }
-        
-        # Get or create provinces
-        for province_name, province_data in iran_provinces.items():
-            province = Province.query.filter_by(name_fa=province_name).first()
-            if not province:
-                province = Province(
-                    name_fa=province_name,
-                    code=province_data["code"]
-                )
-                db.session.add(province)
-                db.session.flush()
-            iran_provinces[province_name]["id"] = province.id
-        
         # Iran ports data
         iran_ports_data = [
             {
@@ -152,10 +120,26 @@ def seed_iran_ports():
             }
         ]
         
-        # Create ports
+        expected_codes = set(PORT_PROVINCE_CODES.values())
+        provinces = Province.query.filter(Province.code.in_(expected_codes)).all()
+        by_code = {province.code: province for province in provinces}
+        missing = sorted(expected_codes - set(by_code))
+        duplicate = sorted(code for code in expected_codes if Province.query.filter_by(code=code).count() != 1)
+        if missing or duplicate:
+            db.session.rollback()
+            raise RuntimeError(f"Unresolved port geography: missing={missing}, duplicate={duplicate}")
+
+        # Validate every reference before the first write.
+        unresolved = [p["name_en"] for p in iran_ports_data if p["name_en"] not in PORT_PROVINCE_CODES]
+        if unresolved:
+            raise RuntimeError(f"Unresolved ports: {sorted(unresolved)}")
+
+        # Create ports idempotently. Existing rows are reused by exact English name.
         for port_data in iran_ports_data:
-            province_id = iran_provinces[port_data["province_name"]]["id"]
-            port = IranPort(
+            province_id = by_code[PORT_PROVINCE_CODES[port_data["name_en"]]].id
+            port = IranPort.query.filter_by(name_en=port_data["name_en"]).first()
+            if port is None:
+                port = IranPort(
                 name_fa=port_data["name_fa"],
                 name_en=port_data["name_en"],
                 port_type=port_data["port_type"],
@@ -164,14 +148,16 @@ def seed_iran_ports():
                 is_major_port=port_data["is_major_port"],
                 is_active=True,
                 created_at=datetime.utcnow()
-            )
-            db.session.add(port)
-            db.session.flush()
+                )
+                db.session.add(port)
+                db.session.flush()
             
             # Create port-province mappings with suitability scores
             port_province_mappings = get_port_province_mappings(port_data["name_fa"], port.id)
             for mapping in port_province_mappings:
-                db.session.add(mapping)
+                exists = PortProvinceMapping.query.filter_by(port_id=port.id, province_id=mapping.province_id).first()
+                if exists is None:
+                    db.session.add(mapping)
         
         try:
             db.session.commit()
