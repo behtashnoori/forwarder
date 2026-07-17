@@ -494,6 +494,48 @@ class ShipmentTransportUnit(db.Model):
     )
 
 
+class TrackingLocationReference(db.Model):
+    """Curated internal UI helper for manually reported tracking locations."""
+
+    __tablename__ = "tracking_location_reference"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "internal_key", name="uq_tracking_location_reference_internal_key"
+        ),
+        db.CheckConstraint(
+            "location_type IN ('origin_city','commercial_hub','seaport','rail_terminal',"
+            "'road_terminal','border_point','transit_city','iran_gateway',"
+            "'destination_city','other')",
+            name="ck_tracking_location_reference_type",
+        ),
+        db.CheckConstraint(
+            "reference_status IN ('internal_reference','verified_internal','inactive')",
+            name="ck_tracking_location_reference_status",
+        ),
+        db.CheckConstraint("sort_order >= 0", name="ck_tracking_location_reference_sort_order"),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    internal_key = db.Column(db.String(100), nullable=False)
+    name_fa = db.Column(db.String(160), nullable=False)
+    name_en = db.Column(db.String(160), nullable=True)
+    country_code = db.Column(db.String(2), nullable=False)
+    location_type = db.Column(db.String(32), nullable=False)
+    aliases = db.Column(db.JSON, nullable=True)
+    reference_status = db.Column(db.String(32), nullable=False, default="internal_reference")
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    tracking_updates = db.relationship(
+        "ShipmentTransportUnitUpdate",
+        back_populates="location_reference",
+        passive_deletes=True,
+    )
+
+
 class ShipmentTransportUnitUpdate(db.Model):
     """Append-only manually entered status for one transport unit."""
 
@@ -510,6 +552,14 @@ class ShipmentTransportUnitUpdate(db.Model):
     )
     status = db.Column(db.String(32), nullable=False)
     location = db.Column(db.String(255), nullable=True)
+    location_reference_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("tracking_location_reference.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    location_name_snapshot = db.Column(db.String(160), nullable=True)
+    country_code_snapshot = db.Column(db.String(2), nullable=True)
+    location_text = db.Column(db.String(255), nullable=True)
     customer_message = db.Column(db.Text, nullable=True)
     internal_note = db.Column(db.Text, nullable=True)
     is_customer_visible = db.Column(db.Boolean, nullable=False, default=True)
@@ -521,6 +571,18 @@ class ShipmentTransportUnitUpdate(db.Model):
 
     unit = db.relationship("ShipmentTransportUnit", back_populates="updates")
     created_by_user = db.relationship("ExpertUser", foreign_keys=[created_by_user_id])
+    location_reference = db.relationship("TrackingLocationReference", back_populates="tracking_updates")
+
+
+@event.listens_for(TrackingLocationReference, "before_delete")
+def _protect_referenced_tracking_location(_mapper, connection, target):
+    referenced = connection.execute(
+        select(ShipmentTransportUnitUpdate.id)
+        .where(ShipmentTransportUnitUpdate.location_reference_id == target.id)
+        .limit(1)
+    ).first()
+    if referenced:
+        raise ValueError("referenced tracking locations cannot be hard deleted")
 
 
 class ShipmentRequestLog(db.Model):

@@ -9,6 +9,7 @@ from backend.models import (
     ShipmentTracking,
     ShipmentTransportUnit,
     ShipmentTransportUnitUpdate,
+    TrackingLocationReference,
 )
 
 
@@ -174,6 +175,8 @@ def add_update(
     status: str,
     occurred_at: datetime,
     location: str | None = None,
+    location_reference_id: int | None = None,
+    location_text: str | None = None,
     customer_message: str | None = None,
     internal_note: str | None = None,
     is_customer_visible: bool = True,
@@ -193,9 +196,18 @@ def add_update(
     created_at = _utc_naive(now or datetime.utcnow())
     if occurred_at > created_at:
         raise TrackingValidationError("occurred_at cannot be in the future")
-    clean_location = (location or "").strip() or None
-    if clean_location and len(clean_location) > 255:
-        raise TrackingValidationError("location must be at most 255 characters")
+    clean_location = _clean_optional(location, "location", 255)
+    clean_location_text = _clean_optional(location_text, "location_text", 255)
+    reference = None
+    if location_reference_id is not None:
+        if not isinstance(location_reference_id, int) or isinstance(location_reference_id, bool):
+            raise TrackingValidationError("location_reference_id must be an integer")
+        reference = db.session.get(TrackingLocationReference, location_reference_id)
+        if reference is None or not reference.is_active:
+            raise TrackingValidationError("active tracking location reference not found")
+    if reference and clean_location_text:
+        raise TrackingValidationError("select a reference or enter free text, not both")
+    resolved_location = reference.name_fa if reference else (clean_location_text or clean_location)
     clean_message = (customer_message or "").strip() or None
     clean_internal_note = (internal_note or "").strip() or None
     if not isinstance(is_customer_visible, bool):
@@ -203,7 +215,11 @@ def add_update(
     update = ShipmentTransportUnitUpdate(
         unit=unit,
         status=normalized_status,
-        location=clean_location,
+        location=resolved_location,
+        location_reference=reference,
+        location_name_snapshot=reference.name_fa if reference else None,
+        country_code_snapshot=reference.country_code if reference else None,
+        location_text=clean_location_text or (clean_location if not reference else None),
         customer_message=clean_message,
         internal_note=clean_internal_note,
         is_customer_visible=is_customer_visible,
@@ -217,6 +233,28 @@ def add_update(
 
 def _iso(value):
     return value.isoformat() if value and hasattr(value, "isoformat") else None
+
+
+def _location_payload(row):
+    name = row.location_name_snapshot or row.location_text or row.location
+    return {
+        "location_reference_id": row.location_reference_id,
+        "location_name": name,
+        "location_text": row.location_text,
+        "country_code": row.country_code_snapshot,
+        "location_source": "reference" if row.location_reference_id else ("manual" if name else None),
+    }
+
+
+def _latest_location_row(history):
+    return next(
+        (
+            row
+            for row in history
+            if row.location_name_snapshot or row.location_text or row.location
+        ),
+        None,
+    )
 
 
 def _latest_visible_updates(tracking: ShipmentTracking):
@@ -285,7 +323,16 @@ def build_internal_unit_tracking(req: ShipmentRequest):
                 "vehicle_reference": unit.vehicle_reference,
                 "is_active": unit.is_active,
                 "latest_status": latest.status if latest else "not_started",
-                "latest_location": latest.location if latest else None,
+                "latest_location": (
+                    _location_payload(_latest_location_row(_history))["location_name"]
+                    if _latest_location_row(_history)
+                    else None
+                ),
+                "latest_location_detail": (
+                    _location_payload(_latest_location_row(_history))
+                    if _latest_location_row(_history)
+                    else None
+                ),
                 "latest_event_at": _iso(latest.occurred_at) if latest else None,
             }
             for unit, _history, latest in latest_rows
@@ -304,7 +351,7 @@ def build_public_unit_tracking(req: ShipmentRequest):
     latest_rows = _latest_visible_updates(tracking)
     aggregate_status, summary, last_updated = _aggregate(latest_rows)
     for unit, history_rows, latest in latest_rows:
-        latest_location_row = next((row for row in history_rows if row.location), None)
+        latest_location_row = _latest_location_row(history_rows)
         latest_status = latest.status if latest else "not_started"
         progress_values.append(STATUS_PROGRESS.get(latest_status, 0))
         public_units.append(
@@ -314,12 +361,18 @@ def build_public_unit_tracking(req: ShipmentRequest):
                 "display_name": unit.display_name,
                 "vehicle_reference": unit.vehicle_reference,
                 "latest_status": latest_status,
-                "latest_location": latest_location_row.location if latest_location_row else None,
+                "latest_location": (
+                    _location_payload(latest_location_row)["location_name"]
+                    if latest_location_row
+                    else None
+                ),
+                "latest_location_detail": _location_payload(latest_location_row) if latest_location_row else None,
                 "latest_event_at": _iso(latest.occurred_at) if latest else None,
                 "timeline": [
                     {
                         "status": row.status,
                         "location": row.location,
+                        **_location_payload(row),
                         "customer_note": row.customer_message,
                         "event_at": _iso(row.occurred_at),
                     }

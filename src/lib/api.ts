@@ -259,7 +259,29 @@ export interface TransportUnitUpdate {
   location: string | null;
   customer_note: string | null;
   event_at: string;
+  location_reference_id?: number | null;
+  location_name?: string | null;
+  location_text?: string | null;
+  country_code?: string | null;
+  location_source?: "reference" | "manual" | null;
 }
+
+export interface TrackingLocationReference {
+  id: number; name_fa: string; name_en: string | null; country_code: string;
+  location_type: string; aliases: string[]; is_active: boolean;
+  internal_key?: string; reference_status?: string; sort_order?: number; notes?: string | null;
+}
+
+export const fetchTrackingLocations = (q = ""): Promise<{ items: TrackingLocationReference[] }> =>
+  request(`/api/tracking-locations${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+export const fetchAdminTrackingLocations = (q = ""): Promise<{ items: TrackingLocationReference[] }> =>
+  request(`/api/tracking-locations?include_inactive=true${q ? `&q=${encodeURIComponent(q)}` : ""}`);
+export const createTrackingLocation = (payload: Record<string, unknown>): Promise<TrackingLocationReference> =>
+  request("/api/tracking-locations",{method:"POST",body:JSON.stringify(payload)});
+export const updateTrackingLocation = (id:number,payload:Record<string,unknown>): Promise<TrackingLocationReference> =>
+  request(`/api/tracking-locations/${id}`,{method:"PATCH",body:JSON.stringify(payload)});
+export const deactivateTrackingLocation = (id:number): Promise<TrackingLocationReference> =>
+  request(`/api/tracking-locations/${id}`,{method:"DELETE"});
 
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -851,6 +873,8 @@ export const addTrackingUnitUpdate = (
   payload: {
     status: string;
     location?: string;
+    location_reference_id?: number;
+    location_text?: string;
     customer_message?: string;
     internal_note?: string;
     is_customer_visible: boolean;

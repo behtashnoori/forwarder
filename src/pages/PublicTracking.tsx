@@ -57,7 +57,7 @@ const formatDate = (
   locale = "fa-IR",
 ) => {
   if (!value) return fallback;
-  return new Date(value).toLocaleDateString(locale, options);
+  return new Intl.DateTimeFormat(locale, options).format(new Date(value));
 };
 
 const getLocationDisplay = (

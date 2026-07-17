@@ -207,6 +207,8 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
             current_user["id"],
             status=data.get("status"),
             location=data.get("location"),
+            location_reference_id=data.get("location_reference_id"),
+            location_text=data.get("location_text"),
             customer_message=data.get("customer_message"),
             internal_note=data.get("internal_note"),
             is_customer_visible=data.get("is_customer_visible", True),

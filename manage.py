@@ -20,6 +20,7 @@ from backend.security import sanitize_input
 from backend.services.user_service import hash_password
 from backend.services.reference_schema_service import build_readiness_report, export_backfill_inventory, write_json_report
 from backend.services.reference_backfill_service import apply_package, diff_package, export_inventory_package, validate_package
+from backend.services.tracking_location_bootstrap_service import bootstrap as bootstrap_tracking_locations
 from backend.config import get_database_uri
 
 
@@ -175,6 +176,9 @@ def build_parser() -> argparse.ArgumentParser:
     diff.add_argument("--path", type=Path, required=True); diff.add_argument("--database", required=True)
     apply_cmd = subparsers.add_parser("apply-reference-backfill", help="guarded Backfill dry-run/apply")
     apply_cmd.add_argument("--path", type=Path, required=True); apply_cmd.add_argument("--database", required=True); apply_cmd.add_argument("--apply", action="store_true")
+    tracking_locations = subparsers.add_parser("bootstrap-china-iran-tracking-locations", help="dry-run/apply curated internal tracking checkpoints")
+    tracking_locations.add_argument("--database", required=True, help="explicit authorized database name")
+    tracking_locations.add_argument("--apply", action="store_true", help="persist the idempotent bootstrap")
     return parser
 
 
@@ -234,6 +238,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command == "create-admin":
         return run_create_admin()
+    if args.command == "bootstrap-china-iran-tracking-locations":
+        if args.database == "forwarder_db":
+            print("BLOCKED: forwarder_db is permanently read-only")
+            return 2
+        try: config=_database_config(args.database)
+        except ValueError as exc: print(f"BLOCKED: {exc}"); return 2
+        app=create_app(config,skip_startup=True)
+        with app.app_context():
+            payload=bootstrap_tracking_locations(apply=args.apply)
+            print(json.dumps(payload,ensure_ascii=False,sort_keys=True))
+            return 0
     if args.command in {"reference-schema-readiness", "export-reference-backfill-inventory"}:
         return _run_reference_command(args)
     def result_exit(payload: dict) -> int:
