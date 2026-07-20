@@ -12,4 +12,3 @@ if __name__ == "__main__":
     # Canonical dev entrypoint: one place for port check, migrations, server start
     from backend.run import main
     main()
-
