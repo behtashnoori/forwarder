@@ -79,16 +79,28 @@ interface RequestDetail {
     full_name: string;
   };
   route?: {
+    shipping_type?: string;
     origin?: {
       province?: string | null;
       county?: string | null;
       city?: string | null;
+      country?: string | null;
+      international_city?: string | null;
+      address?: string | null;
     };
     destination?: {
       province?: string | null;
       county?: string | null;
       city?: string | null;
+      country?: string | null;
+      international_city?: string | null;
+      address?: string | null;
     };
+    iran_destination?: {
+      type?: string | null;
+      label?: string | null;
+      province?: string | null;
+    } | null;
   };
   transport_method?: string;
   international_transport_method?: string;
@@ -494,6 +506,7 @@ const RequestDetail = () => {
 
   const renderLocationBox = (title: string, location: RouteLocation, tone: "origin" | "destination") => {
     const accent = tone === "origin" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-blue-50 text-blue-700 border-blue-100";
+    const isInternational = request?.route?.shipping_type === "international";
     return (
       <div className={`rounded-2xl border p-4 ${accent}`}>
         <div className="mb-4 flex items-center gap-2">
@@ -501,9 +514,48 @@ const RequestDetail = () => {
           <h3 className="font-bold">{title}</h3>
         </div>
         <div className="space-y-3 text-sm">
-          <InfoRow label={t("requestDetail.province")} value={displayValue(location.province, missingValue)} />
-          <InfoRow label={t("requestDetail.county")} value={displayValue(location.county, missingValue)} />
-          <InfoRow label={t("requestDetail.city")} value={displayValue(location.city, missingValue)} />
+          {isInternational ? (
+            <>
+              <InfoRow label={t("requestDetail.country")} value={displayValue(location.country, missingValue)} />
+              <InfoRow label={t("requestDetail.cityPort")} value={displayValue(location.international_city, missingValue)} />
+              {location.address ? (
+                <InfoRow label={t("requestDetail.address")} value={displayValue(location.address, missingValue)} />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <InfoRow label={t("requestDetail.province")} value={displayValue(location.province, missingValue)} />
+              <InfoRow label={t("requestDetail.county")} value={displayValue(location.county, missingValue)} />
+              <InfoRow label={t("requestDetail.city")} value={displayValue(location.city, missingValue)} />
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderIranDestinationBox = () => {
+    const iranDest = request?.route?.iran_destination;
+    if (!iranDest?.type) {
+      return null;
+    }
+    const typeLabel =
+      iranDest.type === "port"
+        ? t("requestDetail.iranDestTypePort")
+        : iranDest.type === "customs"
+          ? t("requestDetail.iranDestTypeCustoms")
+          : t("requestDetail.iranDestTypeCity");
+    const icon = iranDest.type === "port" ? "🚢" : iranDest.type === "customs" ? "🛃" : "🏙️";
+    return (
+      <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-amber-800">
+        <div className="mb-4 flex items-center gap-2">
+          <MapPin className="h-5 w-5" />
+          <h3 className="font-bold">{t("requestDetail.iranDestinationTitle")}</h3>
+        </div>
+        <div className="space-y-3 text-sm">
+          <InfoRow label={t("requestDetail.pointType")} value={`${icon} ${typeLabel}`} />
+          <InfoRow label={t("requestDetail.cityPort")} value={displayValue(iranDest.label, missingValue)} />
+          <InfoRow label={t("requestDetail.province")} value={displayValue(iranDest.province, missingValue)} />
         </div>
       </div>
     );
@@ -625,6 +677,8 @@ const RequestDetail = () => {
                       </div>
                       {renderLocationBox(t("common.destination"), destination, "destination")}
                     </div>
+
+                    {renderIranDestinationBox()}
 
                     <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                       <div className="flex flex-wrap items-center gap-3">

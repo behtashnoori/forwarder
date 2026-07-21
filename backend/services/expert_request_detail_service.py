@@ -4,16 +4,14 @@ from typing import Any, Optional
 
 from backend.extensions import db
 from backend.models import (
-    City,
-    County,
     ExpertConsoleLog,
     ExpertConsoleMessage,
     ExpertQuote,
     ExpertUser,
-    Province,
     ShipmentRequest,
 )
 from backend.services import message_service, quote_service
+from backend.services.route_payload_service import build_route_payload
 
 
 class ExpertRequestDetailServiceError(Exception):
@@ -107,25 +105,8 @@ def build_customer_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
 
 
 def build_route_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
-    """Build the current route payload with human-readable location names."""
-    origin_province = db.session.get(Province, req.origin_province_id) if req.origin_province_id else None
-    origin_county = db.session.get(County, req.origin_county_id) if req.origin_county_id else None
-    origin_city = db.session.get(City, req.origin_city_id) if req.origin_city_id else None
-    dest_province = db.session.get(Province, req.dest_province_id) if req.dest_province_id else None
-    dest_county = db.session.get(County, req.dest_county_id) if req.dest_county_id else None
-    dest_city = db.session.get(City, req.dest_city_id) if req.dest_city_id else None
-    return {
-        "origin": {
-            "province": origin_province.name_fa if origin_province else "نامشخص",
-            "county": origin_county.name_fa if origin_county else "نامشخص",
-            "city": origin_city.name_fa if origin_city else "نامشخص",
-        },
-        "destination": {
-            "province": dest_province.name_fa if dest_province else "نامشخص",
-            "county": dest_county.name_fa if dest_county else "نامشخص",
-            "city": dest_city.name_fa if dest_city else "نامشخص",
-        },
-    }
+    """Build the route payload with human-readable names for domestic and international."""
+    return build_route_payload(req)
 
 
 def build_cargo_detail_payload(req: ShipmentRequest) -> dict[str, Any]:

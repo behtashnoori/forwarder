@@ -9,6 +9,7 @@ from sqlalchemy import desc, or_
 from sqlalchemy.orm import joinedload
 
 from backend.models import City, County, Province, ShipmentRequest
+from backend.services.route_payload_service import build_iran_destination_payload
 
 
 INVALID_DATE_ERROR = "\u0641\u0631\u0645\u062a \u062a\u0627\u0631\u06cc\u062e \u0646\u0627\u0645\u0639\u062a\u0628\u0631 \u0627\u0633\u062a"
@@ -174,16 +175,24 @@ def build_admin_request_detail_payload(shipment_request: ShipmentRequest) -> dic
         "status": shipment_request.status,
         "priority": shipment_request.priority,
         "assigned_to": assigned_expert,
+        "shipping_type": shipment_request.shipping_type,
         "origin": {
             "province": origin_province.name_fa if origin_province else None,
             "county": origin_county.name_fa if origin_county else None,
             "city": origin_city.name_fa if origin_city else None,
+            "country": shipment_request.origin_country,
+            "international_city": shipment_request.origin_city_international,
+            "address": shipment_request.origin_address_international,
         },
         "destination": {
             "province": dest_province.name_fa if dest_province else None,
             "county": dest_county.name_fa if dest_county else None,
             "city": dest_city.name_fa if dest_city else None,
+            "country": shipment_request.dest_country,
+            "international_city": shipment_request.dest_city_international,
+            "address": shipment_request.dest_address_international,
         },
+        "iran_destination": build_iran_destination_payload(shipment_request),
         "created_at": (
             shipment_request.created_at.isoformat()
             if shipment_request.created_at
@@ -252,16 +261,24 @@ def build_admin_request_list_item_payload(
         "status": req.status,
         "priority": req.priority,
         "assigned_to": req.assigned_to,
+        "shipping_type": req.shipping_type,
         "origin": {
             "province": province_lookup.get(req.origin_province_id),
             "county": county_lookup.get(req.origin_county_id),
             "city": city_lookup.get(req.origin_city_id),
+            "country": req.origin_country,
+            "international_city": req.origin_city_international,
+            "address": req.origin_address_international,
         },
         "destination": {
             "province": province_lookup.get(req.dest_province_id),
             "county": county_lookup.get(req.dest_county_id),
             "city": city_lookup.get(req.dest_city_id),
+            "country": req.dest_country,
+            "international_city": req.dest_city_international,
+            "address": req.dest_address_international,
         },
+        "iran_destination": build_iran_destination_payload(req),
         "created_at": req.created_at.isoformat() if req.created_at else None,
     }
 

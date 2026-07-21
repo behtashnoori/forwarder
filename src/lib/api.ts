@@ -730,16 +730,28 @@ export interface ExpertRequest {
     phone: string;
   };
   route: {
+    shipping_type?: string;
     origin: {
-      province: string;
-      county: string;
-      city: string;
+      province: string | null;
+      county: string | null;
+      city: string | null;
+      country?: string | null;
+      international_city?: string | null;
+      address?: string | null;
     };
     destination: {
-      province: string;
-      county: string;
-      city: string;
+      province: string | null;
+      county: string | null;
+      city: string | null;
+      country?: string | null;
+      international_city?: string | null;
+      address?: string | null;
     };
+    iran_destination?: {
+      type?: string | null;
+      label?: string | null;
+      province?: string | null;
+    } | null;
   };
   transport_method?: string;
   cargo: {

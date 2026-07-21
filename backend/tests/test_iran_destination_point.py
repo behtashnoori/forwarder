@@ -147,6 +147,41 @@ def test_missing_reference_for_declared_type_is_rejected(app, client):
     assert response.status_code == 400
 
 
+def test_route_payload_surfaces_international_and_iran_destination(app):
+    """Regression: expert/admin route payload must not show international as «نامشخص»."""
+    from backend.models import ShipmentRequest
+    from backend.services.route_payload_service import build_route_payload
+
+    with app.app_context():
+        province, _county, _city, _port, customs = _geography()
+        req = ShipmentRequest(
+            shipping_type="international",
+            origin_country="آلمان",
+            origin_city_international="هامبورگ",
+            dest_country="ایران",
+            dest_city_international="تهران",
+            contact_phone="09121234567",
+            iran_dest_type="customs",
+            iran_dest_customs_office_id=customs.id,
+            iran_entry_province_id=province.id,
+        )
+        db.session.add(req)
+        db.session.commit()
+
+        route = build_route_payload(req)
+        assert route["shipping_type"] == "international"
+        assert route["origin"]["country"] == "آلمان"
+        assert route["origin"]["international_city"] == "هامبورگ"
+        assert route["destination"]["country"] == "ایران"
+        # Domestic slots stay empty for an international shipment (never «نامشخص» in country slot).
+        assert route["origin"]["province"] is None
+        assert route["iran_destination"] == {
+            "type": "customs",
+            "label": "گمرک بازرگان",
+            "province": "آذربایجان غربی",
+        }
+
+
 def test_legacy_international_without_dest_type_still_succeeds(app, client):
     """Payloads that never declare iran_dest_type keep working unchanged."""
     with app.app_context():

@@ -271,9 +271,10 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     assert detail_data["assigned_to"]["id"] == expert_contract_app["expert_id"]
     assert set(detail_data["customer"].keys()) == {"first_name", "last_name", "phone", "full_name"}
     assert detail_data["customer"]["full_name"] == "Ali Rahimi"
-    assert set(detail_data["route"].keys()) == {"origin", "destination"}
-    assert set(detail_data["route"]["origin"].keys()) == {"province", "county", "city"}
-    assert set(detail_data["route"]["destination"].keys()) == {"province", "county", "city"}
+    assert set(detail_data["route"].keys()) == {"origin", "destination", "shipping_type", "iran_destination"}
+    endpoint_keys = {"province", "county", "city", "country", "international_city", "address"}
+    assert set(detail_data["route"]["origin"].keys()) == endpoint_keys
+    assert set(detail_data["route"]["destination"].keys()) == endpoint_keys
     assert set(detail_data["cargo"].keys()) == {"description", "weight", "volume", "value", "special_instructions"}
     assert detail_data["cargo"]["description"] == "Phase 4H cargo"
     assert set(detail_data["dates"].keys()) == {"pickup_date", "delivery_date"}

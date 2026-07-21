@@ -7,7 +7,8 @@ from typing import Any, Mapping
 from sqlalchemy import desc, or_
 
 from backend.extensions import db
-from backend.models import City, County, ExpertUser, Province, ShipmentRequest
+from backend.models import ExpertUser, ShipmentRequest
+from backend.services.route_payload_service import build_route_payload
 
 
 def normalize_request_list_filters(args: Mapping[str, Any]) -> dict[str, Any]:
@@ -76,12 +77,6 @@ def apply_request_list_filters(query, filters: dict[str, Any]):
 
 def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
     """Build the current request list item payload."""
-    origin_province = db.session.query(Province).get(req.origin_province_id)
-    origin_county = db.session.query(County).get(req.origin_county_id)
-    origin_city = db.session.query(City).get(req.origin_city_id)
-    dest_province = db.session.query(Province).get(req.dest_province_id)
-    dest_county = db.session.query(County).get(req.dest_county_id)
-    dest_city = db.session.query(City).get(req.dest_city_id)
     assigned_expert = db.session.query(ExpertUser).get(req.assigned_to) if req.assigned_to else None
 
     sla_status = "on_time"
@@ -107,18 +102,7 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
             "name": f"{req.customer_first_name or ''} {req.customer_last_name or ''}".strip() or "نامشخص",
             "phone": req.contact_phone,
         },
-        "route": {
-            "origin": {
-                "province": origin_province.name_fa if origin_province else "نامشخص",
-                "county": origin_county.name_fa if origin_county else "نامشخص",
-                "city": origin_city.name_fa if origin_city else "نامشخص",
-            },
-            "destination": {
-                "province": dest_province.name_fa if dest_province else "نامشخص",
-                "county": dest_county.name_fa if dest_county else "نامشخص",
-                "city": dest_city.name_fa if dest_city else "نامشخص",
-            },
-        },
+        "route": build_route_payload(req),
         "transport_method": req.transport_method,
         "international_transport_method": req.international_transport_method,
         "domestic_transport_method": req.domestic_transport_method,

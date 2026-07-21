@@ -228,8 +228,22 @@ const ExpertConsole = () => {
   };
 
   const formatRoute = (request: ShipmentRequest) => {
-    const origin = [request.route.origin.city, request.route.origin.county, request.route.origin.province].filter(Boolean).join("، ");
-    const destination = [request.route.destination.city, request.route.destination.county, request.route.destination.province].filter(Boolean).join("، ");
+    const { route } = request;
+    let origin: string;
+    let destination: string;
+
+    if (route.shipping_type === "international") {
+      origin = [route.origin.international_city, route.origin.country].filter(Boolean).join("، ");
+      destination = [route.destination.international_city, route.destination.country].filter(Boolean).join("، ");
+      // Append the structured in-Iran destination point when present.
+      if (route.iran_destination?.label) {
+        destination = [destination, route.iran_destination.label].filter(Boolean).join(" ← ");
+      }
+    } else {
+      origin = [route.origin.city, route.origin.county, route.origin.province].filter(Boolean).join("، ");
+      destination = [route.destination.city, route.destination.county, route.destination.province].filter(Boolean).join("، ");
+    }
+
     return {
       origin: origin || t("expert.unknownOrigin"),
       destination: destination || t("expert.unknownDestination"),
