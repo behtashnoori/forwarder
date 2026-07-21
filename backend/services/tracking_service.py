@@ -36,6 +36,8 @@ def get_latest_quote(req):
         "valid_until": row.valid_until.isoformat() if row.valid_until else None,
         "created_at": row.created_at.isoformat() if hasattr(row.created_at, "isoformat") else str(row.created_at),
         "created_by": created_by_name,
+        "customer_response": row.customer_response,
+        "responded_at": row.responded_at.isoformat() if row.responded_at else None,
     }
 
 

@@ -16,17 +16,18 @@ import {
   Phone,
   RefreshCw,
   User,
+  XCircle,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   CustomerWorkflowHttpError,
   fetchCustomerWorkflow,
+  submitQuoteResponse,
   type CustomerWorkflowData,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
-const showLatestQuoteCard: boolean = false;
 
 function formatDate(date: string | null | undefined, locale: string, fallback: string): string {
   return date ? new Date(date).toLocaleDateString(locale) : fallback;
@@ -83,6 +84,31 @@ const CustomerRequestDetail: React.FC = () => {
   const handleRefresh = () => {
     setRefreshing(true);
     fetchRequestDetail();
+  };
+
+  const [respondingQuote, setRespondingQuote] = useState(false);
+
+  const handleQuoteResponse = async (response: "accepted" | "declined") => {
+    if (!customer || !requestId) {
+      return;
+    }
+    setRespondingQuote(true);
+    try {
+      await submitQuoteResponse(customer, requestId, response);
+      toast({
+        title: t("customer.quoteResponseSuccessTitle"),
+        description: t("customer.quoteResponseSuccessDesc"),
+      });
+      await fetchRequestDetail();
+    } catch (error) {
+      toast({
+        title: t("customer.quoteResponseErrorTitle"),
+        description: error instanceof Error ? error.message : t("customer.quoteResponseErrorTitle"),
+        variant: "destructive",
+      });
+    } finally {
+      setRespondingQuote(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -352,42 +378,84 @@ const CustomerRequestDetail: React.FC = () => {
               </CardContent>
             </Card>
 
-            {showLatestQuoteCard && requestDetail.latest_quote && (
-              <Card className="border-border/70 bg-card/95 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    {t("customer.quoteTitle")}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm text-muted-foreground">{t("common.amount")}</span>
-                    <span className="text-lg font-bold text-foreground">
-                      {requestDetail.latest_quote.amount?.toLocaleString(locale)} {requestDetail.latest_quote.currency}
-                    </span>
-                  </div>
-                  {requestDetail.latest_quote.valid_until && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="h-4 w-4 shrink-0" />
-                      <span>{formatDate(requestDetail.latest_quote.valid_until, locale, t("common.pending"))}</span>
+            {requestDetail.latest_quote && (() => {
+              const quote = requestDetail.latest_quote;
+              const isExpired =
+                !quote.customer_response &&
+                !!quote.valid_until &&
+                new Date(quote.valid_until) < new Date(new Date().toDateString());
+              const canRespond = !quote.customer_response && !isExpired;
+              return (
+                <Card className="border-border/70 bg-card/95 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                      {t("customer.quoteTitle")}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm text-muted-foreground">{t("common.amount")}</span>
+                      <span className="text-lg font-bold text-foreground">
+                        {quote.amount?.toLocaleString(locale)} {quote.currency}
+                      </span>
                     </div>
-                  )}
-                  {requestDetail.latest_quote.note && (
-                    <p className="border-t pt-2 text-sm text-muted-foreground">{requestDetail.latest_quote.note}</p>
-                  )}
-                  <div className="pt-1 text-xs text-muted-foreground">
-                    {requestDetail.latest_quote.created_at &&
-                      new Date(requestDetail.latest_quote.created_at).toLocaleDateString(locale, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    {requestDetail.latest_quote.created_by && ` — ${requestDetail.latest_quote.created_by}`}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                    {quote.valid_until && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4 shrink-0" />
+                        <span>
+                          {t("customer.quoteValidUntil")}: {formatDate(quote.valid_until, locale, t("common.pending"))}
+                        </span>
+                      </div>
+                    )}
+                    {quote.note && (
+                      <p className="border-t pt-2 text-sm text-muted-foreground">{quote.note}</p>
+                    )}
+
+                    {quote.customer_response === "accepted" && (
+                      <div className="flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm font-medium text-green-800">
+                        <CheckCircle className="h-4 w-4 shrink-0" />
+                        {t("customer.quoteAccepted")}
+                      </div>
+                    )}
+                    {quote.customer_response === "declined" && (
+                      <div className="flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm font-medium text-red-800">
+                        <XCircle className="h-4 w-4 shrink-0" />
+                        {t("customer.quoteDeclined")}
+                      </div>
+                    )}
+                    {isExpired && (
+                      <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4 shrink-0" />
+                        {t("customer.quoteExpired")}
+                      </div>
+                    )}
+
+                    {canRespond && (
+                      <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row">
+                        <Button
+                          className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
+                          disabled={respondingQuote}
+                          onClick={() => handleQuoteResponse("accepted")}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                          {t("customer.quoteAccept")}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="flex-1 gap-2 border-red-200 text-red-700 hover:bg-red-50"
+                          disabled={respondingQuote}
+                          onClick={() => handleQuoteResponse("declined")}
+                        >
+                          <XCircle className="h-4 w-4" />
+                          {t("customer.quoteDecline")}
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })()}
           </main>
         </div>
       </div>

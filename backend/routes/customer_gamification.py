@@ -62,6 +62,16 @@ def get_customer_workflow(customer_id: int):
         return jsonify({"message": "خطا در دریافت گردش کار"}), 500
 
 
+@customer_gamification_bp.post("/quote-response/<int:customer_id>")
+def respond_to_quote(customer_id: int):
+    """Record a customer's accept/decline on the latest quote for one of their requests."""
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    payload, status_code = customer_gamification_service.record_quote_response(
+        customer_id, data.get("request_id"), data.get("response")
+    )
+    return jsonify(payload), status_code
+
+
 @customer_gamification_bp.post("/complete-step")
 def complete_workflow_step():
     """Mark a workflow step as completed."""

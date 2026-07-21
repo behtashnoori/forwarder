@@ -136,6 +136,8 @@ def build_quote_payload(quote: ExpertQuote, include_created_by: bool = False) ->
         "note": quote.note,
         "valid_until": quote.valid_until.isoformat() if quote.valid_until else None,
         "created_at": quote.created_at.isoformat(),
+        "customer_response": quote.customer_response,
+        "responded_at": quote.responded_at.isoformat() if quote.responded_at else None,
     }
     if include_created_by:
         payload["created_by"] = quote.created_by_expert.full_name if quote.created_by_expert else None

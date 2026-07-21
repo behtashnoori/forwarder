@@ -448,6 +448,8 @@ export interface PublicTrackingData {
     valid_until?: string | null;
     created_at: string;
     created_by?: string | null;
+    customer_response?: "accepted" | "declined" | null;
+    responded_at?: string | null;
   } | null;
   workflow_steps?: PublicTrackingWorkflowStep[];
   workflow_steps_simple?: PublicTrackingWorkflowStep[];
@@ -582,7 +584,8 @@ export interface CustomerWorkflowData {
     note?: string | null;
     valid_until?: string | null;
     created_at: string;
-    created_by?: string | null;
+    customer_response?: "accepted" | "declined" | null;
+    responded_at?: string | null;
   } | null;
 }
 
@@ -608,6 +611,30 @@ export async function fetchCustomerWorkflow(
   }
 
   return (await response.json()) as CustomerWorkflowData;
+}
+
+export interface QuoteResponseResult {
+  message?: string;
+  latest_quote?: CustomerWorkflowData["latest_quote"];
+}
+
+export async function submitQuoteResponse(
+  customerId: string,
+  requestId: string | number,
+  response: "accepted" | "declined",
+): Promise<QuoteResponseResult> {
+  const path = `/api/customer/quote-response/${customerId}`;
+  const res = await fetch(`${API_BASE_URL}${buildPath(path)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ request_id: requestId, response }),
+  });
+
+  const data = (await res.json().catch(() => ({}))) as QuoteResponseResult;
+  if (!res.ok) {
+    throw new Error(data.message || `Quote response failed with status ${res.status}`);
+  }
+  return data;
 }
 
 export interface CustomerEmailVerificationResponse {

@@ -748,6 +748,17 @@ class ExpertQuote(db.Model):
     )
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
+    # Customer response to the quote: NULL (no response yet), 'accepted', or 'declined'.
+    customer_response = db.Column(db.String(10), nullable=True)
+    responded_at = db.Column(db.DateTime, nullable=True)
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "customer_response IS NULL OR customer_response IN ('accepted', 'declined')",
+            name="ck_expert_quote_customer_response",
+        ),
+    )
+
     shipment_request = db.relationship("ShipmentRequest", backref=db.backref("quotes", lazy="dynamic"))
     created_by_expert = db.relationship("ExpertUser", backref="created_quotes")
 

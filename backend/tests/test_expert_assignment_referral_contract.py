@@ -711,6 +711,8 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
         "note",
         "valid_until",
         "created_at",
+        "customer_response",
+        "responded_at",
         "created_by",
     }
 

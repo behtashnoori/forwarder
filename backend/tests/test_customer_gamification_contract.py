@@ -561,13 +561,15 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
         "note",
         "valid_until",
         "created_at",
-        "created_by",
+        "customer_response",
+        "responded_at",
     }
     assert workflow_payload["latest_quote"]["amount"] == 123456
     assert workflow_payload["latest_quote"]["currency"] == "IRR"
     assert workflow_payload["latest_quote"]["note"] == "Seed quote"
     assert workflow_payload["latest_quote"]["valid_until"] == "2026-08-01"
-    assert workflow_payload["latest_quote"]["created_by"] == "Phase 5K Expert"
+    assert workflow_payload["latest_quote"]["customer_response"] is None
+    assert workflow_payload["latest_quote"]["responded_at"] is None
 
 
 def test_customer_leaderboard_contract(customer_gamification_app):

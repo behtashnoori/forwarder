@@ -305,6 +305,38 @@ const PublicTracking: React.FC = () => {
           </div>
         </section>
 
+        {requestData.latest_quote && (
+          <Section icon={DollarSign} title={t("customer.quoteTitle")} className="mb-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label={t("common.amount")}
+                value={`${requestData.latest_quote.amount?.toLocaleString(locale)} ${requestData.latest_quote.currency}`}
+              />
+              {requestData.latest_quote.valid_until && (
+                <Field
+                  label={t("customer.quoteValidUntil")}
+                  value={formatDate(requestData.latest_quote.valid_until, { dateStyle: "medium" }, "—", locale)}
+                />
+              )}
+            </div>
+            {requestData.latest_quote.note && (
+              <p className="mt-4 border-t border-border/70 pt-3 text-sm text-muted-foreground">
+                {requestData.latest_quote.note}
+              </p>
+            )}
+            {requestData.latest_quote.customer_response === "accepted" && (
+              <div className="mt-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-800">
+                {t("customer.quoteAccepted")}
+              </div>
+            )}
+            {requestData.latest_quote.customer_response === "declined" && (
+              <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
+                {t("customer.quoteDeclined")}
+              </div>
+            )}
+          </Section>
+        )}
+
         {unitTracking && (
           <Section icon={Truck} title={t("multiTracking.customerTitle")} className="mb-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

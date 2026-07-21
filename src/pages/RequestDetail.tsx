@@ -145,6 +145,8 @@ interface RequestDetail {
     valid_until?: string | null;
     created_at: string;
     created_by?: string | null;
+    customer_response?: "accepted" | "declined" | null;
+    responded_at?: string | null;
   } | null;
 }
 
