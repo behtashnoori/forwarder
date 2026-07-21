@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PageNav from "@/components/PageNav";
+import { QuoteModal } from "@/components/QuoteModal";
 import { useToast } from "@/hooks/use-toast";
 import {
   addMessage,
@@ -194,6 +195,7 @@ const RequestDetail = () => {
 
   const [request, setRequest] = useState<RequestDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [quoteModalOpen, setQuoteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const [newMessage, setNewMessage] = useState({
     type: "internal_note",
@@ -728,6 +730,63 @@ const RequestDetail = () => {
                     </div>
                   </CardContent>
                 </Card>
+
+                <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <CardTitle className="flex items-center gap-3 text-lg text-slate-950">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-50 text-amber-700">
+                          <DollarSign className="h-5 w-5" />
+                        </span>
+                        {t("requestDetail.quoteSectionTitle")}
+                      </CardTitle>
+                      <Button size="sm" variant="outline" className="gap-2" onClick={() => setQuoteModalOpen(true)}>
+                        <Plus className="h-4 w-4" />
+                        {request.latest_quote ? t("requestDetail.editQuote") : t("requestDetail.setQuote")}
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {request.latest_quote ? (
+                      <>
+                        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-xs text-slate-500">{t("common.amount")}</span>
+                            <span className="text-lg font-bold text-slate-900">
+                              {request.latest_quote.amount?.toLocaleString(locale)} {request.latest_quote.currency}
+                            </span>
+                          </div>
+                          {request.latest_quote.valid_until && (
+                            <p className="mt-2 text-xs text-slate-500">
+                              {t("requestDetail.quoteValidUntil")}: {new Date(request.latest_quote.valid_until).toLocaleDateString(locale)}
+                            </p>
+                          )}
+                          {request.latest_quote.note && (
+                            <p className="mt-2 border-t border-slate-100 pt-2 text-sm text-slate-700">{request.latest_quote.note}</p>
+                          )}
+                        </div>
+                        {request.latest_quote.customer_response === "accepted" ? (
+                          <div className="flex items-center gap-2 rounded-2xl bg-green-50 p-3 text-sm font-medium text-green-800">
+                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                            {t("requestDetail.customerAccepted")}
+                          </div>
+                        ) : request.latest_quote.customer_response === "declined" ? (
+                          <div className="flex items-center gap-2 rounded-2xl bg-red-50 p-3 text-sm font-medium text-red-800">
+                            <AlertCircle className="h-4 w-4 shrink-0" />
+                            {t("requestDetail.customerDeclined")}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
+                            <Clock className="h-4 w-4 shrink-0" />
+                            {t("requestDetail.customerPending")}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-sm text-slate-500">{t("requestDetail.noQuoteYet")}</p>
+                    )}
+                  </CardContent>
+                </Card>
               </main>
 
               <aside className="min-w-0 space-y-6">
@@ -854,6 +913,13 @@ const RequestDetail = () => {
             <TrackingManagementCard requestId={request.id} locale={locale} t={t} toast={toast} />
           </TabsContent>
         </Tabs>
+
+        <QuoteModal
+          open={quoteModalOpen}
+          onOpenChange={setQuoteModalOpen}
+          requestId={request.id}
+          onSuccess={loadRequestDetail}
+        />
       </div>
     </div>
   );
