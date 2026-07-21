@@ -283,6 +283,60 @@ export const updateTrackingLocation = (id:number,payload:Record<string,unknown>)
 export const deactivateTrackingLocation = (id:number): Promise<TrackingLocationReference> =>
   request(`/api/tracking-locations/${id}`,{method:"DELETE"});
 
+// --- Admin location (origin/destination) management ------------------------
+// Admin serializers return richer records than the public read endpoints, so
+// these admin-facing shapes are separate from Province/County/City above.
+export interface AdminProvince {
+  id: number; name_fa: string; code: string | null; country_id: number | null; is_active: boolean;
+}
+export interface AdminCounty {
+  id: number; name_fa: string; code: string | null; province_id: number; province_name: string | null; is_active: boolean;
+}
+export interface AdminCity {
+  id: number; name_fa: string; code: string | null; county_id: number; county_name: string | null;
+  province_id: number; province_name: string | null; is_active: boolean;
+}
+export interface AdminCountry {
+  id: number; name_fa: string; name_en: string; code: string; is_active: boolean;
+}
+export interface AdminInternationalCity {
+  id: number; name_fa: string; name_en: string; country_id: number; country_name: string | null;
+  city_type: string; is_major_port: boolean; is_major_airport: boolean; is_active: boolean;
+}
+export interface AdminIranPort {
+  id: number; name_fa: string; name_en: string; port_type: string; province_id: number;
+  province_name: string | null; country_id: number | null; is_major_port: boolean;
+  description: string | null; is_active: boolean;
+}
+
+/** Admin location resource segments (match backend `_RESOURCES` keys). */
+export type AdminLocationResource =
+  | "provinces" | "counties" | "cities" | "countries" | "international-cities" | "iran-ports";
+
+function adminLocationPath(resource: AdminLocationResource, params?: Record<string, string | number | undefined>): string {
+  return withQuery(`/api/admin/locations/${resource}`, { include_inactive: "true", ...params });
+}
+
+export const fetchAdminProvinces = (): Promise<{ items: AdminProvince[] }> =>
+  request(adminLocationPath("provinces"));
+export const fetchAdminCounties = (provinceId?: number): Promise<{ items: AdminCounty[] }> =>
+  request(adminLocationPath("counties", { province_id: provinceId }));
+export const fetchAdminCities = (countyId?: number): Promise<{ items: AdminCity[] }> =>
+  request(adminLocationPath("cities", { county_id: countyId }));
+export const fetchAdminCountries = (): Promise<{ items: AdminCountry[] }> =>
+  request(adminLocationPath("countries"));
+export const fetchAdminInternationalCities = (countryId?: number): Promise<{ items: AdminInternationalCity[] }> =>
+  request(adminLocationPath("international-cities", { country_id: countryId }));
+export const fetchAdminIranPorts = (): Promise<{ items: AdminIranPort[] }> =>
+  request(adminLocationPath("iran-ports"));
+
+export const createAdminLocation = <T>(resource: AdminLocationResource, payload: Record<string, unknown>): Promise<{ item: T }> =>
+  request(`/api/admin/locations/${resource}`, { method: "POST", body: JSON.stringify(payload) });
+export const updateAdminLocation = <T>(resource: AdminLocationResource, id: number, payload: Record<string, unknown>): Promise<{ item: T }> =>
+  request(`/api/admin/locations/${resource}/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+export const deactivateAdminLocation = <T>(resource: AdminLocationResource, id: number): Promise<{ item: T }> =>
+  request(`/api/admin/locations/${resource}/${id}`, { method: "DELETE" });
+
 let refreshPromise: Promise<boolean> | null = null;
 
 export function refreshExpertSession(): Promise<boolean> {

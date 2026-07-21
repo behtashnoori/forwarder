@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Gauge,
   LogOut,
+  MapPin,
   Package,
   RefreshCw,
   Scale,
@@ -27,6 +28,7 @@ import AdminReportsTab from "@/components/AdminReportsTab";
 import ReferralRulesTab from "@/components/ReferralRulesTab";
 import SiteSettingsTab from "@/components/SiteSettingsTab";
 import TrackingLocationsAdminTab from "@/components/TrackingLocationsAdminTab";
+import LocationsAdminTab from "@/components/LocationsAdminTab";
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
@@ -235,7 +237,7 @@ const AdminPanel = () => {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-3 xl:grid-cols-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-3 xl:grid-cols-7">
             <TabsTrigger
               value="dashboard"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
@@ -270,6 +272,13 @@ const AdminPanel = () => {
             >
               <Settings className="h-4 w-4" />
               {t("admin.siteSettings")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="locations"
+              className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
+            >
+              <MapPin className="h-4 w-4" />
+              مبدا و مقصد
             </TabsTrigger>
             <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>
           </TabsList>
@@ -455,6 +464,7 @@ const AdminPanel = () => {
           <TabsContent value="site-settings" className="space-y-4">
             <SiteSettingsTab />
           </TabsContent>
+          <TabsContent value="locations" className="space-y-4"><LocationsAdminTab /></TabsContent>
           <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>
         </Tabs>
       </div>
