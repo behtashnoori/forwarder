@@ -24,7 +24,20 @@ PREFERENCE_OPTIONS = [
 ]
 VALID_SHIPPING_TYPES = ["domestic", "international"]
 VALID_TRANSPORT_PREFERENCES = ["customer_choice", "forwarder_suggestion"]
+VALID_IRAN_DEST_TYPES = ["port", "customs", "city"]
 DOMESTIC_LOCATION_ERROR = "اطلاعات مبدا و مقصد داخلی نامعتبر است."
+
+# Keys carrying the structured Iran destination point. Absent for domestic and
+# for international shipments whose destination is not Iran.
+IRAN_DEST_KEYS = (
+    "iran_dest_type",
+    "iran_entry_port",
+    "iran_entry_province",
+    "iran_entry_port_id",
+    "iran_entry_province_id",
+    "iran_dest_customs_office_id",
+    "iran_dest_city_id",
+)
 
 
 class ShipmentValidationError(ValueError):
@@ -128,6 +141,7 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
             "dest_city_international": dest_city_international,
             "dest_address_international": payload.get("dest_address_international", "").strip() or None,
         })
+        normalized.update(normalize_iran_destination(payload))
 
     contact_phone = payload.get("contact_phone", "")
     if not is_valid_phone(contact_phone):
@@ -162,6 +176,57 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "delivery_date": parse_date_or_none(payload.get("delivery_date")),
     })
     return normalized
+
+
+def normalize_iran_destination(payload: dict[str, Any]) -> dict[str, Any]:
+    """Validate and normalize the structured Iran destination point.
+
+    The three modes ('port', 'customs', 'city') are mutually exclusive and each
+    requires its own reference plus a province. Validation only runs when the
+    caller explicitly declares ``iran_dest_type``; legacy payloads without it are
+    persisted as-is, preserving backward-compatible behavior.
+    """
+    result: dict[str, Any] = {
+        "iran_dest_type": None,
+        "iran_entry_port": payload.get("iran_entry_port", "").strip() or None
+        if isinstance(payload.get("iran_entry_port"), str) else None,
+        "iran_entry_province": payload.get("iran_entry_province", "").strip() or None
+        if isinstance(payload.get("iran_entry_province"), str) else None,
+        "iran_entry_port_id": _parse_ref_id(payload.get("iran_entry_port_id")),
+        "iran_entry_province_id": _parse_ref_id(payload.get("iran_entry_province_id")),
+        "iran_dest_customs_office_id": _parse_ref_id(payload.get("iran_dest_customs_office_id")),
+        "iran_dest_city_id": _parse_ref_id(payload.get("iran_dest_city_id")),
+    }
+
+    raw_type = payload.get("iran_dest_type")
+    if raw_type in (None, ""):
+        return result
+
+    dest_type = str(raw_type).strip().lower()
+    if dest_type not in VALID_IRAN_DEST_TYPES:
+        raise ShipmentValidationError("نوع مقصد در ایران نامعتبر است.")
+    result["iran_dest_type"] = dest_type
+
+    if dest_type == "port" and not result["iran_entry_port_id"]:
+        raise ShipmentValidationError("بندر مقصد در ایران را انتخاب کنید.")
+    if dest_type == "customs" and not result["iran_dest_customs_office_id"]:
+        raise ShipmentValidationError("گمرک مرزی مقصد در ایران را انتخاب کنید.")
+    if dest_type == "city" and not result["iran_dest_city_id"]:
+        raise ShipmentValidationError("شهر مقصد در ایران را انتخاب کنید.")
+    if not result["iran_entry_province_id"]:
+        raise ShipmentValidationError("استان مقصد در ایران را انتخاب کنید.")
+
+    return result
+
+
+def _parse_ref_id(value):
+    """Parse an optional reference id; reject non-numeric values with a 400."""
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        raise ShipmentValidationError("شناسه مرجع مقصد در ایران نامعتبر است.") from None
 
 
 def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime) -> dict[str, Any]:
@@ -213,6 +278,13 @@ def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime)
             "dest_country": normalized["dest_country"],
             "dest_city_international": normalized["dest_city_international"],
             "dest_address_international": normalized["dest_address_international"],
+            "iran_dest_type": normalized.get("iran_dest_type"),
+            "iran_entry_port": normalized.get("iran_entry_port"),
+            "iran_entry_province": normalized.get("iran_entry_province"),
+            "iran_entry_port_id": normalized.get("iran_entry_port_id"),
+            "iran_entry_province_id": normalized.get("iran_entry_province_id"),
+            "iran_dest_customs_office_id": normalized.get("iran_dest_customs_office_id"),
+            "iran_dest_city_id": normalized.get("iran_dest_city_id"),
         })
 
     return shipment_request_data

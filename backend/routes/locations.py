@@ -5,7 +5,7 @@ from flask import Blueprint, jsonify, request, current_app
 from sqlalchemy import text
 
 from backend.extensions import db
-from backend.models import City, County, Province, Country, InternationalCity, IranPort, PortProvinceMapping
+from backend.models import City, County, Province, Country, InternationalCity, IranPort, PortProvinceMapping, CustomsOffice
 
 location_bp = Blueprint("location", __name__, url_prefix="/api")
 
@@ -182,6 +182,34 @@ def list_iran_ports():
                 "description": port.description,
             }
             for port in ports
+        ]
+    )
+
+
+@location_bp.get("/border-customs")
+def list_border_customs():
+    """Return active land/rail border customs offices as Iran destination points."""
+    offices = (
+        CustomsOffice.query.filter(
+            CustomsOffice.is_active == True,  # noqa: E712
+            CustomsOffice.customs_type.in_(("road_border", "rail")),
+        )
+        .order_by(CustomsOffice.name_fa)
+        .all()
+    )
+
+    return jsonify(
+        [
+            {
+                "id": office.id,
+                "name_fa": office.name_fa,
+                "name_en": office.name_en,
+                "customs_type": office.customs_type,
+                "province_id": office.province_id,
+                "province_name": office.province.name_fa if office.province else None,
+                "description": office.source_reference,
+            }
+            for office in offices
         ]
     )
 

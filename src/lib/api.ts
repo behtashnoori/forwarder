@@ -41,6 +41,16 @@ export interface IranPort {
   description?: string;
 }
 
+export interface BorderCustoms {
+  id: number;
+  name_fa: string;
+  name_en: string;
+  customs_type: string;
+  province_id: number | null;
+  province_name?: string | null;
+  description?: string | null;
+}
+
 export interface PortProvinceMapping {
   id: number;
   port_id: number;
@@ -104,6 +114,10 @@ export interface ShipmentRequestPayload {
   iran_entry_province?: string;
   iran_entry_port_id?: number;
   iran_entry_province_id?: number;
+  // Structured Iran destination point: 'port' | 'customs' | 'city'
+  iran_dest_type?: string;
+  iran_dest_customs_office_id?: number;
+  iran_dest_city_id?: number;
   contact_phone: string;
   // Customer details (optional)
   customer_first_name?: string;
@@ -1676,4 +1690,8 @@ export function fetchPortProvinceMappings(params: {
 
 export function fetchRecommendedPorts(provinceId: number): Promise<RecommendedPort[]> {
   return request(`/api/recommended-ports?province_id=${provinceId}`);
+}
+
+export function fetchBorderCustoms(): Promise<BorderCustoms[]> {
+  return request(`/api/border-customs`);
 }

@@ -362,7 +362,17 @@ class ShipmentRequest(db.Model):
     iran_entry_province = db.Column(db.String(100), nullable=True)
     iran_entry_port_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("iran_port.id"), nullable=True)
     iran_entry_province_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=True)
-    
+
+    # Iran destination point: how the customer names their in-Iran destination.
+    # 'port' -> iran_entry_port_id, 'customs' -> iran_dest_customs_office_id, 'city' -> iran_dest_city_id.
+    iran_dest_type = db.Column(db.String(10), nullable=True)  # port, customs, city
+    iran_dest_customs_office_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("customs_office.id"), nullable=True
+    )
+    iran_dest_city_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("city.id"), nullable=True
+    )
+
     contact_phone = db.Column(db.String(32), nullable=False)
     # Customer details (optional)
     customer_first_name = db.Column(db.String(100), nullable=True)
@@ -405,6 +415,9 @@ class ShipmentRequest(db.Model):
     assigned_expert = db.relationship("ExpertUser", back_populates="assigned_requests")
     customer = db.relationship("Customer", back_populates="requests")
     gamification_customer = db.relationship("CustomerGamification", back_populates="requests")
+    iran_entry_port_ref = db.relationship("IranPort", foreign_keys=[iran_entry_port_id])
+    iran_dest_customs_office = db.relationship("CustomsOffice", foreign_keys=[iran_dest_customs_office_id])
+    iran_dest_city = db.relationship("City", foreign_keys=[iran_dest_city_id])
     shipment_tracking = db.relationship(
         "ShipmentTracking",
         back_populates="shipment_request",
