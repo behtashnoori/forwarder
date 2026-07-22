@@ -21,8 +21,9 @@ def create_admin_user():
     with app.app_context():
         try:
             username = "admin"
-            password = "Pirooz13@!"
-            
+            password = os.environ.get("ADMIN_BOOTSTRAP_PASSWORD")
+            if not password:
+                raise RuntimeError("ADMIN_BOOTSTRAP_PASSWORD is required")
             # Check if admin user already exists
             existing_user = ExpertUser.query.filter_by(username=username).first()
             if existing_user:

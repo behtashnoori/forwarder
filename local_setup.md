@@ -61,7 +61,7 @@ CREATE DATABASE forwarder_db;
 - **Host**: 127.0.0.1
 - **Port**: 5432
 - **Username**: postgres
-- **Password**: bagheri13
+- **Password**: change_me
 - **Database**: forwarder_db
 
 ### تغییر تنظیمات (در صورت نیاز)
@@ -70,7 +70,7 @@ CREATE DATABASE forwarder_db;
 ```python
 "SQLALCHEMY_DATABASE_URI": os.getenv(
     "DATABASE_URL",
-    "postgresql+psycopg2://your_username:your_password@127.0.0.1:5432/forwarder_db",
+    "postgresql+psycopg2://forwarder_dev:change_me@localhost:5432/forwarder_dev",
 ),
 ```
 
@@ -242,7 +242,7 @@ forwarder/
 
 ```bash
 # .env
-DATABASE_URL=postgresql+psycopg2://postgres:bagheri13@127.0.0.1:5432/forwarder_db
+DATABASE_URL=postgresql+psycopg2://forwarder_dev:change_me@localhost:5432/forwarder_dev
 CORS_ORIGIN=http://localhost:5173
 SECRET_KEY=your-secret-key
 FLASK_ENV=development

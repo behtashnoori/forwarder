@@ -35,10 +35,10 @@ def test_env_loader_respects_process_database_url(monkeypatch: pytest.MonkeyPatc
     backend_dir = project_root / "backend"
     backend_dir.mkdir(parents=True)
     (project_root / ".env").write_text(
-        "DATABASE_URL=postgresql+psycopg2://file:secret@localhost:5432/filedb\n",
+        "DATABASE_URL=postgresql://test_user:change_me@localhost:5432/forwarder_test",
         encoding="utf-8",
     )
-    process_url = "postgresql+psycopg2://process:secret@localhost:5432/processdb"
+    process_url = "postgresql://test_user:change_me@localhost:5432/forwarder_test"
     monkeypatch.setenv("DATABASE_URL", process_url)
 
     loaded = runtime_config.load_env_files(
@@ -56,7 +56,7 @@ def test_env_loader_supports_backend_env(monkeypatch: pytest.MonkeyPatch, tmp_pa
     project_root = tmp_path / "project"
     backend_dir = project_root / "backend"
     backend_dir.mkdir(parents=True)
-    backend_url = "postgresql+psycopg2://backend:secret@localhost:5432/backenddb"
+    backend_url = "postgresql://test_user:change_me@localhost:5432/forwarder_test"
     (backend_dir / ".env").write_text(f"DATABASE_URL={backend_url}\n", encoding="utf-8")
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
@@ -73,7 +73,7 @@ def test_env_loader_supports_backend_env(monkeypatch: pytest.MonkeyPatch, tmp_pa
 def test_database_url_diagnostics_do_not_expose_password():
     """Startup diagnostics should identify the DB without printing secrets."""
     summary = runtime_config.format_database_url_diagnostics(
-        "postgresql+psycopg2://postgres:super-secret@localhost:5432/forwarder_db"
+        "postgresql+psycopg2://test_user:change_me@localhost:5432/forwarder_db"
     )
 
     assert "super-secret" not in summary
@@ -96,7 +96,7 @@ def test_production_rejects_placeholder_secret(monkeypatch: pytest.MonkeyPatch):
     """Production must not accept documented/dev placeholder secrets."""
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg2://user:pass@db:5432/app")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
     monkeypatch.setenv("SECRET_KEY", "development-secret-key")
     monkeypatch.setenv("JWT_SECRET_KEY", "deployment-specific-jwt-secret")
     monkeypatch.setenv("CORS_ORIGINS", "https://app.forwarder.test")
@@ -109,7 +109,7 @@ def test_production_rejects_open_cors(monkeypatch: pytest.MonkeyPatch):
     """Production must not allow wildcard/allow-all CORS."""
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg2://user:pass@db:5432/app")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
     monkeypatch.setenv("SECRET_KEY", "deployment-specific-secret")
     monkeypatch.setenv("JWT_SECRET_KEY", "deployment-specific-jwt-secret")
     monkeypatch.setenv("CORS_ORIGINS", "*")
@@ -122,7 +122,7 @@ def test_testing_mode_uses_isolated_database_even_with_production_env(monkeypatc
     """Testing mode must remain isolated from production DATABASE_URL."""
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg2://user:pass@db:5432/production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
     monkeypatch.setenv("TEST_DATABASE_URL", "sqlite:///:memory:")
 
     app = create_app({"TESTING": True}, skip_startup=True)

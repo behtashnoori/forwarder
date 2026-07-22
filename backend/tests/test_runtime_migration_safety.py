@@ -54,9 +54,9 @@ def test_alembic_config_is_absolute_and_cwd_independent(tmp_path, monkeypatch):
 
 
 def test_alembic_config_accepts_percent_encoded_credentials():
-    cfg = alembic_config("postgresql://user:p%40ss@example.invalid/db")
+    cfg = alembic_config("postgresql://test_user:change_me@localhost:5432/forwarder_test")
     assert cfg.get_main_option("sqlalchemy.url") == (
-        "postgresql://user:p%40ss@example.invalid/db"
+        "postgresql://test_user:change_me@localhost:5432/forwarder_test"
     )
 
 
@@ -169,7 +169,7 @@ def test_health_is_db_only_and_masks_failures(monkeypatch):
     app = create_app({"TESTING": True}, skip_startup=True)
 
     def fail(_statement):
-        raise RuntimeError("postgresql://user:secret@private/db SELECT password")
+        raise RuntimeError("postgresql://test_user:change_me@localhost:5432/forwarder_test SELECT password")
 
     monkeypatch.setattr(db.session, "execute", fail)
     response = app.test_client().get("/api/health?readiness=1")
@@ -203,7 +203,7 @@ def test_ping_never_touches_database(monkeypatch):
 def test_migration_cli_read_only_exit_codes(monkeypatch, command, status, expected):
     import backend.migration_cli as cli
 
-    monkeypatch.setattr(cli, "database_url", lambda: "postgresql://user:secret@db.example/test")
+    monkeypatch.setattr(cli, "database_url", lambda: "postgresql://test_user:change_me@localhost:5432/forwarder_test")
     monkeypatch.setattr(cli, "revision_status", lambda _url: status)
     assert cli.main([command]) == expected
 
@@ -238,7 +238,7 @@ def test_migration_cli_error_boundary_masks_details(monkeypatch, capsys):
     monkeypatch.setattr(
         cli,
         "database_url",
-        lambda: (_ for _ in ()).throw(RuntimeError("postgresql://user:secret@private/db")),
+        lambda: (_ for _ in ()).throw(RuntimeError("postgresql://test_user:change_me@localhost:5432/forwarder_test")),
     )
     assert cli.run(["current"]) == 1
     captured = capsys.readouterr()

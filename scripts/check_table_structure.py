@@ -15,7 +15,7 @@ def check_table_structure():
         'port': '5432',
         'database': 'forwarder_db',
         'user': 'postgres',
-        'password': 'bagheri13'
+        'password': 'change_me'
     }
     
     try:

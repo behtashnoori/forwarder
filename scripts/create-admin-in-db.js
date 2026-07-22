@@ -22,18 +22,18 @@ function getDatabaseUrl() {
     const m = env.match(/DATABASE_URL=(.+)/);
     if (m) return m[1].trim();
   } catch (_) {}
-  return 'postgresql://postgres:bagheri13@127.0.0.1:5432/forwarder_db';
+  throw new Error('DATABASE_URL must be provided through the process environment or local .env.');
 }
 
 function parsePgUrl(url) {
-  // postgresql+psycopg2://user:pass@host:port/dbname -> postgres://...
+  // Normalize SQLAlchemy PostgreSQL driver URLs for the Node pg client.
   const u = url.replace(/^postgresql\+psycopg2:/, 'postgres:');
   return u;
 }
 
 const ADMIN = {
   username: 'admin',
-  password: 'Pirooz13@!',
+  password: process.env.ADMIN_BOOTSTRAP_PASSWORD,
   full_name: 'مدیر سیستم',
   email: 'admin@company.com',
   phone: '09120000000',
@@ -42,6 +42,7 @@ const ADMIN = {
 };
 
 async function main() {
+  if (!ADMIN.password) throw new Error('ADMIN_BOOTSTRAP_PASSWORD is required.');
   const rawUrl = getDatabaseUrl();
   const connectionString = parsePgUrl(rawUrl);
 
@@ -152,7 +153,6 @@ async function main() {
       console.log('============================================================');
       console.log('\n🔑 اطلاعات ورود:');
       console.log('   Username: admin');
-      console.log('   Password: Pirooz13@!');
       console.log('');
     }
   } catch (err) {

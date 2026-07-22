@@ -1,7 +1,7 @@
 -- Create admin user in expert_user table
 -- Uses pgcrypto for bcrypt-compatible password hash (Pirooz13@!)
 -- Run: psql -h 127.0.0.1 -U postgres -d forwarder_db -f scripts/create-admin-in-db.sql
--- Or: PGPASSWORD=bagheri13 psql -h 127.0.0.1 -U postgres -d forwarder_db -f scripts/create-admin-in-db.sql
+-- Or: PGPASSWORD=change_me psql -h 127.0.0.1 -U postgres -d forwarder_db -f scripts/create-admin-in-db.sql
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

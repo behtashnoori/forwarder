@@ -83,7 +83,7 @@ If multiple files exist, they are loaded in this order and never override values
 Use placeholders only in committed docs:
 
 ```env
-DATABASE_URL=postgresql+psycopg2://postgres:YOUR_PASSWORD@localhost:5432/forwarder_db
+DATABASE_URL=postgresql+psycopg2://forwarder_dev:change_me@localhost:5432/forwarder_dev
 SECRET_KEY=dev-secret-change-me
 JWT_SECRET_KEY=dev-jwt-secret-change-me
 FLASK_ENV=development
@@ -103,7 +103,7 @@ echo $env:DATABASE_URL
 To set it for the current PowerShell session:
 
 ```powershell
-$env:DATABASE_URL="postgresql+psycopg2://postgres:YOUR_PASSWORD@localhost:5432/forwarder_db"
+$env:DATABASE_URL="postgresql+psycopg2://forwarder_dev:change_me@localhost:5432/forwarder_dev"
 $env:SECRET_KEY="dev-secret-change-me"
 $env:JWT_SECRET_KEY="dev-jwt-secret-change-me"
 $env:FLASK_ENV="development"

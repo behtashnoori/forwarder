@@ -23,7 +23,7 @@ function getDatabaseUrl() {
     const m = env.match(/DATABASE_URL=(.+)/);
     if (m) return m[1].trim();
   } catch (_) {}
-  return 'postgresql://postgres:bagheri13@127.0.0.1:5432/forwarder_db';
+  throw new Error('DATABASE_URL must be provided through the process environment or local .env.');
 }
 
 function parsePgUrl(url) {
@@ -45,10 +45,11 @@ async function listCurrentUsers() {
 }
 
 async function adminLogin() {
+  if (!process.env.ADMIN_TEST_PASSWORD) throw new Error('ADMIN_TEST_PASSWORD is required.');
   const res = await fetch(`${API_URL}/api/expert/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: 'admin', password: 'Pirooz13@!' }),
+    body: JSON.stringify({ username: 'admin', password: process.env.ADMIN_TEST_PASSWORD }),
   });
   if (!res.ok) {
     const text = await res.text();
