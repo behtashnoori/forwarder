@@ -31,6 +31,7 @@ import {
   fetchRecommendedPorts,
   fetchTransportMethodOptions,
   submitShipmentRequest,
+  buildIranDestinationPayload,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
@@ -1017,6 +1018,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     () => [...countries].sort((a, b) => a.name.localeCompare(b.name)),
     [countries],
   );
+  const isIranDestination = useMemo(
+    () => countries.find((country) => country.id.toString() === formData.destCountry)?.code === "IR",
+    [countries, formData.destCountry],
+  );
   const originInternationalCityOptions = useMemo(
     () => [...originInternationalCities].sort((a, b) => a.name.localeCompare(b.name)),
     [originInternationalCities],
@@ -1047,7 +1052,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
     // When shipping to Iran, spell out the chosen in-Iran destination point.
     let iranDestLabel = "";
-    if (dCountry?.name === "ایران") {
+    if (dCountry?.code === "IR") {
       const provinceName = provinceOptions.find((p) => p.id.toString() === formData.iranEntryProvince)?.name;
       if (formData.iranDestType === "port") {
         iranDestLabel = iranPorts.find((p) => p.id.toString() === formData.iranEntryPort)?.name_fa || "";
@@ -1103,27 +1108,16 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   // the destination country is Iran. Shared by the preview and final submit paths.
   const applyIranDestinationToPayload = (payload: ShipmentRequestPayload) => {
     const selectedProvince = provinces.find(p => p.id.toString() === formData.iranEntryProvince);
-    payload.iran_dest_type = formData.iranDestType;
-    payload.iran_entry_province = selectedProvince?.name || "";
-    if (formData.iranEntryProvince) {
-      payload.iran_entry_province_id = Number(formData.iranEntryProvince);
-    }
-
-    if (formData.iranDestType === "port") {
-      const selectedPort = iranPorts.find(p => p.id.toString() === formData.iranEntryPort);
-      payload.iran_entry_port = selectedPort?.name_fa || "";
-      if (formData.iranEntryPort) {
-        payload.iran_entry_port_id = Number(formData.iranEntryPort);
-      }
-    } else if (formData.iranDestType === "customs") {
-      if (formData.iranDestCustomsOffice) {
-        payload.iran_dest_customs_office_id = Number(formData.iranDestCustomsOffice);
-      }
-    } else if (formData.iranDestType === "city") {
-      if (formData.iranDestCity) {
-        payload.iran_dest_city_id = Number(formData.iranDestCity);
-      }
-    }
+    const selectedPort = iranPorts.find(p => p.id.toString() === formData.iranEntryPort);
+    Object.assign(payload, buildIranDestinationPayload({
+      type: formData.iranDestType,
+      provinceId: formData.iranEntryProvince,
+      provinceName: selectedProvince?.name,
+      portId: formData.iranEntryPort,
+      portName: selectedPort?.name_fa,
+      customsOfficeId: formData.iranDestCustomsOffice,
+      cityId: formData.iranDestCity,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -1157,18 +1151,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         errorMessage = t("requestForm.validation.internationalRouteRequired");
       }
       
-      // Check if destination is Iran and validate the structured destination point
-      const destCountry = countries.find(c => c.id.toString() === formData.destCountry);
-      if (destCountry?.name === "ایران") {
-        const hasPoint =
-          (formData.iranDestType === "port" && !!formData.iranEntryPort) ||
-          (formData.iranDestType === "customs" && !!formData.iranDestCustomsOffice) ||
-          (formData.iranDestType === "city" && !!formData.iranDestCity);
-        if (!hasPoint || !formData.iranEntryProvince) {
-          isValid = false;
-          errorMessage = t("requestForm.validation.iranEntryRequired");
-        }
-      }
     }
 
     if (!isValid) {
@@ -1226,7 +1208,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.dest_address_international = formData.destAddressInternational;
         
         // Add the structured Iran destination point if destination is Iran
-        if (destCountry?.name === "ایران") {
+        if (destCountry?.code === "IR") {
           applyIranDestinationToPayload(payload);
         }
       }
@@ -1311,7 +1293,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.dest_address_international = formData.destAddressInternational;
         
         // Add the structured Iran destination point if destination is Iran
-        if (destCountry?.name === "ایران") {
+        if (destCountry?.code === "IR") {
           applyIranDestinationToPayload(payload);
         }
       }
@@ -1925,6 +1907,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       ...formData,
                       destCountry: value,
                       destCityInternational: "",
+                      iranDestType: "city",
+                      iranEntryPort: "",
+                      iranDestCustomsOffice: "",
+                      iranDestCounty: "",
+                      iranDestCity: "",
+                      iranEntryProvince: "",
                     });
                   }}
                   disabled={isLoadingCountries && countryOptions.length === 0}
@@ -2006,7 +1994,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             </div>
 
             {/* Iran Destination Section - Only show if destination is Iran */}
-            {formData.destCountry && countries.find(c => c.id.toString() === formData.destCountry)?.name === "ایران" && (
+            {isIranDestination && (
               <>
                 {/* Arrow */}
                 <div className="flex justify-center">
@@ -2025,7 +2013,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                     {/* Destination point type: port / customs / city */}
                     <Label className="flex items-center gap-1 text-sm font-medium">
                       {t("requestForm.iranDestTypeLabel")}
-                      <RequiredAsterisk />
                     </Label>
                     <div className="grid grid-cols-3 gap-2">
                       {([
@@ -2065,7 +2052,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       <>
                         <Label className="flex items-center gap-1 text-sm font-medium">
                           {t("requestForm.entryPort")}
-                          <RequiredAsterisk />
                         </Label>
                         <Select
                           value={formData.iranEntryPort}
@@ -2118,7 +2104,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       <>
                         <Label className="flex items-center gap-1 text-sm font-medium">
                           {t("requestForm.borderCustoms")}
-                          <RequiredAsterisk />
                         </Label>
                         <Select
                           value={formData.iranDestCustomsOffice}
@@ -2168,7 +2153,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       <>
                         <Label className="flex items-center gap-1 text-sm font-medium">
                           {t("requestForm.entryProvince")}
-                          <RequiredAsterisk />
                         </Label>
                         <Select
                           value={formData.iranEntryProvince}
@@ -2196,7 +2180,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
                         <Label className="flex items-center gap-1 text-sm font-medium">
                           {t("requestForm.destinationCounty")}
-                          <RequiredAsterisk />
                         </Label>
                         <Select
                           value={formData.iranDestCounty}
@@ -2232,7 +2215,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
                         <Label className="flex items-center gap-1 text-sm font-medium">
                           {t("requestForm.destinationCity")}
-                          <RequiredAsterisk />
                         </Label>
                         <Select
                           value={formData.iranDestCity}

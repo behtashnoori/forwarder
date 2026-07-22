@@ -52,7 +52,7 @@ BORDER_CUSTOMS = [
 
 
 def _get_or_create_iran() -> Country:
-    country = Country.query.filter_by(name_fa="ایران").first()
+    country = Country.query.filter_by(code="IR").first()
     if country is None:
         country = Country(name_en="Iran", name_fa="ایران", code="IR", is_active=True, created_at=datetime.utcnow())
         db.session.add(country)

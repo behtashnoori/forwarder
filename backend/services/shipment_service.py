@@ -207,6 +207,16 @@ def normalize_iran_destination(payload: dict[str, Any]) -> dict[str, Any]:
         raise ShipmentValidationError("نوع مقصد در ایران نامعتبر است.")
     result["iran_dest_type"] = dest_type
 
+    # Only the reference belonging to the declared mode may survive. This also
+    # protects non-UI clients from persisting stale IDs after changing modes.
+    if dest_type != "port":
+        result["iran_entry_port"] = None
+        result["iran_entry_port_id"] = None
+    if dest_type != "customs":
+        result["iran_dest_customs_office_id"] = None
+    if dest_type != "city":
+        result["iran_dest_city_id"] = None
+
     if dest_type == "port" and not result["iran_entry_port_id"]:
         raise ShipmentValidationError("بندر مقصد در ایران را انتخاب کنید.")
     if dest_type == "customs" and not result["iran_dest_customs_office_id"]:

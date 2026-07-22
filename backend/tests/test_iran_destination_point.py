@@ -8,6 +8,7 @@ from backend.models import (
     Country,
     County,
     CustomsOffice,
+    InternationalCity,
     IranPort,
     Province,
     ShipmentRequest,
@@ -81,6 +82,28 @@ def test_border_customs_endpoint_returns_only_border_offices(app, client):
     assert "Inland" not in codes
     bazargan = next(row for row in data if row["name_en"] == "Bazargan")
     assert bazargan["province_name"] == "آذربایجان غربی"
+
+
+def test_international_cities_uses_canonical_rows_for_iran_and_china(app, client):
+    """The endpoint must not synthesize colliding IDs from port/tracking tables."""
+    with app.app_context():
+        iran = Country(code="IR", name_en="Iran", name_fa="ایران")
+        china = Country(code="CN", name_en="China", name_fa="چین")
+        db.session.add_all([iran, china])
+        db.session.flush()
+        db.session.add_all([
+            InternationalCity(country_id=iran.id, name_fa="تهران", name_en="Tehran"),
+            InternationalCity(country_id=china.id, name_fa="شانگهای", name_en="Shanghai"),
+        ])
+        db.session.commit()
+        iran_id, china_id = iran.id, china.id
+
+    iran_response = client.get(f"/api/international-cities?country_id={iran_id}")
+    china_response = client.get(f"/api/international-cities?country_id={china_id}")
+
+    assert iran_response.status_code == china_response.status_code == 200
+    assert [row["name_en"] for row in iran_response.get_json()] == ["Tehran"]
+    assert [row["name_en"] for row in china_response.get_json()] == ["Shanghai"]
 
 
 def test_city_destination_persists_structured_fields(app, client):
@@ -192,3 +215,51 @@ def test_legacy_international_without_dest_type_still_succeeds(app, client):
     with app.app_context():
         req = ShipmentRequest.query.first()
         assert req.iran_dest_type is None
+
+
+def test_optional_iran_destination_can_be_omitted_completely(app, client):
+    """Stage 3 is optional and must not cause a 400 when it is untouched."""
+    with app.app_context():
+        _geography()
+
+    response = client.post("/api/shipment-request", json=_base_payload())
+
+    assert response.status_code == 201
+    with app.app_context():
+        req = ShipmentRequest.query.first()
+        assert req.iran_dest_type is None
+        assert req.iran_entry_port_id is None
+        assert req.iran_entry_province_id is None
+        assert req.iran_dest_customs_office_id is None
+        assert req.iran_dest_city_id is None
+
+
+@pytest.mark.parametrize(
+    ("dest_type", "selected_field", "stale_fields"),
+    [
+        ("port", "iran_entry_port_id", ("iran_dest_customs_office_id", "iran_dest_city_id")),
+        ("customs", "iran_dest_customs_office_id", ("iran_entry_port_id", "iran_dest_city_id")),
+        ("city", "iran_dest_city_id", ("iran_entry_port_id", "iran_dest_customs_office_id")),
+    ],
+)
+def test_destination_mode_discards_stale_ids(app, client, dest_type, selected_field, stale_fields):
+    with app.app_context():
+        province, _county, city, port, customs = _geography()
+        ids = {
+            "iran_entry_port_id": port.id,
+            "iran_dest_customs_office_id": customs.id,
+            "iran_dest_city_id": city.id,
+        }
+        payload = _base_payload(
+            iran_dest_type=dest_type,
+            iran_entry_province_id=province.id,
+            **ids,
+        )
+
+    response = client.post("/api/shipment-request", json=payload)
+
+    assert response.status_code == 201
+    with app.app_context():
+        req = ShipmentRequest.query.first()
+        assert getattr(req, selected_field) == ids[selected_field]
+        assert all(getattr(req, field) is None for field in stale_fields)

@@ -136,6 +136,48 @@ export interface ShipmentRequestPayload {
   delivery_date?: string;
 }
 
+export interface IranDestinationSelection {
+  type: "port" | "customs" | "city";
+  provinceId?: string;
+  provinceName?: string;
+  portId?: string;
+  portName?: string;
+  customsOfficeId?: string;
+  cityId?: string;
+}
+
+/** Build an optional, mutually-exclusive Iran destination payload fragment. */
+export const buildIranDestinationPayload = (
+  selection: IranDestinationSelection,
+): Partial<ShipmentRequestPayload> => {
+  const provinceId = selection.provinceId?.trim();
+  const selectedId = selection.type === "port"
+    ? selection.portId?.trim()
+    : selection.type === "customs"
+      ? selection.customsOfficeId?.trim()
+      : selection.cityId?.trim();
+
+  // Incomplete optional selections are omitted. In particular, Number("") is
+  // never evaluated and no zero reference ID can leak into the payload.
+  if (!provinceId || !selectedId) return {};
+
+  const payload: Partial<ShipmentRequestPayload> = {
+    iran_dest_type: selection.type,
+    iran_entry_province_id: Number(provinceId),
+  };
+  if (selection.provinceName) payload.iran_entry_province = selection.provinceName;
+
+  if (selection.type === "port") {
+    payload.iran_entry_port_id = Number(selectedId);
+    if (selection.portName) payload.iran_entry_port = selection.portName;
+  } else if (selection.type === "customs") {
+    payload.iran_dest_customs_office_id = Number(selectedId);
+  } else {
+    payload.iran_dest_city_id = Number(selectedId);
+  }
+  return payload;
+};
+
 import { env } from './env';
 
 const API_BASE_URL = env.API_URL.replace(/\/+$/, "");
