@@ -13,17 +13,17 @@ services:
 
   api:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
     env_file:
       - backend/.env.docker
     ports:
-      - "5000:5000"
+      - "5001:5001"
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./backend:/app:ro
+      - ./backend:/app/backend:ro
 
   db:
     image: postgres:16

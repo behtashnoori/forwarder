@@ -1,73 +1,35 @@
-# Test Backend API connection from network/internet perspective
-# This script checks if the backend is accessible
+[CmdletBinding()]
+param(
+    [string]$ServerIP = "127.0.0.1",
+    [int]$ApiPort = 5001,
+    [switch]$AllowRemote
+)
 
-$serverIP = "130.185.77.25"
-$apiPort = 8000
-$frontendPort = 8080
-
-Write-Host "Testing Backend API Connection..." -ForegroundColor Cyan
-Write-Host "Server IP: $serverIP" -ForegroundColor Yellow
-Write-Host ""
-
-# Test 1: Check if backend is running locally
-Write-Host "Test 1: Checking local backend (127.0.0.1:$apiPort)..." -ForegroundColor Cyan
-try {
-    $response = Invoke-WebRequest -Uri "http://127.0.0.1:$apiPort/api/health" -Method GET -TimeoutSec 5 -ErrorAction Stop
-    Write-Host "  ✓ Backend is running locally" -ForegroundColor Green
-    Write-Host "  Status: $($response.StatusCode)" -ForegroundColor Green
-} catch {
-    Write-Host "  ✗ Backend is NOT running locally" -ForegroundColor Red
-    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "  Solution: Start backend with:" -ForegroundColor Yellow
-    Write-Host "    python backend/wsgi.py" -ForegroundColor White
-    Write-Host "  Or set FLASK_RUN_HOST=0.0.0.0" -ForegroundColor White
+$ErrorActionPreference = "Stop"
+$localTargets = @("127.0.0.1", "localhost", "::1")
+if (-not $AllowRemote -and $localTargets -notcontains $ServerIP) {
+    throw "Remote target refused. Pass -AllowRemote only after explicit target approval."
 }
 
-Write-Host ""
+$healthUrl = "http://{0}:{1}/api/health" -f $ServerIP, $ApiPort
+$pingUrl = "http://{0}:{1}/api/health/ping" -f $ServerIP, $ApiPort
+$readyUrl = "http://{0}:{1}/api/health/ready" -f $ServerIP, $ApiPort
 
-# Test 2: Check if backend is accessible from network IP
-Write-Host "Test 2: Checking network backend ($serverIP`:$apiPort)..." -ForegroundColor Cyan
-try {
-    $response = Invoke-WebRequest -Uri "http://$serverIP`:$apiPort/api/health" -Method GET -TimeoutSec 5 -ErrorAction Stop
-    Write-Host "  ✓ Backend is accessible from network" -ForegroundColor Green
-    Write-Host "  Status: $($response.StatusCode)" -ForegroundColor Green
-} catch {
-    Write-Host "  ✗ Backend is NOT accessible from network" -ForegroundColor Red
-    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-    Write-Host ""
-    Write-Host "  Possible causes:" -ForegroundColor Yellow
-    Write-Host "  1. Backend is running on 127.0.0.1 instead of 0.0.0.0" -ForegroundColor White
-    Write-Host "  2. Firewall is blocking port $apiPort" -ForegroundColor White
-    Write-Host "  3. External firewall/router is blocking port $apiPort" -ForegroundColor White
-    Write-Host ""
-    Write-Host "  Solutions:" -ForegroundColor Yellow
-    Write-Host "  - Set FLASK_RUN_HOST=0.0.0.0 in .env or environment" -ForegroundColor White
-    Write-Host "  - Run: python backend/wsgi.py (defaults to 0.0.0.0)" -ForegroundColor White
-    Write-Host "  - Check firewall: Get-NetFirewallRule -DisplayName '*8000*'" -ForegroundColor White
+Write-Host ("Testing approved backend target {0}:{1}" -f $ServerIP, $ApiPort) -ForegroundColor Cyan
+foreach ($probe in @(
+    @{ Name = "Liveness"; Uri = $pingUrl },
+    @{ Name = "Database health"; Uri = $healthUrl },
+    @{ Name = "Readiness"; Uri = $readyUrl }
+)) {
+    try {
+        $response = Invoke-WebRequest -Uri $probe.Uri -UseBasicParsing -TimeoutSec 5
+        Write-Host ("{0}: HTTP {1}" -f $probe.Name, $response.StatusCode) -ForegroundColor Green
+    }
+    catch {
+        Write-Host ("{0}: failed" -f $probe.Name) -ForegroundColor Red
+        throw
+    }
 }
 
-Write-Host ""
-
-# Test 3: Test provinces endpoint
-Write-Host "Test 3: Testing provinces API endpoint..." -ForegroundColor Cyan
-try {
-    $response = Invoke-WebRequest -Uri "http://$serverIP`:$apiPort/api/provinces" -Method GET -TimeoutSec 5 -ErrorAction Stop
-    $data = $response.Content | ConvertFrom-Json
-    Write-Host "  ✓ Provinces endpoint works" -ForegroundColor Green
-    Write-Host "  Found $($data.Count) provinces" -ForegroundColor Green
-} catch {
-    Write-Host "  ✗ Provinces endpoint failed" -ForegroundColor Red
-    Write-Host "  Error: $($_.Exception.Message)" -ForegroundColor Red
-}
-
-Write-Host ""
-Write-Host "Summary:" -ForegroundColor Cyan
-Write-Host "  Frontend URL: http://$serverIP`:$frontendPort" -ForegroundColor White
-Write-Host "  Backend API URL: http://$serverIP`:$apiPort" -ForegroundColor White
-Write-Host ""
-Write-Host "If tests fail, check:" -ForegroundColor Yellow
-Write-Host "  1. Backend is running: python backend/wsgi.py" -ForegroundColor White
-Write-Host "  2. Backend listens on 0.0.0.0 (check wsgi.py or FLASK_RUN_HOST)" -ForegroundColor White
-Write-Host "  3. Firewall allows port $apiPort: npm run firewall:open" -ForegroundColor White
-Write-Host "  4. External firewall/router allows port $apiPort" -ForegroundColor White
+Write-Host "Development command: python -m backend.run" -ForegroundColor White
+Write-Host ("Windows status: powershell -File scripts/backend-service.ps1 -Action Status -Port {0}" -f $ApiPort) -ForegroundColor White

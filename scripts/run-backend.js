@@ -2,7 +2,7 @@
 /**
  * Canonical dev launcher: runs backend via python -m backend.run (fixed port, no silent exit).
  * Usage: node scripts/run-backend.js [--reload]
- * Backend runs on PORT from .env (default 8000). Change port only in .env.
+ * Backend runs on PORT from .env (default 5001). Change port only in .env.
  */
 import { spawn } from 'child_process';
 import fs from 'fs';
@@ -30,7 +30,7 @@ function loadEnv() {
 }
 
 loadEnv();
-const port = parseInt(process.env.PORT || process.env.FLASK_RUN_PORT || '8000', 10);
+const port = parseInt(process.env.PORT || process.env.FLASK_RUN_PORT || '5001', 10);
 
 const net = await import('net');
 const portInUse = await new Promise((resolve) => {
@@ -41,7 +41,7 @@ const portInUse = await new Promise((resolve) => {
 });
 if (portInUse) {
   console.error(`Port ${port} is already in use. Please stop the process using it.`);
-  console.error(`  Windows: Get-NetTCPConnection -LocalPort ${port} | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }`);
+  console.error(`  Windows: powershell -File scripts/backend-service.ps1 -Action Status -Port ${port}`);
   console.error(`  Or: netstat -ano | findstr :${port}`);
   process.exit(1);
 }

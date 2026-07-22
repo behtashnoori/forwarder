@@ -135,7 +135,7 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     # Test apps should be self-contained and must not depend on external schema
     # state, migrations, or developer databases. This is test-only and does not
     # affect production startup behavior.
-    if app.config.get("TESTING"):
+    if app.config.get("TESTING") and not skip_startup:
         with app.app_context():
             db.create_all()
 

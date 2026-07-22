@@ -23,7 +23,7 @@ services:
     environment:
       AUTO_MIGRATE_ON_STARTUP: "false"
     expose:
-      - "5000"
+      - "5001"
     depends_on:
       db:
         condition: service_healthy
@@ -33,7 +33,7 @@ services:
     networks:
       - forwarder-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health/ready"]
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/health/ready"]
       interval: 30s
       timeout: 10s
       retries: 3

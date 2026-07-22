@@ -1,6 +1,6 @@
 """Separate liveness, health, and deployment-readiness probes."""
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
 from sqlalchemy import text
 
 from backend.extensions import db
@@ -29,23 +29,11 @@ def health_root():
             }),
             503,
         )
-    # Optional: check tables only when explicitly requested (e.g. GET /api/health?readiness=1)
-    tables_ok = True
-    if current_app.config.get("TESTING") or request.args.get("readiness"):
-        for table in ("province", "transport_method"):
-            try:
-                db.session.execute(text(f"SELECT 1 FROM {table} LIMIT 1"))
-            except Exception as e:
-                current_app.logger.warning("Health readiness: table %s missing or inaccessible: %s", table, e)
-                tables_ok = False
-                break
     payload = {
         "status": "ok",
         "database": "connected",
         "port": port,
     }
-    if request.args.get("readiness"):
-        payload["tables_ready"] = tables_ok
     return jsonify(payload)
 
 

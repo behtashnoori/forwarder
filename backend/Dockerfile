@@ -13,5 +13,5 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 
 COPY . .
 
-EXPOSE 5000
-CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5000", "backend.wsgi:app"]
+EXPOSE 5001
+CMD ["gunicorn", "-w", "2", "-b", "0.0.0.0:5001", "backend.wsgi:app"]

@@ -285,11 +285,11 @@ def _origin_is_placeholder(origin: str) -> bool:
     return any(fragment in lowered for fragment in _PLACEHOLDER_ORIGIN_FRAGMENTS)
 
 
-# Server settings - single source of truth (default: no reload, fixed port 8000)
+# Server settings - single source of truth (default: no reload, fixed port 5001)
 # Bind to 0.0.0.0 so the server is accessible from network; do not use 127.0.0.1
 _raw_host = (os.getenv("HOST") or os.getenv("FLASK_RUN_HOST") or "0.0.0.0").strip().lower()
 HOST: str = "0.0.0.0" if _raw_host in ("127.0.0.1", "localhost", "") else _raw_host
-PORT: int = _int_env("PORT", 8000)
+PORT: int = _int_env("PORT", 5001)
 DEBUG: bool = _bool_env("FLASK_DEBUG", False)
 USE_RELOAD: bool = _bool_env("FLASK_USE_RELOAD", False)
 

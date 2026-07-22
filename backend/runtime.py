@@ -26,6 +26,8 @@ def readiness_report(app) -> dict[str, object]:
         url = app.config["SQLALCHEMY_DATABASE_URI"]
         status = revision_status(url)
         report["database"] = "connected"
+        report["current_revisions"] = list(status.current)
+        report["head_revisions"] = list(status.heads)
         engine = database_engine(url)
         try:
             report["migrations"] = "pending" if status.pending else "current"

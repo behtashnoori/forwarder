@@ -1,6 +1,14 @@
-# Test provinces API endpoint from network perspective
-$serverIP = "130.185.77.25"
-$apiPort = 8000
+[CmdletBinding()]
+param(
+    [string]$ServerIP = "127.0.0.1",
+    [int]$ApiPort = 5001,
+    [switch]$AllowRemote
+)
+
+# Test provinces API endpoint against an explicitly approved target.
+if (-not $AllowRemote -and $ServerIP -notin @("127.0.0.1", "localhost", "::1")) {
+    throw "Remote target refused. Pass -AllowRemote only after explicit target approval."
+}
 
 Write-Host "Testing Provinces API Endpoint..." -ForegroundColor Cyan
 Write-Host "Server IP: $serverIP`:$apiPort" -ForegroundColor Yellow
@@ -75,6 +83,6 @@ Write-Host "  2. Database connection is working" -ForegroundColor White
 Write-Host "  3. CORS headers are correct (not using '*')" -ForegroundColor White
 Write-Host ""
 Write-Host "  If both fail, check:" -ForegroundColor Yellow
-Write-Host "  1. Backend is running: python backend/wsgi.py" -ForegroundColor White
+Write-Host "  1. Backend is running: python -m backend.run" -ForegroundColor White
 Write-Host "  2. Backend listens on 0.0.0.0 (not 127.0.0.1)" -ForegroundColor White
 Write-Host "  3. Firewall allows port $apiPort" -ForegroundColor White

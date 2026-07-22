@@ -55,11 +55,16 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":
+def run(argv: list[str] | None = None) -> int:
+    """Run the CLI with a stable, non-secret process-boundary contract."""
     try:
-        raise SystemExit(main())
+        return main(argv)
     except Exception as exc:
         # Do not echo driver messages: they may include sensitive connection
         # details. Operators can correlate the exception class with server logs.
         print(f"Migration command failed ({type(exc).__name__}).", file=sys.stderr)
-        raise SystemExit(1) from None
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(run())
