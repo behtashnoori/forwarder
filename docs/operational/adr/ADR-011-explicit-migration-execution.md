@@ -33,4 +33,3 @@ Revisit only if a deployment orchestrator provides a single-leader migration job
 
 - [Runtime migration safety](../phase0_1_runtime_migration_safety.md)
 - [Database revision runbook](../phase0_1_database_revision_runbook.md)
-

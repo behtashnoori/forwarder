@@ -39,4 +39,3 @@ Both Dockerfiles copy the repository layout and run `backend.wsgi:app` on 5001. 
 - [Windows deployment runbook](phase0_1_deployment_runbook_windows.md)
 - [Runtime migration safety](phase0_1_runtime_migration_safety.md)
 - [ADR-012](adr/ADR-012-versioned-backend-entrypoint.md)
-

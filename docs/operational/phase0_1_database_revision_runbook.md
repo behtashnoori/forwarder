@@ -50,4 +50,3 @@ For Phase 0.1 on this workstation, PostgreSQL rehearsal is `NOT_RUN_ENVIRONMENT_
 - [Runtime migration safety](phase0_1_runtime_migration_safety.md)
 - [ADR-011](adr/ADR-011-explicit-migration-execution.md)
 - [Windows deployment runbook](phase0_1_deployment_runbook_windows.md)
-

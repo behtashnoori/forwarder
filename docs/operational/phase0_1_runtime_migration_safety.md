@@ -59,4 +59,3 @@ Code: `backend/__init__.py`, `backend/runtime.py`, `backend/migration_runtime.py
 - [Database revision runbook](phase0_1_database_revision_runbook.md)
 - [Backend entrypoint](phase0_1_backend_entrypoint.md)
 - [ADR-011](adr/ADR-011-explicit-migration-execution.md)
-

@@ -55,4 +55,3 @@ If entrypoint, `.venv`, ownership, liveness, or readiness fails, do not stop an 
 - [Backend entrypoint](phase0_1_backend_entrypoint.md)
 - [Database revision runbook](phase0_1_database_revision_runbook.md)
 - [Runtime migration safety](phase0_1_runtime_migration_safety.md)
-
