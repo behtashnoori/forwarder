@@ -22,6 +22,8 @@ def admin_app():
         },
         skip_startup=True,
     )
+    with app.app_context():
+        db.create_all()
     yield app
     with app.app_context():
         db.session.remove()

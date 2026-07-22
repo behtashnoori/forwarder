@@ -9,7 +9,6 @@ from backend import config as runtime_config
 from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertUser
-from backend.security import security
 
 
 PRODUCTION_ENV_KEYS = (
@@ -147,6 +146,7 @@ def test_crm_customers_rejects_expert_role():
     """Basic experts should not receive CRM customer listings."""
     app = create_app({"TESTING": True}, skip_startup=True)
     with app.app_context():
+        db.create_all()
         db.session.add(
             ExpertUser(
                 username="expert_role_check",
@@ -172,6 +172,7 @@ def test_monitoring_metrics_rejects_expert_role():
     """Operational monitoring metrics require supervisor-level access or higher."""
     app = create_app({"TESTING": True}, skip_startup=True)
     with app.app_context():
+        db.create_all()
         db.session.add(
             ExpertUser(
                 username="monitoring_expert_role_check",
