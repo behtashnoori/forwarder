@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "backend": "node scripts/run-backend.js",
+    "backend:migration:current": "python -m backend.migration_cli current",
+    "backend:migration:check": "python -m backend.migration_cli check",
+    "backend:migration:upgrade": "python -m backend.migration_cli upgrade --confirm",
     "backend:check": "node scripts/check-backend-determinism.js",
     "backend:test:live": "python scripts/test-backend-health-live.py",
     "build": "vite build",

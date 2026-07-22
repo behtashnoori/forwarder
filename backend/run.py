@@ -1,6 +1,5 @@
 """
-Canonical dev entrypoint. Loads config, checks port, starts server.
-Migrations + verify + seed run inside create_app() so they always run on any backend start.
+Canonical development entrypoint. It never applies migrations or seeds.
 Run: python -m backend.run [--reload]
 """
 from __future__ import annotations
@@ -17,9 +16,7 @@ if _PROJECT_ROOT not in sys.path:
 
 # Load config first (loads .env and sets HOST, PORT, DEBUG, USE_RELOAD)
 from backend import config  # noqa: E402
-from backend import create_app  # noqa: E402
-from backend.startup import run_migrations, verify_critical_tables  # noqa: E402
-from backend.startup_seed import run_startup_seed  # noqa: E402
+from backend.runtime import create_runtime_app  # noqa: E402
 
 
 def _is_port_in_use(host: str, port: int) -> bool:
@@ -56,7 +53,7 @@ def _get_server_ip_for_display() -> str:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run backend server (migrations run automatically in create_app)")
+    parser = argparse.ArgumentParser(description="Run backend server without applying migrations or seeds")
     parser.add_argument("--reload", action="store_true", help="Enable Flask reloader (default: off for stability)")
     args = parser.parse_args()
     use_reloader = args.reload
@@ -94,11 +91,7 @@ def main() -> None:
     except OSError:
         pass
 
-    # Skip startup inside create_app so we run it once here (avoids running twice when reloader spawns child)
-    app = create_app(skip_startup=True)
-    run_migrations(app)
-    verify_critical_tables(app)
-    run_startup_seed(app)
+    app = create_runtime_app()
 
     server_ip = _get_server_ip_for_display()
     print("Backend started successfully.")

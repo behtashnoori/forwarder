@@ -1,18 +1,17 @@
 """Alembic environment configuration."""
-import os
 import sys
+from pathlib import Path
 from logging.config import fileConfig
 
 from alembic import context
-from alembic.script import ScriptDirectory
 from sqlalchemy import engine_from_config, pool
 
-# Add the project root to the Python path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add the repository root to the Python path for direct Alembic invocation.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from backend import create_app
 from backend.extensions import db
-from backend.migrations.version_table import ensure_version_table_capacity
+from backend import models  # noqa: F401 - register all model metadata
+from backend.config import get_database_uri
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -26,17 +25,6 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 target_metadata = db.metadata
-script_directory = ScriptDirectory.from_config(config)
-
-
-def _valid_parallel_heads(revisions: tuple[str, ...]) -> bool:
-    """Accept only resolvable revisions that are mutually current branch heads."""
-    try:
-        current = script_directory.get_all_current(revisions)
-    except Exception:
-        return False
-    return {revision.revision for revision in current} == set(revisions)
-
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -44,15 +32,9 @@ def _valid_parallel_heads(revisions: tuple[str, ...]) -> bool:
 
 
 def get_url():
-    """Get database URL from Flask app config. Use current_app when already in app context (e.g. run from startup.run_migrations) to avoid recursion."""
-    try:
-        from flask import current_app
-        return current_app.config.get("SQLALCHEMY_DATABASE_URI")
-    except RuntimeError:
-        pass
-    app = create_app(skip_startup=True)
-    with app.app_context():
-        return app.config.get("SQLALCHEMY_DATABASE_URI")
+    """Resolve the URL without constructing or importing a Flask application."""
+    configured = config.get_main_option("sqlalchemy.url").strip()
+    return configured or get_database_uri(testing=False)
 
 
 def run_migrations_offline() -> None:
@@ -86,7 +68,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    configuration = config.get_section(config.config_ini_section)
+    configuration = config.get_section(config.config_ini_section) or {}
     configuration["sqlalchemy.url"] = get_url()
     connectable = engine_from_config(
         configuration,
@@ -95,12 +77,6 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        with connection.begin():
-            ensure_version_table_capacity(
-                connection,
-                multiple_revision_validator=_valid_parallel_heads,
-            )
-
         context.configure(
             connection=connection, target_metadata=target_metadata
         )

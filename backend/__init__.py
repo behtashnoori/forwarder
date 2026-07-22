@@ -9,7 +9,6 @@ from typing import Any, Mapping, MutableMapping
 import backend.config  # noqa: F401 - load .env once (single source of truth in backend.config)
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from sqlalchemy import text
 
 from backend.extensions import db, migrate
 from backend.routes import register_routes
@@ -28,8 +27,9 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     config:
         Optional mapping of configuration values that should override the defaults.
     skip_startup:
-        If True, do not run migrations/verify/seed inside create_app (caller will run them once, e.g. run.py).
-        Use True in run.py to avoid running startup twice when reloader spawns a child process.
+        Deprecated compatibility argument. Application construction never runs
+        migrations, seeds, or database readiness checks. Runtime policy belongs
+        to ``backend.runtime`` and migrations require an explicit CLI command.
     """
 
     app = Flask(__name__, instance_relative_config=True)
@@ -53,6 +53,7 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         "SLA_HOURS": int(os.getenv("SLA_HOURS", 2)),
         "PORT": _cfg.PORT,
         "APP_ENV": _cfg.get_runtime_environment(testing=is_testing_config),
+        "AUTO_MIGRATE_ON_STARTUP": False,
     }
 
     app.config.from_mapping(default_config)
@@ -131,28 +132,12 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
                 response.headers.add('Access-Control-Max-Age', '3600')
                 return response
 
-    with app.app_context():
-        try:
-            db.session.execute(text("SELECT 1"))
-            print("[startup] Database connection OK.")
-        except Exception as exc:  # pragma: no cover - startup diagnostic
-            print("[startup] Database connection failed:", exc)
-            traceback.print_exc()
-            sys.exit(1)
-
     # Test apps should be self-contained and must not depend on external schema
     # state, migrations, or developer databases. This is test-only and does not
     # affect production startup behavior.
     if app.config.get("TESTING"):
         with app.app_context():
             db.create_all()
-    # When not testing and not skip_startup: run migrations, verify tables, seed (gunicorn/wsgi; run.py runs them itself to avoid double run with reloader)
-    elif not skip_startup:
-        from backend.startup import run_migrations, verify_critical_tables
-        from backend.startup_seed import run_startup_seed
-        run_migrations(app)
-        verify_critical_tables(app)
-        run_startup_seed(app)
 
     # Register all HTTP routes with the application.
     try:
