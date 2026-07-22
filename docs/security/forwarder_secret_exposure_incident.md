@@ -14,7 +14,11 @@
 - Potential impact: anyone with repository access could have recovered the former credential
 - Owner action: completed; the owner confirmed revocation, external secret storage, and application connectivity
 - Codex handling: Codex did not receive or test the replacement credential and did not connect to Production
-- Incident status: `PASS_WITH_HISTORY_REMEDIATION_PENDING`
-- History decision: `PENDING_MANAGEMENT_DECISION`
+- Incident status: `CLOSED_ROTATION_COMPLETE_HISTORY_RISK_ACCEPTED`
+- Rotation closure: `CLOSED` — the exposed credential is confirmed rotated and revoked
+- History disposition: `RISK_ACCEPTED` — the rotated credential remains in Git history under formal management acceptance
+- History decision: `FORMAL_RISK_ACCEPTANCE_AFTER_ROTATION`
+- Risk acceptance review date: `2026-10-22`
+- Risk acceptance record: `docs/security/forwarder_historical_secret_risk_acceptance.md`
 
 Codex performed no production connection, credential validation, deployment, restart, migration, seed, or server change as part of this remediation.
