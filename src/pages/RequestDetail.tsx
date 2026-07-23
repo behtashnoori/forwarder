@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import {
   AlertCircle,
   ArrowLeft,
@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PageNav from "@/components/PageNav";
+import OperationalPermission from "@/components/OperationalPermission";
 import { QuoteModal } from "@/components/QuoteModal";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -766,9 +767,9 @@ const RequestDetail = () => {
                           )}
                         </div>
                         {request.latest_quote.customer_response === "accepted" ? (
-                          <div className="flex items-center gap-2 rounded-2xl bg-green-50 p-3 text-sm font-medium text-green-800">
-                            <CheckCircle2 className="h-4 w-4 shrink-0" />
-                            {t("requestDetail.customerAccepted")}
+                          <div className="space-y-3 rounded-2xl bg-green-50 p-3 text-sm font-medium text-green-800">
+                            <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0" />{t("requestDetail.customerAccepted")}</div>
+                            <OperationalPermission permission="operational_shipment.create"><Button asChild size="sm"><Link to={`/operations/shipments?accepted_quote_id=${request.latest_quote.id}&request_id=${request.id}`}>{t("operations.create")}</Link></Button></OperationalPermission>
                           </div>
                         ) : request.latest_quote.customer_response === "declined" ? (
                           <div className="flex items-center gap-2 rounded-2xl bg-red-50 p-3 text-sm font-medium text-red-800">

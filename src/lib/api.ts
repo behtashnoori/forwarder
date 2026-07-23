@@ -250,12 +250,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let message = `Request failed with status ${response.status}`;
     try {
       const body = await response.json();
-      if (body && typeof body.message === "string") {
+      if (body?.error && typeof body.error === "object" && typeof body.error.message === "string") {
+        throw new ApiError(response.status, body.error.code || "API_ERROR", body.error.message, body.error.fields || []);
+      } else if (body && typeof body.message === "string") {
         message = body.message;
       } else if (body && typeof body.error === "string") {
         message = body.error;
       }
     } catch (error) {
+      if (error instanceof ApiError) throw error;
       // Ignore JSON parsing errors and keep default message.
     }
     throw new Error(message);
@@ -1041,6 +1044,41 @@ export interface SubmitQuotePayload {
   note?: string;
   valid_until?: string;
 }
+
+export class ApiError extends Error {
+  constructor(public readonly status: number, public readonly code: string, message: string, public readonly fields: unknown[] = []) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+export interface OperationalLocationRef { source_type: string; source_id: number }
+export interface OperationalShipmentSummary {
+  id: number; public_id: string; status: string; version: number;
+  customer?: string; current_milestone?: string | null; overdue: boolean; overdue_since?: string | null; open_work_item_count: number;
+  source: { accepted_quote_id: number; shipment_request_id: number; quote_amount?: number };
+  route_leg: { id: number; origin: { display_name: string }; destination: { display_name: string }; transport_mode: string; planned_departure: string; planned_arrival: string; version: number };
+  milestones: Array<{ id: number; type: string; planned_at: string; occurred_at?: string | null; verification_state: string; version: number }>;
+  recent_events: Array<{ id: number; milestone_id: number; event_type: string; occurred_at: string; reason?: string | null }>;
+  open_work_items: Array<{ id: number; milestone_id: number; type: string; due_at: string; status: string; version: number }>;
+  audit_summary: Array<{ id: number; action: string; recorded_at: string }>;
+}
+
+export interface OperationalWorkItem { id: number; shipment_id: number; milestone_id: number; type: string; status: string; due_at: string; planned_at: string; milestone_type: string; overdue_seconds: number; customer?: string; route_leg: OperationalShipmentSummary["route_leg"]; reason: string; assignee_user_id?: number | null; version: number }
+export function getOperationalContext(): Promise<{ data: { organization_id: number; permissions: string[] } }> { return request("/api/operational-context"); }
+
+export function listOperationalShipments(params = ""): Promise<{ data: OperationalShipmentSummary[]; meta: { page: number; has_more: boolean } }> {
+  return request(`/api/operational-shipments${params ? `?${params}` : ""}`);
+}
+export function getOperationalShipment(id: number): Promise<{ data: OperationalShipmentSummary }> { return request(`/api/operational-shipments/${id}`); }
+export function createOperationalShipment(payload: { accepted_quote_id: number; planned_departure: string; planned_arrival: string; origin: OperationalLocationRef; destination: OperationalLocationRef; transport_mode: string }, key: string): Promise<{ data: OperationalShipmentSummary; meta: { created: boolean } }> {
+  return request("/api/operational-shipments/from-accepted-quote", { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(payload) });
+}
+export function recordOperationalEvent(shipmentId: number, milestoneId: number, occurred_at: string, key: string) { return request(`/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/events`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ occurred_at }) }); }
+export function verifyOperationalMilestone(shipmentId: number, milestoneId: number, expected_version: number) { return request(`/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/verify`, { method: "POST", body: JSON.stringify({ expected_version }) }); }
+export function correctOperationalMilestone(shipmentId: number, milestoneId: number, occurred_at: string, reason: string, expected_version: number, key: string) { return request(`/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/correct`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ occurred_at, reason, expected_version }) }); }
+export function listOperationalWorkItems(params = ""): Promise<{ data: OperationalWorkItem[]; meta: { page:number; has_more:boolean } }> { return request(`/api/operational-work-items${params ? `?${params}` : ""}`); }
+export function resolveOperationalWorkItem(id: number, expected_version: number) { return request(`/api/operational-work-items/${id}/resolve`, { method: "POST", body: JSON.stringify({ expected_version }) }); }
 
 export function submitQuote(
   requestId: number,

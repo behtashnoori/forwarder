@@ -15,6 +15,9 @@ import CustomerRequestDetail from "./pages/CustomerRequestDetail";
 import PublicTracking from "./pages/PublicTracking";
 import VerifyEmail from "./pages/VerifyEmail";
 import ProtectedRoute from "./components/ProtectedRoute";
+import OperationalShipments from "./pages/OperationalShipments";
+import OperationalShipmentDetail from "./pages/OperationalShipmentDetail";
+import OperationalWorkQueue from "./pages/OperationalWorkQueue";
 import AdminRoute from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AdminPanel from "./pages/AdminPanel";
@@ -124,6 +127,9 @@ const App = () => (
                     </PersianOnlyRoute>
                   </AdminRoute>
                 } />
+                <Route path="/operations/shipments" element={<ProtectedRoute><OperationalShipments /></ProtectedRoute>} />
+                <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalShipmentDetail /></ProtectedRoute>} />
+                <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalWorkQueue /></ProtectedRoute>} />
                 <Route path="/customer/:customerId" element={
                   <ErrorBoundary>
                     <CustomerDashboard />

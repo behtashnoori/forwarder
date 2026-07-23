@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
@@ -19,6 +19,7 @@ function getBackendTarget(): string {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  test: { environment: "jsdom", setupFiles: ["./src/tests/setup.ts"], include: ["src/**/*.test.{ts,tsx}"] },
   server: {
     host: "0.0.0.0",
     port: 8080,
