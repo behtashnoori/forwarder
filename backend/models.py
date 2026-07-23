@@ -751,6 +751,12 @@ class ExpertQuote(db.Model):
     # Customer response to the quote: NULL (no response yet), 'accepted', or 'declined'.
     customer_response = db.Column(db.String(10), nullable=True)
     responded_at = db.Column(db.DateTime, nullable=True)
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
 
     __table_args__ = (
         db.CheckConstraint(
@@ -1324,6 +1330,24 @@ class SiteSetting(db.Model):
         return f"<SiteSetting key={self.key!r}>"
 
 
+# Import the bounded operational module after legacy models are declared so its
+# foreign-key targets are registered in the same SQLAlchemy metadata.
+from backend.operational_models import (  # noqa: E402
+    CanonicalLocation,
+    Milestone,
+    MilestoneEvent,
+    OperationalAudit,
+    OperationalIdempotency,
+    OperationalMembership,
+    OperationalOrganization,
+    OperationalOutbox,
+    OperationalShipment,
+    OperationalWorkItem,
+    RouteLeg,
+    RoutePlan,
+)
+
+
 __all__ = [
     "Province",
     "County",
@@ -1368,4 +1392,16 @@ __all__ = [
     "CUSTOMS_OFFICE_TYPES",
     "PORT_CUSTOMS_RELATIONSHIP_TYPES",
     "SiteSetting",
+    "OperationalOrganization",
+    "OperationalMembership",
+    "CanonicalLocation",
+    "OperationalShipment",
+    "RoutePlan",
+    "RouteLeg",
+    "Milestone",
+    "MilestoneEvent",
+    "OperationalWorkItem",
+    "OperationalAudit",
+    "OperationalOutbox",
+    "OperationalIdempotency",
 ]
