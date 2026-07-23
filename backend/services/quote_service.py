@@ -65,6 +65,17 @@ def create_quote_for_request(
         created_by_expert_id=expert_id,
         created_at=datetime.utcnow(),
     )
+    from backend.operational_models import OperationalMembership, OperationalOrganization
+    memberships = db.session.query(OperationalMembership).join(
+        OperationalOrganization,
+        OperationalMembership.organization_id == OperationalOrganization.id,
+    ).filter(
+        OperationalMembership.user_id == expert_id,
+        OperationalMembership.is_active.is_(True),
+        OperationalOrganization.is_active.is_(True),
+    ).all()
+    if len(memberships) == 1:
+        quote.operational_organization_id = memberships[0].organization_id
     db.session.add(quote)
     db.session.flush()
 
