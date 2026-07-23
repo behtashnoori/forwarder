@@ -1,0 +1,197 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import OperationalShipments from "../../pages/OperationalShipments";
+import OperationalShipmentDetail from "../../pages/OperationalShipmentDetail";
+import OperationalWorkQueue from "../../pages/OperationalWorkQueue";
+import * as api from "../../lib/api";
+vi.mock("../../i18n", () => ({
+  useI18n: () => ({ t: (k: string) => k, direction: "ltr", locale: "en-US" }),
+}));
+vi.mock("../../components/OperationalPermission", () => ({
+  default: ({ children }: { children: unknown }) => children,
+}));
+vi.mock("../../lib/api", async () => {
+  const actual =
+    await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
+  return {
+    ...actual,
+    listOperationalShipments: vi.fn(),
+    createOperationalShipment: vi.fn(),
+    getOperationalShipment: vi.fn(),
+    recordOperationalEvent: vi.fn(),
+    verifyOperationalMilestone: vi.fn(),
+    correctOperationalMilestone: vi.fn(),
+    listOperationalWorkItems: vi.fn(),
+    resolveOperationalWorkItem: vi.fn(),
+  };
+});
+const shipment = {
+  id: 1,
+  public_id: "s1",
+  status: "planned",
+  version: 1,
+  customer: "UAT Customer",
+  overdue: true,
+  overdue_since: "2026-01-01T00:00:00Z",
+  open_work_item_count: 1,
+  current_milestone: "departure",
+  source: { accepted_quote_id: 2, shipment_request_id: 3 },
+  route_leg: {
+    id: 4,
+    origin: { display_name: "Origin" },
+    destination: { display_name: "Destination" },
+    transport_mode: "road",
+    planned_departure: "2026-01-01T00:00:00Z",
+    planned_arrival: "2026-01-02T00:00:00Z",
+    version: 1,
+  },
+  milestones: [
+    {
+      id: 5,
+      type: "departure",
+      planned_at: "2026-01-01T00:00:00Z",
+      verification_state: "reported",
+      version: 2,
+    },
+  ],
+  recent_events: [],
+  open_work_items: [
+    {
+      id: 6,
+      milestone_id: 5,
+      type: "OVERDUE_MILESTONE",
+      due_at: "2026-01-01T00:00:00Z",
+      status: "open",
+      version: 1,
+    },
+  ],
+  audit_summary: [],
+};
+beforeEach(() => vi.clearAllMocks());
+describe("Phase 1A operational pages", () => {
+  it("renders loading then list data and filters", async () => {
+    let release: (v: unknown) => void = () => {};
+    (api.listOperationalShipments as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise((r) => (release = r)),
+    );
+    render(
+      <MemoryRouter>
+        <OperationalShipments />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("operations.loading")).toBeInTheDocument();
+    release({ data: [shipment], meta: { page: 1, has_more: false } });
+    expect(await screen.findByText("UAT Customer")).toBeInTheDocument();
+    expect(screen.getByLabelText("status")).toBeInTheDocument();
+  });
+  it("prevents duplicate create submissions", async () => {
+    (
+      api.listOperationalShipments as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({ data: [], meta: { page: 1, has_more: false } });
+    (api.createOperationalShipment as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise(() => {}),
+    );
+    render(
+      <MemoryRouter>
+        <OperationalShipments />
+      </MemoryRouter>,
+    );
+    for (const [label, value] of [
+      ["quote", "2"],
+      ["origin", "1"],
+      ["destination", "2"],
+      ["departure", "2026-01-01T00:00"],
+      ["arrival", "2026-01-02T00:00"],
+    ])
+      fireEvent.change(document.querySelector(`#create-${label}`) as HTMLInputElement, { target: { value } });
+    const button = screen.getByRole("button", { name: "operations.create" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    await waitFor(() =>
+      expect(api.createOperationalShipment).toHaveBeenCalledTimes(1),
+    );
+    expect(button).toBeDisabled();
+  });
+  it("shows a friendly validation error for invalid route times", async () => {
+    (api.listOperationalShipments as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: [],
+      meta: { page: 1, has_more: false },
+    });
+    render(
+      <MemoryRouter>
+        <OperationalShipments />
+      </MemoryRouter>,
+    );
+    for (const [label, value] of [
+      ["quote", "2"],
+      ["origin", "1"],
+      ["destination", "2"],
+      ["departure", "not-a-time"],
+      ["arrival", "also-not-a-time"],
+    ])
+      fireEvent.change(document.querySelector(`#create-${label}`) as HTMLInputElement, { target: { value } });
+    fireEvent.click(screen.getByRole("button", { name: "operations.create" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("operations.invalidTime");
+    expect(api.createOperationalShipment).not.toHaveBeenCalled();
+  });
+  it("renders detail milestones, work and audit sections", async () => {
+    (api.getOperationalShipment as ReturnType<typeof vi.fn>).mockResolvedValue({
+      data: shipment,
+    });
+    render(
+      <MemoryRouter initialEntries={["/operations/shipments/1"]}>
+        <Routes>
+          <Route
+            path="/operations/shipments/:id"
+            element={<OperationalShipmentDetail />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByText("UAT Customer", { exact: false }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("departure")).toBeInTheDocument();
+    expect(screen.getByText("operations.workQueue")).toBeInTheDocument();
+  });
+  it("renders and resolves a work item", async () => {
+    (
+      api.listOperationalWorkItems as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({
+      data: [
+        {
+          id: 6,
+          shipment_id: 1,
+          milestone_id: 5,
+          type: "OVERDUE_MILESTONE",
+          status: "open",
+          due_at: "2026-01-01T00:00:00Z",
+          planned_at: "2026-01-01T00:00:00Z",
+          milestone_type: "departure",
+          overdue_seconds: 3600,
+          customer: "UAT Customer",
+          route_leg: shipment.route_leg,
+          reason: "late",
+          version: 1,
+        },
+      ],
+      meta: { page: 1, has_more: false },
+    });
+    (
+      api.resolveOperationalWorkItem as ReturnType<typeof vi.fn>
+    ).mockResolvedValue({});
+    render(
+      <MemoryRouter>
+        <OperationalWorkQueue />
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByText("UAT Customer", { exact: false }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "operations.resolve" }));
+    await waitFor(() =>
+      expect(api.resolveOperationalWorkItem).toHaveBeenCalledWith(6, 1),
+    );
+  });
+});

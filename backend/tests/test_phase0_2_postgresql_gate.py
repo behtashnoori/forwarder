@@ -12,7 +12,7 @@ from backend import create_app
 from backend.migration_runtime import revision_status
 
 
-HEAD = "20260728_add_quote_customer_response"
+HEAD = "20260729_operational_vertical_slice"
 
 
 def _url() -> str:
