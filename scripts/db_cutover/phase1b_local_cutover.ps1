@@ -44,6 +44,26 @@ function Assert-True([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw "CUTOVER_BLOCKED: $Message" }
 }
 
+function Resolve-ActiveMigrationHead([object[]]$RawHeadOutput) {
+    $headValues = @(
+        $RawHeadOutput |
+            ForEach-Object { ([string]$_).Trim() } |
+            Where-Object { $_ -ne "" }
+    )
+    Assert-True `
+        -Condition ([bool]($headValues.Count -eq 1)) `
+        -Message "expected exactly one active migration head"
+    $head = [string]$headValues[0]
+    Assert-True `
+        -Condition ([bool][string]::Equals(
+            $head,
+            $ActiveHead,
+            [System.StringComparison]::Ordinal
+        )) `
+        -Message "unexpected active migration head: $head"
+    return $head
+}
+
 function Write-Evidence([string]$Name, [hashtable]$Payload) {
     $Payload["timestamp_utc"] = [DateTime]::UtcNow.ToString("o")
     $Payload["row_payload_recorded"] = $false
@@ -211,8 +231,8 @@ function Assert-Preflight {
     Assert-True ((Get-Content -Raw ".backend-port").Trim() -eq "57065") ".backend-port changed"
     Assert-True (Test-Path $Python) "required Python missing"
     Assert-True (Test-Path (Join-Path $PgBin "pg_dump.exe")) "PostgreSQL 18 tools missing"
-    $head = & $Python -c "from backend.migration_runtime import alembic_config; from alembic.script import ScriptDirectory; print(','.join(ScriptDirectory.from_config(alembic_config('sqlite://')).get_heads()))"
-    Assert-True ($head -eq $ActiveHead) "unexpected active migration head"
+    $rawHeadOutput = & $Python -c "from backend.migration_runtime import alembic_config; from alembic.script import ScriptDirectory; print(','.join(ScriptDirectory.from_config(alembic_config('sqlite://')).get_heads()))"
+    $head = Resolve-ActiveMigrationHead -RawHeadOutput @($rawHeadOutput)
     Write-Evidence "preflight-summary.json" @{ pass=$true; branch=$ExpectedBranch; baseline=$ExpectedHead; head=(git rev-parse HEAD); backend_port=57065 }
 }
 

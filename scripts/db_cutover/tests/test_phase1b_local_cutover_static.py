@@ -1,5 +1,6 @@
 from pathlib import Path
 import re
+import subprocess
 
 
 SCRIPT = (Path(__file__).parents[1] / "phase1b_local_cutover.ps1").read_text(encoding="utf-8")
@@ -53,3 +54,68 @@ def test_full_tests_are_not_pointed_at_transferred_database():
 
 def test_all_script_blocks_start_at_repository_location():
     assert SCRIPT.startswith('Set-Location "D:\\1-webapp\\15-forwarder"')
+
+
+def test_active_head_normalization_regression(tmp_path):
+    harness = tmp_path / "head-normalization-regression.ps1"
+    tool_path = Path(__file__).parents[1] / "phase1b_local_cutover.ps1"
+    harness.write_text(
+        f"""
+$tokens = $null
+$errors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseFile(
+    '{tool_path.as_posix()}',
+    [ref]$tokens,
+    [ref]$errors
+)
+if ($errors.Count -ne 0) {{ exit 10 }}
+$names = @('Assert-True', 'Resolve-ActiveMigrationHead')
+$functions = $ast.FindAll({{
+    param($node)
+    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+        $names -contains $node.Name
+}}, $true)
+foreach ($function in $functions) {{ Invoke-Expression $function.Extent.Text }}
+$ActiveHead = '20260801_route_exception'
+$cases = @(
+    @{{ Name='valid'; Values=@('20260801_route_exception'); Pass=$true }},
+    @{{ Name='whitespace'; Values=@('  20260801_route_exception  '); Pass=$true }},
+    @{{ Name='empty'; Values=@(); Pass=$false }},
+    @{{ Name='two'; Values=@('20260801_route_exception', 'other'); Pass=$false }},
+    @{{ Name='different'; Values=@('other'); Pass=$false }}
+)
+foreach ($case in $cases) {{
+    $passed = $false
+    $objectArrayError = $false
+    try {{
+        $value = Resolve-ActiveMigrationHead -RawHeadOutput @($case.Values)
+        $passed = [string]::Equals(
+            [string]$value,
+            $ActiveHead,
+            [System.StringComparison]::Ordinal
+        )
+    }} catch {{
+        $objectArrayError = $_.Exception.Message -match 'System.Object\\[\\].*System.Boolean'
+    }}
+    if ($objectArrayError -or $passed -ne $case.Pass) {{
+        Write-Error "case failed: $($case.Name)"
+        exit 11
+    }}
+}}
+""",
+        encoding="utf-8",
+    )
+    completed = subprocess.run(
+        [
+            "powershell.exe",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(harness),
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
