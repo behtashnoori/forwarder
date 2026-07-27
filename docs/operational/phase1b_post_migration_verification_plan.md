@@ -1,5 +1,30 @@
 # Phase 1B post-migration verification plan
 
+## Current gate result — 2026-07-27
+
+Post-migration database verification and application smoke were not executed.
+Phase A stopped with `UNKNOWN_REVISION` because verified source revision
+`54ea21ea0d9f` is not part of the executable Alembic graph. No backend, Vite, or
+browser runtime was started; no seed or mutation occurred; local/server
+persistent applied remain `NO`.
+
+`PHASE_1B_LOCAL_PERSISTENT_MIGRATION_GRAPH_BLOCKED`
+
+## Canonical blocked-evidence record
+
+- Target: `127.0.0.1:5432/forwarder_db`
+- Source revision: `54ea21ea0d9f`
+- Expected active head: `20260801_route_exception`
+- Active graph: source revision absent; archive reference is evidence only and is not execution authorization.
+- Migration classification: `UNKNOWN_REVISION`
+- Go/No-Go: `LOCAL_PHASE1B_MIGRATION_GO=NO`
+- Backup executed: `NO`; restore database created: `NO`
+- Migration attempt count: `0`; seed executed: `NO`
+- Persistent applied local/server: `NO` / `NO`
+- Server access/deploy: `NO` / `NO`
+- Credential or DSN recorded: `NO`
+- Prohibited without an independent gate: Alembic stamp, raw Alembic upgrade, archived migration execution, manual `alembic_version` editing, and schema repair.
+
 ## Scope
 
 This plan is for a later, separately approved migration gate. Nothing here was executed against a persistent database. Verification evidence must be sanitized and must not contain row data, customer/user/shipment identities, credentials, or raw connection strings.

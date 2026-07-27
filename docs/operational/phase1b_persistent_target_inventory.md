@@ -1,58 +1,99 @@
-# Phase 1B persistent target inventory
+# Phase 1B selected local persistent target inventory
 
-## Scope and decision
+## Superseding authenticated inventory result — 2026-07-27
 
-This inventory is repository- and documentation-based. It does not authorize database access or migration application. No `.env` file, credential, raw DSN, customer row, or production repository was read. No database connection was attempted because no single target and no read-only access approval were established.
+The later owner-verified read-only inventory established PostgreSQL 18.0/UTF8,
+32 application tables, 321 columns, 252 constraints, 48 indexes, database size
+10,794,687 bytes, zero non-inspection active/idle connections, zero long
+transactions, and revision `54ea21ea0d9f`. The revision is absent from the
+executable Alembic graph and exists only in the deprecated root-migration
+archive. Classification is `UNKNOWN_REVISION`; local/server persistent applied
+remain `NO`, and no server endpoint was accessed.
 
-**Selection decision:** `BLOCKED`. The repository contains several deployment patterns and database references, but it does not identify one approved persistent database with all required ownership, access, backup, and maintenance controls.
+`PHASE_1B_LOCAL_PERSISTENT_MIGRATION_GRAPH_BLOCKED`
 
-## Candidate inventory
+## Canonical blocked-evidence record
 
-Fingerprints below are sanitized labels derived from non-secret repository descriptions; they are not connection values.
+- Target: `127.0.0.1:5432/forwarder_db`
+- Source revision: `54ea21ea0d9f`
+- Expected active head: `20260801_route_exception`
+- Active graph: source revision absent; archive reference is evidence only and is not execution authorization.
+- Migration classification: `UNKNOWN_REVISION`
+- Go/No-Go: `LOCAL_PHASE1B_MIGRATION_GO=NO`
+- Backup executed: `NO`; restore database created: `NO`
+- Migration attempt count: `0`; seed executed: `NO`
+- Persistent applied local/server: `NO` / `NO`
+- Server access/deploy: `NO` / `NO`
+- Credential or DSN recorded: `NO`
+- Prohibited without an independent gate: Alembic stamp, raw Alembic upgrade, archived migration execution, manual `alembic_version` editing, and schema repair.
 
-| ID | Environment class | Engine | Host class | Database fingerprint | Evidence source | Approved target |
+## Scope and owner selection
+
+Inspection date: 2026-07-27 (Asia/Tehran). Behtash Noori, acting as business, technical and database owner and read-only approver, selected `127.0.0.1:5432/forwarder_db` as the local persistent `INTERNAL_UAT` target. The server target remains deferred.
+
+This gate authorized endpoint readiness and authenticated read-only metadata inspection only. It did not authorize migration, seed, DDL, DML, backup, restore, database/role creation, service changes, server access, deploy, merge, commit, or push.
+
+**Gate result:** `PHASE_1B_LOCAL_READONLY_OPERATOR_EXECUTION_REQUIRED`.
+
+## Selected instance
+
+| Control | Result |
+|---|---|
+| Host tested | `127.0.0.1` |
+| Port | `5432` |
+| Database requested | `forwarder_db` |
+| PostgreSQL accepting | YES (`pg_isready`) |
+| Binary version | PostgreSQL 18.0 |
+| Listener PID | `7456` |
+| Executable path | `C:\Program Files\PostgreSQL\18\bin\postgres.exe` |
+| Data directory | `C:\Program Files\PostgreSQL\18\data` |
+| Windows service | `postgresql-x64-18`, Running |
+| Selected by owner | YES |
+| Server endpoint contacted | NO |
+
+The same listener is bound to `0.0.0.0` and `::`. This is a security note; no bind, port, firewall, service, or process setting was changed.
+
+The installed `psql`, `pg_dump`, `pg_restore`, and `pg_isready` tools all report PostgreSQL 18.0. Six separate Phase 1B temporary instances remain running on loopback ports and were not contacted or changed.
+
+## Credential and execution contract
+
+| Credential source | Present | Approved class | Value exposed |
+|---|---|---|---|
+| Interactive operator input | CONFIRMED by owner/manual connection | YES | NO |
+| Codex interactive prompt | NOT AVAILABLE in this execution channel | YES | NO |
+
+The owner reports a successful manual authenticated connection as role `postgres`, with `current_database=forwarder_db` and server version 18.0. The password was not disclosed. Because this execution channel cannot service the required `psql -W` prompt, Codex did not repeat the authenticated connection and did not run inventory queries. The approved SQL and exact operator command are preserved in `phase1b_local_forwarder_db_readonly_verification.md`.
+
+## Database metadata
+
+| Candidate ID | Instance | Database fingerprint | Encoding | Revision | Project match | Decision |
 |---|---|---|---|---|---|---|
-| PT-01 | DEVELOPMENT_PERSISTENT | PostgreSQL | localhost | `fp-dev-local-template` | `.env.example`, `backend/env.docker.example` | NO; example only |
-| PT-02 | DEVELOPMENT_PERSISTENT | PostgreSQL 16 image | private network | `fp-dev-compose-volume` | `docker-compose.yml` named volume and database service | NO; local compose pattern only |
-| PT-03 | PRODUCTION | PostgreSQL 16 image | private network | `fp-prod-compose-volume` | `docker-compose.production.yml` named volume and production env file reference | NO; deployment template, not proof of the active target |
-| PT-04 | UNKNOWN | PostgreSQL required by runtime | unknown | `fp-runtime-secret-unknown` | `backend/env.production.example`, `backend/config.py`; value must come from a deployment secret source | NO; actual host/database identity is absent |
-| PT-05 | INTERNAL_UAT | PostgreSQL 18 disposable | localhost | `fp-uat-disposable-retired` | Phase 1B application register and UAT evidence | NO; disposable resources were removed |
-| PT-06 | PRODUCTION | PostgreSQL expected | unknown | `fp-historical-prod-unknown` | Historical production reference: separate repository, service port 5001, old deploy branch/commit | NO; isolation reference only and not database identity |
+| DB-01 | PG-01 | `fp-forwarder-db-local-5432` | UNKNOWN | UNKNOWN | Owner-selected; manual identity confirmation only | OPERATOR EXECUTION REQUIRED |
 
-SQLite local-development storage is explicitly excluded from persistent-target selection.
-
-## Selection controls
-
-| Control | Evidence | Result |
-|---|---|---|
-| Environment class | Multiple classes are documented | AMBIGUOUS |
-| Environment owner | No named owner for a candidate target | MISSING |
-| Database owner | No named database owner | MISSING |
-| Connection source | Production template names a secret-store responsibility, but no approved source is identified | MISSING |
-| PostgreSQL engine | Required by UAT/production runtime; templates use PostgreSQL | PASS at design level |
-| Database identity | Template labels exist; active database identity is not proven | MISSING |
-| Backup location | No approved target-specific location | MISSING |
-| Migration authority | No named approver or change ticket | MISSING |
-| Maintenance policy | No approved window or downtime budget | MISSING |
-| Read-only inspection approval | Not provided | MISSING |
-
-## Approval boundary
-
-| Control | Required | Current state |
-|---|---|---|
-| Environment owner identified | YES | NO |
-| Database owner identified | YES | NO |
-| Read-only inspection approved | YES | NO |
-| Production classification known | YES | NO for the actual target |
-| Credential source approved | YES | NO |
-| Backup responsibility known | YES | NO |
-
-The human decision package must identify exactly one candidate or a new candidate, its environment classification, owner names, sanitized host/database fingerprint, approved credential source, backup destination, maintenance window, and Go/No-Go authority. Until then, public PostgreSQL 5432 and the historical production environment remain untouched.
+| Control | Result |
+|---|---|
+| Environment | `INTERNAL_UAT` |
+| Host | Local laptop |
+| Engine/version | PostgreSQL 18.0 endpoint |
+| Read-only enforced | NOT ESTABLISHED by Codex; interactive run required |
+| Database identity via SQL | NOT VERIFIED |
+| Encoding/collation/timezone | UNKNOWN |
+| Current revision | UNKNOWN |
+| Expected head | `20260801_route_exception` |
+| Pending revisions | UNKNOWN |
+| Schema drift | NOT ASSESSED |
+| Database size/active connections | UNKNOWN |
+| Production-data indicators | UNKNOWN |
+| Persistent applied | NO |
 
 ## Isolation record
 
-- Production repository touched: NO
-- Production service or port 5001 touched: NO
-- Public PostgreSQL touched: NO
-- Persistent database applied: NO
-- Deploy or merge performed: NO
+- Database/role creation or deletion: NO
+- Authenticated SQL/row-data access: NO
+- Migration/seed/DDL/DML: NO
+- Backup/restore: NO
+- Service/process/config change: NO
+- Server access: NO
+- Deploy/merge/commit/push: NO
+- Credential or DSN exposed: NO
+- `.backend-port`: `57065` (unchanged)

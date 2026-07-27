@@ -1,5 +1,30 @@
 # Phase 1B persistent migration execution runbook
 
+## Current execution status — 2026-07-27
+
+This runbook was not executed. The verified source revision `54ea21ea0d9f` is
+absent from the executable Alembic graph and is retained only as an archived
+deprecated root-only migration. The mandatory supported-linear-path condition
+failed with `UNKNOWN_REVISION`; migration attempt count is zero and both local
+and server persistent application remain `NO`.
+
+`PHASE_1B_LOCAL_PERSISTENT_MIGRATION_GRAPH_BLOCKED`
+
+## Canonical blocked-evidence record
+
+- Target: `127.0.0.1:5432/forwarder_db`
+- Source revision: `54ea21ea0d9f`
+- Expected active head: `20260801_route_exception`
+- Active graph: source revision absent; archive reference is evidence only and is not execution authorization.
+- Migration classification: `UNKNOWN_REVISION`
+- Go/No-Go: `LOCAL_PHASE1B_MIGRATION_GO=NO`
+- Backup executed: `NO`; restore database created: `NO`
+- Migration attempt count: `0`; seed executed: `NO`
+- Persistent applied local/server: `NO` / `NO`
+- Server access/deploy: `NO` / `NO`
+- Credential or DSN recorded: `NO`
+- Prohibited without an independent gate: Alembic stamp, raw Alembic upgrade, archived migration execution, manual `alembic_version` editing, and schema repair.
+
 ## Authorization boundary
 
 This is a plan only. It does not authorize execution. The current gate selected no target and performed no database operation. Raw Alembic upgrade, direct DDL/DML, seed execution, and startup-time migration remain prohibited.
