@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import sys
 import traceback
+from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
 import backend.config  # noqa: F401 - load .env once (single source of truth in backend.config)
@@ -67,8 +68,13 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         jwt_secret_key=app.config["JWT_SECRET_KEY"],
     )
 
-    # Ensure the instance path exists before any SQLite database is created.
-    os.makedirs(app.instance_path, exist_ok=True)
+    # File-backed SQLite needs its parent at application startup. Configuration
+    # import and URI resolution remain side-effect free.
+    from sqlalchemy.engine import make_url
+
+    configured_url = make_url(app.config["SQLALCHEMY_DATABASE_URI"])
+    if configured_url.get_backend_name() == "sqlite" and configured_url.database not in {None, "", ":memory:"}:
+        Path(configured_url.database).parent.mkdir(parents=True, exist_ok=True)
 
     db.init_app(app)
     migrate.init_app(app, db)

@@ -7,12 +7,17 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
+import ipaddress
 import os
+from pathlib import Path
+import platform
+import re
 from urllib.parse import urlsplit
+
+from sqlalchemy.engine import URL, make_url
 
 _BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-_DEV_DATABASE_URI = "sqlite:///forwarder_dev.db"
 _TEST_DATABASE_URI = "sqlite:///:memory:"
 _TEST_SECRET_KEY = "test-secret-key"
 _TEST_JWT_SECRET_KEY = "test-jwt-secret-key-for-pytest-only-32-key-for-pytest-only-32"
@@ -31,6 +36,11 @@ _PLACEHOLDER_SECRET_VALUES = {
 }
 _PLACEHOLDER_ORIGIN_FRAGMENTS = ("yourdomain.com", "example.com", "localhost", "127.0.0.1")
 _LOADED_ENV_FILES: tuple[str, ...] = ()
+_HOSTNAME_PATTERN = re.compile(
+    r"(?=.{1,253}\Z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*"
+    r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z",
+    re.IGNORECASE,
+)
 
 
 def _load_env_file(path: str) -> bool:
@@ -146,8 +156,10 @@ def format_database_url_diagnostics(database_url: str | None = None) -> str:
     return ", ".join(details)
 
 
-# Load once at import so any code using os.getenv (e.g. create_app) sees env
-load_env_files()
+# UAT is process-environment-only. In all other profiles, retain the existing
+# local developer env-file convention.
+if (os.getenv("APP_ENV") or os.getenv("ENV") or os.getenv("FLASK_ENV") or "").strip().lower() != "uat":
+    load_env_files()
 
 
 def _bool_env(name: str, default: bool = False) -> bool:
@@ -188,8 +200,74 @@ def is_development_environment(environment: str | None = None, *, testing: bool 
     return env in {"development", "dev", "local"}
 
 
+def resolve_user_data_directory(
+    *,
+    system: str | None = None,
+    environ: dict[str, str] | os._Environ[str] | None = None,
+    home: str | os.PathLike[str] | None = None,
+) -> Path:
+    """Resolve Forwarder's user-local data directory without creating it."""
+    runtime_system = (system or platform.system()).lower()
+    runtime_environ = os.environ if environ is None else environ
+    home_path = Path(home).expanduser() if home is not None else Path.home()
+
+    if runtime_system == "windows":
+        local_app_data = runtime_environ.get("LOCALAPPDATA")
+        if not local_app_data:
+            local_app_data = str(home_path / "AppData" / "Local")
+        return Path(local_app_data) / "Forwarder" / "15-forwarder" / "data"
+    if runtime_system == "darwin":
+        return home_path / "Library" / "Application Support" / "Forwarder" / "15-forwarder"
+
+    xdg_data_home = runtime_environ.get("XDG_DATA_HOME")
+    base = Path(xdg_data_home).expanduser() if xdg_data_home else home_path / ".local" / "share"
+    return base / "forwarder" / "15-forwarder"
+
+
+def _path_is_within(path: Path, directory: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(directory.resolve(strict=False))
+    except ValueError:
+        return False
+    return True
+
+
+def resolve_local_sqlite_path(
+    explicit_path: str | os.PathLike[str] | None = None,
+    *,
+    project_root: str | os.PathLike[str] | None = None,
+    system: str | None = None,
+    environ: dict[str, str] | os._Environ[str] | None = None,
+    home: str | os.PathLike[str] | None = None,
+) -> Path:
+    """Resolve and validate a local SQLite file path without touching disk."""
+    runtime_environ = os.environ if environ is None else environ
+    configured_path = explicit_path
+    if configured_path is None:
+        configured_path = runtime_environ.get("FORWARDER_LOCAL_DB_PATH")
+
+    if configured_path is None:
+        candidate = resolve_user_data_directory(
+            system=system, environ=runtime_environ, home=home
+        ) / "forwarder_dev.db"
+    else:
+        candidate = Path(configured_path).expanduser()
+        if not candidate.is_absolute():
+            raise RuntimeError("FORWARDER_LOCAL_DB_PATH must be an absolute path.")
+
+    repository = Path(project_root or _PROJECT_ROOT)
+    if _path_is_within(candidate, repository):
+        raise RuntimeError("FORWARDER_LOCAL_DB_PATH must be outside the repository.")
+    return candidate.resolve(strict=False)
+
+
+def build_sqlite_database_uri(path: str | os.PathLike[str]) -> str:
+    """Build a correctly escaped SQLAlchemy SQLite URL."""
+    return str(URL.create("sqlite", database=str(path)))
+
+
 def get_database_uri(*, testing: bool = False) -> str:
-    """Return a database URI with explicit test/dev/prod behavior."""
+    """Return a database URI with explicit test/local/UAT/production behavior."""
     if testing:
         return os.getenv("TEST_DATABASE_URL") or _TEST_DATABASE_URI
 
@@ -201,15 +279,23 @@ def get_database_uri(*, testing: bool = False) -> str:
         return database_url
 
     if database_url:
+        if env == "uat" and make_url(database_url).get_backend_name() != "postgresql":
+            raise RuntimeError("UAT DATABASE_URL must use PostgreSQL.")
         print("[startup]", format_database_url_diagnostics(database_url))
         return database_url
 
+    if env == "uat":
+        raise RuntimeError("DATABASE_URL is required and must use PostgreSQL when APP_ENV is uat.")
+    if not is_development_environment(env):
+        raise RuntimeError("DATABASE_URL is required outside local development and testing.")
+
+    local_path = resolve_local_sqlite_path()
     print(
         "[startup] DATABASE_URL is not set. For local PostgreSQL, set DATABASE_URL "
-        "in project .env, backend/.env, or process env. Falling back to "
-        "development-only local SQLite database."
+        "in the process environment. Falling back to the user-local "
+        "development-only SQLite database."
     )
-    return os.getenv("DEV_DATABASE_URL") or _DEV_DATABASE_URI
+    return str(build_sqlite_database_uri(local_path))
 
 
 def get_secret_config(*, testing: bool = False) -> tuple[str, str]:
@@ -285,10 +371,42 @@ def _origin_is_placeholder(origin: str) -> bool:
     return any(fragment in lowered for fragment in _PLACEHOLDER_ORIGIN_FRAGMENTS)
 
 
+def resolve_server_host(raw_host: str | None, *, environment: str | None = None) -> str:
+    """Return a validated server bind address.
+
+    UAT defaults to IPv4 loopback so a missing host cannot expose the readiness
+    server. Other profiles retain the historical wildcard default, including
+    production. An explicitly requested ``0.0.0.0`` remains supported.
+    """
+    runtime_environment = (
+        environment if environment is not None else get_runtime_environment()
+    ).strip().lower()
+    if raw_host is None:
+        return "127.0.0.1" if runtime_environment == "uat" else "0.0.0.0"
+
+    host = raw_host.strip().lower()
+    if not host:
+        raise RuntimeError("HOST/FLASK_RUN_HOST must not be empty.")
+    if host == "localhost":
+        return "127.0.0.1"
+
+    try:
+        ipaddress.ip_address(host)
+    except ValueError:
+        if not _HOSTNAME_PATTERN.fullmatch(host):
+            raise RuntimeError(
+                "HOST/FLASK_RUN_HOST must be an IP address or valid hostname."
+            ) from None
+    return host
+
+
 # Server settings - single source of truth (default: no reload, fixed port 5001)
-# Bind to 0.0.0.0 so the server is accessible from network; do not use 127.0.0.1
-_raw_host = (os.getenv("HOST") or os.getenv("FLASK_RUN_HOST") or "0.0.0.0").strip().lower()
-HOST: str = "0.0.0.0" if _raw_host in ("127.0.0.1", "localhost", "") else _raw_host
+# Development and production retain the historical 0.0.0.0 default. UAT is
+# loopback-only by default. Explicit loopback values are never widened.
+_configured_host = os.getenv("HOST")
+if _configured_host is None:
+    _configured_host = os.getenv("FLASK_RUN_HOST")
+HOST: str = resolve_server_host(_configured_host)
 PORT: int = _int_env("PORT", 5001)
 DEBUG: bool = _bool_env("FLASK_DEBUG", False)
 USE_RELOAD: bool = _bool_env("FLASK_USE_RELOAD", False)

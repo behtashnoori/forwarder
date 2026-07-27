@@ -1,0 +1,17 @@
+{
+  "run_token": "P1B-UAT-20260727044111047492",
+  "status": "PASS",
+  "exit_code": 0,
+  "viewport": "1280x720",
+  "expert_token_contract": "PASS",
+  "expert_user_serialization": "PASS",
+  "protected_route": "PASS",
+  "refresh_persistence": "PASS",
+  "operational_detail": "PASS",
+  "public_redirect": false,
+  "console_errors": 0,
+  "unexpected_5xx": 0,
+  "cleanup": "PASS",
+  "persistent_applied": false,
+  "sanitized": true
+}

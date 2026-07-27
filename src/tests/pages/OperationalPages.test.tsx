@@ -22,6 +22,17 @@ vi.mock("../../lib/api", async () => {
     recordOperationalEvent: vi.fn(),
     verifyOperationalMilestone: vi.fn(),
     correctOperationalMilestone: vi.fn(),
+    listRoutePlans: vi.fn(),
+    getRoutePlan: vi.fn(),
+    getRouteTimeline: vi.fn(),
+    reconcileRouteTimeline: vi.fn(),
+    replanRoute: vi.fn(),
+    commandRouteCheckpoint: vi.fn(),
+    verifyRouteMilestone: vi.fn(),
+    correctRouteMilestone: vi.fn(),
+    listRouteExceptions: vi.fn(),
+    reconcileRouteExceptions: vi.fn(),
+    resolveRouteException: vi.fn(),
     listOperationalWorkItems: vi.fn(),
     resolveOperationalWorkItem: vi.fn(),
   };
@@ -68,7 +79,38 @@ const shipment = {
   ],
   audit_summary: [],
 };
-beforeEach(() => vi.clearAllMocks());
+const routePlan = {
+  id: 20, revision_number: 2, status: "active", is_active: true, version: 4,
+  legs: [
+    { ...shipment.route_leg, id: 21, sequence_number: 1, status: "completed", projected_departure: null, projected_arrival: null, actual_departure: "2026-01-01T00:00:00Z", actual_arrival: "2026-01-02T00:00:00Z" },
+    { ...shipment.route_leg, id: 22, sequence_number: 2, status: "planned", origin: { display_name: "Hub" }, destination: { display_name: "Port" } },
+    { ...shipment.route_leg, id: 23, sequence_number: 3, status: "planned", origin: { display_name: "Port" }, destination: { display_name: "Destination" } },
+  ],
+  checkpoints: [{
+    id: 30, route_leg_id: 21, sequence_number: 1, checkpoint_type: "origin",
+    status: "arrived", verification_state: "reported", version: 2,
+    planned_arrival_at: "2026-01-01T00:00:00Z", planned_departure_at: "2026-01-01T01:00:00Z",
+    projected_arrival_at: "2026-01-01T00:30:00Z", projected_departure_at: "2026-01-01T01:30:00Z",
+    actual_arrival_at: "2026-01-01T00:25:00Z", actual_departure_at: null,
+    milestones: [{ id: 31, type: "arrival", planned_at: "2026-01-01T00:00:00Z", projected_at: "2026-01-01T00:30:00Z", occurred_at: "2026-01-01T00:25:00Z", verification_state: "reported", version: 2 }],
+  }],
+  dependencies: [],
+};
+const timeline = {
+  route_plan_id: 20, route_plan_revision: 2, reconciliation_version: 4, reconciled_at: "2026-01-01T02:00:00Z",
+  planned: [{ checkpoint_id: 30, arrival_at: "2026-01-01T00:00:00Z", departure_at: "2026-01-01T01:00:00Z" }],
+  projected: [{ checkpoint_id: 30, arrival_at: "2026-01-01T00:30:00Z", departure_at: "2026-01-01T01:30:00Z" }],
+  actual: [{ checkpoint_id: 30, arrival_at: "2026-01-01T00:25:00Z", departure_at: null }],
+  effective: [{ checkpoint_id: 30, arrival_at: "2026-01-01T00:25:00Z", departure_at: "2026-01-01T01:30:00Z", arrival_source: "actual", departure_source: "projected" }],
+  delays: [{ checkpoint_id: 30, seconds: 1800 }], dependencies: [], open_exceptions: [],
+};
+beforeEach(() => {
+  vi.clearAllMocks();
+  (api.listRoutePlans as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [routePlan] });
+  (api.getRoutePlan as ReturnType<typeof vi.fn>).mockResolvedValue({ data: routePlan });
+  (api.getRouteTimeline as ReturnType<typeof vi.fn>).mockResolvedValue({ data: timeline });
+  (api.listRouteExceptions as ReturnType<typeof vi.fn>).mockResolvedValue({ data: [] });
+});
 describe("Phase 1A operational pages", () => {
   it("renders loading then list data and filters", async () => {
     let release: (v: unknown) => void = () => {};
@@ -83,6 +125,7 @@ describe("Phase 1A operational pages", () => {
     expect(screen.getByText("operations.loading")).toBeInTheDocument();
     release({ data: [shipment], meta: { page: 1, has_more: false } });
     expect(await screen.findByText("UAT Customer")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: /#1/ })).toHaveLength(1);
     expect(screen.getByLabelText("status")).toBeInTheDocument();
   });
   it("prevents duplicate create submissions", async () => {
@@ -152,7 +195,7 @@ describe("Phase 1A operational pages", () => {
     expect(
       await screen.findByText("UAT Customer", { exact: false }),
     ).toBeInTheDocument();
-    expect(screen.getByText("departure")).toBeInTheDocument();
+    expect(screen.getAllByText("arrival", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("operations.workQueue")).toBeInTheDocument();
   });
   it("renders and resolves a work item", async () => {

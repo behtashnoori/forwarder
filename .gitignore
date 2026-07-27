@@ -42,3 +42,9 @@ backend/routes/__pycache__/shipment_request.cpython-312.pyc
 *.pyc
 backend/__pycache__/__init__.cpython-312.pyc
 backend/routes/__pycache__/shipment_request.cpython-312.pyc
+
+# Exact retired Phase 1B duplicate SQLite artifacts (do not broaden to *.db)
+/forwarder_dev.db
+/backend/forwarder_dev.db
+/test_live.db
+/test_run.db

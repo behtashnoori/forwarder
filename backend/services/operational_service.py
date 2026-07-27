@@ -63,6 +63,25 @@ def _hash(payload: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def _lock_idempotency_scope(
+    organization_id: int,
+    operation: str,
+    resource_type: str,
+    resource_id: int,
+    key: str,
+) -> None:
+    """Serialize one exact command/resource/key scope for this transaction."""
+    if db.session.get_bind().dialect.name != "postgresql":
+        return
+    scope = json.dumps(
+        [organization_id, operation, resource_type, resource_id, key],
+        separators=(",", ":"),
+        ensure_ascii=True,
+    )
+    lock_id = int.from_bytes(hashlib.sha256(scope.encode()).digest()[:8], "big", signed=True)
+    db.session.execute(text("SELECT pg_advisory_xact_lock(:lock_id)"), {"lock_id": lock_id})
+
+
 def _require_idempotency_key(key: str) -> None:
     if not key or len(key) > 100:
         raise OperationalError("VALIDATION_FAILED", "A valid Idempotency-Key is required.")
@@ -112,13 +131,14 @@ def create_from_accepted_quote(payload: dict[str, Any], user: dict[str, Any], ke
     org = organization_for_user(int(user["id"]))
     _require_idempotency_key(key)
     request_hash = _hash(payload)
-    replay = db.session.scalar(select(OperationalIdempotency).where(OperationalIdempotency.organization_id == org, OperationalIdempotency.operation == "create_shipment", OperationalIdempotency.idempotency_key == key))
+    quote_id = payload.get("accepted_quote_id")
+    _lock_idempotency_scope(org, "create_shipment", "accepted_quote", quote_id, key)
+    replay = db.session.scalar(select(OperationalIdempotency).where(OperationalIdempotency.organization_id == org, OperationalIdempotency.operation == "create_shipment", OperationalIdempotency.resource_type == "accepted_quote", OperationalIdempotency.command_resource_id == quote_id, OperationalIdempotency.idempotency_key == key))
     if replay:
         if replay.request_hash != request_hash:
             raise OperationalError("IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD", "Idempotency key was already used with a different payload.", 409)
-        shipment = db.session.get(OperationalShipment, replay.resource_id)
+        shipment = db.session.get(OperationalShipment, replay.result_resource_id)
         return shipment, False
-    quote_id = payload.get("accepted_quote_id")
     quote = db.session.scalar(select(ExpertQuote).where(ExpertQuote.id == quote_id).with_for_update())
     if quote is None or quote.customer_response != "accepted":
         raise OperationalError("QUOTE_NOT_ACCEPTED", "The selected quote is not accepted.", 422)
@@ -147,8 +167,11 @@ def create_from_accepted_quote(payload: dict[str, Any], user: dict[str, Any], ke
     db.session.add(plan); db.session.flush()
     leg = RouteLeg(route_plan_id=plan.id, sequence_number=1, origin_location_id=origin.id, destination_location_id=destination.id, origin_snapshot=_location_snapshot(origin), destination_snapshot=_location_snapshot(destination), transport_mode=mode, planned_departure=departure, planned_arrival=arrival, status="planned")
     db.session.add(leg); db.session.flush()
-    db.session.add_all([Milestone(route_leg_id=leg.id, milestone_type="departure", planned_at=departure), Milestone(route_leg_id=leg.id, milestone_type="arrival", planned_at=arrival)])
-    db.session.add(OperationalIdempotency(organization_id=org, operation="create_shipment", idempotency_key=key, request_hash=request_hash, resource_id=shipment.id))
+    db.session.add_all([
+        Milestone(route_plan_id=plan.id, route_leg_id=leg.id, milestone_type="departure", planned_at=departure, projected_at=departure),
+        Milestone(route_plan_id=plan.id, route_leg_id=leg.id, milestone_type="arrival", planned_at=arrival, projected_at=arrival),
+    ])
+    db.session.add(OperationalIdempotency(organization_id=org, operation="create_shipment", resource_type="accepted_quote", command_resource_id=quote.id, idempotency_key=key, request_hash=request_hash, result_resource_id=shipment.id))
     _audit(org, user["id"], "operational_shipment.created", "OperationalShipment", shipment.id)
     _outbox(org, "operational_shipment.created", "OperationalShipment", shipment.id, {"accepted_quote_id": quote.id})
     try:
@@ -173,8 +196,14 @@ def scoped_shipment(shipment_id: int, user: dict[str, Any]) -> OperationalShipme
 
 def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
     plan = db.session.scalar(select(RoutePlan).where(RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True)))
-    leg = db.session.scalar(select(RouteLeg).where(RouteLeg.route_plan_id == plan.id))
-    milestones = db.session.scalars(select(Milestone).where(Milestone.route_leg_id == leg.id).order_by(Milestone.planned_at)).all()
+    legs = db.session.scalars(select(RouteLeg).where(RouteLeg.route_plan_id == plan.id).order_by(RouteLeg.sequence_number)).all()
+    leg = legs[0]
+    leg_ids = [row.id for row in legs]
+    milestones = db.session.scalars(
+        select(Milestone).where(
+            (Milestone.route_plan_id == plan.id) | (Milestone.route_leg_id.in_(leg_ids))
+        ).order_by(Milestone.planned_at, Milestone.id)
+    ).all()
     events = db.session.scalars(select(MilestoneEvent).where(MilestoneEvent.milestone_id.in_([m.id for m in milestones])).order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc()).limit(20)).all()
     work = db.session.scalars(select(OperationalWorkItem).where(OperationalWorkItem.operational_shipment_id == shipment.id, OperationalWorkItem.status == "open")).all()
     quote = db.session.get(ExpertQuote, shipment.accepted_quote_id); request_row=db.session.get(ShipmentRequest, shipment.shipment_request_id)
@@ -182,14 +211,15 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
     current=next((m for m in milestones if m.verification_state != "verified"), milestones[-1] if milestones else None); now=utcnow()
     overdue=[m for m in milestones if m.verification_state != "verified" and m.planned_at.replace(tzinfo=m.planned_at.tzinfo or timezone.utc) < now]
     customer=" ".join(filter(None,[getattr(request_row,"customer_first_name",None),getattr(request_row,"customer_last_name",None)])).strip() or getattr(request_row,"contact_phone",None)
-    return {"id": shipment.id, "public_id": shipment.public_id, "status": shipment.lifecycle_status, "version": shipment.version, "organization_id": shipment.organization_id, "customer": customer, "source": {"accepted_quote_id": shipment.accepted_quote_id, "shipment_request_id": shipment.shipment_request_id, "quote_amount": quote.amount if quote else None}, "route_plan": {"id": plan.id, "revision": plan.revision, "is_active": plan.is_active}, "route_leg": {"id": leg.id, "sequence_number": leg.sequence_number, "origin": leg.origin_snapshot, "destination": leg.destination_snapshot, "transport_mode": leg.transport_mode, "planned_departure": leg.planned_departure.isoformat(), "planned_arrival": leg.planned_arrival.isoformat(), "status": leg.status, "version": leg.version}, "current_milestone": current.milestone_type if current else None, "overdue": bool(overdue), "overdue_since": min((m.planned_at for m in overdue),default=None).isoformat() if overdue else None, "open_work_item_count": len(work), "milestones": [{"id": m.id, "type": m.milestone_type, "planned_at": m.planned_at.isoformat(), "occurred_at": m.occurred_at.isoformat() if m.occurred_at else None, "verification_state": m.verification_state, "version": m.version} for m in milestones], "recent_events": [{"id": e.id, "milestone_id": e.milestone_id, "event_type": e.event_type, "occurred_at": e.occurred_at.isoformat(), "recorded_at": e.recorded_at.isoformat(), "reason": e.reason, "supersedes_event_id": e.supersedes_event_id} for e in events], "open_work_items": [{"id": w.id, "milestone_id": w.milestone_id, "type": w.work_type, "due_at": w.due_at.isoformat(), "status": w.status, "version": w.version} for w in work], "audit_summary":[{"id":a.id,"action":a.action,"recorded_at":a.recorded_at.isoformat()} for a in audits]}
+    leg_data = lambda row: {"id": row.id, "sequence_number": row.sequence_number, "origin": row.origin_snapshot, "destination": row.destination_snapshot, "transport_mode": row.transport_mode, "planned_departure": row.planned_departure.isoformat(), "planned_arrival": row.planned_arrival.isoformat(), "status": row.status, "version": row.version}
+    return {"id": shipment.id, "public_id": shipment.public_id, "status": shipment.lifecycle_status, "version": shipment.version, "organization_id": shipment.organization_id, "customer": customer, "source": {"accepted_quote_id": shipment.accepted_quote_id, "shipment_request_id": shipment.shipment_request_id, "quote_amount": quote.amount if quote else None}, "route_plan": {"id": plan.id, "revision": plan.revision, "revision_number": plan.revision_number, "status": plan.status, "is_active": plan.is_active, "version": plan.version}, "route_leg": leg_data(leg), "route_legs": [leg_data(row) for row in legs], "current_milestone": current.milestone_type if current else None, "overdue": bool(overdue), "overdue_since": min((m.planned_at for m in overdue),default=None).isoformat() if overdue else None, "open_work_item_count": len(work), "milestones": [{"id": m.id, "type": m.milestone_type, "planned_at": m.planned_at.isoformat(), "occurred_at": m.occurred_at.isoformat() if m.occurred_at else None, "verification_state": m.verification_state, "version": m.version} for m in milestones], "recent_events": [{"id": e.id, "milestone_id": e.milestone_id, "event_type": e.event_type, "occurred_at": e.occurred_at.isoformat(), "recorded_at": e.recorded_at.isoformat(), "reason": e.reason, "supersedes_event_id": e.supersedes_event_id} for e in events], "open_work_items": [{"id": w.id, "milestone_id": w.milestone_id, "type": w.work_type, "due_at": w.due_at.isoformat(), "status": w.status, "version": w.version} for w in work], "audit_summary":[{"id":a.id,"action":a.action,"recorded_at":a.recorded_at.isoformat()} for a in audits]}
 
 
 def _milestone_target(shipment_id: int, milestone_id: int, user: dict[str, Any], permission: str):
     require_permission(user, permission); shipment = scoped_shipment(shipment_id, user)
     plan = db.session.scalar(select(RoutePlan.id).where(RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True)))
-    leg = db.session.scalar(select(RouteLeg.id).where(RouteLeg.route_plan_id == plan))
-    milestone = db.session.scalar(select(Milestone).where(Milestone.id == milestone_id, Milestone.route_leg_id == leg).with_for_update())
+    leg_ids = select(RouteLeg.id).where(RouteLeg.route_plan_id == plan)
+    milestone = db.session.scalar(select(Milestone).where(Milestone.id == milestone_id, Milestone.route_leg_id.in_(leg_ids)).with_for_update())
     if milestone is None: raise OperationalError("RESOURCE_NOT_FOUND", "Milestone was not found.", 404)
     return shipment, milestone
 

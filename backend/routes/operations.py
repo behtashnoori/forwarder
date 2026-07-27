@@ -8,9 +8,10 @@ from sqlalchemy import exists, or_, select
 from backend.auth import get_current_user
 from backend.extensions import db
 from backend.models import ShipmentRequest
-from backend.operational_models import Milestone, OperationalShipment, OperationalWorkItem, RouteLeg, RoutePlan
+from backend.operational_models import Milestone, OperationalCheckpoint, OperationalShipment, OperationalWorkItem, RouteLeg, RoutePlan
 from backend.security import require_auth
 from backend.services import operational_service as service
+from backend.services import route_orchestration_service as routes
 
 
 operations_bp = Blueprint("operations", __name__)
@@ -70,6 +71,7 @@ def list_shipments():
         if request.args.get("overdue") in {"true","false"}:
             overdue=exists(select(Milestone.id).where(Milestone.route_leg_id == RouteLeg.id,Milestone.verification_state != "verified",Milestone.planned_at < datetime.now(timezone.utc)))
             query=query.where(overdue if request.args["overdue"] == "true" else ~overdue)
+        query=query.distinct()
         rows=db.session.scalars(query.order_by(OperationalShipment.created_at.desc()).offset((page-1)*per_page).limit(per_page+1)).all(); has_more=len(rows)>per_page
         return jsonify({"data":[service.shipment_graph(row) for row in rows[:per_page]], "meta":{"page":page,"per_page":per_page,"has_more":has_more}})
     except service.OperationalError as exc: return _error(exc)
@@ -80,6 +82,191 @@ def list_shipments():
 def shipment_detail(shipment_id: int):
     try: return jsonify({"data": service.shipment_graph(service.scoped_shipment(shipment_id, _user()))})
     except service.OperationalError as exc: return _error(exc)
+
+
+@operations_bp.get("/api/operational-shipments/<int:shipment_id>/route-plans")
+@require_auth
+def route_plan_list(shipment_id):
+    try: return jsonify({"data": routes.list_plans(shipment_id, _user())})
+    except service.OperationalError as exc: return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-plans")
+@require_auth
+def route_plan_create(shipment_id):
+    try: return jsonify({"data": routes.create_plan(shipment_id, request.get_json(silent=True) or {}, _user())}), 201
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.get("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>")
+@require_auth
+def route_plan_get(shipment_id, plan_id):
+    try: return jsonify({"data": routes.get_plan(shipment_id, plan_id, _user())})
+    except service.OperationalError as exc: return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/validate")
+@require_auth
+def route_plan_validate(shipment_id, plan_id):
+    try: return jsonify({"data": routes.validate_plan(shipment_id, plan_id, _user())})
+    except service.OperationalError as exc: return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/activate")
+@require_auth
+def route_plan_activate(shipment_id, plan_id):
+    try: return jsonify({"data": routes.activate_plan(shipment_id, plan_id, request.get_json(silent=True) or {}, _user())})
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/replan")
+@require_auth
+def route_plan_replan(shipment_id, plan_id):
+    try: return jsonify({"data": routes.replan(shipment_id, plan_id, request.get_json(silent=True) or {}, _user(), request.headers.get("Idempotency-Key", ""))}), 201
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/legs")
+@require_auth
+def route_leg_create(shipment_id, plan_id):
+    try: return jsonify({"data": routes.add_leg(shipment_id, plan_id, request.get_json(silent=True) or {}, _user())}), 201
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.patch("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/legs/<int:leg_id>")
+@require_auth
+def route_leg_update(shipment_id,plan_id,leg_id):
+    try:return jsonify({"data":routes.update_leg(shipment_id,plan_id,leg_id,request.get_json(silent=True) or {},_user())})
+    except service.OperationalError as exc:db.session.rollback();return _error(exc)
+
+
+@operations_bp.delete("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/legs/<int:leg_id>")
+@require_auth
+def route_leg_delete(shipment_id,plan_id,leg_id):
+    try:routes.delete_leg(shipment_id,plan_id,leg_id,_user());return "",204
+    except service.OperationalError as exc:db.session.rollback();return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/checkpoints")
+@require_auth
+def checkpoint_create(shipment_id, plan_id):
+    try: return jsonify({"data": routes.add_checkpoint(shipment_id, plan_id, request.get_json(silent=True) or {}, _user())}), 201
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.patch("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/checkpoints/<int:checkpoint_id>")
+@require_auth
+def checkpoint_update(shipment_id,plan_id,checkpoint_id):
+    try:return jsonify({"data":routes.update_checkpoint(shipment_id,plan_id,checkpoint_id,request.get_json(silent=True) or {},_user())})
+    except service.OperationalError as exc:db.session.rollback();return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-plans/<int:plan_id>/dependencies")
+@require_auth
+def dependency_create(shipment_id, plan_id):
+    try: return jsonify({"data": routes.add_dependency(shipment_id, plan_id, request.get_json(silent=True) or {}, _user())}), 201
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+def _checkpoint_action(shipment_id, checkpoint_id, action):
+    try:
+        return jsonify({"data": routes.checkpoint_command(shipment_id, checkpoint_id, request.get_json(silent=True) or {}, _user(), request.headers.get("Idempotency-Key", ""), action)})
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/checkpoints/<int:checkpoint_id>/arrive")
+@require_auth
+def checkpoint_arrive(shipment_id, checkpoint_id): return _checkpoint_action(shipment_id, checkpoint_id, "arrive")
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/checkpoints/<int:checkpoint_id>/complete-processing")
+@require_auth
+def checkpoint_processing(shipment_id, checkpoint_id): return _checkpoint_action(shipment_id, checkpoint_id, "complete_processing")
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/checkpoints/<int:checkpoint_id>/depart")
+@require_auth
+def checkpoint_depart(shipment_id, checkpoint_id): return _checkpoint_action(shipment_id, checkpoint_id, "depart")
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/checkpoints/<int:checkpoint_id>/milestones/<int:milestone_id>/verify")
+@require_auth
+def checkpoint_milestone_verify(shipment_id, checkpoint_id, milestone_id):
+    try:
+        payload=request.get_json(silent=True) or {}
+        return jsonify({"data":routes.verify_checkpoint_milestone(
+            shipment_id,checkpoint_id,milestone_id,payload.get("expected_version"),_user(),
+            request.headers.get("Idempotency-Key",""),
+        )})
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/checkpoints/<int:checkpoint_id>/milestones/<int:milestone_id>/correct")
+@require_auth
+def checkpoint_milestone_correct(shipment_id, checkpoint_id, milestone_id):
+    try:
+        return jsonify({"data":routes.correct_checkpoint_milestone(shipment_id,checkpoint_id,milestone_id,request.get_json(silent=True) or {},_user(),request.headers.get("Idempotency-Key",""))}),201
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.get("/api/operational-shipments/<int:shipment_id>/timeline")
+@require_auth
+def route_timeline(shipment_id):
+    try: return jsonify({"data": routes.timeline(shipment_id, _user())})
+    except service.OperationalError as exc: return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/timeline/reconcile")
+@require_auth
+def route_timeline_reconcile(shipment_id):
+    try:
+        payload = request.get_json(silent=True) or {}
+        return jsonify({"data": routes.recalculate_projected_timeline(
+            shipment_id, _user(), payload.get("expected_route_plan_version"),
+            request.headers.get("Idempotency-Key", ""),
+        )})
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<int:shipment_id>/route-exceptions/reconcile")
+@require_auth
+def route_exception_reconcile(shipment_id):
+    payload=request.get_json(silent=True) or {}
+    try:
+        idempotency_key=request.headers.get("Idempotency-Key","")
+        service._require_idempotency_key(idempotency_key)
+        return jsonify({"data":routes.reconcile_route_exceptions(
+            shipment_id,_user(),payload.get("expected_route_plan_version"),
+            service._parse_utc(payload.get("calculation_time"),"calculation_time") if payload.get("calculation_time") else None,
+            idempotency_key,
+        )})
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
+
+
+@operations_bp.get("/api/operational-route-exceptions")
+@operations_bp.get("/api/operational-shipments/<int:shipment_id>/route-exceptions")
+@require_auth
+def route_exception_list(shipment_id=None):
+    try:
+        data=routes.list_route_exceptions(_user(),request.args.get("status","open"))
+        if shipment_id is not None: data=[row for row in data if row["shipment_id"]==shipment_id]
+        return jsonify({"data":data})
+    except service.OperationalError as exc: return _error(exc)
+
+
+@operations_bp.post("/api/operational-route-exceptions/<int:item_id>/resolve")
+@operations_bp.post("/api/route-exceptions/<int:item_id>/resolve")
+@require_auth
+def route_exception_resolve(item_id):
+    try:
+        idempotency_key=request.headers.get("Idempotency-Key","")
+        service._require_idempotency_key(idempotency_key)
+        return jsonify({"data":routes._resolve_route_exception(
+            item_id, request.get_json(silent=True) or {}, _user(), idempotency_key,
+        )})
+    except service.OperationalError as exc: db.session.rollback(); return _error(exc)
 
 
 @operations_bp.post("/api/operational-shipments/<int:shipment_id>/milestones/<int:milestone_id>/events")
@@ -120,7 +307,8 @@ def work_queue():
         data=[]
         for r in rows[:per_page]:
             graph=service.shipment_graph(db.session.get(OperationalShipment,r.operational_shipment_id)); milestone=db.session.get(Milestone,r.milestone_id)
-            data.append({"id":r.id,"shipment_id":r.operational_shipment_id,"milestone_id":r.milestone_id,"type":r.work_type,"status":r.status,"due_at":r.due_at.isoformat(),"planned_at":milestone.planned_at.isoformat(),"milestone_type":milestone.milestone_type,"overdue_seconds":max(0,int((datetime.now(timezone.utc)-r.due_at.replace(tzinfo=r.due_at.tzinfo or timezone.utc)).total_seconds())),"customer":graph["customer"],"route_leg":graph["route_leg"],"reason":r.reason,"assignee_user_id":r.assignee_user_id,"version":r.version})
+            checkpoint=db.session.get(OperationalCheckpoint,r.checkpoint_id) if r.checkpoint_id else None
+            data.append({"id":r.id,"shipment_id":r.operational_shipment_id,"milestone_id":r.milestone_id,"checkpoint_id":r.checkpoint_id,"type":r.work_type,"status":r.status,"due_at":r.due_at.isoformat(),"planned_at":(milestone.planned_at if milestone else r.due_at).isoformat(),"milestone_type":milestone.milestone_type if milestone else checkpoint.checkpoint_type if checkpoint else r.work_type,"overdue_seconds":max(0,int((datetime.now(timezone.utc)-r.due_at.replace(tzinfo=r.due_at.tzinfo or timezone.utc)).total_seconds())),"customer":graph["customer"],"route_leg":graph["route_leg"],"reason":r.reason,"assignee_user_id":r.assignee_user_id,"version":r.version})
         return jsonify({"data":data, "meta":{"page":page,"per_page":per_page,"has_more":has_more}})
     except service.OperationalError as exc: return _error(exc)
 

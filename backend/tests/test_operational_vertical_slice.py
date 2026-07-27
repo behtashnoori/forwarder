@@ -27,7 +27,7 @@ def operational_app():
         outsider=ExpertUser(username="phase1a-outsider",password_hash="unused",full_name="Phase1A Outsider",role="expert",is_active=True)
         verifier=ExpertUser(username="phase1a-verifier",password_hash="unused",full_name="Phase1A Verifier",role="manager",is_active=True)
         db.session.add_all([org,other_org,user,outsider,verifier]); db.session.flush()
-        all_permissions=["operational_shipment.read","operational_shipment.create","milestone_event.create","milestone.verify","milestone.correct","work_item.read","work_item.manage"]
+        all_permissions=["operational_shipment.read","operational_shipment.create","milestone_event.create","milestone.verify","milestone.correct","work_item.read","work_item.manage","route_plan.read","route_plan.create","route_plan.activate","route_plan.replan","route_leg.manage","checkpoint.read","checkpoint.report","checkpoint.verify","route_exception.read","route_exception.manage"]
         db.session.add_all([OperationalMembership(organization_id=org.id,user_id=user.id,permissions=all_permissions),OperationalMembership(organization_id=org.id,user_id=verifier.id,permissions=all_permissions),OperationalMembership(organization_id=other_org.id,user_id=outsider.id,permissions=all_permissions)])
         origin=Province(name_fa="مبدأ",code="P1A-O"); destination=Province(name_fa="مقصد",code="P1A-D")
         request=ShipmentRequest(contact_phone="09000000000",status="waiting_for_customer",status_request_status="new",assigned_to=user.id)
@@ -146,6 +146,42 @@ def test_http_create_list_detail_and_error_envelopes(operational_app):
     mismatch=dict(_payload(operational_app));mismatch["transport_mode"]="rail"
     conflict=client.post("/api/operational-shipments/from-accepted-quote",json=mismatch,headers=headers)
     assert conflict.status_code == 409 and conflict.json["error"]["code"] == "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD"
+
+
+def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(operational_app):
+    with operational_app.app_context():
+        shipment, _ = service.create_from_accepted_quote(
+            _payload(operational_app), _user(operational_app), "dedup-list"
+        )
+        shipment_id = shipment.id
+        plan = RoutePlan.query.filter_by(
+            operational_shipment_id=shipment.id, is_active=True
+        ).one()
+        first_leg = RouteLeg.query.filter_by(route_plan_id=plan.id).one()
+        for sequence in (2, 3):
+            db.session.add(RouteLeg(
+                route_plan_id=plan.id,
+                sequence_number=sequence,
+                origin_location_id=first_leg.origin_location_id,
+                destination_location_id=first_leg.destination_location_id,
+                origin_snapshot=first_leg.origin_snapshot,
+                destination_snapshot=first_leg.destination_snapshot,
+                transport_mode=first_leg.transport_mode,
+                planned_departure=first_leg.planned_departure + timedelta(hours=sequence),
+                planned_arrival=first_leg.planned_arrival + timedelta(hours=sequence),
+            ))
+        db.session.commit()
+
+    response = operational_app.test_client().get(
+        "/api/operational-shipments?page=1&per_page=1",
+        headers=_auth(operational_app),
+    )
+
+    assert response.status_code == 200
+    assert [row["id"] for row in response.json["data"]] == [shipment_id]
+    assert response.json["meta"] == {
+        "page": 1, "per_page": 1, "has_more": False,
+    }
 
 
 def test_http_permission_validation_transition_and_stale_conflicts(operational_app):

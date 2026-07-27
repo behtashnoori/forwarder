@@ -1058,6 +1058,7 @@ export interface OperationalShipmentSummary {
   customer?: string; current_milestone?: string | null; overdue: boolean; overdue_since?: string | null; open_work_item_count: number;
   source: { accepted_quote_id: number; shipment_request_id: number; quote_amount?: number };
   route_leg: { id: number; origin: { display_name: string }; destination: { display_name: string }; transport_mode: string; planned_departure: string; planned_arrival: string; version: number };
+  route_legs?: Array<OperationalShipmentSummary["route_leg"] & { sequence_number: number; status: string }>;
   milestones: Array<{ id: number; type: string; planned_at: string; occurred_at?: string | null; verification_state: string; version: number }>;
   recent_events: Array<{ id: number; milestone_id: number; event_type: string; occurred_at: string; reason?: string | null }>;
   open_work_items: Array<{ id: number; milestone_id: number; type: string; due_at: string; status: string; version: number }>;
@@ -1079,6 +1080,59 @@ export function verifyOperationalMilestone(shipmentId: number, milestoneId: numb
 export function correctOperationalMilestone(shipmentId: number, milestoneId: number, occurred_at: string, reason: string, expected_version: number, key: string) { return request(`/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/correct`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ occurred_at, reason, expected_version }) }); }
 export function listOperationalWorkItems(params = ""): Promise<{ data: OperationalWorkItem[]; meta: { page:number; has_more:boolean } }> { return request(`/api/operational-work-items${params ? `?${params}` : ""}`); }
 export function resolveOperationalWorkItem(id: number, expected_version: number) { return request(`/api/operational-work-items/${id}/resolve`, { method: "POST", body: JSON.stringify({ expected_version }) }); }
+export interface RouteMilestone {
+  id:number; type:string; planned_at:string; projected_at?:string|null; occurred_at?:string|null;
+  verification_state:string; version:number; source_milestone_id?:number|null;
+}
+export interface RouteCheckpoint {
+  id:number; route_leg_id:number; sequence_number:number; checkpoint_type:string; status:string;
+  verification_state:string; planned_arrival_at?:string|null; planned_departure_at?:string|null;
+  projected_arrival_at?:string|null; projected_departure_at?:string|null;
+  actual_arrival_at?:string|null; actual_departure_at?:string|null; responsible_party?:string|null;
+  notes?:string|null; version:number; source_checkpoint_id?:number|null; milestones:RouteMilestone[];
+}
+export interface RouteLeg {
+  id:number; sequence_number:number; origin:{display_name?:string}; destination:{display_name?:string};
+  transport_mode:string; carrier_reference?:string|null; planned_departure:string; planned_arrival:string;
+  projected_departure?:string|null; projected_arrival?:string|null; actual_departure?:string|null;
+  actual_arrival?:string|null; status:string; version:number; source_route_leg_id?:number|null;
+}
+export interface RoutePlanSummary {
+  id:number; revision_number:number; status:string; is_active:boolean; created_from_plan_id?:number|null;
+  replan_reason?:string|null; effective_at?:string|null; created_at?:string; version:number;
+}
+export interface RoutePlanDetail extends RoutePlanSummary {
+  legs:RouteLeg[]; checkpoints:RouteCheckpoint[];
+  dependencies:Array<{id:number;predecessor_checkpoint_id:number;successor_checkpoint_id:number;dependency_type:string}>;
+}
+export interface TimelinePoint { checkpoint_id:number; arrival_at:string|null; departure_at:string|null }
+export interface EffectiveTimelinePoint extends TimelinePoint { arrival_source:string; departure_source:string }
+export interface RouteTimeline {
+  route_plan_id?:number; route_plan_revision?:number; reconciliation_version?:number; reconciled_at?:string|null;
+  planned:TimelinePoint[]; projected:TimelinePoint[]; actual:TimelinePoint[]; effective:EffectiveTimelinePoint[];
+  delays:Array<{checkpoint_id:number;seconds:number}>; dependencies:Array<{predecessor_checkpoint_id:number;successor_checkpoint_id:number;type:string}>;
+  open_exceptions:Array<{id:number;checkpoint_id?:number|null;type:string;severity:string;due_at:string;reason:string;version:number}>;
+}
+export function listRoutePlans(shipmentId:number):Promise<{data:RoutePlanSummary[]}>{ return request(`/api/operational-shipments/${shipmentId}/route-plans`); }
+export function getRoutePlan(shipmentId:number,planId:number):Promise<{data:RoutePlanDetail}>{ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}`); }
+export function getRouteTimeline(shipmentId:number):Promise<{data:RouteTimeline}>{ return request(`/api/operational-shipments/${shipmentId}/timeline`); }
+export function reconcileRouteTimeline(shipmentId:number, expectedRoutePlanVersion:number, idempotencyKey:string):Promise<{data:{route_plan_id:number;revision:number;version:number;reconciled_at:string|null;updated_checkpoints:number;actual_override_count:number;replayed:boolean}}>{
+  return request(`/api/operational-shipments/${shipmentId}/timeline/reconcile`,{method:"POST",headers:{"Idempotency-Key":idempotencyKey},body:JSON.stringify({expected_route_plan_version:expectedRoutePlanVersion})});
+}
+export function validateRoutePlan(shipmentId:number,planId:number){ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/validate`,{method:"POST"}); }
+export function activateRoutePlan(shipmentId:number,planId:number,expected_version:number){ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/activate`,{method:"POST",body:JSON.stringify({expected_version})}); }
+export function replanRoute(shipmentId:number,planId:number,expected_version:number,reason:string,key:string){ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/replan`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_version,reason})}); }
+export function commandRouteCheckpoint(shipmentId:number,checkpointId:number,action:"arrive"|"complete-processing"|"depart",occurred_at:string,expected_version:number,key:string){return request(`/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/${action}`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({occurred_at,expected_version})});}
+export function verifyRouteMilestone(shipmentId:number,checkpointId:number,milestoneId:number,expected_version:number,key:string){return request(`/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/milestones/${milestoneId}/verify`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_version})});}
+export function correctRouteMilestone(shipmentId:number,checkpointId:number,milestoneId:number,occurred_at:string,reason:string,expected_version:number,key:string){return request(`/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/milestones/${milestoneId}/correct`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({occurred_at,reason,expected_version})});}
+export interface RouteException {
+  id:number; shipment_id:number; route_plan_id:number; checkpoint_id?:number|null; type:string; status:string;
+  severity:string; due_at:string; detected_at?:string; resolved_at?:string|null; resolution_source?:string|null;
+  resolution_reason?:string|null; reason:string; version:number;
+}
+export function listRouteExceptions(shipmentId:number,status=""):Promise<{data:RouteException[]}>{return request(`/api/operational-shipments/${shipmentId}/route-exceptions?status=${encodeURIComponent(status)}`);}
+export function reconcileRouteExceptions(shipmentId:number,expectedRoutePlanVersion:number,key:string):Promise<{data:{opened:number;resolved:number;reopened:number;unchanged:number;replayed:boolean}}>{return request(`/api/operational-shipments/${shipmentId}/route-exceptions/reconcile`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_route_plan_version:expectedRoutePlanVersion})});}
+export function resolveRouteException(id:number,expected_version:number,reason:string,key:string){return request(`/api/route-exceptions/${id}/resolve`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_version,reason})});}
 
 export function submitQuote(
   requestId: number,

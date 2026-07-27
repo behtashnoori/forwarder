@@ -1,16 +1,243 @@
 """Explicit internal commands for operational reconciliation."""
 from __future__ import annotations
 import argparse
+import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import bcrypt
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertQuote, ExpertUser, Province, ShipmentRequest
-from backend.operational_models import CanonicalLocation, Milestone, MilestoneEvent, OperationalAudit, OperationalIdempotency, OperationalMembership, OperationalOrganization, OperationalOutbox, OperationalShipment, OperationalWorkItem, RouteLeg, RoutePlan
+from backend.operational_models import CanonicalLocation, Milestone, MilestoneEvent, OperationalAudit, OperationalCheckpoint, OperationalIdempotency, OperationalMembership, OperationalOrganization, OperationalOutbox, OperationalShipment, OperationalWorkItem, RouteDependency, RouteLeg, RoutePlan
 from backend.services.operational_service import OperationalError, reconcile_overdue
+
+
+PHASE1B_PREFIX = "phase1b_uat_"
+PHASE1B_DATABASE_PREFIXES = ("forwarder_phase1b_uat", "phase1b_uat")
+PHASE1B_NOW = datetime(2030, 1, 15, 12, 0, tzinfo=timezone.utc)
+PHASE1B_ALL_PERMISSIONS = [
+    "operational_shipment.read", "operational_shipment.create",
+    "milestone_event.create", "milestone.verify", "milestone.correct",
+    "work_item.read", "work_item.manage", "route_plan.read",
+    "route_plan.create", "route_plan.activate", "route_plan.replan",
+    "route_leg.manage", "checkpoint.read", "checkpoint.report",
+    "checkpoint.verify", "route_exception.read", "route_exception.manage",
+]
+
+
+def _phase1b_seed_guard(app, database_url=None) -> None:
+    environment = os.getenv("APP_ENV", "").strip().lower()
+    if environment not in {"test", "uat", "development"}:
+        raise OperationalError("UAT_ENVIRONMENT_REJECTED", "Phase 1B seed requires an explicit test/UAT environment.", 403)
+    if environment in {"production", "prod"} or app.config.get("ENV") == "production":
+        raise OperationalError("UAT_ENVIRONMENT_REJECTED", "Production is not a seed target.", 403)
+    url = make_url(str(database_url or db.engine.url))
+    if url.get_backend_name() == "sqlite":
+        database = url.database or ""
+        if not app.config.get("TESTING") or database != ":memory:":
+            raise OperationalError("UAT_DATABASE_REJECTED", "SQLite seed targets are limited to in-memory tests.", 403)
+        return
+    if url.get_backend_name() != "postgresql":
+        raise OperationalError("UAT_DATABASE_REJECTED", "Phase 1B seed requires PostgreSQL.", 403)
+    if (url.host or "").lower() not in {"localhost", "127.0.0.1", "::1"}:
+        raise OperationalError("UAT_DATABASE_REJECTED", "Phase 1B seed database must be loopback-only.", 403)
+    if not any((url.database or "").lower().startswith(prefix) for prefix in PHASE1B_DATABASE_PREFIXES):
+        raise OperationalError("UAT_DATABASE_REJECTED", "Phase 1B seed database name is not allow-listed.", 403)
+
+
+def _one_or_create(model, defaults=None, **identity):
+    row = model.query.filter_by(**identity).one_or_none()
+    if row is None:
+        row = model(**identity, **(defaults or {}))
+        db.session.add(row)
+        db.session.flush()
+    return row
+
+
+def seed_phase1b_uat(app, password: str) -> dict:
+    """Create the synthetic Phase 1B UAT graph in one idempotent transaction."""
+    _phase1b_seed_guard(app)
+    try:
+        org_a = _one_or_create(OperationalOrganization, name="[PHASE1B-UAT] Organization A")
+        org_b = _one_or_create(OperationalOrganization, name="[PHASE1B-UAT] Organization B")
+        roles = (
+            ("admin", org_a, PHASE1B_ALL_PERMISSIONS, True, "manager"),
+            ("operations", org_a, PHASE1B_ALL_PERMISSIONS, True, "manager"),
+            ("reporter", org_a, ["operational_shipment.read", "milestone_event.create", "route_plan.read", "checkpoint.read", "checkpoint.report", "route_exception.read", "work_item.read"], True, "expert"),
+            ("verifier", org_a, ["operational_shipment.read", "milestone.verify", "milestone.correct", "route_plan.read", "checkpoint.read", "checkpoint.verify", "route_exception.read", "work_item.read"], True, "manager"),
+            ("readonly", org_a, ["operational_shipment.read", "route_plan.read", "checkpoint.read", "route_exception.read", "work_item.read"], True, "expert"),
+            ("no_permission", org_a, [], True, "expert"),
+            ("inactive", org_a, PHASE1B_ALL_PERMISSIONS, False, "expert"),
+            ("org_b_admin", org_b, PHASE1B_ALL_PERMISSIONS, True, "manager"),
+        )
+        users = {}
+        for suffix, organization, permissions, active_member, role in roles:
+            username = f"{PHASE1B_PREFIX}{suffix}"
+            user = ExpertUser.query.filter_by(username=username).one_or_none()
+            if user is None:
+                user = ExpertUser(
+                    username=username,
+                    password_hash=bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
+                    full_name=f"[PHASE1B-UAT] {suffix.replace('_', ' ').title()}",
+                    role=role, is_active=True,
+                )
+                db.session.add(user); db.session.flush()
+            membership = _one_or_create(OperationalMembership, organization_id=organization.id, user_id=user.id)
+            membership.permissions = list(permissions)
+            membership.is_active = active_member
+            users[suffix] = user
+
+        provinces = []
+        for index in range(1, 5):
+            province = _one_or_create(
+                Province,
+                defaults={"name_fa": f"[PHASE1B-UAT] Location {index}"},
+                code=f"P1BU{index}",
+            )
+            location = _one_or_create(
+                CanonicalLocation,
+                defaults={"location_type": "province", "display_name": f"[PHASE1B-UAT] Location {index}", "country_code": "TST"},
+                source_type="province", source_id=province.id,
+            )
+            provinces.append(location)
+
+        shipments = []
+        for org_key, organization, creator, phone in (
+            ("A", org_a, users["admin"], "09000000201"),
+            ("B", org_b, users["org_b_admin"], "09000000202"),
+        ):
+            request_row = _one_or_create(
+                ShipmentRequest,
+                defaults={"customer_first_name": "Synthetic", "customer_last_name": f"UAT {org_key}",
+                          "status": "waiting_for_customer", "status_request_status": "new", "assigned_to": creator.id},
+                contact_phone=phone,
+            )
+            quote = ExpertQuote.query.filter_by(shipment_request_id=request_row.id, created_by_expert_id=creator.id).one_or_none()
+            if quote is None:
+                quote = ExpertQuote(shipment_request_id=request_row.id, amount=1000, currency="TST",
+                                    created_by_expert_id=creator.id, created_at=PHASE1B_NOW,
+                                    customer_response="accepted", responded_at=PHASE1B_NOW,
+                                    operational_organization_id=organization.id)
+                db.session.add(quote); db.session.flush()
+            shipment = _one_or_create(
+                OperationalShipment,
+                defaults={"organization_id": organization.id, "shipment_request_id": request_row.id,
+                          "lifecycle_status": "in_progress", "created_by_user_id": creator.id},
+                accepted_quote_id=quote.id,
+            )
+            plan = _one_or_create(
+                RoutePlan,
+                defaults={"status": "active", "is_active": True, "effective_at": PHASE1B_NOW,
+                          "created_by_user_id": creator.id},
+                operational_shipment_id=shipment.id, revision_number=1,
+            )
+            legs = []
+            for sequence in range(1, 4):
+                departure = PHASE1B_NOW + timedelta(days=(sequence - 1) * 2)
+                leg = _one_or_create(
+                    RouteLeg,
+                    defaults={"origin_location_id": provinces[sequence - 1].id,
+                              "destination_location_id": provinces[sequence].id,
+                              "origin_snapshot": {"display_name": provinces[sequence - 1].display_name},
+                              "destination_snapshot": {"display_name": provinces[sequence].display_name},
+                              "transport_mode": ("road", "rail", "sea")[sequence - 1],
+                              "planned_departure": departure, "planned_arrival": departure + timedelta(days=1),
+                              "status": "completed" if sequence == 1 else "planned",
+                              "actual_departure": departure if sequence == 1 else None,
+                              "actual_arrival": departure + timedelta(days=1) if sequence == 1 else None},
+                    route_plan_id=plan.id, sequence_number=sequence,
+                )
+                legs.append(leg)
+            checkpoints = []
+            checkpoint_specs = (
+                (1, 1, "origin_loading"), (2, 1, "export_customs"),
+                (3, 2, "transit_border_entry"), (4, 2, "transit_border_exit"),
+                (5, 3, "import_customs"), (6, 3, "final_delivery"),
+            )
+            for sequence, leg_number, checkpoint_type in checkpoint_specs:
+                planned = PHASE1B_NOW + timedelta(hours=12 * (sequence - 1))
+                completed = org_key == "A" and sequence <= 2
+                checkpoint = _one_or_create(
+                    OperationalCheckpoint,
+                    defaults={"route_leg_id": legs[leg_number - 1].id, "checkpoint_type": checkpoint_type,
+                              "canonical_location_id": provinces[min(leg_number, 3)].id,
+                              "planned_arrival_at": planned, "planned_departure_at": planned + timedelta(hours=2),
+                              "actual_arrival_at": planned if completed else None,
+                              "actual_departure_at": planned + timedelta(hours=2) if completed else None,
+                              "status": "completed" if completed else ("blocked" if sequence == 5 else "planned"),
+                              "verification_state": "verified" if completed else "planned",
+                              "responsible_party": "[PHASE1B-UAT] Synthetic Operator",
+                              "created_by_user_id": creator.id},
+                    route_plan_id=plan.id, sequence_number=sequence,
+                )
+                checkpoints.append(checkpoint)
+                for offset, milestone_type in enumerate(("checkpoint_arrival", "checkpoint_processing_complete", "checkpoint_departure")):
+                    milestone = _one_or_create(
+                        Milestone,
+                        defaults={"route_plan_id": plan.id, "planned_at": planned + timedelta(hours=offset),
+                                  "occurred_at": planned + timedelta(hours=offset) if completed else None,
+                                  "verification_state": "verified" if completed else "planned"},
+                        checkpoint_id=checkpoint.id, milestone_type=milestone_type,
+                    )
+                    if completed:
+                        reported = _one_or_create(
+                            MilestoneEvent,
+                            defaults={
+                                "event_type": "reported",
+                                "occurred_at": planned + timedelta(hours=offset),
+                                "recorded_at": planned + timedelta(hours=offset),
+                                "actor_user_id": users["reporter"].id,
+                                "request_hash": "0" * 64,
+                            },
+                            milestone_id=milestone.id,
+                            idempotency_key=f"phase1b-uat-report-{sequence}-{offset}",
+                        )
+                        _one_or_create(
+                            MilestoneEvent,
+                            defaults={
+                                "event_type": "verified",
+                                "occurred_at": planned + timedelta(hours=offset),
+                                "recorded_at": planned + timedelta(hours=offset, minutes=5),
+                                "actor_user_id": users["verifier"].id,
+                                "supersedes_event_id": reported.id,
+                                "request_hash": "1" * 64,
+                            },
+                            milestone_id=milestone.id,
+                            idempotency_key=f"phase1b-uat-verify-{sequence}-{offset}",
+                        )
+            # Includes a chain (1->2->3), fan-out (2->3,2->4), and fan-in (3->5,4->5).
+            for predecessor, successor in ((1, 2), (2, 3), (2, 4), (3, 5), (4, 5), (5, 6)):
+                _one_or_create(RouteDependency, route_plan_id=plan.id,
+                               predecessor_checkpoint_id=checkpoints[predecessor - 1].id,
+                               successor_checkpoint_id=checkpoints[successor - 1].id,
+                               dependency_type="finish_to_start")
+            if org_key == "A":
+                for work_type, checkpoint, reason in (
+                    ("CHECKPOINT_OVERDUE", checkpoints[3], "[PHASE1B-UAT] Overdue checkpoint."),
+                    ("ROUTE_DEPENDENCY_BLOCKED", checkpoints[4], "[PHASE1B-UAT] Dependency-blocked checkpoint."),
+                ):
+                    _one_or_create(
+                        OperationalWorkItem,
+                        defaults={"organization_id": organization.id, "operational_shipment_id": shipment.id,
+                                  "severity": "warning", "detected_at": PHASE1B_NOW,
+                                  "due_at": PHASE1B_NOW - timedelta(hours=1),
+                                  "reason": reason, "status": "open"},
+                        route_plan_id=plan.id, checkpoint_id=checkpoint.id, work_type=work_type,
+                    )
+            shipments.append(shipment)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    return {
+        "organizations": 2, "users": len(users), "shipments": len(shipments),
+        "route_plans": 2, "route_legs": 6, "checkpoints": 12,
+        "dependencies": 12, "milestones": 36, "milestone_events": 12,
+        "open_work_items": 2,
+    }
 
 
 def main(argv=None) -> int:
@@ -19,6 +246,7 @@ def main(argv=None) -> int:
     bootstrap=sub.add_parser("bootstrap-organization"); bootstrap.add_argument("--name", required=True); bootstrap.add_argument("--user-id", type=int, required=True); bootstrap.add_argument("--permissions", required=True); bootstrap.add_argument("--confirm", action="store_true")
     scope_quote=sub.add_parser("scope-quote"); scope_quote.add_argument("--quote-id", type=int, required=True); scope_quote.add_argument("--organization-id", type=int, required=True); scope_quote.add_argument("--confirm", action="store_true")
     provision=sub.add_parser("provision-uat"); provision.add_argument("--confirm", action="store_true")
+    phase1b=sub.add_parser("seed-phase1b-uat"); phase1b.add_argument("--confirm", action="store_true")
     cleanup=sub.add_parser("cleanup-uat"); cleanup.add_argument("--confirm", action="store_true")
     args=parser.parse_args(argv)
     if not args.confirm:
@@ -27,7 +255,13 @@ def main(argv=None) -> int:
         print("UAT commands are restricted to APP_ENV=test or development.", file=sys.stderr); return 2
     app=create_app(skip_startup=True)
     with app.app_context():
-        if args.command == "provision-uat":
+        if args.command == "seed-phase1b-uat":
+            password=os.getenv("FORWARDER_UAT_PASSWORD")
+            if not password:
+                print("FORWARDER_UAT_PASSWORD is required.", file=sys.stderr); return 2
+            summary=seed_phase1b_uat(app, password)
+            print(json.dumps({"command": "seed-phase1b-uat", "result": "ready", **summary}, sort_keys=True))
+        elif args.command == "provision-uat":
             password=os.getenv("FORWARDER_UAT_PASSWORD")
             if not password: print("FORWARDER_UAT_PASSWORD is required.",file=sys.stderr); return 2
             reporter_permissions=["operational_shipment.read","operational_shipment.create","milestone_event.create","work_item.read"]
