@@ -216,14 +216,37 @@ function Invoke-Migration([string]$Database) {
     Assert-True ($check.StdOut -match "current=$ActiveHead" -and $check.StdOut -match "pending=no") "fresh target did not reach active head"
 }
 
+function Write-SanitizedMappingBlockers([string]$EvidencePath) {
+    $contractPath = Join-Path $EvidencePath "mapping-contract.json"
+    $blockedPath = Join-Path $EvidencePath "blocked.json"
+    if (Test-Path -LiteralPath $contractPath) {
+        $contract = Get-Content -Raw -LiteralPath $contractPath | ConvertFrom-Json
+        foreach ($plan in @($contract.plans | Where-Object {
+            $_.classification -in @("SOURCE_ONLY_REVIEW", "MANUAL_DECISION_REQUIRED")
+        })) {
+            Write-Host ("MAPPING_BLOCKED table={0} reason={1}" -f `
+                [string]$plan.table, [string]$plan.reason)
+        }
+    }
+    if (Test-Path -LiteralPath $blockedPath) {
+        $blocked = Get-Content -Raw -LiteralPath $blockedPath | ConvertFrom-Json
+        Write-Host ("MAPPING_GATE reason={0}" -f [string]$blocked.reason)
+    }
+}
+
 function Invoke-Transfer([string]$TransferMode, [string]$Target, [string]$EvidenceName) {
     $path = Join-Path $EvidenceRoot $EvidenceName
     New-Item -ItemType Directory -Force -Path $path | Out-Null
-    Invoke-Native -File $Python -Arguments @(
-        "scripts/db_cutover/phase1b_fresh_transfer.py",
-        "--mode", $TransferMode, "--source", $Source, "--target", $Target,
-        "--user", $PostgresUser, "--evidence", $path
-    ) -Operation "$TransferMode-transfer-analysis" -TimeoutSeconds 1800 | Out-Null
+    try {
+        Invoke-Native -File $Python -Arguments @(
+            "scripts/db_cutover/phase1b_fresh_transfer.py",
+            "--mode", $TransferMode, "--source", $Source, "--target", $Target,
+            "--user", $PostgresUser, "--evidence", $path
+        ) -Operation "$TransferMode-transfer-analysis" -TimeoutSeconds 1800 | Out-Null
+    } catch {
+        Write-SanitizedMappingBlockers $path
+        throw
+    }
     if ($TransferMode -eq "DryRun") {
         $contract = Get-Content -Raw -LiteralPath (Join-Path $path "mapping-contract.json") | ConvertFrom-Json
         Assert-True $contract.mapping_complete "mapping incomplete"

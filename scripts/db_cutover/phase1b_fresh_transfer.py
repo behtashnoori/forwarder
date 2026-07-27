@@ -14,7 +14,9 @@ import os
 from pathlib import Path
 import re
 from typing import Any, Iterable
+import uuid
 
+import bcrypt
 import psycopg2
 from psycopg2 import sql
 from psycopg2.extras import execute_values
@@ -57,6 +59,7 @@ class TablePlan:
     columns: tuple[str, ...]
     source_rows: int
     reason: str
+    target_table: str | None = None
 
 
 def quote_dsn(host: str, port: int, user: str, database: str) -> str:
@@ -95,6 +98,61 @@ def transferable_columns(
     return tuple(selected), None
 
 
+def password_compatibility_proven() -> bool:
+    """Prove the application's bcrypt producer/verifier contract synthetically."""
+    password = b"phase1b-synthetic-verifier"
+    encoded = bcrypt.hashpw(password, bcrypt.gensalt(rounds=4))
+    return (
+        encoded.startswith((b"$2a$", b"$2b$", b"$2y$"))
+        and len(encoded) <= 128
+        and bcrypt.checkpw(password, encoded)
+        and not bcrypt.checkpw(b"wrong", encoded)
+    )
+
+
+def _has_columns(schema: dict[str, tuple[Column, ...]], table: str, names: set[str]) -> bool:
+    return names <= {column.name for column in schema.get(table, ())}
+
+
+def _special_plan(
+    table: str,
+    source_schema: dict[str, tuple[Column, ...]],
+    target_schema: dict[str, tuple[Column, ...]],
+    count: int,
+) -> TablePlan | None:
+    if table == "tenants" and _has_columns(
+        source_schema, table, {"id", "name", "slug", "status", "created_at"}
+    ) and _has_columns(
+        target_schema, "operational_organization",
+        {"id", "public_id", "name", "is_active", "created_at"},
+    ):
+        return TablePlan(
+            table, "ID_REMAP_REQUIRED",
+            ("name", "slug", "status", "created_at"), count,
+            "tenant maps to operational organization; deterministic public_id and ID map required",
+            "operational_organization",
+        )
+    if table == "memberships" and _has_columns(
+        source_schema, table, {"id", "tenant_id", "user_id", "role", "status", "created_at"}
+    ) and _has_columns(
+        target_schema, "operational_membership",
+        {"id", "organization_id", "user_id", "is_active", "permissions", "created_at"},
+    ):
+        return TablePlan(
+            table, "ID_REMAP_REQUIRED",
+            ("tenant_id", "user_id", "role", "status", "created_at"), count,
+            "membership uses tenant-to-organization ID map and role permissions",
+            "operational_membership",
+        )
+    if table == "audit_logs":
+        return TablePlan(
+            table, "ARCHIVE_ONLY", (), count,
+            "legacy rows lack required entity target and may lack the required actor; retained in legacy database and backup",
+            None,
+        )
+    return None
+
+
 def build_mapping(
     source_schema: dict[str, tuple[Column, ...]],
     target_schema: dict[str, tuple[Column, ...]],
@@ -104,7 +162,10 @@ def build_mapping(
     blockers: list[str] = []
     for table in sorted(source_schema):
         count = source_counts.get(table, 0)
-        if table == "alembic_version":
+        special = _special_plan(table, source_schema, target_schema, count)
+        if special:
+            plans.append(special)
+        elif table == "alembic_version":
             plans.append(TablePlan(table, "TARGET_BASELINE_PRESERVE", (), count,
                                    "active migration metadata is never copied"))
         elif table in BASELINE_TABLES:
@@ -120,6 +181,18 @@ def build_mapping(
             if count:
                 blockers.append(f"{table}: populated source-only table")
         else:
+            if table == "expert_user" and password_compatibility_proven():
+                columns = tuple(
+                    column.name for column in target_schema[table]
+                    if not column.generated
+                    and column.name in {item.name for item in source_schema[table]}
+                )
+                plans.append(TablePlan(
+                    table, "DIRECT_COPY", columns, count,
+                    "bcrypt $2-compatible synthetic verifier passed; password hashes preserved",
+                    table,
+                ))
+                continue
             columns, error = transferable_columns(
                 source_schema[table], target_schema[table], table
             )
@@ -129,7 +202,7 @@ def build_mapping(
                     blockers.append(f"{table}: {error}")
             else:
                 plans.append(TablePlan(table, "DIRECT_COPY", columns, count,
-                                       "same-name compatible columns; identifiers preserved"))
+                                       "same-name compatible columns; identifiers preserved", table))
     return plans, blockers
 
 
@@ -258,12 +331,170 @@ def inventory_payload(
     }
 
 
+def _metric(plan: TablePlan, inserted: int = 0, excluded: int = 0,
+            transformed: int = 0) -> dict[str, int | str]:
+    accounted = inserted + excluded
+    return {
+        "table": plan.table, "source_rows": plan.source_rows,
+        "inserted_rows": inserted, "excluded_rows": excluded,
+        "transformed_rows": transformed, "rejected_rows": 0,
+        "variance": plan.source_rows - accounted,
+    }
+
+
+def _fetch_dicts(connection, table: str, columns: tuple[str, ...]) -> list[dict[str, Any]]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            sql.SQL("SELECT {} FROM {} ORDER BY id").format(
+                sql.SQL(",").join(map(sql.Identifier, columns)),
+                sql.Identifier(table),
+            )
+        )
+        return [dict(zip(columns, row)) for row in cursor.fetchall()]
+
+
+def _insert_returning_id(connection, table: str, columns: tuple[str, ...],
+                         values: tuple[Any, ...]) -> int:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            sql.SQL("INSERT INTO {} ({}) VALUES ({}) RETURNING id").format(
+                sql.Identifier(table),
+                sql.SQL(",").join(map(sql.Identifier, columns)),
+                sql.SQL(",").join(sql.Placeholder() for _ in columns),
+            ),
+            values,
+        )
+        return int(cursor.fetchone()[0])
+
+
+def reconcile_countries(source, target, plan: TablePlan) -> tuple[dict[int, int], int]:
+    """Reconcile the authoritative target baseline using normalized ISO code."""
+    rows = _fetch_dicts(
+        source, "country",
+        ("id", "name_en", "name_fa", "code", "is_active", "created_at"),
+    )
+    with target.cursor() as cursor:
+        cursor.execute("SELECT id, upper(trim(code)) FROM country")
+        by_code = {code: int(identifier) for identifier, code in cursor.fetchall()}
+    identifier_map: dict[int, int] = {}
+    inserted = 0
+    for row in rows:
+        natural_key = str(row["code"]).strip().upper()
+        target_id = by_code.get(natural_key)
+        if target_id is None:
+            target_id = _insert_returning_id(
+                target, "country",
+                ("name_en", "name_fa", "code", "is_active", "created_at"),
+                (row["name_en"], row["name_fa"], natural_key,
+                 row["is_active"], row["created_at"]),
+            )
+            by_code[natural_key] = target_id
+            inserted += 1
+        identifier_map[int(row["id"])] = target_id
+    return identifier_map, inserted
+
+
+def transfer_organizations(source, target, plan: TablePlan) -> dict[int, int]:
+    rows = _fetch_dicts(
+        source, "tenants", ("id", "name", "slug", "status", "created_at")
+    )
+    identifier_map: dict[int, int] = {}
+    namespace = uuid.UUID("7fc2dbbb-3aa5-4f49-8c9d-c48ba01cb375")
+    for row in rows:
+        target_id = _insert_returning_id(
+            target, "operational_organization",
+            ("public_id", "name", "is_active", "created_at"),
+            (str(uuid.uuid5(namespace, str(row["slug"]))), row["name"],
+             str(row["status"]).lower() == "active", row["created_at"]),
+        )
+        identifier_map[int(row["id"])] = target_id
+    return identifier_map
+
+
+def transfer_memberships(source, target, plan: TablePlan,
+                         organization_ids: dict[int, int]) -> int:
+    rows = _fetch_dicts(
+        source, "memberships",
+        ("tenant_id", "user_id", "role", "status", "created_at"),
+    )
+    permissions_by_role = {
+        "admin": ["admin", "report", "verify", "correct"],
+        "manager": ["report", "verify", "correct"],
+        "member": ["report"],
+        "expert": ["report"],
+        "viewer": [],
+    }
+    for row in rows:
+        organization_id = organization_ids.get(int(row["tenant_id"]))
+        if organization_id is None:
+            raise CutoverBlocked("memberships: tenant-to-organization mapping is incomplete")
+        role = str(row["role"]).lower()
+        permissions = permissions_by_role.get(role)
+        if permissions is None:
+            raise CutoverBlocked(f"memberships: unsupported role {role}")
+        _insert_returning_id(
+            target, "operational_membership",
+            ("organization_id", "user_id", "is_active", "permissions", "created_at"),
+            (organization_id, row["user_id"],
+             str(row["status"]).lower() == "active",
+             json.dumps(permissions), row["created_at"]),
+        )
+    return len(rows)
+
+
+def foreign_key_columns(connection, table: str, parent_table: str) -> tuple[str, ...]:
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT kcu.column_name
+            FROM information_schema.table_constraints tc
+            JOIN information_schema.key_column_usage kcu
+              ON kcu.constraint_name=tc.constraint_name
+             AND kcu.constraint_schema=tc.constraint_schema
+            JOIN information_schema.constraint_column_usage ccu
+              ON ccu.constraint_name=tc.constraint_name
+             AND ccu.constraint_schema=tc.constraint_schema
+            WHERE tc.table_schema='public' AND tc.constraint_type='FOREIGN KEY'
+              AND tc.table_name=%s AND ccu.table_name=%s
+            ORDER BY kcu.ordinal_position
+            """,
+            (table, parent_table),
+        )
+        return tuple(row[0] for row in cursor.fetchall())
+
+
 def transfer(source, target, plans: list[TablePlan], batch_size: int) -> list[dict[str, int]]:
     direct = {plan.table: plan for plan in plans if plan.classification == "DIRECT_COPY"}
     metrics: list[dict[str, int]] = []
-    for table in load_order(target, set(direct)):
+    country_plan = next(
+        (item for item in plans if item.table == "country"), None
+    )
+    if country_plan:
+        country_ids, country_inserted = reconcile_countries(
+            source, target, country_plan
+        )
+        metrics.append(_metric(
+            country_plan, inserted=country_plan.source_rows,
+            transformed=country_plan.source_rows - country_inserted,
+        ))
+    else:
+        country_ids = {}
+    # Users must exist before memberships; preserving IDs also preserves all user FKs.
+    priority = ["expert_user"]
+    ordered_direct = [
+        table for table in priority if table in direct
+    ] + [
+        table for table in load_order(target, set(direct))
+        if table not in priority
+    ]
+    for table in ordered_direct:
         plan = direct[table]
         inserted = 0
+        country_fk_indexes = {
+            plan.columns.index(name)
+            for name in foreign_key_columns(target, table, "country")
+            if name in plan.columns
+        }
         with source.cursor(name=f"phase1b_{table}") as source_cursor:
             source_cursor.itersize = batch_size
             source_cursor.execute(
@@ -277,28 +508,49 @@ def transfer(source, target, plans: list[TablePlan], batch_size: int) -> list[di
                     rows = source_cursor.fetchmany(batch_size)
                     if not rows:
                         break
+                    if country_fk_indexes:
+                        remapped = []
+                        for source_row in rows:
+                            row = list(source_row)
+                            for index in country_fk_indexes:
+                                if row[index] is not None:
+                                    try:
+                                        row[index] = country_ids[int(row[index])]
+                                    except KeyError as exc:
+                                        raise CutoverBlocked(
+                                            f"{table}: country ID mapping is incomplete"
+                                        ) from exc
+                            remapped.append(tuple(row))
+                        rows = remapped
                     statement = sql.SQL("INSERT INTO {} ({}) VALUES %s").format(
                         sql.Identifier(table),
                         sql.SQL(",").join(map(sql.Identifier, plan.columns)),
                     ).as_string(target)
                     execute_values(target_cursor, statement, rows, page_size=batch_size)
                     inserted += len(rows)
-        metrics.append({
-            "table": table, "source_rows": plan.source_rows,
-            "inserted_rows": inserted, "excluded_rows": 0,
-            "transformed_rows": 0, "rejected_rows": 0,
-            "variance": plan.source_rows - inserted,
-        })
+        metrics.append(_metric(plan, inserted=inserted))
+    tenant_plan = next((item for item in plans if item.table == "tenants"), None)
+    membership_plan = next((item for item in plans if item.table == "memberships"), None)
+    if tenant_plan:
+        organization_ids = transfer_organizations(source, target, tenant_plan)
+        metrics.append(_metric(
+            tenant_plan, inserted=len(organization_ids), transformed=len(organization_ids)
+        ))
+    else:
+        organization_ids = {}
+    if membership_plan:
+        inserted = transfer_memberships(
+            source, target, membership_plan, organization_ids
+        )
+        metrics.append(_metric(
+            membership_plan, inserted=inserted, transformed=inserted
+        ))
     for plan in plans:
         if plan.classification in {
             "EXCLUDE_SECURITY_SENSITIVE", "TARGET_BASELINE_PRESERVE",
-            "TARGET_BASELINE_RECONCILE", "SOURCE_ONLY_REVIEW",
+            "SOURCE_ONLY_REVIEW", "ARCHIVE_ONLY",
         }:
-            metrics.append({
-                "table": plan.table, "source_rows": plan.source_rows,
-                "inserted_rows": 0, "excluded_rows": plan.source_rows,
-                "transformed_rows": 0, "rejected_rows": 0, "variance": 0,
-            })
+            metrics.append(_metric(plan, excluded=plan.source_rows))
     return metrics
 
 

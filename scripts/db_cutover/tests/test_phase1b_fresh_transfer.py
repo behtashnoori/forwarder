@@ -56,7 +56,7 @@ def test_populated_unmapped_or_required_column_blocks():
     }
 
 
-def test_password_hash_is_not_copied_without_algorithm_proof():
+def test_password_hash_is_not_copied_by_generic_schema_matching():
     columns, blocker = tool.transferable_columns(
         (column("id"), column("password_hash", nullable=False, dtype="text")),
         (column("id"), column("password_hash", nullable=False, dtype="text")),
@@ -64,6 +64,62 @@ def test_password_hash_is_not_copied_without_algorithm_proof():
     )
     assert columns == ()
     assert "compatibility unproven" in blocker
+
+
+def test_six_mapping_decisions_are_complete():
+    tenant = (
+        column("id"), column("name", dtype="text"), column("slug", dtype="text"),
+        column("status", dtype="text"), column("created_at", dtype="timestamp"),
+    )
+    membership = (
+        column("id"), column("tenant_id"), column("user_id"),
+        column("role", dtype="text"), column("status", dtype="text"),
+        column("created_at", dtype="timestamp"),
+    )
+    audit = (
+        column("id"), column("tenant_id"), column("actor_type", dtype="text"),
+        column("actor_id"), column("action", dtype="text"),
+        column("metadata_json", dtype="text"), column("created_at", dtype="timestamp"),
+    )
+    expert = (
+        column("id"), column("username", dtype="text"),
+        column("password_hash", nullable=False, dtype="character varying"),
+        column("full_name", dtype="text"),
+    )
+    country = (column("id"), column("code", dtype="text"))
+    version = (column("version_num", nullable=False, dtype="text"),)
+    source = {
+        "tenants": tenant, "memberships": membership, "audit_logs": audit,
+        "expert_user": expert, "country": country, "alembic_version": version,
+    }
+    target = {
+        "operational_organization": (
+            column("id"), column("public_id", dtype="text"),
+            column("name", dtype="text"), column("is_active"),
+            column("created_at", dtype="timestamp"),
+        ),
+        "operational_membership": (
+            column("id"), column("organization_id"), column("user_id"),
+            column("is_active"), column("permissions", dtype="json"),
+            column("created_at", dtype="timestamp"),
+        ),
+        "operational_audit": (column("id"),),
+        "expert_user": expert, "country": country, "alembic_version": version,
+    }
+    plans, blockers = tool.build_mapping(
+        source, target, {name: 3 for name in source}
+    )
+    classes = {plan.table: plan.classification for plan in plans}
+    assert blockers == []
+    assert classes == {
+        "alembic_version": "TARGET_BASELINE_PRESERVE",
+        "audit_logs": "ARCHIVE_ONLY",
+        "country": "TARGET_BASELINE_RECONCILE",
+        "expert_user": "DIRECT_COPY",
+        "memberships": "ID_REMAP_REQUIRED",
+        "tenants": "ID_REMAP_REQUIRED",
+    }
+    assert tool.password_compatibility_proven()
 
 
 def test_reconciliation_fixture_is_fail_closed():

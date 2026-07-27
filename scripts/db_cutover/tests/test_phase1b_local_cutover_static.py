@@ -133,6 +133,14 @@ def test_alembic_head_exit_code_is_checked_separately():
     assert "Resolve-ActiveMigrationHead -RawHeadOutput @($headResult.StdOut)" in SCRIPT
 
 
+def test_failed_transfer_prints_only_sanitized_mapping_decisions():
+    assert "function Write-SanitizedMappingBlockers" in SCRIPT
+    assert '"mapping-contract.json"' in SCRIPT
+    assert '"blocked.json"' in SCRIPT
+    assert "MAPPING_BLOCKED table={0} reason={1}" in SCRIPT
+    assert "Write-SanitizedMappingBlockers $path" in SCRIPT
+
+
 def _run_powershell_harness(tmp_path, body):
     harness = tmp_path / "cutover-harness.ps1"
     tool_path = Path(__file__).parents[1] / "phase1b_local_cutover.ps1"
