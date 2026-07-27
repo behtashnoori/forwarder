@@ -21,6 +21,11 @@ def test_native_process_transport_is_shell_free_and_separates_streams():
     assert "$psi.RedirectStandardError = $true" in SCRIPT
     assert "$process.StandardInput.Write($InputText)" in SCRIPT
     assert "$psi.ArgumentList" not in SCRIPT
+    assert "$process.StandardOutput.ReadToEndAsync()" in SCRIPT
+    assert "$process.StandardError.ReadToEndAsync()" in SCRIPT
+    assert "$process.WaitForExit($TimeoutSeconds * 1000)" in SCRIPT
+    assert "Stop-ProcessTree $process" in SCRIPT
+    assert 'Write-StageEvent "PROCESS_TIMEOUT" $operationName' in SCRIPT
 
 
 def test_legacy_main_is_never_migrated_or_dropped():
@@ -126,3 +131,110 @@ def test_alembic_head_exit_code_is_checked_separately():
     assert '"-m", "alembic", "-c", "backend/migrations/alembic.ini", "heads"' in SCRIPT
     assert "-Condition ([bool]($headResult.ExitCode -eq 0))" in SCRIPT
     assert "Resolve-ActiveMigrationHead -RawHeadOutput @($headResult.StdOut)" in SCRIPT
+
+
+def _run_powershell_harness(tmp_path, body):
+    harness = tmp_path / "cutover-harness.ps1"
+    tool_path = Path(__file__).parents[1] / "phase1b_local_cutover.ps1"
+    harness.write_text(
+        f"""
+$tokens = $null
+$errors = $null
+$ast = [System.Management.Automation.Language.Parser]::ParseFile(
+    '{tool_path.as_posix()}',
+    [ref]$tokens,
+    [ref]$errors
+)
+if ($errors.Count -ne 0) {{ exit 10 }}
+function Get-ToolFunctionText([string[]]$Names) {{
+    $functions = $ast.FindAll({{
+        param($node)
+        $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $Names -contains $node.Name
+    }}, $true)
+    foreach ($function in $functions) {{ $function.Extent.Text }}
+}}
+{body}
+""",
+        encoding="utf-8",
+    )
+    return subprocess.run(
+        [
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-File", str(harness),
+        ],
+        text=True, capture_output=True, check=False,
+    )
+
+
+def test_mock_dryrun_success_stages_and_cleanup(tmp_path):
+    completed = _run_powershell_harness(
+        tmp_path,
+        r"""
+Invoke-Expression ((Get-ToolFunctionText @('Invoke-DryRunWorkflow')) -join "`n")
+$events = New-Object System.Collections.Generic.List[string]
+$Rehearsal = 'forwarder_phase1b_rehearsal_mock'
+function Invoke-Stage([string]$Stage, [scriptblock]$Action) {
+    $events.Add("START:$Stage")
+    & $Action
+    $events.Add("COMPLETE:$Stage")
+}
+function New-Database([string]$Name) { $events.Add('CREATE') }
+function Invoke-Migration([string]$Name) { $events.Add('MIGRATION_COMPLETE') }
+function Invoke-Transfer([string]$Mode, [string]$Name, [string]$Evidence) {
+    $events.Add('ANALYSIS_EXIT_0')
+    $events.Add('MAPPING_COMPLETE')
+}
+function Remove-DisposableDatabase([string]$Name) { $events.Add('CLEANUP_COMPLETE') }
+function Invoke-RenameCutover { $events.Add('MAIN_CHANGED') }
+Invoke-DryRunWorkflow
+$required = @(
+    'MIGRATION_COMPLETE', 'ANALYSIS_EXIT_0', 'MAPPING_COMPLETE',
+    'CLEANUP_COMPLETE'
+)
+if (@($required | Where-Object { -not $events.Contains($_) }).Count -ne 0) { exit 20 }
+if ($events.Contains('MAIN_CHANGED')) { exit 21 }
+""",
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_native_timeout_stops_process_and_dryrun_cleanup_runs(tmp_path):
+    evidence = (tmp_path / "evidence").as_posix()
+    completed = _run_powershell_harness(
+        tmp_path,
+        rf"""
+Invoke-Expression ((Get-ToolFunctionText @(
+    'Write-StageEvent', 'Stop-ProcessTree', 'Invoke-Native',
+    'Invoke-DryRunWorkflow'
+)) -join "`n")
+$EvidenceRoot = '{evidence}'
+New-Item -ItemType Directory -Force -Path $EvidenceRoot | Out-Null
+$script:PlainPassword = $null
+$Rehearsal = 'forwarder_phase1b_rehearsal_mock'
+$cleanup = $false
+$mainChanged = $false
+function Invoke-Stage([string]$Stage, [scriptblock]$Action) {{ & $Action }}
+function New-Database([string]$Name) {{ }}
+function Invoke-Migration([string]$Name) {{
+    Invoke-Native -File 'powershell.exe' -Arguments @(
+        '-NoProfile', '-Command', 'Start-Sleep -Seconds 30'
+    ) -Operation 'mock-analysis' -TimeoutSeconds 1 | Out-Null
+}}
+function Invoke-Transfer([string]$Mode, [string]$Name, [string]$Evidence) {{ }}
+function Remove-DisposableDatabase([string]$Name) {{ $script:cleanup = $true }}
+function Invoke-RenameCutover {{ $script:mainChanged = $true }}
+$timedOut = $false
+try {{
+    Invoke-DryRunWorkflow
+}} catch {{
+    $timedOut = $_.Exception.Message -match 'PROCESS_TIMEOUT:mock-analysis'
+}}
+if (-not $timedOut) {{ exit 30 }}
+if (-not $script:cleanup) {{ exit 31 }}
+if ($script:mainChanged) {{ exit 32 }}
+$log = Get-Content -Raw -LiteralPath (Join-Path $EvidenceRoot 'stage-events.log')
+if ($log -notmatch 'PROCESS_TIMEOUT=mock-analysis') {{ exit 33 }}
+""",
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr

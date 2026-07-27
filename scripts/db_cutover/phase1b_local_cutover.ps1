@@ -81,13 +81,59 @@ function Write-Evidence([string]$Name, [hashtable]$Payload) {
     $Payload | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $EvidenceRoot $Name) -Encoding UTF8
 }
 
+function Write-StageEvent([string]$Status, [string]$Stage) {
+    $message = "$Status=$Stage"
+    Write-Host $message
+    Add-Content -LiteralPath (Join-Path $EvidenceRoot "stage-events.log") `
+        -Value "$([DateTime]::UtcNow.ToString('o')) $message" -Encoding UTF8
+}
+
+function Invoke-Stage([string]$Stage, [scriptblock]$Action) {
+    Write-StageEvent "STAGE_START" $Stage
+    try {
+        $result = & $Action
+        Write-StageEvent "STAGE_COMPLETE" $Stage
+        return $result
+    } catch {
+        Write-StageEvent "STAGE_FAILED" $Stage
+        throw
+    }
+}
+
+function Stop-ProcessTree([System.Diagnostics.Process]$Process) {
+    if ($Process.HasExited) {
+        return
+    }
+    $stopInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $stopInfo.FileName = "$env:SystemRoot\System32\taskkill.exe"
+    $stopInfo.Arguments = "/PID $($Process.Id) /T /F"
+    $stopInfo.UseShellExecute = $false
+    $stopInfo.CreateNoWindow = $true
+    $stopProcess = New-Object System.Diagnostics.Process
+    $stopProcess.StartInfo = $stopInfo
+    try {
+        [void]$stopProcess.Start()
+        [void]$stopProcess.WaitForExit(10000)
+    } finally {
+        $stopProcess.Dispose()
+    }
+    if (-not $Process.HasExited) {
+        $Process.Kill()
+    }
+    if (-not $Process.WaitForExit(10000)) {
+        throw "PROCESS_TERMINATION_FAILED:$($Process.Id)"
+    }
+}
+
 function Invoke-Native {
     param(
         [Parameter(Mandatory=$true)][string]$File,
         [string[]]$Arguments = @(),
         [string]$InputText = $null,
         [hashtable]$Environment = @{},
-        [switch]$AllowFailure
+        [switch]$AllowFailure,
+        [string]$Operation = $null,
+        [ValidateRange(1, 7200)][int]$TimeoutSeconds = 900
     )
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $File
@@ -105,13 +151,23 @@ function Invoke-Native {
     $psi.Arguments = $quotedArguments -join " "
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $psi
+    $operationName = if ($Operation) { $Operation } else { [IO.Path]::GetFileName($File) }
     try {
         [void]$process.Start()
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
         if ($null -ne $InputText) { $process.StandardInput.Write($InputText) }
         $process.StandardInput.Close()
-        $stdout = $process.StandardOutput.ReadToEnd()
-        $stderr = $process.StandardError.ReadToEnd()
+        $completed = $process.WaitForExit($TimeoutSeconds * 1000)
+        if (-not $completed) {
+            Write-StageEvent "PROCESS_TIMEOUT" $operationName
+            Stop-ProcessTree $process
+            throw "PROCESS_TIMEOUT:$operationName"
+        }
+        # Flush process state, then collect both concurrently-drained streams.
         $process.WaitForExit()
+        $stdout = $stdoutTask.GetAwaiter().GetResult()
+        $stderr = $stderrTask.GetAwaiter().GetResult()
         $result = [ordered]@{ ExitCode=$process.ExitCode; StdOut=$stdout; StdErr=$stderr }
         if (-not $AllowFailure -and $process.ExitCode -ne 0) {
             throw "NATIVE_FAIL:$([IO.Path]::GetFileName($File)):$($process.ExitCode)"
@@ -153,8 +209,10 @@ function Invoke-Migration([string]$Database) {
         "DATABASE_URL" = "postgresql+psycopg2://$PostgresUser@127.0.0.1:5432/$Database"
         "APP_ENV" = "uat"
     }
-    Invoke-Native -File $Python -Arguments @("-m", "backend.migration_cli", "upgrade", "--confirm") -Environment $env | Out-Null
-    $check = Invoke-Native -File $Python -Arguments @("-m", "backend.migration_cli", "check") -Environment $env
+    Invoke-Native -File $Python -Arguments @("-m", "backend.migration_cli", "upgrade", "--confirm") `
+        -Environment $env -Operation "$Database-migration-upgrade" -TimeoutSeconds 900 | Out-Null
+    $check = Invoke-Native -File $Python -Arguments @("-m", "backend.migration_cli", "check") `
+        -Environment $env -Operation "$Database-migration-check" -TimeoutSeconds 120
     Assert-True ($check.StdOut -match "current=$ActiveHead" -and $check.StdOut -match "pending=no") "fresh target did not reach active head"
 }
 
@@ -165,7 +223,7 @@ function Invoke-Transfer([string]$TransferMode, [string]$Target, [string]$Eviden
         "scripts/db_cutover/phase1b_fresh_transfer.py",
         "--mode", $TransferMode, "--source", $Source, "--target", $Target,
         "--user", $PostgresUser, "--evidence", $path
-    ) | Out-Null
+    ) -Operation "$TransferMode-transfer-analysis" -TimeoutSeconds 1800 | Out-Null
     if ($TransferMode -eq "DryRun") {
         $contract = Get-Content -Raw -LiteralPath (Join-Path $path "mapping-contract.json") | ConvertFrom-Json
         Assert-True $contract.mapping_complete "mapping incomplete"
@@ -177,6 +235,24 @@ function Invoke-Transfer([string]$TransferMode, [string]$Target, [string]$Eviden
     Assert-True ($reconciliation.orphan_foreign_keys -eq 0) "orphan FK detected"
     Assert-True ($reconciliation.constraint_violations -eq 0) "constraint violation detected"
     Assert-True ($reconciliation.unexplained_variance -eq 0) "unexplained variance detected"
+}
+
+function Invoke-DryRunWorkflow {
+    $created = $false
+    try {
+        Invoke-Stage "rehearsal-create" { New-Database $Rehearsal }
+        $created = $true
+        Invoke-Stage "rehearsal-migration" { Invoke-Migration $Rehearsal }
+        Invoke-Stage "dryrun-transfer-analysis" {
+            Invoke-Transfer "DryRun" $Rehearsal "dry-run"
+        }
+    } finally {
+        if ($created) {
+            Invoke-Stage "rehearsal-cleanup" {
+                Remove-DisposableDatabase $Rehearsal
+            }
+        }
+    }
 }
 
 function Backup-Database([string]$Suffix) {
@@ -274,8 +350,9 @@ function Invoke-Rollback {
 
 New-Item -ItemType Directory -Force -Path $EvidenceRoot, $BackupRoot | Out-Null
 $securePassword = $null
+$rehearsalCreated = $false
 try {
-    Assert-Preflight
+    Invoke-Stage "preflight" { Assert-Preflight }
     if ($Mode -eq "Final") {
         Assert-True $ConfirmCutover "Final mode requires -ConfirmCutover"
     }
@@ -283,51 +360,71 @@ try {
     $script:PasswordBstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
     $script:PlainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($script:PasswordBstr)
     Assert-True (-not [string]::IsNullOrWhiteSpace($script:PlainPassword)) "empty credential"
-    $identity = Invoke-Psql $Source "BEGIN READ ONLY; SELECT current_database(), current_user, current_setting('server_version'), (SELECT version_num FROM alembic_version); ROLLBACK;"
+    $identity = Invoke-Stage "source-read-only-identity" {
+        Invoke-Psql $Source "BEGIN READ ONLY; SELECT current_database(), current_user, current_setting('server_version'), (SELECT version_num FROM alembic_version); ROLLBACK;"
+    }
     Assert-True ($identity.StdOut -match "forwarder_db\|.+\|18\." -and $identity.StdOut -match "54ea21ea0d9f") "source identity/revision mismatch"
     Write-Evidence "source-identity.json" @{ pass=$true; database=$Source; legacy_revision="54ea21ea0d9f"; source_read_only_confirmed=$true }
 
-    $backup = Backup-Database "before_phase1b_cutover"
+    $backup = Invoke-Stage "source-backup" { Backup-Database "before_phase1b_cutover" }
     Write-Evidence "source-backup-manifest.json" @{ pass=$true; path=$backup.Path; sha256=$backup.Sha256; bytes=$backup.Bytes }
-    Validate-Backup $backup.Path
+    Invoke-Stage "backup-restore-validation" { Validate-Backup $backup.Path }
 
-    New-Database $Rehearsal
-    Invoke-Migration $Rehearsal
     if ($Mode -eq "DryRun") {
-        Invoke-Transfer "DryRun" $Rehearsal "dry-run"
+        Invoke-DryRunWorkflow
         Write-Evidence "final-summary.json" @{ result="DRY_RUN_PASS"; cutover_performed=$false }
         exit 0
     }
-    Invoke-Transfer "Rehearsal" $Rehearsal "rehearsal"
-    Invoke-ApplicationValidation $Rehearsal "rehearsal"
+    Invoke-Stage "rehearsal-create" { New-Database $Rehearsal }
+    $rehearsalCreated = $true
+    Invoke-Stage "rehearsal-migration" { Invoke-Migration $Rehearsal }
+    Invoke-Stage "rehearsal-transfer" {
+        Invoke-Transfer "Rehearsal" $Rehearsal "rehearsal"
+    }
+    Invoke-Stage "rehearsal-application-validation" {
+        Invoke-ApplicationValidation $Rehearsal "rehearsal"
+    }
     Write-Evidence "rehearsal-summary.json" @{ pass=$true; database=$Rehearsal }
     if ($Mode -eq "Rehearsal") {
         Write-Evidence "final-summary.json" @{ result="REHEARSAL_PASS"; cutover_performed=$false }
         exit 0
     }
 
-    $finalBackup = Backup-Database "final"
+    $finalBackup = Invoke-Stage "final-backup" { Backup-Database "final" }
     Write-Evidence "final-backup-manifest.json" @{ pass=$true; path=$finalBackup.Path; sha256=$finalBackup.Sha256; bytes=$finalBackup.Bytes }
-    New-Database $Final
-    Invoke-Migration $Final
-    Invoke-Transfer "Final" $Final "final"
-    Invoke-ApplicationValidation $Final "final"
+    Invoke-Stage "final-create" { New-Database $Final }
+    Invoke-Stage "final-migration" { Invoke-Migration $Final }
+    Invoke-Stage "final-transfer" { Invoke-Transfer "Final" $Final "final" }
+    Invoke-Stage "final-application-validation" {
+        Invoke-ApplicationValidation $Final "final"
+    }
     $script:State = "CUTOVER_READY"
-    Invoke-RenameCutover
+    Invoke-Stage "atomic-cutover" { Invoke-RenameCutover }
     try {
-        Invoke-ApplicationValidation $Source "post-cutover"
+        Invoke-Stage "post-cutover-validation" {
+            Invoke-ApplicationValidation $Source "post-cutover"
+        }
         $revision = Invoke-Psql $Source "SELECT version_num FROM alembic_version;"
         Assert-True ($revision.StdOut.Trim() -eq $ActiveHead) "post-cutover revision mismatch"
         $script:State = "COMPLETE"
         Write-Evidence "post-cutover-validation.json" @{ pass=$true; revision=$ActiveHead; legacy_retained=$Legacy }
     } catch {
-        Invoke-Rollback
+        Invoke-Stage "automatic-rollback" { Invoke-Rollback }
         throw "POST_CUTOVER_FAILED_AND_ROLLED_BACK"
     }
 } catch {
     Write-Evidence "blocked-summary.json" @{ pass=$false; state=$script:State; reason=$_.Exception.Message; retry_performed=$false }
     throw
 } finally {
+    if ($rehearsalCreated) {
+        try {
+            Invoke-Stage "rehearsal-cleanup" { Remove-DisposableDatabase $Rehearsal }
+        } catch {
+            Write-Evidence "cleanup-failure.json" @{
+                pass=$false; database=$Rehearsal; reason=$_.Exception.Message
+            }
+        }
+    }
     $script:PlainPassword = $null
     if ($script:PasswordBstr -ne [IntPtr]::Zero) {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($script:PasswordBstr)
