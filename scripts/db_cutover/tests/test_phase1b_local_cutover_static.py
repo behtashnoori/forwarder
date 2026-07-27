@@ -78,11 +78,12 @@ $functions = $ast.FindAll({{
 foreach ($function in $functions) {{ Invoke-Expression $function.Extent.Text }}
 $ActiveHead = '20260801_route_exception'
 $cases = @(
-    @{{ Name='valid'; Values=@('20260801_route_exception'); Pass=$true }},
-    @{{ Name='whitespace'; Values=@('  20260801_route_exception  '); Pass=$true }},
+    @{{ Name='valid'; Values=@('20260801_route_exception (head)'); Pass=$true }},
+    @{{ Name='whitespace'; Values=@('  20260801_route_exception (head)  '); Pass=$true }},
+    @{{ Name='informational'; Values=@("informational line`n20260801_route_exception (head)"); Pass=$true }},
     @{{ Name='empty'; Values=@(); Pass=$false }},
-    @{{ Name='two'; Values=@('20260801_route_exception', 'other'); Pass=$false }},
-    @{{ Name='different'; Values=@('other'); Pass=$false }}
+    @{{ Name='two'; Values=@('20260801_route_exception (head)', 'other (head)'); Pass=$false }},
+    @{{ Name='different'; Values=@('other (head)'); Pass=$false }}
 )
 foreach ($case in $cases) {{
     $passed = $false
@@ -119,3 +120,9 @@ foreach ($case in $cases) {{
         check=False,
     )
     assert completed.returncode == 0, completed.stdout + completed.stderr
+
+
+def test_alembic_head_exit_code_is_checked_separately():
+    assert '"-m", "alembic", "-c", "backend/migrations/alembic.ini", "heads"' in SCRIPT
+    assert "-Condition ([bool]($headResult.ExitCode -eq 0))" in SCRIPT
+    assert "Resolve-ActiveMigrationHead -RawHeadOutput @($headResult.StdOut)" in SCRIPT

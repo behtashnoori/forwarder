@@ -45,15 +45,26 @@ function Assert-True([bool]$Condition, [string]$Message) {
 }
 
 function Resolve-ActiveMigrationHead([object[]]$RawHeadOutput) {
-    $headValues = @(
-        $RawHeadOutput |
-            ForEach-Object { ([string]$_).Trim() } |
-            Where-Object { $_ -ne "" }
-    )
+    $headRevisions = @()
+    foreach ($rawOutput in @($RawHeadOutput)) {
+        foreach ($rawLine in @(([string]$rawOutput) -split "\r?\n")) {
+            $line = ([string]$rawLine).Trim()
+            if ([string]::IsNullOrWhiteSpace($line)) {
+                continue
+            }
+            $match = [regex]::Match(
+                $line,
+                '^(?<revision>[A-Za-z0-9_]+)\s+\(head\)\s*$'
+            )
+            if ($match.Success) {
+                $headRevisions += [string]$match.Groups["revision"].Value
+            }
+        }
+    }
     Assert-True `
-        -Condition ([bool]($headValues.Count -eq 1)) `
+        -Condition ([bool]($headRevisions.Count -eq 1)) `
         -Message "expected exactly one active migration head"
-    $head = [string]$headValues[0]
+    $head = [string]$headRevisions[0]
     Assert-True `
         -Condition ([bool][string]::Equals(
             $head,
@@ -231,8 +242,13 @@ function Assert-Preflight {
     Assert-True ((Get-Content -Raw ".backend-port").Trim() -eq "57065") ".backend-port changed"
     Assert-True (Test-Path $Python) "required Python missing"
     Assert-True (Test-Path (Join-Path $PgBin "pg_dump.exe")) "PostgreSQL 18 tools missing"
-    $rawHeadOutput = & $Python -c "from backend.migration_runtime import alembic_config; from alembic.script import ScriptDirectory; print(','.join(ScriptDirectory.from_config(alembic_config('sqlite://')).get_heads()))"
-    $head = Resolve-ActiveMigrationHead -RawHeadOutput @($rawHeadOutput)
+    $headResult = Invoke-Native -File $Python -Arguments @(
+        "-m", "alembic", "-c", "backend/migrations/alembic.ini", "heads"
+    ) -AllowFailure
+    Assert-True `
+        -Condition ([bool]($headResult.ExitCode -eq 0)) `
+        -Message "Alembic head command failed"
+    $head = Resolve-ActiveMigrationHead -RawHeadOutput @($headResult.StdOut)
     Write-Evidence "preflight-summary.json" @{ pass=$true; branch=$ExpectedBranch; baseline=$ExpectedHead; head=(git rev-parse HEAD); backend_port=57065 }
 }
 
