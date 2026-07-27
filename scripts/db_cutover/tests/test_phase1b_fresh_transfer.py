@@ -8,6 +8,7 @@ import pytest
 
 
 MODULE = Path(__file__).parents[1] / "phase1b_fresh_transfer.py"
+SOURCE = MODULE.read_text(encoding="utf-8")
 SPEC = importlib.util.spec_from_file_location("phase1b_fresh_transfer", MODULE)
 tool = importlib.util.module_from_spec(SPEC)
 assert SPEC and SPEC.loader
@@ -120,6 +121,79 @@ def test_six_mapping_decisions_are_complete():
         "tenants": "ID_REMAP_REQUIRED",
     }
     assert tool.password_compatibility_proven()
+
+
+def test_rehearsal_only_tables_have_explicit_archive_decisions():
+    customer_links = (
+        column("id"), column("tenant_id"), column("customer_id"),
+        column("status", dtype="text"), column("points"),
+        column("level", dtype="text"), column("created_at", dtype="timestamp"),
+    )
+    export_jobs = (
+        column("id"), column("tenant_id"),
+        column("requested_by_type", dtype="text"), column("requested_by_id"),
+        column("status", dtype="text"), column("progress"),
+        column("file_path", dtype="text"), column("created_at", dtype="timestamp"),
+        column("finished_at", dtype="timestamp"), column("error", dtype="text"),
+    )
+    plans, blockers = tool.build_mapping(
+        {"customer_tenant_links": customer_links, "export_jobs": export_jobs},
+        {},
+        {"customer_tenant_links": 4, "export_jobs": 2},
+    )
+    assert blockers == []
+    assert {plan.table: plan.classification for plan in plans} == {
+        "customer_tenant_links": "ARCHIVE_ONLY",
+        "export_jobs": "ARCHIVE_ONLY",
+    }
+    metrics = [
+        tool._metric(plan, excluded=plan.source_rows) for plan in plans
+    ]
+    result = tool.reconcile_metrics(metrics)
+    assert result["excluded_rows"] == 6
+    assert result["rejected_rows"] == 0
+    assert result["unexplained_variance"] == 0
+
+
+def test_tenant_owner_is_closed_least_privilege_mapping_and_unknown_fails():
+    owner = tool.ROLE_PERMISSIONS["tenant_owner"]
+    assert "admin" not in owner
+    assert "operational_shipment.read" in owner
+    assert "route_plan.activate" in owner
+    membership = tool.TablePlan(
+        "memberships", "ID_REMAP_REQUIRED", (), 2, "fixture",
+        "operational_membership",
+    )
+    assert tool.validate_runtime_mapping([membership], ["tenant_owner"]) == []
+    assert tool.validate_runtime_mapping([membership], ["tenant_owner", "invented"]) == [
+        "memberships: unsupported role invented"
+    ]
+
+
+def test_dryrun_and_rehearsal_share_prewrite_validation():
+    plans = [
+        tool.TablePlan(
+            "customer_tenant_links", "SOURCE_ONLY_REVIEW", (), 1, "fixture"
+        ),
+        tool.TablePlan("export_jobs", "SOURCE_ONLY_REVIEW", (), 1, "fixture"),
+        tool.TablePlan(
+            "memberships", "ID_REMAP_REQUIRED", (), 1, "fixture",
+            "operational_membership",
+        ),
+    ]
+    expected = [
+        "customer_tenant_links: populated legacy table lacks archive policy",
+        "export_jobs: populated legacy table lacks archive policy",
+        "memberships: unsupported role unsupported",
+    ]
+    for mode in ("DryRun", "Rehearsal"):
+        # Validation is intentionally mode-free and runs before DryRun returns
+        # or Rehearsal performs its first insert.
+        assert tool.validate_runtime_mapping(plans, ["unsupported"]) == expected
+    assert SOURCE.index("runtime_blockers, membership_roles =") < SOURCE.index(
+        'if args.mode == "DryRun":'
+    )
+    assert all("file_path" not in plan.reason for plan in plans)
 
 
 def test_reconciliation_fixture_is_fail_closed():

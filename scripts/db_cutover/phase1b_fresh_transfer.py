@@ -34,6 +34,23 @@ SECURITY_PATTERNS = (
     "otp", "session", "token", "reset", "secret", "api_key", "challenge",
 )
 PASSWORD_COLUMNS = {"password", "password_hash", "hashed_password"}
+ROLE_PERMISSIONS = {
+    "admin": ("admin", "report", "verify", "correct"),
+    "manager": ("report", "verify", "correct"),
+    "member": ("report",),
+    "expert": ("report",),
+    "viewer": (),
+    # Active Head has no organization role column. Ownership is represented by
+    # the complete, closed set of existing operational capabilities.
+    "tenant_owner": (
+        "checkpoint.read", "checkpoint.report", "checkpoint.verify",
+        "milestone.correct", "milestone.verify", "milestone_event.create",
+        "operational_shipment.create", "operational_shipment.read",
+        "route_exception.manage", "route_exception.read", "route_leg.manage",
+        "route_plan.activate", "route_plan.create", "route_plan.read",
+        "route_plan.replan", "work_item.manage", "work_item.read",
+    ),
+}
 ALLOWED_DATABASE = re.compile(
     r"^(forwarder_db|forwarder_phase1b_(?:rehearsal|final)_[a-z0-9_]+)$"
 )
@@ -150,7 +167,46 @@ def _special_plan(
             "legacy rows lack required entity target and may lack the required actor; retained in legacy database and backup",
             None,
         )
+    if table == "customer_tenant_links" and _has_columns(
+        source_schema, table,
+        {"id", "tenant_id", "customer_id", "status", "points", "level", "created_at"},
+    ):
+        return TablePlan(
+            table, "ARCHIVE_ONLY", (), count,
+            "legacy tenant-scoped gamification relation has no active-head organization/customer relation; retained in legacy database and backup",
+            None,
+        )
+    if table == "export_jobs" and _has_columns(
+        source_schema, table,
+        {"id", "tenant_id", "requested_by_type", "requested_by_id", "status",
+         "progress", "file_path", "created_at", "finished_at", "error"},
+    ):
+        return TablePlan(
+            table, "ARCHIVE_ONLY", (), count,
+            "transient legacy export job state and file references have no active-head queue; retained in legacy database and backup",
+            None,
+        )
     return None
+
+
+def validate_runtime_mapping(
+    plans: Iterable[TablePlan], membership_roles: Iterable[str],
+) -> list[str]:
+    """Run write-independent validations identically in every transfer mode."""
+    blockers: list[str] = []
+    by_table = {plan.table: plan for plan in plans}
+    for table in ("customer_tenant_links", "export_jobs"):
+        plan = by_table.get(table)
+        if plan and plan.source_rows and plan.classification != "ARCHIVE_ONLY":
+            blockers.append(f"{table}: populated legacy table lacks archive policy")
+    membership = by_table.get("memberships")
+    if membership and membership.source_rows:
+        if membership.target_table != "operational_membership":
+            blockers.append("memberships: active-head target mapping unavailable")
+        for role in sorted({str(value).strip().lower() for value in membership_roles}):
+            if role not in ROLE_PERMISSIONS:
+                blockers.append(f"memberships: unsupported role {role}")
+    return blockers
 
 
 def build_mapping(
@@ -280,6 +336,35 @@ def schema_inventory(connection) -> tuple[dict[str, tuple[Column, ...]], dict[st
     return {key: tuple(value) for key, value in schema.items()}, counts
 
 
+def source_runtime_validation(
+    connection, schema: dict[str, tuple[Column, ...]], plans: list[TablePlan],
+) -> tuple[list[str], tuple[str, ...]]:
+    roles: tuple[str, ...] = ()
+    blockers: list[str] = []
+    if "memberships" in schema:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT DISTINCT lower(trim(role)) FROM memberships ORDER BY 1"
+            )
+            roles = tuple(str(row[0]) for row in cursor.fetchall())
+            if {"tenants", "expert_user"} <= set(schema):
+                cursor.execute(
+                    """
+                    SELECT count(*)
+                    FROM memberships m
+                    LEFT JOIN tenants t ON t.id=m.tenant_id
+                    LEFT JOIN expert_user u ON u.id=m.user_id
+                    WHERE t.id IS NULL OR u.id IS NULL
+                    """
+                )
+                if int(cursor.fetchone()[0]):
+                    blockers.append(
+                        "memberships: required tenant/user ID mapping has orphan source rows"
+                    )
+    blockers.extend(validate_runtime_mapping(plans, roles))
+    return blockers, roles
+
+
 def load_order(connection, tables: set[str]) -> list[str]:
     with connection.cursor() as cursor:
         cursor.execute(
@@ -332,10 +417,11 @@ def inventory_payload(
 
 
 def _metric(plan: TablePlan, inserted: int = 0, excluded: int = 0,
-            transformed: int = 0) -> dict[str, int | str]:
+            transformed: int = 0) -> dict[str, Any]:
     accounted = inserted + excluded
     return {
-        "table": plan.table, "source_rows": plan.source_rows,
+        "table": plan.table, "classification": plan.classification,
+        "reason": plan.reason, "source_rows": plan.source_rows,
         "inserted_rows": inserted, "excluded_rows": excluded,
         "transformed_rows": transformed, "rejected_rows": 0,
         "variance": plan.source_rows - accounted,
@@ -417,19 +503,12 @@ def transfer_memberships(source, target, plan: TablePlan,
         source, "memberships",
         ("tenant_id", "user_id", "role", "status", "created_at"),
     )
-    permissions_by_role = {
-        "admin": ["admin", "report", "verify", "correct"],
-        "manager": ["report", "verify", "correct"],
-        "member": ["report"],
-        "expert": ["report"],
-        "viewer": [],
-    }
     for row in rows:
         organization_id = organization_ids.get(int(row["tenant_id"]))
         if organization_id is None:
             raise CutoverBlocked("memberships: tenant-to-organization mapping is incomplete")
         role = str(row["role"]).lower()
-        permissions = permissions_by_role.get(role)
+        permissions = ROLE_PERMISSIONS.get(role)
         if permissions is None:
             raise CutoverBlocked(f"memberships: unsupported role {role}")
         _insert_returning_id(
@@ -437,7 +516,7 @@ def transfer_memberships(source, target, plan: TablePlan,
             ("organization_id", "user_id", "is_active", "permissions", "created_at"),
             (organization_id, row["user_id"],
              str(row["status"]).lower() == "active",
-             json.dumps(permissions), row["created_at"]),
+             json.dumps(list(permissions)), row["created_at"]),
         )
     return len(rows)
 
@@ -589,6 +668,10 @@ def run(args: argparse.Namespace) -> int:
         write_json(evidence / "target-inventory.json",
                    inventory_payload(target_schema, target_counts))
         plans, blockers = build_mapping(source_schema, target_schema, source_counts)
+        runtime_blockers, membership_roles = source_runtime_validation(
+            source, source_schema, plans
+        )
+        blockers.extend(runtime_blockers)
         contract = {
             "mode": args.mode,
             "source_read_only_confirmed": True,
@@ -597,6 +680,11 @@ def run(args: argparse.Namespace) -> int:
             "mapping_complete": not blockers,
             "blockers": blockers,
             "plans": [asdict(item) for item in plans],
+            "role_mappings": [{
+                "source_role": role,
+                "target": "operational_membership.permissions",
+                "permissions": list(ROLE_PERMISSIONS[role]),
+            } for role in membership_roles if role in ROLE_PERMISSIONS],
             "target_baseline_counts": target_counts,
         }
         write_json(evidence / "mapping-contract.json", contract)
@@ -625,7 +713,8 @@ def run(args: argparse.Namespace) -> int:
             "mode": args.mode, "committed": True, "tables": metrics,
         })
         write_json(evidence / "reconciliation.json", {
-            **reconciliation, **checks, "mapping_complete": True
+            **reconciliation, **checks, "mapping_complete": True,
+            "tables": metrics,
         })
         return 0
     except CutoverBlocked as exc:

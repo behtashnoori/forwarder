@@ -38,6 +38,27 @@ target actor. All three rows therefore remain in the retained legacy database
 and verified backup; reconciliation records three explained exclusions and
 zero unexplained variance. Metadata or row payload is never printed.
 
+Legacy `customer_tenant_links` are also `ARCHIVE_ONLY`. Static model and
+migration inspection proves that Active Head has no tenant-to-customer
+relation. `customer_gamification` is a separate global identity with no
+organization FK, while `crm_customer_link_audit` records shipment link changes
+and is not a replacement for tenant loyalty points/status. Transforming these
+rows would therefore invent scope or overwrite customer state. Every source
+row remains in the retained legacy database and backup and is counted as an
+explained exclusion.
+
+Legacy `export_jobs` are `ARCHIVE_ONLY`. Their progress, completion/error state,
+and optional file path describe a transient export job; Active Head has no
+export queue/model or durable semantic target. Counts, but never file paths,
+errors, or job payloads, are recorded in reconciliation.
+
+Legacy `tenant_owner` maps to `operational_membership.permissions`, not to an
+invented Active Head role or the unrelated `expert_user.role`. Its permission
+set is the closed set of operational capabilities currently enforced by the
+services (shipment, route plan/leg, checkpoint, milestone, work item, and route
+exception operations). It does not receive the legacy generic `admin`
+permission. Unknown legacy roles remain fail-closed.
+
 `expert_user` is copied with its password hash. This is supported by the same
 bcrypt producer and verifier in the legacy and active-head authentication flow,
 the same `$2` hash family and a target 128-character column. A synthetic bcrypt
@@ -48,6 +69,13 @@ Countries reconcile by normalized ISO `code`. The fresh target baseline row is
 preserved, its matching source ID maps to it, and only missing codes are
 inserted. `alembic_version` is never sourced and must remain
 `20260801_route_exception`.
+
+Schema mapping and runtime mapping validation are mode-independent. Before
+DryRun can return, and before Rehearsal can write, the engine validates
+populated source-only policy, archive policy, target mapping availability,
+distinct role support, and membership tenant/user referential completeness.
+Only role names and their target permission names are included in evidence;
+no user identity or row payload is emitted.
 
 The engine loads parents before children using the target FK graph, uses bounded
 batches and one target transaction, and rolls the target back on any error.
