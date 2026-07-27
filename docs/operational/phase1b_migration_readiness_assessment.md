@@ -1,5 +1,35 @@
 # Phase 1B selected-target migration readiness assessment
 
+## Final closure decision — 2026-07-27
+
+Phase 1B product implementation and UAT are complete. Database cutover remains deferred. The main legacy database remains unchanged at revision `54ea21ea0d9f`; no active candidate is canonically equivalent to Main, and both stamp and a legacy marker are rejected. The approved future strategy is a fresh database at active head plus controlled data transfer under a separate gate.
+
+The final operational evidence records successful source read-only confirmation, source inventory hashing, and rollback. Its disposable target migrated successfully to `20260801_route_exception`; target inventory hashing and baseline classification passed. The accepted baseline contained only explained migration/system occupancy, with zero unexpected business tables and zero unknown tables.
+
+Automated mapping did not complete. The exact failure recorded by the allowed evidence is `NATIVE_FAIL:ANALYSIS:1`: the native analysis child exited `1` after `MAPPING_STARTED`. The allowed evidence contains no more specific inner analysis error. This is a known limitation and deferred work.
+
+Cleanup completed with exit `0` and `disposable_remaining=false`. The evidence also records `main_database_targeted_for_write=false`, `server_targeted=false`, and `seed_executed=false`. No data transfer, persistent migration, stamp, deploy, or server change was performed.
+
+- `PHASE_1B_IMPLEMENTATION_COMPLETE`
+- `PHASE_1B_DATABASE_CUTOVER_DEFERRED`
+- `FRESH_TRANSFER_REQUIRED`
+- `AUTOMATED_MAPPING_DEFERRED`
+- `MAIN_DATABASE_UNCHANGED`
+- `SERVER_UNCHANGED`
+
+## Candidate materialization evidence gate — 2026-07-27
+
+The five candidate fingerprint outputs and SHA-256 companions declared by run
+token `36f64cadd4a4` are absent. Candidate final revisions, cleanup, structural
+deltas, equivalence ranking, and a safe bridge topology are therefore
+unverified. The operator-reported runner exit code `0` is insufficient to
+advance readiness. Persistent application remains local/server `NO` / `NO`.
+
+See `phase1b_candidate_materialization_comparison.md`. No database operation,
+migration, stamp, product change, commit, or push was performed by this gate.
+
+`PHASE_1B_BRIDGE_TOPOLOGY_DECISION_BLOCKED`
+
 ## Superseding migration gate result — 2026-07-27
 
 The authenticated read-only inventory subsequently reported target revision

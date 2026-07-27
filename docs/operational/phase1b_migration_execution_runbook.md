@@ -1,5 +1,23 @@
 # Phase 1B persistent migration execution runbook
 
+## Final closure — database cutover deferred (2026-07-27)
+
+Phase 1B product implementation and UAT are complete. This runbook remains a future cutover plan and was not executed persistently. Main remains unchanged at legacy revision `54ea21ea0d9f`; no active candidate is canonically equivalent, so stamp and legacy-marker approaches are rejected. The future path is a fresh active-head database at `20260801_route_exception` followed by separately authorized controlled data transfer.
+
+The disposable assessment proved source read-only/rollback, successful target migration, valid target inventory hash, an accepted explained migration/system baseline, and complete cleanup. Automated mapping stopped at `NATIVE_FAIL:ANALYSIS:1` and is deferred. No transfer, persistent migration, stamp, deploy, seed, Main write, or server change occurred.
+
+Final decisions: `PHASE_1B_IMPLEMENTATION_COMPLETE`, `PHASE_1B_DATABASE_CUTOVER_DEFERRED`, `FRESH_TRANSFER_REQUIRED`, `AUTOMATED_MAPPING_DEFERRED`, `MAIN_DATABASE_UNCHANGED`, `SERVER_UNCHANGED`.
+
+## Candidate materialization evidence hold — 2026-07-27
+
+Execution remains prohibited. The five manifest-declared candidate fingerprint
+outputs and SHA-256 companions are absent, so no target active revision or
+bridge topology can be selected. The next action is a separately authorized
+disposable evidence run followed by read-only comparison; it is not a stamp or
+persistent migration. Local/server persistent application remains `NO` / `NO`.
+
+`PHASE_1B_BRIDGE_TOPOLOGY_DECISION_BLOCKED`
+
 ## Current execution status — 2026-07-27
 
 This runbook was not executed. The verified source revision `54ea21ea0d9f` is
