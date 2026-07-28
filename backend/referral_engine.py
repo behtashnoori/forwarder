@@ -19,13 +19,16 @@ from backend.models import (
     CustomerWorkflowStep,
 )
 from backend.extensions import db
+from backend.services.expert_scope_service import can_handle_request, eligible_experts
 
 logger = logging.getLogger(__name__)
 
 
-def _get_assignable_experts(session: Session) -> List[ExpertUser]:
+def _get_assignable_experts(
+    session: Session, request: ShipmentRequest | None = None
+) -> List[ExpertUser]:
     """Return active experts (expert, business_expert) ordered by id for deterministic tie-break."""
-    return (
+    experts = (
         session.query(ExpertUser)
         .filter(
             and_(
@@ -36,14 +39,17 @@ def _get_assignable_experts(session: Session) -> List[ExpertUser]:
         .order_by(ExpertUser.id.asc())
         .all()
     )
+    return eligible_experts(experts, request) if request is not None else experts
 
 
-def _select_expert_by_last_assignment(session: Session) -> Optional[ExpertUser]:
+def _select_expert_by_last_assignment(
+    session: Session, request: ShipmentRequest
+) -> Optional[ExpertUser]:
     """
     Select the expert with the oldest last-assignment time (time-based round-robin).
     Experts with no assignment history are preferred (treated as oldest). Tie-break by ExpertUser.id.
     """
-    experts = _get_assignable_experts(session)
+    experts = _get_assignable_experts(session, request)
     if not experts:
         return None
     # Subquery: last assigned_at per expert from ReferralAssignmentLog
@@ -67,8 +73,10 @@ def _select_expert_by_last_assignment(session: Session) -> Optional[ExpertUser]:
         )
         .order_by(last_assigned_subq.c.last_at.asc().nulls_first(), ExpertUser.id.asc())
     )
-    first = expert_with_last.first()
-    return first
+    return next(
+        (expert for expert in expert_with_last.all() if can_handle_request(expert, request)),
+        None,
+    )
 
 
 def _json_object(value: str | None) -> Dict[str, Any]:
@@ -133,7 +141,12 @@ def _active_assignment_count(session: Session, expert_id: int) -> int:
     )
 
 
-def _assignable_pool(session: Session, expert_ids: list[int], max_active: Any = None) -> list[ExpertUser]:
+def _assignable_pool(
+    session: Session,
+    expert_ids: list[int],
+    request: ShipmentRequest,
+    max_active: Any = None,
+) -> list[ExpertUser]:
     if not expert_ids:
         return []
 
@@ -149,7 +162,10 @@ def _assignable_pool(session: Session, expert_ids: list[int], max_active: Any = 
         .all()
     )
     by_id = {expert.id: expert for expert in experts}
-    ordered = [by_id[expert_id] for expert_id in expert_ids if expert_id in by_id]
+    ordered = eligible_experts(
+        [by_id[expert_id] for expert_id in expert_ids if expert_id in by_id],
+        request,
+    )
 
     if max_active in (None, ""):
         return ordered
@@ -197,7 +213,7 @@ class ReferralEngine:
                 logger.info(f"Request {request_id} already assigned to {request.assigned_to}")
                 return request.assigned_to
 
-            experts = _get_assignable_experts(self.db)
+            experts = _get_assignable_experts(self.db, request)
             if not experts:
                 logger.warning("No active experts for auto-assignment")
                 return None
@@ -228,7 +244,7 @@ class ReferralEngine:
                 .first()
             )
 
-            selected = _select_expert_by_last_assignment(self.db)
+            selected = _select_expert_by_last_assignment(self.db, request)
             if not selected:
                 return None
             expert_id = selected.id
@@ -265,7 +281,7 @@ class ReferralEngine:
             if not request:
                 result["error"] = "request_not_found"
                 return result
-            experts = _get_assignable_experts(self.db)
+            experts = _get_assignable_experts(self.db, request)
             if not experts:
                 result["error"] = "no_experts"
                 return result
@@ -279,7 +295,7 @@ class ReferralEngine:
                 result["debug_trace"] = rule_assignment["debug"]
                 return result
             expert_ids = [e.id for e in experts]
-            selected = _select_expert_by_last_assignment(self.db)
+            selected = _select_expert_by_last_assignment(self.db, request)
             if not selected:
                 result["error"] = "no_experts"
                 return result
@@ -310,7 +326,7 @@ class ReferralEngine:
             action_type = action.get("type")
             if action_type == "direct_assign":
                 expert = self.db.get(ExpertUser, action.get("expert_id"))
-                if not expert or not expert.is_active or expert.role not in ("expert", "business_expert"):
+                if not expert or not can_handle_request(expert, request):
                     if getattr(rule, "stop_on_match", True):
                         return None
                     continue
@@ -333,6 +349,7 @@ class ReferralEngine:
                 candidates = _assignable_pool(
                     self.db,
                     candidate_ids,
+                    request,
                     action.get("max_active_assignments_per_expert"),
                 )
                 if not candidates:
@@ -391,7 +408,7 @@ class ReferralEngine:
     ) -> None:
         """Update request, create ReferralAssignmentLog, ExpertConsoleLog, notification, gamification. Commits."""
         expert = self.db.get(ExpertUser, expert_id)
-        if not expert or not expert.is_active:
+        if not expert or not can_handle_request(expert, request):
             raise ValueError(f"Expert {expert_id} is not active or does not exist")
         request.assigned_to = expert_id
         request.status = "assigned"

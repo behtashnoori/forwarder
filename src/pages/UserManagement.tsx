@@ -59,6 +59,8 @@ interface User {
   role: string;
   department?: string;
   is_active: boolean;
+  can_handle_domestic: boolean;
+  can_handle_international: boolean;
   created_at: string;
   last_login_at?: string;
   manager?: {
@@ -132,7 +134,9 @@ const UserManagement = () => {
     phone: "",
     role: "expert",
     department: "",
-    is_active: true
+    is_active: true,
+    can_handle_domestic: true,
+    can_handle_international: true
   });
   const [creatingUser, setCreatingUser] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -141,7 +145,9 @@ const UserManagement = () => {
     phone: "",
     username: "",
     password: "",
-    is_active: true
+    is_active: true,
+    can_handle_domestic: true,
+    can_handle_international: true
   });
   const [updatingUser, setUpdatingUser] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -240,6 +246,15 @@ const UserManagement = () => {
     }
   };
 
+  const isExpertRole = (role: string) => role === "expert" || role === "business_expert";
+
+  const getScopeLabel = (user: User) => {
+    if (user.can_handle_domestic && user.can_handle_international) return "هیبرید";
+    if (user.can_handle_domestic) return "داخلی";
+    if (user.can_handle_international) return "بین‌المللی";
+    return "بدون حوزه";
+  };
+
   const getProficiencyColor = (level: string) => {
     switch (level) {
       case "expert": return "bg-red-100 text-red-800";
@@ -275,7 +290,9 @@ const UserManagement = () => {
       phone: user.phone || "",
       username: user.username,
       password: "",
-      is_active: user.is_active
+      is_active: user.is_active,
+      can_handle_domestic: user.can_handle_domestic,
+      can_handle_international: user.can_handle_international
     });
     setEditDialogOpen(true);
   };
@@ -289,7 +306,9 @@ const UserManagement = () => {
         full_name: editFormData.full_name,
         phone: editFormData.phone,
         username: editFormData.username,
-        is_active: editFormData.is_active
+        is_active: editFormData.is_active,
+        can_handle_domestic: editFormData.can_handle_domestic,
+        can_handle_international: editFormData.can_handle_international
       };
       if (editFormData.password.trim()) {
         body.password = editFormData.password;
@@ -396,6 +415,8 @@ const UserManagement = () => {
         full_name: userFormData.full_name,
         role: userFormData.role,
         is_active: userFormData.is_active,
+        can_handle_domestic: userFormData.can_handle_domestic,
+        can_handle_international: userFormData.can_handle_international,
       };
       if (userFormData.email.trim() !== "") payload.email = userFormData.email.trim();
       if (userFormData.phone.trim() !== "") payload.phone = userFormData.phone.trim();
@@ -426,7 +447,9 @@ const UserManagement = () => {
           phone: "",
           role: "expert",
           department: "",
-          is_active: true
+          is_active: true,
+          can_handle_domestic: true,
+          can_handle_international: true
         });
         loadData();
       } else {
@@ -620,6 +643,9 @@ const UserManagement = () => {
                             <Badge className={getRoleColor(user.role)}>
                               {getRoleLabel(user.role)}
                             </Badge>
+                            {isExpertRole(user.role) && (
+                              <Badge variant="secondary">{getScopeLabel(user)}</Badge>
+                            )}
                             {!user.is_active && (
                               <Badge variant="outline" className="text-red-600">
                                 غیرفعال
@@ -820,6 +846,26 @@ const UserManagement = () => {
               </div>
 
               <div className="space-y-2 md:col-span-2">
+                {isExpertRole(userFormData.role) && (
+                  <fieldset className="rounded-md border p-3">
+                    <legend className="px-1 text-sm font-medium">حوزه فعالیت کارشناس</legend>
+                    <div className="mt-2 flex flex-wrap gap-5">
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={userFormData.can_handle_domestic}
+                          onChange={(e) => setUserFormData({ ...userFormData, can_handle_domestic: e.target.checked })} />
+                        حمل داخلی
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={userFormData.can_handle_international}
+                          onChange={(e) => setUserFormData({ ...userFormData, can_handle_international: e.target.checked })} />
+                        حمل بین‌المللی
+                      </label>
+                    </div>
+                  </fieldset>
+                )}
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="full_name">نام کامل *</Label>
                 <Input
                   id="full_name"
@@ -910,7 +956,9 @@ const UserManagement = () => {
                     phone: "",
                     role: "expert",
                     department: "",
-                    is_active: true
+                    is_active: true,
+                    can_handle_domestic: true,
+                    can_handle_international: true
                   });
                 }}
               >
@@ -992,6 +1040,23 @@ const UserManagement = () => {
                 کاربر فعال است
               </Label>
             </div>
+            {editingUser && isExpertRole(editingUser.role) && (
+              <fieldset className="rounded-md border p-3">
+                <legend className="px-1 text-sm font-medium">حوزه فعالیت کارشناس</legend>
+                <div className="mt-2 flex flex-wrap gap-5">
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={editFormData.can_handle_domestic}
+                      onChange={(e) => setEditFormData({ ...editFormData, can_handle_domestic: e.target.checked })} />
+                    حمل داخلی
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={editFormData.can_handle_international}
+                      onChange={(e) => setEditFormData({ ...editFormData, can_handle_international: e.target.checked })} />
+                    حمل بین‌المللی
+                  </label>
+                </div>
+              </fieldset>
+            )}
             <div className="flex justify-end gap-2 pt-4">
               <Button type="button" variant="outline" onClick={() => setEditDialogOpen(false)}>
                 انصراف

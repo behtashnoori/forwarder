@@ -11,6 +11,7 @@ from backend.models import (
     AssignmentRule, AssignmentLog, CustomerGamification, CustomerWorkflowStep
 )
 from backend.extensions import db
+from backend.services.expert_scope_service import eligible_experts
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +72,7 @@ class AssignmentEngine:
             
             # Try each rule in order of priority
             for rule in rules:
-                experts = self._get_experts_by_rule(request, rule)
+                experts = eligible_experts(self._get_experts_by_rule(request, rule), request)
                 if experts:
                     # Select the best expert from the filtered list
                     return self._select_best_expert(experts, request)
@@ -334,6 +335,7 @@ class AssignmentEngine:
             )
         ).all()
         
+        experts = eligible_experts(experts, request)
         if not experts:
             return None
         

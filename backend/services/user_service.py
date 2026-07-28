@@ -55,6 +55,8 @@ def build_user_payload(user: ExpertUser) -> dict[str, Any]:
         "role": user.role,
         "department": user.department,
         "is_active": user.is_active,
+        "can_handle_domestic": user.can_handle_domestic,
+        "can_handle_international": user.can_handle_international,
         "created_at": user.created_at.isoformat(),
         "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
         "manager": manager_info,
@@ -118,6 +120,15 @@ def create_user(payload: dict[str, Any]) -> ExpertUser:
     if existing_user:
         raise UserValidationError("نام کاربری قبلاً استفاده شده است")
 
+    validate_expert_scope(
+        data.get("role"),
+        data.get("is_active", True),
+        {
+            "can_handle_domestic": data.get("can_handle_domestic", True),
+            "can_handle_international": data.get("can_handle_international", True),
+        },
+    )
+
     user = ExpertUser(
         username=data.get("username"),
         password_hash=hash_password(data.get("password")),
@@ -128,6 +139,8 @@ def create_user(payload: dict[str, Any]) -> ExpertUser:
         department=normalize_optional_create_string(data.get("department")),
         manager_id=data.get("manager_id"),
         is_active=data.get("is_active", True),
+        can_handle_domestic=data.get("can_handle_domestic", True),
+        can_handle_international=data.get("can_handle_international", True),
     )
 
     db.session.add(user)
@@ -160,6 +173,14 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
     password_changed = False
     deactivated = False
     role_changed = False
+    validate_expert_scope(
+        data.get("role", user.role),
+        data.get("is_active", user.is_active),
+        {
+            "can_handle_domestic": data.get("can_handle_domestic", user.can_handle_domestic),
+            "can_handle_international": data.get("can_handle_international", user.can_handle_international),
+        },
+    )
 
     if "username" in data:
         new_username = data["username"]
@@ -193,6 +214,10 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
     if "manager_id" in data:
         user.manager_id = data["manager_id"]
 
+    for field in ["can_handle_domestic", "can_handle_international"]:
+        if field in data:
+            setattr(user, field, bool(data[field]))
+
     if "specializations" in data:
         replace_user_specializations(user_id, data["specializations"])
 
@@ -202,3 +227,16 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
         revoke_all_user_sessions(user_id, reason, commit=False)
     db.session.commit()
     return user
+
+
+def validate_expert_scope(role: str, is_active: bool, data: dict[str, Any]) -> None:
+    """Require at least one assignment capability for active expert roles."""
+    from backend.services.expert_scope_service import is_expert_role
+
+    if (
+        is_active
+        and is_expert_role(role)
+        and not data.get("can_handle_domestic", False)
+        and not data.get("can_handle_international", False)
+    ):
+        raise UserValidationError("حداقل یک حوزه فعالیت برای کارشناس فعال الزامی است")

@@ -168,6 +168,8 @@ class ExpertUser(db.Model):
     phone = db.Column(db.String(20), nullable=True)
     role = db.Column(db.String(20), default="expert")  # expert, supervisor, crm_manager, business_expert
     is_active = db.Column(db.Boolean, default=True)
+    can_handle_domestic = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
+    can_handle_international = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
     

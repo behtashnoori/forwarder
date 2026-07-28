@@ -4,6 +4,7 @@ from typing import Any, Optional
 
 from backend.extensions import db
 from backend.models import ExpertConsoleLog, ExpertConsoleNotification, ExpertUser, ShipmentRequest
+from backend.services.expert_scope_service import can_handle_request
 
 
 class AssignmentServiceError(Exception):
@@ -55,6 +56,9 @@ def assign_request_to_expert(
         raise AssignmentNotFoundError("کارشناس یافت نشد", 404)
     if not expert.is_active:
         raise AssignmentValidationError("کارشناس غیرفعال است")
+
+    if not can_handle_request(expert, req):
+        raise AssignmentValidationError("حوزه فعالیت کارشناس با نوع درخواست سازگار نیست")
 
     old_status = req.status
     req.assigned_to = target_expert_id
