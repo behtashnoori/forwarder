@@ -1,5 +1,5 @@
 import { type ElementType, useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   AlertCircle,
   BarChart3,

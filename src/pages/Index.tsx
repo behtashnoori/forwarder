@@ -24,7 +24,7 @@ import {
   UserRoundCheck,
   FileSignature,
 } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { useI18n } from "@/i18n";
 
 const Index = () => {
