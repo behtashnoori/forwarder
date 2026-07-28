@@ -1,5 +1,19 @@
 # Phase 1B selected-target migration readiness assessment
 
+## Local readiness closure supersedes earlier gates — 2026-07-28
+
+The separately approved local fresh-database transfer and atomic cutover
+completed successfully. The active local database is `forwarder_db` at
+`20260801_route_exception`, and the retained rollback database is
+`forwarder_db_legacy_20260727_222328`. Earlier blocked/deferred findings below
+remain historical justification for rejecting an in-place legacy upgrade; they
+are not the current local status.
+
+Authoritative closure:
+[Phase 1B Local Database Cutover Final Closure Report](phase1b_local_backup_restore_migration_result.md).
+
+Server cutover remains `NOT_STARTED`; Production remains `UNTOUCHED`.
+
 ## Final closure decision — 2026-07-27
 
 Phase 1B product implementation and UAT are complete. Database cutover remains deferred. The main legacy database remains unchanged at revision `54ea21ea0d9f`; no active candidate is canonically equivalent to Main, and both stamp and a legacy marker are rejected. The approved future strategy is a fresh database at active head plus controlled data transfer under a separate gate.

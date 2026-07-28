@@ -16,7 +16,10 @@
 | ESLint | 0 errors, 11 baseline warnings (reused) |
 | Build | PASS (reused) |
 | Browser/Mobile UAT | YES |
-| Persistent applied | NO |
+| Local database cutover | PASS — [final closure report](phase1b_local_backup_restore_migration_result.md) |
+| Local active database/head | `forwarder_db` / `20260801_route_exception` |
+| Retained legacy database | `forwarder_db_legacy_20260727_222328` |
+| Server/Production | `NOT_STARTED` / `UNTOUCHED` |
 
 P1B-UAT-001 through P1B-UAT-006 are `CLOSED_VERIFIED`. The remaining content is historical chronology and its earlier pending statuses are superseded.
 

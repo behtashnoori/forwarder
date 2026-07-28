@@ -1,5 +1,21 @@
 # Phase 1B persistent migration execution runbook
 
+## Local cutover closure supersedes this execution plan — 2026-07-28
+
+The local database cutover completed through the separately approved
+fresh-active-head transfer strategy. `forwarder_db` is active at
+`20260801_route_exception`; `forwarder_db_legacy_20260727_222328` is retained
+for rollback. This former execution plan and all blocked/deferred records below
+are historical evidence and must not be used to rerun Final Cutover or upgrade
+the legacy database.
+
+See the
+[Phase 1B Local Database Cutover Final Closure Report](phase1b_local_backup_restore_migration_result.md)
+and the
+[Local Database Rollback Runbook](phase1b_local_database_rollback_runbook.md).
+
+Server cutover remains `NOT_STARTED`; Production remains `UNTOUCHED`.
+
 ## Final closure — database cutover deferred (2026-07-27)
 
 Phase 1B product implementation and UAT are complete. This runbook remains a future cutover plan and was not executed persistently. Main remains unchanged at legacy revision `54ea21ea0d9f`; no active candidate is canonically equivalent, so stamp and legacy-marker approaches are rejected. The future path is a fresh active-head database at `20260801_route_exception` followed by separately authorized controlled data transfer.
