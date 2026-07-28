@@ -32,6 +32,7 @@ import {
   fetchTransportMethodOptions,
   submitShipmentRequest,
   buildIranDestinationPayload,
+  isInternationalRouteComplete,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
@@ -816,7 +817,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   // Load international cities for destination country
   useEffect(() => {
     let active = true;
-    if (!formData.destCountry) {
+    const selectedCountry = countries.find(
+      (country) => country.id.toString() === formData.destCountry,
+    );
+    if (!formData.destCountry || selectedCountry?.code === "IR") {
       setDestinationInternationalCities([]);
       setIsLoadingDestinationInternationalCities(false);
       return () => {
@@ -854,7 +858,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [formData.destCountry, t, toast]);
+  }, [countries, formData.destCountry, t, toast]);
 
   // Derive the destination province from the selected port (port mode).
   useEffect(() => {
@@ -1145,8 +1149,13 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         errorMessage = t("requestForm.validation.domesticRouteRequired");
       }
     } else if (shippingType === "international") {
-      if (!formData.originCountry || !formData.originCityInternational ||
-          !formData.destCountry || !formData.destCityInternational) {
+      if (!isInternationalRouteComplete({
+        originCountry: formData.originCountry,
+        originCity: formData.originCityInternational,
+        destinationCountry: formData.destCountry,
+        destinationCity: formData.destCityInternational,
+        isIranDestination,
+      })) {
         isValid = false;
         errorMessage = t("requestForm.validation.internationalRouteRequired");
       }
@@ -1204,7 +1213,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.origin_city_international = originCity?.name || "";
         payload.origin_address_international = formData.originAddressInternational;
         payload.dest_country = destCountry?.name || "";
-        payload.dest_city_international = destCity?.name || "";
+        if (destCountry?.code !== "IR") {
+          payload.dest_city_international = destCity?.name || "";
+        }
         payload.dest_address_international = formData.destAddressInternational;
         
         // Add the structured Iran destination point if destination is Iran
@@ -1289,7 +1300,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.origin_city_international = originCity?.name || "";
         payload.origin_address_international = formData.originAddressInternational;
         payload.dest_country = destCountry?.name || "";
-        payload.dest_city_international = destCity?.name || "";
+        if (destCountry?.code !== "IR") {
+          payload.dest_city_international = destCity?.name || "";
+        }
         payload.dest_address_international = formData.destAddressInternational;
         
         // Add the structured Iran destination point if destination is Iran
@@ -1934,44 +1947,48 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectContent>
                 </Select>
 
-                <Label className="flex items-center gap-1 text-sm font-medium">
-                  {t("requestForm.destinationCityPort")}
-                  <RequiredAsterisk />
-                </Label>
-                <Select
-                  value={formData.destCityInternational}
-                  onValueChange={(value) => {
-                    setFormData({
-                      ...formData,
-                      destCityInternational: value,
-                    });
-                  }}
-                  disabled={!formData.destCountry || isLoadingDestinationInternationalCities}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        !formData.destCountry
-                          ? t("requestForm.selectCountryFirst")
-                          : isLoadingDestinationInternationalCities
-                            ? t("requestForm.loading")
-                            : t("requestForm.selectDestinationCityPort")
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {destinationInternationalCityOptions.map((city) => (
-                      <SelectItem key={city.id} value={city.id.toString()}>
-                        {city.name} {city.is_major_port && "🏭"} {city.is_major_airport && "✈️"}
-                      </SelectItem>
-                    ))}
-                    {destinationInternationalCityOptions.length === 0 && formData.destCountry && !isLoadingDestinationInternationalCities && (
-                      <SelectItem value="no-dest-city" disabled>
-                        {t("requestForm.noCity")}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                {!isIranDestination && (
+                  <>
+                    <Label className="flex items-center gap-1 text-sm font-medium">
+                      {t("requestForm.destinationCityPort")}
+                      <RequiredAsterisk />
+                    </Label>
+                    <Select
+                      value={formData.destCityInternational}
+                      onValueChange={(value) => {
+                        setFormData({
+                          ...formData,
+                          destCityInternational: value,
+                        });
+                      }}
+                      disabled={!formData.destCountry || isLoadingDestinationInternationalCities}
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            !formData.destCountry
+                              ? t("requestForm.selectCountryFirst")
+                              : isLoadingDestinationInternationalCities
+                                ? t("requestForm.loading")
+                                : t("requestForm.selectDestinationCityPort")
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {destinationInternationalCityOptions.map((city) => (
+                          <SelectItem key={city.id} value={city.id.toString()}>
+                            {city.name} {city.is_major_port && "🏭"} {city.is_major_airport && "✈️"}
+                          </SelectItem>
+                        ))}
+                        {destinationInternationalCityOptions.length === 0 && formData.destCountry && !isLoadingDestinationInternationalCities && (
+                          <SelectItem value="no-dest-city" disabled>
+                            {t("requestForm.noCity")}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="destAddressInternational" className="flex items-center gap-2 text-sm font-medium">

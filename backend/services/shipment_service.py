@@ -10,6 +10,7 @@ from backend.extensions import db
 from backend.models import (
     CustomerGamification,
     CustomerWorkflowStep,
+    Country,
     ShipmentRequest,
     ShipmentRequestLog,
     TransportMethod,
@@ -128,9 +129,15 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         origin_country = payload.get("origin_country", "").strip()
         origin_city_international = payload.get("origin_city_international", "").strip()
         dest_country = payload.get("dest_country", "").strip()
-        dest_city_international = payload.get("dest_city_international", "").strip()
+        dest_city_international = _optional_text(payload.get("dest_city_international"))
+        is_iran_destination = is_iran_destination_country(dest_country)
 
-        if not origin_country or not origin_city_international or not dest_country or not dest_city_international:
+        if (
+            not origin_country
+            or not origin_city_international
+            or not dest_country
+            or (not is_iran_destination and not dest_city_international)
+        ):
             raise ShipmentValidationError("اطلاعات مبدا و مقصد بین‌المللی نامعتبر است.")
 
         normalized.update({
@@ -176,6 +183,26 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "delivery_date": parse_date_or_none(payload.get("delivery_date")),
     })
     return normalized
+
+
+def _optional_text(value: Any) -> str | None:
+    return value.strip() or None if isinstance(value, str) else None
+
+
+def is_iran_destination_country(country_name: str) -> bool:
+    """Resolve the submitted display name through canonical country data."""
+    normalized_name = country_name.strip().casefold()
+    if not normalized_name:
+        return False
+
+    iran = db.session.query(Country).filter(Country.code == "IR").one_or_none()
+    if iran is None:
+        return False
+
+    return normalized_name in {
+        iran.name_en.strip().casefold(),
+        iran.name_fa.strip().casefold(),
+    }
 
 
 def normalize_iran_destination(payload: dict[str, Any]) -> dict[str, Any]:

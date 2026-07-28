@@ -234,6 +234,35 @@ def test_optional_iran_destination_can_be_omitted_completely(app, client):
         assert req.iran_dest_city_id is None
 
 
+@pytest.mark.parametrize("city_value", [None, ""])
+def test_iran_without_generic_city_or_precise_destination_is_accepted(app, client, city_value):
+    with app.app_context():
+        _geography()
+
+    payload = _base_payload()
+    payload["dest_city_international"] = city_value
+    response = client.post("/api/shipment-request", json=payload)
+
+    assert response.status_code == 201
+    with app.app_context():
+        req = ShipmentRequest.query.first()
+        assert req.dest_city_international is None
+        assert req.iran_dest_type is None
+
+
+def test_non_iran_without_generic_destination_city_is_rejected(app, client):
+    with app.app_context():
+        db.session.add(Country(code="DE", name_en="Germany", name_fa="آلمان"))
+        db.session.commit()
+
+    response = client.post(
+        "/api/shipment-request",
+        json=_base_payload(dest_country="Germany", dest_city_international=None),
+    )
+
+    assert response.status_code == 400
+
+
 @pytest.mark.parametrize(
     ("dest_type", "selected_field", "stale_fields"),
     [

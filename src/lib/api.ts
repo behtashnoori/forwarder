@@ -146,6 +146,23 @@ export interface IranDestinationSelection {
   cityId?: string;
 }
 
+export interface InternationalRouteSelection {
+  originCountry: string;
+  originCity: string;
+  destinationCountry: string;
+  destinationCity: string;
+  isIranDestination: boolean;
+}
+
+/** Iran uses the optional structured destination stage instead of the generic city dropdown. */
+export const isInternationalRouteComplete = (selection: InternationalRouteSelection): boolean =>
+  Boolean(
+    selection.originCountry
+    && selection.originCity
+    && selection.destinationCountry
+    && (selection.isIranDestination || selection.destinationCity),
+  );
+
 /** Build an optional, mutually-exclusive Iran destination payload fragment. */
 export const buildIranDestinationPayload = (
   selection: IranDestinationSelection,
