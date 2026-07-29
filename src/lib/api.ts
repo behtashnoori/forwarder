@@ -246,7 +246,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const requestInit: RequestInit = {
     ...init,
     headers: {
-      "Content-Type": "application/json",
+      ...(!(init?.body instanceof FormData) && { "Content-Type": "application/json" }),
       ...(token && { "Authorization": `Bearer ${token}` }),
       ...(init?.headers ?? {}),
     },
@@ -1062,6 +1062,54 @@ export interface SubmitQuotePayload {
   currency?: string;
   note?: string;
   valid_until?: string;
+}
+
+export type DocumentFormat = "jpeg" | "png" | "webp" | "pdf" | "docx" | "xlsx";
+export interface DocumentDefinition {
+  id: number; code: string; title: string; description?: string | null; is_required: boolean;
+  allowed_formats: DocumentFormat[]; max_file_size_bytes: number; max_active_file_count: number;
+  sort_order: number; is_active: boolean; applicability_scope: "all" | "domestic" | "international";
+  revision: number; usage_count: number;
+}
+export interface CaseDocumentFile {
+  id: number; requirement_id?: number | null; is_miscellaneous: boolean; custom_title?: string | null;
+  description?: string | null; original_filename: string; canonical_extension: string; file_size_bytes: number;
+  sha256_hash: string; version_number: number; status: "active" | "superseded" | "deleted"; uploaded_at: string;
+}
+export interface CaseDocumentRequirement {
+  id: number; code: string; title: string; description?: string | null; is_required: boolean;
+  allowed_formats: DocumentFormat[]; max_file_size_bytes: number; max_active_file_count: number;
+  complete: boolean; active_files: CaseDocumentFile[]; versions: CaseDocumentFile[];
+}
+export interface CaseDocumentsPayload {
+  requirements: CaseDocumentRequirement[]; miscellaneous: CaseDocumentFile[];
+  summary: { total_requirements: number; required_requirements: number; uploaded_requirements: number; missing_required_requirements: number; miscellaneous_file_count: number };
+}
+export const fetchDocumentDefinitions = () => request<{items: DocumentDefinition[]}>("/api/admin/document-definitions");
+export const createDocumentDefinition = (payload: Partial<DocumentDefinition>) =>
+  request<DocumentDefinition>("/api/admin/document-definitions", { method: "POST", body: JSON.stringify(payload) });
+export const updateDocumentDefinition = (id: number, payload: Partial<DocumentDefinition>) =>
+  request<DocumentDefinition>(`/api/admin/document-definitions/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+export const setDocumentDefinitionActive = (id: number, is_active: boolean) =>
+  request<DocumentDefinition>(`/api/admin/document-definitions/${id}/activation`, { method: "POST", body: JSON.stringify({is_active}) });
+export const fetchCaseDocuments = (caseId: number) =>
+  request<CaseDocumentsPayload>(`/api/expert/requests/${caseId}/documents`);
+export const uploadCaseDocument = (caseId: number, requirementId: number | null, form: FormData, replace = false) =>
+  request<CaseDocumentFile>(requirementId == null
+    ? `/api/expert/requests/${caseId}/documents/miscellaneous`
+    : `/api/expert/requests/${caseId}/document-requirements/${requirementId}/${replace ? "replace" : "files"}`,
+    { method: "POST", body: form });
+export const deleteCaseDocument = (caseId: number, fileId: number, reason: string) =>
+  request<{id: number; status: string}>(`/api/expert/requests/${caseId}/documents/${fileId}`, { method: "DELETE", body: JSON.stringify({reason}) });
+export async function downloadCaseDocument(caseId: number, fileId: number, filename: string) {
+  const token = localStorage.getItem("expert_token");
+  const response = await fetch(`${API_BASE_URL}${buildPath(`/api/expert/requests/${caseId}/documents/${fileId}/download`)}`, {
+    headers: token ? {Authorization: `Bearer ${token}`} : {},
+  });
+  if (!response.ok) throw new Error("دریافت فایل ناموفق بود");
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 export class ApiError extends Error {

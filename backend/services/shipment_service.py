@@ -100,6 +100,11 @@ def create_shipment_request(payload: dict[str, Any], remote_addr: str | None = N
 
     handle_gamification(shipment_request, normalized.get("gamification_customer_id"), timestamp)
 
+    # New canonical cases receive the currently applicable document policies in
+    # the same transaction. Legacy cases use the idempotent documents endpoint.
+    from backend.services.case_document_service import initialize_requirements
+    initialize_requirements(shipment_request, None)
+
     db.session.commit()
     assign_request_with_referral(shipment_request)
     return shipment_request

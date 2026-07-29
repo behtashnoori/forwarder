@@ -16,6 +16,7 @@ from .public_tracking import public_tracking_bp
 from .site_settings import site_bp, admin_site_bp
 from .customs import customs_bp
 from .operations import operations_bp
+from .case_documents import document_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -37,3 +38,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(admin_site_bp)
     app.register_blueprint(customs_bp)
     app.register_blueprint(operations_bp)
+    app.register_blueprint(document_bp)

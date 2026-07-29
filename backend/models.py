@@ -1339,6 +1339,116 @@ class SiteSetting(db.Model):
         return f"<SiteSetting key={self.key!r}>"
 
 
+class DocumentDefinition(db.Model):
+    """Admin policy used when snapshotting requirements onto shipment requests."""
+
+    __tablename__ = "document_definition"
+    __table_args__ = (
+        db.CheckConstraint("max_file_size_bytes > 0", name="ck_document_definition_max_size"),
+        db.CheckConstraint("max_active_file_count > 0", name="ck_document_definition_max_count"),
+        db.CheckConstraint(
+            "applicability_scope IN ('all', 'domestic', 'international')",
+            name="ck_document_definition_scope",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    code = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    is_required = db.Column(db.Boolean, nullable=False, default=False)
+    allowed_formats = db.Column(db.Text, nullable=False)
+    max_file_size_bytes = db.Column(SQLITE_COMPAT_BIGINT, nullable=False)
+    max_active_file_count = db.Column(db.Integer, nullable=False, default=1)
+    sort_order = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    applicability_scope = db.Column(db.String(20), nullable=False, default="all")
+    revision = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    updated_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+
+
+class CaseDocumentRequirement(db.Model):
+    """Immutable policy snapshot attached to the canonical shipment request."""
+
+    __tablename__ = "case_document_requirement"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "shipment_request_id", "source_definition_id", "source_definition_revision",
+            name="uq_case_document_requirement_source_revision",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="CASCADE"), nullable=False, index=True)
+    source_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
+    source_definition_code = db.Column(db.String(64), nullable=False)
+    source_definition_revision = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    is_required = db.Column(db.Boolean, nullable=False)
+    allowed_formats = db.Column(db.Text, nullable=False)
+    max_file_size_bytes = db.Column(SQLITE_COMPAT_BIGINT, nullable=False)
+    max_active_file_count = db.Column(db.Integer, nullable=False)
+    sort_order = db.Column(db.Integer, nullable=False)
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    applied_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+
+
+class CaseDocumentFile(db.Model):
+    """Immutable file metadata; binaries live in private document storage."""
+
+    __tablename__ = "case_document_file"
+    __table_args__ = (
+        db.CheckConstraint("status IN ('active', 'superseded', 'deleted')", name="ck_case_document_file_status"),
+        db.CheckConstraint(
+            "(is_miscellaneous AND case_requirement_id IS NULL AND custom_title IS NOT NULL) OR "
+            "((NOT is_miscellaneous) AND case_requirement_id IS NOT NULL)",
+            name="ck_case_document_file_requirement",
+        ),
+        db.UniqueConstraint("case_requirement_id", "version_number", name="uq_case_document_file_requirement_version"),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="CASCADE"), nullable=False, index=True)
+    case_requirement_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("case_document_requirement.id", ondelete="RESTRICT"), nullable=True, index=True)
+    is_miscellaneous = db.Column(db.Boolean, nullable=False, default=False, index=True)
+    custom_title = db.Column(db.String(200), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    original_filename = db.Column(db.String(255), nullable=False)
+    safe_download_filename = db.Column(db.String(255), nullable=False)
+    storage_key = db.Column(db.String(500), nullable=False, unique=True)
+    canonical_extension = db.Column(db.String(10), nullable=False)
+    detected_mime_type = db.Column(db.String(100), nullable=False)
+    file_size_bytes = db.Column(SQLITE_COMPAT_BIGINT, nullable=False)
+    sha256_hash = db.Column(db.String(64), nullable=False)
+    version_number = db.Column(db.Integer, nullable=False, default=1)
+    status = db.Column(db.String(20), nullable=False, default="active", index=True)
+    uploaded_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    superseded_at = db.Column(db.DateTime, nullable=True)
+    superseded_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("case_document_file.id", ondelete="SET NULL"), nullable=True)
+    deleted_at = db.Column(db.DateTime, nullable=True)
+    deleted_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    deletion_reason = db.Column(db.Text, nullable=True)
+
+
+class DocumentAuditEvent(db.Model):
+    """Append-only audit trail for document policy and file actions."""
+
+    __tablename__ = "document_audit_event"
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    event_type = db.Column(db.String(64), nullable=False, index=True)
+    actor_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True, index=True)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="SET NULL"), nullable=True, index=True)
+    definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="SET NULL"), nullable=True)
+    document_file_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("case_document_file.id", ondelete="SET NULL"), nullable=True)
+    details = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+
 # Import the bounded operational module after legacy models are declared so its
 # foreign-key targets are registered in the same SQLAlchemy metadata.
 from backend.operational_models import (  # noqa: E402
@@ -1401,6 +1511,10 @@ __all__ = [
     "CUSTOMS_OFFICE_TYPES",
     "PORT_CUSTOMS_RELATIONSHIP_TYPES",
     "SiteSetting",
+    "DocumentDefinition",
+    "CaseDocumentRequirement",
+    "CaseDocumentFile",
+    "DocumentAuditEvent",
     "OperationalOrganization",
     "OperationalMembership",
     "CanonicalLocation",

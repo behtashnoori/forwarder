@@ -6,6 +6,7 @@ import {
   Bell,
   Clock,
   FileSpreadsheet,
+  Files,
   Gauge,
   LogOut,
   MapPin,
@@ -29,6 +30,7 @@ import ReferralRulesTab from "@/components/ReferralRulesTab";
 import SiteSettingsTab from "@/components/SiteSettingsTab";
 import TrackingLocationsAdminTab from "@/components/TrackingLocationsAdminTab";
 import LocationsAdminTab from "@/components/LocationsAdminTab";
+import DocumentDefinitionsTab from "@/components/DocumentDefinitionsTab";
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
@@ -237,7 +239,7 @@ const AdminPanel = () => {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-3 xl:grid-cols-7">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-4 xl:grid-cols-8">
             <TabsTrigger
               value="dashboard"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
@@ -281,6 +283,7 @@ const AdminPanel = () => {
               مبدا و مقصد
             </TabsTrigger>
             <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>
+            <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>مدیریت مستندات</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -466,6 +469,7 @@ const AdminPanel = () => {
           </TabsContent>
           <TabsContent value="locations" className="space-y-4"><LocationsAdminTab /></TabsContent>
           <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>
+          <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>
         </Tabs>
       </div>
     </div>

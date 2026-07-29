@@ -66,11 +66,22 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
             seconds=int(os.getenv("SESSION_ABSOLUTE_LIFETIME_SECONDS", "7776000"))
         ),
         "JWT_CLOCK_SKEW_SECONDS": int(os.getenv("CLOCK_SKEW_SECONDS", "60")),
+        "DOCUMENT_STORAGE_ROOT": os.getenv("DOCUMENT_STORAGE_ROOT"),
     }
 
     app.config.from_mapping(default_config)
     if config is not None:
         app.config.from_mapping(config)
+
+    from backend.services.document_storage_service import validate_storage_root
+    production = str(app.config["APP_ENV"]).lower() in {"production", "prod"}
+    if not app.config.get("DOCUMENT_STORAGE_ROOT") and not production:
+        app.config["DOCUMENT_STORAGE_ROOT"] = str(Path(app.instance_path) / "private-documents")
+    app.config["DOCUMENT_STORAGE_ROOT"] = str(validate_storage_root(
+        app.config.get("DOCUMENT_STORAGE_ROOT"),
+        production=production,
+        repository_root=PROJECT_ROOT,
+    ))
 
     _cfg.validate_runtime_config(
         testing=bool(app.config.get("TESTING")),

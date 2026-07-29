@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PageNav from "@/components/PageNav";
 import OperationalPermission from "@/components/OperationalPermission";
+import CaseDocumentsTab from "@/components/CaseDocumentsTab";
 import { QuoteModal } from "@/components/QuoteModal";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -647,6 +648,9 @@ const RequestDetail = () => {
             >
               {t("multiTracking.internalTitle")}
             </TabsTrigger>
+            <TabsTrigger value="documents" className="rounded-2xl px-5 py-2 text-slate-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              مستندات پرونده
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="details" className="space-y-0">
@@ -915,6 +919,7 @@ const RequestDetail = () => {
           <TabsContent value="tracking">
             <TrackingManagementCard requestId={request.id} locale={locale} t={t} toast={toast} />
           </TabsContent>
+          <TabsContent value="documents"><CaseDocumentsTab caseId={request.id}/></TabsContent>
         </Tabs>
 
         <QuoteModal

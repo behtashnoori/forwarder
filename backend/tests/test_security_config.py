@@ -105,7 +105,7 @@ def test_production_rejects_placeholder_secret(monkeypatch: pytest.MonkeyPatch):
         create_app(skip_startup=True)
 
 
-def test_production_rejects_open_cors(monkeypatch: pytest.MonkeyPatch):
+def test_production_rejects_open_cors(monkeypatch: pytest.MonkeyPatch, tmp_path):
     """Production must not allow wildcard/allow-all CORS."""
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
@@ -113,6 +113,7 @@ def test_production_rejects_open_cors(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv("SECRET_KEY", "deployment-specific-secret")
     monkeypatch.setenv("JWT_SECRET_KEY", "deployment-specific-jwt-secret")
     monkeypatch.setenv("CORS_ORIGINS", "*")
+    monkeypatch.setenv("DOCUMENT_STORAGE_ROOT", str(tmp_path / "durable-documents"))
 
     with pytest.raises(RuntimeError, match="Wildcard CORS origins"):
         create_app(skip_startup=True)

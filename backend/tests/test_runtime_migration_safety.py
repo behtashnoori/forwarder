@@ -97,7 +97,7 @@ def test_runtime_rejects_auto_migrate(monkeypatch):
 
 @pytest.mark.parametrize("environment", ["production", "prod"])
 def test_production_runtime_fails_fast_when_migrations_are_pending(
-    monkeypatch, environment
+    monkeypatch, environment, tmp_path
 ):
     import backend.runtime as runtime
 
@@ -106,6 +106,7 @@ def test_production_runtime_fails_fast_when_migrations_are_pending(
             "TESTING": True,
             "APP_ENV": environment,
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "DOCUMENT_STORAGE_ROOT": str(tmp_path / "durable-documents"),
         },
         skip_startup=True,
     )
