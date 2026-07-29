@@ -413,6 +413,8 @@ class ReferralEngine:
         request.assigned_to = expert_id
         request.status = "assigned"
         request.has_unread_for_assignee = True
+        from backend.services.sla_service import set_initial_assignment_sla
+        set_initial_assignment_sla(request, expert)
         log = ReferralAssignmentLog(
             request_id=request.id,
             rule_id=rule_id,

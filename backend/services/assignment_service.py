@@ -5,6 +5,7 @@ from typing import Any, Optional
 from backend.extensions import db
 from backend.models import ExpertConsoleLog, ExpertConsoleNotification, ExpertUser, ShipmentRequest
 from backend.services.expert_scope_service import can_handle_request
+from backend.services.sla_service import set_initial_assignment_sla
 
 
 class AssignmentServiceError(Exception):
@@ -64,6 +65,7 @@ def assign_request_to_expert(
     req.assigned_to = target_expert_id
     req.status = "assigned"
     req.has_unread_for_assignee = True
+    set_initial_assignment_sla(req, expert)
 
     create_assignment_log(request_id, target_expert_id, old_status, expert.full_name, remote_addr)
     create_assignment_notification_if_needed(request_id, target_expert_id)

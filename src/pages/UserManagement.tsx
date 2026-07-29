@@ -61,6 +61,7 @@ interface User {
   is_active: boolean;
   can_handle_domestic: boolean;
   can_handle_international: boolean;
+  sla_response_work_minutes: number;
   created_at: string;
   last_login_at?: string;
   manager?: {
@@ -136,7 +137,8 @@ const UserManagement = () => {
     department: "",
     is_active: true,
     can_handle_domestic: true,
-    can_handle_international: true
+    can_handle_international: true,
+    sla_response_work_minutes: 120
   });
   const [creatingUser, setCreatingUser] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -147,7 +149,8 @@ const UserManagement = () => {
     password: "",
     is_active: true,
     can_handle_domestic: true,
-    can_handle_international: true
+    can_handle_international: true,
+    sla_response_work_minutes: 120
   });
   const [updatingUser, setUpdatingUser] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -292,7 +295,8 @@ const UserManagement = () => {
       password: "",
       is_active: user.is_active,
       can_handle_domestic: user.can_handle_domestic,
-      can_handle_international: user.can_handle_international
+      can_handle_international: user.can_handle_international,
+      sla_response_work_minutes: user.sla_response_work_minutes
     });
     setEditDialogOpen(true);
   };
@@ -308,7 +312,8 @@ const UserManagement = () => {
         username: editFormData.username,
         is_active: editFormData.is_active,
         can_handle_domestic: editFormData.can_handle_domestic,
-        can_handle_international: editFormData.can_handle_international
+        can_handle_international: editFormData.can_handle_international,
+        sla_response_work_minutes: editFormData.sla_response_work_minutes
       };
       if (editFormData.password.trim()) {
         body.password = editFormData.password;
@@ -417,6 +422,7 @@ const UserManagement = () => {
         is_active: userFormData.is_active,
         can_handle_domestic: userFormData.can_handle_domestic,
         can_handle_international: userFormData.can_handle_international,
+        sla_response_work_minutes: userFormData.sla_response_work_minutes,
       };
       if (userFormData.email.trim() !== "") payload.email = userFormData.email.trim();
       if (userFormData.phone.trim() !== "") payload.phone = userFormData.phone.trim();
@@ -449,7 +455,8 @@ const UserManagement = () => {
           department: "",
           is_active: true,
           can_handle_domestic: true,
-          can_handle_international: true
+          can_handle_international: true,
+          sla_response_work_minutes: 120
         });
         loadData();
       } else {
@@ -682,6 +689,12 @@ const UserManagement = () => {
                             <span>بار کاری: {user.workload}</span>
                             <span>•</span>
                             <span>تخصص‌ها: {user.specializations.length}</span>
+                            {isExpertRole(user.role) && (
+                              <>
+                                <span>•</span>
+                                <span>SLA پاسخ: {user.sla_response_work_minutes} دقیقه کاری</span>
+                              </>
+                            )}
                             {user.last_login_at && (
                               <>
                                 <span>•</span>
@@ -847,7 +860,7 @@ const UserManagement = () => {
 
               <div className="space-y-2 md:col-span-2">
                 {isExpertRole(userFormData.role) && (
-                  <fieldset className="rounded-md border p-3">
+                  <fieldset className="space-y-4 rounded-md border p-3">
                     <legend className="px-1 text-sm font-medium">حوزه فعالیت کارشناس</legend>
                     <div className="mt-2 flex flex-wrap gap-5">
                       <label className="flex items-center gap-2">
@@ -860,6 +873,19 @@ const UserManagement = () => {
                           onChange={(e) => setUserFormData({ ...userFormData, can_handle_international: e.target.checked })} />
                         حمل بین‌المللی
                       </label>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="create-sla-minutes">SLA پاسخ اولیه (دقیقه کاری)</Label>
+                      <Input
+                        id="create-sla-minutes"
+                        type="number"
+                        min={1}
+                        max={10080}
+                        value={userFormData.sla_response_work_minutes}
+                        onChange={(e) => setUserFormData({ ...userFormData, sla_response_work_minutes: Number(e.target.value) })}
+                        required
+                      />
+                      <p className="text-xs text-gray-500">این مقدار فقط در پنل ادمین قابل مدیریت است.</p>
                     </div>
                   </fieldset>
                 )}
@@ -958,7 +984,8 @@ const UserManagement = () => {
                     department: "",
                     is_active: true,
                     can_handle_domestic: true,
-                    can_handle_international: true
+                    can_handle_international: true,
+                    sla_response_work_minutes: 120
                   });
                 }}
               >
@@ -1041,7 +1068,7 @@ const UserManagement = () => {
               </Label>
             </div>
             {editingUser && isExpertRole(editingUser.role) && (
-              <fieldset className="rounded-md border p-3">
+              <fieldset className="space-y-4 rounded-md border p-3">
                 <legend className="px-1 text-sm font-medium">حوزه فعالیت کارشناس</legend>
                 <div className="mt-2 flex flex-wrap gap-5">
                   <label className="flex items-center gap-2">
@@ -1054,6 +1081,18 @@ const UserManagement = () => {
                       onChange={(e) => setEditFormData({ ...editFormData, can_handle_international: e.target.checked })} />
                     حمل بین‌المللی
                   </label>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-sla-minutes">SLA پاسخ اولیه (دقیقه کاری)</Label>
+                  <Input
+                    id="edit-sla-minutes"
+                    type="number"
+                    min={1}
+                    max={10080}
+                    value={editFormData.sla_response_work_minutes}
+                    onChange={(e) => setEditFormData({ ...editFormData, sla_response_work_minutes: Number(e.target.value) })}
+                    required
+                  />
                 </div>
               </fieldset>
             )}

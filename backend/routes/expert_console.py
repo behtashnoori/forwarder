@@ -281,9 +281,12 @@ def update_request_status(request_id: int):
         req.status = new_status
         req.has_unread_for_assignee = True
         
-        # Set SLA due date for new requests
+        # Set SLA only once, using the assigned expert's admin-managed policy.
         if new_status == "assigned" and not req.sla_due_at:
-            req.sla_due_at = datetime.utcnow() + timedelta(hours=2)  # 2 hour SLA
+            if not req.assigned_expert:
+                return jsonify({"error": "برای شروع SLA ابتدا کارشناس تعیین کنید"}), 400
+            from backend.services.sla_service import set_initial_assignment_sla
+            set_initial_assignment_sla(req, req.assigned_expert)
         
         # Create log entry
         log = ExpertConsoleLog(

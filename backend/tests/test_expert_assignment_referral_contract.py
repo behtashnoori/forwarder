@@ -945,6 +945,10 @@ def test_referral_engine_uses_matching_active_referral_rule(expert_contract_app)
         }
         assert updated_request.assigned_to == selected_expert_id
         assert updated_request.status == "assigned"
+        assert updated_request.sla_due_at is not None
+        original_deadline = updated_request.sla_due_at
+        assert referral_engine.auto_assign_request(request_id) == selected_expert_id
+        assert db.session.get(ShipmentRequest, request_id).sla_due_at == original_deadline
 
         referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
         assert referral_log.rule_id == expert_contract_app["referral_rule_id"]
@@ -999,10 +1003,80 @@ def test_referral_engine_falls_back_when_no_referral_rule_matches(expert_contrac
         }
         assert updated_request.assigned_to == selected_expert_id
         assert updated_request.status == "assigned"
+        assert updated_request.sla_due_at is not None
 
         referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
         assert referral_log.rule_id is None
         assert referral_log.strategy_used == "round_robin"
+
+
+def test_assignment_engine_sets_once_and_no_candidate_leaves_null(expert_contract_app, monkeypatch):
+    from backend.assignment_engine import AssignmentEngine
+
+    with expert_contract_app["app"].app_context():
+        request_row = ShipmentRequest(
+            tracking_code="SR-SLA-AUTO",
+            shipping_type="domestic",
+            contact_phone="09123456784",
+            transport_method="road",
+            domestic_transport_method="road",
+            status_request_status="new",
+            status="new",
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        request_id = request_row.id
+        engine = AssignmentEngine(db.session)
+        monkeypatch.setattr(
+            engine,
+            "_find_best_expert",
+            lambda _request: expert_contract_app["expert_id"],
+        )
+        assert engine.assign_request(request_id) == expert_contract_app["expert_id"]
+        deadline = db.session.get(ShipmentRequest, request_id).sla_due_at
+        assert deadline is not None
+
+        assert (
+            engine.assign_request(
+                request_id, assignment_method="override", reason="reassignment"
+            )
+            == expert_contract_app["expert_id"]
+        )
+        assert db.session.get(ShipmentRequest, request_id).sla_due_at == deadline
+
+        no_candidate = ShipmentRequest(
+            tracking_code="SR-SLA-NONE",
+            shipping_type="domestic",
+            contact_phone="09123456785",
+            transport_method="road",
+            domestic_transport_method="road",
+            status_request_status="new",
+            status="new",
+        )
+        db.session.add(no_candidate)
+        db.session.commit()
+        monkeypatch.setattr(engine, "_find_best_expert", lambda _request: None)
+        assert engine.assign_request(no_candidate.id) is None
+        assert db.session.get(ShipmentRequest, no_candidate.id).sla_due_at is None
+
+
+def test_referral_preview_does_not_set_deadline(expert_contract_app):
+    from backend.referral_engine import referral_engine
+
+    with expert_contract_app["app"].app_context():
+        request_row = ShipmentRequest(
+            tracking_code="SR-SLA-PREVIEW",
+            shipping_type="domestic",
+            contact_phone="09123456786",
+            transport_method="road",
+            domestic_transport_method="road",
+            status_request_status="new",
+            status="new",
+        )
+        db.session.add(request_row)
+        db.session.commit()
+        assert "error" not in referral_engine.preview_assignment(request_row.id)
+        assert db.session.get(ShipmentRequest, request_row.id).sla_due_at is None
 
 
 def test_public_request_creation_distributes_between_active_experts_round_robin(expert_contract_app):
@@ -1204,6 +1278,8 @@ def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(exper
     assert {"matched_rule", "candidates", "selected_expert", "strategy_used", "debug_trace"}.issubset(
         preview_response.get_json().keys()
     )
+    with expert_contract_app["app"].app_context():
+        assert db.session.get(ShipmentRequest, request_id).sla_due_at is not None
 
 def test_user_management_manual_assignment_fix_contract(expert_contract_app):
     """Manual assignment now uses the shared assignment path and side effects."""
@@ -1240,6 +1316,7 @@ def test_user_management_manual_assignment_fix_contract(expert_contract_app):
         assert request_row.assigned_to == other_expert_id
         assert request_row.status == "assigned"
         assert request_row.has_unread_for_assignee is True
+        assert request_row.sla_due_at is not None
         assert AssignmentLog.query.filter_by(shipment_request_id=request_id).count() == 0
         assert ExpertConsoleLog.query.filter_by(
             shipment_request_id=request_id,

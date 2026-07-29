@@ -194,9 +194,10 @@ def test_admin_auth_role_requirements_and_read_shapes(user_management_app):
         "role",
         "department",
             "is_active",
-            "can_handle_domestic",
-            "can_handle_international",
-            "created_at",
+                "can_handle_domestic",
+                "can_handle_international",
+                "sla_response_work_minutes",
+                "created_at",
         "last_login_at",
         "manager",
         "subordinates_count",
@@ -300,6 +301,7 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
             "role": "expert",
             "department": " sales ",
             "manager_id": user_management_app["admin_id"],
+            "sla_response_work_minutes": 90,
             "specializations": [
                 {
                     "transport_method_id": user_management_app["air_id"],
@@ -322,6 +324,7 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
         assert created.email == "created@example.test"
         assert created.phone == "09120000000"
         assert created.department == "sales"
+        assert created.sla_response_work_minutes == 90
         assert len(created.specializations) == 1
         assert created.specializations[0].transport_method_id == user_management_app["air_id"]
 
@@ -357,6 +360,7 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
             "department": "crm",
             "is_active": False,
             "manager_id": None,
+            "sla_response_work_minutes": 45,
             "specializations": [
                 {
                     "transport_method_id": user_management_app["road_id"],
@@ -377,10 +381,82 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
         assert updated.department == "crm"
         assert updated.is_active is False
         assert updated.manager_id is None
+        assert updated.sla_response_work_minutes == 45
         assert len(updated.specializations) == 1
         assert updated.specializations[0].transport_method_id == user_management_app["road_id"]
         assert updated.specializations[0].proficiency_level == "expert"
         assert updated.specializations[0].is_primary is True
+
+
+@pytest.mark.parametrize(
+    "value",
+    [0, -1, 10081, 1.5, "not-a-number", True, False],
+)
+def test_sla_update_rejects_invalid_values(user_management_app, value):
+    client = user_management_app["app"].test_client()
+    response = client.put(
+        f"/api/user-management/users/{user_management_app['expert_id']}",
+        headers=_auth_headers(user_management_app["admin_token"]),
+        json={"sla_response_work_minutes": value},
+    )
+    assert response.status_code == 400
+    with user_management_app["app"].app_context():
+        assert (
+            db.session.get(ExpertUser, user_management_app["expert_id"])
+            .sla_response_work_minutes
+            == 120
+        )
+
+
+def test_sla_default_response_authorization_and_historical_deadline(user_management_app):
+    client = user_management_app["app"].test_client()
+    admin_headers = _auth_headers(user_management_app["admin_token"])
+    expert_headers = _auth_headers(user_management_app["expert_token"])
+
+    create_response = client.post(
+        "/api/user-management/users",
+        headers=admin_headers,
+        json={
+            "username": "sla_default_expert",
+            "password": "test123",
+            "full_name": "SLA Default Expert",
+            "role": "expert",
+        },
+    )
+    assert create_response.status_code == 201
+    created_id = create_response.get_json()["user_id"]
+
+    list_response = client.get("/api/user-management/users", headers=admin_headers)
+    created_payload = next(
+        user for user in list_response.get_json()["users"] if user["id"] == created_id
+    )
+    assert created_payload["sla_response_work_minutes"] == 120
+
+    forbidden = client.put(
+        f"/api/user-management/users/{created_id}",
+        headers=expert_headers,
+        json={"sla_response_work_minutes": 30},
+    )
+    assert forbidden.status_code == 403
+
+    with user_management_app["app"].app_context():
+        request_row = db.session.get(
+            ShipmentRequest, user_management_app["request_id"]
+        )
+        request_row.sla_due_at = datetime(2026, 7, 27, 8, 30)
+        db.session.commit()
+
+    valid = client.put(
+        f"/api/user-management/users/{created_id}",
+        headers=admin_headers,
+        json={"sla_response_work_minutes": 30},
+    )
+    assert valid.status_code == 200
+    with user_management_app["app"].app_context():
+        assert db.session.get(ExpertUser, created_id).sla_response_work_minutes == 30
+        assert db.session.get(
+            ShipmentRequest, user_management_app["request_id"]
+        ).sla_due_at == datetime(2026, 7, 27, 8, 30)
 
 
 def test_user_delete_cleanup_and_hard_delete_contract(user_management_app):
@@ -926,6 +1002,7 @@ def test_assignment_statistics_and_manual_assignment_contract(user_management_ap
         assert request_row.assigned_to == user_management_app["other_expert_id"]
         assert request_row.status == "assigned"
         assert request_row.has_unread_for_assignee is True
+        assert request_row.sla_due_at is not None
         assert AssignmentLog.query.filter_by(shipment_request_id=user_management_app["request_id"]).count() == 0
         assignment_log = ExpertConsoleLog.query.filter_by(
             shipment_request_id=user_management_app["request_id"],
@@ -984,6 +1061,7 @@ def test_assignment_statistics_and_manual_assignment_contract(user_management_ap
         request_row = db.session.get(ShipmentRequest, rollback_request_id)
         assert request_row.assigned_to == user_management_app["expert_id"]
         assert request_row.status == "new"
+        assert request_row.sla_due_at is None
         assert ExpertConsoleLog.query.filter_by(shipment_request_id=rollback_request_id, action="assignment").count() == 0
         assert ExpertConsoleNotification.query.filter_by(
             shipment_request_id=rollback_request_id,

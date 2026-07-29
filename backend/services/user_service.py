@@ -57,6 +57,7 @@ def build_user_payload(user: ExpertUser) -> dict[str, Any]:
         "is_active": user.is_active,
         "can_handle_domestic": user.can_handle_domestic,
         "can_handle_international": user.can_handle_international,
+        "sla_response_work_minutes": user.sla_response_work_minutes,
         "created_at": user.created_at.isoformat(),
         "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
         "manager": manager_info,
@@ -128,6 +129,7 @@ def create_user(payload: dict[str, Any]) -> ExpertUser:
             "can_handle_international": data.get("can_handle_international", True),
         },
     )
+    sla_minutes = validate_sla_minutes(data.get("sla_response_work_minutes", 120))
 
     user = ExpertUser(
         username=data.get("username"),
@@ -141,6 +143,7 @@ def create_user(payload: dict[str, Any]) -> ExpertUser:
         is_active=data.get("is_active", True),
         can_handle_domestic=data.get("can_handle_domestic", True),
         can_handle_international=data.get("can_handle_international", True),
+        sla_response_work_minutes=sla_minutes,
     )
 
     db.session.add(user)
@@ -218,6 +221,11 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
         if field in data:
             setattr(user, field, bool(data[field]))
 
+    if "sla_response_work_minutes" in data:
+        user.sla_response_work_minutes = validate_sla_minutes(
+            data["sla_response_work_minutes"]
+        )
+
     if "specializations" in data:
         replace_user_specializations(user_id, data["specializations"])
 
@@ -227,6 +235,19 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
         revoke_all_user_sessions(user_id, reason, commit=False)
     db.session.commit()
     return user
+
+
+def validate_sla_minutes(value: Any) -> int:
+    """Validate the admin-managed per-expert SLA duration."""
+    if isinstance(value, bool):
+        raise UserValidationError("مدت SLA باید عدد صحیح باشد")
+    try:
+        normalized = int(value)
+    except (TypeError, ValueError) as exc:
+        raise UserValidationError("مدت SLA باید عدد صحیح باشد") from exc
+    if str(value).strip() != str(normalized) or not 1 <= normalized <= 10080:
+        raise UserValidationError("مدت SLA باید بین ۱ تا ۱۰۰۸۰ دقیقه باشد")
+    return normalized
 
 
 def validate_expert_scope(role: str, is_active: bool, data: dict[str, Any]) -> None:

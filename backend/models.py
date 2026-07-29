@@ -159,6 +159,12 @@ class ExpertUser(db.Model):
     """Represents an expert user who can handle shipment requests."""
     
     __tablename__ = "expert_user"
+    __table_args__ = (
+        db.CheckConstraint(
+            "sla_response_work_minutes BETWEEN 1 AND 10080",
+            name="ck_expert_user_sla_response_work_minutes",
+        ),
+    )
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -170,6 +176,7 @@ class ExpertUser(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     can_handle_domestic = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
     can_handle_international = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
+    sla_response_work_minutes = db.Column(db.Integer, nullable=False, default=120, server_default="120")
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     last_login_at = db.Column(db.DateTime, nullable=True)
     
