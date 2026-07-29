@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router';
 import { useToast } from '@/hooks/use-toast';
 import { env } from '@/lib/env';
 import { useSiteSettings } from '@/contexts/SiteSettingsContext';
+import { consumeReturnTo } from '@/lib/authContinuity';
 
 const ExpertLogin = () => {
   const settings = useSiteSettings();
@@ -59,14 +60,10 @@ const ExpertLogin = () => {
           description: `به پنل ${data.expert.full_name} خوش آمدید`
         });
         
-        // Redirect based on role
-        if (data.expert.role === 'admin') {
-          navigate('/admin');
-        } else if (crmPrimaryRoles.has(data.expert.role)) {
-          navigate('/crm');
-        } else {
-          navigate('/expert');
-        }
+        const roleFallback = data.expert.role === 'admin'
+          ? '/admin'
+          : crmPrimaryRoles.has(data.expert.role) ? '/crm' : '/expert';
+        navigate(consumeReturnTo(roleFallback), { replace: true });
       } else {
         setError(data.error || 'نام کاربری یا رمز عبور اشتباه است');
       }

@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import sys
 import traceback
+from datetime import timedelta
 from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
@@ -55,6 +56,16 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         "PORT": _cfg.PORT,
         "APP_ENV": _cfg.get_runtime_environment(testing=is_testing_config),
         "AUTO_MIGRATE_ON_STARTUP": False,
+        "JWT_ACCESS_TOKEN_EXPIRES": timedelta(
+            seconds=int(os.getenv("ACCESS_TOKEN_LIFETIME_SECONDS", "3600"))
+        ),
+        "JWT_REFRESH_TOKEN_EXPIRES": timedelta(
+            seconds=int(os.getenv("REFRESH_IDLE_LIFETIME_SECONDS", "2592000"))
+        ),
+        "SESSION_ABSOLUTE_LIFETIME": timedelta(
+            seconds=int(os.getenv("SESSION_ABSOLUTE_LIFETIME_SECONDS", "7776000"))
+        ),
+        "JWT_CLOCK_SKEW_SECONDS": int(os.getenv("CLOCK_SKEW_SECONDS", "60")),
     }
 
     app.config.from_mapping(default_config)

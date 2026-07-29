@@ -114,7 +114,12 @@ class SecurityManager:
     def verify_token(self, token: str) -> Optional[Dict[str, Any]]:
         """Verify and decode JWT token."""
         try:
-            payload = jwt.decode(token, self.app.config['JWT_SECRET_KEY'], algorithms=['HS256'])
+            payload = jwt.decode(
+                token,
+                self.app.config['JWT_SECRET_KEY'],
+                algorithms=['HS256'],
+                leeway=self.app.config.get('JWT_CLOCK_SKEW_SECONDS', 60),
+            )
             return payload
         except jwt.ExpiredSignatureError:
             return None

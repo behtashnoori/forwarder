@@ -52,7 +52,10 @@ def create_session_tokens(user_id: int) -> dict[str, str]:
         refresh_jti=refresh_jti,
         created_at=now,
         last_rotated_at=now,
-        expires_at=now + current_app.config["JWT_REFRESH_TOKEN_EXPIRES"],
+        expires_at=min(
+            now + current_app.config["JWT_REFRESH_TOKEN_EXPIRES"],
+            now + current_app.config["SESSION_ABSOLUTE_LIFETIME"],
+        ),
         is_active=True,
     )
     db.session.add(session)
@@ -95,7 +98,12 @@ def rotate_refresh_token(raw_refresh_token: str) -> dict[str, str] | None:
     new_refresh_jti = str(uuid4())
     session.refresh_jti = new_refresh_jti
     session.last_rotated_at = datetime.utcnow()
-    session.expires_at = datetime.utcnow() + current_app.config["JWT_REFRESH_TOKEN_EXPIRES"]
+    now = datetime.utcnow()
+    absolute_expiry = session.created_at + current_app.config["SESSION_ABSOLUTE_LIFETIME"]
+    session.expires_at = min(
+        now + current_app.config["JWT_REFRESH_TOKEN_EXPIRES"],
+        absolute_expiry,
+    )
     db.session.commit()
     return _token_pair(user_id, session_id, new_refresh_jti)
 

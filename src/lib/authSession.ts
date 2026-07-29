@@ -1,4 +1,5 @@
 import { logoutExpert } from "./api";
+import { clearExpertSession } from "./authContinuity";
 
 export async function logoutAndClearExpertSession(): Promise<boolean> {
   const token = localStorage.getItem("expert_token");
@@ -6,9 +7,7 @@ export async function logoutAndClearExpertSession(): Promise<boolean> {
   try {
     if (token && token !== "null") serverConfirmed = await logoutExpert(token);
   } finally {
-    localStorage.removeItem("expert_user");
-    localStorage.removeItem("expert_token");
-    localStorage.removeItem("expert_refresh_token");
+    clearExpertSession();
   }
   return serverConfirmed;
 }

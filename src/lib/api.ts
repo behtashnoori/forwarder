@@ -196,6 +196,7 @@ export const buildIranDestinationPayload = (
 };
 
 import { env } from './env';
+import { clearExpertSession, rememberCurrentRouteForLogin } from "./authContinuity";
 
 const API_BASE_URL = env.API_URL.replace(/\/+$/, "");
 
@@ -260,6 +261,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         Authorization: `Bearer ${localStorage.getItem("expert_token")}`,
       };
       response = await fetch(url, requestInit);
+    } else {
+      rememberCurrentRouteForLogin();
+      window.location.assign("/");
     }
   }
 
@@ -432,9 +436,7 @@ export function refreshExpertSession(): Promise<boolean> {
       localStorage.setItem("expert_refresh_token", tokens.refresh_token);
       return true;
     } catch {
-      localStorage.removeItem("expert_user");
-      localStorage.removeItem("expert_token");
-      localStorage.removeItem("expert_refresh_token");
+      clearExpertSession();
       return false;
     } finally {
       refreshPromise = null;

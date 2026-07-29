@@ -131,3 +131,44 @@ def test_token_type_missing_session_expiry_and_cleanup(session_app):
         assert cleanup_sessions(dry_run=False) == 0
         assert not any(c.name in {"access_token", "refresh_token", "token_hash"} for c in AuthSession.__table__.columns)
         assert RevokedToken.query.filter(RevokedToken.reason == "refresh_rotated").count() == 0
+
+
+def test_session_policy_is_configurable_and_absolute_lifetime_does_not_slide():
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "JWT_ACCESS_TOKEN_EXPIRES": timedelta(minutes=5),
+            "JWT_REFRESH_TOKEN_EXPIRES": timedelta(days=30),
+            "SESSION_ABSOLUTE_LIFETIME": timedelta(days=90),
+            "JWT_CLOCK_SKEW_SECONDS": 17,
+        },
+        skip_startup=True,
+    )
+    with app.app_context():
+        db.create_all()
+        user = ExpertUser(
+            username="absolute-session-user",
+            password_hash=bcrypt.hashpw(b"SafeTest123!", bcrypt.gensalt()).decode(),
+            full_name="Absolute Session User",
+            role="admin",
+            is_active=True,
+        )
+        db.session.add(user)
+        db.session.commit()
+        tokens = create_session_tokens(user.id)
+        payload = security.verify_token(tokens["refresh_token"])
+        session = AuthSession.query.filter_by(session_id=payload["sid"]).one()
+        session.created_at = datetime.utcnow() - timedelta(days=89, hours=23)
+        session.expires_at = datetime.utcnow() + timedelta(hours=1)
+        db.session.commit()
+
+        rotated = app.test_client().post(
+            "/api/expert/auth/refresh",
+            json={"refresh_token": tokens["refresh_token"]},
+        )
+        assert rotated.status_code == 200
+        db.session.refresh(session)
+        assert session.expires_at <= session.created_at + timedelta(days=90)
+        assert app.config["JWT_ACCESS_TOKEN_EXPIRES"] == timedelta(minutes=5)
+        assert app.config["JWT_CLOCK_SKEW_SECONDS"] == 17
