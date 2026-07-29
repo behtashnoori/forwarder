@@ -26,6 +26,7 @@ import {
   type CustomerWorkflowData,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { formatLocalDate, isLocalDateBeforeToday } from "@/lib/localDate";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
 
@@ -383,7 +384,7 @@ const CustomerRequestDetail: React.FC = () => {
               const isExpired =
                 !quote.customer_response &&
                 !!quote.valid_until &&
-                new Date(quote.valid_until) < new Date(new Date().toDateString());
+                isLocalDateBeforeToday(quote.valid_until);
               const canRespond = !quote.customer_response && !isExpired;
               return (
                 <Card className="border-border/70 bg-card/95 shadow-sm">
@@ -404,7 +405,7 @@ const CustomerRequestDetail: React.FC = () => {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 shrink-0" />
                         <span>
-                          {t("customer.quoteValidUntil")}: {formatDate(quote.valid_until, locale, t("common.pending"))}
+                          {t("customer.quoteValidUntil")}: {formatLocalDate(quote.valid_until, locale, t("common.pending"))}
                         </span>
                       </div>
                     )}

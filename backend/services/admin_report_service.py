@@ -8,6 +8,7 @@ from sqlalchemy import and_, case, func
 
 from backend.extensions import db
 from backend.models import AssignmentLog, ExpertConsoleLog, ExpertUser, ShipmentRequest
+from backend.services.utc_timestamp import current_utc_timestamp
 
 
 def get_assignment_summary_payload() -> dict[str, Any]:
@@ -22,7 +23,7 @@ def build_assignment_summary_response_payload() -> dict[str, Any]:
     return {
         "assignments_per_expert": assignments_per_expert,
         "overall_stats": build_overall_assignment_stats(total_assignments, total_won),
-        "generated_at": datetime.utcnow().isoformat(),
+        "generated_at": current_utc_timestamp(),
     }
 
 

@@ -60,6 +60,8 @@ import {
   type TrackingManagementData,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { localDateTimeInputToUtc, toLocalDateTimeInputValue } from "@/lib/localDateTime";
+import { formatLocalDate } from "@/lib/localDate";
 
 interface RequestDetail {
   id: number;
@@ -759,7 +761,7 @@ const RequestDetail = () => {
                           </div>
                           {request.latest_quote.valid_until && (
                             <p className="mt-2 text-xs text-slate-500">
-                              {t("requestDetail.quoteValidUntil")}: {new Date(request.latest_quote.valid_until).toLocaleDateString(locale)}
+                              {t("requestDetail.quoteValidUntil")}: {formatLocalDate(request.latest_quote.valid_until, locale)}
                             </p>
                           )}
                           {request.latest_quote.note && (
@@ -1277,7 +1279,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
   const [editUnitId, setEditUnitId] = useState("");
   const [editUnit, setEditUnit] = useState({ display_name: "", vehicle_reference: "" });
   const [updateUnitId, setUpdateUnitId] = useState("");
-  const [update, setUpdate] = useState({ status: "in_transit", location_reference_id: "", location_text: "", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: new Date().toISOString().slice(0, 16) });
+  const [update, setUpdate] = useState({ status: "in_transit", location_reference_id: "", location_text: "", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: toLocalDateTimeInputValue(new Date()) });
   const [locationQuery, setLocationQuery] = useState("");
   const [locations, setLocations] = useState<TrackingLocationReference[]>([]);
   const locationCountry = (code: string) => {
@@ -1306,6 +1308,19 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
       toast({ title: success });
     } catch { toast({ title: t("common.error"), description: t("multiTracking.saveError"), variant: "destructive" }); }
     finally { setBusy(false); }
+  };
+  const submitUpdate = () => {
+    const occurredAtUtc = localDateTimeInputToUtc(update.occurred_at);
+    if (!occurredAtUtc) {
+      toast({ title: t("common.error"), description: t("multiTracking.saveError"), variant: "destructive" });
+      return;
+    }
+    void run(() => addTrackingUnitUpdate(requestId, Number(updateUnitId), {
+      ...update,
+      location_reference_id: update.location_reference_id ? Number(update.location_reference_id) : undefined,
+      location_text: update.location_text || undefined,
+      occurred_at: occurredAtUtc,
+    }), t("multiTracking.updateAdded"));
   };
 
   if (!data) return <Card><CardContent className="p-8 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></CardContent></Card>;
@@ -1359,7 +1374,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
             <Textarea value={update.customer_message} onChange={(e) => setUpdate({ ...update, customer_message: e.target.value })} placeholder={t("multiTracking.customerMessage")} />
             <Textarea value={update.internal_note} onChange={(e) => setUpdate({ ...update, internal_note: e.target.value })} placeholder={t("multiTracking.internalNote")} />
             <label className="flex items-center gap-2 text-sm"><Checkbox checked={update.is_customer_visible} onCheckedChange={(checked) => setUpdate({ ...update, is_customer_visible: checked === true })} />{t("multiTracking.customerVisible")}</label>
-            <Button disabled={busy || !updateUnitId || !update.occurred_at} onClick={() => run(() => addTrackingUnitUpdate(requestId, Number(updateUnitId), { ...update, location_reference_id:update.location_reference_id?Number(update.location_reference_id):undefined, location_text:update.location_text||undefined, occurred_at: new Date(update.occurred_at).toISOString() }), t("multiTracking.updateAdded"))}>{t("multiTracking.addUpdate")}</Button>
+            <Button disabled={busy || !updateUnitId || !update.occurred_at} onClick={submitUpdate}>{t("multiTracking.addUpdate")}</Button>
           </CardContent>
         </Card>
         <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: {u.vehicle_reference}</p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>

@@ -12,6 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from backend.extensions import db
 from backend.models import CustomerGamification, CustomerWorkflowStep, ExpertQuote, ShipmentRequest
 from backend.routes.public_tracking import _workflow_steps_simple_4
+from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 
 
 def generate_customer_verification_token() -> str:
@@ -439,7 +440,7 @@ def build_customer_profile_payload(customer: CustomerGamification) -> dict[str, 
                 "id": req.id,
                 "shipping_type": req.shipping_type,
                 "status": req.status,
-                "created_at": req.created_at.isoformat(),
+                "created_at": serialize_legacy_utc_datetime(req.created_at),
                 "assigned_expert": {
                     "id": req.assigned_expert.id,
                     "full_name": req.assigned_expert.full_name,
@@ -623,9 +624,7 @@ def build_customer_workflow_payload(
         for step_definition in all_steps
     ]
 
-    created_at = shipment_request.created_at
-    if hasattr(created_at, "isoformat"):
-        created_at = created_at.isoformat()
+    created_at = serialize_legacy_utc_datetime(shipment_request.created_at)
 
     return {
         "id": shipment_request.id,

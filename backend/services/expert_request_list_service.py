@@ -8,6 +8,7 @@ from sqlalchemy import desc, or_
 
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
+from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
 
 
@@ -91,7 +92,7 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
         "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
         "status": req.status,
         "priority": req.priority,
-        "created_at": req.created_at.isoformat(),
+        "created_at": serialize_legacy_utc_datetime(req.created_at),
         "sla_due_at": req.sla_due_at.isoformat() if req.sla_due_at else None,
         "sla_status": sla_status,
         "assigned_to": {

@@ -27,6 +27,7 @@ import {
   User,
 } from "lucide-react";
 import { useI18n } from "@/i18n";
+import { formatLocalDate } from "@/lib/localDate";
 
 const showLatestQuoteCard: boolean = false;
 
@@ -315,7 +316,7 @@ const PublicTracking: React.FC = () => {
               {requestData.latest_quote.valid_until && (
                 <Field
                   label={t("customer.quoteValidUntil")}
-                  value={formatDate(requestData.latest_quote.valid_until, { dateStyle: "medium" }, "—", locale)}
+                  value={formatLocalDate(requestData.latest_quote.valid_until, locale)}
                 />
               )}
             </div>
@@ -477,10 +478,10 @@ const PublicTracking: React.FC = () => {
                       <Field label={t("common.value")} value={requestData.cargo_value} />
                     )}
                     {requestData.pickup_date && (
-                      <Field label={t("common.createdAt")} value={formatDate(requestData.pickup_date, undefined, "—", locale)} />
+                      <Field label={t("common.createdAt")} value={formatLocalDate(requestData.pickup_date, locale)} />
                     )}
                     {requestData.delivery_date && (
-                      <Field label={t("common.createdAt")} value={formatDate(requestData.delivery_date, undefined, "—", locale)} />
+                      <Field label={t("common.createdAt")} value={formatLocalDate(requestData.delivery_date, locale)} />
                     )}
                   </div>
                   {requestData.special_instructions && (
@@ -533,7 +534,7 @@ const PublicTracking: React.FC = () => {
                   {requestData.latest_quote.valid_until && (
                     <Field
                       label={t("common.validUntil")}
-                      value={formatDate(requestData.latest_quote.valid_until, undefined, "—", locale)}
+                      value={formatLocalDate(requestData.latest_quote.valid_until, locale)}
                     />
                   )}
                   {requestData.latest_quote.note && (

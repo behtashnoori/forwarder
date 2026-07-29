@@ -9,6 +9,7 @@ from sqlalchemy import desc, or_
 from sqlalchemy.orm import joinedload
 
 from backend.models import City, County, Province, ShipmentRequest
+from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_iran_destination_payload
 
 
@@ -194,7 +195,7 @@ def build_admin_request_detail_payload(shipment_request: ShipmentRequest) -> dic
         },
         "iran_destination": build_iran_destination_payload(shipment_request),
         "created_at": (
-            shipment_request.created_at.isoformat()
+            serialize_legacy_utc_datetime(shipment_request.created_at)
             if shipment_request.created_at
             else None
         ),
@@ -279,7 +280,7 @@ def build_admin_request_list_item_payload(
             "address": req.dest_address_international,
         },
         "iran_destination": build_iran_destination_payload(req),
-        "created_at": req.created_at.isoformat() if req.created_at else None,
+        "created_at": serialize_legacy_utc_datetime(req.created_at),
     }
 
 

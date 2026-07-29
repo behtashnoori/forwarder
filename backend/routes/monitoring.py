@@ -1,11 +1,10 @@
 """Monitoring and analytics API routes."""
-from datetime import datetime
-
 from flask import Blueprint, jsonify, request, current_app
 
 from backend.auth import admin_required
 from backend.security import require_role
 from backend.services import alert_service, monitoring_service
+from backend.services.utc_timestamp import current_utc_timestamp
 
 monitoring_bp = Blueprint("monitoring", __name__, url_prefix="/api/monitoring")
 
@@ -164,5 +163,5 @@ def ping():
     """Health check endpoint for monitoring."""
     return jsonify({
         "message": "Monitoring API is running",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": current_utc_timestamp()
     })

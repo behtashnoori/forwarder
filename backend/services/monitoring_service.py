@@ -1,8 +1,8 @@
 """Service helpers for monitoring and analytics orchestration."""
-from datetime import datetime
 from typing import Any, Dict, Optional
 
 from backend.monitoring import analytics_engine, system_monitor
+from backend.services.utc_timestamp import current_utc_timestamp
 
 
 def get_health_status() -> Dict[str, Any]:
@@ -52,7 +52,7 @@ def get_dashboard_summary() -> Dict[str, Any]:
     performance_analytics = get_performance_analytics(30)
 
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": current_utc_timestamp(),
         "health": health_status,
         "system": system_metrics,
         "database": db_metrics,
@@ -74,7 +74,7 @@ def get_system_logs(log_type: str, limit: int) -> Optional[Dict[str, Any]]:
     logs = {
         "application": [
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": current_utc_timestamp(),
                 "level": "INFO",
                 "message": "Application started",
                 "module": "app",
@@ -82,7 +82,7 @@ def get_system_logs(log_type: str, limit: int) -> Optional[Dict[str, Any]]:
         ],
         "errors": [
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": current_utc_timestamp(),
                 "level": "ERROR",
                 "message": "Database connection failed",
                 "module": "database",
@@ -90,7 +90,7 @@ def get_system_logs(log_type: str, limit: int) -> Optional[Dict[str, Any]]:
         ],
         "security": [
             {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": current_utc_timestamp(),
                 "level": "WARNING",
                 "message": "Failed login attempt",
                 "module": "auth",

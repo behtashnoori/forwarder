@@ -1,8 +1,8 @@
 """Service helpers for monitoring alert orchestration."""
-from datetime import datetime
 from typing import Any, Dict, List
 
 from backend.services.monitoring_service import get_system_metrics
+from backend.services.utc_timestamp import current_utc_timestamp
 
 
 def list_alerts() -> Dict[str, Any]:
@@ -16,14 +16,14 @@ def list_alerts() -> Dict[str, Any]:
             "type": "critical",
             "category": "memory",
             "message": f"Memory usage is critically high: {memory_percent:.1f}%",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": current_utc_timestamp(),
         })
     elif memory_percent > 80:
         alerts.append({
             "type": "warning",
             "category": "memory",
             "message": f"Memory usage is high: {memory_percent:.1f}%",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": current_utc_timestamp(),
         })
 
     cpu_percent = metrics["system"]["cpu_percent"]
@@ -32,14 +32,14 @@ def list_alerts() -> Dict[str, Any]:
             "type": "critical",
             "category": "cpu",
             "message": f"CPU usage is critically high: {cpu_percent:.1f}%",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": current_utc_timestamp(),
         })
     elif cpu_percent > 80:
         alerts.append({
             "type": "warning",
             "category": "cpu",
             "message": f"CPU usage is high: {cpu_percent:.1f}%",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": current_utc_timestamp(),
         })
 
     total_requests = metrics["application"]["total_requests"]
@@ -52,14 +52,14 @@ def list_alerts() -> Dict[str, Any]:
                 "type": "critical",
                 "category": "errors",
                 "message": f"Error rate is critically high: {error_rate:.1f}%",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": current_utc_timestamp(),
             })
         elif error_rate > 5:
             alerts.append({
                 "type": "warning",
                 "category": "errors",
                 "message": f"Error rate is high: {error_rate:.1f}%",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": current_utc_timestamp(),
             })
 
     avg_response_time = metrics["application"]["avg_response_time"]
@@ -68,7 +68,7 @@ def list_alerts() -> Dict[str, Any]:
             "type": "warning",
             "category": "performance",
             "message": f"Average response time is slow: {avg_response_time:.2f}s",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": current_utc_timestamp(),
         })
 
     return {
@@ -84,5 +84,5 @@ def acknowledge_alert(alert_id: Any) -> Dict[str, Any]:
     return {
         "message": "Alert acknowledged",
         "alert_id": alert_id,
-        "acknowledged_at": datetime.utcnow().isoformat(),
+        "acknowledged_at": current_utc_timestamp(),
     }

@@ -13,6 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest, Customer, Opportunity, Activity
+from backend.services.utc_timestamp import current_utc_timestamp
 
 
 class SystemMonitor:
@@ -32,7 +33,7 @@ class SystemMonitor:
                       response_time: float, user_id: Optional[int] = None):
         """Record API request metrics."""
         request_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'method': method,
             'endpoint': endpoint,
             'status_code': status_code,
@@ -50,7 +51,7 @@ class SystemMonitor:
     def record_error(self, error: Exception, context: Dict[str, Any]):
         """Record error metrics."""
         error_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'error_type': type(error).__name__,
             'error_message': str(error),
             'context': context,
@@ -64,7 +65,7 @@ class SystemMonitor:
                           additional_metrics: Optional[Dict] = None):
         """Record performance metrics."""
         perf_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'operation': operation,
             'duration': duration,
             'additional_metrics': additional_metrics or {}
@@ -279,7 +280,7 @@ class SystemMonitor:
         return {
             'overall': overall_health,
             'indicators': health_indicators,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': current_utc_timestamp()
         }
 
 

@@ -3,6 +3,7 @@ from sqlalchemy import func
 
 from backend.extensions import db
 from backend.models import AssignmentLog, ExpertConsoleLog, ReferralAssignmentLog
+from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 
 # Fixed 7 workflow steps (no email_verified). Order and completion derived from status.
 WORKFLOW_STEP_DEFS = [
@@ -41,7 +42,7 @@ WORKFLOW_STEP_DEFS_SIMPLE_4 = [
 def build_workflow_steps_from_status(status: str, created_at, assigned_at=None, quote_created_at=None) -> list:
     """Build 7 workflow steps with is_completed and optional real completed_at."""
     max_completed = STATUS_TO_COMPLETED_UP_TO.get(status, 0)
-    created_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+    created_iso = serialize_legacy_utc_datetime(created_at)
     steps = []
     for i, defn in enumerate(WORKFLOW_STEP_DEFS):
         is_completed = i <= max_completed
@@ -124,7 +125,7 @@ def build_workflow_steps_simple_4(req, assigned_at=None):
     """
     status = req.status or "new"
     created_at = req.created_at
-    created_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+    created_iso = serialize_legacy_utc_datetime(created_at)
     if assigned_at is None:
         assigned_at = get_assigned_at(req)
     assigned_at_iso = (

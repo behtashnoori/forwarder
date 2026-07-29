@@ -10,6 +10,7 @@ from functools import wraps
 
 from flask import request, g, current_app
 from werkzeug.exceptions import HTTPException
+from backend.services.utc_timestamp import current_utc_timestamp
 
 
 class StructuredLogger:
@@ -110,7 +111,7 @@ class StructuredLogger:
         logger = logging.getLogger('forwarder.api')
         
         log_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'type': 'api_request',
             'method': method,
             'endpoint': endpoint,
@@ -131,7 +132,7 @@ class StructuredLogger:
         logger = logging.getLogger('forwarder.security')
         
         log_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'type': 'security_event',
             'event_type': event_type,
             'severity': severity,
@@ -157,7 +158,7 @@ class StructuredLogger:
         logger = logging.getLogger('forwarder.performance')
         
         log_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'type': 'performance',
             'operation': operation,
             'duration_ms': round(duration * 1000, 2),
@@ -172,7 +173,7 @@ class StructuredLogger:
         logger = logging.getLogger('forwarder.database')
         
         log_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'type': 'database_operation',
             'operation': operation,
             'table': table,
@@ -187,7 +188,7 @@ class StructuredLogger:
         logger = logging.getLogger('forwarder')
         
         error_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'type': 'error',
             'error_type': type(error).__name__,
             'error_message': str(error),
@@ -209,7 +210,7 @@ class JSONFormatter(logging.Formatter):
     
     def format(self, record):
         log_entry = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': current_utc_timestamp(),
             'level': record.levelname,
             'logger': record.name,
             'message': record.getMessage(),

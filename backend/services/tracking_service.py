@@ -2,6 +2,7 @@
 from backend.extensions import db
 from backend.models import City, County, ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.services import timeline_service
+from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.multi_unit_tracking_service import build_public_unit_tracking
 
 
@@ -110,7 +111,7 @@ def build_tracking_response(req, *, include_unit_tracking: bool = False):
     tracking_number = req.tracking_code if req.tracking_code else f"SR{req.id:06d}"
 
     created_at = req.created_at
-    created_iso = created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+    created_iso = serialize_legacy_utc_datetime(created_at)
 
     assigned_at = timeline_service.get_assigned_at(req)
     assigned_at_iso = assigned_at.isoformat() if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
