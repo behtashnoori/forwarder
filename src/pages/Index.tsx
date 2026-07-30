@@ -10,12 +10,13 @@ import {
   Check,
   ClipboardCheck,
   Clock3,
-  Database,
+  BarChart3,
   Eye,
+  FileStack,
   FileText,
   Globe2,
+  Handshake,
   MapPin,
-  MapPinned,
   PackageCheck,
   PhoneCall,
   Search,
@@ -78,7 +79,7 @@ const Index = () => {
 
               <WorkflowSection />
 
-              <ValueSection />
+              <KeyCapabilitiesSection />
 
               <section id="services" className="scroll-mt-24 space-y-7">
                 <div className="text-center">
@@ -202,7 +203,7 @@ const WorkflowSection = () => {
     { icon: ClipboardCheck, title: "workflow.step4.title", description: "workflow.step4.description" },
     { icon: FileSignature, title: "workflow.step5.title", description: "workflow.step5.description" },
     { icon: PackageCheck, title: "workflow.step6.title", description: "workflow.step6.description" },
-    { icon: MapPinned, title: "workflow.step7.title", description: "workflow.step7.description" },
+    { icon: PackageCheck, title: "workflow.step7.title", description: "workflow.step7.description" },
   ];
 
   return (
@@ -232,35 +233,70 @@ const WorkflowSection = () => {
   );
 };
 
-const ValueSection = () => {
+const KeyCapabilitiesSection = () => {
   const { t } = useI18n();
-  const values = [
-    { icon: Sparkles, title: "value.fast.title", description: "value.fast.description" },
-    { icon: UserRoundCheck, title: "value.expert.title", description: "value.expert.description" },
-    { icon: Eye, title: "value.clear.title", description: "value.clear.description" },
-    { icon: Database, title: "value.focused.title", description: "value.focused.description" },
+  const capabilities = [
+    {
+      icon: ClipboardCheck,
+      title: "capabilities.visibility.title",
+      description: "capabilities.visibility.description",
+      values: ["capabilities.visibility.value1", "capabilities.visibility.value2", "capabilities.visibility.value3"],
+    },
+    {
+      icon: FileStack,
+      title: "capabilities.documents.title",
+      description: "capabilities.documents.description",
+      values: ["capabilities.documents.value1", "capabilities.documents.value2", "capabilities.documents.value3"],
+    },
+    {
+      icon: BarChart3,
+      title: "capabilities.analytics.title",
+      description: "capabilities.analytics.description",
+      values: ["capabilities.analytics.value1", "capabilities.analytics.value2"],
+    },
+    {
+      icon: Handshake,
+      title: "capabilities.collaboration.title",
+      description: "capabilities.collaboration.description",
+      values: ["capabilities.collaboration.value1", "capabilities.collaboration.value2", "capabilities.collaboration.value3"],
+    },
   ];
 
   return (
-    <section className="rounded-3xl bg-[#172033] px-5 py-8 text-white md:px-8 md:py-10" aria-labelledby="value-title">
-      <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
-        <div>
-          <p className="text-sm font-semibold text-blue-300">{t("value.eyebrow")}</p>
-          <h2 id="value-title" className="mt-2 text-2xl font-bold md:text-3xl">{t("value.title")}</h2>
-        </div>
-        <p className="max-w-lg text-sm leading-7 text-slate-300">{t("value.description")}</p>
+    <section id="capabilities" className="scroll-mt-24" aria-labelledby="capabilities-title">
+      <div className="text-center">
+        <p className="text-sm font-semibold text-primary">{t("capabilities.eyebrow")}</p>
+        <h2 id="capabilities-title" className="mt-2 text-2xl font-bold text-[#1F2937] md:text-3xl">
+          {t("capabilities.title")}
+        </h2>
+        <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-[#667085]">
+          {t("capabilities.description")}
+        </p>
       </div>
-      <div className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
-        {values.map(({ icon: Icon, title, description }) => (
-          <div key={title} className="flex gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 text-blue-300">
-              <Icon className="h-5 w-5" />
+
+      <div className="mt-8 grid gap-5 md:grid-cols-2">
+        {capabilities.map(({ icon: Icon, title, description, values }) => (
+          <article key={title} className="group rounded-2xl border border-border/70 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/20 hover:shadow-md md:p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Icon className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <div>
+                <h3 className="font-bold text-[#1F2937]">{t(title)}</h3>
+                <p className="mt-2 text-sm leading-7 text-[#667085]">{t(description)}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-bold">{t(title)}</h3>
-              <p className="mt-1 text-xs leading-6 text-slate-300">{t(description)}</p>
-            </div>
-          </div>
+            <ul className="mt-5 grid gap-2 border-t border-border/60 pt-4 text-sm text-[#475467] sm:grid-cols-2">
+              {values.map((value) => (
+                <li key={value} className="flex items-center gap-2">
+                  <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                  </span>
+                  {t(value)}
+                </li>
+              ))}
+            </ul>
+          </article>
         ))}
       </div>
     </section>

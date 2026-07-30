@@ -8,10 +8,10 @@ const defaultSettings: SiteSettings = {
   site_tagline: "مسیر روشن درخواست حمل",
   logo_url: "",
   favicon_url: "",
-  page_title: "فورواردرت | ثبت و پیگیری درخواست حمل",
-  meta_description: "فورواردرت، سامانه ثبت، بررسی و پیگیری شفاف درخواست‌های حمل داخلی و بین‌المللی.",
+  page_title: "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل",
+  meta_description: "فورواردرت، بستر یکپارچه مدیریت درخواست‌ها، مستندات و مراحل پروژه‌های حمل بین‌الملل با شفافیت فرآیند برای ذینفعان حمل.",
   meta_author: "فورواردرت",
-  meta_keywords: "فورواردری, ارسال مرسوله, حمل و نقل, ارسال سریع, ایران",
+  meta_keywords: "فورواردرت, مدیریت عملیات حمل, شفافیت فرآیند حمل, مدیریت مستندات حمل, حمل بین‌المللی",
   footer_company_name: "فورواردری سریع",
   footer_description: "ارائه دهنده خدمات حمل و نقل و فورواردری با بیش از ۱۰ سال تجربه در سراسر کشور",
   footer_phone: "۰۲۱-۸۸۷۷۶۶۵۵",
@@ -64,6 +64,7 @@ export function SiteSettingsProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (settings.page_title) {
       document.title = settings.page_title.startsWith("فورواردری سریع")
+        || settings.page_title === "فورواردرت | ثبت و پیگیری درخواست حمل"
         ? defaultSettings.page_title
         : settings.page_title;
     }
