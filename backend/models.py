@@ -414,6 +414,12 @@ class ShipmentRequest(db.Model):
     estimated_value = db.Column(db.Float, nullable=True)
     
     # Optional CRM integration
+    project_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("project.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True)
     gamification_customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer_gamification.id"), nullable=True)
 
@@ -423,6 +429,7 @@ class ShipmentRequest(db.Model):
     expert_notifications = db.relationship("ExpertConsoleNotification", backref="shipment_request", lazy=True)
     assigned_expert = db.relationship("ExpertUser", back_populates="assigned_requests")
     customer = db.relationship("Customer", back_populates="requests")
+    project = db.relationship("Project", back_populates="shipment_requests")
     gamification_customer = db.relationship("CustomerGamification", back_populates="requests")
     iran_entry_port_ref = db.relationship("IranPort", foreign_keys=[iran_entry_port_id])
     iran_dest_customs_office = db.relationship("CustomsOffice", foreign_keys=[iran_dest_customs_office_id])
@@ -1462,6 +1469,7 @@ from backend.operational_models import (  # noqa: E402
     OperationalOutbox,
     OperationalShipment,
     OperationalWorkItem,
+    Project,
     RouteLeg,
     RoutePlan,
 )
@@ -1516,6 +1524,7 @@ __all__ = [
     "CaseDocumentFile",
     "DocumentAuditEvent",
     "OperationalOrganization",
+    "Project",
     "OperationalMembership",
     "CanonicalLocation",
     "OperationalShipment",

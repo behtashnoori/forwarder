@@ -2,6 +2,34 @@
 
 ## Unreleased
 
+### Feature: Project Aggregate Foundation
+
+Release metadata:
+
+| Field | Value |
+| --- | --- |
+| VERSION | `1.2.0` |
+| RELEASE NAME | `Project Aggregate Foundation` |
+| CHANGE TYPE | `MINOR / Feature` |
+| PRIMARY CAPABILITY | `CAP-001 Project Management` |
+| SUPPORTING CAPABILITY | `CAP-003 Execution Management` |
+| RFC / EPIC / SLICE | `RFC-001` / `EPIC-001` / `SLICE-001` |
+| DATABASE REVISION | `20260805_project_foundation` |
+| DEPLOYMENT TYPE | Backend model and explicit additive database migration; no API, UI, or workflow change |
+
+Changes:
+
+- Added the internal Project aggregate backbone governed by ADR-017 and the Slice-001 Architecture Authority decision.
+- Added organization-scoped Project identity, primary customer ownership, typed customer-party relationships, and explicit ShipmentRequest lineage.
+- Added an optional, same-organization Project relationship to OperationalShipment so all existing rows and workflows remain valid.
+- Added no Project API, UI, summary calculation, alert, timeline, document, notification, ExecutionUnit, or customer-visible behavior.
+
+Compatibility and rollout:
+
+- Existing ShipmentRequest, OperationalShipment, API, and UI behavior remains unchanged.
+- Existing OperationalShipment rows require no Project assignment and receive no inferred backfill.
+- The migration is additive and its downgrade removes only the unused Slice-001 Project structures; production execution remains an explicit, separately approved deployment action.
+
 ### Feature: Landing Page Value Proposition Enhancement
 
 Release metadata:

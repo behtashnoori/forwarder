@@ -23,6 +23,84 @@ class OperationalOrganization(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
+project_party_relationship = db.Table(
+    "project_party_relationship",
+    db.Column(
+        "project_id",
+        BIGINT,
+        db.ForeignKey("project.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    db.Column(
+        "customer_id",
+        BIGINT,
+        db.ForeignKey("customer.id", ondelete="RESTRICT"),
+        primary_key=True,
+    ),
+    db.Column("party_role", db.String(32), primary_key=True),
+    db.Column("source", db.String(64), nullable=False),
+    db.Column("valid_from", db.DateTime(timezone=True), nullable=False, default=utcnow),
+    db.Column("valid_until", db.DateTime(timezone=True), nullable=True),
+    db.CheckConstraint(
+        "party_role IN ('payer','consignee','cargo_owner','notify_party','other')",
+        name="ck_project_party_relationship_role",
+    ),
+    db.CheckConstraint(
+        "valid_until IS NULL OR valid_until >= valid_from",
+        name="ck_project_party_relationship_validity",
+    ),
+)
+
+
+class Project(db.Model):
+    """Business coordination boundary; Slice-001 exposes no Project workflow."""
+
+    __tablename__ = "project"
+    __table_args__ = (
+        db.UniqueConstraint("public_id", name="uq_project_public_id"),
+        db.UniqueConstraint(
+            "organization_id", "project_code", name="uq_project_org_code"
+        ),
+        db.UniqueConstraint("id", "organization_id", name="uq_project_id_org"),
+        db.CheckConstraint(
+            "lifecycle_status IN "
+            "('not_started','in_progress','partially_delivered','completed','cancelled')",
+            name="ck_project_lifecycle_status",
+        ),
+        db.CheckConstraint("version >= 1", name="ck_project_version_positive"),
+        db.Index("ix_project_org_customer", "organization_id", "primary_customer_id"),
+    )
+
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    primary_customer_id = db.Column(
+        BIGINT, db.ForeignKey("customer.id", ondelete="RESTRICT"), nullable=False
+    )
+    project_code = db.Column(db.String(64), nullable=False)
+    lifecycle_status = db.Column(
+        db.String(24), nullable=False, default="not_started"
+    )
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    shipment_requests = db.relationship(
+        "ShipmentRequest", back_populates="project", lazy="selectin"
+    )
+
+
 class OperationalMembership(db.Model):
     __tablename__ = "operational_membership"
     __table_args__ = (
@@ -58,12 +136,19 @@ class OperationalShipment(db.Model):
     __table_args__ = (
         db.UniqueConstraint("accepted_quote_id", name="uq_operational_shipment_accepted_quote"),
         db.UniqueConstraint("id", "organization_id", name="uq_operational_shipment_id_org"),
+        db.ForeignKeyConstraint(
+            ["project_id", "organization_id"],
+            ["project.id", "project.organization_id"],
+            name="fk_operational_shipment_project_same_org",
+            ondelete="RESTRICT",
+        ),
         db.CheckConstraint("lifecycle_status IN ('planned','in_progress','completed','cancelled')", name="ck_operational_shipment_status"),
         db.Index("ix_operational_shipment_org_status", "organization_id", "lifecycle_status"),
     )
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
     organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    project_id = db.Column(BIGINT, nullable=True, index=True)
     shipment_request_id = db.Column(BIGINT, db.ForeignKey("shipment_request.id", ondelete="RESTRICT"), nullable=False, index=True)
     accepted_quote_id = db.Column(BIGINT, db.ForeignKey("expert_quote.id", ondelete="RESTRICT"), nullable=False)
     lifecycle_status = db.Column(db.String(20), nullable=False, default="planned")
@@ -338,7 +423,7 @@ class OperationalIdempotency(db.Model):
 
 
 ALL_OPERATIONAL_MODELS = [
-    OperationalOrganization, OperationalMembership, CanonicalLocation,
+    OperationalOrganization, Project, OperationalMembership, CanonicalLocation,
     OperationalShipment, RoutePlan, RouteLeg, OperationalCheckpoint,
     RouteDependency, Milestone, MilestoneEvent,
     OperationalWorkItem, OperationalAudit, OperationalOutbox,
