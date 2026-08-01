@@ -1,0 +1,62 @@
+# Cargo Data Foundation Approval Matrix
+
+- **Status:** Draft review aid
+- **Date:** 2026-08-01
+- **Authority:** None; this matrix does not accept a decision.
+- **Discovery evidence:** [Discovery and Domain Analysis Report](discovery-cargo-data-and-scroll-analysis-20260801.md); the evidence-availability gap is closed, but approval gates remain open.
+
+Legend: `R` = required approval; `C` = required consultation/review; `—` = not a named approval gate for this record.
+
+| Decision/ADR | Product | Architecture | Operations | Security | Data | Blocking Slice |
+|---|---:|---:|---:|---:|---:|---|
+| PDR-013-D01 Master Data scope and ownership | R | R | R | C | R | B1 |
+| PDR-013-D04 UnitOfMeasure | R | R | R | C | R | B1 |
+| PDR-013-D12 Legacy classification | R | R | R | C | R | B1 |
+| ADR-021 Explicit master-data tables | C | R | C | C | R | B1 |
+| PDR-013-D02 Service cardinality | R | R | R | C | R | B2 |
+| PDR-013-D03 Service ownership | R | R | R | R | C | B2 |
+| PDR-013-D05 Catalog scope | R | R | C | R | R | B3 |
+| PDR-013-D06 Codes and aliases | R | C | C | R | R | B3 |
+| ADR-022 Catalog/snapshot architecture | C | R | C | R | R | B3 |
+| PDR-013-D07 ShipmentCargoItem fields | R | R | R | R | R | B4 |
+| PDR-013-D08 Allocation quantity | R | R | R | R | R | B5 |
+| PDR-013-D09 Delivery/correction | R | R | R | R | R | B5 |
+| ADR-023 Allocation integrity | C | R | R | R | R | B5 |
+| PDR-013-D10 Customer search access | R | R | C | R | R | B6 |
+| PDR-013-D11 Sensitive visibility | R | C | R | R | R | B6 |
+| ADR-024 Tenant-scoped search | C | R | C | R | R | B6 |
+
+## Approval timing
+
+### Required before B1
+
+PDR-013-D01, D04, D12 and ADR-021. The governed discovery/domain report is available; Product, Architecture, Data, and Operations must still decide the listed proposals.
+
+### Required before B2
+
+All B1 gates plus PDR-013-D02/D03 and B2 applicability confirmation for ADR-021.
+
+### Deferrable until allocation
+
+PDR-013-D08/D09 and ADR-023 may remain Proposed through B1–B4. Allocation commands and projections must remain absent/disabled.
+
+### Deferrable until customer search
+
+PDR-013-D10/D11 and ADR-024 may remain Proposed through B1–B5, except D11 must be accepted earlier for any customer-facing catalog/item projection. Cross-Project search remains absent/disabled.
+
+## Authorization verdict
+
+Cargo Data Foundation implementation is **not authorized**. The evidence-availability gap is closed; the first possible implementation slice, B1, remains blocked on the listed acceptances.
+
+## Minimum B1 approval recommendation
+
+These are recommendations only. Every record remains Proposed until its named approvers record acceptance.
+
+| Decision | Recommended Option | Approvers | Blocks B1 | Fail-safe if unresolved |
+| --- | --- | --- | --- | --- |
+| PDR-013-D01 | Explicit domain tables with shared governance; no generic EAV; Product/Data ownership; permission-controlled administration; immutable codes; deactivate rather than delete after use | Product, Data, Architecture, Operations | YES | Keep structured master-data writes disabled and retain legacy descriptions |
+| PDR-013-D04 | Explicit UnitOfMeasure domain with immutable code, measurement dimension, bilingual name/symbol, exact-UOM matching first, conversion deferred, no generic Other, and no structured numeric fact without required UOM | Product, Data, Architecture, Operations | YES | Reject structured quantities that lack an active required UOM; do not infer or convert |
+| PDR-013-D12 | Additive nullable adoption; no guessed backfill; legacy remains readable; new transactions use structure after rollout; audited manual classification for open records; closed history remains Unclassified unless curated | Product, Data, Operations, Architecture | YES | Retain the legacy read path and do not classify automatically |
+| ADR-021 | Explicit tables for significant concepts; reusable governance infrastructure; FK integrity; bilingual labels; activation/deactivation; audit; historical references; no destructive delete or unbounded metadata-driven business logic | Architecture, Data (Product, Operations, and Security consulted) | YES | Do not implement SLICE-B1 or introduce generic metadata-driven business logic |
+
+**Cargo implementation status: NOT AUTHORIZED.**
