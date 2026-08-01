@@ -1,12 +1,12 @@
 # Release Notes
 
-## Unreleased
+## 1.4.0 — Governed Master Data Foundation
 
 ### Feature: Governed Master Data Foundation
 
 | Field | Value |
 | --- | --- |
-| PROPOSED VERSION | `1.4.0` |
+| VERSION | `1.4.0` |
 | RELEASE NAME | `Governed Master Data Foundation` |
 | CHANGE TYPE | `MINOR` |
 | CAPABILITIES | `CAP-013` (primary), `CAP-009`, `CAP-010` |
