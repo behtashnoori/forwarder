@@ -1,0 +1,333 @@
+{
+  "schema_version": "1",
+  "catalog_version": "1.0.0",
+  "source_version": "PDR-014-accepted-2026-08-01",
+  "checksum": "sha256:f7fcfc54d624baa5ae993213fb70c8ca2b76432fb6ae9ae2167e1a11aa9ddaab",
+  "cargo_types": [
+    {
+      "code": "CARGO_AUTOMOTIVE_MECHANICAL_COMPONENTS",
+      "fa_name": "قطعات خودرویی و مکانیکی",
+      "en_name": "Automotive and Mechanical Components",
+      "description": "Parts and assemblies primarily used in vehicles or mechanical systems; excludes complete vehicles and industrial machines.",
+      "display_order": 20,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_INDUSTRIAL_MACHINERY_EQUIPMENT",
+      "fa_name": "ماشین‌آلات و تجهیزات صنعتی",
+      "en_name": "Industrial Machinery and Equipment",
+      "description": "Machines and capital equipment used in industrial operations; excludes spare components and vehicles.",
+      "display_order": 30,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_RAW_MATERIALS",
+      "fa_name": "مواد اولیه",
+      "en_name": "Raw Materials",
+      "description": "Unprocessed or minimally processed inputs not covered by a more specific approved material category.",
+      "display_order": 40,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_METALS_METAL_PRODUCTS",
+      "fa_name": "فلزات و محصولات فلزی",
+      "en_name": "Metals and Metal Products",
+      "description": "Primary metals, semi-finished metals, and metal products; excludes finished machinery.",
+      "display_order": 50,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_CHEMICALS",
+      "fa_name": "مواد شیمیایی",
+      "en_name": "Chemicals",
+      "description": "Chemical substances and preparations excluding petroleum products, pharmaceuticals, and cargo hazard classification.",
+      "display_order": 60,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_PETROLEUM_PETROCHEMICAL",
+      "fa_name": "فرآورده‌های نفتی و پتروشیمی",
+      "en_name": "Petroleum and Petrochemical Products",
+      "description": "Petroleum-origin fuels, oils, and petrochemical products.",
+      "display_order": 70,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_FOOD_AGRICULTURAL",
+      "fa_name": "محصولات غذایی و کشاورزی",
+      "en_name": "Food and Agricultural Products",
+      "description": "Food, beverages, crops, and agricultural products; perishability and temperature control remain separate attributes.",
+      "display_order": 80,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_PHARMACEUTICAL_MEDICAL",
+      "fa_name": "کالاهای دارویی و پزشکی",
+      "en_name": "Pharmaceutical and Medical Goods",
+      "description": "Medicines, medical supplies, and medical devices; excludes general chemicals.",
+      "display_order": 90,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_ELECTRICAL_ELECTRONIC",
+      "fa_name": "کالاهای برقی و الکترونیکی",
+      "en_name": "Electrical and Electronic Goods",
+      "description": "Electrical equipment, electronics, and their primary assemblies; excludes mechanical-only components.",
+      "display_order": 100,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_CONSTRUCTION_MATERIALS",
+      "fa_name": "مصالح ساختمانی",
+      "en_name": "Construction Materials",
+      "description": "Materials primarily supplied for building and civil works; excludes construction machinery.",
+      "display_order": 110,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_TEXTILE_APPAREL",
+      "fa_name": "منسوجات و پوشاک",
+      "en_name": "Textile and Apparel",
+      "description": "Fibers, fabrics, garments, and textile products.",
+      "display_order": 120,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_CONSUMER_FINISHED_GOODS",
+      "fa_name": "کالاهای مصرفی و نهایی",
+      "en_name": "Consumer and Finished Goods",
+      "description": "Finished goods intended primarily for end use and not better represented by another approved category.",
+      "display_order": 130,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_VEHICLES_MOBILE_EQUIPMENT",
+      "fa_name": "وسایل نقلیه و تجهیزات متحرک",
+      "en_name": "Vehicles and Mobile Equipment",
+      "description": "Complete vehicles and self-propelled or mobile equipment transported as cargo; excludes vehicle components.",
+      "display_order": 140,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_OTHER",
+      "fa_name": "سایر کالاها",
+      "en_name": "Other",
+      "description": "Known cargo outside the approved taxonomy. Later transactional selection requires a mandatory explanation.",
+      "display_order": 900,
+      "is_active": true,
+      "parent_code": null
+    },
+    {
+      "code": "CARGO_UNCLASSIFIED",
+      "fa_name": "طبقه‌بندی‌نشده",
+      "en_name": "Unclassified",
+      "description": "System-owned, non-user-selectable state for cargo lacking an evidence-backed classification.",
+      "display_order": 999,
+      "is_active": true,
+      "parent_code": null
+    }
+  ],
+  "service_types": [
+    {
+      "code": "SERVICE_FREIGHT_TRANSPORT",
+      "fa_name": "خدمات حمل بار",
+      "en_name": "Freight Transport Service",
+      "description": "Commercial coordination or sale of freight movement independent of TransportMode and domestic or international scope.",
+      "display_order": 10,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_CUSTOMS_CLEARANCE",
+      "fa_name": "ترخیص گمرکی",
+      "en_name": "Customs Clearance",
+      "description": "Coordination or performance of customs-clearance work as a customer service; customs locations remain separate concepts.",
+      "display_order": 20,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_WAREHOUSING",
+      "fa_name": "انبارداری",
+      "en_name": "Warehousing",
+      "description": "Temporary storage and warehouse coordination supplied as a customer service; this does not implement a Warehouse or WMS domain.",
+      "display_order": 30,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_LOADING",
+      "fa_name": "بارگیری",
+      "en_name": "Loading",
+      "description": "Loading explicitly sold or coordinated as a customer service; operational loading events remain separate.",
+      "display_order": 40,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_UNLOADING",
+      "fa_name": "تخلیه بار",
+      "en_name": "Unloading",
+      "description": "Unloading explicitly sold or coordinated as a customer service; operational unloading activities remain separate.",
+      "display_order": 50,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_PACKING_REPACKING",
+      "fa_name": "بسته‌بندی و بسته‌بندی مجدد",
+      "en_name": "Packing and Repacking",
+      "description": "Packing or repacking explicitly sold or coordinated as a customer service; PackagingType remains separate.",
+      "display_order": 60,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_CARGO_CONSOLIDATION",
+      "fa_name": "تجمیع بار",
+      "en_name": "Cargo Consolidation",
+      "description": "Combining cargo consignments as a coordinated service without authorizing allocation, split, or merge behavior.",
+      "display_order": 70,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_CARGO_DECONSOLIDATION",
+      "fa_name": "تفکیک بار تجمیعی",
+      "en_name": "Cargo Deconsolidation",
+      "description": "Separating consolidated cargo as a coordinated service without authorizing cargo allocation behavior.",
+      "display_order": 80,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_DOCUMENTATION",
+      "fa_name": "خدمات اسنادی",
+      "en_name": "Documentation Service",
+      "description": "Preparation or coordination of logistics documentation without changing Document Platform ownership.",
+      "display_order": 90,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_INSURANCE_COORDINATION",
+      "fa_name": "هماهنگی بیمه",
+      "en_name": "Insurance Coordination",
+      "description": "Coordination of cargo or shipment insurance without representing Forwarder as insurer of record.",
+      "display_order": 100,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_DISTRIBUTION_LAST_MILE",
+      "fa_name": "توزیع و تحویل نهایی",
+      "en_name": "Distribution and Last Mile",
+      "description": "Coordinated final distribution or delivery service without changing delivery lifecycle semantics.",
+      "display_order": 110,
+      "is_active": true
+    },
+    {
+      "code": "SERVICE_OTHER",
+      "fa_name": "سایر خدمات",
+      "en_name": "Other Service",
+      "description": "Known customer service outside the approved vocabulary. Later transactional selection requires an explanation and governed review.",
+      "display_order": 900,
+      "is_active": true
+    }
+  ],
+  "units_of_measure": [
+    {
+      "code": "UOM_PIECE",
+      "fa_name": "عدد",
+      "en_name": "Piece",
+      "description": "Count of discrete individual items.",
+      "display_order": 10,
+      "is_active": true,
+      "symbol": "pcs",
+      "measurement_dimension": "COUNT"
+    },
+    {
+      "code": "UOM_GRAM",
+      "fa_name": "گرم",
+      "en_name": "Gram",
+      "description": "SI mass unit equal to one-thousandth kilogram.",
+      "display_order": 20,
+      "is_active": true,
+      "symbol": "g",
+      "measurement_dimension": "WEIGHT"
+    },
+    {
+      "code": "UOM_KILOGRAM",
+      "fa_name": "کیلوگرم",
+      "en_name": "Kilogram",
+      "description": "SI base logistics mass unit.",
+      "display_order": 30,
+      "is_active": true,
+      "symbol": "kg",
+      "measurement_dimension": "WEIGHT"
+    },
+    {
+      "code": "UOM_METRIC_TON",
+      "fa_name": "تن متریک",
+      "en_name": "Metric Ton",
+      "description": "Metric mass unit defined as exactly 1,000 kilograms; no conversion behavior is implemented.",
+      "display_order": 40,
+      "is_active": true,
+      "symbol": "t",
+      "measurement_dimension": "WEIGHT"
+    },
+    {
+      "code": "UOM_LITER",
+      "fa_name": "لیتر",
+      "en_name": "Liter",
+      "description": "Volume unit equal to one cubic decimeter.",
+      "display_order": 50,
+      "is_active": true,
+      "symbol": "L",
+      "measurement_dimension": "VOLUME"
+    },
+    {
+      "code": "UOM_CUBIC_METER",
+      "fa_name": "متر مکعب",
+      "en_name": "Cubic Meter",
+      "description": "SI-derived cubic volume unit.",
+      "display_order": 60,
+      "is_active": true,
+      "symbol": "m³",
+      "measurement_dimension": "VOLUME"
+    },
+    {
+      "code": "UOM_CENTIMETER",
+      "fa_name": "سانتی‌متر",
+      "en_name": "Centimeter",
+      "description": "Length unit equal to one-hundredth meter.",
+      "display_order": 70,
+      "is_active": true,
+      "symbol": "cm",
+      "measurement_dimension": "LENGTH"
+    },
+    {
+      "code": "UOM_METER",
+      "fa_name": "متر",
+      "en_name": "Meter",
+      "description": "SI length unit.",
+      "display_order": 80,
+      "is_active": true,
+      "symbol": "m",
+      "measurement_dimension": "LENGTH"
+    },
+    {
+      "code": "UOM_KILOMETER",
+      "fa_name": "کیلومتر",
+      "en_name": "Kilometer",
+      "description": "Length unit equal to one thousand meters.",
+      "display_order": 90,
+      "is_active": true,
+      "symbol": "km",
+      "measurement_dimension": "LENGTH"
+    }
+  ]
+}

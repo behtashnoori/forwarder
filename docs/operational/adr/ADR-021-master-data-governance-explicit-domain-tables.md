@@ -3,6 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-01
 - **Accepted:** 2026-08-01
+- **Clarified:** 2026-08-01 for Release 1.5.0 seed execution evidence
 - **Acceptance scope:** SLICE-B1 and future governed master-data slices unless superseded. This acceptance does not authorize later EPIC-002 slices.
 - **Blocking:** SLICE-B1, SLICE-B2
 - **Evidence:** [Discovery and Domain Analysis Report](../discovery-cargo-data-and-scroll-analysis-20260801.md)
@@ -16,6 +17,8 @@ CargoType, ServiceType, and UnitOfMeasure need distinct semantics, constraints, 
 Use explicit domain tables, not generic EAV or unbounded metadata-driven business logic. They share reusable governance and administration conventions: opaque identity, immutable unique code in the approved scope, bilingual display fields, active/inactive lifecycle, provenance, creator/updater and timestamps, optimistic version where edited, and auditable administrative actions. Used values are deactivated, never physically deleted. Foreign keys preserve integrity, and references retain valid historical display even after deactivation.
 
 CargoType is hierarchical with cycle prevention and reserved system records. ServiceType is separate from TransportMode. UnitOfMeasure carries a governed measurement dimension—including count, weight, volume, length, and other explicitly approved dimensions—and forbids structured numeric cargo facts without their required UOM. Conversion factors and organization CargoType extensions are deferred until governed.
+
+For the bounded initial-catalog operational command, reusable governance infrastructure includes an explicit `ReferenceDataSeedRun` record. It persistently identifies catalog version/checksum, environment, mode, named executor, approval reference, counts, status, timestamps, and a sanitized failure summary. It is not a generic seed/EAV framework and grants no authority to execute in Production.
 
 ## Aggregate, security, data, and migration
 

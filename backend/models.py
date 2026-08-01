@@ -1374,6 +1374,54 @@ class UnitOfMeasure(_GovernedMasterDataMixin, db.Model):
     measurement_dimension = db.Column(db.String(32), nullable=False, index=True)
 
 
+REFERENCE_DATA_SEED_RUN_MODES = frozenset({"apply"})
+REFERENCE_DATA_SEED_RUN_STATUSES = frozenset({"started", "succeeded", "failed", "refused"})
+
+
+class ReferenceDataSeedRun(db.Model):
+    """Persistent, secret-safe evidence for explicit reference-data apply runs."""
+
+    __tablename__ = "reference_data_seed_run"
+    __table_args__ = (
+        db.CheckConstraint("mode IN ('apply')", name="ck_reference_data_seed_run_mode"),
+        db.CheckConstraint(
+            "status IN ('started','succeeded','failed','refused')",
+            name="ck_reference_data_seed_run_status",
+        ),
+        db.CheckConstraint(
+            "planned_count >= 0 AND created_count >= 0 AND unchanged_count >= 0 AND conflict_count >= 0",
+            name="ck_reference_data_seed_run_counts_nonnegative",
+        ),
+        db.Index(
+            "ix_reference_data_seed_run_catalog_target",
+            "catalog_version",
+            "checksum",
+            "environment",
+        ),
+        db.Index(
+            "ix_reference_data_seed_run_status_started",
+            "status",
+            "started_at",
+        ),
+    )
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    catalog_version = db.Column(db.String(64), nullable=False)
+    checksum = db.Column(db.String(71), nullable=False)
+    environment = db.Column(db.String(32), nullable=False)
+    mode = db.Column(db.String(16), nullable=False, default="apply")
+    planned_count = db.Column(db.Integer, nullable=False, default=0)
+    created_count = db.Column(db.Integer, nullable=False, default=0)
+    unchanged_count = db.Column(db.Integer, nullable=False, default=0)
+    conflict_count = db.Column(db.Integer, nullable=False, default=0)
+    status = db.Column(db.String(16), nullable=False, default="started")
+    executed_by = db.Column(db.String(160), nullable=False)
+    approval_reference = db.Column(db.String(200), nullable=False)
+    started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    error_summary = db.Column(db.String(500), nullable=True)
+
+
 @event.listens_for(CargoType, "before_update")
 @event.listens_for(ServiceType, "before_update")
 @event.listens_for(UnitOfMeasure, "before_update")
@@ -1544,6 +1592,9 @@ __all__ = [
     "CargoType",
     "ServiceType",
     "UnitOfMeasure",
+    "ReferenceDataSeedRun",
+    "REFERENCE_DATA_SEED_RUN_MODES",
+    "REFERENCE_DATA_SEED_RUN_STATUSES",
     "MASTER_DATA_DIMENSIONS",
     "Province",
     "County",

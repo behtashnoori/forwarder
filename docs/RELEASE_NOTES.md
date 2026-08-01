@@ -1,5 +1,22 @@
 # Release Notes
 
+## 1.5.0 — Reference Data Initial Catalog
+
+| Field | Value |
+| --- | --- |
+| VERSION | `1.5.0` |
+| CHANGE TYPE | MINOR |
+| RELEASE NAME | Reference Data Initial Catalog |
+| BASE RELEASE | `1.4.0` — Governed Master Data Foundation |
+| DATABASE REVISION | `20260808_reference_seed` |
+
+- Accepts PDR-014 D01-D10 and the reviewed initial catalog: 15 CargoTypes, 12 ServiceTypes, and 9 Units of Measure.
+- Adds bounded persistent `ReferenceDataSeedRun` evidence under clarified ADR-021.
+- Adds explicit, checksum-controlled, fail-closed `plan` and `apply --confirm` commands; no startup or migration seed execution.
+- Preserves manual values, inactive values, legacy cargo fields, and current TransportMethod behavior; no automatic backfill or synchronization.
+- Excludes `CARGO_GENERAL_GOODS`, `SERVICE_PROJECT_LOGISTICS`, packaging/handling/container concepts, cargo attributes, CargoCatalogItem, ShipmentCargoItem, allocations, service relationships, search, reports, and dashboards.
+- Production Seed execution, release packaging, deployment, staging, committing, pushing, and tagging are not performed by this implementation task.
+
 ## 1.4.0 — Governed Master Data Foundation
 
 ### Feature: Governed Master Data Foundation
