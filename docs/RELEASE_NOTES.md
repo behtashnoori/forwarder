@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Feature: Governed Master Data Foundation
+
+| Field | Value |
+| --- | --- |
+| PROPOSED VERSION | `1.4.0` |
+| RELEASE NAME | `Governed Master Data Foundation` |
+| CHANGE TYPE | `MINOR` |
+| CAPABILITIES | `CAP-013` (primary), `CAP-009`, `CAP-010` |
+| SLICE | `SLICE-B1` only |
+| DATABASE REVISION | `20260807_master_data` |
+| DEPLOYMENT TYPE | Additive database migration, backend restart, frontend immutable release |
+
+- Adds explicit canonical CargoType, ServiceType, and UnitOfMeasure tables with immutable normalized codes, bilingual labels, activation lifecycle, timestamps, and optimistic versions.
+- Adds admin-only bounded APIs and a reusable responsive administration surface with filtering, sorting, pagination, and no hard-delete action.
+- Performs no seed insertion, classification, backfill, Cargo Catalog, ShipmentCargoItem, allocation, aliases, customer search, dashboard, or reporting work.
+- Preserves legacy fields and behavior. Application rollback disables the new backend/frontend surface while retaining additive master-data tables; database downgrade is permitted only after confirming B1 records need not be retained.
+- Production release preparation requires a backup, explicit migration to `20260807_master_data`, backend restart, immutable frontend build, smoke tests, and a new release manifest. No release package is built by this slice review.
+
 ### Patch: Central Route Scroll Restoration
 
 | Field | Value |

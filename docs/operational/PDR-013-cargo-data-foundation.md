@@ -1,10 +1,10 @@
 # PDR-013 — Cargo Data Foundation Product Decisions
 
-- **Status:** Proposed
+- **Status:** Partially Accepted (D01, D04, and D12 only)
 - **Date:** 2026-08-01
 - **Target:** EPIC-002 — Cargo Data Foundation
 - **Capabilities:** CAP-013 Master Data, CAP-002 Shipment Management, CAP-003 Execution Management, CAP-007 Customer Portal, CAP-009 Administration, CAP-010 Security & Identity
-- **Decision authority:** None. Every decision below remains Proposed until its required approvers record acceptance.
+- **Decision authority:** The SLICE-B1 final review contract accepts D01, D04, and D12 for the bounded Master Data Governance Foundation. All other decisions remain Proposed.
 
 ## Evidence and protocol
 
@@ -20,7 +20,8 @@ Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-d
 - **Operational / Security / Data impact:** Product and Data approve semantics; authorized administrators operate records; foreign keys preserve references; historical use prevents destructive deletion; tenant extensions cannot override canonical meaning.
 - **Migration / UX / AI impact:** Additive nullable adoption with no guessed backfill; bilingual selectors retain inactive historical values; AI may propose evidence-backed mappings but cannot create or approve master data.
 - **Required approvers / Blocking slice / Fail-safe:** Product, Data, Architecture, Operations / SLICE-B1 / keep structured master-data writes disabled and retain legacy descriptions.
-- **Status:** Proposed
+- **Status:** Accepted
+- **Accepted:** 2026-08-01, for SLICE-B1 canonical Master Data Governance Foundation only.
 
 ## PDR-013-D02 — ServiceType cardinality
 
@@ -56,7 +57,8 @@ Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-d
 - **Operational / Security / Data impact:** Data owns UOM activation; no special security beyond governed admin permission; quantities use appropriate precision and UOM FK.
 - **Migration / UX / AI impact:** Do not infer units from numbers; dimension-filtered selection; AI cannot convert without an accepted conversion policy.
 - **Required approvers / Blocking slice / Fail-safe:** Product, Data, Architecture, Operations / SLICE-B1 / reject new structured quantities lacking an active UOM.
-- **Status:** Proposed
+- **Status:** Accepted
+- **Accepted:** 2026-08-01, for SLICE-B1 UnitOfMeasure governance; allocation and conversion behavior remain deferred to their governed slices.
 
 ## PDR-013-D05 — Cargo catalog scope
 
@@ -152,8 +154,9 @@ Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-d
 - **Operational / Security / Data impact:** Prioritized review queue; mapping permissions and audit; nullable links, provenance, confidence/source, and reconciliation status.
 - **Migration / UX / AI impact:** Expand-migrate-verify without destructive rewrite; clearly label unclassified history; AI may recommend evidence-backed mappings but cannot write them automatically.
 - **Required approvers / Blocking slice / Fail-safe:** Product, Data, Operations, Architecture / SLICE-B1 / retain legacy read path and do not classify.
-- **Status:** Proposed
+- **Status:** Accepted
+- **Accepted:** 2026-08-01, for additive/no-backfill adoption in SLICE-B1 and later governed adoption unless superseded.
 
 ## Register consequence
 
-No decision in this register authorizes implementation. SLICE-B1 is blocked on D01, D04, and D12 plus ADR-021 acceptance; later slices remain blocked as identified above.
+D01, D04, and D12 authorize only the approved SLICE-B1 Master Data Governance Foundation together with Accepted ADR-021. They do not authorize Cargo Catalog, ShipmentCargoItem, allocation, aliases, customer search, dashboards, reports, seed data, or any other EPIC-002 slice. All other decisions remain Proposed with their stated fail-safe behavior.

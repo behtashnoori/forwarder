@@ -16,18 +16,18 @@ Establish governed cargo master data, organization catalogs, immutable shipment-
 
 - **Capability / goal:** CAP-013 / establish reusable governance conventions, stewardship, reserved values, validation, audit, and adoption controls for explicit cargo master data.
 - **Dependencies / accepted decisions required:** Constitution/Baseline/Catalog review; PDR-013-D01, D04, D12 and ADR-021 Accepted.
-- **Scope / out of scope:** Governance infrastructure and contracts for immutable codes, lifecycle, localization, provenance, audit, and `UNCLASSIFIED`; excludes domain administration screens, cargo records, allocations, and search.
+- **Scope / out of scope:** Governance infrastructure plus the explicitly approved canonical CargoType, ServiceType, and UnitOfMeasure tables and reusable administration surface; excludes seed values, catalog records, ShipmentCargoItem, allocations, aliases, customer search, dashboards, and reports.
 - **Database / API / UI impact:** Additive governance columns/tables and canonical migration; bounded admin/reference contracts; minimal internal stewardship surface only if separately approved.
 - **Security / migration:** CAP-013 admin permission, least privilege, audit; nullable adoption, no guessed backfill, legacy reads retained.
 - **Tests / rollback:** constraints, reserved records, permission/audit, migration N/N-1 and reconciliation; disable writes/new reads and retain additive data.
 - **Target version:** Next approved MINOR release; exact SemVer assigned at slice authorization.
-- **Acceptance criteria:** owners and runbook named; immutable-code/deactivation rules enforced; `UNCLASSIFIED` works; no EAV; no inferred data; gates and rollback proven.
+- **Acceptance criteria:** immutable-code/deactivation rules enforced; explicit tables and bounded admin APIs/UI proven; no EAV, seed data, inferred classification, or backfill; migration and rollback gates proven.
 
-## SLICE-B2 — CargoType, ServiceType and UnitOfMeasure Administration
+## SLICE-B2 — Service Package Relationships (not authorized)
 
 - **Capability / goal:** CAP-013 and CAP-009 / administer explicit bilingual taxonomies and accepted service-package references.
 - **Dependencies / accepted decisions required:** B1; PDR-013-D01–D04; ADR-021.
-- **Scope / out of scope:** CargoType hierarchy, ServiceType, UOM CRUD via activate/deactivate and Project/request/shipment service relationships as separately designed; excludes conversion, organization taxonomy extensions, catalog/items/allocation/search.
+- **Scope / out of scope:** Future Project/request/shipment service-package relationships as separately designed; canonical master-data tables and administration are delivered only by approved B1. Excludes conversion, organization taxonomy extensions, catalog/items/allocation/search.
 - **Database / API / UI impact:** Explicit tables and relationship constraints; paginated admin/reference APIs; accessible bilingual administration and separate mode/service selectors.
 - **Security / migration:** governed admin permissions and audit; additive references, legacy transport/service text preserved, no automatic remap.
 - **Tests / rollback:** hierarchy cycles, immutable/unique code, UOM dimension, cardinality, localization, auth, accessibility; feature flags disable admin/new links while history remains readable.

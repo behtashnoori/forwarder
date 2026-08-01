@@ -31,6 +31,7 @@ import SiteSettingsTab from "@/components/SiteSettingsTab";
 import TrackingLocationsAdminTab from "@/components/TrackingLocationsAdminTab";
 import LocationsAdminTab from "@/components/LocationsAdminTab";
 import DocumentDefinitionsTab from "@/components/DocumentDefinitionsTab";
+import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
@@ -239,7 +240,7 @@ const AdminPanel = () => {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-4 xl:grid-cols-8">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-4 xl:grid-cols-9">
             <TabsTrigger
               value="dashboard"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
@@ -284,6 +285,7 @@ const AdminPanel = () => {
             </TabsTrigger>
             <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>
             <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>مدیریت مستندات</TabsTrigger>
+            <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -470,6 +472,7 @@ const AdminPanel = () => {
           <TabsContent value="locations" className="space-y-4"><LocationsAdminTab /></TabsContent>
           <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>
           <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>
+          <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>
         </Tabs>
       </div>
     </div>

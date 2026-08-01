@@ -1,6 +1,6 @@
 # Cargo Data Foundation Approval Matrix
 
-- **Status:** Draft review aid
+- **Status:** Reconciled for approved SLICE-B1; later-slice rows remain a Draft review aid
 - **Date:** 2026-08-01
 - **Authority:** None; this matrix does not accept a decision.
 - **Discovery evidence:** [Discovery and Domain Analysis Report](discovery-cargo-data-and-scroll-analysis-20260801.md); the evidence-availability gap is closed, but approval gates remain open.
@@ -28,9 +28,9 @@ Legend: `R` = required approval; `C` = required consultation/review; `—` = not
 
 ## Approval timing
 
-### Required before B1
+### Accepted for B1
 
-PDR-013-D01, D04, D12 and ADR-021. The governed discovery/domain report is available; Product, Architecture, Data, and Operations must still decide the listed proposals.
+PDR-013-D01, D04, D12 and ADR-021 were accepted on 2026-08-01 for the bounded SLICE-B1 Master Data Governance Foundation. This acceptance does not extend to other matrix rows.
 
 ### Required before B2
 
@@ -46,7 +46,7 @@ PDR-013-D10/D11 and ADR-024 may remain Proposed through B1–B5, except D11 must
 
 ## Authorization verdict
 
-Cargo Data Foundation implementation is **not authorized**. The evidence-availability gap is closed; the first possible implementation slice, B1, remains blocked on the listed acceptances.
+SLICE-B1 Master Data Governance Foundation is **authorized and reconciled**. Cargo implementation beyond B1 remains **not authorized** and retains the fail-safe gates below.
 
 ## Minimum B1 approval recommendation
 
@@ -59,4 +59,4 @@ These are recommendations only. Every record remains Proposed until its named ap
 | PDR-013-D12 | Additive nullable adoption; no guessed backfill; legacy remains readable; new transactions use structure after rollout; audited manual classification for open records; closed history remains Unclassified unless curated | Product, Data, Operations, Architecture | YES | Retain the legacy read path and do not classify automatically |
 | ADR-021 | Explicit tables for significant concepts; reusable governance infrastructure; FK integrity; bilingual labels; activation/deactivation; audit; historical references; no destructive delete or unbounded metadata-driven business logic | Architecture, Data (Product, Operations, and Security consulted) | YES | Do not implement SLICE-B1 or introduce generic metadata-driven business logic |
 
-**Cargo implementation status: NOT AUTHORIZED.**
+**Cargo implementation status: SLICE-B1 ONLY AUTHORIZED; ALL LATER SLICES NOT AUTHORIZED.**

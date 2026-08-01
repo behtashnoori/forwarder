@@ -11,6 +11,7 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Master Data
   - name: Execution Units
   - name: Public Project Tracking
   - name: Public Shipment
@@ -86,6 +87,88 @@ components:
       bearerFormat: JWT
       description: Bearer token used by protected expert, CRM, admin, and user-management endpoints.
   schemas:
+    MasterDataItem:
+      type: object
+      required: [public_id, immutable_code, fa_name, en_name, display_order, is_active, created_at, updated_at, version]
+      properties:
+        public_id: { type: string, format: uuid }
+        immutable_code: { type: string, maxLength: 64 }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160 }
+        description: { type: string, nullable: true }
+        parent_id: { type: string, format: uuid, nullable: true }
+        symbol: { type: string, maxLength: 32 }
+        measurement_dimension:
+          type: string
+          enum: [COUNT, WEIGHT, VOLUME, LENGTH, OTHER_GOVERNED]
+        display_order: { type: integer }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
+    MasterDataWrite:
+      type: object
+      required: [immutable_code, fa_name, en_name]
+      properties:
+        immutable_code: { type: string, maxLength: 64 }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160 }
+        description: { type: string, nullable: true }
+        display_order: { type: integer, default: 0 }
+        is_active: { type: boolean, default: true }
+    CargoTypeCreate:
+      allOf:
+        - { $ref: '#/components/schemas/MasterDataWrite' }
+        - type: object
+          properties:
+            parent_id: { type: string, format: uuid, nullable: true }
+    ServiceTypeCreate:
+      allOf:
+        - { $ref: '#/components/schemas/MasterDataWrite' }
+    UnitOfMeasureCreate:
+      allOf:
+        - { $ref: '#/components/schemas/MasterDataWrite' }
+        - type: object
+          required: [symbol, measurement_dimension]
+          properties:
+            symbol: { type: string, maxLength: 32 }
+            measurement_dimension: { type: string, enum: [COUNT, WEIGHT, VOLUME, LENGTH, OTHER_GOVERNED] }
+    MasterDataCreate:
+      oneOf:
+        - { $ref: '#/components/schemas/CargoTypeCreate' }
+        - { $ref: '#/components/schemas/ServiceTypeCreate' }
+        - { $ref: '#/components/schemas/UnitOfMeasureCreate' }
+    MasterDataUpdate:
+      type: object
+      required: [version]
+      properties:
+        immutable_code: { type: string, description: May be repeated unchanged; changes are rejected. }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160 }
+        description: { type: string, nullable: true }
+        display_order: { type: integer }
+        version: { type: integer, minimum: 1 }
+    CargoTypeUpdate:
+      allOf:
+        - { $ref: '#/components/schemas/MasterDataUpdate' }
+        - type: object
+          properties:
+            parent_id: { type: string, format: uuid, nullable: true }
+    ServiceTypeUpdate:
+      allOf:
+        - { $ref: '#/components/schemas/MasterDataUpdate' }
+    UnitOfMeasureUpdate:
+      allOf:
+        - { $ref: '#/components/schemas/MasterDataUpdate' }
+        - type: object
+          properties:
+            symbol: { type: string, maxLength: 32 }
+            measurement_dimension: { type: string, enum: [COUNT, WEIGHT, VOLUME, LENGTH, OTHER_GOVERNED] }
+    MasterDataUpdateRequest:
+      oneOf:
+        - { $ref: '#/components/schemas/CargoTypeUpdate' }
+        - { $ref: '#/components/schemas/ServiceTypeUpdate' }
+        - { $ref: '#/components/schemas/UnitOfMeasureUpdate' }
     ErrorResponse:
       type: object
       additionalProperties: true
@@ -1911,6 +1994,75 @@ paths:
                     type: string
         '400':
           $ref: '#/components/responses/BadRequest'
+  /api/admin/master-data/{resource}:
+    parameters:
+      - name: resource
+        in: path
+        required: true
+        schema: { type: string, enum: [cargo-types, service-types, units-of-measure] }
+    get:
+      tags: [Master Data]
+      summary: List governed master data
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PerPage' }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: active, in: query, schema: { type: string, enum: [all, 'true', 'false'] } }
+        - { name: sort, in: query, schema: { type: string, enum: [display_order, code, fa_name, en_name, updated_at] } }
+        - { name: direction, in: query, schema: { type: string, enum: [asc, desc] } }
+        - { name: measurement_dimension, in: query, schema: { type: string, enum: [COUNT, WEIGHT, VOLUME, LENGTH, OTHER_GOVERNED] } }
+      responses:
+        '200':
+          description: Paginated canonical values.
+          content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { $ref: '#/components/schemas/MasterDataItem' } }, page: { type: integer }, per_page: { type: integer }, total: { type: integer }, pages: { type: integer } } } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Master Data]
+      summary: Create governed master data
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MasterDataCreate' } } } }
+      responses:
+        '201': { description: Created canonical value. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { description: Duplicate or conflicting canonical value. }
+  /api/admin/master-data/{resource}/{public_id}:
+    parameters:
+      - { name: resource, in: path, required: true, schema: { type: string, enum: [cargo-types, service-types, units-of-measure] } }
+      - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Master Data]
+      summary: Get governed master-data detail
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Canonical value detail. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Master Data]
+      summary: Update mutable fields using optimistic version
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MasterDataUpdateRequest' } } } }
+      responses:
+        '200': { description: Updated canonical value. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { description: Optimistic version conflict. }
+  /api/admin/master-data/{resource}/{public_id}/{action}:
+    post:
+      tags: [Master Data]
+      summary: Activate or deactivate a canonical value
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: resource, in: path, required: true, schema: { type: string, enum: [cargo-types, service-types, units-of-measure] } }
+        - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [version], properties: { version: { type: integer, minimum: 1 } } } } }
+      responses:
+        '200': { description: Activation state changed. }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { description: Optimistic version conflict. }
   /api/uploads/{filename}:
     get:
       tags: [Site Settings]

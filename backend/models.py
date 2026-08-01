@@ -1,6 +1,8 @@
 """Database models for the shipment request service."""
 from datetime import datetime
-from sqlalchemy import event, select
+from uuid import uuid4
+from sqlalchemy import event, inspect, select
+from sqlalchemy.orm import declared_attr
 
 from backend.extensions import db
 
@@ -1317,6 +1319,69 @@ class CustomsProvinceMapping(db.Model):
     province = db.relationship("Province")
 
 
+MASTER_DATA_DIMENSIONS = frozenset({"COUNT", "WEIGHT", "VOLUME", "LENGTH", "OTHER_GOVERNED"})
+
+
+class _GovernedMasterDataMixin:
+    """Shared persistence contract for organization-independent reference data."""
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    immutable_code = db.Column(db.String(64), nullable=False, unique=True)
+    fa_name = db.Column(db.String(160), nullable=False)
+    en_name = db.Column(db.String(160), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    version = db.Column(db.Integer, nullable=False, default=1)
+
+    @declared_attr
+    def __mapper_args__(cls):
+        # SQLAlchemy includes the previously-read version in UPDATE predicates,
+        # preventing concurrent requests from silently overwriting each other.
+        return {"version_id_col": cls.version, "version_id_generator": False}
+
+
+class CargoType(_GovernedMasterDataMixin, db.Model):
+    __tablename__ = "cargo_type"
+    __table_args__ = (
+        db.CheckConstraint("version >= 1", name="ck_cargo_type_version_positive"),
+        db.CheckConstraint("parent_id IS NULL OR parent_id <> id", name="ck_cargo_type_not_self_parent"),
+    )
+    parent_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("cargo_type.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    parent = db.relationship("CargoType", remote_side="CargoType.id", backref="children")
+
+
+class ServiceType(_GovernedMasterDataMixin, db.Model):
+    __tablename__ = "service_type"
+    __table_args__ = (db.CheckConstraint("version >= 1", name="ck_service_type_version_positive"),)
+
+
+class UnitOfMeasure(_GovernedMasterDataMixin, db.Model):
+    __tablename__ = "unit_of_measure"
+    __table_args__ = (
+        db.CheckConstraint("version >= 1", name="ck_unit_of_measure_version_positive"),
+        db.CheckConstraint(
+            "measurement_dimension IN ('COUNT','WEIGHT','VOLUME','LENGTH','OTHER_GOVERNED')",
+            name="ck_unit_of_measure_dimension",
+        ),
+    )
+    symbol = db.Column(db.String(32), nullable=False)
+    measurement_dimension = db.Column(db.String(32), nullable=False, index=True)
+
+
+@event.listens_for(CargoType, "before_update")
+@event.listens_for(ServiceType, "before_update")
+@event.listens_for(UnitOfMeasure, "before_update")
+def _prevent_master_data_code_change(_mapper, _connection, target) -> None:
+    if inspect(target).attrs.immutable_code.history.has_changes():
+        raise ValueError("immutable_code cannot be changed")
+
+
 @event.listens_for(PortLocation, "before_insert")
 @event.listens_for(PortLocation, "before_update")
 def _validate_port_location_before_write(_mapper, connection, target) -> None:
@@ -1476,6 +1541,10 @@ from backend.operational_models import (  # noqa: E402
 
 
 __all__ = [
+    "CargoType",
+    "ServiceType",
+    "UnitOfMeasure",
+    "MASTER_DATA_DIMENSIONS",
     "Province",
     "County",
     "City",

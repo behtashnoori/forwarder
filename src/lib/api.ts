@@ -417,6 +417,24 @@ export const updateAdminLocation = <T>(resource: AdminLocationResource, id: numb
 export const deactivateAdminLocation = <T>(resource: AdminLocationResource, id: number): Promise<{ item: T }> =>
   request(`/api/admin/locations/${resource}/${id}`, { method: "DELETE" });
 
+export type MasterDataResource = "cargo-types" | "service-types" | "units-of-measure";
+export type MeasurementDimension = "COUNT" | "WEIGHT" | "VOLUME" | "LENGTH" | "OTHER_GOVERNED";
+export interface MasterDataItem {
+  public_id: string; immutable_code: string; fa_name: string; en_name: string;
+  description: string | null; display_order: number; is_active: boolean; version: number;
+  created_at: string; updated_at: string; parent_id?: string | null; symbol?: string;
+  measurement_dimension?: MeasurementDimension;
+}
+export interface MasterDataPage { items: MasterDataItem[]; page: number; per_page: number; total: number; pages: number; }
+export const fetchMasterData = (resource: MasterDataResource, params: Record<string, string | number | undefined>) =>
+  request<MasterDataPage>(withQuery(`/api/admin/master-data/${resource}`, params));
+export const createMasterData = (resource: MasterDataResource, payload: Record<string, unknown>) =>
+  request<{ item: MasterDataItem }>(`/api/admin/master-data/${resource}`, { method: "POST", body: JSON.stringify(payload) });
+export const updateMasterData = (resource: MasterDataResource, publicId: string, payload: Record<string, unknown>) =>
+  request<{ item: MasterDataItem }>(`/api/admin/master-data/${resource}/${publicId}`, { method: "PATCH", body: JSON.stringify(payload) });
+export const setMasterDataActive = (resource: MasterDataResource, item: MasterDataItem, active: boolean) =>
+  request<{ item: MasterDataItem }>(`/api/admin/master-data/${resource}/${item.public_id}/${active ? "activate" : "deactivate"}`, { method: "POST", body: JSON.stringify({ version: item.version }) });
+
 let refreshPromise: Promise<boolean> | null = null;
 
 export function refreshExpertSession(): Promise<boolean> {
