@@ -11,8 +11,9 @@ import { useToast } from '@/hooks/use-toast';
 import { env } from '@/lib/env';
 import { useSiteSettings } from '@/contexts/SiteSettingsContext';
 import { consumeReturnTo } from '@/lib/authContinuity';
+import { useI18n } from '@/i18n';
 
-const ExpertLogin = () => {
+const ExpertLogin = ({ triggerClassName = "" }: { triggerClassName?: string }) => {
   const settings = useSiteSettings();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -22,6 +23,7 @@ const ExpertLogin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const crmPrimaryRoles = new Set(['crm_manager', 'business_expert']);
+  const { t } = useI18n();
 
   // Logout function
   const handleLogout = () => {
@@ -78,9 +80,9 @@ const ExpertLogin = () => {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" className="text-sm font-medium">
+        <Button variant="outline" className={`text-sm font-medium ${triggerClassName}`}>
           <User className="w-4 h-4 ml-2" />
-          ورود
+          {t("command.staffLogin")}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">

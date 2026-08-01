@@ -32,13 +32,13 @@ const Header = () => {
 
           <nav className="hidden md:flex items-center gap-4">
             <Button variant="ghost" className="text-sm font-medium" asChild>
-              <Link to="/#about">
+              <Link to="/about">
                 <Info className={`w-4 h-4 ${iconSpacingClass}`} />
                 {localizedSetting(settings.nav_about, t("nav.about"))}
               </Link>
             </Button>
             <Button variant="ghost" className="text-sm font-medium" asChild>
-              <Link to="/#contact">
+              <Link to="/contact">
                 <Phone className={`w-4 h-4 ${iconSpacingClass}`} />
                 {localizedSetting(settings.nav_contact, t("nav.contact"))}
               </Link>
@@ -54,30 +54,32 @@ const Header = () => {
               <Globe2 className={`w-4 h-4 ${iconSpacingClass}`} />
               {t("app.language.toggle")}
             </Button>
-            <ExpertLogin />
           </nav>
 
           <Button
             variant="ghost"
             size="sm"
-            className="md:hidden"
+            className="shrink-0"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
+            aria-expanded={isMenuOpen}
+            aria-controls="site-menu"
+            aria-label={t("nav.menu")}
           >
             <Menu className="w-5 h-5" />
           </Button>
         </div>
 
         {isMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border bg-card/95">
+          <div id="site-menu" className="border-t border-border bg-card/95 py-4">
             <nav className="flex flex-col gap-2">
-              <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                <Link to="/#about" onClick={() => setIsMenuOpen(false)}>
+              <Button variant="ghost" className="justify-start text-sm font-medium md:hidden" asChild>
+                <Link to="/about" onClick={() => setIsMenuOpen(false)}>
                   <Info className={`w-4 h-4 ${iconSpacingClass}`} />
                   {localizedSetting(settings.nav_about, t("nav.about"))}
                 </Link>
               </Button>
-              <Button variant="ghost" className="justify-start text-sm font-medium" asChild>
-                <Link to="/#contact" onClick={() => setIsMenuOpen(false)}>
+              <Button variant="ghost" className="justify-start text-sm font-medium md:hidden" asChild>
+                <Link to="/contact" onClick={() => setIsMenuOpen(false)}>
                   <Phone className={`w-4 h-4 ${iconSpacingClass}`} />
                   {localizedSetting(settings.nav_contact, t("nav.contact"))}
                 </Link>
@@ -86,7 +88,7 @@ const Header = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                className="mx-3 justify-start text-xs font-medium"
+                className="mx-3 justify-start text-xs font-medium md:hidden"
                 onClick={() => {
                   toggleLanguage();
                   setIsMenuOpen(false);

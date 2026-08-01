@@ -62,6 +62,9 @@ export function SiteSettingsProvider({ children }: { children: React.ReactNode }
   }, []);
 
   useEffect(() => {
+    if (window.location.pathname === "/") {
+      document.title = "فورواردر | ثبت درخواست و رهگیری عملیات حمل";
+    } else
     if (settings.page_title) {
       document.title = settings.page_title.startsWith("فورواردری سریع")
         || settings.page_title === "فورواردرت | ثبت و پیگیری درخواست حمل"

@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Feature: Forwarder Command Center
+
+| Field | Value |
+| --- | --- |
+| VERSION | `1.3.0` |
+| RELEASE NAME | `Forwarder Command Center` |
+| CHANGE TYPE | `MINOR / Customer-facing UX Enhancement` |
+| CAPABILITIES | `CAP-007` (primary), `CAP-010`, `CAP-001` |
+| PRODUCT DECISION | `PDR-012` |
+| DEPLOYMENT TYPE | Frontend-only immutable release; IIS pointer switch during deployment |
+
+- Replaced the long-form root landing page with an operational portal focused on request registration and request/Project tracking; staff login remains available once, behind the compact header menu.
+- Preserved the domestic/international request forms and public request and Project tracking routes.
+- Moved concise About and Contact information to dedicated routes and removed promotional sections from root rendering.
+- Added bilingual accessible validation, Enter submission, responsive layout, and purpose-aligned metadata.
+- No backend, API, authentication, database, migration, dependency, or environment change.
+- Rollback: switch the IIS pointer to immutable release `1.2.0`; no data rollback is needed.
+
 ### Feature: Multi-unit Operational Project Tracking
 
 Release metadata:

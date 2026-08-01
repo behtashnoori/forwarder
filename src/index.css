@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+@media (min-width: 1024px) {
+  body:has(#command-center-root) {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
 /* Forwarding Service Design System - Persian RTL Optimized
 All colors MUST be HSL. Mobile-first design with professional aesthetics.
 */

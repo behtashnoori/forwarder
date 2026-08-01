@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router";
 import Index from "./pages/Index";
+import InformationPage from "./pages/InformationPage";
 import NotFound from "./pages/NotFound";
 import ExpertConsole from "./pages/ExpertConsole";
 import RequestDetail from "./pages/RequestDetail";
@@ -84,6 +85,8 @@ const App = () => (
             <SiteSettingsProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/about" element={<InformationPage kind="about" />} />
+                <Route path="/contact" element={<InformationPage kind="contact" />} />
                 <Route path="/expert" element={
                   <ProtectedRoute>
                     <PersianOnlyRoute>
