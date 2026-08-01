@@ -1,7 +1,8 @@
 # ADR-019: Unified Timeline and Operational Event Model
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
+- Acceptance date: 2026-07-31
 
 ## 1. Context
 

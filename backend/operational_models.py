@@ -58,6 +58,7 @@ class Project(db.Model):
     __tablename__ = "project"
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_project_public_id"),
+        db.UniqueConstraint("tracking_code", name="uq_project_tracking_code"),
         db.UniqueConstraint(
             "organization_id", "project_code", name="uq_project_org_code"
         ),
@@ -74,6 +75,9 @@ class Project(db.Model):
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(
         db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
+    )
+    tracking_code = db.Column(
+        db.String(48), nullable=False, default=lambda: uuid.uuid4().hex
     )
     organization_id = db.Column(
         BIGINT,
@@ -99,6 +103,88 @@ class Project(db.Model):
     shipment_requests = db.relationship(
         "ShipmentRequest", back_populates="project", lazy="selectin"
     )
+    execution_units = db.relationship(
+        "ExecutionUnit", back_populates="project", lazy="selectin"
+    )
+
+
+class ExecutionUnit(db.Model):
+    """Canonical independently managed unit within a Project (ADR-018)."""
+
+    __tablename__ = "execution_unit"
+    __table_args__ = (
+        db.UniqueConstraint("public_id", name="uq_execution_unit_public_id"),
+        db.UniqueConstraint("project_id", "unit_code", name="uq_execution_unit_project_code"),
+        db.UniqueConstraint("legacy_unit_id", name="uq_execution_unit_legacy_unit"),
+        db.CheckConstraint(
+            "lifecycle_status IN ('not_started','ready','in_progress','arrived','delivered','cancelled')",
+            name="ck_execution_unit_lifecycle_status",
+        ),
+        db.CheckConstraint("version >= 1", name="ck_execution_unit_version_positive"),
+        db.Index("ix_execution_unit_project_status_active", "project_id", "lifecycle_status", "is_active"),
+        db.Index("ix_execution_unit_project_updated", "project_id", "updated_at"),
+    )
+
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid.uuid4()))
+    project_id = db.Column(BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False)
+    operational_shipment_id = db.Column(BIGINT, db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"), nullable=True)
+    legacy_unit_id = db.Column(BIGINT, db.ForeignKey("shipment_transport_unit.id", ondelete="RESTRICT"), nullable=True)
+    unit_code = db.Column(db.String(64), nullable=False)
+    unit_type = db.Column(db.String(32), nullable=False)
+    display_name = db.Column(db.String(160), nullable=True)
+    vehicle_reference = db.Column(db.String(160), nullable=True)
+    lifecycle_status = db.Column(db.String(24), nullable=False, default="not_started")
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    attention_required = db.Column(db.Boolean, nullable=False, default=False)
+    delayed = db.Column(db.Boolean, nullable=False, default=False)
+    latest_checkpoint = db.Column(db.String(255), nullable=True)
+    last_event_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+    project = db.relationship("Project", back_populates="execution_units")
+    events = db.relationship("OperationalEvent", back_populates="execution_unit", lazy="raise")
+
+
+class OperationalEvent(db.Model):
+    """Append-only event envelope and unit timeline source (ADR-019)."""
+
+    __tablename__ = "operational_event"
+    __table_args__ = (
+        db.UniqueConstraint("public_id", name="uq_operational_event_public_id"),
+        db.UniqueConstraint("execution_unit_id", "idempotency_key", name="uq_operational_event_unit_idempotency"),
+        db.CheckConstraint("visibility IN ('internal','customer')", name="ck_operational_event_visibility"),
+        db.Index("ix_operational_event_unit_occurred", "execution_unit_id", "occurred_at", "id"),
+        db.Index("ix_operational_event_project_recorded", "project_id", "recorded_at", "id"),
+    )
+
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid.uuid4()))
+    project_id = db.Column(BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False)
+    execution_unit_id = db.Column(BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=False)
+    event_type = db.Column(db.String(64), nullable=False)
+    lifecycle_status = db.Column(db.String(24), nullable=True)
+    checkpoint_text = db.Column(db.String(255), nullable=True)
+    customer_message = db.Column(db.Text, nullable=True)
+    internal_note = db.Column(db.Text, nullable=True)
+    visibility = db.Column(db.String(16), nullable=False, default="internal")
+    attention_required = db.Column(db.Boolean, nullable=False, default=False)
+    delayed = db.Column(db.Boolean, nullable=False, default=False)
+    occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    actor_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    source = db.Column(db.String(32), nullable=False, default="expert")
+    idempotency_key = db.Column(db.String(100), nullable=False)
+    request_hash = db.Column(db.String(64), nullable=False)
+    correlation_id = db.Column(db.String(100), nullable=True)
+    batch_id = db.Column(db.String(100), nullable=True)
+    supersedes_event_id = db.Column(BIGINT, db.ForeignKey("operational_event.id", ondelete="RESTRICT"), nullable=True)
+    threshold_policy_version = db.Column(db.String(32), nullable=True)
+
+    execution_unit = db.relationship("ExecutionUnit", back_populates="events")
 
 
 class OperationalMembership(db.Model):

@@ -1,7 +1,8 @@
 # ADR-018: Execution Unit Architecture
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-07-31
+- Acceptance date: 2026-07-31
 
 ## 1. Context
 

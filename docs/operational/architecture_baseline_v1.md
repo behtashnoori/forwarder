@@ -26,8 +26,8 @@ The established and proposed architecture covers:
 - commercial ShipmentRequest intake, assignment, Quotation, and customer response;
 - operational execution through OperationalShipment, Route, Checkpoint, Milestone, and verified events;
 - Project-level coordination and aggregation as proposed by ADR-017;
-- independently concurrent ExecutionUnits as proposed by ADR-018;
-- permission-filtered operational history and event projections as proposed by ADR-019;
+- independently concurrent ExecutionUnits as accepted by ADR-018;
+- permission-filtered operational history and event projections as accepted by ADR-019;
 - document artifact, attachment, version, requirement, visibility, and audit foundations as proposed by ADR-020;
 - operational alerts, exceptions, tasks/work queues, reports, dashboards, public/customer visibility, security, audit, migration, deployment, and release controls;
 - AI observation, recommendation, preparation, explanation, and later policy-controlled actions.
@@ -82,7 +82,7 @@ This section summarizes existing decisions and links to their authoritative sour
 | Deterministic runtime and deployment | Startup has no schema writes; use canonical entrypoint, controlled environment, quality gates, immutable release identity, and manifest | [ADR-011](adr/ADR-011-explicit-migration-execution.md), [ADR-012](adr/ADR-012-versioned-backend-entrypoint.md), [Release Governance](../../../28-AI-Rules/06-Version-Release-Deployment-Governance.md) |
 | Human approval boundaries | AI and automation may read/recommend/prepare; sensitive execution and approval remain governed explicit actions | [Operational Workshop](operational_architecture_workshop.md#5-ai-readiness), [PDR](phase0_5_product_decision_register.md) |
 
-ADR-017 and PDR-001 through PDR-004 were Accepted for SLICE-001 on 2026-07-31. PDR-005, PDR-006, and PDR-010 are Deferred. ADR-018 through ADR-020 and PDR-007 through PDR-009/PDR-011 remain `Proposed`. Inclusion in this index does not change any individual status.
+ADR-017 through ADR-019, PDR-001 through PDR-006, and PDR-010 are Accepted as of 2026-07-31. ADR-020 and PDR-007 through PDR-009/PDR-011 remain `Proposed`. Inclusion in this index does not change any individual status.
 
 ## 3. Architecture Map
 
@@ -374,8 +374,8 @@ No existing document was modified during this review.
 | Route/milestone/location | ADR-004/005/009 | Phase 1A/1B domain/API/state/test docs | ADRs Accepted; implementations documented |
 | Migration/runtime/release safety | ADR-006/011/012/014/015/016 | Migration sequence, runbooks, AI Rules, CI | ADRs Accepted |
 | Project architecture | ADR-017 | PDR-001–004, Workshop, Catalog | ADR Accepted; PDR-001–004 Accepted for SLICE-001 |
-| ExecutionUnit | ADR-018 | PDR-005–007/010, Workshop, Catalog | ADR Proposed; Slice 1 choices Proposed |
-| Unified events/timeline | ADR-019 | ADR-009/010/016, Workshop, Catalog | ADR Proposed; preserves specialized events |
+| ExecutionUnit | ADR-018 | PDR-005–007/010, Workshop, Catalog | ADR Accepted; PDR-005/006/010 Accepted for Release 1.2.0 |
+| Unified events/timeline | ADR-019 | ADR-009/010/016, Workshop, Catalog | ADR Accepted; preserves specialized events |
 | Document platform | ADR-020 | PDR-008/009/011, Workshop, Catalog | ADR Proposed; later-slice decisions Proposed |
 | Vocabulary | Canonical Catalog | All ADR/PDR/workshop sources | Catalog draft; proposed for authority |
 | Human/AI approval | AI Rules + PDR/Workshop | AI-ready docs, Permission Matrix | Principles established; action policies not broadly accepted |
@@ -424,7 +424,7 @@ These are compatibility/documentation findings, not authorization to rename code
 
 ### Consistency verdict
 
-The architecture sources are structurally consistent when document status and historical context are respected. ADR-017 and PDR-001 through PDR-004 are Accepted for SLICE-001; PDR-005, PDR-006, and PDR-010 are Deferred; ADR-018 through ADR-020 and the remaining PDRs retain Proposed status. Workshop outcomes, Catalog authority, and this Baseline retain their documented statuses.
+The architecture sources are structurally consistent when document status and historical context are respected. ADR-017 through ADR-019, PDR-001 through PDR-006, and PDR-010 are Accepted; ADR-020 and the remaining PDRs retain Proposed status. Workshop outcomes, Catalog authority, and this Baseline retain their documented statuses.
 
 ## 11. Architecture Readiness Assessment
 
@@ -432,7 +432,7 @@ The architecture sources are structurally consistent when document status and hi
 
 | Dimension | Assessment | Evidence | Remaining condition |
 |---|---|---|---|
-| Architecture maturity | High for documented boundaries and operational foundation | Accepted ADR-001–017, Phase 0/1 contracts and evidence; Proposed ADR-018–020 | Reconcile remaining decisions before their affected later slices |
+| Architecture maturity | High for documented boundaries and operational foundation | Accepted ADR-001–019, Phase 0/1 contracts and evidence; Proposed ADR-020 | Reconcile remaining decisions before their affected later slices |
 | Governance maturity | High structure, medium closure | AI Rules, ADR/PDR process, permission/state/test matrices, release governance | Record explicit Product/Architecture approvals and link them to implementation |
 | Documentation maturity | High breadth, medium discoverability before baseline | Extensive operational docs, runbooks, evidence, Catalog, Workshop | Accept baseline and add future authorized links from README/System Architecture |
 | AI readiness | High for principles/read/recommend; low-to-medium for execution authorization | AI Rules, provider/context docs, event/audit/permission foundations, Workshop boundaries | Accept action-specific policies; keep sensitive/autonomous execution disabled |

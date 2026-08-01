@@ -3,9 +3,13 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
 import { getBackendTarget } from "./vite-backend-target";
+import packageMetadata from "./package.json";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: {
+    "import.meta.env.VITE_APP_VERSION": JSON.stringify(packageMetadata.version),
+  },
   test: { environment: "jsdom", setupFiles: ["./src/tests/setup.ts"], include: ["src/**/*.test.{ts,tsx}"] },
   server: {
     host: "0.0.0.0",

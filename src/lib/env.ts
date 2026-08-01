@@ -32,7 +32,7 @@ export const env = {
   
   // App Configuration
   APP_NAME: import.meta.env.VITE_APP_NAME || 'Forwarder App',
-  APP_VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
+  APP_VERSION: import.meta.env.VITE_APP_VERSION,
   
   // Development flags
   IS_DEVELOPMENT: import.meta.env.DEV,

@@ -1989,3 +1989,19 @@ export function fetchRecommendedPorts(provinceId: number): Promise<RecommendedPo
 export function fetchBorderCustoms(): Promise<BorderCustoms[]> {
   return request(`/api/border-customs`);
 }
+
+export interface ExecutionUnitView {
+  public_id:string; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null;
+  lifecycle_status:string; is_active:boolean; version?:number; latest_checkpoint?:string|null; last_update_at?:string|null;
+  alerts:{attention_required:boolean;delayed:boolean;stale:boolean};
+}
+export interface ExecutionEventView { public_id:string; event_type:string; lifecycle_status?:string|null; checkpoint_text?:string|null; customer_message?:string|null; internal_note?:string|null; visibility:string; occurred_at:string; }
+export interface PageMeta { page:number; per_page:number; total:number; pages:number }
+export interface ProjectUnitSummary { project_public_id:string; project_code:string; status:string; total_units:number; delivered_units:number; in_progress_units:number; delayed_units:number; attention_required:number; units_without_recent_update:number; progress_percentage:number; last_update_at?:string|null; threshold_policy:{version:string;stale_after_hours:number} }
+export const listExecutionUnits=(projectId:string,params:URLSearchParams)=>request<{data:ExecutionUnitView[];meta:PageMeta}>(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units?${params}`);
+export const createExecutionUnit=(projectId:string,payload:{unit_type:string;display_name?:string;vehicle_reference?:string})=>request<{data:ExecutionUnitView}>(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units`,{method:"POST",body:JSON.stringify(payload)});
+export const getExecutionUnitTimeline=(projectId:string,unitId:string,page=1)=>request<{data:ExecutionEventView[];meta:PageMeta}>(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}/timeline?page=${page}&per_page=25`);
+export const createExecutionUnitEvent=(projectId:string,unitId:string,payload:Record<string,unknown>,key:string)=>request(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}/events`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify(payload)});
+export const getPublicProjectSummary=(code:string)=>request<{data:ProjectUnitSummary}>(`/api/public/v2/projects/${encodeURIComponent(code)}/summary`);
+export const listPublicExecutionUnits=(code:string,params:URLSearchParams)=>request<{data:ExecutionUnitView[];meta:PageMeta}>(`/api/public/v2/projects/${encodeURIComponent(code)}/execution-units?${params}`);
+export const getPublicExecutionTimeline=(code:string,unitId:string,page=1)=>request<{data:ExecutionEventView[];meta:PageMeta}>(`/api/public/v2/projects/${encodeURIComponent(code)}/execution-units/${encodeURIComponent(unitId)}/timeline?page=${page}&per_page=25`);

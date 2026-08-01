@@ -109,10 +109,10 @@ This register makes Product decisions and unresolved choices explicit before imp
 - **AI-agent impact:** AI uses canonical codes for explanations and public IDs/versions for commands; it does not treat external identifiers as stable ownership keys.
 - **Decision owner:** Product Owner — Execution Operations
 - **Required approvers:** Product Owner, Operations Owner, Data Owner
-- **Status:** Deferred
-- **Deferral date:** 2026-07-31
-- **Deferral reason:** ExecutionUnit is outside SLICE-001.
-- **Slice disposition:** Deferred from SLICE-001; revisit for the authorized ExecutionUnit slice.
+- **Status:** Accepted
+- **Selected option:** Option C
+- **Acceptance date:** 2026-07-31
+- **Slice disposition:** Deferred from SLICE-001 and accepted for the authorized Release 1.2.0 ExecutionUnit slice.
 - **Default fail-safe behavior if unresolved:** Do not generate or rewrite codes. Preserve legacy values read-only, use opaque IDs internally, and block canonical unit creation.
 
 ## PDR-006 — ExecutionUnit lifecycle
@@ -130,10 +130,10 @@ This register makes Product decisions and unresolved choices explicit before imp
 - **AI-agent impact:** AI can compare shared lifecycle while citing mode events. It must not invent a core transition from an unverified mode event.
 - **Decision owner:** Product Owner — Multimodal Operations
 - **Required approvers:** Product Owner, Road/Rail/Sea/Air/Warehouse/Customs Operations representatives, Data Owner
-- **Status:** Deferred
-- **Deferral date:** 2026-07-31
-- **Deferral reason:** ExecutionUnit lifecycle belongs to a later slice.
-- **Slice disposition:** Deferred from SLICE-001; revisit for the later ExecutionUnit lifecycle slice.
+- **Status:** Accepted
+- **Selected option:** Option B
+- **Acceptance date:** 2026-07-31
+- **Slice disposition:** Deferred from SLICE-001 and accepted for the authorized Release 1.2.0 ExecutionUnit lifecycle slice.
 - **Default fail-safe behavior if unresolved:** Preserve legacy statuses without canonical transition writes; expose `lifecycle_unmapped` internally and exclude ambiguous units from automatic completion.
 
 ## PDR-007 — ExecutionUnit split and merge policy
@@ -217,10 +217,11 @@ This register makes Product decisions and unresolved choices explicit before imp
 - **AI-agent impact:** AI recommendations cite the threshold policy. Agent bulk actions are capped identically and cannot partition requests to bypass limits.
 - **Decision owner:** Operations Owner — Service Control
 - **Required approvers:** Product Owner, Operations Owner, Security Owner, Platform/SRE Owner
-- **Status:** Deferred
-- **Deferral date:** 2026-07-31
-- **Deferral reason:** Freshness and stale-update alerts belong to later summary/timeline work.
-- **Slice disposition:** Deferred from SLICE-001; freshness/stale-update policy, SLA catalog, bulk execution, and ZIP limits require their respective later slices.
+- **Status:** Accepted
+- **Selected option:** Option B
+- **Acceptance date:** 2026-07-31
+- **Accepted Release 1.2.0 policy:** Stale after 24 hours once execution has started. The threshold is configurable, policy-versioned, and designed for future mode-, service-, organization-, or customer-specific overrides without schema redesign. SLA catalogs, bulk execution, and ZIP limits remain outside Release 1.2.0.
+- **Slice disposition:** Deferred from SLICE-001 and accepted for the authorized Release 1.2.0 summary/timeline slice within the scope above.
 - **Default fail-safe behavior if unresolved:** Do not label units delayed or SLA-breached automatically. Expose update age only; mark alert policy `unconfigured`. Bulk update and ZIP generation remain disabled.
 
 ## PDR-011 — Retention, legal hold, purge, and digital signatures
@@ -250,12 +251,12 @@ This register makes Product decisions and unresolved choices explicit before imp
 | PDR-002 | Accepted Option B: role/state-based authority; elevated cancel and ownership transfer | Approved; SLICE-001 uses only its authorized scope | Product Owner — Operational Governance | Accepted |
 | PDR-003 | Accepted Option C: separate opaque public ID, internal Project code, and high-entropy public tracking code | Approved; public tracking remains outside SLICE-001 | Product Owner — Project Experience | Accepted |
 | PDR-004 | Accepted Options B and D: complete when all non-cancelled units are delivered; forced closure remains separate | Approved; summary calculation remains outside SLICE-001 | Product Owner — Operational Lifecycle | Accepted |
-| PDR-005 | Recommended Option C remains unchanged | Deferred: ExecutionUnit is outside SLICE-001 | Product Owner — Execution Operations | Deferred |
-| PDR-006 | Recommended Option B remains unchanged | Deferred: ExecutionUnit lifecycle belongs to a later slice | Product Owner — Multimodal Operations | Deferred |
+| PDR-005 | Accepted Option C: generated immutable Project-local canonical code, never reused | Release 1.2.0 | Product Owner — Execution Operations | Accepted |
+| PDR-006 | Accepted Option B: shared lifecycle plus mode-specific events/checkpoints | Release 1.2.0 | Product Owner — Multimodal Operations | Accepted |
 | PDR-007 | Immutable split/merge lineage with quantity, custody, and attachment-link reconciliation | No | Product Owner — Execution Operations | Proposed |
 | PDR-008 | Explicit attachment visibility plus classification ceiling and stakeholder grants | No | Product Owner — Documents and Collaboration | Proposed |
 | PDR-009 | Controlled customer upload/replacement with staff verification; no customer approval | No | Product Owner — Customer Experience | Proposed |
-| PDR-010 | Recommended Option B remains unchanged | Deferred: freshness and stale-update alerts belong to later summary/timeline work | Operations Owner — Service Control | Deferred |
+| PDR-010 | Accepted Option B: versioned configurable threshold policy; initial stale threshold 24 hours | Release 1.2.0; bulk and ZIP remain out of scope | Operations Owner — Service Control | Accepted |
 | PDR-011 | Policy-based retention; legal hold overrides; no purge/signature claim without approval/evidence | No | Legal/Compliance Owner | Proposed |
 
 ## SLICE-001 decision disposition
@@ -268,16 +269,24 @@ The Architecture Authority resolved the SLICE-001 decisions as follows on 2026-0
 4. PDR-010 is Deferred because freshness and stale-update alerts belong to later summary/timeline work.
 5. The accepted PDR-004 policy governs future summary behavior, but Project Summary calculation was not part of SLICE-001.
 
+## Release 1.2.0 decision reconciliation
+
+The Architecture Authority and Product Decision authority accepted the following on 2026-07-31 for the authorized Release 1.2.0 vertical slice:
+
+1. PDR-005 Option C for generated, immutable, Project-local ExecutionUnit codes that are never reused.
+2. PDR-006 Option B for a shared canonical lifecycle with mode-specific events, checkpoints, and metadata.
+3. PDR-010 Option B for a configurable, versioned threshold policy, initially 24 hours for stale updates after execution starts.
+
+This acceptance does not authorize bulk update UI, ZIP/export behavior, or any other deferred capability.
+
 ## Non-blocking deferred decisions
 
-- PDR-005 remains disabled until an authorized ExecutionUnit slice.
-- PDR-006 retains its documented fail-safe behavior until a later lifecycle slice.
 - PDR-007 may be deferred by keeping split/merge disabled.
 - PDR-008 may be deferred while all documents remain internal and Slice 1 creates no document attachments.
 - PDR-009 may be deferred by exposing no customer document operations.
-- PDR-010 remains unconfigured; freshness/stale-update alerts, SLA catalogs, executable bulk updates, and ZIP quotas remain disabled until their later slices.
+- PDR-010 stale-update policy is configured for Release 1.2.0; SLA catalogs, executable bulk updates, and ZIP quotas remain disabled until their later slices.
 - PDR-011 may be deferred for Slice 1 by retaining all records, honoring manual/legal holds conservatively, prohibiting physical purge, and making no digital-signature verification claims.
 
 ## Readiness verdict
 
-**SLICE-001 governance reconciled.** PDR-001 through PDR-004 are Accepted. PDR-005, PDR-006, and PDR-010 are Deferred with explicit reasons and fail-safe behavior. PDR-007 through PDR-009 and PDR-011 remain Proposed and unchanged in substance. This reconciliation does not authorize any later slice.
+**Release 1.2.0 governance reconciled.** PDR-001 through PDR-006 and PDR-010 are Accepted. PDR-007 through PDR-009 and PDR-011 remain Proposed and unchanged in substance. PDR-010 acceptance is limited to the configurable stale-update policy; bulk and ZIP behavior remain out of scope.

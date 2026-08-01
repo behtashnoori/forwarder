@@ -13,6 +13,8 @@ import UserManagement from "./pages/UserManagement";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerRequestDetail from "./pages/CustomerRequestDetail";
 import PublicTracking from "./pages/PublicTracking";
+import ExecutionUnits from "./pages/ExecutionUnits";
+import ProjectTracking from "./pages/ProjectTracking";
 import VerifyEmail from "./pages/VerifyEmail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import OperationalShipments from "./pages/OperationalShipments";
@@ -130,6 +132,7 @@ const App = () => (
                 <Route path="/operations/shipments" element={<ProtectedRoute><OperationalShipments /></ProtectedRoute>} />
                 <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalShipmentDetail /></ProtectedRoute>} />
                 <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalWorkQueue /></ProtectedRoute>} />
+                <Route path="/operations/projects/:projectId/units" element={<ProtectedRoute><ExecutionUnits /></ProtectedRoute>} />
                 <Route path="/customer/:customerId" element={
                   <ErrorBoundary>
                     <CustomerDashboard />
@@ -145,6 +148,7 @@ const App = () => (
                     <PublicTracking />
                   </ErrorBoundary>
                 } />
+                <Route path="/project/track/:trackingCode" element={<ErrorBoundary><ProjectTracking /></ErrorBoundary>} />
                 <Route path="/verify-email" element={
                   <ErrorBoundary>
                     <VerifyEmail />

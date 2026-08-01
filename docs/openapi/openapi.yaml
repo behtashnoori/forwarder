@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Forwarder Backend API
-  version: 0.1.0
+  version: 1.2.0
   description: |
     Initial OpenAPI documentation for the Forwarder backend.
 
@@ -11,6 +11,8 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Execution Units
+  - name: Public Project Tracking
   - name: Public Shipment
   - name: Public Tracking
   - name: Expert Auth
@@ -324,6 +326,84 @@ components:
       type: object
       additionalProperties: true
 paths:
+  /api/v2/projects/{projectId}/execution-units:
+    get:
+      tags: [Execution Units]
+      summary: List Project execution units without timelines
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: projectId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/Page'}
+        - {$ref: '#/components/parameters/PerPage'}
+        - {name: search, in: query, schema: {type: string}}
+        - {name: status, in: query, schema: {type: string}}
+        - {name: delayed, in: query, schema: {type: boolean}}
+        - {name: stale, in: query, schema: {type: boolean}}
+        - {name: active, in: query, schema: {type: boolean}}
+      responses: {'200': {description: Bounded unit page}, '404': {$ref: '#/components/responses/NotFound'}}
+    post:
+      tags: [Execution Units]
+      summary: Create an ExecutionUnit with a generated immutable Project-local code
+      security: [{bearerAuth: []}]
+      parameters: [{name: projectId, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'201': {description: Unit created}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/v2/projects/{projectId}/execution-units/{unitId}:
+    get:
+      tags: [Execution Units]
+      summary: Get scoped unit detail
+      security: [{bearerAuth: []}]
+      parameters: &unitPath
+        - {name: projectId, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: unitId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses: {'200': {description: Unit detail}, '404': {$ref: '#/components/responses/NotFound'}}
+    patch:
+      tags: [Execution Units]
+      summary: Update permitted metadata using expected_version
+      security: [{bearerAuth: []}]
+      parameters: *unitPath
+      responses: {'200': {description: Unit updated}, '409': {description: Version conflict}}
+  /api/v2/projects/{projectId}/execution-units/{unitId}/timeline:
+    get:
+      tags: [Execution Units]
+      summary: Get paginated internal unit timeline
+      security: [{bearerAuth: []}]
+      parameters: *unitPath
+      responses: {'200': {description: Bounded timeline page}}
+  /api/v2/projects/{projectId}/execution-units/{unitId}/events:
+    post:
+      tags: [Execution Units]
+      summary: Append an idempotent unit event/update
+      security: [{bearerAuth: []}]
+      parameters: *unitPath
+      responses: {'201': {description: Event appended}, '409': {description: Version or idempotency conflict}}
+  /api/public/v2/projects/{trackingCode}/summary:
+    get:
+      tags: [Public Project Tracking]
+      summary: Get aggregate project summary by opaque tracking code
+      parameters: [{name: trackingCode, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Customer-safe aggregate summary}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/public/v2/projects/{trackingCode}/execution-units:
+    get:
+      tags: [Public Project Tracking]
+      summary: List customer-visible unit projections
+      parameters: [{name: trackingCode, in: path, required: true, schema: {type: string}}]
+      responses: {'200': {description: Bounded customer-safe unit page}}
+  /api/public/v2/projects/{trackingCode}/execution-units/{unitId}:
+    get:
+      tags: [Public Project Tracking]
+      summary: Get customer-visible unit detail
+      parameters:
+        - {name: trackingCode, in: path, required: true, schema: {type: string}}
+        - {name: unitId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses: {'200': {description: Customer-safe unit detail}, '404': {$ref: '#/components/responses/NotFound'}}
+  /api/public/v2/projects/{trackingCode}/execution-units/{unitId}/timeline:
+    get:
+      tags: [Public Project Tracking]
+      summary: Get only customer-visible events in a bounded page
+      parameters:
+        - {name: trackingCode, in: path, required: true, schema: {type: string}}
+        - {name: unitId, in: path, required: true, schema: {type: string, format: uuid}}
+      responses: {'200': {description: Customer-visible timeline}, '404': {$ref: '#/components/responses/NotFound'}}
   /api/transport-methods:
     get:
       tags: [Public Shipment]
