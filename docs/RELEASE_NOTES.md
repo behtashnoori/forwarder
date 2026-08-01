@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Patch: Central Route Scroll Restoration
+
+| Field | Value |
+| --- | --- |
+| VERSION | `1.3.1` |
+| RELEASE NAME | `Central Route Scroll Restoration` |
+| CHANGE TYPE | `PATCH` |
+| DEPLOYMENT TYPE | Frontend-only immutable release |
+| DATABASE REVISION | `20260806_execution_units` (unchanged) |
+| BACKEND | Operationally unchanged; restart not required |
+
+- Added one centralized route-level scroll policy under `BrowserRouter`; no per-page patches were introduced.
+- Reset PUSH and REPLACE navigation to a different pathname with automatic (non-smooth) behavior while preserving browser-native POP restoration, same-path query position, explicit `preserveScroll`, and modal state.
+- Positioned valid hash targets below the sticky header with bounded asynchronous retries that stop after user interaction.
+- Added optional accessible destination-heading focus and regression coverage at 360, 390, and 412 pixel viewport widths.
+- Added no backend, API, database, migration, dependency, or environment change.
+- If deployed over 1.3.0, rollback to immutable release `release-v1.3.0-20260801`. If Production still runs 1.2.0, the operational rollback target remains `release-v1.2.0-20260801` and deploying 1.3.1 introduces both the 1.3.0 Command Center and this patch.
+
 ### Feature: Forwarder Command Center
 
 | Field | Value |

@@ -24,6 +24,7 @@ import OperationalWorkQueue from "./pages/OperationalWorkQueue";
 import AdminRoute from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AdminPanel from "./pages/AdminPanel";
+import RouteScrollManager from "./components/RouteScrollManager";
 import { env } from "./lib/env";
 import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
 import { I18nProvider, useI18n } from "./i18n";
@@ -81,6 +82,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <RouteScrollManager />
           <I18nProvider>
             <SiteSettingsProvider>
               <Routes>
