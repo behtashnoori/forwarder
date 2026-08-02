@@ -1,5 +1,19 @@
 # Release Notes
 
+## 1.6.1 — Frontend Cache Policy Hardening
+
+| Item | Value |
+| --- | --- |
+| VERSION | `1.6.1` |
+| PREVIOUS VERSION | `1.6.0` |
+| CHANGE | Backward-compatible PATCH |
+| DATABASE | Unchanged: `20260809_cargo_catalog_items` |
+| DEPLOYMENT | Frontend-only configuration/package hardening |
+| BACKEND RESTART | Not required by application behavior |
+| DATABASE MIGRATION | None |
+
+Adds a tracked IIS configuration source with explicit response policies: application-shell HTML is not stored, content-hashed `/assets/` files are immutable for one year, and unhashed root manifests/icons revalidate. API proxy and SPA fallback ordering are unchanged. No Service Worker or PWA behavior is introduced.
+
 ## 1.6.0 — Cargo Catalog and Shipment Cargo Foundation
 
 | Item | Value |
