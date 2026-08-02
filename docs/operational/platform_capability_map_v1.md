@@ -895,3 +895,5 @@ Ready for Product Architecture Review
 ## Strategic roadmap extension
 
 [PDR-015](PDR-015-forwarder-domain-development-roadmap.md) is Accepted strategic direction across seven domain maturity layers. [PDR-016](PDR-016-logistics-network-foundation.md) and [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md) authorize LogisticsPointType under CAP-013, LogisticsPoint under CAP-013 with CAP-010 controls, and ProjectLogisticsPoint under CAP-001 with CAP-003 operational consultation. [The roadmap matrix](forwarder-domain-roadmap-matrix.md) records that implementation has not started. No new capability ID is required.
+
+DA-1.0 navigation is provided by the [Architecture Handbook](README.md), [FDD-001](FDD-001-forwarder-data-dictionary.md), and [FDM-001](FDM-001-forwarder-domain-map.md). These views map existing capability ownership and do not change maturity ratings.

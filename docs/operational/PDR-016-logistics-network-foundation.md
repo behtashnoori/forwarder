@@ -8,6 +8,7 @@
 - **Owners:** Product (behavior), Data (reference/master meaning), Architecture (boundaries), Operations (use)
 - **Approvals recorded:** Product, Architecture, Operations, Data; Security for organization/isolation boundaries
 - **Roadmap:** [PDR-015](PDR-015-forwarder-domain-development-roadmap.md), Layers 1–3
+- **Business definitions:** DA-1.0 [FDD-001](FDD-001-forwarder-data-dictionary.md) entries FDD-001-022 through FDD-001-024
 
 ## 1. Purpose and authority boundary
 

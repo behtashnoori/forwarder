@@ -7,6 +7,7 @@
 - **Product decision:** [PDR-016 — Logistics Network Foundation](../PDR-016-logistics-network-foundation.md), Accepted D01–D10
 - **Roadmap:** [PDR-015 — Forwarder Domain Development Roadmap](../PDR-015-forwarder-domain-development-roadmap.md)
 - **Scope:** Aggregate boundaries for the bounded Logistics Network foundation
+- **Architecture view:** DA-1.0 [FDM-001](../FDM-001-forwarder-domain-map.md), Logistics Network view
 
 ## Context
 

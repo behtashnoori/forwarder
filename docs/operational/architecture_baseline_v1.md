@@ -1,5 +1,6 @@
 # Forwarder Platform Architecture Baseline v1
 
+- Domain Architecture: **DA-1.0** — architecture knowledge baseline; no claim of future capability implementation
 - Architecture Baseline Version: 1.0
 - Status: Proposed
 - Date: 2026-07-31
@@ -463,3 +464,7 @@ Ready for Architecture Review
 - [Production Deployment State 1.6.1](production-deployment-state-1.6.1.md) records verified Production release and database evidence.
 
 PDR-015, PDR-016 D01–D10, ADR-025, and the supporting matrix are Accepted within their recorded bounds. The Logistics Network Slice is authorized but not started. ADR-023/ADR-024 remain Proposed; allocation, customer search, dashboards, and AI are not authorized by this closure. This note does not change the Baseline's own status.
+
+## 13. DA-1.0 knowledge layer
+
+DA-1.0 adds navigation and living views without replacing source decisions: [PP-001](PP-001-forwarder-platform-philosophy.md), [AP-001](AP-001-forwarder-architecture-principles.md), [FDD-001](FDD-001-forwarder-data-dictionary.md), [FDM-001](FDM-001-forwarder-domain-map.md), [Decision Index](decision-index.md), [Evolution Map](forwarder-evolution-map.md), and the [Architecture Handbook](README.md). PP-001/AP-001 remain Proposed consolidations; living indexes do not grant implementation authority.

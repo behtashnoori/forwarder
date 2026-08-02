@@ -5,6 +5,7 @@
 - **Date:** 2026-08-02
 - **Decision scope:** Strategic direction only; no implementation authorization
 - **Target horizon:** Post-1.6.1 platform evolution
+- **Architecture view:** DA-1.0 — [FDM-001](FDM-001-forwarder-domain-map.md)
 - **Owners:** Product and Architecture
 - **Approvals recorded:** Product, Architecture, Operations, Data; Security consulted where applicable
 - **Evidence:** [Platform Constitution](platform_constitution_v1.md), [Architecture Baseline](architecture_baseline_v1.md), [Canonical Business Object Catalog](canonical_business_object_catalog.md), [Capability Map](platform_capability_map_v1.md), [PDR-013](PDR-013-cargo-data-foundation.md), [PDR-014](PDR-014-initial-reference-data-catalog.md), [RFC-002](RFC-002-cargo-data-foundation-item-traceability.md), [ADR-021 through ADR-024](adr/ADR-021-master-data-governance-explicit-domain-tables.md), [EPIC-002](EPIC-002-cargo-data-foundation.md), and release evidence through 1.6.1

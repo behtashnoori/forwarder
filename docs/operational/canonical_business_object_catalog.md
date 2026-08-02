@@ -463,3 +463,7 @@ Any deviation must cite the canonical object, explain whether the term is a boun
 ### Accepted logistics-network vocabulary extension
 
 [PDR-016](PDR-016-logistics-network-foundation.md) and [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md) accept three deliberately separate terms: `LogisticsPointType` (Reference Data classification), `LogisticsPoint` (reusable Master Data place), and `ProjectLogisticsPoint` (Project configuration association). They are authorized but not implemented and must not be merged with Province/City, Customer, RoutePlan, Checkpoint, Milestone, or OperationalEvent.
+
+### DA-1.0 dictionary and map
+
+[FDD-001](FDD-001-forwarder-data-dictionary.md) applies this Catalog to business-data definitions and [FDM-001](FDM-001-forwarder-domain-map.md) visualizes the boundaries. The Catalog remains vocabulary authority; neither living view changes decision status.

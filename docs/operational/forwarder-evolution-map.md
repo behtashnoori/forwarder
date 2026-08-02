@@ -1,0 +1,21 @@
+# Forwarder Evolution Map
+
+- **Status:** Living evidence index
+- **Architecture version:** DA-1.0
+- **Date:** 2026-08-02
+
+Release folders and notes are implementation/release evidence; Production is claimed only where an operational record explicitly verifies it.
+
+| Release | Business theme | Main domain capability | Database revision | Deployment state | Important governance/evidence |
+| --- | --- | --- | --- | --- | --- |
+| 1.1.0 | Operational foundation | OperationalShipment/route foundations | Repository release evidence | Release prepared; Production not asserted here | Phase 1A records |
+| 1.2.0 | Project foundation | Project aggregate | `20260805_add_project_aggregate` | Release evidence exists; Production not separately asserted | ADR-017, EPIC-001 |
+| 1.3.0 | Command Center / execution foundation | Customer portal and ExecutionUnit | `20260806_execution_units` | Included in current deployed lineage | PDR-012, ADR-018 |
+| 1.3.1 | Scroll restoration | Cross-cutting UX | unchanged | Included in current deployed lineage | Scroll restoration record |
+| 1.4.0 | Governed Master Data Foundation | CargoType, ServiceType, UnitOfMeasure schema/admin | `20260807_master_data` | Included in current deployed lineage | PDR-013, ADR-021 |
+| 1.5.0 | Initial Reference Data catalog | Versioned reference catalog and seed controls | `20260808_reference_seed` | Schema included in current lineage; Production Seed not executed | PDR-014, catalog review |
+| 1.6.0 | Cargo Catalog and Shipment Cargo Foundation | CargoCatalogItem, CargoItemAlias, ShipmentCargoItem | `20260809_cargo_catalog_items` | Implemented; deployed through verified 1.6.1 lineage | ADR-022, 1.6.0 closure |
+| 1.6.1 | Cache Policy Hardening | Immutable frontend cache behavior | unchanged | **Production verified** at `release-v1.6.1-20260802` | Production Deployment State 1.6.1 |
+| 1.7.0 candidate | Logistics Network Foundation | LogisticsPointType, LogisticsPoint, ProjectLogisticsPoint | proposed `20260810_logistics_network` | Proposed; implementation Not Started | PDR-016, ADR-025, proposed Slice contract |
+
+DA-1.0 is the architecture knowledge baseline accompanying the transition from governed Cargo foundations to proposed Logistics Network implementation. Planned releases are not delivery promises.
