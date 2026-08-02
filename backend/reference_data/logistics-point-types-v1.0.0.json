@@ -1,0 +1,19 @@
+{
+  "schema_version": "1",
+  "catalog_version": "logistics-point-types-1.0.0",
+  "source_version": "PDR-016-R17-D05-accepted-2026-08-02",
+  "checksum": "sha256:d2a23d0928c792118e80561cd6a270a4b137ae80ddb91b955761772743e50076",
+  "logistics_point_types": [
+    {"code":"FACTORY","fa_name":"کارخانه","en_name":"Factory","definition":"Manufacturing or production facility used as a logistics point.","display_order":10,"is_active":true},
+    {"code":"WAREHOUSE","fa_name":"انبار","en_name":"Warehouse","definition":"Facility primarily used for cargo storage.","display_order":20,"is_active":true},
+    {"code":"DISTRIBUTION_CENTER","fa_name":"مرکز توزیع","en_name":"Distribution Center","definition":"Facility used to coordinate distribution and onward movement.","display_order":30,"is_active":true},
+    {"code":"CUSTOMS","fa_name":"گمرک","en_name":"Customs","definition":"Governed customs processing or clearance location.","display_order":40,"is_active":true},
+    {"code":"PORT","fa_name":"بندر","en_name":"Port","definition":"Maritime port facility used in cargo movement.","display_order":50,"is_active":true},
+    {"code":"BORDER_CROSSING","fa_name":"گذرگاه مرزی","en_name":"Border Crossing","definition":"Physical border crossing distinct from a customs office.","display_order":60,"is_active":true},
+    {"code":"AIRPORT","fa_name":"فرودگاه","en_name":"Airport","definition":"Airport facility used for air cargo movement.","display_order":70,"is_active":true},
+    {"code":"RAIL_TERMINAL","fa_name":"پایانه ریلی","en_name":"Rail Terminal","definition":"Rail terminal used for cargo transfer or handling.","display_order":80,"is_active":true},
+    {"code":"ROAD_TERMINAL","fa_name":"پایانه جاده‌ای","en_name":"Road Terminal","definition":"Road terminal used for cargo transfer or handling.","display_order":90,"is_active":true},
+    {"code":"CUSTOMER_SITE","fa_name":"محل مشتری","en_name":"Customer Site","definition":"Customer-associated physical site used in logistics operations.","display_order":100,"is_active":true},
+    {"code":"OTHER_GOVERNED","fa_name":"سایر مورد تأیید","en_name":"Other Governed","definition":"A governed point type outside the initial named vocabulary.","display_order":900,"is_active":true}
+  ]
+}

@@ -1,5 +1,20 @@
 # Release Notes
 
+## 1.7.0 — Logistics Network Foundation
+
+| Item | Value |
+| --- | --- |
+| VERSION | `1.7.0` |
+| PREVIOUS VERSION | `1.6.1` |
+| CHANGE | Backward-compatible MINOR |
+| DATABASE | Additive `20260810_logistics_network` |
+| REFERENCE DATA | Separate checksummed catalog; no automatic or Production apply |
+| PRODUCTION | Not migrated, seeded, packaged, tagged, or deployed by this task |
+
+Adds governed LogisticsPointType reference data, organization-scoped LogisticsPoint master data, and ProjectLogisticsPoint configuration with bounded roles and atomic ordering. Internal/admin APIs and responsive staff UI support create, edit, select, reorder, activate, and deactivate without hard deletion. Exact duplicates are rejected, probable duplicates require explicit confirmation, all organization/project writes are actor-audited, and numeric database identifiers are not serialized.
+
+Maps/GIS, coordinates, route or checkpoint generation, ETA/traffic/weather, customer/public discovery, dashboards/reporting, allocation, cargo-unit linkage, partial delivery, packaging, bulk import, generic workflow/approval/EAV, and AI behavior remain excluded.
+
 ## 1.6.1 — Frontend Cache Policy Hardening
 
 | Item | Value |

@@ -7,7 +7,7 @@
 - **Network authority:** [PDR-016](PDR-016-logistics-network-foundation.md) and [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md)
 - **Production evidence:** [Production Deployment State 1.6.1](production-deployment-state-1.6.1.md) verifies application 1.6.1, IIS release `release-v1.6.1-20260802`, and database revision `20260809_cargo_catalog_items`.
 
-This matrix is a navigation and sequencing aid. “Deployed” is used only where explicit operational evidence supports it. Accepted Logistics Network governance authorizes the bounded Slice; it is not evidence that implementation has started.
+This matrix is a navigation and sequencing aid. “Deployed” is used only where explicit operational evidence supports it. Accepted Logistics Network governance authorized the bounded Slice; implementation is complete in source but is not Production deployment evidence.
 
 | Capability / Slice | Roadmap Layer | Current State | Governance Artifact | Implementation State | Dependency | Next Decision | Target Release |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -22,11 +22,11 @@ This matrix is a navigation and sequencing aid. “Deployed” is used only wher
 | Initial Reference Data | Layer 1 | Catalog implemented; Production Seed not executed | PDR-014; catalog review; Production 1.6.1 record | Structure Deployed; Seed Not Executed | Master Data Foundation | New values/seed execution require separate approval | 1.5.0 |
 | Cargo Catalog | Layer 2 | Implemented and Deployed | PDR-013 D05/D06/internal D11; ADR-022; 1.6.0 closure | Implemented and Deployed | Master Data Foundation | No global/customer catalog without new decision | 1.6.0; deployed in 1.6.1 lineage |
 | ShipmentCargoItem | Layers 4–5 | Implemented and Deployed | PDR-013 D07; ADR-022; 1.6.0 closure | Implemented and Deployed | Cargo Catalog, OperationalShipment | Correction/supersession requires separate governance | 1.6.0; deployed in 1.6.1 lineage |
-| Logistics Network | Layers 1–3 | Governance Accepted | PDR-015; PDR-016; ADR-025 | Implementation Not Started | Bounded Slice contract and normal delivery gates | Freeze 1.7.0 acceptance criteria | Candidate 1.7.0 |
-| 1.7.0 Logistics Network Slice Contract | Layers 1–3 | Proposed | Release 1.7.0 Logistics Network Slice Contract | Implementation Not Started | R17-D01–D10 approval | Review and accept bounded decisions and implementation authority | 1.7.0 candidate |
-| LogisticsPointType | Layer 1 | Authorized | PDR-016 D01; ADR-025 | Not Started | ADR-021 conventions; accepted catalog | Define bounded implementation contract | Candidate 1.7.0 |
-| LogisticsPoint | Layer 2 | Authorized | PDR-016 D02/D06–D09; ADR-025 | Not Started | LogisticsPointType; organization/security scope | Define bounded implementation contract | Candidate 1.7.0 |
-| ProjectLogisticsPoint | Layer 3 | Authorized | PDR-016 D03–D05; ADR-025 | Not Started | Project, LogisticsPoint | Define bounded implementation contract | Candidate 1.7.0 |
+| Logistics Network | Layers 1–3 | Governance Accepted | PDR-015; PDR-016; ADR-025 | Implemented; not deployed | Bounded Slice contract and normal delivery gates | Release/deploy only under separate authority | 1.7.0 |
+| 1.7.0 Logistics Network Slice Contract | Layers 1–3 | Accepted / Implemented | Release 1.7.0 Logistics Network Slice Contract | Implemented; not deployed | Normal release and deployment gates | Preserve bounded contract | 1.7.0 |
+| LogisticsPointType | Layer 1 | Implemented | PDR-016 D01; ADR-025 | Implemented; catalog apply not executed | ADR-021 conventions; accepted catalog | Govern catalog lifecycle | 1.7.0 |
+| LogisticsPoint | Layer 2 | Implemented | PDR-016 D02/D06–D09; ADR-025 | Implemented; not deployed | LogisticsPointType; organization/security scope | Operate after separately authorized deployment | 1.7.0 |
+| ProjectLogisticsPoint | Layer 3 | Implemented | PDR-016 D03–D05; ADR-025 | Implemented; not deployed | Project, LogisticsPoint | Operate after separately authorized deployment | 1.7.0 |
 | Cargo-to-ExecutionUnit Linking / Allocation | Layer 4 | Deferred | PDR-013 D08/D09; ADR-023 Proposed | Not Started | ShipmentCargoItem, ExecutionUnit, concurrency policy | Accept required allocation decisions if maturity justifies them | Deferred |
 | Internal Cargo Search | Layer 6 | Proposed separately | PDR-013 internal D11 boundary; new Slice decision required | Not Started | Cargo snapshots, organization isolation | Define bounded internal scope and security/performance contract | Later MINOR |
 | Customer Cargo Search | Layer 6 | Not Authorized | PDR-013 D10/customer D11; ADR-024 Proposed | Not Started | Customer visibility policy and threat/load evidence | Required PDR/ADR acceptance | Deferred |

@@ -1,20 +1,22 @@
 # Release 1.7.0 — Logistics Network Foundation Slice Contract
 
-- **Status:** Proposed for governance approval
+- **Status:** Accepted — bounded Release 1.7.0 implementation complete in source; not deployed
+- **Accepted:** 2026-08-02
+- **Approver roles:** Product, Architecture, Operations, Data, Security
 - **Date:** 2026-08-02
 - **Target release:** 1.7.0 — Logistics Network Foundation
 - **Current Production baseline:** Application 1.6.1; database `20260809_cargo_catalog_items`
 - **Primary capabilities:** CAP-013 Master Data, CAP-001 Project Management
 - **Supporting capabilities:** CAP-010 Security & Identity, CAP-009 Administration, CAP-003 Execution Management consultation
 - **Authority:** [PDR-015](PDR-015-forwarder-domain-development-roadmap.md), [PDR-016](PDR-016-logistics-network-foundation.md), [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md)
-- **Implementation authorization:** **NO** — the ten decisions in Section 15 require explicit approval
+- **Implementation authorization:** **YES — bounded scope only**
 - **Architecture baseline:** DA-1.0; [FDD-001](FDD-001-forwarder-data-dictionary.md) and [FDM-001](FDM-001-forwarder-domain-map.md)
 
 ## 1. Purpose and release impact
 
-This contract defines the exact bounded implementation and acceptance boundary for `LogisticsPointType`, `LogisticsPoint`, and `ProjectLogisticsPoint`. It is design closure and implementation planning only. Approval of the contract would authorize a separately executed 1.7.0 implementation; this document does not modify or deploy code, schema, APIs, UI, data, seed catalogs, or Production.
+This contract defines the exact bounded implementation and acceptance boundary for `LogisticsPointType`, `LogisticsPoint`, and `ProjectLogisticsPoint`. Its accepted implementation is complete in source. This status does not assert Production migration, seed apply, packaging, tagging, or deployment.
 
-| Release concern | Proposed impact after approval |
+| Release concern | Implemented release impact |
 | --- | --- |
 | SemVer | MINOR: 1.6.1 → 1.7.0 |
 | Release name | Logistics Network Foundation |
@@ -23,7 +25,7 @@ This contract defines the exact bounded implementation and acceptance boundary f
 | Frontend | Internal admin management plus Project configuration selection/ordering |
 | Existing contracts | Additive; existing Projects, RoutePlans, Checkpoints, and APIs remain valid |
 | Seed | No migration seed; proposed separate governed catalog/seed authorization |
-| Production | No action authorized by this contract draft |
+| Production | No migration, catalog apply, packaging, tagging, or deployment performed |
 
 ## 2. In scope
 
@@ -53,7 +55,7 @@ The Slice also excludes fuzzy-search infrastructure, a generic terminal type, ne
 
 ## 4. Proposed physical data contract
 
-All exact choices in this section are Proposed pending Section 15 approval.
+The exact choices in this section are Accepted for the bounded Release 1.7.0 implementation.
 
 ### 4.1 Table `logistics_point_type`
 
@@ -307,21 +309,21 @@ Before implementation acceptance, update OpenAPI with all bounded operations and
 
 ## 15. Required decisions for governance approval
 
-All ten decisions default to **Proposed**. Approval must record accountable functions and must not expand exclusions.
+All ten decisions are Accepted by Product, Architecture, Operations, Data, and Security for the bounded scope. No personal signature is inferred.
 
 | ID | Decision | Recommended bounded option | Required approvers | Fail-safe if unresolved | Status |
 | --- | --- | --- | --- | --- | --- |
-| R17-D01 | Multiple roles for one point in a Project | Multiple ProjectLogisticsPoint rows allowed only for distinct roles; unique Project + point + role | Product, Architecture, Operations, Data | Permit only one association and block duplicates | Proposed |
-| R17-D02 | Sequence uniqueness | Positive sequence unique among active ProjectLogisticsPoint rows within one Project; reorder atomic | Product, Operations, Architecture, Data | Reject conflicting sequence and make no partial reorder | Proposed |
-| R17-D03 | Country representation | Required FK to existing `country`; expose country public/code projection, not numeric ID | Product, Data, Architecture | Reject point creation without active governed country | Proposed |
-| R17-D04 | Province/City integration | Optional existing FKs; City requires consistent Province/Country; optional region text only where Province unavailable | Data, Architecture, Product, Operations | Accept country-only point; do not infer geography | Proposed |
-| R17-D05 | Initial LogisticsPointType population | Separate governed, versioned/checksummed Reference Data catalog and explicit seed action; no migration rows | Product, Data, Operations, Architecture, Security consultation | Deploy empty catalog; admin entry only after explicit direction | Proposed |
-| R17-D06 | Duplicate warning vs rejection | Hard reject exact composite duplicate; admin-only probable warning with explicit reason; never merge | Product, Data, Operations, Security, Architecture | Reject exact/ambiguous creation pending steward review | Proposed |
-| R17-D07 | Deactivation/removal | Deactivate only; removal from Project means inactive association; history readable; no delete endpoint | Product, Operations, Data, Architecture, Security | Preserve record and deny destructive action | Proposed |
-| R17-D08 | Admin/expert permissions | Admin manages types/points; authorized expert reads/selects points and manages authorized Project associations | Product, Security, Operations, Architecture | Deny by default; admin-only management | Proposed |
-| R17-D09 | Project display label | Optional presentation-only label; not searchable master identity and never overwrites master/history | Product, Operations, Data | Omit label and display master name | Proposed |
-| R17-D10 | Release 1.7.0 implementation authority | Authorize only this contract after D01–D09 closure and readiness review | Product, Architecture, Operations, Data, Security | Implementation remains Not Started | Proposed |
+| R17-D01 | Multiple roles for one point in a Project | Multiple ProjectLogisticsPoint rows allowed only for distinct roles; unique Project + point + role | Product, Architecture, Operations, Data | Permit only one association and block duplicates | Accepted |
+| R17-D02 | Sequence uniqueness | Positive sequence unique among active ProjectLogisticsPoint rows within one Project; reorder atomic | Product, Operations, Architecture, Data | Reject conflicting sequence and make no partial reorder | Accepted |
+| R17-D03 | Country representation | Required FK to existing `country`; expose country code/name projection, not numeric ID | Product, Data, Architecture | Reject point creation without active governed country | Accepted |
+| R17-D04 | Province/City integration | Optional existing FKs; City requires consistent Province/Country; do not redesign geography | Data, Architecture, Product, Operations | Accept country-only point; do not infer geography | Accepted |
+| R17-D05 | Initial LogisticsPointType population | Separate governed, versioned/checksummed Reference Data catalog and explicit seed action; no migration rows | Product, Data, Operations, Architecture, Security consultation | Deploy empty catalog; Production apply separately authorized | Accepted |
+| R17-D06 | Duplicate warning vs rejection | Hard reject exact composite duplicate; probable warning without fuzzy/trigram infrastructure; never merge | Product, Data, Operations, Security, Architecture | Reject exact/ambiguous creation pending steward review | Accepted |
+| R17-D07 | Deactivation/removal | Deactivate only; removal from Project means inactive association; history readable; no delete endpoint | Product, Operations, Data, Architecture, Security | Preserve record and deny destructive action | Accepted |
+| R17-D08 | Admin/expert permissions | Admin manages types/points; authorized expert reads/selects points and manages authorized Project associations | Product, Security, Operations, Architecture | Deny by default; admin-only management | Accepted |
+| R17-D09 | Project display label | Optional presentation-only label; not searchable master identity and never overwrites master/history | Product, Operations, Data | Omit label and display master name | Accepted |
+| R17-D10 | Release 1.7.0 implementation authority | Authorize only this contract after D01–D09 closure and readiness review | Product, Architecture, Operations, Data, Security | Scope expansion remains prohibited | Accepted |
 
 ## 16. Authorization verdict
 
-PDR-015, PDR-016, and ADR-025 authorize preparation of this contract. They do not automatically accept its exact physical/API/security choices. Release 1.7.0 implementation is **not authorized** until R17-D01 through R17-D10 are explicitly accepted. No migration, seed, code, API, UI, package, deployment, or Production action may rely on this Proposed contract as execution authority.
+R17-D01 through R17-D10 are Accepted. Release 1.7.0 implementation is authorized only for the exact data, API, UI, security, migration, catalog-preparation, OpenAPI, test, version, and documentation boundaries in this contract. Production Seed apply, Production migration, packaging, tagging, deployment, and every exclusion remain unauthorized.

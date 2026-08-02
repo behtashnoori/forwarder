@@ -25,7 +25,7 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | PDR-013 | Cargo Data Foundation | Mixed per D01–D12 | Cargo | 2026-08-01/02 | 1.4.0/1.6.0 bounded | Cargo master/snapshot/search/allocation | [PDR-013](PDR-013-cargo-data-foundation.md) | — | D08–D10/customer D11 unresolved |
 | PDR-014 | Initial Reference Data Catalog | Accepted | Reference Data | 2026-08-01 | 1.5.0 | Initial cargo/service/UOM values | [PDR-014](PDR-014-initial-reference-data-catalog.md) | — | Production Seed not executed |
 | PDR-015 | Domain Development Roadmap | Accepted strategic direction | Platform | 2026-08-02 | N/A | Maturity layers | [PDR-015](PDR-015-forwarder-domain-development-roadmap.md) | — | No automatic Slice authority |
-| PDR-016 | Logistics Network Foundation | Accepted D01–D10 | Logistics Network | 2026-08-02 | 1.7.0 candidate | Types, points, Project association | [PDR-016](PDR-016-logistics-network-foundation.md) | — | Implementation contract Proposed |
+| PDR-016 | Logistics Network Foundation | Accepted D01–D10 | Logistics Network | 2026-08-02 | 1.7.0 | Types, points, Project association | [PDR-016](PDR-016-logistics-network-foundation.md) | — | Bounded implementation complete; not deployed |
 
 ## Architecture Decision Records
 
@@ -78,4 +78,4 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | SLICE-001 | Project Aggregate Foundation | Delivered foundation per release evidence | Project | 2026-07-31 onward | 1.2.0 lineage | Project aggregate | [EPIC-001](EPIC-001-project-aggregate-foundation.md) | — | Source combines candidate slices |
 | SLICE-B1 | Master Data Governance Foundation | Delivered | Master Data | 2026-08-01 | 1.4.0 | CargoType/ServiceType/UOM governance | [EPIC-002](EPIC-002-cargo-data-foundation.md) | — | — |
 | SLICE-B3/B4 | Cargo Catalog/ShipmentCargoItem | Delivered/deployed lineage | Cargo | 2026-08-02 | 1.6.0 | Bounded catalog and snapshot | [1.6.0 Closure](release-1.6.0-cargo-governance-closure.md) | — | — |
-| R17 | Logistics Network Foundation | Proposed | Logistics Network | 2026-08-02 | 1.7.0 candidate | Type, point, Project association | [1.7.0 Contract](release-1.7.0-logistics-network-slice-contract.md) | — | Implementation Not Started |
+| R17 | Logistics Network Foundation | Accepted / implemented | Logistics Network | 2026-08-02 | 1.7.0 | Type, point, Project association | [1.7.0 Contract](release-1.7.0-logistics-network-slice-contract.md) | — | R17-D01–D10 Accepted; bounded source implementation complete; not deployed |

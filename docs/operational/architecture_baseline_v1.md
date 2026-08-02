@@ -463,7 +463,7 @@ Ready for Architecture Review
 - [Forwarder Domain Roadmap Matrix](forwarder-domain-roadmap-matrix.md) records current and proposed capability sequencing.
 - [Production Deployment State 1.6.1](production-deployment-state-1.6.1.md) records verified Production release and database evidence.
 
-PDR-015, PDR-016 D01–D10, ADR-025, and the supporting matrix are Accepted within their recorded bounds. The Logistics Network Slice is authorized but not started. ADR-023/ADR-024 remain Proposed; allocation, customer search, dashboards, and AI are not authorized by this closure. This note does not change the Baseline's own status.
+PDR-015, PDR-016 D01–D10, ADR-025, and the supporting matrix are Accepted within their recorded bounds. The bounded Logistics Network Slice is implemented in Release 1.7.0 source but not deployed. ADR-023/ADR-024 remain Proposed; allocation, customer search, dashboards, and AI are not authorized by this closure. This note does not change the Baseline's own status.
 
 ## 13. DA-1.0 knowledge layer
 

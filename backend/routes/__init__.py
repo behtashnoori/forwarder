@@ -20,6 +20,7 @@ from .execution_units import execution_units_bp
 from .case_documents import document_bp
 from .master_data import master_data_bp
 from .cargo import cargo_bp
+from .logistics_network import logistics_network_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -45,3 +46,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(document_bp)
     app.register_blueprint(master_data_bp)
     app.register_blueprint(cargo_bp)
+    app.register_blueprint(logistics_network_bp)

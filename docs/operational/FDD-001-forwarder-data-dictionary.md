@@ -227,31 +227,31 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 
 - **Canonical/Persian:** LogisticsPointType / نوع نقطه لجستیکی; **definition/rationale:** cross-industry classification of a LogisticsPoint.
 - **Class/owners:** Reference Data; Product/Data; CAP-013.
-- **Lifecycle/identity/scope:** active/inactive; proposed UUID and immutable global code; organization-independent.
+- **Lifecycle/identity/scope:** active/inactive; UUID and immutable global code; organization-independent.
 - **Relationships:** LogisticsPoint. **Mutable/immutable:** labels/definition/order/state mutable with version; code immutable.
-- **Activation/history:** deactivate; referenced history readable. **API/UI/reporting:** future admin/selectors; type reporting dimension.
-- **Version/state/future/exclusions:** 1.7.0 candidate; **Governance Accepted — Implementation Not Started**; separate governed catalog proposed; excludes loading/unloading/generic terminal types.
-- **Governance/source:** PDR-016, ADR-025, proposed 1.7.0 contract; source-of-truth not implemented.
+- **Activation/history:** deactivate; referenced history readable. **API/UI/reporting:** implemented admin/selectors; no reporting UI.
+- **Version/state/future/exclusions:** 1.7.0; **Governance Accepted — Implemented, Not Deployed**; separate governed catalog prepared but not applied; excludes loading/unloading/generic terminal types.
+- **Governance/source:** PDR-016, ADR-025, accepted 1.7.0 contract; `backend.logistics_network_models.LogisticsPointType`.
 
 ## FDD-001-023 — LogisticsPoint
 
 - **Canonical/Persian:** LogisticsPoint / نقطه لجستیکی; **definition/rationale:** reusable organization-owned real-world logistics place.
 - **Class/owners:** Master Data; Data/Product; CAP-013.
-- **Lifecycle/identity/scope:** active/inactive; proposed UUID and immutable org-local code; organization-scoped.
+- **Lifecycle/identity/scope:** active/inactive; UUID and immutable org-local code; organization-scoped.
 - **Relationships:** type, Country, optional Province/City, ProjectLogisticsPoint. **Mutable/immutable:** names/address/geography/state versioned; identity/code/organization immutable.
-- **Activation/history:** no hard delete; inactive history readable and new selection blocked. **API/UI/reporting:** future admin/expert selection; canonical point dimension.
-- **Version/state/future/exclusions:** 1.7.0 candidate; **Governance Accepted — Implementation Not Started**; future explicit operational references; excludes GIS/telemetry/public search.
-- **Governance/source:** PDR-016, ADR-025, proposed 1.7.0 contract; source-of-truth not implemented.
+- **Activation/history:** no hard delete; inactive history readable and new selection blocked. **API/UI/reporting:** implemented admin/expert selection; no reporting UI.
+- **Version/state/future/exclusions:** 1.7.0; **Governance Accepted — Implemented, Not Deployed**; future explicit operational references; excludes GIS/telemetry/public search.
+- **Governance/source:** PDR-016, ADR-025, accepted 1.7.0 contract; `backend.logistics_network_models.LogisticsPoint`.
 
 ## FDD-001-024 — ProjectLogisticsPoint
 
 - **Canonical/Persian:** ProjectLogisticsPoint / نقطه لجستیکی پروژه; **definition/rationale:** Project-specific association, role, and sequence for a governed point.
 - **Class/owners:** Configuration; Product/Operations; CAP-001.
-- **Lifecycle/identity/scope:** active/inactive; proposed UUID and Project+point+role identity; Project organization-scoped.
+- **Lifecycle/identity/scope:** active/inactive; UUID and Project+point+role identity; Project organization-scoped.
 - **Relationships:** Project and LogisticsPoint. **Mutable/immutable:** sequence/label/notes/state versioned; Project/point/role identity governed.
-- **Activation/history:** removal means deactivation; no historical rewrite. **API/UI/reporting:** future Project configuration; configured network dimension.
-- **Version/state/future/exclusions:** 1.7.0 candidate; **Governance Accepted — Implementation Not Started**; operational linkage later; no RoutePlan/Checkpoint/Event generation.
-- **Governance/source:** PDR-016, ADR-025, proposed 1.7.0 contract; source-of-truth not implemented.
+- **Activation/history:** removal means deactivation; no historical rewrite. **API/UI/reporting:** implemented Project configuration; no reporting UI.
+- **Version/state/future/exclusions:** 1.7.0; **Governance Accepted — Implemented, Not Deployed**; operational linkage later; no RoutePlan/Checkpoint/Event generation.
+- **Governance/source:** PDR-016, ADR-025, accepted 1.7.0 contract; `backend.logistics_network_models.ProjectLogisticsPoint`.
 
 ## FDD-001-025 — DocumentArtifact
 
@@ -299,4 +299,4 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - Platform-wide DocumentArtifact/DocumentAttachment visibility, retention, and customer action rules remain Proposed under ADR-020/PDR-008/009/011.
 - ServiceType relationships remain unresolved under PDR-013 D02/D03.
 - ShipmentCargoItem correction/supersession, allocation, and customer search remain deferred/proposed.
-- Logistics Network physical/API choices and implementation authority remain Proposed in the 1.7.0 Slice contract.
+- Logistics Network physical/API choices are Accepted and implemented in Release 1.7.0 source; Production migration, catalog apply, packaging, and deployment remain separately governed.

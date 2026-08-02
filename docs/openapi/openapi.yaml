@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Forwarder Backend API
-  version: 1.6.0
+  version: 1.7.0
   description: |
     Initial OpenAPI documentation for the Forwarder backend.
 
@@ -11,6 +11,7 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Logistics Network
   - name: Internal Cargo
   - name: Master Data
   - name: Execution Units
@@ -2261,6 +2262,62 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: Version conflict. }
         '422': { description: Snapshot rewrite or quantity validation rejected. }
+  /api/admin/logistics-point-types:
+    get:
+      tags: [Logistics Network]
+      summary: List governed logistics point types for administration
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Bounded type list. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+    post:
+      tags: [Logistics Network]
+      summary: Create an accepted logistics point type
+      security: [{ bearerAuth: [] }]
+      responses: { '201': { description: Type created. }, '409': { description: Code conflict. } }
+  /api/admin/logistics-point-types/{public_id}:
+    parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Logistics Network], summary: Get logistics point type, security: [{ bearerAuth: [] }], responses: { '200': { description: Type detail. }, '404': { $ref: '#/components/responses/NotFound' } } }
+    patch: { tags: [Logistics Network], summary: Update mutable type fields with version, security: [{ bearerAuth: [] }], responses: { '200': { description: Type updated. }, '409': { description: Version conflict. } } }
+  /api/admin/logistics-point-types/{public_id}/{action}:
+    parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }]
+    post: { tags: [Logistics Network], summary: Activate or deactivate a type, security: [{ bearerAuth: [] }], responses: { '200': { description: Updated type. }, '409': { description: Version conflict. } } }
+  /api/admin/logistics-points:
+    get:
+      tags: [Logistics Network]
+      summary: List organization-scoped logistics points for administration
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { description: Paginated point list. } }
+    post: { tags: [Logistics Network], summary: Create an organization-scoped point, security: [{ bearerAuth: [] }], responses: { '201': { description: Point created. }, '409': { description: Exact or probable duplicate conflict. } } }
+  /api/admin/logistics-points/{public_id}:
+    parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Logistics Network], summary: Get organization-scoped point, security: [{ bearerAuth: [] }], responses: { '200': { description: Point detail. }, '404': { $ref: '#/components/responses/NotFound' } } }
+    patch: { tags: [Logistics Network], summary: Update mutable point fields with version, security: [{ bearerAuth: [] }], responses: { '200': { description: Point updated. }, '409': { description: Version or duplicate conflict. } } }
+  /api/admin/logistics-points/{public_id}/{action}:
+    parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }]
+    post: { tags: [Logistics Network], summary: Activate or deactivate a point, security: [{ bearerAuth: [] }], responses: { '200': { description: Updated point. }, '409': { description: Version conflict. } } }
+  /api/internal/logistics-point-types:
+    get: { tags: [Logistics Network], summary: List active types for internal selection, security: [{ bearerAuth: [] }], responses: { '200': { description: Active type allowlist. } } }
+  /api/internal/logistics-points:
+    get:
+      tags: [Logistics Network]
+      summary: Select active organization-scoped points
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PerPage' }]
+      responses: { '200': { description: Active point selector projection. }, '404': { $ref: '#/components/responses/NotFound' } }
+  /api/v2/projects/{project_id}/logistics-points:
+    parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Logistics Network], summary: List a Project logistics configuration, security: [{ bearerAuth: [] }], responses: { '200': { description: Project associations. }, '404': { $ref: '#/components/responses/NotFound' } } }
+    post: { tags: [Logistics Network], summary: Associate an active governed point, security: [{ bearerAuth: [] }], responses: { '201': { description: Association created. }, '409': { description: Role or sequence conflict. } } }
+  /api/v2/projects/{project_id}/logistics-points/reorder:
+    parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Logistics Network], summary: Atomically reorder every active Project point, security: [{ bearerAuth: [] }], responses: { '200': { description: Reordered associations. }, '409': { description: Version or sequence conflict. } } }
+  /api/v2/projects/{project_id}/logistics-points/{association_id}:
+    parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: association_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Logistics Network], summary: Get one Project association, security: [{ bearerAuth: [] }], responses: { '200': { description: Association detail. }, '404': { $ref: '#/components/responses/NotFound' } } }
+    patch: { tags: [Logistics Network], summary: Update role sequence label or notes, security: [{ bearerAuth: [] }], responses: { '200': { description: Association updated. }, '409': { description: Version or uniqueness conflict. } } }
+  /api/v2/projects/{project_id}/logistics-points/{association_id}/{action}:
+    parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: association_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }]
+    post: { tags: [Logistics Network], summary: Activate or remove association from current configuration, security: [{ bearerAuth: [] }], responses: { '200': { description: Updated association. }, '409': { description: Version or active sequence conflict. } } }
   /api/uploads/{filename}:
     get:
       tags: [Site Settings]
