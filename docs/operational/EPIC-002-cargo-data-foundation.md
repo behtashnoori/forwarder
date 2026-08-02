@@ -3,10 +3,11 @@
 - **Epic ID:** EPIC-002
 - **Source:** RFC-002
 - **Discovery evidence:** [Discovery and Domain Analysis Report](discovery-cargo-data-and-scroll-analysis-20260801.md)
-- **Status:** Draft
+- **Status:** In progress — B1 delivered; bounded B3/B4 authorized for Release 1.6.0 reconciliation; B2 and B5/B6 unauthorized
 - **Date:** 2026-08-01
 - **Capability owners:** Data (CAP-013), Product (CAP-002/CAP-007), Operations (CAP-003), Security (CAP-010)
 - **Decision authority:** None. This plan does not accept PDR/ADR records or authorize implementation.
+- **Authorization reference:** [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md). Authority comes from that decision record, not from this Epic.
 
 ## Objective and boundaries
 
@@ -37,24 +38,24 @@ Establish governed cargo master data, organization catalogs, immutable shipment-
 ## SLICE-B3 — Cargo Catalog and Aliases
 
 - **Capability / goal:** CAP-013 and CAP-010 / provide tenant-owned reusable cargo definitions and customer-specific aliases without cross-tenant disclosure.
-- **Dependencies / accepted decisions required:** B1–B2 as applicable; PDR-013-D05/D06/D11/D12; ADR-022.
-- **Scope / out of scope:** Organization CargoCatalogItem lifecycle, immutable local code, aliases, optional platform-definition link; excludes ShipmentCargoItem, allocation, customer cross-Project search, global customer catalog.
+- **Dependencies / accepted decisions required:** B1; PDR-013-D05/D06/internal-D11/D12; ADR-022; Release 1.6.0 closure. B2 service relationships are not required and remain unauthorized.
+- **Scope / out of scope:** Organization CargoCatalogItem lifecycle, immutable local code, and attached aliases; excludes platform/global definition links, ShipmentCargoItem, allocation, customer cross-Project search, and global customer catalog.
 - **Database / API / UI impact:** Additive tenant-keyed catalog/alias records and indexes; paginated exact lookup/admin APIs; organization catalog stewardship UI.
-- **Security / migration:** tenant-first authorization, alias conflict quarantine, audit; evidence-only manual mapping, no part-number correlation across tenants.
+- **Security / migration:** tenant-first authorization, rejected alias collisions, audit; evidence-only manual mapping, no part-number correlation across tenants.
 - **Tests / rollback:** tenant uniqueness/isolation, alias conflict, field permissions, pagination, audit, negative leakage; disable mutations/lookup and retain catalog data.
-- **Target version:** Independently approved MINOR.
+- **Target version:** Release 1.6.0 MINOR candidate.
 - **Acceptance criteria:** identical part numbers coexist across organizations; canonical local code cannot change; forbidden tenant data is absent from results/logs; legacy unaffected.
 
 ## SLICE-B4 — ShipmentCargoItem
 
 - **Capability / goal:** CAP-002 / record cargo as an immutable OperationalShipment transaction snapshot with optional catalog lineage.
-- **Dependencies / accepted decisions required:** B1 and relevant B2/B3 contracts; PDR-013-D04–D07/D11/D12; ADR-022.
-- **Scope / out of scope:** Required quantity/UOM/name snapshot, optional catalog and supplied part/HS/type snapshots, audited correction; excludes allocation, conversion, customer portfolio search, destructive catalog propagation.
-- **Database / API / UI impact:** Additive item/revision records under OperationalShipment; paginated item commands/reads with expected version/idempotency; shipment item entry/history UI.
+- **Dependencies / accepted decisions required:** B1 and B3; PDR-013-D04–D07/internal-D11/D12; ADR-022; Release 1.6.0 closure. B2 service relationships are not required.
+- **Scope / out of scope:** Required CargoType/positive quantity/UOM/name snapshot, optional catalog and supplied identity snapshots; excludes allocation, conversion, customer portfolio search, destructive propagation, and correction/supersession implementation.
+- **Database / API / UI impact:** Additive ShipmentCargoItem records under OperationalShipment; bounded internal commands/reads with optimistic concurrency; shipment item entry/list UI.
 - **Security / migration:** shipment/resource permissions and field classification; structure for enabled new transactions, legacy descriptions remain readable, no guessed backfill.
-- **Tests / rollback:** required/precision/UOM constraints, catalog-change immutability, correction history, auth, N/N-1; stop structured writes and fall back to legacy display while retaining snapshots.
-- **Target version:** Independently approved MINOR.
-- **Acceptance criteria:** no unitless structured record; catalog edits do not rewrite history; corrections are auditable; existing shipment workflows remain compatible.
+- **Tests / rollback:** required/precision/UOM constraints, catalog-change immutability, snapshot non-regeneration, auth, N/N-1; stop structured writes and fall back to legacy display while retaining snapshots.
+- **Target version:** Release 1.6.0 MINOR candidate.
+- **Acceptance criteria:** no unitless structured record; catalog and master-data edits do not rewrite history; ordinary updates do not regenerate snapshots; existing shipment workflows remain compatible.
 
 ## SLICE-B5 — ExecutionUnitCargoAllocation
 

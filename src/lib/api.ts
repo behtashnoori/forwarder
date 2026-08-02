@@ -234,7 +234,7 @@ export function getLogoDisplayUrl(url: string | undefined): string {
   return base ? base + url : url;
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!import.meta.env.DEV && !API_BASE_URL) {
     throw new Error("API URL is not configured. Set VITE_API_URL for production.");
   }
@@ -2013,6 +2013,19 @@ export interface ExecutionUnitView {
   lifecycle_status:string; is_active:boolean; version?:number; latest_checkpoint?:string|null; last_update_at?:string|null;
   alerts:{attention_required:boolean;delayed:boolean;stale:boolean};
 }
+
+export interface CargoAlias { public_id:string; alias_text:string; normalized_alias:string; language:string; alias_type:string; is_active:boolean }
+export interface CargoCatalogItem { public_id:string; immutable_code:string; fa_name:string; en_name?:string|null; part_number?:string|null; customer_item_code?:string|null; hs_code?:string|null; brand?:string|null; model?:string|null; description?:string|null; is_active:boolean; version:number; cargo_type:{public_id:string;code:string;fa_name:string;en_name:string}; default_uom?:{public_id:string;code:string;symbol:string}|null; aliases?:CargoAlias[] }
+export const listCargoCatalog=(params:{q?:string;active?:string;cargo_type?:string;page?:number;per_page?:number})=>request<{items:CargoCatalogItem[];page:number;per_page:number;total:number;pages:number}>(withQuery("/api/internal/cargo-catalog",params));
+export const createCargoCatalogItem=(payload:Record<string,unknown>)=>request<{item:CargoCatalogItem}>("/api/internal/cargo-catalog",{method:"POST",body:JSON.stringify(payload)});
+export const updateCargoCatalogItem=(id:string,payload:Record<string,unknown>)=>request<{item:CargoCatalogItem}>(`/api/internal/cargo-catalog/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(payload)});
+export const setCargoCatalogActive=(id:string,active:boolean,version:number)=>request<{item:CargoCatalogItem}>(`/api/internal/cargo-catalog/${encodeURIComponent(id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version})});
+export const createCargoAlias=(id:string,payload:Record<string,unknown>)=>request<{item:CargoAlias}>(`/api/internal/cargo-catalog/${encodeURIComponent(id)}/aliases`,{method:"POST",body:JSON.stringify(payload)});
+export const updateCargoAlias=(itemId:string,aliasId:string,payload:Record<string,unknown>)=>request<{item:CargoAlias}>(`/api/internal/cargo-catalog/${encodeURIComponent(itemId)}/aliases/${encodeURIComponent(aliasId)}`,{method:"PATCH",body:JSON.stringify(payload)});
+export interface ShipmentCargoItem { public_id:string; line_number:number; source:"catalog"|"manual"; catalog_item_public_id?:string|null; cargo_type_public_id:string; uom_public_id:string; quantity:string; display_name_snapshot:string; cargo_type_code_snapshot:string; cargo_type_fa_snapshot:string; cargo_type_en_snapshot:string; uom_code_snapshot:string; uom_symbol_snapshot:string; part_number_snapshot?:string|null; customer_item_code_snapshot?:string|null; hs_code_snapshot?:string|null; brand_snapshot?:string|null; model_snapshot?:string|null; description_snapshot?:string|null; version:number }
+export const listShipmentCargoItems=(shipmentId:string)=>request<{items:ShipmentCargoItem[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`);
+export const createShipmentCargoItem=(shipmentId:string,payload:Record<string,unknown>)=>request<{item:ShipmentCargoItem}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`,{method:"POST",body:JSON.stringify(payload)});
+export const updateShipmentCargoItem=(shipmentId:string,itemId:string,payload:Record<string,unknown>)=>request<{item:ShipmentCargoItem}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items/${encodeURIComponent(itemId)}`,{method:"PATCH",body:JSON.stringify(payload)});
 export interface ExecutionEventView { public_id:string; event_type:string; lifecycle_status?:string|null; checkpoint_text?:string|null; customer_message?:string|null; internal_note?:string|null; visibility:string; occurred_at:string; }
 export interface PageMeta { page:number; per_page:number; total:number; pages:number }
 export interface ProjectUnitSummary { project_public_id:string; project_code:string; status:string; total_units:number; delivered_units:number; in_progress_units:number; delayed_units:number; attention_required:number; units_without_recent_update:number; progress_percentage:number; last_update_at?:string|null; threshold_policy:{version:string;stale_after_hours:number} }

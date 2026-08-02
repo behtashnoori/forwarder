@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Forwarder Backend API
-  version: 1.2.0
+  version: 1.6.0
   description: |
     Initial OpenAPI documentation for the Forwarder backend.
 
@@ -11,6 +11,7 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Internal Cargo
   - name: Master Data
   - name: Execution Units
   - name: Public Project Tracking
@@ -408,6 +409,63 @@ components:
     SiteSettings:
       type: object
       additionalProperties: true
+    CargoAlias:
+      type: object
+      required: [public_id, alias_text, normalized_alias, language, alias_type, is_active]
+      properties:
+        public_id: { type: string, format: uuid }
+        alias_text: { type: string, maxLength: 200 }
+        normalized_alias: { type: string, maxLength: 200 }
+        language: { type: string, enum: [fa, en, und] }
+        alias_type: { type: string, enum: [COMMON_NAME, CUSTOMER_TERM, ABBREVIATION, LEGACY_TERM, OTHER_GOVERNED] }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    CargoCatalogItem:
+      type: object
+      required: [public_id, immutable_code, fa_name, cargo_type, is_active, version]
+      properties:
+        public_id: { type: string, format: uuid }
+        immutable_code: { type: string, maxLength: 64 }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, nullable: true, maxLength: 160 }
+        description: { type: string, nullable: true }
+        part_number: { type: string, nullable: true }
+        customer_item_code: { type: string, nullable: true }
+        hs_code: { type: string, nullable: true }
+        brand: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        cargo_type: { type: object, additionalProperties: true }
+        default_uom: { type: object, nullable: true, additionalProperties: true }
+        aliases: { type: array, items: { $ref: '#/components/schemas/CargoAlias' } }
+        is_active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    ShipmentCargoItem:
+      type: object
+      required: [public_id, line_number, source, cargo_type_public_id, uom_public_id, quantity, display_name_snapshot, cargo_type_code_snapshot, uom_code_snapshot, uom_symbol_snapshot, version]
+      properties:
+        public_id: { type: string, format: uuid }
+        line_number: { type: integer, minimum: 1 }
+        source: { type: string, enum: [catalog, manual] }
+        catalog_item_public_id: { type: string, format: uuid, nullable: true }
+        cargo_type_public_id: { type: string, format: uuid }
+        uom_public_id: { type: string, format: uuid }
+        quantity: { type: string, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        display_name_snapshot: { type: string }
+        cargo_type_code_snapshot: { type: string }
+        cargo_type_fa_snapshot: { type: string }
+        cargo_type_en_snapshot: { type: string }
+        uom_code_snapshot: { type: string }
+        uom_symbol_snapshot: { type: string }
+        part_number_snapshot: { type: string, nullable: true }
+        customer_item_code_snapshot: { type: string, nullable: true }
+        hs_code_snapshot: { type: string, nullable: true }
+        brand_snapshot: { type: string, nullable: true }
+        model_snapshot: { type: string, nullable: true }
+        description_snapshot: { type: string, nullable: true }
+        version: { type: integer, minimum: 1 }
 paths:
   /api/v2/projects/{projectId}/execution-units:
     get:
@@ -2063,6 +2121,146 @@ paths:
         '200': { description: Activation state changed. }
         '400': { $ref: '#/components/responses/BadRequest' }
         '409': { description: Optimistic version conflict. }
+  /api/internal/cargo-catalog:
+    get:
+      tags: [Internal Cargo]
+      summary: List the authorized organization's cargo catalog
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PerPage' }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: active, in: query, schema: { type: string, enum: [all, 'true', 'false'] } }
+        - { name: cargo_type, in: query, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Bounded organization catalog page. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Internal Cargo]
+      summary: Create an organization cargo catalog item
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created catalog item. }
+        '409': { description: Duplicate or conflicting catalog data. }
+        '422': { description: Resource-specific validation failure. }
+  /api/internal/cargo-catalog/{public_id}:
+    parameters:
+      - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Internal Cargo]
+      summary: Get organization-scoped catalog detail
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Catalog detail with aliases. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Internal Cargo]
+      summary: Update mutable catalog fields using optimistic version
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Updated catalog item. }
+        '409': { description: Version or uniqueness conflict. }
+        '422': { description: Immutable code or validation failure. }
+  /api/internal/cargo-catalog/{public_id}/{action}:
+    post:
+      tags: [Internal Cargo]
+      summary: Activate or deactivate a catalog item
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }
+      responses:
+        '200': { description: Catalog activation state changed. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Version conflict. }
+  /api/internal/cargo-catalog/{public_id}/aliases:
+    parameters:
+      - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Internal Cargo]
+      summary: List aliases attached to an authorized catalog item
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Alias list. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Internal Cargo]
+      summary: Create an attached governed alias
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created alias. }
+        '409': { description: Normalization collision. }
+        '422': { description: Invalid alias metadata. }
+  /api/internal/cargo-catalog/{public_id}/aliases/{alias_id}:
+    patch:
+      tags: [Internal Cargo]
+      summary: Update an attached alias or its active state
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: alias_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Updated alias. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Normalization collision. }
+  /api/internal/cargo-catalog/{public_id}/aliases/{alias_id}/deactivate:
+    post:
+      tags: [Internal Cargo]
+      summary: Deactivate an attached alias
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: alias_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Deactivated alias. }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/internal/cargo-options:
+    get:
+      tags: [Internal Cargo]
+      summary: List active internal cargo-entry options
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Organization catalog and active master-data options. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /api/internal/operational-shipments/{shipment_id}/cargo-items:
+    parameters:
+      - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Internal Cargo]
+      summary: List snapshot cargo lines for an authorized OperationalShipment
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Shipment cargo line list. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Internal Cargo]
+      summary: Create a manual or catalog-linked shipment cargo snapshot
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Created shipment cargo snapshot. }
+        '409': { description: Duplicate line number. }
+        '422': { description: Invalid quantity, master data, catalog state, or snapshot evidence. }
+  /api/internal/operational-shipments/{shipment_id}/cargo-items/{item_id}:
+    parameters:
+      - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      - { name: item_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [Internal Cargo]
+      summary: Get an authorized shipment cargo snapshot
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Shipment cargo snapshot detail. }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Internal Cargo]
+      summary: Update mutable quantity without regenerating snapshots
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Updated quantity and version. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Version conflict. }
+        '422': { description: Snapshot rewrite or quantity validation rejected. }
   /api/uploads/{filename}:
     get:
       tags: [Site Settings]

@@ -8,7 +8,7 @@
 
 ## Decision reconciliation
 
-PDR-013-D01, PDR-013-D04, PDR-013-D12, and ADR-021 are Accepted for the bounded B1 implementation. All other PDR-013 decisions, ADR-022 through ADR-024, RFC-002, and EPIC-002 retain their existing Proposed or Draft status. Cargo implementation beyond B1 remains unauthorized.
+PDR-013-D01, PDR-013-D04, PDR-013-D12, and ADR-021 are Accepted for the bounded B1 implementation. At the date of this B1 review, all other PDR-013 decisions and ADR-022 through ADR-024 remained Proposed. The later [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md) independently accepts only bounded D05/D06/D07, internal-only D11, and ADR-022; it does not retroactively expand this B1 review.
 
 The accepted implementation uses explicit CargoType, ServiceType, and UnitOfMeasure tables with shared conventions. It contains no generic EAV store, organization-specific extension, catalog, shipment item, allocation, alias, customer search, dashboard, report, classification, backfill, or seed value.
 

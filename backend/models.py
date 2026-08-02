@@ -1586,9 +1586,13 @@ from backend.operational_models import (  # noqa: E402
     RouteLeg,
     RoutePlan,
 )
+from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem  # noqa: E402
 
 
 __all__ = [
+    "CargoCatalogItem",
+    "CargoItemAlias",
+    "ShipmentCargoItem",
     "CargoType",
     "ServiceType",
     "UnitOfMeasure",

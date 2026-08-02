@@ -21,7 +21,7 @@
 
 ## Boundary and confirmed decision status
 
-PDR-013-D01, D04, and D12 and ADR-021 are Accepted only for the bounded B1 Master Data Governance Foundation. All other PDR-013 decisions remain Proposed; ADR-022 through ADR-024 remain Proposed; RFC-002 is Draft; EPIC-002 is Draft. B2 and later cargo behavior is not authorized. This PDR defines only the initial vocabulary decision and seed operating policy. It does not authorize CargoCatalogItem, CargoItemAlias, ShipmentCargoItem, ExecutionUnitCargoAllocation, service relationships, customer search, reporting, or dashboards.
+At this Release 1.5.0 decision's acceptance, PDR-013-D01, D04, and D12 and ADR-021 were Accepted only for bounded B1; all later cargo decisions were then Proposed. The later [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md) independently accepts bounded D05/D06/D07, internal-only D11, and ADR-022 without expanding this PDR's seed authority. This PDR still does not authorize ExecutionUnitCargoAllocation, service relationships, customer search, reporting, dashboards, or any new seed values.
 
 ## D01 — Code convention
 

@@ -19,6 +19,7 @@ from .operations import operations_bp
 from .execution_units import execution_units_bp
 from .case_documents import document_bp
 from .master_data import master_data_bp
+from .cargo import cargo_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -43,3 +44,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(execution_units_bp)
     app.register_blueprint(document_bp)
     app.register_blueprint(master_data_bp)
+    app.register_blueprint(cargo_bp)

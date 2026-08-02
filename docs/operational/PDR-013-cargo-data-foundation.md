@@ -1,14 +1,14 @@
 # PDR-013 — Cargo Data Foundation Product Decisions
 
-- **Status:** Partially Accepted (D01, D04, and D12 only)
+- **Status:** Partially Accepted (D01, D04, D05, D06, D07, internal-only D11, and D12)
 - **Date:** 2026-08-01
 - **Target:** EPIC-002 — Cargo Data Foundation
 - **Capabilities:** CAP-013 Master Data, CAP-002 Shipment Management, CAP-003 Execution Management, CAP-007 Customer Portal, CAP-009 Administration, CAP-010 Security & Identity
-- **Decision authority:** The SLICE-B1 final review contract accepts D01, D04, and D12 for the bounded Master Data Governance Foundation. All other decisions remain Proposed.
+- **Decision authority:** The SLICE-B1 final review contract accepts D01, D04, and D12. The [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md) accepts D05, D06, D07, and only the internal visibility boundary of D11 for bounded SLICE-B3/B4. D02, D03, D08-D10, and the customer/public portion of D11 remain Proposed.
 
 ## Evidence and protocol
 
-Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-data-and-scroll-analysis-20260801.md), Platform Constitution v1, Architecture Baseline v1, Canonical Business Object Catalog, Platform Capability Map, Capability Registry, RFC-001, EPIC-001, ADR-001–020, and the current models/APIs. The discovery evidence is available; its recommendations remain non-authoritative and every Product decision below remains Proposed. Recommendations preserve Project, ShipmentRequest, OperationalShipment, ExecutionUnit, TransportMode, organization ownership, additive migration, and deny-by-default authorization.
+Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-data-and-scroll-analysis-20260801.md), Platform Constitution v1, Architecture Baseline v1, Canonical Business Object Catalog, Platform Capability Map, Capability Registry, RFC-001, EPIC-001, accepted ADRs, and the current models/APIs. Discovery recommendations remain non-authoritative. Decision status is recorded individually below and in the applicable acceptance record. Project, ShipmentRequest, OperationalShipment, ExecutionUnit, TransportMode, organization ownership, additive migration, and deny-by-default authorization remain distinct.
 
 ## PDR-013-D01 — Master Data scope and ownership
 
@@ -65,36 +65,40 @@ Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-d
 - **Decision ID / Topic:** PDR-013-D05 / canonical versus organization-owned catalog.
 - **Current evidence:** Platform security is tenant-first and CAP-013 supports canonical and governed reference concepts.
 - **Options:** A) one shared global item catalog; B) organization-only catalogs; C) hybrid canonical definitions plus organization-owned items.
-- **Recommended option:** C. Platform canonical definitions where appropriate, organization-owned items by default, immutable organization-local canonical code, and identical part numbers permitted in separate organizations.
-- **Benefits / Risks:** Reuse without cross-customer disclosure / canonical linkage needs stewardship.
-- **Operational / Security / Data impact:** Organization administrators own items; organization scope precedes lookup; catalog identity, ownership, lifecycle, provenance, aliases, and optional canonical link are explicit.
-- **Migration / UX / AI impact:** Additive opt-in catalog links; organization-local search; AI context is permission-filtered and must not correlate tenants.
-- **Required approvers / Blocking slice / Fail-safe:** Product, Data, Security, Architecture / SLICE-B3 / organization catalog and cross-project lookup remain disabled.
-- **Status:** Proposed
+- **Accepted option:** B for Release 1.6.0. CargoCatalogItem is organization-scoped; platform-global, customer-global/shared, and canonical/global definition linkage are deferred. Its opaque public ID is external identity. Its immutable code is unique by `(organization_id, immutable_code)` and cannot change after creation. Same Part Number may exist in different organizations.
+- **Required fields:** CargoType. Default UnitOfMeasure, Part Number, customer item code, HS Code, brand, model, and description are optional.
+- **Operational / Security / Data impact:** Items support activation/deactivation; used items cannot be hard-deleted. Organization scope precedes lookup and cross-organization visibility is prohibited.
+- **Migration / UX / AI impact:** Additive organization-owned records only; no global definition link or cross-organization correlation.
+- **Required approvers / Blocking slice / Fail-safe:** Product, Data, Architecture, Security; Operations consulted / SLICE-B3 / deny access when organization ownership cannot be proven.
+- **Status:** Accepted for Release 1.6.0 bounded SLICE-B3
+- **Accepted:** 2026-08-02 under the [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md).
 
 ## PDR-013-D06 — Customer-specific codes and aliases
 
 - **Decision ID / Topic:** PDR-013-D06 / aliases and customer codes.
 - **Current evidence:** Catalog governance requires canonical terminology while preserving qualified aliases.
 - **Options:** A) overwrite canonical code; B) scoped aliases linked to immutable catalog identity; C) free-text notes.
-- **Recommended option:** B. Customer-specific codes and aliases are organization-scoped, typed, validity-aware mappings; they never replace the immutable organization-local canonical code.
-- **Benefits / Risks:** Integrations and customer terminology remain traceable / conflicting aliases need uniqueness policy.
-- **Operational / Security / Data impact:** Audited alias stewardship; no alias is discoverable outside its organization; normalized value, type, source, validity, and conflict state are stored.
-- **Migration / UX / AI impact:** Legacy codes map only with evidence; UI labels alias source; AI may suggest, never auto-approve, mappings.
-- **Required approvers / Blocking slice / Fail-safe:** Product, Data, Security / SLICE-B3 / unresolved aliases are quarantined and excluded from matching.
-- **Status:** Proposed
+- **Accepted option:** B. An alias belongs to exactly one CargoCatalogItem, inherits organization scope, and stores alias text, deterministic normalized alias, language, alias type, active state, and audit metadata. Normalized alias is unique within its parent item. Part Number and customer item code remain explicit item fields.
+- **Accepted values:** Alias types `COMMON_NAME`, `CUSTOMER_TERM`, `ABBREVIATION`, `LEGACY_TERM`, `OTHER_GOVERNED`; languages `fa`, `en`, `und`.
+- **Operational / Security / Data impact:** Cross-organization alias access is prohibited. Inactive aliases remain readable but are excluded from new matching. Aliases authorize internal search preparation only, not public/customer search.
+- **Migration / UX / AI impact:** Normalization follows [Cargo alias normalization v1](cargo-alias-normalization-v1.md); ambiguous collisions are rejected rather than merged.
+- **Required approvers / Blocking slice / Fail-safe:** Product, Data, Security; Architecture consulted / SLICE-B3 / reject ambiguous normalization collisions.
+- **Status:** Accepted for Release 1.6.0 bounded SLICE-B3
+- **Accepted:** 2026-08-02 under the [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md).
 
 ## PDR-013-D07 — ShipmentCargoItem required fields
 
 - **Decision ID / Topic:** PDR-013-D07 / transactional cargo item meaning.
 - **Current evidence:** OperationalShipment is the executable shipment aggregate; historical truth must not be rewritten by master-data edits.
 - **Options:** A) catalog reference only; B) free-text row; C) transactional snapshot with optional catalog link.
-- **Recommended option:** C. ShipmentCargoItem belongs to OperationalShipment; quantity, UOM, and display-name snapshot are required; catalog link is optional; part number, HS code, and CargoType snapshots are stored when supplied. Catalog edits never rewrite history.
-- **Benefits / Risks:** Durable historical meaning / snapshot duplication requires explicit correction policy.
-- **Operational / Security / Data impact:** Cargo declaration sits with shipment execution; field visibility is permission-controlled; immutable snapshot fields and auditable corrections.
-- **Migration / UX / AI impact:** New transactions adopt structure; legacy descriptions remain readable; UI distinguishes linked catalog data from snapshot; AI cites snapshot and provenance.
-- **Required approvers / Blocking slice / Fail-safe:** Product, Architecture, Operations, Data, Security / SLICE-B4 / no structured item creation until required fields validate.
-- **Status:** Proposed
+- **Accepted option:** C. ShipmentCargoItem is a transactional child of OperationalShipment. Catalog linkage is optional and manual creation is permitted.
+- **Required fields:** Parent OperationalShipment, shipment-unique line number, CargoType, positive quantity, UnitOfMeasure, and display-name snapshot.
+- **Snapshot policy:** At creation, snapshot display name, CargoType code/titles, UOM code/symbol, and supplied Part Number, customer item code, HS Code, brand, model, and description. Later catalog/CargoType/UOM edits and ordinary line updates never silently regenerate snapshots. Destructive historical rewriting is prohibited; correction/revision/supersession implementation is deferred.
+- **Operational / Security / Data impact:** Linked catalog items must be active and belong to the authorized organization when selected. Historical links remain readable after deactivation. Allocation, delivered quantity, and UOM conversion are excluded.
+- **Migration / UX / AI impact:** Existing ShipmentRequest cargo fields remain readable and unchanged; no automatic conversion, mapping, or backfill.
+- **Required approvers / Blocking slice / Fail-safe:** Product, Architecture, Operations, Data, Security / SLICE-B4 / reject creation or update when ownership or snapshot evidence is inconsistent.
+- **Status:** Accepted for Release 1.6.0 bounded SLICE-B4
+- **Accepted:** 2026-08-02 under the [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md).
 
 ## PDR-013-D08 — Allocation quantity rules
 
@@ -137,12 +141,13 @@ Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-d
 - **Decision ID / Topic:** PDR-013-D11 / customer-safe cargo result projection.
 - **Current evidence:** Platform truth-separation and least-privilege laws prohibit internal data leakage.
 - **Options:** A) return complete internal item/event records; B) allowlisted customer projection; C) hide all item details.
-- **Recommended option:** B. Customer-visible events only; internal notes excluded; declared value, HS/sensitive codes, and other classified fields permission-controlled.
-- **Benefits / Risks:** Useful traceability / misclassification could leak commercial or customs data.
-- **Operational / Security / Data impact:** Previewable visibility policy; per-field backend authorization and negative tests; classification and visibility metadata required.
-- **Migration / UX / AI impact:** Legacy fields default hidden; omitted fields are explained without confirming forbidden data; AI receives only the same allowlisted projection.
-- **Required approvers / Blocking slice / Fail-safe:** Product, Security, Data, Operations / SLICE-B6 / deny and omit any field lacking an accepted visibility rule.
-- **Status:** Proposed
+- **Accepted internal boundary:** Explicitly permitted internal administrators may administer catalog items; permitted operational users may read/select them where needed. ShipmentCargoItem visibility derives from authorization to its parent OperationalShipment. Responses use the field allowlists in the [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md).
+- **Not accepted:** Public APIs, customer cargo projection, customer cross-Project search, public sensitive-field exposure, and customer dashboards/reports.
+- **Operational / Security / Data impact:** Never expose numeric database IDs, cross-tenant identifiers, unrestricted actor internals, or fields unauthorized for the role.
+- **Migration / UX / AI impact:** Unauthorized and cross-organization access is non-disclosing, normally `404` where consistent with existing security architecture.
+- **Required approvers / Blocking slice / Fail-safe:** Product, Security, Data, Operations; Architecture consulted / bounded internal B3/B4 only / deny or omit when authorization is not proven.
+- **Status:** Partially Accepted — internal Release 1.6.0 boundary only; customer/public projection remains Proposed
+- **Accepted:** 2026-08-02 under the [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md).
 
 ## PDR-013-D12 — Legacy classification policy
 
@@ -159,4 +164,8 @@ Current evidence is the [Discovery and Domain Analysis Report](discovery-cargo-d
 
 ## Register consequence
 
-D01, D04, and D12 authorize only the approved SLICE-B1 Master Data Governance Foundation together with Accepted ADR-021. They do not authorize Cargo Catalog, ShipmentCargoItem, allocation, aliases, customer search, dashboards, reports, seed data, or any other EPIC-002 slice. All other decisions remain Proposed with their stated fail-safe behavior.
+### Release 1.6.0 bounded decision closure (2026-08-02)
+
+The authoritative [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md) accepts D05, D06, D07, and the internal-only portion of D11 for bounded SLICE-B3/B4. Customer/public projection, allocation, delivery, cancellation/correction implementation, cross-Project search, dashboards, reports, and seed changes remain deferred.
+
+D01, D04, and D12 remain accepted for SLICE-B1 together with ADR-021. D05, D06, D07, and internal-only D11 authorize only the bounded Release 1.6.0 B3/B4 foundation together with ADR-022. D02, D03, D08-D10, and customer/public D11 remain Proposed with their fail-safe behavior.

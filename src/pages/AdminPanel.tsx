@@ -32,6 +32,7 @@ import TrackingLocationsAdminTab from "@/components/TrackingLocationsAdminTab";
 import LocationsAdminTab from "@/components/LocationsAdminTab";
 import DocumentDefinitionsTab from "@/components/DocumentDefinitionsTab";
 import MasterDataAdminTab from "@/components/MasterDataAdminTab";
+import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
@@ -286,6 +287,7 @@ const AdminPanel = () => {
             <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>
             <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>مدیریت مستندات</TabsTrigger>
             <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>
+            <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -473,6 +475,7 @@ const AdminPanel = () => {
           <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>
           <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>
           <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>
+          <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>
         </Tabs>
       </div>
     </div>

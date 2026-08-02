@@ -25,6 +25,7 @@ import {
   type RouteTimeline,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
@@ -128,6 +129,8 @@ export default function OperationalShipmentDetail() {
               </div>
             </CardContent>
           </Card>
+
+          <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
 
           <Card>
             <CardHeader><CardTitle>Timeline reconciliation</CardTitle></CardHeader>

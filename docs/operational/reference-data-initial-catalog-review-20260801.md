@@ -14,7 +14,7 @@ Product, Data, Architecture, Operations, and Security accepted PDR-014 D01-D10 o
 ## 1. Governance findings
 
 - Confirmed Accepted: PDR-013-D01, D04, D12, and ADR-021, limited to B1.
-- Confirmed Proposed/Draft: PDR-013-D02/D03/D05–D11, ADR-022–024, RFC-002, EPIC-002, and all B2+ behavior.
+- At this Release 1.5.0 review date, PDR-013-D02/D03/D05–D11 and ADR-022–024 were Proposed and RFC-002/EPIC-002 were Draft. The later [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md) independently accepts bounded D05/D06/D07, internal-only D11, and ADR-022. D02/D03/D08–D10, customer/public D11, ADR-023/024, and unauthorized later capabilities remain Proposed.
 - Confirmed B1 implementation: explicit `cargo_type`, `service_type`, and `unit_of_measure` tables; immutable uppercased code; bilingual labels; active state; order; hierarchy/dimension checks; optimistic version; admin API/UI; no data inserted by migration.
 - Confirmed gap: B1 stores neither source/provenance nor seed-execution metadata, system ownership, user-selectability, precision recommendation, or primary/supporting service eligibility.
 - Confirmed current data limitations: cargo is free text with unitless weight/volume and value without currency; no CargoType/ServiceType/UOM transaction reference exists.

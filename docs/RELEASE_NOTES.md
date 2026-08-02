@@ -1,5 +1,17 @@
 # Release Notes
 
+## 1.6.0 — Cargo Catalog and Shipment Cargo Foundation
+
+| Item | Value |
+| --- | --- |
+| VERSION | `1.6.0` |
+| CHANGE | Backward-compatible MINOR |
+| DATABASE | `20260809_cargo_catalog_items` |
+| SEED | None; Release 1.5.0 catalog unchanged |
+| PRODUCTION | Not deployed by this task |
+
+Adds organization-owned CargoCatalogItem and CargoItemAlias administration, deterministic alias normalization, and OperationalShipment-owned ShipmentCargoItem snapshots with positive exact-UOM quantities. Legacy request cargo remains unmodified. Allocation, customer search/projection, dashboards, and reports are excluded.
+
 ## 1.5.0 — Reference Data Initial Catalog
 
 | Field | Value |

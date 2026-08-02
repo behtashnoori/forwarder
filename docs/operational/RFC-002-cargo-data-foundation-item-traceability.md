@@ -1,11 +1,12 @@
 # RFC-002: Cargo Data Foundation and Item Traceability
 
 - **RFC ID:** RFC-002
-- **Status:** Draft
+- **Status:** Partially authorized — bounded SLICE-B3/B4 foundation approved for Release 1.6.0 reconciliation
 - **Date:** 2026-08-01
 - **Review readiness:** Ready for Product and Architecture Review
 - **Capabilities:** CAP-013, CAP-002, CAP-003, CAP-007, CAP-009, CAP-010, CAP-006
 - **Decision authority:** None. This RFC does not accept PDR-013, approve an ADR, or authorize implementation.
+- **Authorization reference:** [Release 1.6.0 Cargo Governance Closure](release-1.6.0-cargo-governance-closure.md). Authority comes from that decision record, not from this RFC.
 - **Discovery evidence:** [Discovery and Domain Analysis Report](discovery-cargo-data-and-scroll-analysis-20260801.md); evidence availability does not resolve its Product decisions.
 
 ## 1. Problem statement and examples
@@ -34,17 +35,17 @@ Other examples include one Project accepting transport, customs clearance, and w
 - No allocation invariant prevents concurrent over-allocation.
 - Existing public tracking is Project/request scoped and must not become anonymous portfolio search.
 - No accepted per-field customer visibility policy exists for cargo search.
-- The governed Discovery and Domain Analysis Report is available for review; its recommendations remain proposals and its Product decisions remain unresolved.
+- The governed Discovery and Domain Analysis Report is evidence, not authority. PDR-013-D01/D04/D05/D06/D07/D12 and internal-only D11 now have bounded acceptance records; all other Product decisions remain unresolved.
 
 ## 3. Scope and domain boundaries
 
 In scope for governance: CargoType, ServiceType, accepted service packages, UnitOfMeasure, CargoCatalogItem and aliases, ShipmentCargoItem snapshots, ExecutionUnitCargoAllocation, tenant-scoped search, legacy adoption, audit, authorization, correction, and phased delivery.
 
-Proposed boundaries for review—not approved decisions—are:
+The following boundaries span accepted and still-proposed slices; their authority and status come from their PDR/ADR records, not this RFC:
 
 - CAP-013 governs explicit reference/master data and catalog conventions.
 - ShipmentRequest owns requested services; Project owns accepted package; OperationalShipment owns fulfilled-service links and ShipmentCargoItem transaction snapshots.
-- CargoCatalogItem is organization-owned by default and is not historical transaction truth.
+- CargoCatalogItem is organization-scoped for Release 1.6.0 and is not historical transaction truth.
 - ExecutionUnitCargoAllocation links a shipment snapshot item to an eligible unit while preserving OperationalShipment and Project invariants.
 - CAP-007 consumes a customer-safe projection; CAP-010 enforces tenant/resource/field authorization; CAP-006 may later consume governed projections.
 
@@ -54,9 +55,9 @@ This RFC does not implement or approve tables, migrations, endpoints, admin/cust
 
 ## 5. Master-data strategy
 
-The candidate strategy uses explicit domain tables sharing immutable codes, bilingual labels/symbols where relevant, activation rather than deletion after use, provenance, ownership, timestamps, audit, and controlled aliases. CargoType is a global hierarchy with `UNCLASSIFIED` and governed `OTHER`; organization extensions may follow later. UOM includes measurement dimension and initially supports exact-unit comparisons only. The cargo catalog is hybrid: platform definitions when appropriate and organization-owned items by default.
+The governed strategy uses explicit domain tables sharing immutable codes, bilingual labels/symbols where relevant, activation rather than deletion after use, provenance, ownership, timestamps, audit, and controlled aliases. CargoType and UOM follow their accepted B1 decisions. Release 1.6.0 uses only organization-scoped catalog items; platform-global definitions are deferred.
 
-These are PDR-013 recommendations and ADR-021/022 proposals, not accepted policy.
+PDR-013 and ADR-021/022 define which parts are Accepted. Allocation, customer search, and other deferred portions remain proposals.
 
 ## 6. Search and security strategy
 
@@ -91,7 +92,7 @@ Every slice is independently deployable, additive, feature-gated, and blocked on
 
 ## 10. Open decisions
 
-All PDR-013 decisions are open: taxonomy ownership, service cardinality/ownership, UOM policy, catalog/aliases, item fields, allocation and correction, customer access/visibility, and legacy classification. Architecture review must disposition ADR-021–024. Operations must set limits and correction workflows; Security must approve field classification, abuse controls, and tenant tests; Data must approve stewardship and quality metrics.
+Open decisions are PDR-013-D02/D03 service relationships, D08/D09 allocation/delivery/correction, D10 customer search, and the customer/public portion of D11. ADR-023 and ADR-024 remain Proposed. Bounded catalog, alias, shipment snapshot, and internal visibility decisions are closed by PDR-013-D05/D06/D07/internal-D11 and ADR-022.
 
 ## 11. Risk analysis
 
@@ -99,4 +100,4 @@ Key risks are taxonomy drift, alias collisions, false catalog correlation, snaps
 
 ## 12. Review outcome requested
 
-Product and Architecture should review boundaries and options, then route PDR-013 and ADR-021–024 to their named approvers. Review does not itself authorize schema or application work.
+Future slices must route their still-Proposed PDR/ADR records to named approvers. This RFC never authorizes schema or application work; bounded Release 1.6.0 authority is recorded separately.
