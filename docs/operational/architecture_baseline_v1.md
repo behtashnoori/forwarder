@@ -453,3 +453,13 @@ The platform is ready for Architecture Review and Product decision closure. It i
 Architecture Baseline Version: 1.0
 Status: Proposed
 Ready for Architecture Review
+
+## 12. Accepted post-baseline strategic direction
+
+- [PDR-015 — Forwarder Domain Development Roadmap](PDR-015-forwarder-domain-development-roadmap.md) maps seven maturity layers from governed facts to later analytics and intelligence.
+- [PDR-016 — Logistics Network Foundation](PDR-016-logistics-network-foundation.md) accepts separate LogisticsPointType, LogisticsPoint, and ProjectLogisticsPoint concepts.
+- [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md) accepts their aggregate boundaries.
+- [Forwarder Domain Roadmap Matrix](forwarder-domain-roadmap-matrix.md) records current and proposed capability sequencing.
+- [Production Deployment State 1.6.1](production-deployment-state-1.6.1.md) records verified Production release and database evidence.
+
+PDR-015, PDR-016 D01–D10, ADR-025, and the supporting matrix are Accepted within their recorded bounds. The Logistics Network Slice is authorized but not started. ADR-023/ADR-024 remain Proposed; allocation, customer search, dashboards, and AI are not authorized by this closure. This note does not change the Baseline's own status.

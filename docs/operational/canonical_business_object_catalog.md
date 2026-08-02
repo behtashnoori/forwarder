@@ -459,3 +459,7 @@ Any deviation must cite the canonical object, explain whether the term is a boun
 ### Readiness verdict
 
 **Canonical vocabulary is complete for Phase 0.6 review. It is suitable as the single terminology reference after Product Owner and Architecture acceptance. Implementation remains paused and no prior ADR/PDR status is changed by this document.**
+
+### Accepted logistics-network vocabulary extension
+
+[PDR-016](PDR-016-logistics-network-foundation.md) and [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md) accept three deliberately separate terms: `LogisticsPointType` (Reference Data classification), `LogisticsPoint` (reusable Master Data place), and `ProjectLogisticsPoint` (Project configuration association). They are authorized but not implemented and must not be merged with Province/City, Customer, RoutePlan, Checkpoint, Milestone, or OperationalEvent.

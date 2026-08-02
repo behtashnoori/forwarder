@@ -82,3 +82,7 @@ Establish governed cargo master data, organization catalogs, immutable shipment-
 ## Epic completion
 
 EPIC-002 completes only after every delivered slice has its own accepted decisions, implementation authorization, immutable release evidence, migration/rollback proof, and operational ownership. Documentation completion alone is not capability completion.
+
+## Roadmap relationship
+
+[PDR-015](PDR-015-forwarder-domain-development-roadmap.md) is Accepted strategic direction placing cargo reference/master data, ShipmentCargoItem snapshots, later visibility, reporting, and optimization in distinct maturity layers. Accepted [PDR-016](PDR-016-logistics-network-foundation.md) and [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md) are adjacent Logistics Network governance and do not expand EPIC-002. Cargo-to-ExecutionUnit allocation/linking, customer search, reporting, dashboards, and AI retain their existing Proposed, unauthorized, or Deferred gates.

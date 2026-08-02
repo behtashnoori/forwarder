@@ -37,3 +37,7 @@ The registry is the compact index of canonical platform capabilities. It is not 
 
 Capability Registry Version: 1.0
 Status: Proposed
+
+## Accepted roadmap mapping
+
+PDR-015, PDR-016, and ADR-025 do not add new capability IDs. Accepted logistics-network ownership maps to CAP-013 (LogisticsPointType and LogisticsPoint governance), CAP-001 (ProjectLogisticsPoint configuration), CAP-010 (organization/security isolation), and CAP-003 (operational use). See [Forwarder Domain Roadmap Matrix](forwarder-domain-roadmap-matrix.md). The bounded Slice is authorized but implementation has not started; this mapping does not change the registry's own status.
