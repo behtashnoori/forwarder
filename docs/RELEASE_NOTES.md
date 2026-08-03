@@ -9,11 +9,24 @@
 | CHANGE | Backward-compatible MINOR |
 | DATABASE | Additive `20260810_logistics_network` |
 | REFERENCE DATA | Separate checksummed catalog; no automatic or Production apply |
-| PRODUCTION | Not migrated, seeded, packaged, tagged, or deployed by this task |
+| DEPLOYMENT | Backend, frontend, and additive migration package |
+| PRODUCTION | Not migrated, seeded, or deployed by release publication |
 
 Adds governed LogisticsPointType reference data, organization-scoped LogisticsPoint master data, and ProjectLogisticsPoint configuration with bounded roles and atomic ordering. Internal/admin APIs and responsive staff UI support create, edit, select, reorder, activate, and deactivate without hard deletion. Exact duplicates are rejected, probable duplicates require explicit confirmation, all organization/project writes are actor-audited, and numeric database identifiers are not serialized.
 
 Maps/GIS, coordinates, route or checkpoint generation, ETA/traffic/weather, customer/public discovery, dashboards/reporting, allocation, cargo-unit linkage, partial delivery, packaging, bulk import, generic workflow/approval/EAV, and AI behavior remain excluded.
+
+Final acceptance passed 546 backend tests with 20 skips, 96 frontend tests,
+TypeScript, ESLint, Ruff for the Logistics Network Python slice, production
+build, OpenAPI/runtime parity, disposable PostgreSQL fresh/parent/round-trip
+migrations, tenant isolation, and authenticated desktop/mobile UAT. The UI
+bundle embeds version 1.7.0 through `VITE_APP_VERSION`; no visible version label
+is rendered. The checksummed LogisticsPointType catalog is included as prepared
+reference data, but Production Seed is not automatic and was not executed.
+
+Application rollback targets `release-v1.6.1-20260802` and normally retains the
+additive 1.7.0 tables. Database downgrade to `20260809_cargo_catalog_items`
+requires separate authorization and preservation assessment after any use.
 
 ## 1.6.1 — Frontend Cache Policy Hardening
 

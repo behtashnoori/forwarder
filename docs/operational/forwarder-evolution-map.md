@@ -16,6 +16,6 @@ Release folders and notes are implementation/release evidence; Production is cla
 | 1.5.0 | Initial Reference Data catalog | Versioned reference catalog and seed controls | `20260808_reference_seed` | Schema included in current lineage; Production Seed not executed | PDR-014, catalog review |
 | 1.6.0 | Cargo Catalog and Shipment Cargo Foundation | CargoCatalogItem, CargoItemAlias, ShipmentCargoItem | `20260809_cargo_catalog_items` | Implemented; deployed through verified 1.6.1 lineage | ADR-022, 1.6.0 closure |
 | 1.6.1 | Cache Policy Hardening | Immutable frontend cache behavior | unchanged | **Production verified** at `release-v1.6.1-20260802` | Production Deployment State 1.6.1 |
-| 1.7.0 candidate | Logistics Network Foundation | LogisticsPointType, LogisticsPoint, ProjectLogisticsPoint | proposed `20260810_logistics_network` | Proposed; implementation Not Started | PDR-016, ADR-025, proposed Slice contract |
+| 1.7.0 | Logistics Network Foundation | LogisticsPointType, LogisticsPoint, ProjectLogisticsPoint | `20260810_logistics_network` | Published and packaged; Production deployment not performed | PDR-016, ADR-025, ADR-026, accepted Slice contract, final RC review |
 
 DA-1.0 is the architecture knowledge baseline accompanying the transition from governed Cargo foundations to proposed Logistics Network implementation. Planned releases are not delivery promises.
