@@ -91,6 +91,39 @@ def test_project_association_role_uniqueness_reorder_and_deactivation(network_ap
         assert ProjectLogisticsPoint.query.count() == 2
 
 
+def test_cross_tenant_and_unauthenticated_commands_are_non_disclosing(network_app):
+    app, ctx = network_app
+    with app.test_client() as client:
+        point = _point(client, ctx, "LP-IDOR", "نقطه محرمانه").get_json()["item"]
+        project_url = f"/api/v2/projects/{ctx['project']}/logistics-points"
+        association = client.post(project_url, headers=ctx["auth"], json={
+            "logistics_point_public_id": point["public_id"],
+            "project_role": "ORIGIN", "sequence_number": 1,
+        }).get_json()["item"]
+
+        detail_url = f"/api/admin/logistics-points/{point['public_id']}"
+        lifecycle_url = detail_url + "/deactivate"
+        association_url = f"{project_url}/{association['public_id']}"
+        attempts = [
+            client.get(detail_url, headers=ctx["other_auth"]),
+            client.patch(detail_url, headers=ctx["other_auth"], json={"version": point["version"], "fa_name": "leak"}),
+            client.post(lifecycle_url, headers=ctx["other_auth"], json={"version": point["version"]}),
+            client.post(project_url, headers=ctx["other_auth"], json={
+                "logistics_point_public_id": point["public_id"], "project_role": "DESTINATION", "sequence_number": 2,
+            }),
+            client.patch(association_url, headers=ctx["other_auth"], json={"version": association["version"], "sequence_number": 2}),
+            client.post(association_url + "/deactivate", headers=ctx["other_auth"], json={"version": association["version"]}),
+            client.post(association_url + "/activate", headers=ctx["other_auth"], json={"version": association["version"]}),
+        ]
+        assert {response.status_code for response in attempts} == {404}
+        assert {response.get_json()["error"]["code"] for response in attempts} == {"NOT_FOUND"}
+        assert all("organization" not in response.get_data(as_text=True).lower() for response in attempts)
+
+        unauthenticated = client.get(detail_url)
+        assert unauthenticated.status_code == 401
+        assert point["public_id"] not in unauthenticated.get_data(as_text=True)
+
+
 def test_logistics_migration_is_the_single_head():
     root = Path(__file__).resolve().parents[1]
     config = Config(str(root / "migrations" / "alembic.ini")); config.set_main_option("script_location", str(root / "migrations"))

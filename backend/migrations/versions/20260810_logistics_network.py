@@ -59,6 +59,7 @@ def upgrade():
     op.create_index("ix_logistics_point_org_type", "logistics_point", ["organization_id", "logistics_point_type_id"])
     op.create_index("ix_logistics_point_org_name", "logistics_point", ["organization_id", "normalized_name"])
     op.create_index("ix_logistics_point_org_geography", "logistics_point", ["organization_id", "country_id", "province_id", "city_id"])
+    op.create_index("ix_logistics_point_org_updated", "logistics_point", ["organization_id", "updated_at"])
     op.create_table("project_logistics_point",
         sa.Column("id", BIGINT, primary_key=True), sa.Column("public_id", sa.String(36), nullable=False),
         sa.Column("organization_id", BIGINT, nullable=False), sa.Column("project_id", BIGINT, nullable=False),
@@ -81,7 +82,7 @@ def downgrade():
     op.drop_index("ix_project_logistics_point_project_active", table_name="project_logistics_point")
     op.drop_index("uq_project_logistics_point_active_sequence", table_name="project_logistics_point")
     op.drop_table("project_logistics_point")
-    for name in ["ix_logistics_point_org_geography", "ix_logistics_point_org_name", "ix_logistics_point_org_type", "ix_logistics_point_org_active"]:
+    for name in ["ix_logistics_point_org_updated", "ix_logistics_point_org_geography", "ix_logistics_point_org_name", "ix_logistics_point_org_type", "ix_logistics_point_org_active"]:
         op.drop_index(name, table_name="logistics_point")
     op.drop_table("logistics_point")
     op.drop_index("ix_logistics_point_type_active_order", table_name="logistics_point_type")

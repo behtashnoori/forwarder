@@ -46,6 +46,24 @@ components:
       schema:
         type: integer
   responses:
+    LogisticsTypeItem:
+      description: Governed logistics point type envelope.
+      content: { application/json: { schema: { type: object, required: [item], properties: { item: { $ref: '#/components/schemas/LogisticsPointType' } } } } }
+    LogisticsTypeList:
+      description: Governed logistics point type collection.
+      content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/LogisticsPointType' } } } } } }
+    LogisticsPointItem:
+      description: Organization-scoped logistics point envelope.
+      content: { application/json: { schema: { type: object, required: [item], properties: { item: { $ref: '#/components/schemas/LogisticsPoint' } } } } }
+    LogisticsPointList:
+      description: Paginated organization-scoped logistics point collection.
+      content: { application/json: { schema: { type: object, required: [items, page, per_page, total, pages], properties: { items: { type: array, items: { $ref: '#/components/schemas/LogisticsPoint' } }, page: { type: integer }, per_page: { type: integer }, total: { type: integer }, pages: { type: integer } } } } }
+    ProjectLogisticsPointItem:
+      description: Project logistics point association envelope.
+      content: { application/json: { schema: { type: object, required: [item], properties: { item: { $ref: '#/components/schemas/ProjectLogisticsPoint' } } } } }
+    ProjectLogisticsPointList:
+      description: Project logistics point association collection.
+      content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/ProjectLogisticsPoint' } } } } } }
     Message:
       description: Message payload.
       content:
@@ -89,6 +107,140 @@ components:
       bearerFormat: JWT
       description: Bearer token used by protected expert, CRM, admin, and user-management endpoints.
   schemas:
+    LogisticsNetworkError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string, example: VALIDATION_FAILED }
+            message: { type: string }
+    LogisticsPointType:
+      type: object
+      required: [public_id, immutable_code, fa_name, en_name, display_order, is_active, version, updated_at]
+      properties:
+        public_id: { type: string, format: uuid }
+        immutable_code: { type: string, maxLength: 64, readOnly: true }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160 }
+        definition: { type: string, nullable: true }
+        display_order: { type: integer }
+        is_active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        updated_at: { type: string, format: date-time }
+    LogisticsPointTypeCreate:
+      type: object
+      required: [immutable_code, fa_name, en_name]
+      properties:
+        immutable_code: { type: string, maxLength: 64, description: Accepted governed type code. }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160 }
+        definition: { type: string, maxLength: 4000, nullable: true }
+        display_order: { type: integer, default: 0 }
+    LogisticsPointTypeUpdate:
+      type: object
+      required: [version]
+      properties:
+        version: { type: integer, minimum: 1 }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160 }
+        definition: { type: string, maxLength: 4000, nullable: true }
+        display_order: { type: integer }
+    VersionCommand:
+      type: object
+      required: [version]
+      properties: { version: { type: integer, minimum: 1 } }
+    LogisticsPoint:
+      type: object
+      required: [public_id, immutable_code, fa_name, is_active, version, point_type, country, updated_at]
+      properties:
+        public_id: { type: string, format: uuid }
+        immutable_code: { type: string, maxLength: 64, readOnly: true }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160, nullable: true }
+        short_address: { type: string, maxLength: 500, nullable: true }
+        is_active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        updated_at: { type: string, format: date-time }
+        point_type: { $ref: '#/components/schemas/LogisticsPointType' }
+        country: { $ref: '#/components/schemas/LogisticsGeography' }
+        province: { allOf: [{ $ref: '#/components/schemas/LogisticsGeography' }], nullable: true }
+        city: { allOf: [{ $ref: '#/components/schemas/LogisticsGeography' }], nullable: true }
+    LogisticsGeography:
+      type: object
+      properties:
+        code: { type: string, nullable: true }
+        fa_name: { type: string }
+        en_name: { type: string }
+    LogisticsPointCreate:
+      type: object
+      required: [immutable_code, point_type_public_id, fa_name, country_code]
+      properties:
+        immutable_code: { type: string, maxLength: 64 }
+        point_type_public_id: { type: string, format: uuid }
+        fa_name: { type: string, maxLength: 160 }
+        en_name: { type: string, maxLength: 160, nullable: true }
+        country_code: { type: string }
+        province_code: { type: string, nullable: true }
+        city_code: { type: string, nullable: true, description: Requires a consistent province_code. }
+        short_address: { type: string, maxLength: 500, nullable: true }
+        confirm_probable_duplicate: { type: boolean, default: false, description: Explicit reviewed override for a probable, never exact, duplicate. }
+    LogisticsPointUpdate:
+      allOf:
+        - { $ref: '#/components/schemas/VersionCommand' }
+        - type: object
+          properties:
+            fa_name: { type: string, maxLength: 160 }
+            en_name: { type: string, maxLength: 160, nullable: true }
+            country_code: { type: string }
+            province_code: { type: string, nullable: true }
+            city_code: { type: string, nullable: true }
+            short_address: { type: string, maxLength: 500, nullable: true }
+    ProjectLogisticsPoint:
+      type: object
+      required: [public_id, project_role, sequence_number, is_active, version, logistics_point]
+      properties:
+        public_id: { type: string, format: uuid }
+        project_role: { type: string, enum: [ORIGIN, INTERMEDIATE, DESTINATION, CUSTOMS_PROCESSING, TRANSFER, STORAGE, LOADING, UNLOADING, OTHER_GOVERNED] }
+        sequence_number: { type: integer, minimum: 1 }
+        display_label: { type: string, maxLength: 160, nullable: true }
+        notes: { type: string, maxLength: 4000, nullable: true }
+        is_active: { type: boolean }
+        version: { type: integer, minimum: 1 }
+        logistics_point: { $ref: '#/components/schemas/LogisticsPoint' }
+    ProjectLogisticsPointCreate:
+      type: object
+      required: [logistics_point_public_id, project_role, sequence_number]
+      properties:
+        logistics_point_public_id: { type: string, format: uuid, description: Existing active point in the Project organization; free-text master creation is not accepted. }
+        project_role: { type: string, enum: [ORIGIN, INTERMEDIATE, DESTINATION, CUSTOMS_PROCESSING, TRANSFER, STORAGE, LOADING, UNLOADING, OTHER_GOVERNED] }
+        sequence_number: { type: integer, minimum: 1 }
+        display_label: { type: string, maxLength: 160, nullable: true }
+        notes: { type: string, maxLength: 4000, nullable: true }
+    ProjectLogisticsPointUpdate:
+      allOf:
+        - { $ref: '#/components/schemas/VersionCommand' }
+        - type: object
+          properties:
+            project_role: { type: string, enum: [ORIGIN, INTERMEDIATE, DESTINATION, CUSTOMS_PROCESSING, TRANSFER, STORAGE, LOADING, UNLOADING, OTHER_GOVERNED] }
+            sequence_number: { type: integer, minimum: 1 }
+            display_label: { type: string, maxLength: 160, nullable: true }
+            notes: { type: string, maxLength: 4000, nullable: true }
+    ProjectLogisticsReorder:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [public_id, version]
+            properties:
+              public_id: { type: string, format: uuid }
+              version: { type: integer, minimum: 1 }
     MasterDataItem:
       type: object
       required: [public_id, immutable_code, fa_name, en_name, display_order, is_active, created_at, updated_at, version]
@@ -2266,58 +2418,69 @@ paths:
     get:
       tags: [Logistics Network]
       summary: List governed logistics point types for administration
+      description: Requires an authenticated admin. Returns the bounded governed catalog; no tenant-sensitive candidate data is exposed.
       security: [{ bearerAuth: [] }]
-      responses: { '200': { description: Bounded type list. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+      parameters:
+        - { name: q, in: query, description: Case-insensitive code or bilingual name search; input is bounded to 160 characters., schema: { type: string, maxLength: 160 } }
+        - { name: active, in: query, description: Filter lifecycle state; all is admin-only., schema: { type: string, enum: ['true', 'false', all], default: all } }
+      responses:
+        '200': { $ref: '#/components/responses/LogisticsTypeList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Logistics Network]
       summary: Create an accepted logistics point type
+      description: Requires an authenticated admin; immutable_code must be in the accepted Release 1.7.0 catalog.
       security: [{ bearerAuth: [] }]
-      responses: { '201': { description: Type created. }, '409': { description: Code conflict. } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LogisticsPointTypeCreate' } } } }
+      responses: { '201': { $ref: '#/components/responses/LogisticsTypeItem' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { description: Governed code or field validation failed., content: { application/json: { schema: { $ref: '#/components/schemas/LogisticsNetworkError' } } } }, '409': { description: Immutable code conflict. } }
   /api/admin/logistics-point-types/{public_id}:
     parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }]
-    get: { tags: [Logistics Network], summary: Get logistics point type, security: [{ bearerAuth: [] }], responses: { '200': { description: Type detail. }, '404': { $ref: '#/components/responses/NotFound' } } }
-    patch: { tags: [Logistics Network], summary: Update mutable type fields with version, security: [{ bearerAuth: [] }], responses: { '200': { description: Type updated. }, '409': { description: Version conflict. } } }
+    get: { tags: [Logistics Network], summary: Get logistics point type, description: Requires an authenticated admin., security: [{ bearerAuth: [] }], responses: { '200': { $ref: '#/components/responses/LogisticsTypeItem' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    patch: { tags: [Logistics Network], summary: Update mutable type fields with version, description: Requires an authenticated admin; immutable_code cannot change., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LogisticsPointTypeUpdate' } } } }, responses: { '200': { description: Type updated. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. }, '422': { description: Validation failed. } } }
   /api/admin/logistics-point-types/{public_id}/{action}:
     parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }]
-    post: { tags: [Logistics Network], summary: Activate or deactivate a type, security: [{ bearerAuth: [] }], responses: { '200': { description: Updated type. }, '409': { description: Version conflict. } } }
+    post: { tags: [Logistics Network], summary: Activate or deactivate a type, description: Requires an authenticated admin. Deactivation preserves historical references., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VersionCommand' } } } }, responses: { '200': { description: Updated type. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
   /api/admin/logistics-points:
     get:
       tags: [Logistics Network]
       summary: List organization-scoped logistics points for administration
+      description: Requires an authenticated admin with logistics point read permission. Results are restricted to the caller's active organization.
       security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PerPage' }]
-      responses: { '200': { description: Paginated point list. } }
-    post: { tags: [Logistics Network], summary: Create an organization-scoped point, security: [{ bearerAuth: [] }], responses: { '201': { description: Point created. }, '409': { description: Exact or probable duplicate conflict. } } }
+      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PerPage' }, { name: q, in: query, description: Code or bilingual name search; bounded to 160 characters., schema: { type: string, maxLength: 160 } }, { name: active, in: query, description: Lifecycle filter., schema: { type: string, enum: ['true', 'false', all], default: all } }, { name: type, in: query, description: Logistics point type public UUID., schema: { type: string, format: uuid } }, { name: country, in: query, description: Country code filter., schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/LogisticsPointList' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
+    post: { tags: [Logistics Network], summary: Create an organization-scoped point, description: Requires an authenticated admin with manage permission. Exact duplicates are rejected; probable duplicates require explicit reviewed confirmation., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LogisticsPointCreate' } } } }, responses: { '201': { description: Point created. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { description: Governed point type is unavailable. }, '409': { description: Exact/probable duplicate or database constraint conflict. }, '422': { description: Geography or field validation failed. } } }
   /api/admin/logistics-points/{public_id}:
     parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }]
-    get: { tags: [Logistics Network], summary: Get organization-scoped point, security: [{ bearerAuth: [] }], responses: { '200': { description: Point detail. }, '404': { $ref: '#/components/responses/NotFound' } } }
-    patch: { tags: [Logistics Network], summary: Update mutable point fields with version, security: [{ bearerAuth: [] }], responses: { '200': { description: Point updated. }, '409': { description: Version or duplicate conflict. } } }
+    get: { tags: [Logistics Network], summary: Get organization-scoped point, description: Requires admin and organization-scoped read permission; forbidden and nonexistent IDs are non-disclosing., security: [{ bearerAuth: [] }], responses: { '200': { $ref: '#/components/responses/LogisticsPointItem' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    patch: { tags: [Logistics Network], summary: Update mutable point fields with version, description: Requires admin and organization-scoped manage permission; cross-tenant and nonexistent IDs are non-disclosing 404 responses., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/LogisticsPointUpdate' } } } }, responses: { '200': { description: Point updated. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or duplicate conflict. }, '422': { description: Geography or field validation failed. } } }
   /api/admin/logistics-points/{public_id}/{action}:
     parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }]
-    post: { tags: [Logistics Network], summary: Activate or deactivate a point, security: [{ bearerAuth: [] }], responses: { '200': { description: Updated point. }, '409': { description: Version conflict. } } }
+    post: { tags: [Logistics Network], summary: Activate or deactivate a point, description: Requires admin and organization-scoped manage permission. No historical association is deleted., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VersionCommand' } } } }, responses: { '200': { description: Updated point. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
   /api/internal/logistics-point-types:
-    get: { tags: [Logistics Network], summary: List active types for internal selection, security: [{ bearerAuth: [] }], responses: { '200': { description: Active type allowlist. } } }
+    get: { tags: [Logistics Network], summary: List active types for internal selection, description: Authenticated internal selector; inactive types are never returned., security: [{ bearerAuth: [] }], responses: { '200': { $ref: '#/components/responses/LogisticsTypeList' }, '401': { $ref: '#/components/responses/Unauthorized' } } }
   /api/internal/logistics-points:
     get:
       tags: [Logistics Network]
       summary: Select active organization-scoped points
+      description: Requires authentication and logistics point read permission. Results are active-only and tenant-scoped; this endpoint cannot create free-text masters.
       security: [{ bearerAuth: [] }]
-      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PerPage' }]
-      responses: { '200': { description: Active point selector projection. }, '404': { $ref: '#/components/responses/NotFound' } }
+      parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PerPage' }, { name: q, in: query, description: Code or bilingual name search; bounded to 160 characters., schema: { type: string, maxLength: 160 } }, { name: type, in: query, description: Active point type public UUID., schema: { type: string, format: uuid } }, { name: country, in: query, description: Country code., schema: { type: string } }]
+      responses: { '200': { $ref: '#/components/responses/LogisticsPointList' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }
   /api/v2/projects/{project_id}/logistics-points:
     parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }]
-    get: { tags: [Logistics Network], summary: List a Project logistics configuration, security: [{ bearerAuth: [] }], responses: { '200': { description: Project associations. }, '404': { $ref: '#/components/responses/NotFound' } } }
-    post: { tags: [Logistics Network], summary: Associate an active governed point, security: [{ bearerAuth: [] }], responses: { '201': { description: Association created. }, '409': { description: Role or sequence conflict. } } }
+    get: { tags: [Logistics Network], summary: List a Project logistics configuration, description: Requires authentication, read permission, and an active membership in the Project organization. Cross-tenant and nonexistent Projects are the same non-disclosing 404., security: [{ bearerAuth: [] }], responses: { '200': { description: Project associations. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    post: { tags: [Logistics Network], summary: Associate an active governed point, description: Requires Project logistics manage permission. The point must already exist, be active, and belong to the Project organization., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProjectLogisticsPointCreate' } } } }, responses: { '201': { description: Association created. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { description: Project or governed point is unavailable without disclosing tenant existence. }, '409': { description: Role or active sequence conflict. }, '422': { description: Role, sequence, or field validation failed. } } }
   /api/v2/projects/{project_id}/logistics-points/reorder:
     parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }]
-    post: { tags: [Logistics Network], summary: Atomically reorder every active Project point, security: [{ bearerAuth: [] }], responses: { '200': { description: Reordered associations. }, '409': { description: Version or sequence conflict. } } }
+    post: { tags: [Logistics Network], summary: Atomically reorder every active Project point, description: Requires Project logistics manage permission. The body must contain every active association exactly once; array order becomes sequence order., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProjectLogisticsReorder' } } } }, responses: { '200': { description: Reordered associations. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or sequence conflict. }, '422': { description: Incomplete, duplicate, or empty reorder validation failed. } } }
   /api/v2/projects/{project_id}/logistics-points/{association_id}:
     parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: association_id, in: path, required: true, schema: { type: string, format: uuid } }]
     get: { tags: [Logistics Network], summary: Get one Project association, security: [{ bearerAuth: [] }], responses: { '200': { description: Association detail. }, '404': { $ref: '#/components/responses/NotFound' } } }
-    patch: { tags: [Logistics Network], summary: Update role sequence label or notes, security: [{ bearerAuth: [] }], responses: { '200': { description: Association updated. }, '409': { description: Version or uniqueness conflict. } } }
+    patch: { tags: [Logistics Network], summary: Update role sequence label or notes, description: Requires manage permission in the Project organization. The governed master identity is never modified., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ProjectLogisticsPointUpdate' } } } }, responses: { '200': { description: Association updated. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or uniqueness conflict. }, '422': { description: Role, sequence, or field validation failed. } } }
   /api/v2/projects/{project_id}/logistics-points/{association_id}/{action}:
     parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: association_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: action, in: path, required: true, schema: { type: string, enum: [activate, deactivate] } }]
-    post: { tags: [Logistics Network], summary: Activate or remove association from current configuration, security: [{ bearerAuth: [] }], responses: { '200': { description: Updated association. }, '409': { description: Version or active sequence conflict. } } }
+    post: { tags: [Logistics Network], summary: Activate or remove association from current configuration, description: Requires Project logistics manage permission. Reactivation revalidates point state and active sequence; deactivation preserves history., security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/VersionCommand' } } } }, responses: { '200': { description: Updated association. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or active sequence conflict. }, '422': { description: Inactive governed point cannot be reactivated. } } }
   /api/uploads/{filename}:
     get:
       tags: [Site Settings]

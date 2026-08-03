@@ -39,7 +39,7 @@ Governed Reference Data with immutable code, required Persian and English names,
 
 ### LogisticsPoint
 
-Reusable organization-scoped Master Data with opaque identity, immutable organization-local code, required LogisticsPointType and country, Persian name, optional English name, optional governed Province/City or region text, optional short address, active state, optimistic version, and actor/timestamp audit. It has no hard-delete behavior after use, and inactive historical references remain readable.
+Reusable organization-scoped Master Data with opaque identity, immutable organization-local code, required LogisticsPointType and governed Country, Persian name, optional English name, optional governed Province and City, optional short address, active state, optimistic version, and actor/timestamp audit. `region_name` is deferred by ADR-026. It has no hard-delete behavior after use, and inactive historical references remain readable.
 
 ### ProjectLogisticsPoint
 
@@ -87,7 +87,6 @@ Indexes support active/display-order and code/name administration. Codes remain 
 | `country_id` | Required RESTRICT FK to existing `country.id` |
 | `province_id` | Optional RESTRICT FK to existing `province.id` |
 | `city_id` | Optional RESTRICT FK to existing `city.id` |
-| `region_name` | Optional normalized free text only where governed Province data is unavailable; not a LogisticsPoint name |
 | `short_address` | Optional, maximum 500 |
 | `is_active`, `version` | Required lifecycle and optimistic concurrency fields |
 | audit fields | Required timezone-aware timestamps and RESTRICT actor FKs |
@@ -97,9 +96,9 @@ Constraints and indexes:
 - unique `(organization_id, immutable_code)` and unique `public_id`;
 - composite unique `(id, organization_id)` to support same-organization foreign-key enforcement;
 - city requires province; the city must belong to the selected province and province to the selected country, enforced by service validation and database composite FKs where the existing geographic keys support them;
-- `region_name` is allowed only when `province_id` is null and must be absent when a governed Province is selected;
+- no free-text administrative region field is exposed; `region_name` is deferred by ADR-026, and short address is descriptive text rather than a reporting dimension;
 - organization-leading indexes for active/type, normalized name, country/province/city, and updated order;
-- an exact duplicate key over organization, normalized name, type, country, and null-safe geography. PostgreSQL uses a unique expression/index with `COALESCE(province_id, 0)`, `COALESCE(city_id, 0)`, and `COALESCE(normalized_region_name, '')`; SQLite-compatible tests must prove equivalent behavior.
+- an exact duplicate key over organization, normalized name, type, country, and null-safe governed Province/City geography. The normalized `geography_key` implementation may remain internal and must not expose a new business concept; SQLite-compatible tests must prove equivalent behavior.
 
 ### 4.3 Table `project_logistics_point`
 
@@ -135,7 +134,7 @@ The algorithm is versioned application logic with direct unit vectors; the store
 
 ### Duplicate boundary
 
-The exact governed duplicate key is organization + normalized Persian name + LogisticsPointType + country + null-safe province/region + city. Exact matches are rejected with a stable conflict response. Probable candidates—same organization/country/type with matching code fragment, alternate English/Persian name, or same normalized name in adjacent/less-specific geography—produce an admin-only warning and require explicit confirmation to create a distinct record. Probable warnings never disclose another organization and never silently merge. No fuzzy engine or cross-tenant candidate lookup is included.
+The exact governed duplicate key is organization + normalized Persian name + LogisticsPointType + country + null-safe Province + City. Exact matches are rejected with a stable conflict response. Probable candidates—same organization/country/type with matching code fragment, alternate English/Persian name, or same normalized name in adjacent/less-specific geography—produce an admin-only warning and require explicit confirmation to create a distinct record. Probable warnings never disclose another organization and never silently merge. No fuzzy engine or cross-tenant candidate lookup is included.
 
 ## 6. Historical and delete behavior
 

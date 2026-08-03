@@ -56,6 +56,7 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | ADR-023 | Allocation Integrity | Proposed | Cargo/Execution | 2026-08-01 | None | Allocation concurrency | [ADR-023](adr/ADR-023-cargo-allocation-integrity-concurrency.md) | — | Deferred |
 | ADR-024 | Tenant Cargo Search | Proposed | Search/Security | 2026-08-01 | None | Customer cargo search | [ADR-024](adr/ADR-024-tenant-scoped-postgresql-cargo-search.md) | — | Unauthorized |
 | ADR-025 | Logistics Network Boundaries | Accepted | Logistics Network | 2026-08-02 | 1.7.0 candidate | Type/master/config/plan/evidence separation | [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md) | — | — |
+| ADR-026 | Logistics Point Region Contract | Accepted | Logistics Network | 2026-08-03 | 1.7.0 | Governed Country and optional Province/City; `region_name` deferred | [ADR-026](adr/ADR-026-logistics-point-region-contract-gap.md) | — | Security consulted; future region requires a separate decision and additive migration |
 
 ## RFCs
 

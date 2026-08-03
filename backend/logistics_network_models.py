@@ -54,6 +54,7 @@ class LogisticsPoint(db.Model):
         db.Index("ix_logistics_point_org_type", "organization_id", "logistics_point_type_id"),
         db.Index("ix_logistics_point_org_name", "organization_id", "normalized_name"),
         db.Index("ix_logistics_point_org_geography", "organization_id", "country_id", "province_id", "city_id"),
+        db.Index("ix_logistics_point_org_updated", "organization_id", "updated_at"),
     )
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid4()))
