@@ -316,8 +316,13 @@ The following entries are **Governance Accepted / Implementation Authorized — 
 
 - **Canonical/Persian:** ProjectDocumentRequirement / الزام سند پروژه; Project declaration that a governed document category is required, optional, or conditional.
 - **Class/owners/scope:** Project Configuration; Product/Operations; CAP-001/CAP-005; organization inherited from Project; opaque ID, version, active lifecycle.
-- **Relationships/exclusions:** existing governed DocumentDefinition category; not a Document, Attachment, Evidence, receipt/validity proof, expression, approval, or blocking rule.
+- **Relationships/exclusions:** existing governed DocumentDefinition category, referenced by numeric FK internally and immutable UUIDv4 `public_id` externally; not a Document, Attachment, Evidence, receipt/validity proof, expression, approval, or blocking rule.
 - **Governance/reporting:** PDR-017 D05/D06 and ADR-027 Accepted; completeness reporting requires later snapshot/enforcement governance.
+
+#### DocumentDefinition identity amendment
+
+- **Identity:** numeric primary key remains internal; a stable, unique, non-null, immutable UUIDv4 `public_id` is accepted for new API identity.
+- **Population/compatibility:** migration-only technical identity backfill assigns generated UUIDv4 values to existing rows without semantic changes. Legacy numeric case-document APIs are temporarily tolerated; new numeric API exposure is prohibited.
 
 ### FDD-001-031 — ProjectMilestoneDefinition
 

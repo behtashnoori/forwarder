@@ -13,7 +13,7 @@ Turn Project into a simple reusable operating configuration that answers which s
 
 ## Included and excluded boundary
 
-Included: ProjectService; reuse of existing ProjectLogisticsPoint; ProjectDocumentRequirement referencing DocumentDefinition as the existing governed document category; ProjectMilestoneDefinition referencing the governed MilestoneType catalog; elapsed target and optional warning duration on milestone definitions; internal organization-scoped configuration APIs/UI; active/inactive and optimistic version lifecycle.
+Included: ProjectService; reuse of existing ProjectLogisticsPoint; ProjectDocumentRequirement referencing DocumentDefinition as the existing governed document category; the accepted additive immutable UUIDv4 `DocumentDefinition.public_id` identity and existing-row technical identity backfill; ProjectMilestoneDefinition referencing the governed MilestoneType catalog; elapsed target and optional warning duration on milestone definitions; internal organization-scoped configuration APIs/UI; active/inactive and optimistic version lifecycle.
 
 Excluded: defaults; customer/carrier/public access; automatic inheritance/materialization; enforcement/blocking; generated RoutePlans, Checkpoints, Milestones, Documents, events, or work; full SLA semantics; and every advanced item listed in the discovery report. Existing operational behavior remains unchanged.
 
@@ -69,7 +69,7 @@ No reusable governed configuration milestone taxonomy exists. Existing `operatio
 
 ## API design requirements
 
-Proposed internal endpoints group under `/api/v2/projects/{project_public_id}/configuration/...` for `services`, `document-requirements`, and `milestone-definitions`; existing `/api/v2/projects/{project_public_id}/logistics-points` is reused. Reads are bounded/paginated with allowlisted sorting. Create/update/activate/deactivate/reorder are explicit commands. Payloads and projections use opaque IDs only, accept `version` for optimistic conflict handling, return 409 on stale writes, and never accept organization identity from the client as authority. Inactive references cannot be selected for new associations but remain readable historically. No hard delete after use, public/customer endpoint, condition evaluator, bulk API, or execution side effect.
+Proposed internal endpoints group under `/api/v2/projects/{project_public_id}/configuration/...` for `services`, `document-requirements`, and `milestone-definitions`; existing `/api/v2/projects/{project_public_id}/logistics-points` is reused. Reads are bounded/paginated with allowlisted sorting. Create/update/activate/deactivate/reorder are explicit commands. Payloads and projections use opaque IDs only, accept `version` for optimistic conflict handling, return 409 on stale writes, and never accept organization identity from the client as authority. DocumentDefinition selectors accept and return its `public_id` only and resolve the numeric key server-side. Legacy case-document numeric APIs are temporarily tolerated for compatibility, are not normative, and must not be copied. Inactive references cannot be selected for new associations but remain readable historically. No hard delete after use, public/customer endpoint, condition evaluator, bulk API, or execution side effect.
 
 ## Low-fidelity UI flows
 
@@ -93,7 +93,7 @@ Use existing membership mechanics with explicit read/manage permissions; final p
 
 ## Migration, Seed, and compatibility
 
-Authorized migration: `20260811_project_configuration`, following verified head `20260810_logistics_network`. It is additive only: no Project or OperationalShipment mutation, backfill, automatic association, default, or catalog row; downgrade must be safe and the chain must retain one Alembic head. Implementation must re-verify names, constraints, indexes, foreign keys, N/N-1 compatibility, downgrade/re-upgrade, zero automatic rows, and PostgreSQL behavior. Existing Project, shipment, logistics network, case document, and public tracking flows continue unchanged.
+Authorized migration: `20260811_project_configuration`, following verified head `20260810_logistics_network`. In addition to the four approved new tables, it may add nullable `document_definition.public_id`, populate every existing row with a newly generated UUIDv4, enforce uniqueness and non-nullability, and leave the numeric primary key and foreign keys unchanged. This is authorized technical identity backfill, not Seed. No other Project, DocumentDefinition semantic, Document/Attachment/Evidence, or OperationalShipment mutation, automatic association, default, or catalog row is authorized. Downgrade must be safe and the chain must retain one Alembic head. After dependent configuration exists, default rollback retains the additive schema; destructive database downgrade requires explicit authority and preserved/exported data.
 
 Seed boundary: no catalog rows in migration and no Seed execution is authorized. MilestoneType values use a separate versioned/checksummed governed catalog with read-only plan and explicit, audited, idempotent apply; Production apply requires separate authorization. Existing ServiceType and DocumentDefinition records are inspected and reused and prior accepted catalogs are not silently altered.
 

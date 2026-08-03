@@ -39,6 +39,8 @@ Project is the configuration aggregate owner. The Slice adds three explicit conf
 
 Repository model, migration, internal API, and admin UI evidence show that `DocumentDefinition` is the existing governed document-category/policy concept: it has an immutable code, revision, activation, description, applicability, ordering, file-policy fields, audit actors, and case requirement snapshots. ProjectDocumentRequirement will reference that existing definition. No duplicate DocumentType is authorized. Project-specific requirement level and conditional description belong to ProjectDocumentRequirement; DocumentDefinition case defaults do not override them. The association is configuration, not a Document, Attachment, Evidence, receipt or validity proof, and it cannot block execution in 1.8.0.
 
+The accepted identity amendment adds a stable, immutable, unique, non-null UUIDv4 `public_id` to DocumentDefinition. Existing rows receive newly generated UUIDv4 values in the migration; the numeric primary key and internal foreign keys remain unchanged. New 1.8.0 APIs use only the opaque identity. Existing numeric case-document APIs are temporarily tolerated for compatibility, not normative, and require a future bounded modernization Slice.
+
 ### Milestone taxonomy
 
 No governed reusable milestone category exists. Current `operational_milestone.milestone_type` values are constrained execution-instance strings and are not reused as configuration taxonomy. A separate `MilestoneType` Reference Data catalog is authorized with immutable code, Persian and English labels, definition, active/inactive state, and display order. Initial codes are `REQUEST_RECEIVED`, `CARGO_READY`, `PICKUP`, `LOADING`, `DEPARTURE`, `BORDER_ARRIVAL`, `CUSTOMS_START`, `CUSTOMS_COMPLETE`, `PORT_ARRIVAL`, `DISCHARGE`, `DELIVERY`, `COMPLETION`, and `OTHER_GOVERNED`. The catalog is separately versioned/checksummed; transport-mode-specific additions require later governance.
@@ -49,7 +51,7 @@ ADR-027 is Accepted for this scope. ProjectService, ProjectDocumentRequirement, 
 
 ## Migration and Seed boundary
 
-Implementation may create additive migration `20260811_project_configuration` with parent `20260810_logistics_network`. It may not mutate Project or OperationalShipment rows, backfill, infer associations, add defaults, or insert catalog rows. It must retain one Alembic head, enforce indexes/constraints/foreign keys, and provide safe downgrade/re-upgrade. No migration is created or run by this closure.
+Implementation may create additive migration `20260811_project_configuration` with parent `20260810_logistics_network`. It may alter `document_definition` only to add nullable `public_id`, technically backfill existing rows with generated UUIDv4 values, enforce uniqueness, and make it non-null, then create the approved new tables. This identity backfill is not Seed. It may not mutate semantics, replace numeric keys, modify Project or OperationalShipment rows, infer associations, add defaults, or insert catalog rows. It must retain one Alembic head and prove safe downgrade/re-upgrade. No migration is created or run by this closure.
 
 MilestoneType catalog planning is read-only. Apply must be explicit, audited, idempotent, and based on its version/checksum. No Seed execution is authorized, and Production apply requires separate authority. Existing ServiceType and DocumentDefinition records are reused without silently altering approved catalogs.
 
@@ -61,7 +63,7 @@ The Project Configuration UI contains Services, Network, Documents, and Mileston
 
 ## Rollback and compatibility principles
 
-Implementation is expand-first. Rollback disables new writes/UI and safely downgrades additive schema only when data handling is proven; rollback never means destructive deletion of business history. Existing Projects remain valid, existing ProjectLogisticsPoints are not redesigned, and existing OperationalShipments, RoutePlans, Checkpoints, Milestones, Events, documents, and shipment flows remain unchanged. No automatic backfill occurs.
+Implementation is expand-first. The authorized DocumentDefinition identity population is the sole technical backfill. Before application use, an authorized downgrade may remove the new identity and tables. After ProjectDocumentRequirement data exists, default rollback reverts application code while retaining additive schema; database downgrade requires explicit authority and preservation/export of configuration data. Existing Projects, numeric DocumentDefinition keys and consumers, ProjectLogisticsPoints, OperationalShipments, RoutePlans, Checkpoints, Milestones, Events, documents, and shipment flows remain unchanged.
 
 ## Implementation authority
 

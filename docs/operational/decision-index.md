@@ -80,6 +80,7 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | ADR-027 | Project Configuration Aggregate Boundaries | Accepted bounded | Project Configuration | 2026-08-03 | 1.8.0 authorized | Configuration/execution/history separation | [ADR-027](adr/ADR-027-project-configuration-aggregate-boundaries.md) | — | No hidden side effects; bounded Slice authority only |
 | R18 | Project Configuration Foundation | Authorized / not implemented | Project Configuration | 2026-08-03 | 1.8.0 | Services, existing network integration, document requirements, milestone definitions, elapsed targets | [1.8.0 Contract](release-1.8.0-project-configuration-slice-contract.md) | — | D01–D15 Accepted; not deployed; Production unchanged |
 | R18-C | Project Configuration Governance Closure | Accepted | Project Configuration | 2026-08-03 | 1.8.0 | Closure and explicit implementation authority | [Closure](release-1.8.0-project-configuration-governance-closure.md) | — | DocumentDefinition reused; MilestoneType catalog accepted |
+| R18-A1 | DocumentDefinition Identity Amendment | Accepted | Project Configuration/Documents | 2026-08-03 | 1.8.0 | Opaque DocumentDefinition identity, technical backfill, migration amendment | [Identity Amendment](release-1.8.0-document-definition-identity-amendment.md) | — | Implementation authority restored; legacy numeric APIs temporarily tolerated |
 
 ## Slice contracts
 
