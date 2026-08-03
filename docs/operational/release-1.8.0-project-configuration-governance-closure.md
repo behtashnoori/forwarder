@@ -1,0 +1,68 @@
+# Release 1.8.0 — Project Configuration Governance Closure
+
+- **Status:** Governance Accepted / Implementation Authorized / Not Yet Implemented / Not Deployed
+- **Acceptance date:** 2026-08-03
+- **Authority:** Product, Architecture, Operations, and Data role authorities; Security consulted where applicable
+- **Production:** Unchanged at 1.6.1
+
+## Closure decision
+
+Release 1.8.0 bounded Option B is authorized for implementation only. It contains ProjectService, reuse of existing ProjectLogisticsPoint, ProjectDocumentRequirement, ProjectMilestoneDefinition, and simple elapsed target/warning durations attached to ProjectMilestoneDefinition. This record authorizes no deployment, Production change, Seed apply, package, tag, or automatic execution behavior. No named individual signatures are asserted.
+
+## Accepted scope and exclusions
+
+Project is the configuration aggregate owner. The Slice adds three explicit configuration children and reuses the 1.7.0 ProjectLogisticsPoint association. It excludes a separate ProjectSlaDefinition; calendars, holidays, pause/resume clocks, penalties, escalations; defaults; a visibility engine or customer/carrier visibility; automatic OperationalShipment snapshots or operational record creation; document enforcement; workflow/BPMN/rule/conditional-expression engines; dashboards/reporting UI; allocation; GIS; ETA; optimization; AI; and all Production changes.
+
+## D01–D15 closure
+
+| ID | Result | Accepted decision |
+| --- | --- | --- |
+| D01 | Accepted | Tightly bounded Option B only. |
+| D02 | Accepted | One active ProjectService per Project + ServiceType. |
+| D03 | Accepted | At most one active primary per Project; draft configuration may have none. |
+| D04 | Accepted | TransportMode remains separate; no inference from ServiceType. |
+| D05 | Accepted | REQUIRED, OPTIONAL, and CONDITIONAL. |
+| D06 | Accepted | CONDITIONAL is descriptive only; bounded reason/description, no engine. |
+| D07 | Accepted | ProjectMilestoneDefinition is configuration, not an operational instance. |
+| D08 | Accepted | No automatic OperationalShipment, RoutePlan, Checkpoint, Milestone, or Event creation. |
+| D09 | Accepted | Optional target and warning values use MINUTE/HOUR/DAY and ELAPSED_TIME only. |
+| D10 | Accepted | Defaults deferred; no generic settings or JSON. |
+| D11 | Accepted | Existing organization/membership/role/permission mechanisms only; internal access only. |
+| D12 | Accepted | Snapshots deferred to a separate accepted Slice; configuration never rewrites history. |
+| D13 | Accepted | Active/inactive, optimistic version, no hard delete after use, readable history. |
+| D14 | Accepted | Organization-first authorization, opaque IDs, 404-safe tenant isolation. |
+| D15 | Accepted | Authority is limited to this bounded Release 1.8.0 Slice. |
+
+## Taxonomy resolutions
+
+### Document category
+
+Repository model, migration, internal API, and admin UI evidence show that `DocumentDefinition` is the existing governed document-category/policy concept: it has an immutable code, revision, activation, description, applicability, ordering, file-policy fields, audit actors, and case requirement snapshots. ProjectDocumentRequirement will reference that existing definition. No duplicate DocumentType is authorized. Project-specific requirement level and conditional description belong to ProjectDocumentRequirement; DocumentDefinition case defaults do not override them. The association is configuration, not a Document, Attachment, Evidence, receipt or validity proof, and it cannot block execution in 1.8.0.
+
+### Milestone taxonomy
+
+No governed reusable milestone category exists. Current `operational_milestone.milestone_type` values are constrained execution-instance strings and are not reused as configuration taxonomy. A separate `MilestoneType` Reference Data catalog is authorized with immutable code, Persian and English labels, definition, active/inactive state, and display order. Initial codes are `REQUEST_RECEIVED`, `CARGO_READY`, `PICKUP`, `LOADING`, `DEPARTURE`, `BORDER_ARRIVAL`, `CUSTOMS_START`, `CUSTOMS_COMPLETE`, `PORT_ARRIVAL`, `DISCHARGE`, `DELIVERY`, `COMPLETION`, and `OTHER_GOVERNED`. The catalog is separately versioned/checksummed; transport-mode-specific additions require later governance.
+
+## ADR and aggregate boundary
+
+ADR-027 is Accepted for this scope. ProjectService, ProjectDocumentRequirement, ProjectMilestoneDefinition, and existing ProjectLogisticsPoint are configuration. Document/Attachment/Evidence, Operational Milestone, OperationalShipment, RoutePlan, Checkpoint, and OperationalEvent retain separate lifecycles. Configuration changes do not rewrite operational history. Generic EAV/JSON settings and hidden cross-aggregate side effects are prohibited.
+
+## Migration and Seed boundary
+
+Implementation may create additive migration `20260811_project_configuration` with parent `20260810_logistics_network`. It may not mutate Project or OperationalShipment rows, backfill, infer associations, add defaults, or insert catalog rows. It must retain one Alembic head, enforce indexes/constraints/foreign keys, and provide safe downgrade/re-upgrade. No migration is created or run by this closure.
+
+MilestoneType catalog planning is read-only. Apply must be explicit, audited, idempotent, and based on its version/checksum. No Seed execution is authorized, and Production apply requires separate authority. Existing ServiceType and DocumentDefinition records are reused without silently altering approved catalogs.
+
+## API, UI, and security boundary
+
+Internal APIs may be implemented under `/api/v2/projects/{project_public_id}/configuration` for `services`, `document-requirements`, and `milestone-definitions`; the existing logistics-points resource is reused. APIs require opaque IDs, organization-first authorization, bounded pagination/sorting, filter allowlists, optimistic conflicts, active/inactive lifecycle, no hard delete, no numeric ID leakage, no public/customer endpoint, and no execution side effects.
+
+The Project Configuration UI contains Services, Network, Documents, and Milestones. Governed identities use selectors, forms/tables are simple, mobile-safe and bilingual where supported, and copy clearly states “configuration, not live operation.” No workflow/timeline/rule designer is authorized.
+
+## Rollback and compatibility principles
+
+Implementation is expand-first. Rollback disables new writes/UI and safely downgrades additive schema only when data handling is proven; rollback never means destructive deletion of business history. Existing Projects remain valid, existing ProjectLogisticsPoints are not redesigned, and existing OperationalShipments, RoutePlans, Checkpoints, Milestones, Events, documents, and shipment flows remain unchanged. No automatic backfill occurs.
+
+## Implementation authority
+
+The first authorized implementation step is to define the additive persistence models and migration contract for MilestoneType, ProjectService, ProjectDocumentRequirement, and ProjectMilestoneDefinition, referencing existing Project, ServiceType, DocumentDefinition, and ProjectLogisticsPoint boundaries, before implementing API or UI. Implementation must satisfy the Slice Contract’s acceptance criteria. Deployment, Seed apply, packaging, tagging, and Production changes remain separately governed.

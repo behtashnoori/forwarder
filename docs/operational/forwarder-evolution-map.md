@@ -19,3 +19,11 @@ Release folders and notes are implementation/release evidence; Production is cla
 | 1.7.0 | Logistics Network Foundation | LogisticsPointType, LogisticsPoint, ProjectLogisticsPoint | `20260810_logistics_network` | Published and packaged; Production deployment not performed | PDR-016, ADR-025, ADR-026, accepted Slice contract, final RC review |
 
 DA-1.0 is the architecture knowledge baseline accompanying the transition from governed Cargo foundations to proposed Logistics Network implementation. Planned releases are not delivery promises.
+
+## Release 1.8.0 authorized scope
+
+| Release | Business theme | Main domain capability | Database revision | Deployment state | Important governance/evidence |
+| --- | --- | --- | --- | --- | --- |
+| 1.8.0 | Project Configuration Foundation | Authorized ProjectService, DocumentDefinition-backed requirements, MilestoneType-backed definitions, elapsed targets; reuse ProjectLogisticsPoint | `20260811_project_configuration` authorized, not created/applied | Governance Accepted / Implementation Authorized — Not Yet Implemented / Not Deployed | PDR-017 Accepted, ADR-027 Accepted, D01–D15 Accepted, bounded Slice authorized |
+
+This governance closure does not change Production: 1.6.1 remains deployed, 1.7.0 deployment remains pending, and Production Seed remains unexecuted.

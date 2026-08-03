@@ -40,3 +40,14 @@ This matrix is a navigation and sequencing aid. “Deployed” is used only wher
 - `Authorized` means governance permits a bounded implementation Slice; it does not mean work started.
 - `Deferred` means the capability remains absent/disabled pending maturity and governance.
 - Current verified Production is application 1.6.1 on IIS release `release-v1.6.1-20260802` with database head `20260809_cargo_catalog_items`; Reference Data Seed was not executed and UI version display remains unresolved.
+
+## Release 1.8.0 bounded authorization
+
+| Capability | Layer | Governance state | Authority | Implementation state | Dependencies | Next gate | Candidate |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Project Configuration Foundation | Layer 3 | Governance Accepted | PDR-017, ADR-027, 1.8.0 Slice Contract | Not Yet Implemented / Not Deployed | 1.7.0 ProjectLogisticsPoint, ServiceType, DocumentDefinition, MilestoneType catalog | Implement bounded additive Slice | 1.8.0 |
+| ProjectService | Layer 3 | Implementation Authorized | D02–D04 Accepted | Not Yet Implemented | Project, ServiceType | Additive model/migration implementation | 1.8.0 |
+| ProjectDocumentRequirement | Layer 3 | Implementation Authorized | D05–D06 Accepted | Not Yet Implemented | Existing DocumentDefinition | Additive association; no enforcement | 1.8.0 |
+| ProjectMilestoneDefinition / target | Layer 3 | Implementation Authorized | D07–D09 and ADR-027 Accepted | Not Yet Implemented | MilestoneType; optional ProjectLogisticsPoint | Additive definition and elapsed targets | 1.8.0 |
+
+Development documentation authorizes only bounded Release 1.8.0 implementation while 1.7.0 deployment remains pending. These entries do not change Production or authorize deployment, Seed apply, packaging, or tagging.

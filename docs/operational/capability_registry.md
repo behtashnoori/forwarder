@@ -43,3 +43,7 @@ Status: Proposed
 PDR-015, PDR-016, and ADR-025 do not add new capability IDs. Accepted logistics-network ownership maps to CAP-013 (LogisticsPointType and LogisticsPoint governance), CAP-001 (ProjectLogisticsPoint configuration), CAP-010 (organization/security isolation), and CAP-003 (operational use). See [Forwarder Domain Roadmap Matrix](forwarder-domain-roadmap-matrix.md). The bounded Slice is authorized but implementation has not started; this mapping does not change the registry's own status.
 
 DA-1.0 business definitions and relationships are indexed in [FDD-001](FDD-001-forwarder-data-dictionary.md) and [FDM-001](FDM-001-forwarder-domain-map.md); capability IDs and owners remain authoritative here.
+
+## Accepted Release 1.8.0 mapping
+
+PDR-017, ADR-027, and the Release 1.8.0 Slice Contract add no capability ID and change no registry maturity status. Authorized ProjectService, ProjectDocumentRequirement, and ProjectMilestoneDefinition map primarily to CAP-001, with CAP-013, CAP-005, CAP-003, and CAP-010 as dependencies. All are **Governance Accepted / Implementation Authorized — Not Yet Implemented / Not Deployed**; defaults, external visibility, enforcement, reporting UI, and automation remain deferred.

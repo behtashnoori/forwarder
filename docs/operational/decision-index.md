@@ -72,6 +72,15 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | EPIC-001 | Project Aggregate Foundation | Draft plan | Project | 2026-07-31 | 1.2.0 lineage | Project/Execution slices | [EPIC-001](EPIC-001-project-aggregate-foundation.md) | — | No decision authority |
 | EPIC-002 | Cargo Data Foundation | In progress/mixed | Cargo | 2026-08-01 | 1.4.0–1.6.0 bounded | B1/B3/B4 delivered; others unauthorized | [EPIC-002](EPIC-002-cargo-data-foundation.md) | — | No decision authority |
 
+## Release 1.8.0 accepted governance records
+
+| ID | Title | Status | Domain | Decision date | Implementation release | Governing scope | Authoritative file | Supersession | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| PDR-017 | Canonical Operational Taxonomy | Accepted | Platform/Project Configuration | 2026-08-03 | Slice-specific | Vocabulary and conceptual boundaries | [PDR-017](PDR-017-canonical-operational-taxonomy.md) | — | Terminology only; no automatic capability authority; unevidenced terms remain TBD |
+| ADR-027 | Project Configuration Aggregate Boundaries | Accepted bounded | Project Configuration | 2026-08-03 | 1.8.0 authorized | Configuration/execution/history separation | [ADR-027](adr/ADR-027-project-configuration-aggregate-boundaries.md) | — | No hidden side effects; bounded Slice authority only |
+| R18 | Project Configuration Foundation | Authorized / not implemented | Project Configuration | 2026-08-03 | 1.8.0 | Services, existing network integration, document requirements, milestone definitions, elapsed targets | [1.8.0 Contract](release-1.8.0-project-configuration-slice-contract.md) | — | D01–D15 Accepted; not deployed; Production unchanged |
+| R18-C | Project Configuration Governance Closure | Accepted | Project Configuration | 2026-08-03 | 1.8.0 | Closure and explicit implementation authority | [Closure](release-1.8.0-project-configuration-governance-closure.md) | — | DocumentDefinition reused; MilestoneType catalog accepted |
+
 ## Slice contracts
 
 | ID | Title | Status | Domain | Decision date | Implementation release | Governing scope | Authoritative file | Supersession | Notes |

@@ -78,3 +78,18 @@ Organization scope is resolved before resource matching or serialization. Opaque
 ## Architecture meaning of DA-1.0
 
 DA-1.0 establishes explicit Reference/Master/Configuration/Transaction/Evidence layers, governed Cargo foundations, and accepted Logistics Network boundaries. It does not claim Logistics Network implementation, dashboards, allocation, customer search, GIS, or AI optimization.
+
+## 6. Accepted Release 1.8.0 Project configuration boundary
+
+```mermaid
+flowchart LR
+  ST["ServiceType"] --> PS["ProjectService — authorized"]
+  DT["DocumentDefinition — existing category"] --> DR["ProjectDocumentRequirement — authorized"]
+  MT["MilestoneType — governed catalog"] --> MD["ProjectMilestoneDefinition — authorized"]
+  LP["LogisticsPoint"] --> PLP["ProjectLogisticsPoint — existing 1.7.0 source"]
+  P["Project"] --> PS & DR & PLP & MD
+  P -. "future explicit snapshot only" .-> OS["OperationalShipment"]
+  MD -. "no automatic generation" .-> M["Operational Milestone"]
+```
+
+New 1.8.0 concepts are **Governance Accepted / Implementation Authorized — Not Yet Implemented / Not Deployed**. ADR-027 and the bounded Slice Contract are Accepted; no Production authority or automatic execution behavior is granted.

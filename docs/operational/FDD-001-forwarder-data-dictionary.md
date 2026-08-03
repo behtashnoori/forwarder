@@ -300,3 +300,35 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - ServiceType relationships remain unresolved under PDR-013 D02/D03.
 - ShipmentCargoItem correction/supersession, allocation, and customer search remain deferred/proposed.
 - Logistics Network physical/API choices are Accepted and implemented in Release 1.7.0 source; Production migration, catalog apply, packaging, and deployment remain separately governed.
+
+## Release 1.8.0 authorized definitions — not yet implemented
+
+The following entries are **Governance Accepted / Implementation Authorized — Not Yet Implemented / Not Deployed** for the bounded Release 1.8.0 Slice.
+
+### FDD-001-029 — ProjectService
+
+- **Canonical/Persian:** ProjectService / خدمت پروژه; Project-owned association to one governed ServiceType.
+- **Class/owners/scope:** Project Configuration; Product/Data; CAP-001/CAP-013; organization inherited from Project; opaque ID, version, active lifecycle.
+- **Relationships/exclusions:** Project and ServiceType; not TransportMode, execution, snapshot, or generator.
+- **Governance/reporting:** PDR-017 D02–D04 and ADR-027 Accepted; future service-mix dimension only after implementation.
+
+### FDD-001-030 — ProjectDocumentRequirement
+
+- **Canonical/Persian:** ProjectDocumentRequirement / الزام سند پروژه; Project declaration that a governed document category is required, optional, or conditional.
+- **Class/owners/scope:** Project Configuration; Product/Operations; CAP-001/CAP-005; organization inherited from Project; opaque ID, version, active lifecycle.
+- **Relationships/exclusions:** existing governed DocumentDefinition category; not a Document, Attachment, Evidence, receipt/validity proof, expression, approval, or blocking rule.
+- **Governance/reporting:** PDR-017 D05/D06 and ADR-027 Accepted; completeness reporting requires later snapshot/enforcement governance.
+
+### FDD-001-031 — ProjectMilestoneDefinition
+
+- **Canonical/Persian:** ProjectMilestoneDefinition / تعریف نقطه عطف پروژه; ordered Project expectation with optional point and elapsed target.
+- **Class/owners/scope:** Project Configuration; Product/Operations; CAP-001/CAP-003; organization inherited from Project; opaque ID, version, active lifecycle.
+- **Relationships/exclusions:** governed MilestoneType and optional ProjectLogisticsPoint; not an operational Milestone, Event, workflow, or generation instruction.
+- **Governance/reporting:** PDR-017 D07–D09 and ADR-027 Accepted; planned-versus-actual reporting requires separately accepted snapshots.
+
+### FDD-001-032 — MilestoneType
+
+- **Canonical/Persian:** MilestoneType / نوع نقطه عطف; governed cross-project category for Project milestone definitions.
+- **Class/owners/scope:** Reference Data; Product/Data/Operations; immutable code, bilingual labels, definition, display order, active lifecycle.
+- **Relationships/exclusions:** selected by ProjectMilestoneDefinition; not the existing operational Milestone row or its execution-specific string constraint.
+- **Governance/reporting:** versioned/checksummed catalog; no migration Seed rows and no Production apply without separate authority.
