@@ -1,5 +1,14 @@
 # Release Notes
 
+## 1.8.0 — Project Configuration Foundation
+
+Status: **Implemented — Not Deployed**. This minor release adds opaque
+`DocumentDefinition.public_id`, governed milestone types, and organization-scoped
+Project service, document-requirement, milestone-definition configuration. It reuses
+the existing Project Logistics Network and creates no operational objects. Database
+revision: `20260811_project_configuration` (previous: `20260810_logistics_network`).
+Production Seed was not executed.
+
 ## 1.7.0 — Logistics Network Foundation
 
 | Item | Value |

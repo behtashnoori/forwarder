@@ -3,7 +3,7 @@
 - **Status:** Accepted
 - **Date:** 2026-08-03
 - **Authority:** Product, Architecture, and Data role authorities; Security authority; Operations consulted
-- **Release status:** Implementation Authorized / Not Yet Implemented / Not Deployed
+- **Release status:** Implemented / Not Published / Not Deployed
 - **Production:** Unchanged at 1.6.1
 
 ## Blocker
@@ -55,3 +55,7 @@ Before application use and before ProjectDocumentRequirement data exists, an aut
 | Release 1.8.0 implementation authority | Restored |
 
 No personal signatures are asserted. This amendment authorizes implementation only; it authorizes no deployment, Production change, Seed execution, push, tag, or package.
+
+## Implementation reconciliation
+
+Migration `20260811_project_configuration` implements the nullable-add, independent UUIDv4 existing-row backfill, unique constraint, and non-null enforcement. Numeric primary keys and existing foreign keys are preserved. New Release 1.8.0 APIs expose only opaque public IDs; legacy numeric case-document APIs remain temporarily compatible. Disposable PostgreSQL 18 fresh, upgrade, downgrade, and re-upgrade evidence passed. Production remains unchanged and Seed was not executed.

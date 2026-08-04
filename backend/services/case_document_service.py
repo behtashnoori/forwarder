@@ -8,7 +8,6 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
 
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -81,7 +80,7 @@ def validate_definition(payload: dict[str, Any], existing: DocumentDefinition | 
 
 def serialize_definition(row: DocumentDefinition) -> dict[str, Any]:
     return {
-        "id": row.id, "code": row.code, "title": row.title, "description": row.description,
+        "id": row.id, "public_id": row.public_id, "code": row.code, "title": row.title, "description": row.description,
         "is_required": row.is_required, "allowed_formats": json.loads(row.allowed_formats),
         "max_file_size_bytes": row.max_file_size_bytes, "max_active_file_count": row.max_active_file_count,
         "sort_order": row.sort_order, "is_active": row.is_active,
@@ -120,19 +119,26 @@ def initialize_requirements(case: ShipmentRequest, actor_id: int | None) -> int:
 
 
 def detect_format(data: bytes) -> tuple[str, str] | None:
-    if len(data) >= 4 and data.startswith(b"\xff\xd8\xff") and data.endswith(b"\xff\xd9"): return "jpeg", "image/jpeg"
-    if len(data) >= 24 and data.startswith(b"\x89PNG\r\n\x1a\n") and b"IHDR" in data[:32] and data.endswith(b"IEND\xaeB`\x82"): return "png", "image/png"
-    if len(data) >= 16 and data.startswith(b"RIFF") and data[8:12] == b"WEBP" and int.from_bytes(data[4:8], "little") + 8 <= len(data): return "webp", "image/webp"
-    if len(data) >= 12 and data.startswith(b"%PDF-") and b"%%EOF" in data[-1024:]: return "pdf", "application/pdf"
+    if len(data) >= 4 and data.startswith(b"\xff\xd8\xff") and data.endswith(b"\xff\xd9"):
+        return "jpeg", "image/jpeg"
+    if len(data) >= 24 and data.startswith(b"\x89PNG\r\n\x1a\n") and b"IHDR" in data[:32] and data.endswith(b"IEND\xaeB`\x82"):
+        return "png", "image/png"
+    if len(data) >= 16 and data.startswith(b"RIFF") and data[8:12] == b"WEBP" and int.from_bytes(data[4:8], "little") + 8 <= len(data):
+        return "webp", "image/webp"
+    if len(data) >= 12 and data.startswith(b"%PDF-") and b"%%EOF" in data[-1024:]:
+        return "pdf", "application/pdf"
     if data.startswith(b"PK\x03\x04"):
         try:
             with zipfile.ZipFile(io.BytesIO(data)) as package:
                 infos = package.infolist()
-                if len(infos) > 10_000 or any(i.file_size > 100 * 1024 * 1024 for i in infos): return None
+                if len(infos) > 10_000 or any(i.file_size > 100 * 1024 * 1024 for i in infos):
+                    return None
                 names = {i.filename.replace("\\", "/") for i in infos}
-                if "[Content_Types].xml" not in names or "_rels/.rels" not in names: return None
+                if "[Content_Types].xml" not in names or "_rels/.rels" not in names:
+                    return None
                 content_types = package.read("[Content_Types].xml")
-                if len(content_types) > 2 * 1024 * 1024: return None
+                if len(content_types) > 2 * 1024 * 1024:
+                    return None
                 if "word/document.xml" in names and b"wordprocessingml.document.main+xml" in content_types:
                     return "docx", next(iter(FORMAT_CATALOG["docx"][1]))
                 if "xl/workbook.xml" in names and b"spreadsheetml.sheet.main+xml" in content_types:

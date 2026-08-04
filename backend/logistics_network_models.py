@@ -140,6 +140,11 @@ class ProjectLogisticsPoint(db.Model):
         db.UniqueConstraint("public_id", name="uq_project_logistics_point_public_id"),
         db.UniqueConstraint(
             "project_id",
+            "id",
+            name="uq_project_logistics_point_project_id_id",
+        ),
+        db.UniqueConstraint(
+            "project_id",
             "logistics_point_id",
             "project_role",
             name="uq_project_logistics_point_role",

@@ -1,9 +1,11 @@
 # Release 1.8.0 — Project Configuration Slice Contract
 
-- **Status:** Authorized for bounded implementation
+- **Status:** Implementation Complete — Not Published — Not Deployed
 - **Version candidate:** 1.8.0
 - **Theme:** Project Configuration Foundation
 - **Date:** 2026-08-03
+
+Implementation closure: the bounded contract is implemented with migration `20260811_project_configuration`. Production is unchanged; Seed was not executed; the MilestoneType catalog is prepared but not applied. Defaults and snapshots remain deferred, and visibility engine, reporting, and automatic execution side effects are absent.
 - **Implementation authority:** YES — only the bounded scope in this contract
 - **Accepted scope:** Option B — tightly bounded Balanced
 

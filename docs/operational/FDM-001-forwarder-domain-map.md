@@ -92,4 +92,4 @@ flowchart LR
   MD -. "no automatic generation" .-> M["Operational Milestone"]
 ```
 
-New 1.8.0 concepts are **Governance Accepted / Implementation Authorized — Not Yet Implemented / Not Deployed**. ADR-027 and the bounded Slice Contract are Accepted; no Production authority or automatic execution behavior is granted.
+The bounded 1.8.0 concepts are **Implemented — Not Deployed**. ADR-027 and the Slice Contract remain the accepted authority; Release 1.8.0 is implementation complete, not published, and not deployed. Production is unchanged, Seed was not executed, the MilestoneType catalog is prepared but not applied, and no automatic execution behavior is present.

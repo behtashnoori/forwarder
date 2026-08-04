@@ -301,9 +301,9 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - ShipmentCargoItem correction/supersession, allocation, and customer search remain deferred/proposed.
 - Logistics Network physical/API choices are Accepted and implemented in Release 1.7.0 source; Production migration, catalog apply, packaging, and deployment remain separately governed.
 
-## Release 1.8.0 authorized definitions — not yet implemented
+## Release 1.8.0 implemented definitions — not deployed
 
-The following entries are **Governance Accepted / Implementation Authorized — Not Yet Implemented / Not Deployed** for the bounded Release 1.8.0 Slice.
+The following entries are **Implemented — Not Deployed** for the bounded Release 1.8.0 Slice. Release 1.8.0 is implementation complete, not published, and not deployed; Production is unchanged and Seed was not executed.
 
 ### FDD-001-029 — ProjectService
 

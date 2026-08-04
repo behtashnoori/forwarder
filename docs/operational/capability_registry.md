@@ -46,4 +46,4 @@ DA-1.0 business definitions and relationships are indexed in [FDD-001](FDD-001-f
 
 ## Accepted Release 1.8.0 mapping
 
-PDR-017, ADR-027, and the Release 1.8.0 Slice Contract add no capability ID and change no registry maturity status. Authorized ProjectService, ProjectDocumentRequirement, and ProjectMilestoneDefinition map primarily to CAP-001, with CAP-013, CAP-005, CAP-003, and CAP-010 as dependencies. All are **Governance Accepted / Implementation Authorized — Not Yet Implemented / Not Deployed**; defaults, external visibility, enforcement, reporting UI, and automation remain deferred.
+PDR-017, ADR-027, and the Release 1.8.0 Slice Contract add no capability ID and change no registry maturity status. ProjectService, ProjectDocumentRequirement, and ProjectMilestoneDefinition map primarily to CAP-001, with CAP-013, CAP-005, CAP-003, and CAP-010 as dependencies. All are **Implemented — Not Deployed**; Release 1.8.0 is not published, Production is unchanged, and Seed was not executed. Defaults, snapshots, external visibility, enforcement, reporting, and automation remain deferred or absent as specified by the Slice.

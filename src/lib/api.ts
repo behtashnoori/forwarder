@@ -1084,7 +1084,7 @@ export interface SubmitQuotePayload {
 
 export type DocumentFormat = "jpeg" | "png" | "webp" | "pdf" | "docx" | "xlsx";
 export interface DocumentDefinition {
-  id: number; code: string; title: string; description?: string | null; is_required: boolean;
+  id: number; public_id: string; code: string; title: string; description?: string | null; is_required: boolean;
   allowed_formats: DocumentFormat[]; max_file_size_bytes: number; max_active_file_count: number;
   sort_order: number; is_active: boolean; applicability_scope: "all" | "domestic" | "international";
   revision: number; usage_count: number;
@@ -2053,3 +2053,17 @@ export const createProjectLogisticsPoint=(projectId:string,payload:Record<string
 export const updateProjectLogisticsPoint=(projectId:string,id:string,payload:Record<string,unknown>)=>request<{item:ProjectLogisticsPointView}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(payload)});
 export const setProjectLogisticsPointActive=(projectId:string,item:ProjectLogisticsPointView,active:boolean)=>request<{item:ProjectLogisticsPointView}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/${encodeURIComponent(item.public_id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version:item.version})});
 export const reorderProjectLogisticsPoints=(projectId:string,items:ProjectLogisticsPointView[])=>request<{items:ProjectLogisticsPointView[]}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/reorder`,{method:"POST",body:JSON.stringify({items:items.map(x=>({public_id:x.public_id,version:x.version}))})});
+export interface ProjectConfigurationItem { public_id:string; is_active:boolean; version:number; display_label?:string|null; notes?:string|null; display_order?:number; is_required?:boolean; is_primary?:boolean; service_type_public_id?:string; document_definition_public_id?:string; document_definition_title?:string; requirement_level?:"REQUIRED"|"OPTIONAL"|"CONDITIONAL"; conditional_description?:string|null; milestone_type_public_id?:string; milestone_type_code?:string; sequence?:number; project_logistics_point_public_id?:string|null; target_duration_value?:number|null; warning_duration_value?:number|null; duration_unit?:"MINUTE"|"HOUR"|"DAY"|null }
+export type ProjectConfigurationResource="services"|"document-requirements"|"milestone-definitions";
+const configurationPath=(projectId:string,resource:ProjectConfigurationResource)=>`/api/v2/projects/${encodeURIComponent(projectId)}/configuration/${resource}`;
+export interface BoundedPage<T>{items:T[];page:number;per_page:number;total:number;pages:number}
+export const listProjectConfiguration=(projectId:string,resource:ProjectConfigurationResource,params:Record<string,string|number|undefined>={})=>request<BoundedPage<ProjectConfigurationItem>>(withQuery(configurationPath(projectId,resource),params));
+export const createProjectConfiguration=(projectId:string,resource:ProjectConfigurationResource,payload:Record<string,unknown>)=>request<{item:ProjectConfigurationItem}>(configurationPath(projectId,resource),{method:"POST",body:JSON.stringify(payload)});
+export const updateProjectConfiguration=(projectId:string,resource:ProjectConfigurationResource,item:ProjectConfigurationItem,payload:Record<string,unknown>)=>request<{item:ProjectConfigurationItem}>(`${configurationPath(projectId,resource)}/${encodeURIComponent(item.public_id)}`,{method:"PATCH",body:JSON.stringify({...payload,version:item.version})});
+export const setProjectConfigurationActive=(projectId:string,resource:ProjectConfigurationResource,item:ProjectConfigurationItem,active:boolean)=>request<{item:ProjectConfigurationItem}>(`${configurationPath(projectId,resource)}/${encodeURIComponent(item.public_id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version:item.version})});
+export const reorderProjectMilestones=(projectId:string,items:ProjectConfigurationItem[])=>request<{items:ProjectConfigurationItem[]}>(`${configurationPath(projectId,"milestone-definitions")}/reorder`,{method:"POST",body:JSON.stringify({items:items.map(x=>({public_id:x.public_id,version:x.version}))})});
+export interface ConfigurationSelector {public_id:string;immutable_code?:string;code?:string;fa_name?:string;en_name?:string;title?:string;display_label?:string|null;project_role?:string;sequence_number?:number}
+export const listMilestoneTypes=(params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery("/api/internal/milestone-types",params));
+export const listProjectServiceTypes=(params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery("/api/internal/project-configuration/service-types",params));
+export const listProjectDocumentDefinitions=(params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery("/api/internal/project-configuration/document-definitions",params));
+export const listProjectLogisticsPointSelectors=(projectId:string,params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery(`/api/v2/projects/${encodeURIComponent(projectId)}/configuration/selectors/logistics-points`,params));

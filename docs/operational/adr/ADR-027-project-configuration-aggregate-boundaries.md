@@ -3,11 +3,13 @@
 - **Status:** Accepted — bounded Release 1.8.0 scope
 - **Date:** 2026-08-03
 - **Decision authority:** Product, Architecture, Operations, Data, and Security where authorization is affected
-- **Implementation authority:** Release 1.8.0 bounded Slice only
+- **Implementation state:** Release 1.8.0 bounded Slice implemented — not deployed
 
 ## Context
 
 Release 1.8.0 discovery proposes reusable Project services, document requirements, milestone definitions, and simple target durations while existing OperationalShipment, RoutePlan, Checkpoint, Milestone, OperationalEvent, Document, and cargo snapshots own execution and history. Without an explicit boundary, configuration edits could silently rewrite or generate operational records.
+
+The accepted boundary is now implemented in the Release 1.8.0 candidate. This factual status update does not alter the decision or authorize publication, deployment, Seed, reporting, visibility, defaults, snapshots, or automation.
 
 ## Decision
 

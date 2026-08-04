@@ -1473,6 +1473,7 @@ class DocumentDefinition(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
     code = db.Column(db.String(64), nullable=False, unique=True, index=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)

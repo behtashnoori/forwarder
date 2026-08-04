@@ -1,0 +1,21 @@
+{
+  "schema_version": "1",
+  "catalog_version": "milestone-types-1.0.0",
+  "source_version": "release-1.8.0-governance-closure",
+  "checksum": "sha256:d9045e0034b9a37ec4b25402cd3adde43d7f39b969b59e084d5a7d202b5951c2",
+  "milestone_types": [
+    {"code":"REQUEST_RECEIVED","fa_name":"دریافت درخواست","en_name":"Request Received","definition":"The governed point at which the transport request is received.","display_order":10,"is_active":true},
+    {"code":"CARGO_READY","fa_name":"آمادگی محموله","en_name":"Cargo Ready","definition":"The cargo is declared ready for the configured service.","display_order":20,"is_active":true},
+    {"code":"PICKUP","fa_name":"جمع‌آوری","en_name":"Pickup","definition":"Cargo pickup from the configured origin.","display_order":30,"is_active":true},
+    {"code":"LOADING","fa_name":"بارگیری","en_name":"Loading","definition":"Cargo loading at a configured logistics point.","display_order":40,"is_active":true},
+    {"code":"DEPARTURE","fa_name":"حرکت","en_name":"Departure","definition":"Departure from a configured logistics point.","display_order":50,"is_active":true},
+    {"code":"BORDER_ARRIVAL","fa_name":"ورود به مرز","en_name":"Border Arrival","definition":"Arrival at a governed border point.","display_order":60,"is_active":true},
+    {"code":"CUSTOMS_START","fa_name":"شروع گمرک","en_name":"Customs Start","definition":"Start of customs processing.","display_order":70,"is_active":true},
+    {"code":"CUSTOMS_COMPLETE","fa_name":"پایان گمرک","en_name":"Customs Complete","definition":"Completion of customs processing.","display_order":80,"is_active":true},
+    {"code":"PORT_ARRIVAL","fa_name":"ورود به بندر","en_name":"Port Arrival","definition":"Arrival at a governed port.","display_order":90,"is_active":true},
+    {"code":"DISCHARGE","fa_name":"تخلیه","en_name":"Discharge","definition":"Cargo discharge at a configured point.","display_order":100,"is_active":true},
+    {"code":"DELIVERY","fa_name":"تحویل","en_name":"Delivery","definition":"Delivery to the configured destination.","display_order":110,"is_active":true},
+    {"code":"COMPLETION","fa_name":"تکمیل","en_name":"Completion","definition":"Completion of the configured Project service.","display_order":120,"is_active":true},
+    {"code":"OTHER_GOVERNED","fa_name":"سایر مورد تأیید","en_name":"Other Governed","definition":"A governed milestone type outside the initial named vocabulary.","display_order":900,"is_active":true}
+  ]
+}

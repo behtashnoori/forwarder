@@ -1,6 +1,6 @@
 # Release 1.8.0 — Project Configuration Governance Closure
 
-- **Status:** Governance Accepted / Implementation Authorized / Not Yet Implemented / Not Deployed
+- **Status:** Governance Accepted / Implemented / Not Published / Not Deployed
 - **Acceptance date:** 2026-08-03
 - **Authority:** Product, Architecture, Operations, and Data role authorities; Security consulted where applicable
 - **Production:** Unchanged at 1.6.1
@@ -37,7 +37,7 @@ Project is the configuration aggregate owner. The Slice adds three explicit conf
 
 ### Document category
 
-Repository model, migration, internal API, and admin UI evidence show that `DocumentDefinition` is the existing governed document-category/policy concept: it has an immutable code, revision, activation, description, applicability, ordering, file-policy fields, audit actors, and case requirement snapshots. ProjectDocumentRequirement will reference that existing definition. No duplicate DocumentType is authorized. Project-specific requirement level and conditional description belong to ProjectDocumentRequirement; DocumentDefinition case defaults do not override them. The association is configuration, not a Document, Attachment, Evidence, receipt or validity proof, and it cannot block execution in 1.8.0.
+Repository model, migration, internal API, and admin UI evidence show that `DocumentDefinition` is the existing governed document-category/policy concept: it has an immutable code, revision, activation, description, applicability, ordering, file-policy fields, audit actors, and case requirement snapshots. ProjectDocumentRequirement references that existing definition. No duplicate DocumentType is implemented. Project-specific requirement level and conditional description belong to ProjectDocumentRequirement; DocumentDefinition case defaults do not override them. The association is configuration, not a Document, Attachment, Evidence, receipt or validity proof, and it cannot block execution in 1.8.0.
 
 The accepted identity amendment adds a stable, immutable, unique, non-null UUIDv4 `public_id` to DocumentDefinition. Existing rows receive newly generated UUIDv4 values in the migration; the numeric primary key and internal foreign keys remain unchanged. New 1.8.0 APIs use only the opaque identity. Existing numeric case-document APIs are temporarily tolerated for compatibility, not normative, and require a future bounded modernization Slice.
 
@@ -67,4 +67,4 @@ Implementation is expand-first. The authorized DocumentDefinition identity popul
 
 ## Implementation authority
 
-The first authorized implementation step is to define the additive persistence models and migration contract for MilestoneType, ProjectService, ProjectDocumentRequirement, and ProjectMilestoneDefinition, referencing existing Project, ServiceType, DocumentDefinition, and ProjectLogisticsPoint boundaries, before implementing API or UI. Implementation must satisfy the Slice Contract’s acceptance criteria. Deployment, Seed apply, packaging, tagging, and Production changes remain separately governed.
+The bounded persistence models, migration, API, selectors, and UI are implemented and acceptance evidence is recorded in the traceability matrix and final RC review. Release 1.8.0 is implementation complete, not published, and not deployed. The MilestoneType catalog is prepared but not applied; Production is unchanged and Seed was not executed. Deployment, Seed apply, packaging, tagging, publication, reporting, visibility, defaults, snapshots, and automation remain separately governed or explicitly deferred.
