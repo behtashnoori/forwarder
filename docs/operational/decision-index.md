@@ -2,6 +2,8 @@
 
 ## Release 1.9.0 accepted records
 
+Implementation reconciliation: **Implemented — Not Published — Not Deployed**; migration `20260812_operational_execution` descends from `security_credential_remediation`.
+
 | ID | Title | Status | Domain | Date | Authority |
 | --- | --- | --- | --- | --- | --- |
 | PDR-018 | [Operational Execution Foundation](PDR-018-operational-execution-foundation.md) | Partially Accepted; D11–D12 Deferred | Operational Execution | 2026-08-04 | Bounded YES |

@@ -1,6 +1,7 @@
 # Release 1.9.0 Operational Execution Slice Contract
 
 - **Status:** Authorized for bounded implementation
+- **Implementation status:** Implemented — Not Published — Not Deployed
 - **Implementation authority:** YES — Evidence linkage excluded pending ADR-020 acceptance
 - **Release theme:** Operational Execution Foundation
 - **Baseline:** application candidate 1.8.0; migration `20260811_project_configuration`; Production evidence unchanged at 1.6.1 / `20260809_cargo_catalog_items`

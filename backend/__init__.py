@@ -19,7 +19,7 @@ from backend.app_logging import logger
 from backend.cors_config import get_cors_config, is_cors_origin_allowed, log_cors_info
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-__version__ = "1.8.0"
+__version__ = "1.9.0"
 
 
 def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = False) -> Flask:

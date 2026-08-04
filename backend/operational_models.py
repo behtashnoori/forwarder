@@ -1,4 +1,5 @@
 """Phase 1A operational execution aggregate models."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -17,7 +18,9 @@ def utcnow() -> datetime:
 class OperationalOrganization(db.Model):
     __tablename__ = "operational_organization"
     id = db.Column(BIGINT, primary_key=True)
-    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
     name = db.Column(db.String(160), nullable=False)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
@@ -88,9 +91,7 @@ class Project(db.Model):
         BIGINT, db.ForeignKey("customer.id", ondelete="RESTRICT"), nullable=False
     )
     project_code = db.Column(db.String(64), nullable=False)
-    lifecycle_status = db.Column(
-        db.String(24), nullable=False, default="not_started"
-    )
+    lifecycle_status = db.Column(db.String(24), nullable=False, default="not_started")
     version = db.Column(db.Integer, nullable=False, default=1)
     created_by_user_id = db.Column(
         BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
@@ -114,22 +115,41 @@ class ExecutionUnit(db.Model):
     __tablename__ = "execution_unit"
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_execution_unit_public_id"),
-        db.UniqueConstraint("project_id", "unit_code", name="uq_execution_unit_project_code"),
+        db.UniqueConstraint(
+            "project_id", "unit_code", name="uq_execution_unit_project_code"
+        ),
         db.UniqueConstraint("legacy_unit_id", name="uq_execution_unit_legacy_unit"),
         db.CheckConstraint(
             "lifecycle_status IN ('not_started','ready','in_progress','arrived','delivered','cancelled')",
             name="ck_execution_unit_lifecycle_status",
         ),
         db.CheckConstraint("version >= 1", name="ck_execution_unit_version_positive"),
-        db.Index("ix_execution_unit_project_status_active", "project_id", "lifecycle_status", "is_active"),
+        db.Index(
+            "ix_execution_unit_project_status_active",
+            "project_id",
+            "lifecycle_status",
+            "is_active",
+        ),
         db.Index("ix_execution_unit_project_updated", "project_id", "updated_at"),
     )
 
     id = db.Column(BIGINT, primary_key=True)
-    public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid.uuid4()))
-    project_id = db.Column(BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False)
-    operational_shipment_id = db.Column(BIGINT, db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"), nullable=True)
-    legacy_unit_id = db.Column(BIGINT, db.ForeignKey("shipment_transport_unit.id", ondelete="RESTRICT"), nullable=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
+    )
+    project_id = db.Column(
+        BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False
+    )
+    operational_shipment_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    legacy_unit_id = db.Column(
+        BIGINT,
+        db.ForeignKey("shipment_transport_unit.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     unit_code = db.Column(db.String(64), nullable=False)
     unit_type = db.Column(db.String(32), nullable=False)
     display_name = db.Column(db.String(160), nullable=True)
@@ -141,12 +161,18 @@ class ExecutionUnit(db.Model):
     latest_checkpoint = db.Column(db.String(255), nullable=True)
     last_event_at = db.Column(db.DateTime(timezone=True), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
-    created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
 
     project = db.relationship("Project", back_populates="execution_units")
-    events = db.relationship("OperationalEvent", back_populates="execution_unit", lazy="raise")
+    events = db.relationship(
+        "OperationalEvent", back_populates="execution_unit", lazy="raise"
+    )
 
 
 class OperationalEvent(db.Model):
@@ -155,16 +181,36 @@ class OperationalEvent(db.Model):
     __tablename__ = "operational_event"
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_operational_event_public_id"),
-        db.UniqueConstraint("execution_unit_id", "idempotency_key", name="uq_operational_event_unit_idempotency"),
-        db.CheckConstraint("visibility IN ('internal','customer')", name="ck_operational_event_visibility"),
-        db.Index("ix_operational_event_unit_occurred", "execution_unit_id", "occurred_at", "id"),
-        db.Index("ix_operational_event_project_recorded", "project_id", "recorded_at", "id"),
+        db.UniqueConstraint(
+            "execution_unit_id",
+            "idempotency_key",
+            name="uq_operational_event_unit_idempotency",
+        ),
+        db.CheckConstraint(
+            "visibility IN ('internal','customer')",
+            name="ck_operational_event_visibility",
+        ),
+        db.Index(
+            "ix_operational_event_unit_occurred",
+            "execution_unit_id",
+            "occurred_at",
+            "id",
+        ),
+        db.Index(
+            "ix_operational_event_project_recorded", "project_id", "recorded_at", "id"
+        ),
     )
 
     id = db.Column(BIGINT, primary_key=True)
-    public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid.uuid4()))
-    project_id = db.Column(BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False)
-    execution_unit_id = db.Column(BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=False)
+    public_id = db.Column(
+        db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
+    )
+    project_id = db.Column(
+        BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False
+    )
+    execution_unit_id = db.Column(
+        BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=False
+    )
     event_type = db.Column(db.String(64), nullable=False)
     lifecycle_status = db.Column(db.String(24), nullable=True)
     checkpoint_text = db.Column(db.String(255), nullable=True)
@@ -175,13 +221,19 @@ class OperationalEvent(db.Model):
     delayed = db.Column(db.Boolean, nullable=False, default=False)
     occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
     recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
-    actor_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    actor_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
     source = db.Column(db.String(32), nullable=False, default="expert")
     idempotency_key = db.Column(db.String(100), nullable=False)
     request_hash = db.Column(db.String(64), nullable=False)
     correlation_id = db.Column(db.String(100), nullable=True)
     batch_id = db.Column(db.String(100), nullable=True)
-    supersedes_event_id = db.Column(BIGINT, db.ForeignKey("operational_event.id", ondelete="RESTRICT"), nullable=True)
+    supersedes_event_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_event.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     threshold_policy_version = db.Column(db.String(32), nullable=True)
 
     execution_unit = db.relationship("ExecutionUnit", back_populates="events")
@@ -190,11 +242,23 @@ class OperationalEvent(db.Model):
 class OperationalMembership(db.Model):
     __tablename__ = "operational_membership"
     __table_args__ = (
-        db.UniqueConstraint("organization_id", "user_id", name="uq_operational_membership_org_user"),
+        db.UniqueConstraint(
+            "organization_id", "user_id", name="uq_operational_membership_org_user"
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="CASCADE"), nullable=False, index=True)
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = db.Column(
+        BIGINT,
+        db.ForeignKey("expert_user.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     permissions = db.Column(db.JSON, nullable=False, default=list)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
@@ -203,11 +267,18 @@ class OperationalMembership(db.Model):
 class CanonicalLocation(db.Model):
     __tablename__ = "canonical_location"
     __table_args__ = (
-        db.UniqueConstraint("source_type", "source_id", name="uq_canonical_location_source"),
-        db.CheckConstraint("source_type IN ('province','city','country','international_city','iran_port','customs_office')", name="ck_canonical_location_source_type"),
+        db.UniqueConstraint(
+            "source_type", "source_id", name="uq_canonical_location_source"
+        ),
+        db.CheckConstraint(
+            "source_type IN ('province','city','country','international_city','iran_port','customs_office')",
+            name="ck_canonical_location_source_type",
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
     source_type = db.Column(db.String(32), nullable=False)
     source_id = db.Column(BIGINT, nullable=False)
     location_type = db.Column(db.String(32), nullable=False)
@@ -220,49 +291,99 @@ class CanonicalLocation(db.Model):
 class OperationalShipment(db.Model):
     __tablename__ = "operational_shipment"
     __table_args__ = (
-        db.UniqueConstraint("accepted_quote_id", name="uq_operational_shipment_accepted_quote"),
-        db.UniqueConstraint("id", "organization_id", name="uq_operational_shipment_id_org"),
+        db.UniqueConstraint(
+            "accepted_quote_id", name="uq_operational_shipment_accepted_quote"
+        ),
+        db.UniqueConstraint(
+            "id", "organization_id", name="uq_operational_shipment_id_org"
+        ),
         db.ForeignKeyConstraint(
             ["project_id", "organization_id"],
             ["project.id", "project.organization_id"],
             name="fk_operational_shipment_project_same_org",
             ondelete="RESTRICT",
         ),
-        db.CheckConstraint("lifecycle_status IN ('planned','in_progress','completed','cancelled')", name="ck_operational_shipment_status"),
-        db.Index("ix_operational_shipment_org_status", "organization_id", "lifecycle_status"),
+        db.CheckConstraint(
+            "lifecycle_status IN ('planned','in_progress','completed','cancelled')",
+            name="ck_operational_shipment_status",
+        ),
+        db.Index(
+            "ix_operational_shipment_org_status", "organization_id", "lifecycle_status"
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
-    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     project_id = db.Column(BIGINT, nullable=True, index=True)
-    shipment_request_id = db.Column(BIGINT, db.ForeignKey("shipment_request.id", ondelete="RESTRICT"), nullable=False, index=True)
-    accepted_quote_id = db.Column(BIGINT, db.ForeignKey("expert_quote.id", ondelete="RESTRICT"), nullable=False)
+    shipment_request_id = db.Column(
+        BIGINT,
+        db.ForeignKey("shipment_request.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    accepted_quote_id = db.Column(
+        BIGINT, db.ForeignKey("expert_quote.id", ondelete="RESTRICT"), nullable=False
+    )
     lifecycle_status = db.Column(db.String(20), nullable=False, default="planned")
     version = db.Column(db.Integer, nullable=False, default=1)
-    created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
 
 
 class RoutePlan(db.Model):
     __tablename__ = "route_plan"
     __table_args__ = (
-        db.UniqueConstraint("operational_shipment_id", "revision", name="uq_route_plan_shipment_revision"),
-        db.UniqueConstraint("id", "operational_shipment_id", name="uq_route_plan_id_shipment"),
-        db.CheckConstraint("status IN ('draft','active','superseded','cancelled')", name="ck_route_plan_status"),
-        db.Index("uq_route_plan_one_active", "operational_shipment_id", unique=True, postgresql_where=db.text("is_active"), sqlite_where=db.text("is_active = 1")),
+        db.UniqueConstraint(
+            "operational_shipment_id",
+            "revision",
+            name="uq_route_plan_shipment_revision",
+        ),
+        db.UniqueConstraint(
+            "id", "operational_shipment_id", name="uq_route_plan_id_shipment"
+        ),
+        db.CheckConstraint(
+            "status IN ('draft','active','superseded','cancelled')",
+            name="ck_route_plan_status",
+        ),
+        db.Index(
+            "uq_route_plan_one_active",
+            "operational_shipment_id",
+            unique=True,
+            postgresql_where=db.text("is_active"),
+            sqlite_where=db.text("is_active = 1"),
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    operational_shipment_id = db.Column(BIGINT, db.ForeignKey("operational_shipment.id", ondelete="CASCADE"), nullable=False, index=True)
+    operational_shipment_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_shipment.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     revision_number = db.Column("revision", db.Integer, nullable=False, default=1)
     status = db.Column(db.String(20), nullable=False, default="active")
     is_active = db.Column(db.Boolean, nullable=False, default=True)
-    created_from_plan_id = db.Column(BIGINT, db.ForeignKey("route_plan.id", ondelete="RESTRICT"), nullable=True)
+    created_from_plan_id = db.Column(
+        BIGINT, db.ForeignKey("route_plan.id", ondelete="RESTRICT"), nullable=True
+    )
     replan_reason = db.Column(db.Text, nullable=True)
     effective_at = db.Column(db.DateTime(timezone=True), nullable=True)
     timeline_reconciled_at = db.Column(db.DateTime(timezone=True), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
-    created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
     @property
@@ -277,19 +398,43 @@ class RoutePlan(db.Model):
 class RouteLeg(db.Model):
     __tablename__ = "route_leg"
     __table_args__ = (
-        db.UniqueConstraint("route_plan_id", "sequence_number", name="uq_route_leg_plan_sequence"),
+        db.UniqueConstraint(
+            "route_plan_id", "sequence_number", name="uq_route_leg_plan_sequence"
+        ),
         db.UniqueConstraint("id", "route_plan_id", name="uq_route_leg_id_plan"),
-        db.CheckConstraint("sequence_number >= 1", name="ck_route_leg_sequence_positive"),
-        db.CheckConstraint("origin_location_id <> destination_location_id", name="ck_route_leg_distinct_locations"),
-        db.CheckConstraint("planned_arrival >= planned_departure", name="ck_route_leg_timeline"),
-        db.CheckConstraint("status IN ('planned','ready','in_progress','completed','blocked','cancelled')", name="ck_route_leg_status"),
+        db.CheckConstraint(
+            "sequence_number >= 1", name="ck_route_leg_sequence_positive"
+        ),
+        db.CheckConstraint(
+            "origin_location_id <> destination_location_id",
+            name="ck_route_leg_distinct_locations",
+        ),
+        db.CheckConstraint(
+            "planned_arrival >= planned_departure", name="ck_route_leg_timeline"
+        ),
+        db.CheckConstraint(
+            "status IN ('planned','ready','in_progress','completed','blocked','cancelled')",
+            name="ck_route_leg_status",
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    source_route_leg_id = db.Column(BIGINT, db.ForeignKey("route_leg.id", ondelete="RESTRICT"), nullable=True)
-    route_plan_id = db.Column(BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=False)
+    source_route_leg_id = db.Column(
+        BIGINT, db.ForeignKey("route_leg.id", ondelete="RESTRICT"), nullable=True
+    )
+    route_plan_id = db.Column(
+        BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=False
+    )
     sequence_number = db.Column(db.Integer, nullable=False)
-    origin_location_id = db.Column(BIGINT, db.ForeignKey("canonical_location.id", ondelete="RESTRICT"), nullable=False)
-    destination_location_id = db.Column(BIGINT, db.ForeignKey("canonical_location.id", ondelete="RESTRICT"), nullable=False)
+    origin_location_id = db.Column(
+        BIGINT,
+        db.ForeignKey("canonical_location.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    destination_location_id = db.Column(
+        BIGINT,
+        db.ForeignKey("canonical_location.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     origin_snapshot = db.Column(db.JSON, nullable=False)
     destination_snapshot = db.Column(db.JSON, nullable=False)
     transport_mode = db.Column(db.String(32), nullable=False)
@@ -303,56 +448,182 @@ class RouteLeg(db.Model):
     status = db.Column(db.String(20), nullable=False, default="planned")
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
 
 
 class Milestone(db.Model):
     __tablename__ = "operational_milestone"
     __table_args__ = (
-        db.UniqueConstraint("route_leg_id", "milestone_type", name="uq_operational_milestone_leg_type"),
-        db.UniqueConstraint("id", "route_plan_id", name="uq_operational_milestone_id_plan"),
-        db.CheckConstraint("milestone_type IN ('departure','arrival','checkpoint_arrival','checkpoint_processing_complete','checkpoint_departure')", name="ck_operational_milestone_type"),
-        db.CheckConstraint("verification_state IN ('planned','reported','verified')", name="ck_operational_milestone_verification"),
-        db.CheckConstraint("(route_leg_id IS NOT NULL AND checkpoint_id IS NULL) OR (route_leg_id IS NULL AND checkpoint_id IS NOT NULL)", name="ck_operational_milestone_single_owner"),
-        db.ForeignKeyConstraint(["checkpoint_id", "route_plan_id"], ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"], name="fk_milestone_checkpoint_same_plan", ondelete="CASCADE"),
+        db.UniqueConstraint(
+            "route_leg_id", "milestone_type", name="uq_operational_milestone_leg_type"
+        ),
+        db.UniqueConstraint(
+            "id", "route_plan_id", name="uq_operational_milestone_id_plan"
+        ),
+        db.CheckConstraint(
+            "length(trim(milestone_type)) > 0", name="ck_operational_milestone_type"
+        ),
+        db.CheckConstraint(
+            "verification_state IN ('planned','reported','verified')",
+            name="ck_operational_milestone_verification",
+        ),
+        db.CheckConstraint(
+            "lifecycle_status IN ('PENDING','READY','IN_PROGRESS','COMPLETED','SKIPPED','CANCELLED','BLOCKED')",
+            name="ck_operational_milestone_lifecycle",
+        ),
+        db.CheckConstraint(
+            "sequence IS NULL OR sequence >= 1",
+            name="ck_operational_milestone_sequence",
+        ),
+        db.CheckConstraint(
+            "(route_leg_id IS NOT NULL AND checkpoint_id IS NULL) OR (route_leg_id IS NULL AND checkpoint_id IS NOT NULL) OR (route_leg_id IS NULL AND checkpoint_id IS NULL AND project_milestone_definition_id IS NOT NULL)",
+            name="ck_operational_milestone_single_owner",
+        ),
+        db.UniqueConstraint(
+            "id", "operational_shipment_id", name="uq_operational_milestone_id_shipment"
+        ),
+        db.UniqueConstraint(
+            "operational_shipment_id",
+            "project_milestone_definition_id",
+            name="uq_operational_milestone_definition_lineage",
+        ),
+        db.Index(
+            "ix_operational_milestone_shipment_sequence",
+            "organization_id",
+            "operational_shipment_id",
+            "sequence",
+        ),
+        db.ForeignKeyConstraint(
+            ["operational_shipment_id", "organization_id"],
+            ["operational_shipment.id", "operational_shipment.organization_id"],
+            name="fk_operational_milestone_shipment_org",
+            ondelete="CASCADE",
+        ),
+        db.ForeignKeyConstraint(
+            ["checkpoint_id", "route_plan_id"],
+            ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"],
+            name="fk_milestone_checkpoint_same_plan",
+            ondelete="CASCADE",
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    route_plan_id = db.Column(BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=True)
-    route_leg_id = db.Column(BIGINT, db.ForeignKey("route_leg.id", ondelete="CASCADE"), nullable=True, index=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(BIGINT, nullable=True)
+    operational_shipment_id = db.Column(BIGINT, nullable=True)
+    route_plan_id = db.Column(
+        BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=True
+    )
+    route_leg_id = db.Column(
+        BIGINT,
+        db.ForeignKey("route_leg.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     checkpoint_id = db.Column(BIGINT, nullable=True, index=True)
-    source_milestone_id = db.Column(BIGINT, db.ForeignKey("operational_milestone.id", ondelete="RESTRICT"), nullable=True)
+    source_milestone_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_milestone.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     milestone_type = db.Column(db.String(40), nullable=False)
-    planned_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    project_milestone_definition_id = db.Column(
+        BIGINT,
+        db.ForeignKey("project_milestone_definition.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    milestone_type_snapshot = db.Column(db.JSON, nullable=True)
+    expected_point_id = db.Column(
+        BIGINT,
+        db.ForeignKey("project_logistics_point.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    expected_point_snapshot = db.Column(db.JSON, nullable=True)
+    target_metadata = db.Column(db.JSON, nullable=True)
+    sequence = db.Column(db.Integer, nullable=True)
+    lifecycle_status = db.Column(db.String(20), nullable=False, default="PENDING")
+    prior_active_status = db.Column(db.String(20), nullable=True)
+    planned_at = db.Column(db.DateTime(timezone=True), nullable=True, index=True)
     projected_at = db.Column(db.DateTime(timezone=True), nullable=True)
     projected_state = db.Column(db.String(20), nullable=False, default="planned")
     occurred_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    started_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    skipped_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    cancelled_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    blocked_at = db.Column(db.DateTime(timezone=True), nullable=True)
     verification_state = db.Column(db.String(20), nullable=False, default="planned")
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
 
 
 class OperationalCheckpoint(db.Model):
     __tablename__ = "operational_checkpoint"
     __table_args__ = (
-        db.UniqueConstraint("route_plan_id", "sequence_number", name="uq_operational_checkpoint_plan_sequence"),
-        db.UniqueConstraint("id", "route_plan_id", name="uq_operational_checkpoint_id_plan"),
-        db.CheckConstraint("sequence_number >= 1", name="ck_operational_checkpoint_sequence_positive"),
-        db.CheckConstraint("planned_departure_at IS NULL OR planned_arrival_at IS NULL OR planned_departure_at >= planned_arrival_at", name="ck_operational_checkpoint_planned_timeline"),
-        db.CheckConstraint("actual_departure_at IS NULL OR actual_arrival_at IS NOT NULL", name="ck_operational_checkpoint_actual_timeline"),
-        db.CheckConstraint("status IN ('planned','approaching','arrived','processing','ready_to_depart','departed','completed','blocked','cancelled')", name="ck_operational_checkpoint_status"),
-        db.CheckConstraint("checkpoint_type IN ('origin_loading','export_customs','border_exit','transit_border_entry','transit_border_exit','border_entry','import_customs','port_entry','port_exit','terminal_arrival','transshipment','destination_arrival','unloading','final_delivery')", name="ck_operational_checkpoint_type"),
-        db.CheckConstraint("verification_state IN ('planned','reported','verified')", name="ck_operational_checkpoint_verification"),
-        db.ForeignKeyConstraint(["route_leg_id", "route_plan_id"], ["route_leg.id", "route_leg.route_plan_id"], name="fk_checkpoint_leg_same_plan", ondelete="RESTRICT"),
+        db.UniqueConstraint(
+            "route_plan_id",
+            "sequence_number",
+            name="uq_operational_checkpoint_plan_sequence",
+        ),
+        db.UniqueConstraint(
+            "id", "route_plan_id", name="uq_operational_checkpoint_id_plan"
+        ),
+        db.CheckConstraint(
+            "sequence_number >= 1", name="ck_operational_checkpoint_sequence_positive"
+        ),
+        db.CheckConstraint(
+            "planned_departure_at IS NULL OR planned_arrival_at IS NULL OR planned_departure_at >= planned_arrival_at",
+            name="ck_operational_checkpoint_planned_timeline",
+        ),
+        db.CheckConstraint(
+            "actual_departure_at IS NULL OR actual_arrival_at IS NOT NULL",
+            name="ck_operational_checkpoint_actual_timeline",
+        ),
+        db.CheckConstraint(
+            "status IN ('planned','approaching','arrived','processing','ready_to_depart','departed','completed','blocked','cancelled')",
+            name="ck_operational_checkpoint_status",
+        ),
+        db.CheckConstraint(
+            "checkpoint_type IN ('origin_loading','export_customs','border_exit','transit_border_entry','transit_border_exit','border_entry','import_customs','port_entry','port_exit','terminal_arrival','transshipment','destination_arrival','unloading','final_delivery')",
+            name="ck_operational_checkpoint_type",
+        ),
+        db.CheckConstraint(
+            "verification_state IN ('planned','reported','verified')",
+            name="ck_operational_checkpoint_verification",
+        ),
+        db.ForeignKeyConstraint(
+            ["route_leg_id", "route_plan_id"],
+            ["route_leg.id", "route_leg.route_plan_id"],
+            name="fk_checkpoint_leg_same_plan",
+            ondelete="RESTRICT",
+        ),
         db.Index("ix_operational_checkpoint_plan_status", "route_plan_id", "status"),
     )
     id = db.Column(BIGINT, primary_key=True)
-    source_checkpoint_id = db.Column(BIGINT, db.ForeignKey("operational_checkpoint.id", ondelete="RESTRICT"), nullable=True)
-    route_plan_id = db.Column(BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=False)
-    route_leg_id = db.Column(BIGINT, db.ForeignKey("route_leg.id", ondelete="RESTRICT"), nullable=True)
+    source_checkpoint_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_checkpoint.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    route_plan_id = db.Column(
+        BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=False
+    )
+    route_leg_id = db.Column(
+        BIGINT, db.ForeignKey("route_leg.id", ondelete="RESTRICT"), nullable=True
+    )
     sequence_number = db.Column(db.Integer, nullable=False)
     checkpoint_type = db.Column(db.String(40), nullable=False)
-    canonical_location_id = db.Column(BIGINT, db.ForeignKey("canonical_location.id", ondelete="RESTRICT"), nullable=False)
+    canonical_location_id = db.Column(
+        BIGINT,
+        db.ForeignKey("canonical_location.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     planned_arrival_at = db.Column(db.DateTime(timezone=True), nullable=True)
     planned_departure_at = db.Column(db.DateTime(timezone=True), nullable=True)
     projected_arrival_at = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -364,53 +635,312 @@ class OperationalCheckpoint(db.Model):
     responsible_party = db.Column(db.String(160), nullable=True)
     notes = db.Column(db.Text, nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
-    created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
 
 
 class RouteDependency(db.Model):
     __tablename__ = "route_dependency"
     __table_args__ = (
-        db.UniqueConstraint("route_plan_id", "predecessor_checkpoint_id", "successor_checkpoint_id", "dependency_type", name="uq_route_dependency_edge"),
-        db.CheckConstraint("predecessor_checkpoint_id <> successor_checkpoint_id", name="ck_route_dependency_no_self_reference"),
-        db.CheckConstraint("dependency_type IN ('finish_to_start','arrival_before_departure','previous_leg_arrival_before_next_leg_departure','customs_clearance_before_border_exit','unloading_before_final_delivery')", name="ck_route_dependency_type"),
-        db.ForeignKeyConstraint(["predecessor_checkpoint_id", "route_plan_id"], ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"], name="fk_dependency_predecessor_same_plan", ondelete="CASCADE"),
-        db.ForeignKeyConstraint(["successor_checkpoint_id", "route_plan_id"], ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"], name="fk_dependency_successor_same_plan", ondelete="CASCADE"),
+        db.UniqueConstraint(
+            "route_plan_id",
+            "predecessor_checkpoint_id",
+            "successor_checkpoint_id",
+            "dependency_type",
+            name="uq_route_dependency_edge",
+        ),
+        db.CheckConstraint(
+            "predecessor_checkpoint_id <> successor_checkpoint_id",
+            name="ck_route_dependency_no_self_reference",
+        ),
+        db.CheckConstraint(
+            "dependency_type IN ('finish_to_start','arrival_before_departure','previous_leg_arrival_before_next_leg_departure','customs_clearance_before_border_exit','unloading_before_final_delivery')",
+            name="ck_route_dependency_type",
+        ),
+        db.ForeignKeyConstraint(
+            ["predecessor_checkpoint_id", "route_plan_id"],
+            ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"],
+            name="fk_dependency_predecessor_same_plan",
+            ondelete="CASCADE",
+        ),
+        db.ForeignKeyConstraint(
+            ["successor_checkpoint_id", "route_plan_id"],
+            ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"],
+            name="fk_dependency_successor_same_plan",
+            ondelete="CASCADE",
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    route_plan_id = db.Column(BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=False)
-    predecessor_checkpoint_id = db.Column(BIGINT, db.ForeignKey("operational_checkpoint.id", ondelete="CASCADE"), nullable=False)
-    successor_checkpoint_id = db.Column(BIGINT, db.ForeignKey("operational_checkpoint.id", ondelete="CASCADE"), nullable=False)
-    dependency_type = db.Column(db.String(60), nullable=False, default="finish_to_start")
+    route_plan_id = db.Column(
+        BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=False
+    )
+    predecessor_checkpoint_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_checkpoint.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    successor_checkpoint_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_checkpoint.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    dependency_type = db.Column(
+        db.String(60), nullable=False, default="finish_to_start"
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class MilestoneEvent(db.Model):
     __tablename__ = "milestone_event"
     __table_args__ = (
-        db.UniqueConstraint("milestone_id", "idempotency_key", name="uq_milestone_event_idempotency"),
-        db.CheckConstraint("event_type IN ('reported','verified','corrected')", name="ck_milestone_event_type"),
-        db.CheckConstraint("event_type <> 'corrected' OR (reason IS NOT NULL AND length(trim(reason)) > 0 AND supersedes_event_id IS NOT NULL)", name="ck_milestone_event_correction"),
-        db.Index("ix_milestone_event_milestone_recorded", "milestone_id", "recorded_at", "id"),
+        db.UniqueConstraint(
+            "milestone_id", "idempotency_key", name="uq_milestone_event_idempotency"
+        ),
+        db.CheckConstraint(
+            "event_type IN ('reported','verified','corrected','INITIALIZED','READY','STARTED','COMPLETED','SKIPPED','CANCELLED','BLOCKED','UNBLOCKED','CORRECTED','REOPENED','VERIFIED')",
+            name="ck_milestone_event_type",
+        ),
+        db.CheckConstraint(
+            "event_type NOT IN ('corrected','CORRECTED') OR (reason IS NOT NULL AND length(trim(reason)) > 0 AND supersedes_event_id IS NOT NULL)",
+            name="ck_milestone_event_correction",
+        ),
+        db.Index(
+            "ix_milestone_event_milestone_recorded", "milestone_id", "recorded_at", "id"
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    milestone_id = db.Column(BIGINT, db.ForeignKey("operational_milestone.id", ondelete="RESTRICT"), nullable=False)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    milestone_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_milestone.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     event_type = db.Column(db.String(20), nullable=False)
     occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
     recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
-    actor_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    actor_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    source_channel = db.Column(db.String(32), nullable=False, default="internal_ui")
+    event_location_id = db.Column(
+        BIGINT,
+        db.ForeignKey("project_logistics_point.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    note = db.Column(db.Text, nullable=True)
+    verification_state = db.Column(db.String(20), nullable=False, default="unverified")
+    verified_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True
+    )
+    verified_at = db.Column(db.DateTime(timezone=True), nullable=True)
     reason = db.Column(db.Text, nullable=True)
-    supersedes_event_id = db.Column(BIGINT, db.ForeignKey("milestone_event.id", ondelete="RESTRICT"), nullable=True)
+    supersedes_event_id = db.Column(
+        BIGINT, db.ForeignKey("milestone_event.id", ondelete="RESTRICT"), nullable=True
+    )
     idempotency_key = db.Column(db.String(100), nullable=False)
     request_hash = db.Column(db.String(64), nullable=False)
+
+
+class OperationalReasonMixin:
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    immutable_code = db.Column(db.String(64), nullable=False)
+    fa_name = db.Column(db.String(160), nullable=False)
+    en_name = db.Column(db.String(160), nullable=False)
+    definition = db.Column(db.Text, nullable=True)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    updated_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+
+class DelayReason(OperationalReasonMixin, db.Model):
+    __tablename__ = "delay_reason"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "organization_id", "immutable_code", name="uq_delay_reason_org_code"
+        ),
+        db.UniqueConstraint("id", "organization_id", name="uq_delay_reason_id_org"),
+        db.CheckConstraint("version >= 1", name="ck_delay_reason_version"),
+        db.Index(
+            "ix_delay_reason_org_active_order",
+            "organization_id",
+            "is_active",
+            "display_order",
+        ),
+    )
+
+
+class ExceptionReason(OperationalReasonMixin, db.Model):
+    __tablename__ = "exception_reason"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "organization_id", "immutable_code", name="uq_exception_reason_org_code"
+        ),
+        db.UniqueConstraint("id", "organization_id", name="uq_exception_reason_id_org"),
+        db.CheckConstraint("version >= 1", name="ck_exception_reason_version"),
+        db.Index(
+            "ix_exception_reason_org_active_order",
+            "organization_id",
+            "is_active",
+            "display_order",
+        ),
+    )
+
+
+class OperationalDelay(db.Model):
+    __tablename__ = "operational_delay"
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ["operational_shipment_id", "organization_id"],
+            ["operational_shipment.id", "operational_shipment.organization_id"],
+            name="fk_delay_shipment_org",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["milestone_id", "operational_shipment_id"],
+            [
+                "operational_milestone.id",
+                "operational_milestone.operational_shipment_id",
+            ],
+            name="fk_delay_milestone_shipment",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["reason_id", "organization_id"],
+            ["delay_reason.id", "delay_reason.organization_id"],
+            name="fk_delay_reason_org",
+            ondelete="RESTRICT",
+        ),
+        db.CheckConstraint(
+            "resolved_at IS NULL OR resolved_at >= started_at",
+            name="ck_delay_timestamps",
+        ),
+        db.CheckConstraint("version >= 1", name="ck_delay_version"),
+        db.Index(
+            "ix_delay_org_shipment_active",
+            "organization_id",
+            "operational_shipment_id",
+            "resolved_at",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(BIGINT, nullable=False)
+    operational_shipment_id = db.Column(BIGINT, nullable=False)
+    milestone_id = db.Column(BIGINT, nullable=True)
+    reason_id = db.Column(BIGINT, nullable=False)
+    started_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    resolved_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    note = db.Column(db.Text, nullable=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    resolved_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True
+    )
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class OperationalException(db.Model):
+    __tablename__ = "operational_exception"
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ["operational_shipment_id", "organization_id"],
+            ["operational_shipment.id", "operational_shipment.organization_id"],
+            name="fk_exception_shipment_org",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["milestone_id", "operational_shipment_id"],
+            [
+                "operational_milestone.id",
+                "operational_milestone.operational_shipment_id",
+            ],
+            name="fk_exception_milestone_shipment",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["reason_id", "organization_id"],
+            ["exception_reason.id", "exception_reason.organization_id"],
+            name="fk_exception_reason_org",
+            ondelete="RESTRICT",
+        ),
+        db.CheckConstraint(
+            "resolved_at IS NULL OR resolved_at >= occurred_at",
+            name="ck_exception_timestamps",
+        ),
+        db.CheckConstraint("version >= 1", name="ck_exception_version"),
+        db.Index(
+            "ix_exception_org_shipment_active",
+            "organization_id",
+            "operational_shipment_id",
+            "resolved_at",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(BIGINT, nullable=False)
+    operational_shipment_id = db.Column(BIGINT, nullable=False)
+    milestone_id = db.Column(BIGINT, nullable=True)
+    reason_id = db.Column(BIGINT, nullable=False)
+    occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    resolved_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    note = db.Column(db.Text, nullable=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    resolved_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True
+    )
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class OperationalWorkItem(db.Model):
     __tablename__ = "operational_work_item"
     __table_args__ = (
-        db.CheckConstraint("work_type IN ('OVERDUE_MILESTONE','CHECKPOINT_OVERDUE','ROUTE_DEPENDENCY_BLOCKED','REPLAN_REQUIRED')", name="ck_operational_work_item_type"),
-        db.CheckConstraint("status IN ('open','resolved')", name="ck_operational_work_item_status"),
+        db.CheckConstraint(
+            "work_type IN ('OVERDUE_MILESTONE','CHECKPOINT_OVERDUE','ROUTE_DEPENDENCY_BLOCKED','REPLAN_REQUIRED')",
+            name="ck_operational_work_item_type",
+        ),
+        db.CheckConstraint(
+            "status IN ('open','resolved')", name="ck_operational_work_item_status"
+        ),
         db.CheckConstraint(
             "resolution_source IS NULL OR resolution_source IN ('automatic','manual','supersession')",
             name="ck_route_exception_resolution_source",
@@ -439,16 +969,56 @@ class OperationalWorkItem(db.Model):
             name="fk_work_item_checkpoint_same_plan",
             ondelete="CASCADE",
         ),
-        db.Index("uq_operational_work_item_open", "milestone_id", "work_type", unique=True, postgresql_where=db.text("status = 'open'"), sqlite_where=db.text("status = 'open'")),
-        db.Index("ix_operational_work_item_queue", "organization_id", "work_type", "status", "due_at"),
-        db.Index("uq_route_exception_open", "route_plan_id", "checkpoint_id", "work_type", unique=True, postgresql_where=db.text("status = 'open' AND route_plan_id IS NOT NULL"), sqlite_where=db.text("status = 'open' AND route_plan_id IS NOT NULL")),
+        db.Index(
+            "uq_operational_work_item_open",
+            "milestone_id",
+            "work_type",
+            unique=True,
+            postgresql_where=db.text("status = 'open'"),
+            sqlite_where=db.text("status = 'open'"),
+        ),
+        db.Index(
+            "ix_operational_work_item_queue",
+            "organization_id",
+            "work_type",
+            "status",
+            "due_at",
+        ),
+        db.Index(
+            "uq_route_exception_open",
+            "route_plan_id",
+            "checkpoint_id",
+            "work_type",
+            unique=True,
+            postgresql_where=db.text("status = 'open' AND route_plan_id IS NOT NULL"),
+            sqlite_where=db.text("status = 'open' AND route_plan_id IS NOT NULL"),
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
-    operational_shipment_id = db.Column(BIGINT, db.ForeignKey("operational_shipment.id", ondelete="CASCADE"), nullable=False, index=True)
-    milestone_id = db.Column(BIGINT, db.ForeignKey("operational_milestone.id", ondelete="CASCADE"), nullable=True)
-    route_plan_id = db.Column(BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=True)
-    checkpoint_id = db.Column(BIGINT, db.ForeignKey("operational_checkpoint.id", ondelete="CASCADE"), nullable=True)
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    operational_shipment_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_shipment.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    milestone_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_milestone.id", ondelete="CASCADE"),
+        nullable=True,
+    )
+    route_plan_id = db.Column(
+        BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=True
+    )
+    checkpoint_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_checkpoint.id", ondelete="CASCADE"),
+        nullable=True,
+    )
     severity = db.Column(db.String(16), nullable=False, default="warning")
     detected_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     resolution_reason = db.Column(db.Text, nullable=True)
@@ -458,19 +1028,30 @@ class OperationalWorkItem(db.Model):
     work_type = db.Column(db.String(40), nullable=False, default="OVERDUE_MILESTONE")
     status = db.Column(db.String(20), nullable=False, default="open")
     due_at = db.Column(db.DateTime(timezone=True), nullable=False)
-    assignee_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    assignee_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
+    )
     reason = db.Column(db.Text, nullable=False)
     version = db.Column(db.Integer, nullable=False, default=1)
     resolved_at = db.Column(db.DateTime(timezone=True), nullable=True)
-    resolved_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    resolved_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class OperationalAudit(db.Model):
     __tablename__ = "operational_audit"
     id = db.Column(BIGINT, primary_key=True)
-    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False, index=True)
-    actor_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    actor_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
     action = db.Column(db.String(80), nullable=False)
     entity_type = db.Column(db.String(50), nullable=False)
     entity_id = db.Column(BIGINT, nullable=False)
@@ -480,9 +1061,15 @@ class OperationalAudit(db.Model):
 
 class OperationalOutbox(db.Model):
     __tablename__ = "operational_outbox"
-    __table_args__ = (db.Index("ix_operational_outbox_unpublished", "published_at", "created_at"),)
+    __table_args__ = (
+        db.Index("ix_operational_outbox_unpublished", "published_at", "created_at"),
+    )
     id = db.Column(BIGINT, primary_key=True)
-    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     event_type = db.Column(db.String(80), nullable=False)
     aggregate_type = db.Column(db.String(50), nullable=False)
     aggregate_id = db.Column(BIGINT, nullable=False)
@@ -494,10 +1081,21 @@ class OperationalOutbox(db.Model):
 class OperationalIdempotency(db.Model):
     __tablename__ = "operational_idempotency"
     __table_args__ = (
-        db.UniqueConstraint("organization_id", "operation", "resource_type", "command_resource_id", "idempotency_key", name="uq_operational_idempotency_scope"),
+        db.UniqueConstraint(
+            "organization_id",
+            "operation",
+            "resource_type",
+            "command_resource_id",
+            "idempotency_key",
+            name="uq_operational_idempotency_scope",
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
-    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="CASCADE"), nullable=False)
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="CASCADE"),
+        nullable=False,
+    )
     operation = db.Column(db.String(60), nullable=False)
     resource_type = db.Column(db.String(40), nullable=False, default="organization")
     command_resource_id = db.Column(BIGINT, nullable=False, default=0)
@@ -509,9 +1107,19 @@ class OperationalIdempotency(db.Model):
 
 
 ALL_OPERATIONAL_MODELS = [
-    OperationalOrganization, Project, OperationalMembership, CanonicalLocation,
-    OperationalShipment, RoutePlan, RouteLeg, OperationalCheckpoint,
-    RouteDependency, Milestone, MilestoneEvent,
-    OperationalWorkItem, OperationalAudit, OperationalOutbox,
+    OperationalOrganization,
+    Project,
+    OperationalMembership,
+    CanonicalLocation,
+    OperationalShipment,
+    RoutePlan,
+    RouteLeg,
+    OperationalCheckpoint,
+    RouteDependency,
+    Milestone,
+    MilestoneEvent,
+    OperationalWorkItem,
+    OperationalAudit,
+    OperationalOutbox,
     OperationalIdempotency,
 ]

@@ -4,6 +4,7 @@
 - **Date:** 2026-08-04
 - **Candidate:** Release 1.9.0
 - **Implementation authority:** YES — bounded scope only; Evidence linkage deferred
+- **Implementation status:** Implemented — Not Published — Not Deployed (`20260812_operational_execution`)
 - **Terminology authority:** [PDR-017](PDR-017-canonical-operational-taxonomy.md)
 
 ## Purpose

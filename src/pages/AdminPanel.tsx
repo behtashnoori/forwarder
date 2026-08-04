@@ -34,6 +34,7 @@ import DocumentDefinitionsTab from "@/components/DocumentDefinitionsTab";
 import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
 import LogisticsNetworkAdminTab from "@/components/LogisticsNetworkAdminTab";
+import OperationalReasonsAdminTab from "@/components/OperationalReasonsAdminTab";
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
@@ -290,6 +291,7 @@ const AdminPanel = () => {
             <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
             <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی</TabsTrigger>
+            <TabsTrigger value="operational-reasons" className="gap-2 rounded-2xl py-3">دلایل عملیاتی</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -479,6 +481,7 @@ const AdminPanel = () => {
           <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>
           <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>
           <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab /></TabsContent>
+          <TabsContent value="operational-reasons" className="space-y-4"><OperationalReasonsAdminTab /></TabsContent>
         </Tabs>
       </div>
     </div>

@@ -44,7 +44,7 @@ def _runtime_routes():
 
 def test_release_180_openapi_runtime_exact_parity_and_schemas():
     text = OPENAPI.read_text(encoding="utf-8")
-    assert re.search(r"^  version: 1\.8\.0$", text, re.MULTILINE)
+    assert re.search(r"^  version: 1\.9\.0$", text, re.MULTILINE)
     documented, runtime = _documented_routes(text), _runtime_routes()
     assert documented == runtime
     required = {

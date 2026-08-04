@@ -2,6 +2,8 @@
 
 ## Release 1.9.0 authorized slice
 
+Implementation reconciliation: **Implemented — Not Published — Not Deployed** using `20260812_operational_execution`; next step is isolated RC validation.
+
 | Slice | State | Dependencies | Next gate |
 | --- | --- | --- | --- |
 | Operational Execution Foundation | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed | Existing milestone/event stack; Security Track complete at `security_credential_remediation` | Begin bounded implementation; first migration must use the accepted parent |

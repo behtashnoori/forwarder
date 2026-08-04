@@ -2,6 +2,8 @@
 
 ## Release 1.9.0 authorized boundary reconciliation
 
+Implementation reconciliation: **Implemented — Not Published — Not Deployed** under `20260812_operational_execution`; Evidence remains Deferred.
+
 ```mermaid
 flowchart LR
   PMD["ProjectMilestoneDefinition — configuration"] -->|"manual snapshot"| OM["Existing Operational Milestone — execution"]

@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Forwarder Backend API
-  version: 1.8.0
+  version: 1.9.0
   description: |
     Initial OpenAPI documentation for the Forwarder backend.
 
@@ -11,6 +11,7 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Operational Execution
   - name: Project Configuration
   - name: Logistics Network
   - name: Internal Cargo
@@ -743,6 +744,47 @@ components:
       additionalProperties: false
       required: [version]
       properties: { version: { type: integer, minimum: 1 }, fa_name: { type: string, maxLength: 160 }, en_name: { type: string, maxLength: 160 }, definition: { type: string, nullable: true, maxLength: 4000 }, display_order: { type: integer, minimum: 0 } }
+    ExecutionMilestone:
+      type: object
+      additionalProperties: false
+      required: [public_id, sequence, milestone_type, status, verification_state, version]
+      properties:
+        public_id: { type: string, format: uuid }
+        sequence: { type: integer, minimum: 1 }
+        milestone_type: { type: string }
+        milestone_type_snapshot: { type: object, nullable: true, additionalProperties: false, properties: { public_id: { type: string, format: uuid }, code: { type: string }, fa_name: { type: string }, en_name: { type: string } } }
+        expected_point_snapshot: { type: object, nullable: true, additionalProperties: false, properties: { public_id: { type: string, format: uuid }, label: { type: string, nullable: true }, role: { type: string } } }
+        target_metadata: { type: object, nullable: true, additionalProperties: false, properties: { target_duration_value: { type: integer, nullable: true }, warning_duration_value: { type: integer, nullable: true }, duration_unit: { type: string, nullable: true, enum: [MINUTE, HOUR, DAY] }, required: { type: boolean } } }
+        status: { type: string, enum: [PENDING, READY, IN_PROGRESS, COMPLETED, SKIPPED, CANCELLED, BLOCKED] }
+        prior_active_status: { type: string, nullable: true }
+        planned_at: { type: string, format: date-time, nullable: true }
+        started_at: { type: string, format: date-time, nullable: true }
+        completed_at: { type: string, format: date-time, nullable: true }
+        skipped_at: { type: string, format: date-time, nullable: true }
+        cancelled_at: { type: string, format: date-time, nullable: true }
+        blocked_at: { type: string, format: date-time, nullable: true }
+        verification_state: { type: string }
+        version: { type: integer, minimum: 1 }
+    ExecutionTransition:
+      type: object
+      additionalProperties: false
+      required: [target_status, expected_version]
+      properties: { target_status: { type: string, enum: [PENDING, READY, IN_PROGRESS, COMPLETED, SKIPPED, CANCELLED, BLOCKED] }, expected_version: { type: integer, minimum: 1 }, effective_at: { type: string, format: date-time }, reason: { type: string }, note: { type: string, nullable: true } }
+    OperationalReason:
+      type: object
+      additionalProperties: false
+      required: [public_id, immutable_code, fa_name, en_name, display_order, is_active, version]
+      properties: { public_id: { type: string, format: uuid }, immutable_code: { type: string }, fa_name: { type: string }, en_name: { type: string }, definition: { type: string, nullable: true }, display_order: { type: integer, minimum: 0 }, is_active: { type: boolean }, version: { type: integer, minimum: 1 } }
+    OperationalCondition:
+      type: object
+      additionalProperties: false
+      required: [public_id, reason, active, duration_seconds, version]
+      properties: { public_id: { type: string, format: uuid }, milestone_public_id: { type: string, format: uuid, nullable: true }, reason: { $ref: '#/components/schemas/OperationalReason' }, started_at: { type: string, format: date-time }, occurred_at: { type: string, format: date-time }, resolved_at: { type: string, format: date-time, nullable: true }, active: { type: boolean }, note: { type: string, nullable: true }, duration_seconds: { type: integer, minimum: 0 }, version: { type: integer, minimum: 1 } }
+    MilestoneEvent190:
+      type: object
+      additionalProperties: false
+      required: [public_id, milestone_public_id, event_type, effective_at, recorded_at, source_channel, verification_state]
+      properties: { public_id: { type: string, format: uuid }, milestone_public_id: { type: string, format: uuid }, event_type: { type: string }, effective_at: { type: string, format: date-time }, recorded_at: { type: string, format: date-time }, source_channel: { type: string }, reason: { type: string, nullable: true }, note: { type: string, nullable: true }, verification_state: { type: string }, verified_at: { type: string, format: date-time, nullable: true }, correction_of_event_public_id: { type: string, format: uuid, nullable: true } }
 paths:
   /api/v2/projects/{projectId}/execution-units:
     get:
@@ -2681,3 +2723,43 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/v2/operational-shipments/{shipment_id}/execution/initialization-preview:
+    get: { tags: [Operational Execution], summary: Read-only initialization preview, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Preview including findings and confirmation_allowed. }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/initialize:
+    post: { tags: [Operational Execution], summary: Explicit atomic idempotent initialization, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, required: [expected_shipment_version], properties: { expected_shipment_version: { type: integer, minimum: 1 } } } } } }, responses: { '200': { description: Safe existing state. }, '201': { description: Initialized. }, '409': { description: Optimistic or concurrent conflict. }, '422': { description: Ineligible configuration. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/milestones:
+    get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Ordered milestones. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/milestones/{milestone_id}/transition:
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: milestone_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ExecutionTransition' } } } }, responses: { '200': { description: Transitioned. }, '409': { description: Stale or invalid transition. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/milestones/{milestone_id}/reopen:
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: milestone_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Terminal milestone reopened with retained history. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/events:
+    get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Immutable occurred/recorded-time timeline. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/milestones/{milestone_id}/events:
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: milestone_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '201': { description: Milestone fact appended. }, '409': { description: Optimistic conflict. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/events/{event_id}/correct:
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: event_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '201': { description: Superseding correction appended. }, '409': { description: Optimistic conflict. }, '422': { description: Correction reason required. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/events/{event_id}/verify:
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: event_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Verification appended. }, '403': { description: Self-verification prohibited. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/progress:
+    get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Deterministic calculated summary. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/delays:
+    get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Shipment delays. } } }
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '201': { description: Delay created. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/delays/{public_id}/resolve:
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Delay resolved explicitly. }, '409': { description: Optimistic conflict. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/exceptions:
+    get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Shipment exceptions. } } }
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '201': { description: Exception created. } } }
+  /api/v2/operational-shipments/{shipment_id}/execution/exceptions/{public_id}/resolve:
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Exception resolved explicitly. }, '409': { description: Optimistic conflict. } } }
+  /api/v2/admin/reference-data/delay-reasons:
+    get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '200': { description: Organization-scoped DelayReason catalog. } } }
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '201': { description: DelayReason created. }, '409': { description: Duplicate immutable code. } } }
+  /api/v2/admin/reference-data/delay-reasons/{public_id}:
+    patch: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Labels, definition, order, or lifecycle updated; code immutable. } } }
+  /api/v2/admin/reference-data/exception-reasons:
+    get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '200': { description: Organization-scoped ExceptionReason catalog. } } }
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '201': { description: ExceptionReason created. }, '409': { description: Duplicate immutable code. } } }
+  /api/v2/admin/reference-data/exception-reasons/{public_id}:
+    patch: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Labels, definition, order, or lifecycle updated; code immutable. } } }

@@ -2,6 +2,8 @@
 
 ## Release 1.9.0 governance closure
 
+Implementation reconciliation: **Implemented — Not Published — Not Deployed**; actual migration `20260812_operational_execution`, parent `security_credential_remediation`.
+
 | Release | Theme | Migration | State |
 | --- | --- | --- | --- |
 | 1.9.0 | Operational Execution Foundation | Not created/reserved; exact parent `security_credential_remediation` | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed; waiting only for implementation; D11–D12 Deferred |

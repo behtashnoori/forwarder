@@ -271,10 +271,12 @@ def _add_checkpoint(plan: RoutePlan, payload: dict, user: dict) -> OperationalCh
         projected_arrival_at=arrival, projected_departure_at=departure,
         responsible_party=payload.get("responsible_party"), notes=payload.get("notes"), created_by_user_id=user["id"])
     db.session.add(row); db.session.flush()
+    shipment = db.session.get(OperationalShipment, plan.operational_shipment_id)
     for milestone_type, planned_field in CHECKPOINT_MILESTONES:
         planned = getattr(row, planned_field) or row.planned_arrival_at or row.planned_departure_at
         if planned:
             db.session.add(Milestone(
+                organization_id=shipment.organization_id, operational_shipment_id=shipment.id,
                 route_plan_id=plan.id, checkpoint_id=row.id, milestone_type=milestone_type,
                 planned_at=planned, projected_at=planned,
             ))
@@ -602,6 +604,7 @@ def replan(
                     checkpoint_update["planned_departure_at"], "planned_departure_at",
                 )
             db.session.add(Milestone(
+                organization_id=shipment.organization_id, operational_shipment_id=shipment.id,
                 route_plan_id=target.id, route_leg_id=leg_map.get(row.route_leg_id),
                 checkpoint_id=checkpoint_map.get(row.checkpoint_id),
                 source_milestone_id=row.id, milestone_type=row.milestone_type,
@@ -721,7 +724,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
         if blocked:
             raise base.OperationalError("CHECKPOINT_DEPENDENCY_BLOCKED", "A predecessor checkpoint is incomplete.", 409)
         checkpoint.status="departed"
-    event = MilestoneEvent(milestone_id=milestone.id, event_type="reported", occurred_at=occurred,
+    event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="reported", occurred_at=occurred,
         actor_user_id=user["id"], idempotency_key=f"{operation}:{key}", request_hash=request_hash)
     db.session.add(event)
     milestone.occurred_at=occurred; milestone.verification_state="reported"; milestone.projected_state="reported"; milestone.version += 1
@@ -764,7 +767,7 @@ def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_
     if report is None: raise base.OperationalError("INVALID_CHECKPOINT_TRANSITION", "No report is available to verify.", 409)
     if report.actor_user_id == user["id"]:
         raise base.OperationalError("REPORTER_CANNOT_VERIFY_OWN_EVENT", "Reporter and verifier must be different users.", 403)
-    event = MilestoneEvent(milestone_id=milestone.id, event_type="verified", occurred_at=report.occurred_at,
+    event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="verified", occurred_at=report.occurred_at,
         actor_user_id=user["id"], supersedes_event_id=report.id,
         idempotency_key=f"verify:{key}", request_hash=request_hash)
     db.session.add(event); milestone.verification_state="verified"; milestone.version += 1
@@ -803,7 +806,7 @@ def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone
     ).order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc()))
     if previous is None: raise base.OperationalError("INVALID_CHECKPOINT_TRANSITION", "No event exists to correct.", 409)
     occurred = base._parse_utc(payload.get("occurred_at"), "occurred_at")
-    event = MilestoneEvent(milestone_id=milestone.id, event_type="corrected", occurred_at=occurred,
+    event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="corrected", occurred_at=occurred,
         actor_user_id=user["id"], reason=reason, supersedes_event_id=previous.id,
         idempotency_key=f"correct:{key}", request_hash=request_hash)
     checkpoint = db.session.get(OperationalCheckpoint, checkpoint_id)

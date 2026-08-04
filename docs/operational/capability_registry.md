@@ -2,6 +2,8 @@
 
 ## Release 1.9.0 authorized mapping
 
+Implementation reconciliation: the bounded CAP-003/CAP-004 execution foundation is **Implemented — Not Published — Not Deployed**; Evidence and reporting maturity are unchanged.
+
 PDR-018 and ADR-029 add no capability ID or implemented maturity claim. The bounded slice maps to CAP-003 and CAP-004, with CAP-005, CAP-009, CAP-010, and CAP-013 dependencies. Initialization, lifecycle, reasons, and progress are **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Evidence is Deferred pending ADR-020; dashboard/reporting maturity is unchanged. Security Track is complete; the future Release 1.9.0 migration parent is `security_credential_remediation`.
 
 - Registry Version: 1.0

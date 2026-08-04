@@ -6,6 +6,7 @@
 - **Deployment:** Not Deployed; Production unchanged
 - **Migration:** Release 1.9.0 identifier unassigned; parent fixed as `security_credential_remediation`
 - **Outcome:** RELEASE 1.9.0 BOUNDED IMPLEMENTATION AUTHORIZED
+- **Implementation status:** Implemented — Not Published — Not Deployed; Evidence remains Deferred
 
 ## Accepted scope and exclusions
 

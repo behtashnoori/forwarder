@@ -168,8 +168,8 @@ def create_from_accepted_quote(payload: dict[str, Any], user: dict[str, Any], ke
     leg = RouteLeg(route_plan_id=plan.id, sequence_number=1, origin_location_id=origin.id, destination_location_id=destination.id, origin_snapshot=_location_snapshot(origin), destination_snapshot=_location_snapshot(destination), transport_mode=mode, planned_departure=departure, planned_arrival=arrival, status="planned")
     db.session.add(leg); db.session.flush()
     db.session.add_all([
-        Milestone(route_plan_id=plan.id, route_leg_id=leg.id, milestone_type="departure", planned_at=departure, projected_at=departure),
-        Milestone(route_plan_id=plan.id, route_leg_id=leg.id, milestone_type="arrival", planned_at=arrival, projected_at=arrival),
+        Milestone(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, route_plan_id=plan.id, route_leg_id=leg.id, milestone_type="departure", planned_at=departure, projected_at=departure),
+        Milestone(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, route_plan_id=plan.id, route_leg_id=leg.id, milestone_type="arrival", planned_at=arrival, projected_at=arrival),
     ])
     db.session.add(OperationalIdempotency(organization_id=org, operation="create_shipment", resource_type="accepted_quote", command_resource_id=quote.id, idempotency_key=key, request_hash=request_hash, result_resource_id=shipment.id))
     _audit(org, user["id"], "operational_shipment.created", "OperationalShipment", shipment.id)
@@ -235,7 +235,7 @@ def record_event(shipment_id: int, milestone_id: int, payload: dict, user: dict,
         if existing.request_hash != event_hash:
             raise OperationalError("IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD", "Idempotency key was reused with a different event payload.", 409)
         return existing
-    event = MilestoneEvent(milestone_id=milestone.id, event_type="reported", occurred_at=occurred, actor_user_id=user["id"], idempotency_key=key, request_hash=event_hash)
+    event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="reported", occurred_at=occurred, actor_user_id=user["id"], idempotency_key=key, request_hash=event_hash)
     db.session.add(event); milestone.occurred_at=occurred; milestone.projected_state="reported"; milestone.verification_state="reported"; milestone.version += 1
     _audit(shipment.organization_id, user["id"], "milestone.reported", "Milestone", milestone.id); _outbox(shipment.organization_id, "milestone.reported", "Milestone", milestone.id)
     db.session.commit(); return event
@@ -248,7 +248,7 @@ def verify_milestone(shipment_id: int, milestone_id: int, expected_version: int,
     latest_report = db.session.scalar(select(MilestoneEvent).where(MilestoneEvent.milestone_id == milestone.id, MilestoneEvent.event_type.in_(["reported", "corrected"])).order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc()))
     if latest_report and latest_report.actor_user_id == user["id"]:
         raise OperationalError("FORBIDDEN_OPERATION", "The reporting actor cannot verify the same milestone event.", 403)
-    event = MilestoneEvent(milestone_id=milestone.id, event_type="verified", occurred_at=milestone.occurred_at, actor_user_id=user["id"], idempotency_key=f"verify:{milestone.id}:{expected_version}", request_hash=_hash({"expected_version": expected_version, "event_type": "verified"}))
+    event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="verified", occurred_at=milestone.occurred_at, actor_user_id=user["id"], idempotency_key=f"verify:{milestone.id}:{expected_version}", request_hash=_hash({"expected_version": expected_version, "event_type": "verified"}))
     db.session.add(event); milestone.verification_state="verified"; milestone.projected_state="verified"; milestone.version += 1
     for item in db.session.scalars(select(OperationalWorkItem).where(OperationalWorkItem.milestone_id == milestone.id, OperationalWorkItem.status == "open")).all():
         item.status="resolved"; item.resolved_at=utcnow(); item.resolved_by_user_id=user["id"]; item.version += 1
@@ -272,7 +272,7 @@ def correct_milestone(shipment_id: int, milestone_id: int, payload: dict, user: 
     if milestone.version != expected: raise OperationalError("STALE_AGGREGATE_VERSION", "Milestone was changed by another operation.", 409)
     previous = db.session.scalar(select(MilestoneEvent).where(MilestoneEvent.milestone_id == milestone.id).order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc()))
     if previous is None: raise OperationalError("INVALID_MILESTONE_TRANSITION", "There is no event to correct.", 409)
-    event = MilestoneEvent(milestone_id=milestone.id, event_type="corrected", occurred_at=occurred, actor_user_id=user["id"], reason=reason, supersedes_event_id=previous.id, idempotency_key=key, request_hash=event_hash)
+    event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="corrected", occurred_at=occurred, actor_user_id=user["id"], reason=reason, supersedes_event_id=previous.id, idempotency_key=key, request_hash=event_hash)
     db.session.add(event); milestone.occurred_at=occurred; milestone.verification_state="reported"; milestone.projected_state="reported"; milestone.version += 1
     _audit(shipment.organization_id, user["id"], "milestone.corrected", "Milestone", milestone.id, {"reason": reason}); _outbox(shipment.organization_id, "milestone.corrected", "Milestone", milestone.id)
     db.session.commit(); return event

@@ -4,6 +4,7 @@
 - **Date:** 2026-08-04
 - **Candidate:** Release 1.9.0
 - **Implementation authority:** YES — bounded Release 1.9.0 scope
+- **Implementation status:** Implemented — Not Published — Not Deployed
 
 ## Context
 
