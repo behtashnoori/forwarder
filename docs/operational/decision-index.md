@@ -8,8 +8,9 @@
 | ADR-029 | [Operational Milestone and Event History Boundaries](adr/ADR-029-operational-milestone-event-boundaries.md) | Accepted | Operational Execution | 2026-08-04 | Bounded YES |
 | R19 | [Operational Execution Slice Contract](release-1.9.0-operational-execution-slice-contract.md) | Authorized for bounded implementation | Operational Execution | 2026-08-04 | Bounded YES |
 | R19-GC | [Operational Execution Governance Closure](release-1.9.0-operational-execution-governance-closure.md) | Accepted | Operational Execution | 2026-08-04 | Bounded YES |
+| SEC-HEAD | [Security Track Completion](../security/forwarder_security_track_completion_20260804.md) | Complete; accepted parent `security_credential_remediation` | Security / Migration | 2026-08-04 | YES |
 
-State is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Evidence is Deferred pending ADR-020; Migration Identifier is Pending Security Track. PDR-017 terminology remains authoritative.
+State is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Evidence is Deferred pending ADR-020. Security Track is complete; the Release 1.9.0 migration identifier remains unassigned until implementation, and its parent is fixed as `security_credential_remediation`. PDR-017 terminology remains authoritative.
 
 - **Status:** Living index; source documents remain authoritative
 - **Date:** 2026-08-02

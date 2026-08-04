@@ -85,10 +85,10 @@ cd ..
 ## 🌱 مرحله 4: Seed داده‌های اولیه (اختیاری)
 
 ```bash
-cd backend
-python seed_experts.py
-cd ..
+python manage.py create-admin
 ```
+
+The command prompts securely for an operator-selected password. Shared sample users and executable default credentials are not created. Additional users must be created individually through the authorized administration flow.
 
 ## 🖥️ مرحله 5: اجرای Backend
 

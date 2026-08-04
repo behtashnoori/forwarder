@@ -11,7 +11,7 @@ flowchart LR
   DA["Existing document artifact"] -. "Evidence deferred pending ADR-020" .-> OM
 ```
 
-This boundary is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Initialization is explicit/manual; Delay does not replace status; Checkpoint is not Milestone. Evidence linkage is Deferred pending ADR-020; any later link cannot duplicate files. Migration Identifier is Pending Security Track.
+This boundary is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Initialization is explicit/manual; Delay does not replace status; Checkpoint is not Milestone. Evidence linkage is Deferred pending ADR-020; any later link cannot duplicate files. Security Track is complete; the future Release 1.9.0 migration parent is `security_credential_remediation`.
 
 - **Status:** Living Architecture View
 - **Architecture version:** DA-1.0

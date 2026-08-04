@@ -4,7 +4,7 @@
 - **Date:** 2026-08-04
 - **Implementation authority:** YES — bounded scope; Not Implemented; Evidence deferred
 - **Deployment:** Not Deployed
-- **Migration:** Identifier Pending Security Track
+- **Migration:** Release 1.9.0 identifier unassigned; parent `security_credential_remediation`
 
 Production relevance means relevance to the last repository-verified Production baseline (1.6.1); it does not claim live inspection.
 

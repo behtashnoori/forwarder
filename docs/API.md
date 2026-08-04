@@ -62,7 +62,7 @@ Authenticate expert user.
 ```json
 {
   "username": "expert",
-  "password": "expert123"
+  "password": "<operator-supplied-password>"
 }
 ```
 
@@ -376,7 +376,7 @@ Cross-Origin Resource Sharing is configured for:
 ```bash
 curl -X POST http://localhost:5000/api/expert/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username": "expert", "password": "expert123"}'
+  -d '{"username": "<operator-supplied-username>", "password": "<operator-supplied-password>"}'
 ```
 
 #### Get Customers (with authentication)
@@ -411,7 +411,7 @@ const loginResponse = await fetch('/api/expert/auth/login', {
   },
   body: JSON.stringify({
     username: 'expert',
-    password: 'expert123'
+    password: operatorSuppliedPassword
   })
 });
 
@@ -435,7 +435,7 @@ import axios from 'axios';
 // Login
 const loginResponse = await axios.post('/api/expert/auth/login', {
   username: 'expert',
-  password: 'expert123'
+  password: operatorSuppliedPassword
 });
 
 const token = loginResponse.data.tokens.access_token;

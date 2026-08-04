@@ -1,5 +1,9 @@
 # Release Notes
 
+## Security Track closure — 2026-08-04
+
+Credential remediation is complete in source and not deployed. Historical migration `20240926_add_password_to_expert_user` remains immutable; additive head `security_credential_remediation` disables only accounts retaining its known shared hash while preserving rows, IDs, relationships, and hashes. Shared credential seeds and unsafe helper paths were retired in favor of interactive `python manage.py create-admin`. Release 1.9.0 now waits only for bounded implementation and must use `security_credential_remediation` as its migration parent. No Release 1.9.0 migration, Seed, package, publication, deployment, or Production change occurred.
+
 ## Architecture policy — Administrator-Managed Reference Data
 
 ADR-028 permanently separates deployment from Reference Data population. Installation and release validation cover application, schema, and migrations only. LogisticsPointType, MilestoneType, ServiceType, DocumentDefinition, CargoType, UnitOfMeasure, Cargo Catalog, and equivalent governed lookups are created and maintained by authorized administrators through Admin UI. Empty catalogs are valid. Seed/import/export/catalog-apply commands remain optional migration utilities and no release may depend on them.

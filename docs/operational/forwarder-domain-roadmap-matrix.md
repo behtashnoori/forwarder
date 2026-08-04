@@ -4,11 +4,11 @@
 
 | Slice | State | Dependencies | Next gate |
 | --- | --- | --- | --- |
-| Operational Execution Foundation | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed | Existing milestone/event stack; future accepted Security Track Alembic head | Begin bounded design without a migration file |
+| Operational Execution Foundation | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed | Existing milestone/event stack; Security Track complete at `security_credential_remediation` | Begin bounded implementation; first migration must use the accepted parent |
 | DelayReason / ExceptionReason | Authorized — Not Implemented; administrator-managed; no Seed rows | ADR-028 administration policy | Implement only within bounded execution slice |
 | Evidence link | Deferred — Not Implemented | ADR-020 must be Accepted with safe authorization boundary | Separate later governance gate |
 
-Dashboards and reporting remain Deferred/Not Started. Migration Identifier is Pending Security Track.
+Dashboards and reporting remain Deferred/Not Started. The Release 1.9.0 migration identifier is unassigned; its parent is fixed as `security_credential_remediation`. Security remediation is no longer a blocker.
 
 - **Status:** Accepted supporting governance artifact
 - **Architecture baseline:** DA-1.0

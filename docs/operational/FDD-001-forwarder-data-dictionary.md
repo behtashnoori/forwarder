@@ -2,7 +2,7 @@
 
 ## Release 1.9.0 authorized vocabulary reconciliation
 
-PDR-018 is Partially Accepted and ADR-029 is Accepted: **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. `ProjectMilestoneDefinition` remains configuration; the existing operational `Milestone` is the authorized shipment execution instance. Lifecycle, verification, and Shipment status are distinct; Delay is an independent condition; correction appends rather than deletes; timeline differs from audit. `DelayReason` and `ExceptionReason` are separate administrator-managed catalogs with no Seed or deployed rows. Evidence linkage is Deferred because ADR-020 remains Proposed; progress is calculated, not stored. Migration Identifier is Pending Security Track.
+PDR-018 is Partially Accepted and ADR-029 is Accepted: **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. `ProjectMilestoneDefinition` remains configuration; the existing operational `Milestone` is the authorized shipment execution instance. Lifecycle, verification, and Shipment status are distinct; Delay is an independent condition; correction appends rather than deletes; timeline differs from audit. `DelayReason` and `ExceptionReason` are separate administrator-managed catalogs with no Seed or deployed rows. Evidence linkage is Deferred because ADR-020 remains Proposed; progress is calculated, not stored. Security Track is complete; the future Release 1.9.0 migration parent is `security_credential_remediation`.
 
 - **Status:** Living Document
 - **Architecture version:** DA-1.0

@@ -106,7 +106,7 @@ Documentation checks cover strict UTF-8 decoding, heading/table structure, local
 
 ## 10. Governance closure note — 2026-08-04
 
-Discovery is complete and superseded for authority by the [Release 1.9.0 Governance Closure](release-1.9.0-operational-execution-governance-closure.md). PDR-018 is Partially Accepted, ADR-029 is Accepted, D01–D10 and D13–D21 are Accepted, and D11–D12 are Deferred because ADR-020 remains Proposed. State is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed — Migration Identifier Pending Security Track**. Dashboard/reporting exclusions and administrator-managed, zero-Seed Reference Data remain unchanged. The historical Proposed statements above describe the discovery state and do not override the closure.
+Discovery is complete and superseded for authority by the [Release 1.9.0 Governance Closure](release-1.9.0-operational-execution-governance-closure.md). PDR-018 is Partially Accepted, ADR-029 is Accepted, D01–D10 and D13–D21 are Accepted, and D11–D12 are Deferred because ADR-020 remains Proposed. State is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Security Track is complete and fixes `security_credential_remediation` as the future migration parent. Dashboard/reporting exclusions and administrator-managed, zero-Seed Reference Data remain unchanged. The historical Proposed statements above describe the discovery state and do not override the closure.
 
 ## 11. Historical discovery outcome and next steps
 

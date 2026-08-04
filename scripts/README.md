@@ -1,5 +1,9 @@
 # Scripts Catalog
 
+## Credential security closure
+
+Scripts that embedded shared login credentials, directly created users, mutated passwords, or probed live hashes were removed on 2026-08-04. `setup-users.sh` and `setup-users.bat` now invoke only the interactive `python manage.py create-admin` path. Names listed later in this historical catalog may refer to retired files and are not current execution guidance. Do not restore removed helpers or add runtime credential defaults.
+
 این پوشه شامل اسکریپت‌های عملیاتی و تستی پروژه است. برای کاهش پراکندگی، اسکریپت‌ها فعلاً با این دسته‌بندی منطقی مدیریت می‌شوند (تا در ریفکتور بعدی فیزیکی هم جدا شوند):
 
 ## 1) Diagnostics

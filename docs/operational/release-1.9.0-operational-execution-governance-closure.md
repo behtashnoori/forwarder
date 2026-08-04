@@ -4,7 +4,7 @@
 - **Governance:** Accepted
 - **Implementation:** Authorized for bounded scope; Not Implemented
 - **Deployment:** Not Deployed; Production unchanged
-- **Migration:** Identifier Pending Security Track
+- **Migration:** Release 1.9.0 identifier unassigned; parent fixed as `security_credential_remediation`
 - **Outcome:** RELEASE 1.9.0 BOUNDED IMPLEMENTATION AUTHORIZED
 
 ## Accepted scope and exclusions
@@ -36,7 +36,7 @@ Evidence linkage is excluded from implementation because ADR-020 remains Propose
 | D17 | Accepted — bounded codes through existing permission architecture |
 | D18 | Accepted — organization-first lookup, opaque IDs, foreign-tenant 404 |
 | D19 | Accepted — no automatic backfill; explicit opt-in for eligible existing Shipments |
-| D20 | Accepted — migration identifier pending the accepted Security Track head |
+| D20 | Accepted — Security Track complete; future migration parent fixed as `security_credential_remediation` |
 | D21 | Accepted — bounded implementation authority only |
 
 ## Aggregate, initialization, and lifecycle policy
@@ -63,7 +63,7 @@ Internal APIs may provide initialization preview/confirm, milestone list/detail/
 
 ## Migration, rollout, and rollback
 
-No migration number is reserved. The Security Track establishes the next accepted Alembic head first; a later Release 1.9.0 migration must use that head as parent, and only one head is permitted. Work that needs no migration file may begin. Migration creation, data population, and a competing head remain blocked.
+No Release 1.9.0 migration number is reserved. The Security Track is complete and its accepted head is `security_credential_remediation`; a later Release 1.9.0 migration must use that exact parent, and only one head is permitted. Data population and a competing head remain blocked. Release 1.9.0 is waiting only for implementation.
 
 Rollout is additive, internal, opt-in, and cohort-controlled after implementation verification. Existing Shipments are not automatically backfilled. Administrators create governed reason values through the authorized Reference Data path. Rollback disables new commands, routes, and UI while retaining append-only facts and audit, preserving configuration, and leaving Shipment status and existing APIs unchanged. Production is unchanged by this closure.
 

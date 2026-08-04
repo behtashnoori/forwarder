@@ -4,7 +4,7 @@
 
 | Release | Theme | Migration | State |
 | --- | --- | --- | --- |
-| 1.9.0 | Operational Execution Foundation | Identifier Pending Security Track; not created/reserved | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed; D11–D12 Deferred |
+| 1.9.0 | Operational Execution Foundation | Not created/reserved; exact parent `security_credential_remediation` | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed; waiting only for implementation; D11–D12 Deferred |
 
 No dashboard, reporting, Seed, backfill, or Production action is included.
 
