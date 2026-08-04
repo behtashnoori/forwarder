@@ -1,5 +1,9 @@
 # Release Notes
 
+## Architecture policy — Administrator-Managed Reference Data
+
+ADR-028 permanently separates deployment from Reference Data population. Installation and release validation cover application, schema, and migrations only. LogisticsPointType, MilestoneType, ServiceType, DocumentDefinition, CargoType, UnitOfMeasure, Cargo Catalog, and equivalent governed lookups are created and maintained by authorized administrators through Admin UI. Empty catalogs are valid. Seed/import/export/catalog-apply commands remain optional migration utilities and no release may depend on them.
+
 ## 1.8.0 — Project Configuration Foundation
 
 Status: **Implemented — Not Deployed**. This minor release adds opaque

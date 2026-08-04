@@ -51,3 +51,6 @@ This matrix is a navigation and sequencing aid. “Deployed” is used only wher
 | ProjectMilestoneDefinition / target | Layer 3 | Implementation Authorized | D07–D09 and ADR-027 Accepted | Implemented — Not Deployed | MilestoneType; optional ProjectLogisticsPoint | Release-publication authorization | 1.8.0 |
 
 The bounded Release 1.8.0 implementation is complete but not published or deployed. The MilestoneType catalog is prepared but not applied; Production and Seed remain unchanged. These entries do not authorize deployment, Seed apply, packaging, or tagging.
+## Permanent Reference Data release rule
+
+ADR-028 removes Reference Data population from every release dependency and roadmap gate. A release needs passing application and applicable migration evidence; it never waits for a Seed or catalog apply. Administrators create the first and later Reference Data records through Admin UI. Optional imports may support environment migration but do not change capability maturity or deployment readiness.

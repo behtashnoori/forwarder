@@ -337,3 +337,8 @@ The following entries are **Implemented — Not Deployed** for the bounded Relea
 - **Class/owners/scope:** Reference Data; Product/Data/Operations; immutable code, bilingual labels, definition, display order, active lifecycle.
 - **Relationships/exclusions:** selected by ProjectMilestoneDefinition; not the existing operational Milestone row or its execution-specific string constraint.
 - **Governance/reporting:** versioned/checksummed catalog; no migration Seed rows and no Production apply without separate authority.
+## Permanent data-class administration policy
+
+ADR-028 classifies LogisticsPointType, MilestoneType, ServiceType, DocumentDefinition, CargoType, UnitOfMeasure, Cargo Catalog, and equivalent governed lookups as administrator-managed Reference Data. They use immutable business codes, duplicate protection, activation/deactivation rather than hard delete, audit, and applicable organization rules. Empty catalogs are valid and no deployment or release validation depends on population.
+
+System Data—roles, permissions, feature flags, internal configuration, framework metadata, and indispensable bootstrap objects—is separate and may be installer-generated. Master Data—Project, Customer, LogisticsPoint, Carrier, Vehicle, Driver, Organization—is user-created during normal operation. Operational Data—Shipment, RoutePlan, Quote, Operational Milestone, Operational Event, Invoice, Evidence—is created only through business execution. Seed/import/export/catalog-apply tools are optional migration utilities.

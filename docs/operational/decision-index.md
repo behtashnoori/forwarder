@@ -82,6 +82,8 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | R18-C | Project Configuration Governance Closure | Accepted / Implemented — Not Deployed | Project Configuration | 2026-08-03 | 1.8.0 | Closure and explicit implementation authority | [Closure](release-1.8.0-project-configuration-governance-closure.md) | — | DocumentDefinition reused; MilestoneType catalog prepared, not applied |
 | R18-A1 | DocumentDefinition Identity Amendment | Accepted / Implemented — Not Deployed | Project Configuration/Documents | 2026-08-03 | 1.8.0 | Opaque DocumentDefinition identity, technical backfill, migration amendment | [Identity Amendment](release-1.8.0-document-definition-identity-amendment.md) | — | Legacy numeric APIs temporarily tolerated; no new numeric disclosure |
 
+| ADR-028 | Administrator-Managed Reference Data | Accepted | Platform/Reference Data | 2026-08-04 | Permanent policy | Deployment-independent administrator ownership, empty catalogs, optional import/export/Seed | [ADR-028](adr/ADR-028-administrator-managed-reference-data.md) | Supersedes deployment-dependent interpretations of PDR-014/ADR-021 | No release depends on population |
+
 ## Slice contracts
 
 | ID | Title | Status | Domain | Decision date | Implementation release | Governing scope | Authoritative file | Supersession | Notes |

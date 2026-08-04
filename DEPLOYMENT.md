@@ -21,4 +21,4 @@ This operator runbook does not authorize deployment. The authoritative repositor
 17. Run the authenticated smoke test.
 18. Record backup, migration, task, IIS, asset, smoke, operator, and timestamp evidence.
 
-The MilestoneType catalog must not run automatically. `plan` must precede any `apply`; Production apply requires separate explicit authorization and checksum confirmation. Basic health must not depend on catalog application. Never place plaintext credentials in deployment evidence.
+Reference Data population is not a deployment step. Authorized administrators create MilestoneType and all other Reference Data through Admin UI after deployment as business needs arise. Optional `plan`/`apply` tooling may support a separately governed import, but basic health and release acceptance never depend on it. Never place plaintext credentials in deployment evidence.

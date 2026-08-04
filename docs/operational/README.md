@@ -16,6 +16,7 @@ This handbook links authoritative documents in place. It does not replace or cha
 
 - [AP-001 — Architecture Principles](AP-001-forwarder-architecture-principles.md)
 - [Architecture Baseline](architecture_baseline_v1.md)
+- [ADR-028 — Administrator-Managed Reference Data](adr/ADR-028-administrator-managed-reference-data.md)
 - [AI Engineering Rules](../../../28-AI-Rules/01-AI-Engineering-Standard.md)
 
 ## 3. Domain and Data

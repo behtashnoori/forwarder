@@ -181,7 +181,7 @@ The B1 schema had no suitable global seed-execution audit record, and `Operation
 - **Admin UI:** No change made. Current UI shows active/inactive but cannot label system versus manual provenance.
 - **Backward compatibility:** Legacy cargo fields and all TransportMethod behavior remain unchanged. No conversion, classification, or backfill occurs.
 - **Version:** The accepted initial catalog plus explicit CLI is a backward-compatible MINOR, 1.5.0.
-- **Deployment:** Release 1.5.0 requires the backend package and additive database migration; catalog apply remains a separate explicit post-deploy operation. No automatic seed is authorized. Release 1.4.0 remains untouched.
+- **Deployment:** Release 1.5.0 requires only the application and additive database migration. Catalog apply is optional migration tooling, not a post-deploy requirement; administrators may create all Reference Data through Admin UI. No automatic Seed is authorized. Release 1.4.0 remains untouched (current policy: ADR-028).
 
 ## 8. Completion gates
 

@@ -1,5 +1,7 @@
 # ADR-021: Master Data Governance and Explicit Domain Tables
 
+> **Current policy clarification (ADR-028):** Explicit Reference Data tables are administrator-managed. `ReferenceDataSeedRun` records optional tool execution only; it is not a deployment ledger or prerequisite, and an empty catalog is valid.
+
 - **Status:** Accepted
 - **Date:** 2026-08-01
 - **Accepted:** 2026-08-01

@@ -1,5 +1,7 @@
 # PDR-014 — Initial Reference Data Catalog
 
+> **Current policy (ADR-028):** This historical catalog/tooling decision does not make population installation or deployment work. Reference Data is created through Admin UI; Seed/apply remains optional migration tooling and no release depends on it.
+
 - **Status:** Accepted for Release 1.5.0
 - **Date:** 2026-08-01
 - **Accepted:** 2026-08-01 by Product, Data, Architecture, Operations, and Security

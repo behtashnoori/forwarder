@@ -27,3 +27,6 @@ DA-1.0 is the architecture knowledge baseline accompanying the transition from g
 | 1.8.0 | Project Configuration Foundation | ProjectService, DocumentDefinition-backed requirements, MilestoneType-backed definitions, elapsed targets; reuse ProjectLogisticsPoint | `20260811_project_configuration` implemented, not applied to Production | Implementation Complete — Not Published — Not Deployed | PDR-017 Accepted, ADR-027 Accepted, D01–D15 Accepted; PostgreSQL 18 disposable migration evidence passed |
 
 This implementation closure does not change Production: 1.6.1 remains the last verified deployed version recorded by this governance baseline, 1.7.0 deployment remains pending, and Production Seed remains unexecuted. The 1.8.0 MilestoneType catalog is prepared but not applied.
+## Permanent installation boundary
+
+From ADR-028 onward, all releases install application, schema, and migrations only. Reference Data population is administrator work outside release validation. Historical Seed/catalog artifacts remain optional utilities and do not represent required evolution steps.

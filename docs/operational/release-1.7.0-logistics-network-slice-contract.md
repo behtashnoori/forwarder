@@ -229,7 +229,7 @@ The display label is presentation-only, cannot substitute for point selection, a
 - Parent: `20260809_cargo_catalog_items`.
 - One Alembic head before and after upgrade.
 - Add only `logistics_point_type`, `logistics_point`, `project_logistics_point`, their indexes, FKs, check/unique constraints, and no unrelated changes.
-- Insert zero LogisticsPointType or LogisticsPoint rows. Initial accepted type values require a separate versioned/checksummed governed Reference Data catalog and explicit seed authorization; until then an authorized admin may enter types after deployment only if governance explicitly chooses that option.
+- Insert zero LogisticsPointType or LogisticsPoint rows. An authorized administrator creates the first and later type records through Admin UI. A versioned/checksummed catalog is optional import tooling and is never a release or deployment prerequisite (ADR-028).
 - Perform no legacy backfill or conversion and preserve Country, Province, City, CanonicalLocation, Project, OperationalShipment, RoutePlan, Checkpoint, Milestone, and OperationalEvent data unchanged.
 - Fresh-chain upgrade, Production-like PostgreSQL upgrade, downgrade/re-upgrade, constraint parity, and single-head checks are required before release.
 - Downgrade drops only the three new tables in dependency order after explicit authorization. Operational rollback retains additive tables by default.

@@ -21,7 +21,7 @@
 - Existing Project Logistics Network continues to work.
 - Numeric `DocumentDefinition` IDs are absent from new API/UI payloads.
 
-## Catalog and version
+## Reference Data administration and version
 
-- Record whether the MilestoneType catalog remains prepared or was separately authorized and applied; basic health must pass while it is not applied.
+- With an empty governed catalog, verify the administration page remains usable and an authorized administrator can create the first Reference Data record. Do not run or prompt for Seed/catalog apply; basic health must pass with zero records.
 - Verify actual JS/CSS filenames. Version 1.8.0 is embedded in the build but is not visibly rendered in the UI.

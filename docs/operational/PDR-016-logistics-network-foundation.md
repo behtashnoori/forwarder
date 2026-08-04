@@ -124,7 +124,7 @@ Evidence common to D01–D10: current free-text/geographic and Project/route mod
 - **UX/Reporting:** filtered bilingual selection and stable type dimensions.
 - **Migration/Security:** additive table, no inferred types; admin-only mutation and permitted reads.
 - **Approvers:** Product, Data, Operations, Architecture, Security consultation.
-- **Fail-safe:** seed only the accepted catalog through separately authorized seed governance; reject unknown type codes.
+- **Fail-safe:** reject unknown type codes. Authorized administrators create and manage LogisticsPointType records through Admin UI; optional import/Seed tooling is not a deployment requirement (ADR-028).
 - **Status:** Accepted.
 
 ### D02 — LogisticsPoint master identity and ownership

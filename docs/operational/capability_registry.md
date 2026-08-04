@@ -47,3 +47,6 @@ DA-1.0 business definitions and relationships are indexed in [FDD-001](FDD-001-f
 ## Accepted Release 1.8.0 mapping
 
 PDR-017, ADR-027, and the Release 1.8.0 Slice Contract add no capability ID and change no registry maturity status. ProjectService, ProjectDocumentRequirement, and ProjectMilestoneDefinition map primarily to CAP-001, with CAP-013, CAP-005, CAP-003, and CAP-010 as dependencies. All are **Implemented — Not Deployed**; Release 1.8.0 is not published, Production is unchanged, and Seed was not executed. Defaults, snapshots, external visibility, enforcement, reporting, and automation remain deferred or absent as specified by the Slice.
+## Permanent Reference Data administration policy
+
+ADR-028 does not add a capability ID or change maturity status. It makes all governed Reference Data administrator-managed and removes catalog population from installation, deployment, release validation, and basic smoke tests. Existing Admin CRUD/lifecycle capabilities remain the authoritative population path; optional import/export/Seed tools are utilities only.

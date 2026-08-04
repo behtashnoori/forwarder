@@ -16,6 +16,8 @@ flowchart LR
 
 Layers are maturity stages, not unconditional release order. Analytics and optimization remain deferred until facts and governance are mature.
 
+Reference Data is administrator-managed and may be empty after installation. It includes LogisticsPointType, MilestoneType, ServiceType, DocumentDefinition, CargoType, UnitOfMeasure, Cargo Catalog, and equivalent governed lookups. System Data (roles, permissions, feature flags, internal/framework configuration) is a separate installer/bootstrap concern. Master Data (Project, Customer, LogisticsPoint, Carrier, Vehicle, Driver, Organization) is created through normal user administration. Operational Data (Shipment, RoutePlan, Quote, Operational Milestone, Operational Event, Invoice, Evidence) is created only by business execution. See ADR-028.
+
 ## 2. Core business flow
 
 ```mermaid
