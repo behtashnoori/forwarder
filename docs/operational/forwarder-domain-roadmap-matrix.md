@@ -1,5 +1,15 @@
 # Forwarder Domain Roadmap Matrix
 
+## Release 1.9.0 authorized slice
+
+| Slice | State | Dependencies | Next gate |
+| --- | --- | --- | --- |
+| Operational Execution Foundation | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed | Existing milestone/event stack; future accepted Security Track Alembic head | Begin bounded design without a migration file |
+| DelayReason / ExceptionReason | Authorized — Not Implemented; administrator-managed; no Seed rows | ADR-028 administration policy | Implement only within bounded execution slice |
+| Evidence link | Deferred — Not Implemented | ADR-020 must be Accepted with safe authorization boundary | Separate later governance gate |
+
+Dashboards and reporting remain Deferred/Not Started. Migration Identifier is Pending Security Track.
+
 - **Status:** Accepted supporting governance artifact
 - **Architecture baseline:** DA-1.0
 - **Date:** 2026-08-02

@@ -1,5 +1,9 @@
 # PDR-017 — Canonical Operational Taxonomy
 
+## Release 1.9.0 terminology application
+
+PDR-018 (Partially Accepted) and ADR-029 (Accepted) use this accepted taxonomy as their authority. Their lifecycle, Delay/Exception distinction, and manual initialization policy do not amend PDR-017. Evidence linkage remains Deferred pending ADR-020. Any terminology change requires an explicit amendment and must not be inferred from implementation.
+
 - **Status:** Accepted
 - **Date:** 2026-08-03
 - **Decision scope:** Vocabulary and conceptual boundaries only

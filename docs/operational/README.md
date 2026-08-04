@@ -1,5 +1,14 @@
 # Forwarder Architecture Handbook
 
+## Accepted Release 1.9.0 governance
+
+- [PDR-018 — Operational Execution Foundation](PDR-018-operational-execution-foundation.md)
+- [ADR-029 — Operational Milestone and Event History Boundaries](adr/ADR-029-operational-milestone-event-boundaries.md)
+- [Release 1.9.0 Operational Execution Slice Contract](release-1.9.0-operational-execution-slice-contract.md)
+- [Release 1.9.0 Governance Closure](release-1.9.0-operational-execution-governance-closure.md)
+- [Operational Execution Discovery](discovery-operational-execution-foundation-20260804.md)
+- [Operational Execution Domain Matrix](operational-execution-domain-matrix.md)
+
 - **Status:** Living navigation index
 - **Domain Architecture:** DA-1.0
 - **Current verified Production:** 1.6.1 / `20260809_cargo_catalog_items`

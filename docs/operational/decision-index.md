@@ -1,5 +1,16 @@
 # Architecture and Governance Decision Index
 
+## Release 1.9.0 accepted records
+
+| ID | Title | Status | Domain | Date | Authority |
+| --- | --- | --- | --- | --- | --- |
+| PDR-018 | [Operational Execution Foundation](PDR-018-operational-execution-foundation.md) | Partially Accepted; D11–D12 Deferred | Operational Execution | 2026-08-04 | Bounded YES |
+| ADR-029 | [Operational Milestone and Event History Boundaries](adr/ADR-029-operational-milestone-event-boundaries.md) | Accepted | Operational Execution | 2026-08-04 | Bounded YES |
+| R19 | [Operational Execution Slice Contract](release-1.9.0-operational-execution-slice-contract.md) | Authorized for bounded implementation | Operational Execution | 2026-08-04 | Bounded YES |
+| R19-GC | [Operational Execution Governance Closure](release-1.9.0-operational-execution-governance-closure.md) | Accepted | Operational Execution | 2026-08-04 | Bounded YES |
+
+State is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Evidence is Deferred pending ADR-020; Migration Identifier is Pending Security Track. PDR-017 terminology remains authoritative.
+
 - **Status:** Living index; source documents remain authoritative
 - **Date:** 2026-08-02
 - **Architecture version:** DA-1.0

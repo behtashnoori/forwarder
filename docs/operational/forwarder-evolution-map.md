@@ -1,5 +1,13 @@
 # Forwarder Evolution Map
 
+## Release 1.9.0 governance closure
+
+| Release | Theme | Migration | State |
+| --- | --- | --- | --- |
+| 1.9.0 | Operational Execution Foundation | Identifier Pending Security Track; not created/reserved | Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed; D11–D12 Deferred |
+
+No dashboard, reporting, Seed, backfill, or Production action is included.
+
 - **Status:** Living evidence index
 - **Architecture version:** DA-1.0
 - **Date:** 2026-08-02

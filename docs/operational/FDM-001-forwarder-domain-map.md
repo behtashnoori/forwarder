@@ -1,5 +1,18 @@
 # FDM-001 — Forwarder Domain Map
 
+## Release 1.9.0 authorized boundary reconciliation
+
+```mermaid
+flowchart LR
+  PMD["ProjectMilestoneDefinition — configuration"] -->|"manual snapshot"| OM["Existing Operational Milestone — execution"]
+  OM --> ME["MilestoneEvent — specialized history"]
+  ME -. "defined projection" .-> OE["OperationalEvent — timeline envelope"]
+  RS["DelayReason / ExceptionReason"] --> ME
+  DA["Existing document artifact"] -. "Evidence deferred pending ADR-020" .-> OM
+```
+
+This boundary is **Governance Accepted — Implementation Authorized — Not Implemented — Not Deployed**. Initialization is explicit/manual; Delay does not replace status; Checkpoint is not Milestone. Evidence linkage is Deferred pending ADR-020; any later link cannot duplicate files. Migration Identifier is Pending Security Track.
+
 - **Status:** Living Architecture View
 - **Architecture version:** DA-1.0
 - **Date:** 2026-08-02
