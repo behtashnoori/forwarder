@@ -1,19 +1,24 @@
-# Forwarder 1.7.0 deployment preparation
+# Forwarder 1.8.0 deployment preparation
 
-This is an operator runbook only. Release publication did not contact or change Production.
+This operator runbook does not authorize deployment. The authoritative repository baseline is Production application 1.6.1 at database revision `20260809_cargo_catalog_items`; Release 1.7.0 is published but is not recorded as deployed.
 
-1. Copy `release-v1.7.0-20260803` to a new immutable server path.
-2. Run `powershell -ExecutionPolicy Bypass -File .\VERIFY-PACKAGE.ps1` and record the reproduced hash.
-3. Record the current IIS physical path and backend Scheduled Task configuration.
-4. Verify the database currently reports `20260809_cargo_catalog_items`.
-5. Take a PostgreSQL custom-format backup and record its SHA-256.
-6. Run the migration preflight and review its sanitized target.
-7. Apply the explicit migration to `20260810_logistics_network`; confirm `pending=no`.
-8. Switch the backend repository/runtime path to the 1.7.0 immutable directory.
-9. Ensure the Scheduled Task WorkingDirectory, `--repo`, and `PYTHONPATH` all reference that directory.
-10. Restart the backend cleanly and verify `/api/health` and an unauthenticated protected Logistics Network route (401, not 404).
-11. Switch IIS to the immutable 1.7.0 path.
-12. Verify the new JS/CSS assets, cache headers, normal refresh, authenticated admin/Project smoke tests, and tenant isolation.
-13. Record migration, task, IIS, asset, smoke, and timestamp evidence.
+1. Copy `release-v1.8.0-20260804` to a new immutable server directory.
+2. Run `powershell -ExecutionPolicy Bypass -File .\VERIFY-PACKAGE.ps1` and record its hash and result.
+3. Record the current IIS physical path.
+4. Record the current backend Scheduled Task action, WorkingDirectory, `--repo`, and `PYTHONPATH` behavior without exposing secrets.
+5. Verify the current database revision; the documented baseline is `20260809_cargo_catalog_items`.
+6. Take a PostgreSQL custom-format backup and record its SHA-256.
+7. Run the migration preflight and review the sanitized target and the complete two-revision path.
+8. Apply the explicit chain to `20260811_project_configuration` with the supported migration CLI.
+9. Confirm current/head `20260811_project_configuration` and `pending=no`.
+10. Update the backend release path to the immutable 1.8.0 directory.
+11. Ensure the Scheduled Task WorkingDirectory, `--repo`, and `PYTHONPATH` all point to the current release.
+12. Restart the backend cleanly.
+13. Verify `/api/health` returns 200 with the database connected.
+14. Verify an unauthenticated protected Project Configuration route returns 401, not 404.
+15. Switch the IIS physical path to the immutable 1.8.0 directory.
+16. Verify new JS/CSS assets, cache headers, normal refresh, and no stale asset reference.
+17. Run the authenticated smoke test.
+18. Record backup, migration, task, IIS, asset, smoke, operator, and timestamp evidence.
 
-Reference Data Seed must not run automatically. A Production catalog apply requires a separately authorized plan review, explicit confirmation, approved checksum, operator identity, and approval reference. Never place credentials in deployment evidence.
+The MilestoneType catalog must not run automatically. `plan` must precede any `apply`; Production apply requires separate explicit authorization and checksum confirmation. Basic health must not depend on catalog application. Never place plaintext credentials in deployment evidence.

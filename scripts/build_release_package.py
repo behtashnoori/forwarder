@@ -12,9 +12,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.7.0"
-TAG = "v1.7.0"
-RELEASE_DIR = ROOT / "release-v1.7.0-20260803"
+VERSION = "1.8.0"
+TAG = "v1.8.0"
+RELEASE_DIR = ROOT / "release-v1.8.0-20260804"
 
 
 def run(*args: str) -> str:
@@ -47,7 +47,7 @@ def main() -> None:
 
     root_files = [
         "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml",
-        "web.config", "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md",
+        "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md",
         "MIGRATION-PREFLIGHT.md", "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1",
     ]
     for name in root_files:
@@ -77,8 +77,8 @@ def main() -> None:
     )
     package_hash = hashlib.sha256(records.encode()).hexdigest()
     manifest = {
-        "application_version": VERSION, "previous_version": "1.6.1",
-        "release_name": "Logistics Network Foundation", "change_type": "MINOR",
+        "application_version": VERSION, "previous_version": "1.7.0",
+        "release_name": "Project Configuration Foundation", "change_type": "MINOR",
         "git_commit": commit, "git_tag": TAG,
         "build_timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "package_hash": package_hash,
@@ -88,17 +88,21 @@ def main() -> None:
         "frontend_entry_js_gzip_bytes": len(gzip.compress((RELEASE_DIR / js).read_bytes())),
         "frontend_entry_css_bytes": (RELEASE_DIR / css).stat().st_size,
         "frontend_entry_css_gzip_bytes": len(gzip.compress((RELEASE_DIR / css).read_bytes())),
-        "backend_revision": commit, "database_revision": "20260810_logistics_network",
-        "previous_database_revision": "20260809_cargo_catalog_items", "database_migration_included": True,
+        "backend_revision": commit, "database_revision": "20260811_project_configuration",
+        "previous_database_revision": "20260810_logistics_network", "database_migration_included": True,
         "deployment_type": "backend-frontend-migration", "api_base": "http://server.logisticmarket.ir",
         "environment_fingerprint": "sha256:" + hashlib.sha256(env_canonical).hexdigest(),
         "environment_fingerprint_definition": "SHA-256 of canonical secret-free JSON containing Python, Node, npm, package-lock SHA-256, and requirements SHA-256",
-        "rollback_release": "release-v1.6.1-20260802",
-        "reference_data_catalog_included": True, "reference_data_catalog_prepared_only": True,
+        "rollback_release": "release-v1.7.0-20260803",
+        "milestone_type_catalog_filename": "backend/reference_data/milestone-types-v1.0.0.json",
+        "milestone_type_catalog_version": "1.0.0",
+        "milestone_type_catalog_sha256": sha256(ROOT / "backend/reference_data/milestone-types-v1.0.0.json"),
+        "milestone_type_catalog_apply_status": "not applied",
         "production_seed_executed": False, "service_worker_included": False,
         "cache_policy": {"application_shell": "no-cache, no-store, must-revalidate", "pragma": "no-cache", "expires": "0", "hashed_assets": "public, max-age=31536000, immutable", "root_metadata": "public, max-age=0, must-revalidate", "api_headers_owned_by_backend": True},
         "build_warnings": ["Browserslist caniuse-lite data is 14 months old.", "The main JavaScript chunk exceeds Vite's 500 kB warning threshold."],
-        "known_limitations": ["Version 1.7.0 is embedded in the frontend build but is not visibly rendered in the UI.", "Application rollback retains additive 1.7.0 tables by default; database downgrade requires separate authorization and data-retention assessment."]
+        "ui_version_display_status": "not visibly rendered",
+        "known_limitations": ["Version 1.8.0 is embedded in the frontend build but is not visibly rendered in the UI.", "Application rollback normally retains the additive 1.8.0 schema; database downgrade requires separate authorization and data-retention assessment after Production use.", "MilestoneType catalog rollback or deactivation is separate governed work if it is later applied."]
     }
     (RELEASE_DIR / "release-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print(RELEASE_DIR)

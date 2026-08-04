@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = "Stop"
 & (Join-Path $ReleasePath "VERIFY-PACKAGE.ps1")
 $manifest = Get-Content -Raw -LiteralPath (Join-Path $ReleasePath "release-manifest.json") | ConvertFrom-Json
-if ($manifest.git_tag -ne "v1.7.0" -or $manifest.application_version -ne "1.7.0") { throw "Manifest identity mismatch" }
+if ($manifest.git_tag -ne "v1.8.0" -or $manifest.application_version -ne "1.8.0" -or $manifest.milestone_type_catalog_apply_status -ne "not applied") { throw "Manifest identity mismatch" }
 if ($SiteName) {
     Import-Module WebAdministration -ErrorAction Stop
     $physicalPath = (Get-Item "IIS:\Sites\$SiteName").physicalPath
@@ -25,8 +25,8 @@ if ($TaskName) {
 if (-not (Get-NetTCPConnection -State Listen -LocalPort $BackendPort -ErrorAction SilentlyContinue)) { throw "Backend listener missing on port $BackendPort" }
 $health = Invoke-WebRequest "$($BaseUrl.TrimEnd('/'))/api/health" -UseBasicParsing
 if ($health.StatusCode -ne 200) { throw "Health check failed" }
-$protectedStatus = try { (Invoke-WebRequest "$($BaseUrl.TrimEnd('/'))/api/logistics-point-types" -UseBasicParsing).StatusCode } catch { [int]$_.Exception.Response.StatusCode }
-if ($protectedStatus -ne 401 -and $protectedStatus -ne 403) { throw "Protected Logistics Network route returned $protectedStatus" }
+$protectedStatus = try { (Invoke-WebRequest "$($BaseUrl.TrimEnd('/'))/api/projects/00000000-0000-0000-0000-000000000000/configuration/services" -UseBasicParsing).StatusCode } catch { [int]$_.Exception.Response.StatusCode }
+if ($protectedStatus -ne 401) { throw "Protected Project Configuration route returned $protectedStatus" }
 $root = Invoke-WebRequest "$($BaseUrl.TrimEnd('/'))/" -UseBasicParsing
 $js = Invoke-WebRequest "$($BaseUrl.TrimEnd('/'))/$($manifest.frontend_entry_js)" -UseBasicParsing
 $css = Invoke-WebRequest "$($BaseUrl.TrimEnd('/'))/$($manifest.frontend_entry_css)" -UseBasicParsing
@@ -36,4 +36,4 @@ if ($DatabaseRevisionCommand) {
     $revision = & powershell -NoProfile -Command $DatabaseRevisionCommand
     if (($revision | Out-String) -notmatch [regex]::Escape($manifest.database_revision)) { throw "Database revision mismatch" }
 }
-Write-Output "server=PASS release=$($manifest.application_version) tag=$($manifest.git_tag) seed-auto-run=false"
+Write-Output "server=PASS release=$($manifest.application_version) tag=$($manifest.git_tag) catalog-auto-run=false"
