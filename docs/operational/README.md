@@ -1,5 +1,10 @@
 # Forwarder Architecture Handbook
 
+## MDPM-1 document readiness
+
+- [ADR-030 — MDPM Document Readiness Policy](adr/ADR-030-mdpm-document-readiness-policy.md)
+- [MDPM-1 Document Readiness Slice Contract](mdpm-1-document-readiness-slice-contract.md)
+
 ## Accepted Release 1.9.0 governance
 
 - [Security Track Completion — accepted Alembic parent](../security/forwarder_security_track_completion_20260804.md)
