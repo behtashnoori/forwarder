@@ -21,6 +21,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import OperationalShipments from "./pages/OperationalShipments";
 import OperationalShipmentDetail from "./pages/OperationalShipmentDetail";
 import OperationalWorkQueue from "./pages/OperationalWorkQueue";
+import OipSituationDetail from "./pages/OipSituationDetail";
 import AdminRoute from "./components/AdminRoute";
 import ErrorBoundary from "./components/ErrorBoundary";
 import AdminPanel from "./pages/AdminPanel";
@@ -137,6 +138,7 @@ const App = () => (
                 <Route path="/operations/shipments" element={<ProtectedRoute><OperationalShipments /></ProtectedRoute>} />
                 <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalShipmentDetail /></ProtectedRoute>} />
                 <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalWorkQueue /></ProtectedRoute>} />
+                <Route path="/operations/intelligence/:id" element={<ProtectedRoute><OipSituationDetail /></ProtectedRoute>} />
                 <Route path="/operations/projects/:projectId/units" element={<ProtectedRoute><ExecutionUnits /></ProtectedRoute>} />
                 <Route path="/customer/:customerId" element={
                   <ErrorBoundary>

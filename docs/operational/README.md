@@ -5,6 +5,12 @@
 - [ADR-030 — MDPM Document Readiness Policy](adr/ADR-030-mdpm-document-readiness-policy.md)
 - [MDPM-1 Document Readiness Slice Contract](mdpm-1-document-readiness-slice-contract.md)
 
+## OIP-2 deterministic attention
+
+- [OIP-2 Situation + Attention Queue Slice Contract](oip-2-slice-contract.md)
+- [ADR-031 — Deterministic Operational Intelligence attention](adr/ADR-031-oip-deterministic-attention.md)
+- [OIP-2 Candidate Evidence](assurance/oip-2/candidate-evidence.md)
+
 ## Accepted Release 1.9.0 governance
 
 - [Security Track Completion — accepted Alembic parent](../security/forwarder_security_track_completion_20260804.md)
