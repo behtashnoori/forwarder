@@ -23,6 +23,7 @@ from .master_data import master_data_bp
 from .cargo import cargo_bp
 from .logistics_network import logistics_network_bp
 from .project_configuration import project_configuration_bp
+from .document_readiness import document_readiness_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -51,3 +52,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(cargo_bp)
     app.register_blueprint(logistics_network_bp)
     app.register_blueprint(project_configuration_bp)
+    app.register_blueprint(document_readiness_bp)

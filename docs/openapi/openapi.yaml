@@ -11,6 +11,7 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Document Readiness
   - name: Operational Execution
   - name: Project Configuration
   - name: Logistics Network
@@ -2726,6 +2727,26 @@ paths:
           $ref: '#/components/responses/NotFound'
   /api/v2/operational-shipments/{shipment_id}/execution/initialization-preview:
     get: { tags: [Operational Execution], summary: Read-only initialization preview, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Preview including findings and confirmation_allowed. }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/materialization-preview:
+    get: { tags: [Document Readiness], summary: Read explicit materialization preview, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Configuration snapshot preview and findings. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/materialize:
+    post: { tags: [Document Readiness], summary: Confirm shipment requirement snapshot, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Existing snapshot. }, '201': { description: Requirements materialized. }, '409': { description: Stale shipment version. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/requirements:
+    get: { tags: [Document Readiness], summary: Read materialized requirements and current exact-version assessment, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Document requirements. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/requirements/{requirement_id}/artifacts:
+    post: { tags: [Document Readiness], summary: Explicitly associate an eligible existing artifact version, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: requirement_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Associated; prior association superseded. }, '409': { description: Stale requirement version. }, '422': { description: Ineligible or mismatched artifact. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/requirements/{requirement_id}/assessments:
+    post: { tags: [Document Readiness], summary: Append review approval rejection or verification fact, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: requirement_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '201': { description: Assessment appended to exact artifact association. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/requirements/{requirement_id}/applicability:
+    post: { tags: [Document Readiness], summary: Explicitly resolve conditional applicability, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: requirement_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '201': { description: Append-only decision recorded and projection updated. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/milestones/{milestone_id}/readiness:
+    get: { tags: [Document Readiness], summary: Evaluate deterministic transition readiness without durable read event, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: milestone_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: target_status, in: query, required: true, schema: { type: string } }], responses: { '200': { description: Structured readiness blockers warnings versions and overrides. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/next-action:
+    get: { tags: [Document Readiness], summary: Evaluate the deterministic next operational action, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Next action readiness or null when no next action exists. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/requirements/{requirement_id}/overrides:
+    post: { tags: [Document Readiness], summary: Grant exact transition single-use override, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: requirement_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '201': { description: Override granted with immutable audit. } } }
+  /api/v2/operational-shipments/{shipment_id}/document-readiness/overrides/{override_id}/revoke:
+    post: { tags: [Document Readiness], summary: Revoke an unused exact override, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: override_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Override revoked. }, '409': { description: Override already consumed revoked or expired. } } }
   /api/v2/operational-shipments/{shipment_id}/execution/initialize:
     post: { tags: [Operational Execution], summary: Explicit atomic idempotent initialization, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, required: [expected_shipment_version], properties: { expected_shipment_version: { type: integer, minimum: 1 } } } } } }, responses: { '200': { description: Safe existing state. }, '201': { description: Initialized. }, '409': { description: Optimistic or concurrent conflict. }, '422': { description: Ineligible configuration. } } }
   /api/v2/operational-shipments/{shipment_id}/execution/milestones:

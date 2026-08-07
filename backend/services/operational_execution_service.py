@@ -376,6 +376,19 @@ def transition(shipment_id, milestone_id, payload, user):
         raise OperationalError(
             "STRUCTURED_REASON_REQUIRED", "A reason is required.", 422
         )
+    # MDPM readiness is evaluated under the same transaction and locks as the
+    # authoritative milestone mutation. It remains a projection, never a status.
+    from backend.services import document_readiness_service as readiness_service
+    readiness = readiness_service.transition_readiness(shipment, m, target, user)
+    if not readiness["allowed"]:
+        readiness_service._audit(
+            shipment, user, "TransitionBlocked", None, m,
+            {"target_status": target, "blocking_requirements": readiness["blocking_requirements"]},
+        )
+        db.session.commit()
+        exc = OperationalError("TRANSITION_READINESS_BLOCKED", "Document readiness blocks this transition.", 409)
+        exc.fields = readiness
+        raise exc
     effective = (
         _parse_utc(payload.get("effective_at"), "effective_at")
         if payload.get("effective_at")
@@ -408,6 +421,18 @@ def transition(shipment_id, milestone_id, payload, user):
         "Milestone",
         m.id,
         {"from": previous, "to": target},
+    )
+    for override in readiness["_overrides"]:
+        override.state = "CONSUMED"
+        override.consumed_at = effective
+        readiness_service._audit(
+            shipment, user, "OverrideConsumed",
+            db.session.get(readiness_service.OperationalDocumentRequirement, override.requirement_id), m,
+            {"override_public_id": override.public_id, "target_status": target},
+        )
+    readiness_service._audit(
+        shipment, user, "TransitionAllowed", None, m,
+        {"target_status": target, "override_public_ids": [o.public_id for o in readiness["_overrides"]]},
     )
     db.session.commit()
     return milestone_projection(m)

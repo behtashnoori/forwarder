@@ -110,10 +110,16 @@ class ProjectDocumentRequirement(ConfigurationAuditMixin, db.Model):
         nullable=False,
     )
     requirement_level = db.Column(db.String(16), nullable=False)
+    required_assessment_level = db.Column(db.String(16), nullable=False, default="APPROVED")
+    target_milestone_type_id = db.Column(
+        BIGINT, db.ForeignKey("milestone_type.id", ondelete="RESTRICT"), nullable=True
+    )
+    target_status = db.Column(db.String(20), nullable=True)
     display_order = db.Column(db.Integer, nullable=False, default=0)
     conditional_description = db.Column(db.Text)
     notes = db.Column(db.Text)
     document_definition = db.relationship("DocumentDefinition")
+    target_milestone_type = db.relationship("MilestoneType")
 
 
 class ProjectMilestoneDefinition(ConfigurationAuditMixin, db.Model):

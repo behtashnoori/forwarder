@@ -241,7 +241,7 @@ def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, re
 def serialize_file(row: CaseDocumentFile) -> dict[str, Any]:
     return {
         "id": row.id, "requirement_id": row.case_requirement_id, "is_miscellaneous": row.is_miscellaneous,
-        "custom_title": row.custom_title, "description": row.description, "original_filename": row.original_filename,
+        "public_id": row.public_id, "custom_title": row.custom_title, "description": row.description, "original_filename": row.original_filename,
         "canonical_extension": row.canonical_extension, "detected_mime_type": row.detected_mime_type,
         "file_size_bytes": row.file_size_bytes, "sha256_hash": row.sha256_hash,
         "version_number": row.version_number, "status": row.status,

@@ -240,10 +240,27 @@ def create_document(owner, p, user):
         raise OperationalError(
             "VALIDATION_FAILED", "conditional_description is required for CONDITIONAL."
         )
+    assessment = str(p.get("required_assessment_level", "APPROVED")).upper()
+    if assessment not in {"APPROVED", "VERIFIED"}:
+        raise OperationalError("VALIDATION_FAILED", "required_assessment_level is invalid.")
+    target_type = None
+    target_status = str(p.get("target_status") or "").upper() or None
+    if p.get("target_milestone_type_public_id"):
+        target_type = db.session.scalar(select(MilestoneType).where(
+            MilestoneType.public_id == p["target_milestone_type_public_id"],
+            MilestoneType.is_active.is_(True),
+        ))
+        if not target_type:
+            raise OperationalError("NOT_FOUND", "Target MilestoneType not found.", 404)
+        if target_status not in {"READY", "IN_PROGRESS", "COMPLETED", "SKIPPED", "CANCELLED"}:
+            raise OperationalError("VALIDATION_FAILED", "target_status is invalid.")
     row = ProjectDocumentRequirement(
         project_id=owner.id,
         document_definition_id=ref.id,
         requirement_level=level,
+        required_assessment_level=assessment,
+        target_milestone_type_id=target_type.id if target_type else None,
+        target_status=target_status if target_type else None,
         display_order=max(0, int(p.get("display_order", 0))),
         conditional_description=conditional if level == "CONDITIONAL" else None,
         notes=_text(p, "notes", 4000),

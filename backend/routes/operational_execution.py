@@ -22,7 +22,7 @@ def user():
 def error(exc):
     db.session.rollback()
     return jsonify(
-        {"error": {"code": exc.code, "message": exc.message, "fields": []}}
+        {"error": {"code": exc.code, "message": exc.message, "fields": getattr(exc, "fields", [])}}
     ), exc.status
 
 

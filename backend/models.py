@@ -1533,6 +1533,7 @@ class CaseDocumentFile(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
     shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="CASCADE"), nullable=False, index=True)
     case_requirement_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("case_document_requirement.id", ondelete="RESTRICT"), nullable=True, index=True)
     is_miscellaneous = db.Column(db.Boolean, nullable=False, default=False, index=True)
@@ -1592,6 +1593,14 @@ from backend.operational_models import (  # noqa: E402
     RoutePlan,
 )
 from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem  # noqa: E402
+from backend.mdpm_models import (  # noqa: E402
+    ArtifactAssociation,
+    DocumentAssessment,
+    DocumentReadinessAudit,
+    OperationalDocumentRequirement,
+    RequirementApplicabilityDecision,
+    TransitionOverride,
+)
 
 
 __all__ = [

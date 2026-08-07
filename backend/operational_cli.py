@@ -29,6 +29,9 @@ PHASE1B_ALL_PERMISSIONS = [
     "operational_event.create", "operational_event.correct",
     "operational_event.verify", "delay_reason.manage",
     "exception_reason.manage",
+    "document_readiness.read", "document_readiness.manage",
+    "document_readiness.assess", "document_readiness.verify",
+    "document_readiness.override",
 ]
 
 
