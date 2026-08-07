@@ -174,7 +174,7 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.getByText("Source: manual", { exact: false })).toHaveTextContent("carrier confirmed");
     fireEvent.click(screen.getByRole("button", { name: "Resolve manually" }));
     expect(screen.getByRole("alert")).toHaveTextContent("A reason is required.");
-    fireEvent.change(screen.getByLabelText("Resolution reason 40"), { target: { value: "Reviewed evidence" } });
+    fireEvent.change(screen.getByLabelText("Resolution reason for CHECKPOINT_OVERDUE"), { target: { value: "Reviewed evidence" } });
     fireEvent.click(screen.getByRole("button", { name: "Resolve manually" }));
     await waitFor(() => expect(api.resolveRouteException).toHaveBeenCalledWith(40, 2, "Reviewed evidence", expect.any(String)));
   });
