@@ -129,6 +129,9 @@ def _event(
 def milestone_projection(m):
     return {
         "public_id": m.public_id,
+        # Project-defined milestones are intentionally independent of routing.
+        # The v2 execution API never exposes the internal numeric FK.
+        "route_plan_public_id": None,
         "sequence": m.sequence,
         "milestone_type": m.milestone_type,
         "milestone_type_snapshot": m.milestone_type_snapshot,
@@ -278,6 +281,7 @@ def initialize(shipment_id, payload, user):
         m = Milestone(
             organization_id=shipment.organization_id,
             operational_shipment_id=shipment.id,
+            route_plan_id=None,
             project_milestone_definition_id=d.id,
             milestone_type=mt.immutable_code,
             milestone_type_snapshot={

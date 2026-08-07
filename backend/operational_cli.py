@@ -177,7 +177,9 @@ def seed_phase1b_uat(app, password: str) -> dict:
                 for offset, milestone_type in enumerate(("checkpoint_arrival", "checkpoint_processing_complete", "checkpoint_departure")):
                     milestone = _one_or_create(
                         Milestone,
-                        defaults={"route_plan_id": plan.id, "planned_at": planned + timedelta(hours=offset),
+                        defaults={"organization_id": shipment.organization_id,
+                                  "operational_shipment_id": shipment.id,
+                                  "route_plan_id": plan.id, "planned_at": planned + timedelta(hours=offset),
                                   "occurred_at": planned + timedelta(hours=offset) if completed else None,
                                   "verification_state": "verified" if completed else "planned"},
                         checkpoint_id=checkpoint.id, milestone_type=milestone_type,
@@ -186,6 +188,7 @@ def seed_phase1b_uat(app, password: str) -> dict:
                         reported = _one_or_create(
                             MilestoneEvent,
                             defaults={
+                                "organization_id": shipment.organization_id,
                                 "event_type": "reported",
                                 "occurred_at": planned + timedelta(hours=offset),
                                 "recorded_at": planned + timedelta(hours=offset),
@@ -198,6 +201,7 @@ def seed_phase1b_uat(app, password: str) -> dict:
                         _one_or_create(
                             MilestoneEvent,
                             defaults={
+                                "organization_id": shipment.organization_id,
                                 "event_type": "verified",
                                 "occurred_at": planned + timedelta(hours=offset),
                                 "recorded_at": planned + timedelta(hours=offset, minutes=5),

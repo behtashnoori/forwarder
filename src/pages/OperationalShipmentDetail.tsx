@@ -107,8 +107,8 @@ export default function OperationalShipmentDetail() {
         {notice && <div role="status" className="rounded bg-emerald-50 p-3 text-emerald-800">{notice}</div>}
         {data && <>
           <header>
-            <h1 className="text-2xl font-bold">{t("operations.shipmentDetail")} #{data.id}</h1>
-            <p>{data.customer || "Not provided"} · Quote #{data.source.accepted_quote_id} · Request #{data.source.shipment_request_id} · {data.status} · Shipment v{data.version}</p>
+            <h1 className="text-2xl font-bold">{t("operations.shipmentDetail")}</h1>
+            <p>{data.customer || "Not provided"} · {data.status} · Shipment v{data.version}</p>
           </header>
 
           <Card>
@@ -124,7 +124,7 @@ export default function OperationalShipmentDetail() {
                     <p>Planned: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>
                     {"projected_departure" in leg && <p>Projected: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}
                     {"actual_departure" in leg && <p>Actual: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}
-                    {"source_route_leg_id" in leg && leg.source_route_leg_id && <p>Copied from leg #{leg.source_route_leg_id}</p>}
+                    {"source_route_leg_id" in leg && leg.source_route_leg_id && <p>Copied from the prior route revision.</p>}
                   </article>
                 ))}
               </div>
@@ -147,7 +147,7 @@ export default function OperationalShipmentDetail() {
                     const effective = timeline?.effective.find((item) => item.checkpoint_id === row.checkpoint_id);
                     const delay = timeline?.delays.find((item) => item.checkpoint_id === row.checkpoint_id);
                     return <tr key={row.checkpoint_id} className="border-t align-top">
-                      <td className="p-2">#{row.checkpoint_id}</td>
+                      <td className="p-2">Checkpoint</td>
                       <td>{when(row.arrival_at, locale)}<br />{when(row.departure_at, locale)}</td>
                       <td>{when(projected?.arrival_at, locale)}<br />{when(projected?.departure_at, locale)}</td>
                       <td>{when(actual?.arrival_at, locale)}<br />{when(actual?.departure_at, locale)}</td>
@@ -196,7 +196,7 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>Replan and revision history</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>Revision {item.revision_number}</strong> · {item.is_active ? "Active target" : item.status} · v{item.version}{item.created_from_plan_id ? ` · supersedes plan #${item.created_from_plan_id}` : ""}<br />{item.replan_reason && `Reason: ${item.replan_reason}`}</div>)}
+              {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>Revision {item.revision_number}</strong> · {item.is_active ? "Active target" : item.status} · v{item.version}{item.created_from_plan_id ? " · supersedes the prior plan" : ""}<br />{item.replan_reason && `Reason: ${item.replan_reason}`}</div>)}
               {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Replan reason" placeholder="Replan reason (required)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentId, activePlan.id, activePlan.version, reason, key()), "A new active revision was created.")}>Replan future segments</Button></div><p className="text-sm text-slate-600">Completed segments remain read-only; only future segments are copied into the new revision.</p></OperationalPermission>}
             </CardContent>
           </Card>
@@ -210,7 +210,7 @@ export default function OperationalShipmentDetail() {
                 const reasonKey = `exception-${exception.id}`;
                 return <article key={exception.id} className="rounded border p-3">
                   <strong>{exception.type}</strong> · {exception.status} · {exception.severity} · v{exception.version}
-                  <p>Checkpoint #{exception.checkpoint_id ?? "—"} · plan #{exception.route_plan_id}</p>
+                  <p>{exception.checkpoint_id == null ? "Shipment-level exception" : "Checkpoint exception"}</p>
                   <p>Detected {when(exception.detected_at, locale)} · due {when(exception.due_at, locale)} · resolved {when(exception.resolved_at, locale)}</p>
                   <p>Source: {exception.resolution_source || "Not resolved"} · Reason: {exception.resolution_reason || exception.reason || "Not provided"}</p>
                   {exception.status === "open" && <OperationalPermission permission="route_exception.manage"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Resolution reason ${exception.id}`} placeholder="Resolution reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason(reasonKey, (reason) => resolveRouteException(exception.id, exception.version, reason, key()), "Exception resolved.")}>Resolve manually</Button></div></OperationalPermission>}
@@ -218,7 +218,7 @@ export default function OperationalShipmentDetail() {
               })}
               <h3 className="font-semibold">{t("operations.workQueue")}</h3>
               {!data.open_work_items.length && <p>No actionable work items.</p>}
-              {data.open_work_items.map((item) => <div key={item.id} className="rounded border p-3">#{item.id} · {item.type} · {item.status === "open" ? "Actionable" : "Non-actionable"} · due {when(item.due_at, locale)} · v{item.version}</div>)}
+              {data.open_work_items.map((item) => <div key={item.id} className="rounded border p-3">{item.type} · {item.status === "open" ? "Actionable" : "Non-actionable"} · due {when(item.due_at, locale)} · v{item.version}</div>)}
             </CardContent>
           </Card>
 

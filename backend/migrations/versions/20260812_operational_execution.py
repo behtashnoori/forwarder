@@ -14,6 +14,14 @@ depends_on = None
 
 
 def upgrade():
+    # Project-defined execution milestones are shipment-owned and do not require
+    # a RoutePlan. Existing RoutePlan-backed rows and their FK remain intact.
+    op.alter_column(
+        "operational_milestone",
+        "route_plan_id",
+        existing_type=sa.BigInteger(),
+        nullable=True,
+    )
     for column in (
         sa.Column("public_id", sa.String(36), nullable=True),
         sa.Column("organization_id", sa.BigInteger(), nullable=True),
@@ -90,6 +98,14 @@ def upgrade():
         "operational_shipment",
         ["operational_shipment_id", "organization_id"],
         ["id", "organization_id"],
+        ondelete="CASCADE",
+    )
+    op.create_foreign_key(
+        "fk_operational_milestone_plan_shipment",
+        "operational_milestone",
+        "route_plan",
+        ["route_plan_id", "operational_shipment_id"],
+        ["id", "operational_shipment_id"],
         ondelete="CASCADE",
     )
     op.create_foreign_key(
@@ -305,6 +321,23 @@ def upgrade():
 
 
 def downgrade():
+    # The parent schema requires every milestone to be RoutePlan-backed. Never
+    # invent assignments or delete shipment-owned milestones to make that fit.
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM operational_milestone WHERE route_plan_id IS NULL
+            ) THEN
+                RAISE EXCEPTION
+                    'cannot downgrade: operational milestones without RoutePlan exist'
+                    USING ERRCODE = '23502';
+            END IF;
+        END
+        $$
+        """
+    )
     op.drop_table("operational_exception")
     op.drop_table("operational_delay")
     op.drop_table("exception_reason")
@@ -358,6 +391,11 @@ def downgrade():
         type_="foreignkey",
     )
     op.drop_constraint(
+        "fk_operational_milestone_plan_shipment",
+        "operational_milestone",
+        type_="foreignkey",
+    )
+    op.drop_constraint(
         "fk_operational_milestone_shipment_org",
         "operational_milestone",
         type_="foreignkey",
@@ -396,6 +434,12 @@ def downgrade():
         "(route_leg_id IS NOT NULL AND checkpoint_id IS NULL) OR (route_leg_id IS NULL AND checkpoint_id IS NOT NULL)",
     )
     op.alter_column("operational_milestone", "planned_at", nullable=False)
+    op.alter_column(
+        "operational_milestone",
+        "route_plan_id",
+        existing_type=sa.BigInteger(),
+        nullable=False,
+    )
     for name in (
         "blocked_at",
         "cancelled_at",

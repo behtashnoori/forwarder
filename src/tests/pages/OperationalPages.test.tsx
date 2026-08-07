@@ -125,7 +125,8 @@ describe("Phase 1A operational pages", () => {
     expect(screen.getByText("operations.loading")).toBeInTheDocument();
     release({ data: [shipment], meta: { page: 1, has_more: false } });
     expect(await screen.findByText("UAT Customer")).toBeInTheDocument();
-    expect(screen.getAllByRole("link", { name: /#1/ })).toHaveLength(1);
+    expect(screen.getAllByRole("link", { name: /UAT Customer/ })).toHaveLength(1);
+    expect(screen.queryByText(/Quote #2|Request #3|#1/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("status")).toBeInTheDocument();
   });
   it("prevents duplicate create submissions", async () => {
@@ -197,6 +198,7 @@ describe("Phase 1A operational pages", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("arrival", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("operations.workQueue")).toBeInTheDocument();
+    expect(screen.queryByText(/Quote #2|Request #3|plan #20|Checkpoint #30|#6/)).not.toBeInTheDocument();
   });
   it("renders and resolves a work item", async () => {
     (

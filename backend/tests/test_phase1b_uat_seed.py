@@ -8,7 +8,6 @@ from sqlalchemy.engine import URL
 
 from backend import create_app
 from backend.auth import auth_manager
-from backend.extensions import db
 from backend.models import ExpertUser
 from backend.operational_cli import _phase1b_seed_guard, seed_phase1b_uat
 from backend.operational_models import (
@@ -76,6 +75,7 @@ def test_seed_is_complete_tenant_scoped_and_idempotent(seed_app):
         assert OperationalCheckpoint.query.filter_by(route_plan_id=plan.id, status="completed").count() == 2
         assert OperationalCheckpoint.query.filter_by(route_plan_id=plan.id, status="blocked").count() == 1
         assert MilestoneEvent.query.count() == 12
+        assert MilestoneEvent.query.filter(MilestoneEvent.organization_id.is_(None)).count() == 0
         assert {row.event_type for row in MilestoneEvent.query.all()} == {"reported", "verified"}
         assert {row.work_type for row in OperationalWorkItem.query.all()} == {
             "CHECKPOINT_OVERDUE", "ROUTE_DEPENDENCY_BLOCKED",

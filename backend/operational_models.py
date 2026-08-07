@@ -502,6 +502,12 @@ class Milestone(db.Model):
             ondelete="CASCADE",
         ),
         db.ForeignKeyConstraint(
+            ["route_plan_id", "operational_shipment_id"],
+            ["route_plan.id", "route_plan.operational_shipment_id"],
+            name="fk_operational_milestone_plan_shipment",
+            ondelete="CASCADE",
+        ),
+        db.ForeignKeyConstraint(
             ["checkpoint_id", "route_plan_id"],
             ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"],
             name="fk_milestone_checkpoint_same_plan",
@@ -512,8 +518,8 @@ class Milestone(db.Model):
     public_id = db.Column(
         db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
     )
-    organization_id = db.Column(BIGINT, nullable=True)
-    operational_shipment_id = db.Column(BIGINT, nullable=True)
+    organization_id = db.Column(BIGINT, nullable=False)
+    operational_shipment_id = db.Column(BIGINT, nullable=False)
     route_plan_id = db.Column(
         BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=True
     )

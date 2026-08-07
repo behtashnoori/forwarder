@@ -12,11 +12,13 @@ from backend.models import Customer, ExpertQuote, ExpertUser, ShipmentRequest
 from backend.operational_models import (
     DelayReason,
     ExceptionReason,
+    Milestone,
     MilestoneEvent,
     OperationalMembership,
     OperationalOrganization,
     OperationalShipment,
     Project,
+    RoutePlan,
 )
 from backend.project_configuration_models import (
     MilestoneType,
@@ -169,6 +171,10 @@ def test_preview_confirm_idempotency_and_no_project_mutation(execution_app):
             shipment.public_id, {"expected_shipment_version": 1}, actor(execution_app)
         )
         assert created and len(rows) == 1 and rows[0].lifecycle_status == "PENDING"
+        assert rows[0].route_plan_id is None
+        projection = svc.milestone_projection(rows[0])
+        assert projection["route_plan_public_id"] is None
+        assert "route_plan_id" not in projection
         replay, recreated = svc.initialize(
             shipment.public_id, {"expected_shipment_version": 2}, actor(execution_app)
         )
@@ -332,6 +338,35 @@ def test_verification_separation_and_one_migration_head(execution_app):
     assert ScriptDirectory.from_config(config).get_heads() == [
         "20260812_operational_execution"
     ]
+
+
+def test_optional_route_plan_mapper_and_same_shipment_constraint(execution_app):
+    route_plan = Milestone.__table__.c.route_plan_id
+    shipment = Milestone.__table__.c.operational_shipment_id
+    organization = Milestone.__table__.c.organization_id
+    assert route_plan.nullable is True
+    assert shipment.nullable is False and organization.nullable is False
+    constraints = {
+        constraint.name: constraint
+        for constraint in Milestone.__table__.foreign_key_constraints
+    }
+    scoped = constraints["fk_operational_milestone_plan_shipment"]
+    assert [column.name for column in scoped.columns] == [
+        "route_plan_id",
+        "operational_shipment_id",
+    ]
+    assert RoutePlan.__table__.c.operational_shipment_id.nullable is False
+
+
+def test_release_migration_has_nullable_upgrade_and_fail_closed_downgrade():
+    source = open(
+        "backend/migrations/versions/20260812_operational_execution.py",
+        encoding="utf-8",
+    ).read()  # noqa: SIM115
+    assert '"route_plan_id",\n        existing_type=sa.BigInteger(),\n        nullable=True' in source
+    assert "fk_operational_milestone_plan_shipment" in source
+    assert "operational milestones without RoutePlan exist" in source
+    assert "WHERE route_plan_id IS NULL" in source
 
 
 def test_opaque_event_create_and_append_only_correction(execution_app):

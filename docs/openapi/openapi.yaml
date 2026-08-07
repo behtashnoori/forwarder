@@ -747,9 +747,10 @@ components:
     ExecutionMilestone:
       type: object
       additionalProperties: false
-      required: [public_id, sequence, milestone_type, status, verification_state, version]
+      required: [public_id, route_plan_public_id, sequence, milestone_type, status, verification_state, version]
       properties:
         public_id: { type: string, format: uuid }
+        route_plan_public_id: { type: string, format: uuid, nullable: true }
         sequence: { type: integer, minimum: 1 }
         milestone_type: { type: string }
         milestone_type_snapshot: { type: object, nullable: true, additionalProperties: false, properties: { public_id: { type: string, format: uuid }, code: { type: string }, fa_name: { type: string }, en_name: { type: string } } }
