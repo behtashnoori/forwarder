@@ -167,7 +167,7 @@ export default function OperationalShipmentDetail() {
             <CardContent className="space-y-4">
               {!plan?.checkpoints.length && <p>No checkpoints.</p>}
               {plan?.checkpoints.map((checkpoint) => <article key={checkpoint.id} className="rounded border p-3">
-                <h3 className="font-semibold">#{checkpoint.sequence_number} {checkpoint.checkpoint_type} · {checkpoint.status} · checkpoint v{checkpoint.version}</h3>
+                <h3 className="font-semibold">Checkpoint {checkpoint.sequence_number} · {checkpoint.checkpoint_type} · {checkpoint.status} · v{checkpoint.version}</h3>
                 <p>Planned arrival/departure: {when(checkpoint.planned_arrival_at, locale)} / {when(checkpoint.planned_departure_at, locale)}</p>
                 <p>Projected arrival/departure: {when(checkpoint.projected_arrival_at, locale)} / {when(checkpoint.projected_departure_at, locale)}</p>
                 <p>Actual arrival/departure: {when(checkpoint.actual_arrival_at, locale)} / {when(checkpoint.actual_departure_at, locale)}</p>
@@ -186,7 +186,7 @@ export default function OperationalShipmentDetail() {
                     <div className="mt-2 flex flex-wrap gap-2">
                       {milestone.verification_state === "reported" && <OperationalPermission permission="checkpoint.verify"><Button className="min-h-11" disabled={!!pending} onClick={() => void run(`verify-${milestone.id}`, () => verifyRouteMilestone(shipmentId, checkpoint.id, milestone.id, milestone.version, key()), "Milestone verified or re-verified.")}>Verify / re-verify</Button></OperationalPermission>}
                     </div>
-                    {milestone.verification_state === "verified" && <OperationalPermission permission="milestone.correct"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Correction reason ${milestone.id}`} placeholder="Correction reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} variant="secondary" onClick={() => requireReason(reasonKey, (reason) => correctRouteMilestone(shipmentId, checkpoint.id, milestone.id, new Date().toISOString(), reason, milestone.version, key()), "Milestone corrected.")}>Correct</Button></div></OperationalPermission>}
+                    {milestone.verification_state === "verified" && <OperationalPermission permission="milestone.correct"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Correction reason for ${milestone.type}`} placeholder="Correction reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} variant="secondary" onClick={() => requireReason(reasonKey, (reason) => correctRouteMilestone(shipmentId, checkpoint.id, milestone.id, new Date().toISOString(), reason, milestone.version, key()), "Milestone corrected.")}>Correct</Button></div></OperationalPermission>}
                   </div>;
                 })}</div>
               </article>)}
@@ -213,7 +213,7 @@ export default function OperationalShipmentDetail() {
                   <p>{exception.checkpoint_id == null ? "Shipment-level exception" : "Checkpoint exception"}</p>
                   <p>Detected {when(exception.detected_at, locale)} · due {when(exception.due_at, locale)} · resolved {when(exception.resolved_at, locale)}</p>
                   <p>Source: {exception.resolution_source || "Not resolved"} · Reason: {exception.resolution_reason || exception.reason || "Not provided"}</p>
-                  {exception.status === "open" && <OperationalPermission permission="route_exception.manage"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Resolution reason ${exception.id}`} placeholder="Resolution reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason(reasonKey, (reason) => resolveRouteException(exception.id, exception.version, reason, key()), "Exception resolved.")}>Resolve manually</Button></div></OperationalPermission>}
+                  {exception.status === "open" && <OperationalPermission permission="route_exception.manage"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Resolution reason for ${exception.type}`} placeholder="Resolution reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason(reasonKey, (reason) => resolveRouteException(exception.id, exception.version, reason, key()), "Exception resolved.")}>Resolve manually</Button></div></OperationalPermission>}
                 </article>;
               })}
               <h3 className="font-semibold">{t("operations.workQueue")}</h3>

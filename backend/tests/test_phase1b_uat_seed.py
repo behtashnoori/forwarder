@@ -77,6 +77,13 @@ def test_seed_is_complete_tenant_scoped_and_idempotent(seed_app):
         assert MilestoneEvent.query.count() == 12
         assert MilestoneEvent.query.filter(MilestoneEvent.organization_id.is_(None)).count() == 0
         assert {row.event_type for row in MilestoneEvent.query.all()} == {"reported", "verified"}
+        admin = ExpertUser.query.filter_by(username="phase1b_uat_admin").one()
+        admin_membership = OperationalMembership.query.filter_by(user_id=admin.id).one()
+        assert {
+            "operational_execution.read",
+            "operational_execution.manage",
+            "operational_event.verify",
+        }.issubset(set(admin_membership.permissions))
         assert {row.work_type for row in OperationalWorkItem.query.all()} == {
             "CHECKPOINT_OVERDUE", "ROUTE_DEPENDENCY_BLOCKED",
         }

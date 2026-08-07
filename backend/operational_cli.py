@@ -25,6 +25,10 @@ PHASE1B_ALL_PERMISSIONS = [
     "route_plan.create", "route_plan.activate", "route_plan.replan",
     "route_leg.manage", "checkpoint.read", "checkpoint.report",
     "checkpoint.verify", "route_exception.read", "route_exception.manage",
+    "operational_execution.read", "operational_execution.manage",
+    "operational_event.create", "operational_event.correct",
+    "operational_event.verify", "delay_reason.manage",
+    "exception_reason.manage",
 ]
 
 
