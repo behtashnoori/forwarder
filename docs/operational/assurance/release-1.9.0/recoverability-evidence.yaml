@@ -1,0 +1,44 @@
+evidence_id: EVD-FWD-REC-003
+evidence_version: 1
+claim: Candidate migrations can be applied after restoring a fresh backup of the safe local development source, without loss of the sampled pre-existing data.
+scope:
+  candidate_id: CAND-FWD-1.9.0-NEXT-RC-001
+  candidate_commit: fa2871e0717a6062e5cb362eaaf4f751893d2c5a
+  source_environment: local development PostgreSQL 18 on loopback
+  source_database: forwarder_db
+  source_revision: 20260807_master_data
+  disposable_target: forwarder_phase1b_uat_eaaf_next_rc
+  target_revision: 20260812_operational_execution
+producer: Codex stabilization executor
+produced_utc: 2026-08-07T16:45:00Z
+source_provenance: pg_dump custom-format backup produced directly from the configured loopback development database after candidate freeze
+backup:
+  path: C:/Users/pc/AppData/Local/Forwarder/15-forwarder/evidence/AEP-FWD-1.9-RC/recoverability/EVD-FWD-REC-003-next-rc-source.dump
+  size_bytes: 367958
+  sha256: 1e6307834c54b3305d33480a9c19f0736f0e049d892366ddaa43579197998758
+restore_and_migration:
+  fresh_target_created: true
+  restored_revision: 20260807_master_data
+  final_revision: 20260812_operational_execution
+  single_head: true
+  pending_migrations: false
+  sampled_source_counts: {expert_user: 6, shipment_request: 0, operational_shipment: 0, route_plan: 0, operational_milestone: 0}
+  sampled_restored_counts_before_upgrade: {expert_user: 6, shipment_request: 0, operational_shipment: 0, route_plan: 0, operational_milestone: 0}
+  sampled_counts_after_upgrade: {expert_user: 6, shipment_request: 0, operational_shipment: 0, route_plan: 0, operational_milestone: 0}
+logs:
+  - {path: C:/Users/pc/AppData/Local/Forwarder/15-forwarder/evidence/AEP-FWD-1.9-RC/recoverability/EVD-FWD-S3-003-next-rc-upgrade.txt, size_bytes: 3540, sha256: d9e1b19c026edaa121ae961bc13c30644812a9a210a7f2f0a5259c0694061492}
+  - {path: C:/Users/pc/AppData/Local/Forwarder/15-forwarder/evidence/AEP-FWD-1.9-RC/recoverability/EVD-FWD-S3-004-next-rc-check.txt, size_bytes: 588, sha256: 8d4fa2d09db59626fe1fb40fab331b5d5d0449275b60833494fd041b5c76ad35}
+retrievability: AVAILABLE
+custodian: local Forwarder evidence directory
+evidence_level: VERIFIED
+lifecycle_state: ACTIVE
+confidence: High for local/disposable restore and migration; no inference about production recovery time or production data.
+retention_requirement: Retain through the Release 1.9 human production decision and any rollback window.
+expiration_trigger:
+  - candidate change
+  - backup or log integrity failure
+  - loss of the external evidence directory
+  - source/target database-engine compatibility change
+authority: Architecture Owner autonomous execution brief, disposable resources only
+downstream_gate: S3 disposable migration rehearsal
+

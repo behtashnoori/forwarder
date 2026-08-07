@@ -1,0 +1,46 @@
+package_id: AEP-FWD-1.9-RC
+package_version: 0.1.0
+status: CONSUMED_FOR_DISPOSABLE_S3
+classification: Pilot
+scope:
+  - Release 1.9 NEXT-RC candidate identity and bounded RC defect closure
+  - local source backup/restore and disposable PostgreSQL migration rehearsal
+package_owner: Forwarder Release Custodian
+candidate_id: CAND-FWD-1.9.0-NEXT-RC-001
+candidate_manifest: docs/operational/assurance/release-1.9.0/candidate-manifest.yaml
+authority: Architecture Owner autonomous execution brief dated 2026-08-07
+downstream_gate: S3 disposable migration rehearsal
+permitted_action: S3 RESUME AUTHORIZED — DISPOSABLE ONLY
+evidence_objects:
+  - {evidence_id: EVD-FWD-CAND-001, mandatory: true, evidence_level: AUTHORITATIVE, lifecycle_state: ACTIVE, artifact_identity: fa2871e0717a6062e5cb362eaaf4f751893d2c5a, source_provenance: Git repository and candidate manifest, integrity_hash: e52ca3184f594f33882bd683b1f3558de08cc271, retrievability: AVAILABLE, confidence: High, expiration_trigger: [candidate change]}
+  - {evidence_id: EVD-FWD-TEST-001, mandatory: true, evidence_level: VERIFIED, lifecycle_state: ACTIVE, artifact_identity: targeted backend/frontend tests, source_provenance: local candidate checkout, integrity_hash: Git-bound test sources, retrievability: AVAILABLE, confidence: High, expiration_trigger: [candidate or test-environment change]}
+  - {evidence_id: EVD-FWD-VAL-003, mandatory: true, evidence_level: VERIFIED, lifecycle_state: ACTIVE, artifact_identity: browser-validation.md, source_provenance: in-app browser against disposable UAT, integrity_hash: Git blob assigned by governance commit, retrievability: AVAILABLE, confidence: High for tested flow, expiration_trigger: [candidate, browser contract, or fixture change]}
+  - {evidence_id: EVD-FWD-REC-003, mandatory: true, evidence_level: VERIFIED, lifecycle_state: ACTIVE, artifact_identity: EVD-FWD-REC-003-next-rc-source.dump, source_provenance: local loopback development PostgreSQL source, integrity_hash: 1e6307834c54b3305d33480a9c19f0736f0e049d892366ddaa43579197998758, retrievability: AVAILABLE, confidence: High for disposable scope, expiration_trigger: [candidate, custody, integrity, or engine change]}
+  - {evidence_id: EVD-FWD-S3-003, mandatory: true, evidence_level: VERIFIED, lifecycle_state: CONSUMED, artifact_identity: migration log, source_provenance: fresh restored disposable database, integrity_hash: d9e1b19c026edaa121ae961bc13c30644812a9a210a7f2f0a5259c0694061492, retrievability: AVAILABLE, confidence: High for disposable scope, expiration_trigger: [candidate or migration-runtime change]}
+mandatory_link_assessment:
+  authority: PASS
+  scope: PASS
+  candidate_identity: PASS
+  repository_identity: PASS
+  migration_identity: PASS
+  environment_identity: PASS
+  recoverability: PASS
+  contract: PASS
+  validation: PASS
+  evidence_integrity: PASS
+  retrievability: PASS
+  confidence: PASS_FOR_DISPOSABLE_SCOPE
+  permitted_action: PASS_FOR_DISPOSABLE_S3_ONLY
+weakest_mandatory_link: confidence and authority are bounded to disposable/local scope
+package_confidence: Sufficient for disposable S3; insufficient for production authorization
+gaps:
+  - GAP-FWD-PROD-001: no current production environment/database identity or candidate rehearsal evidence
+  - GAP-FWD-PROD-002: no human production risk acceptance or production-change authority
+created_utc: 2026-08-07T16:46:00Z
+package_integrity: Git blob identities recorded in evidence-custody-index after this manifest is committed
+supersedes: prior unstructured Release 1.9 blocked assessment; does not erase its history
+expiration_invalidation_triggers:
+  - candidate change
+  - any mandatory evidence expiry, integrity failure, or loss of retrievability
+  - release scope, authority, contract, migration, or target environment change
+

@@ -1,0 +1,49 @@
+candidate_id: CAND-FWD-1.9.0-NEXT-RC-001
+candidate_version: 1.9.0-next-rc.1
+status: FROZEN
+owner: Forwarder Release Custodian
+release_scope:
+  - Release 1.9 operational execution foundation
+  - RC initialization preview correction
+  - operational UI visible numeric-identifier remediation
+intended_promotion_context: human-reviewed Release 1.9 promotion; no production authorization implied
+source:
+  repository: D:/1-webapp/15-forwarder
+  branch_at_freeze: codex/release-1.9-next-rc
+  commit: fa2871e0717a6062e5cb362eaaf4f751893d2c5a
+  tree: e52ca3184f594f33882bd683b1f3558de08cc271
+version: 1.9.0
+migrations:
+  - {revision: 20260808_reference_seed, path: backend/migrations/versions/20260808_reference_data_seed_run.py, sha256: f5e35c410cb47aecb27ef97583fc456067e61eb35d6b97f0201115f49e2944b4}
+  - {revision: 20260809_cargo_catalog_items, path: backend/migrations/versions/20260809_cargo_catalog_items.py, sha256: df320b836f4120f90bf91fe50a1ff76f2a852e703fa6401f08c07be3d99b6cae}
+  - {revision: 20260810_logistics_network, path: backend/migrations/versions/20260810_logistics_network.py, sha256: 26e4dc0718f2e9699378e7cadd97cdac688264bd6e8f85317906ab186e37e9fa}
+  - {revision: 20260811_project_configuration, path: backend/migrations/versions/20260811_project_configuration.py, sha256: fd242778c4da17b83339bf08bb571084cead7d6c799d3c062f45a9f6ea45b9d7}
+  - {revision: security_credential_remediation, path: backend/migrations/versions/security_credential_remediation.py, sha256: 72e19843e625054dac4f338ee7f54772bc2ebef332dabdab7417e50fab6635ee}
+  - {revision: 20260812_operational_execution, path: backend/migrations/versions/20260812_operational_execution.py, sha256: b4271cb83947d91d3b51f434e83ff20a78c8d0f9d134c69ee00fa6707962e68d}
+contracts:
+  - {path: docs/openapi/openapi.yaml, sha256: 8c50bee3066b67424cd8ec1c4b367c186cf6bf477c6031096d7cc36ebcfdf8b0}
+frontend:
+  - {path: src/components/OperationalExecutionSection.tsx, sha256: e70160d53cf535bf1357d00dd376fe6a276b39010ebd19ea7f2d669a9974d8bf}
+  - {path: src/pages/OperationalShipments.tsx, sha256: 034762fe95bfcdf9096baf1b7c5d7b9fb7cfc04fee9a874e0ad9abec82baa2d2}
+  - {path: src/pages/OperationalShipmentDetail.tsx, sha256: 32ea2472e3b695746757d59545b7878aa46ce1bbca15410194aa735b2e0668e8}
+  - {path: src/pages/OperationalWorkQueue.tsx, sha256: ec7a622afaa7255a6ca7f0ee4eda539a5b16719521b6477e4c8cdbecde1b79c8}
+targeted_validation:
+  - backend/tests/test_operational_execution_190.py
+  - backend/tests/test_phase1b_uat_seed.py
+  - src/tests/components/OperationalExecutionSection.test.tsx
+  - src/tests/components/OperationalExecutionPreviewIsolation.test.tsx
+  - src/tests/pages/OperationalPages.test.tsx
+exclusions:
+  - stash db3d6dd81ff97845dcb6c233c219c7a6786a293f (unrelated UI polish)
+  - .env and local credentials
+  - .codex temporary material
+  - dist and build caches
+  - release-v1.* historical packages
+  - evidence backups and disposable databases
+created_utc: 2026-08-07T16:45:00Z
+producer: Codex stabilization executor
+invalidation_triggers:
+  - candidate commit or tree changes
+  - any listed migration, contract, frontend, or test input changes
+  - release scope or authority changes
+
