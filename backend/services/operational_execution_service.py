@@ -350,6 +350,39 @@ def list_milestones(shipment_id, user):
 
 def transition(shipment_id, milestone_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_execution.manage")
+    from backend.operational_models import OperationalIdempotency
+    from backend.services import operational_service as base_service
+
+    raw_idempotency_key = payload.pop("_idempotency_key", None)
+    if raw_idempotency_key is None:
+        import uuid
+        raw_idempotency_key = str(uuid.uuid4())
+    idempotency_key = str(raw_idempotency_key or "")
+    base_service._require_idempotency_key(idempotency_key)
+    command_milestone = _milestone(shipment, milestone_id)
+    request_hash = base_service._hash(payload)
+    base_service._lock_idempotency_scope(
+        shipment.organization_id,
+        "execution_milestone_transition",
+        "milestone",
+        command_milestone.id,
+        idempotency_key,
+    )
+    replay = db.session.scalar(select(OperationalIdempotency).where(
+        OperationalIdempotency.organization_id == shipment.organization_id,
+        OperationalIdempotency.operation == "execution_milestone_transition",
+        OperationalIdempotency.resource_type == "milestone",
+        OperationalIdempotency.command_resource_id == command_milestone.id,
+        OperationalIdempotency.idempotency_key == idempotency_key,
+    ))
+    if replay:
+        if replay.request_hash != request_hash:
+            raise OperationalError(
+                "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD",
+                "Idempotency key payload differs.",
+                409,
+            )
+        return milestone_projection(_milestone(shipment, milestone_id))
     m = _milestone(shipment, milestone_id, True)
     if m.version != payload.get("expected_version"):
         raise OperationalError(
@@ -434,6 +467,15 @@ def transition(shipment_id, milestone_id, payload, user):
         shipment, user, "TransitionAllowed", None, m,
         {"target_status": target, "override_public_ids": [o.public_id for o in readiness["_overrides"]]},
     )
+    db.session.add(OperationalIdempotency(
+        organization_id=shipment.organization_id,
+        operation="execution_milestone_transition",
+        resource_type="milestone",
+        command_resource_id=m.id,
+        idempotency_key=idempotency_key,
+        request_hash=request_hash,
+        result_resource_id=m.id,
+    ))
     db.session.commit()
     return milestone_projection(m)
 

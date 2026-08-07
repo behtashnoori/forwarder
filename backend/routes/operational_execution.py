@@ -78,7 +78,10 @@ def transition(shipment_id, milestone_id):
                 "data": svc.transition(
                     shipment_id,
                     milestone_id,
-                    request.get_json(silent=True) or {},
+                    {
+                        **(request.get_json(silent=True) or {}),
+                        "_idempotency_key": request.headers.get("Idempotency-Key", ""),
+                    },
                     user(),
                 )
             }

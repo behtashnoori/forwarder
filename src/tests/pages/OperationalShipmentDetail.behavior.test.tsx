@@ -63,7 +63,7 @@ const openException = { id: 40, shipment_id: 1, route_plan_id: 20, checkpoint_id
 const resolvedException = { ...openException, id: 41, status: "resolved", resolved_at: "2026-01-02T00:00:00Z", resolution_source: "manual", resolution_reason: "carrier confirmed", version: 3 };
 
 function renderDetail() {
-  return render(<MemoryRouter initialEntries={["/operations/shipments/1"]}><Routes><Route path="/operations/shipments/:id" element={<OperationalShipmentDetail />} /></Routes></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={["/operations/shipments/11111111-1111-4111-8111-111111111111"]}><Routes><Route path="/operations/shipments/:id" element={<OperationalShipmentDetail />} /></Routes></MemoryRouter>);
 }
 beforeEach(() => {
   vi.clearAllMocks();

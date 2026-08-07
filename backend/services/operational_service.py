@@ -194,6 +194,21 @@ def scoped_shipment(shipment_id: int, user: dict[str, Any]) -> OperationalShipme
     return shipment
 
 
+def scoped_shipment_by_public_id(public_id: str, user: dict[str, Any]) -> OperationalShipment:
+    """Resolve the external identity inside the caller's tenant boundary."""
+    require_permission(user, "operational_shipment.read")
+    org = organization_for_user(int(user["id"]))
+    shipment = db.session.scalar(
+        select(OperationalShipment).where(
+            OperationalShipment.public_id == str(public_id),
+            OperationalShipment.organization_id == org,
+        )
+    )
+    if shipment is None:
+        raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
+    return shipment
+
+
 def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
     plan = db.session.scalar(select(RoutePlan).where(RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True)))
     legs = db.session.scalars(select(RouteLeg).where(RouteLeg.route_plan_id == plan.id).order_by(RouteLeg.sequence_number)).all()

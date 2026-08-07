@@ -84,6 +84,16 @@ def shipment_detail(shipment_id: int):
     except service.OperationalError as exc: return _error(exc)
 
 
+@operations_bp.get("/api/operational-shipments/by-public-id/<uuid:shipment_public_id>")
+@require_auth
+def shipment_detail_by_public_id(shipment_public_id):
+    try:
+        shipment = service.scoped_shipment_by_public_id(str(shipment_public_id), _user())
+        return jsonify({"data": service.shipment_graph(shipment)})
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
 @operations_bp.get("/api/operational-shipments/<int:shipment_id>/route-plans")
 @require_auth
 def route_plan_list(shipment_id):
@@ -308,7 +318,7 @@ def work_queue():
         for r in rows[:per_page]:
             graph=service.shipment_graph(db.session.get(OperationalShipment,r.operational_shipment_id)); milestone=db.session.get(Milestone,r.milestone_id)
             checkpoint=db.session.get(OperationalCheckpoint,r.checkpoint_id) if r.checkpoint_id else None
-            data.append({"id":r.id,"shipment_id":r.operational_shipment_id,"milestone_id":r.milestone_id,"checkpoint_id":r.checkpoint_id,"type":r.work_type,"status":r.status,"due_at":r.due_at.isoformat(),"planned_at":(milestone.planned_at if milestone else r.due_at).isoformat(),"milestone_type":milestone.milestone_type if milestone else checkpoint.checkpoint_type if checkpoint else r.work_type,"overdue_seconds":max(0,int((datetime.now(timezone.utc)-r.due_at.replace(tzinfo=r.due_at.tzinfo or timezone.utc)).total_seconds())),"customer":graph["customer"],"route_leg":graph["route_leg"],"reason":r.reason,"assignee_user_id":r.assignee_user_id,"version":r.version})
+            data.append({"id":r.id,"shipment_id":r.operational_shipment_id,"shipment_public_id":graph["public_id"],"milestone_id":r.milestone_id,"checkpoint_id":r.checkpoint_id,"type":r.work_type,"status":r.status,"due_at":r.due_at.isoformat(),"planned_at":(milestone.planned_at if milestone else r.due_at).isoformat(),"milestone_type":milestone.milestone_type if milestone else checkpoint.checkpoint_type if checkpoint else r.work_type,"overdue_seconds":max(0,int((datetime.now(timezone.utc)-r.due_at.replace(tzinfo=r.due_at.tzinfo or timezone.utc)).total_seconds())),"customer":graph["customer"],"route_leg":graph["route_leg"],"reason":r.reason,"assignee_user_id":r.assignee_user_id,"version":r.version})
         return jsonify({"data":data, "meta":{"page":page,"per_page":per_page,"has_more":has_more}})
     except service.OperationalError as exc: return _error(exc)
 

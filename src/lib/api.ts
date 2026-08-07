@@ -1150,13 +1150,13 @@ export interface OperationalShipmentSummary {
   audit_summary: Array<{ id: number; action: string; recorded_at: string }>;
 }
 
-export interface OperationalWorkItem { id: number; shipment_id: number; milestone_id: number; type: string; status: string; due_at: string; planned_at: string; milestone_type: string; overdue_seconds: number; customer?: string; route_leg: OperationalShipmentSummary["route_leg"]; reason: string; assignee_user_id?: number | null; version: number }
+export interface OperationalWorkItem { id: number; shipment_id: number; shipment_public_id: string; milestone_id: number; type: string; status: string; due_at: string; planned_at: string; milestone_type: string; overdue_seconds: number; customer?: string; route_leg: OperationalShipmentSummary["route_leg"]; reason: string; assignee_user_id?: number | null; version: number }
 export function getOperationalContext(): Promise<{ data: { organization_id: number; permissions: string[] } }> { return request("/api/operational-context"); }
 
 export function listOperationalShipments(params = ""): Promise<{ data: OperationalShipmentSummary[]; meta: { page: number; has_more: boolean } }> {
   return request(`/api/operational-shipments${params ? `?${params}` : ""}`);
 }
-export function getOperationalShipment(id: number): Promise<{ data: OperationalShipmentSummary }> { return request(`/api/operational-shipments/${id}`); }
+export function getOperationalShipment(publicId: string): Promise<{ data: OperationalShipmentSummary }> { return request(`/api/operational-shipments/by-public-id/${encodeURIComponent(publicId)}`); }
 export function createOperationalShipment(payload: { accepted_quote_id: number; planned_departure: string; planned_arrival: string; origin: OperationalLocationRef; destination: OperationalLocationRef; transport_mode: string }, key: string): Promise<{ data: OperationalShipmentSummary; meta: { created: boolean } }> {
   return request("/api/operational-shipments/from-accepted-quote", { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(payload) });
 }
@@ -2075,7 +2075,7 @@ export type ExecutionEvent = {public_id:string;milestone_public_id:string;event_
 export const getExecutionPreview=(shipmentId:string)=>request<{data:{project_public_id?:string|null;initialized:boolean;existing_count:number;milestones:Array<Record<string,unknown>>;findings:Array<{code:string;message:string}>;confirmation_allowed:boolean}}>(`/api/v2/operational-shipments/${shipmentId}/execution/initialization-preview`);
 export const initializeExecution=(shipmentId:string,expected_shipment_version:number)=>request<{data:ExecutionMilestone[];meta:{created:boolean}}>(`/api/v2/operational-shipments/${shipmentId}/execution/initialize`,{method:"POST",body:JSON.stringify({expected_shipment_version})});
 export const listExecutionMilestones=(shipmentId:string)=>request<{data:ExecutionMilestone[]}>(`/api/v2/operational-shipments/${shipmentId}/execution/milestones`);
-export const transitionExecutionMilestone=(shipmentId:string,milestone:ExecutionMilestone,target_status:string,reason?:string)=>request<{data:ExecutionMilestone}>(`/api/v2/operational-shipments/${shipmentId}/execution/milestones/${milestone.public_id}/transition`,{method:"POST",body:JSON.stringify({target_status,reason,expected_version:milestone.version})});
+export const transitionExecutionMilestone=(shipmentId:string,milestone:ExecutionMilestone,target_status:string,reason?:string)=>request<{data:ExecutionMilestone}>(`/api/v2/operational-shipments/${shipmentId}/execution/milestones/${milestone.public_id}/transition`,{method:"POST",headers:{"Idempotency-Key":crypto.randomUUID()},body:JSON.stringify({target_status,reason,expected_version:milestone.version})});
 export const reopenExecutionMilestone=(shipmentId:string,milestone:ExecutionMilestone,reason:string)=>request<{data:ExecutionMilestone}>(`/api/v2/operational-shipments/${shipmentId}/execution/milestones/${milestone.public_id}/reopen`,{method:"POST",body:JSON.stringify({reason,expected_version:milestone.version})});
 export type DocumentReadinessRequirement={public_id:string;title:string;requirement_level:"REQUIRED"|"OPTIONAL"|"CONDITIONAL";applicability_state:"APPLICABLE"|"NOT_APPLICABLE"|"UNRESOLVED";required_assessment_level:"APPROVED"|"VERIFIED";target_milestone_type:string;target_status:string;version:number;artifact:null|{artifact_public_id:string;filename:string;version:number;assessment:string}};
 export type TransitionReadiness={allowed:boolean;target_action:string;blocking_requirements:Array<{code:string;requirement_public_id:string;title:string}>;warnings:Array<{code:string;requirement_public_id:string;title:string}>};
@@ -2083,7 +2083,7 @@ export const getDocumentMaterializationPreview=(s:string)=>request<{data:{initia
 export const materializeDocumentRequirements=(s:string,v:number)=>request(`/api/v2/operational-shipments/${s}/document-readiness/materialize`,{method:"POST",body:JSON.stringify({expected_shipment_version:v})});
 export const listDocumentReadinessRequirements=(s:string)=>request<{data:DocumentReadinessRequirement[]}>(`/api/v2/operational-shipments/${s}/document-readiness/requirements`);
 export const associateDocumentArtifact=(s:string,r:DocumentReadinessRequirement,a:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/artifacts`,{method:"POST",body:JSON.stringify({artifact_public_id:a,expected_requirement_version:r.version})});
-export const assessDocumentArtifact=(s:string,r:DocumentReadinessRequirement,d:string,reason?:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/assessments`,{method:"POST",body:JSON.stringify({decision:d,reason})});
+export const assessDocumentArtifact=(s:string,r:DocumentReadinessRequirement,d:string,reason?:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/assessments`,{method:"POST",body:JSON.stringify({decision:d,reason,expected_requirement_version:r.version})});
 export const resolveDocumentApplicability=(s:string,r:DocumentReadinessRequirement,d:string,reason:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/applicability`,{method:"POST",body:JSON.stringify({decision:d,reason,expected_requirement_version:r.version})});
 export const getTransitionReadiness=(s:string,m:ExecutionMilestone,t:string)=>request<{data:TransitionReadiness}>(`/api/v2/operational-shipments/${s}/document-readiness/milestones/${m.public_id}/readiness?target_status=${encodeURIComponent(t)}`);
 export const getNextTransitionReadiness=(s:string)=>request<{data:TransitionReadiness|null}>(`/api/v2/operational-shipments/${s}/document-readiness/next-action`);

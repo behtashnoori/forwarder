@@ -28,7 +28,6 @@ import { useI18n } from "@/i18n";
 import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
 import DocumentReadinessSection from "@/components/DocumentReadinessSection";
-import DocumentReadinessSection from "@/components/DocumentReadinessSection";
 
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
@@ -45,7 +44,7 @@ const when = (value: string | null | undefined, locale: string) =>
   value ? new Date(value).toLocaleString(locale, { timeZoneName: "short" }) : "Not recorded";
 
 export default function OperationalShipmentDetail() {
-  const shipmentId = Number(useParams().id);
+  const shipmentPublicId = useParams().id || "";
   const { t, direction, locale } = useI18n();
   const [data, setData] = useState<OperationalShipmentSummary>();
   const [plans, setPlans] = useState<RoutePlanSummary[]>([]);
@@ -56,27 +55,29 @@ export default function OperationalShipmentDetail() {
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const shipmentId = data?.id ?? 0;
   const activePlan = useMemo(() => plans.find((item) => item.is_active), [plans]);
 
   const load = useCallback(async () => {
     try {
       setError("");
-      const [shipment, revisions, routeTimeline, routeExceptions] = await Promise.all([
-        getOperationalShipment(shipmentId),
-        listRoutePlans(shipmentId),
-        getRouteTimeline(shipmentId),
-        listRouteExceptions(shipmentId),
+      const shipment = await getOperationalShipment(shipmentPublicId);
+      const internalShipmentId = shipment.data.id;
+      const [revisions, routeTimeline, routeExceptions] = await Promise.all([
+        listRoutePlans(internalShipmentId),
+        getRouteTimeline(internalShipmentId),
+        listRouteExceptions(internalShipmentId),
       ]);
       setData(shipment.data);
       setPlans(revisions.data);
       setTimeline(routeTimeline.data);
       setExceptions(routeExceptions.data);
       const active = revisions.data.find((item) => item.is_active);
-      setPlan(active ? (await getRoutePlan(shipmentId, active.id)).data : undefined);
+      setPlan(active ? (await getRoutePlan(internalShipmentId, active.id)).data : undefined);
     } catch (caught) {
       setError(safeError(caught));
     }
-  }, [shipmentId]);
+  }, [shipmentPublicId]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -135,7 +136,6 @@ export default function OperationalShipmentDetail() {
 
           <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
 
           <Card>

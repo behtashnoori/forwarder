@@ -153,6 +153,9 @@ def assess(shipment_id, requirement_id, payload, user):
     decision = str(payload.get("decision") or "").upper()
     permission = "document_readiness.verify" if decision == "VERIFIED" else "document_readiness.assess"
     shipment = _shipment(shipment_id, user, permission, True); req = _requirement(shipment, requirement_id, True)
+    expected_version = payload.get("expected_requirement_version")
+    if expected_version is not None and req.version != expected_version:
+        raise OperationalError("STALE_REQUIREMENT_VERSION", "Requirement was changed by another operation.", 409)
     if decision not in ASSESSMENTS: raise OperationalError("VALIDATION_FAILED", "Assessment decision is invalid.")
     assoc = _active_association(req)
     if not assoc or assoc.artifact.status != "active" or assoc.artifact.version_number != assoc.artifact_version:
@@ -160,7 +163,7 @@ def assess(shipment_id, requirement_id, payload, user):
     reason = str(payload.get("reason") or "").strip() or None
     if decision == "REJECTED" and not reason: raise OperationalError("STRUCTURED_REASON_REQUIRED", "Rejection reason is required.")
     row = DocumentAssessment(organization_id=shipment.organization_id, association_id=assoc.id, decision=decision, reason=reason, actor_user_id=user["id"])
-    db.session.add(row); db.session.flush(); _audit(shipment, user, {"REVIEW_STARTED":"ReviewStarted","APPROVED":"DocumentApproved","REJECTED":"DocumentRejected","VERIFIED":"DocumentVerified"}[decision], req, evidence={"assessment_public_id": row.public_id, "artifact_version": assoc.artifact_version})
+    db.session.add(row); req.version += 1; db.session.flush(); _audit(shipment, user, {"REVIEW_STARTED":"ReviewStarted","APPROVED":"DocumentApproved","REJECTED":"DocumentRejected","VERIFIED":"DocumentVerified"}[decision], req, evidence={"assessment_public_id": row.public_id, "artifact_version": assoc.artifact_version})
     db.session.commit(); return _requirement_projection(req)
 
 

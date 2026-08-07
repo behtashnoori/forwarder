@@ -39,7 +39,7 @@ vi.mock("../../lib/api", async () => {
 });
 const shipment = {
   id: 1,
-  public_id: "s1",
+  public_id: "11111111-1111-4111-8111-111111111111",
   status: "planned",
   version: 1,
   customer: "UAT Customer",
@@ -126,6 +126,9 @@ describe("Phase 1A operational pages", () => {
     release({ data: [shipment], meta: { page: 1, has_more: false } });
     expect(await screen.findByText("UAT Customer")).toBeInTheDocument();
     expect(screen.getAllByRole("link", { name: /UAT Customer/ })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: /UAT Customer/ })).toHaveAttribute(
+      "href", "/operations/shipments/11111111-1111-4111-8111-111111111111",
+    );
     expect(screen.queryByText(/Quote #2|Request #3|#1/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("status")).toBeInTheDocument();
   });
@@ -184,7 +187,7 @@ describe("Phase 1A operational pages", () => {
       data: shipment,
     });
     render(
-      <MemoryRouter initialEntries={["/operations/shipments/1"]}>
+      <MemoryRouter initialEntries={["/operations/shipments/11111111-1111-4111-8111-111111111111"]}>
         <Routes>
           <Route
             path="/operations/shipments/:id"
@@ -199,6 +202,9 @@ describe("Phase 1A operational pages", () => {
     expect(screen.getAllByText("arrival", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("operations.workQueue")).toBeInTheDocument();
     expect(screen.queryByText(/Quote #2|Request #3|plan #20|Checkpoint #30|#6/)).not.toBeInTheDocument();
+    expect(api.getOperationalShipment).toHaveBeenCalledWith(
+      "11111111-1111-4111-8111-111111111111",
+    );
   });
   it("renders and resolves a work item", async () => {
     (
@@ -208,6 +214,7 @@ describe("Phase 1A operational pages", () => {
         {
           id: 6,
           shipment_id: 1,
+          shipment_public_id: "11111111-1111-4111-8111-111111111111",
           milestone_id: 5,
           type: "OVERDUE_MILESTONE",
           status: "open",

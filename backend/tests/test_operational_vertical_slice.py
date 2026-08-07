@@ -115,6 +115,14 @@ def test_cross_tenant_detail_and_queue_are_hidden(operational_app):
         shipment,_=service.create_from_accepted_quote(_payload(operational_app),_user(operational_app),"tenant")
         with pytest.raises(service.OperationalError) as hidden: service.scoped_shipment(shipment.id,_user(operational_app,"outsider"))
         assert hidden.value.status == 404
+        public_id = shipment.public_id
+
+    response = operational_app.test_client().get(
+        f"/api/operational-shipments/by-public-id/{public_id}",
+        headers=_auth(operational_app, "outsider"),
+    )
+    assert response.status_code == 404
+    assert response.json["error"]["code"] == "RESOURCE_NOT_FOUND"
 
 
 def test_permission_denied_and_correction_reason_required(operational_app):
@@ -141,6 +149,9 @@ def test_http_create_list_detail_and_error_envelopes(operational_app):
     assert {"customer","current_milestone","overdue","open_work_item_count"} <= listing.json["data"][0].keys()
     detail=client.get(f"/api/operational-shipments/{created.json['data']['id']}",headers=_auth(operational_app))
     assert detail.status_code == 200 and "audit_summary" in detail.json["data"]
+    opaque_detail=client.get(f"/api/operational-shipments/by-public-id/{created.json['data']['public_id']}",headers=_auth(operational_app))
+    assert opaque_detail.status_code == 200
+    assert opaque_detail.json["data"]["public_id"] == created.json["data"]["public_id"]
     missing=client.get("/api/operational-shipments/999999",headers=_auth(operational_app))
     assert missing.status_code == 404 and missing.json["error"]["code"] == "RESOURCE_NOT_FOUND"
     mismatch=dict(_payload(operational_app));mismatch["transport_mode"]="rail"
