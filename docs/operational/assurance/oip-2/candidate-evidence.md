@@ -46,6 +46,8 @@ FRAMEWORK DELTA: **PATTERN CANDIDATE**; this implementation confirms EAAF bounda
 
 ## OIP-D20 evidence (2026-08-08)
 
+- Bound implementation commit: `414bae0269905ae61a1dcf82e7bd8101c9a5d7c5`.
+- Bound implementation tree: `60431ab880d53338755df1ccd53883d7e95b5a51`.
 - Architecture: [OIP-D20](../../adr/ADR-032-oip-projection-health-lifecycle.md), contract `oip-projection-health-v1`.
 - Migration head: `20260816_oip_projection_health`, parent `20260815_oip_threshold_policy`.
 - Migration SHA-256: `3EE88CD1E7A24B6CFC60C0C4BB20F113498B335F6AF520C2B2C8F5C2864B7EC5`.
