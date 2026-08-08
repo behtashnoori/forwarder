@@ -40,14 +40,16 @@ def _seed(valid_until=None):
     )
     db.session.add(quote)
     db.session.commit()
-    return customer.id, req.id, quote.id
+    req.tracking_code = "SR-QUOTE-CAPABILITY"
+    db.session.commit()
+    return customer.id, req.id, quote.id, req.tracking_code
 
 
 def test_customer_can_accept_quote(app, client):
     with app.app_context():
-        customer_id, request_id, quote_id = _seed(valid_until=date.today() + timedelta(days=3))
+        _customer_id, request_id, quote_id, tracking_code = _seed(valid_until=date.today() + timedelta(days=3))
 
-    resp = client.post(f"/api/customer/quote-response/{customer_id}", json={"request_id": request_id, "response": "accepted"})
+    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
     assert resp.status_code == 200
     assert resp.get_json()["latest_quote"]["customer_response"] == "accepted"
 
@@ -60,53 +62,82 @@ def test_customer_can_accept_quote(app, client):
 
 def test_customer_can_decline_quote(app, client):
     with app.app_context():
-        customer_id, request_id, _ = _seed()
-    resp = client.post(f"/api/customer/quote-response/{customer_id}", json={"request_id": request_id, "response": "declined"})
+        _customer_id, _request_id, _, tracking_code = _seed()
+    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "declined"})
     assert resp.status_code == 200
     assert resp.get_json()["latest_quote"]["customer_response"] == "declined"
 
 
 def test_invalid_response_is_rejected(app, client):
     with app.app_context():
-        customer_id, request_id, _ = _seed()
-    resp = client.post(f"/api/customer/quote-response/{customer_id}", json={"request_id": request_id, "response": "maybe"})
+        _customer_id, _request_id, _, tracking_code = _seed()
+    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "maybe"})
     assert resp.status_code == 400
 
 
 def test_double_response_is_conflict(app, client):
     with app.app_context():
-        customer_id, request_id, _ = _seed()
-    first = client.post(f"/api/customer/quote-response/{customer_id}", json={"request_id": request_id, "response": "accepted"})
+        _customer_id, _request_id, _, tracking_code = _seed()
+    first = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
     assert first.status_code == 200
-    second = client.post(f"/api/customer/quote-response/{customer_id}", json={"request_id": request_id, "response": "declined"})
+    replay = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
+    assert replay.status_code == 200
+    second = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "declined"})
     assert second.status_code == 409
 
 
 def test_expired_quote_cannot_be_answered(app, client):
     with app.app_context():
-        customer_id, request_id, _ = _seed(valid_until=date.today() - timedelta(days=1))
-    resp = client.post(f"/api/customer/quote-response/{customer_id}", json={"request_id": request_id, "response": "accepted"})
+        _customer_id, _request_id, _, tracking_code = _seed(valid_until=date.today() - timedelta(days=1))
+    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
     assert resp.status_code == 400
 
 
 def test_foreign_customer_cannot_answer(app, client):
     with app.app_context():
-        _customer_id, request_id, _ = _seed()
+        _customer_id, _request_id, _, _tracking_code = _seed()
         other = CustomerGamification(email="o@example.com", phone="09120000000")
         db.session.add(other)
         db.session.commit()
         other_id = other.id
-    resp = client.post(f"/api/customer/quote-response/{other_id}", json={"request_id": request_id, "response": "accepted"})
+    resp = client.post(f"/api/customer/quote-response/SR-FOREIGN-CAPABILITY", json={"response": "accepted"})
     assert resp.status_code == 404
 
 
 def test_workflow_payload_exposes_quote_response(app, client):
     with app.app_context():
-        customer_id, request_id, _ = _seed()
-        client.post(f"/api/customer/quote-response/{customer_id}", json={"request_id": request_id, "response": "accepted"})
+        customer_id, request_id, _, tracking_code = _seed()
+        client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
 
     resp = client.get(f"/api/customer/workflow/{customer_id}?request_id={request_id}")
     assert resp.status_code == 200
     latest_quote = resp.get_json()["latest_quote"]
     assert latest_quote["customer_response"] == "accepted"
     assert "responded_at" in latest_quote
+    assert "id" not in latest_quote
+
+
+def test_numeric_and_invalid_capabilities_have_same_not_found_behavior(app, client):
+    with app.app_context():
+        _seed()
+    numeric = client.post("/api/customer/quote-response/1", json={"response": "accepted"})
+    invalid = client.post("/api/customer/quote-response/SR-NOT-FOUND", json={"response": "accepted"})
+    assert numeric.status_code == invalid.status_code == 404
+    assert numeric.get_json() == invalid.get_json()
+
+
+def test_response_is_audited(app, client):
+    with app.app_context():
+        _customer_id, request_id, _, tracking_code = _seed()
+    response = client.post(
+        f"/api/customer/quote-response/{tracking_code}",
+        json={"response": "accepted"},
+        environ_base={"REMOTE_ADDR": "203.0.113.9"},
+    )
+    assert response.status_code == 200
+    with app.app_context():
+        from backend.models import ExpertConsoleLog
+        audit = ExpertConsoleLog.query.filter_by(
+            shipment_request_id=request_id, action="customer_quote_response"
+        ).one()
+        assert audit.ip_address == "203.0.113.9"

@@ -512,7 +512,8 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
         "created_at",
         "assigned_expert",
         "customer_id",
-        "request_id",
+            "request_id",
+            "tracking_code",
         "workflow_steps",
         "workflow_steps_simple",
         "total_points_earned",
@@ -555,7 +556,6 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
     assert workflow_payload["total_points_earned"] == 20
     assert workflow_payload["total_steps"] == 8
     assert set(workflow_payload["latest_quote"].keys()) == {
-        "id",
         "amount",
         "currency",
         "note",

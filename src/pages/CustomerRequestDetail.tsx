@@ -95,7 +95,10 @@ const CustomerRequestDetail: React.FC = () => {
     }
     setRespondingQuote(true);
     try {
-      await submitQuoteResponse(customer, requestId, response);
+      if (!requestDetail?.tracking_code) {
+        throw new Error(t("customer.quoteResponseErrorTitle"));
+      }
+      await submitQuoteResponse(requestDetail.tracking_code, response);
       toast({
         title: t("customer.quoteResponseSuccessTitle"),
         description: t("customer.quoteResponseSuccessDesc"),

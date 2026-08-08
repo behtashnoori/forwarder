@@ -894,6 +894,7 @@ export interface CustomerWorkflowStep {
 }
 
 export interface CustomerWorkflowData {
+  tracking_code: string | null;
   id: number;
   shipping_type: string;
   status: string;
@@ -910,7 +911,6 @@ export interface CustomerWorkflowData {
   completed_steps: number;
   total_steps: number;
   latest_quote?: {
-    id: number;
     amount: number;
     currency: string;
     note?: string | null;
@@ -951,15 +951,14 @@ export interface QuoteResponseResult {
 }
 
 export async function submitQuoteResponse(
-  customerId: string,
-  requestId: string | number,
+  trackingCode: string,
   response: "accepted" | "declined",
 ): Promise<QuoteResponseResult> {
-  const path = `/api/customer/quote-response/${customerId}`;
+  const path = `/api/customer/quote-response/${encodeURIComponent(trackingCode)}`;
   const res = await fetch(`${API_BASE_URL}${buildPath(path)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ request_id: requestId, response }),
+    body: JSON.stringify({ response }),
   });
 
   const data = (await res.json().catch(() => ({}))) as QuoteResponseResult;

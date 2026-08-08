@@ -10,7 +10,7 @@ from flask import current_app
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
-from backend.models import CustomerGamification, CustomerWorkflowStep, ExpertQuote, ShipmentRequest
+from backend.models import CustomerGamification, CustomerWorkflowStep, ExpertConsoleLog, ExpertQuote, ShipmentRequest
 from backend.routes.public_tracking import _workflow_steps_simple_4
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 
@@ -477,30 +477,45 @@ VALID_QUOTE_RESPONSES = {"accepted", "declined"}
 
 
 def record_quote_response(
-    customer_id: int, request_id: Any, response: Any
+    tracking_code: str, response: Any, remote_addr: str | None = None
 ) -> tuple[dict[str, Any], int]:
     """Record a customer's accept/decline on the latest quote for their own request."""
     if response not in VALID_QUOTE_RESPONSES:
         return {"message": "پاسخ نامعتبر است"}, 400
 
     try:
-        resolved_request_id = int(request_id)
+        resolved_request_id = str(tracking_code).strip()
+        if not resolved_request_id or resolved_request_id.isdigit():
+            raise ValueError
     except (TypeError, ValueError):
+        return {"message": "Not found"}, 404
         return {"message": "شناسه درخواست نامعتبر است"}, 400
 
-    shipment_request = get_customer_workflow_or_none(customer_id, resolved_request_id)
+    shipment_request = (
+        db.session.query(ShipmentRequest)
+        .filter(ShipmentRequest.tracking_code == resolved_request_id)
+        .with_for_update()
+        .first()
+    )
     if shipment_request is None:
+        return {"message": "Not found"}, 404
         return {"message": "درخواست یافت نشد یا به این مشتری تعلق ندارد"}, 404
 
     quote_row = (
         db.session.query(ExpertQuote)
         .filter(ExpertQuote.shipment_request_id == shipment_request.id)
         .order_by(ExpertQuote.created_at.desc())
+        .with_for_update()
         .first()
     )
     if quote_row is None:
         return {"message": "پیشنهاد قیمتی برای این درخواست ثبت نشده است"}, 404
 
+    if quote_row.customer_response == response:
+        return {
+            "message": "Response recorded",
+            "latest_quote": build_latest_quote_payload(shipment_request),
+        }, 200
     if quote_row.customer_response is not None:
         return {"message": "شما قبلاً به این پیشنهاد پاسخ داده‌اید"}, 409
 
@@ -512,6 +527,16 @@ def record_quote_response(
         quote_row.responded_at = datetime.utcnow()
         # Surface the decision to the assigned expert on their next console visit.
         shipment_request.has_unread_for_assignee = True
+        db.session.add(ExpertConsoleLog(
+            shipment_request_id=shipment_request.id,
+            expert_user_id=None,
+            action="customer_quote_response",
+            old_status=shipment_request.status,
+            new_status=shipment_request.status,
+            note=f"response={response}; quote_id={quote_row.id}; capability=tracking_code",
+            ip_address=remote_addr,
+            created_at=datetime.utcnow(),
+        ))
         db.session.commit()
     except SQLAlchemyError as exc:  # pragma: no cover - defensive
         db.session.rollback()
@@ -584,7 +609,6 @@ def build_latest_quote_payload(shipment_request: ShipmentRequest) -> dict[str, A
         return None
 
     return {
-        "id": quote_row.id,
         "amount": int(quote_row.amount) if quote_row.amount is not None else None,
         "currency": quote_row.currency or "IRR",
         "note": quote_row.note,
@@ -634,6 +658,7 @@ def build_customer_workflow_payload(
         "assigned_expert": build_assigned_expert_payload(shipment_request),
         "customer_id": customer_id,
         "request_id": request_id,
+        "tracking_code": shipment_request.tracking_code,
         "workflow_steps": workflow_status,
         "workflow_steps_simple": _workflow_steps_simple_4(shipment_request),
         "total_points_earned": sum(step.points_earned for step in steps),
