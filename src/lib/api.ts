@@ -319,6 +319,16 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+export type MoneyValue={amount:string;currency:string};
+export type EconomicObservation={public_id:string;stage:"ESTIMATE"|"COMMITMENT"|"ACTUAL";money:MoneyValue;effective_at:string;recorded_at:string;authority:string;status:string;correction_type?:string|null;reason?:string|null};
+export type EconomicLine={public_id:string;side:"REVENUE"|"COST";service_type_id:number;description?:string|null;lifecycle:string;version:number;observations:EconomicObservation[]};
+export type EconomicStageProjection={revenue:MoneyValue|null;cost:MoneyValue|null;margin:MoneyValue|null;margin_percentage:string|null;currency:string|null;completeness:"COMPLETE"|"INCOMPLETE"|"UNKNOWN"|"NOT_APPLICABLE";missing_inputs:string[];source_observation_ids:string[];applied_fx_rate_ids:string[]};
+export type ShipmentEconomicsProjection={shipment_public_id:string;calculated_at:string;stages:Record<"ESTIMATE"|"COMMITMENT"|"ACTUAL",EconomicStageProjection>};
+export const getEconomicProjection=(shipmentId:string)=>request<{data:ShipmentEconomicsProjection}>(`/api/v2/operational-shipments/${shipmentId}/economics/projection`);
+export const listEconomicLines=(shipmentId:string)=>request<{data:EconomicLine[]}>(`/api/v2/operational-shipments/${shipmentId}/economics/lines`);
+export const previewCommercialEconomics=(shipmentId:string)=>request<{data:{already_materialized:boolean;confirmation_allowed:boolean;commercial_intent:{amount:string;currency:string};findings:string[]}}>(`/api/v2/operational-shipments/${shipmentId}/economics/commercial-materialization-preview`);
+export const confirmCommercialEconomics=(shipmentId:string,serviceTypeId:number,authority:string)=>request(`/api/v2/operational-shipments/${shipmentId}/economics/commercial-materialize`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({service_type_id:serviceTypeId,authority,reason:"Explicit authorized commercial materialization",idempotency_key:crypto.randomUUID()})});
+
 export function fetchProvinces(): Promise<Province[]> {
   return request<Province[]>("/api/provinces");
 }

@@ -28,6 +28,7 @@ import { useI18n } from "@/i18n";
 import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
 import DocumentReadinessSection from "@/components/DocumentReadinessSection";
+import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
 
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
@@ -137,6 +138,7 @@ export default function OperationalShipmentDetail() {
           <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
+          {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} /></OperationalPermission>}
 
           <Card>
             <CardHeader><CardTitle>Timeline reconciliation</CardTitle></CardHeader>

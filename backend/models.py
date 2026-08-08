@@ -1601,6 +1601,10 @@ from backend.mdpm_models import (  # noqa: E402
     RequirementApplicabilityDecision,
     TransitionOverride,
 )
+from backend.economics_models import (  # noqa: E402
+    EconomicAudit, EconomicEvidenceAssociation, EconomicFxRate,
+    EconomicLine, EconomicObservation,
+)
 
 
 __all__ = [
@@ -1678,4 +1682,9 @@ __all__ = [
     "OperationalAudit",
     "OperationalOutbox",
     "OperationalIdempotency",
+    "EconomicLine",
+    "EconomicObservation",
+    "EconomicEvidenceAssociation",
+    "EconomicFxRate",
+    "EconomicAudit",
 ]
