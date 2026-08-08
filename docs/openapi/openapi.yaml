@@ -11,6 +11,7 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Operational Intelligence
   - name: Document Readiness
   - name: Operational Execution
   - name: Project Configuration
@@ -787,7 +788,138 @@ components:
       additionalProperties: false
       required: [public_id, milestone_public_id, event_type, effective_at, recorded_at, source_channel, verification_state]
       properties: { public_id: { type: string, format: uuid }, milestone_public_id: { type: string, format: uuid }, event_type: { type: string }, effective_at: { type: string, format: date-time }, recorded_at: { type: string, format: date-time }, source_channel: { type: string }, reason: { type: string, nullable: true }, note: { type: string, nullable: true }, verification_state: { type: string }, verified_at: { type: string, format: date-time, nullable: true }, correction_of_event_public_id: { type: string, format: uuid, nullable: true } }
+    OipProjectionHealth:
+      type: object
+      additionalProperties: false
+      required: [health_state, calculated_at, source_watermark, projection_version, policy_version, version]
+      properties:
+        health_state: { type: string, enum: [FRESH, STALE, REBUILDING, DEGRADED] }
+        calculated_at: { type: string, format: date-time }
+        source_watermark: { type: string }
+        processed_watermark: { type: string, nullable: true }
+        projection_version: { type: string }
+        policy_version: { type: string }
+        reason_code: { type: string, nullable: true, description: Stable sanitized code when non-FRESH. }
+        reason: { type: string, nullable: true, description: Sanitized reason; never includes internal exception detail. }
+        last_success_at: { type: string, format: date-time, nullable: true }
+        rebuild_started_at: { type: string, format: date-time, nullable: true }
+        rebuild_completed_at: { type: string, format: date-time, nullable: true }
+        last_failure_at: { type: string, format: date-time, nullable: true }
+        run_id: { type: string, format: uuid, nullable: true }
+        version: { type: integer, minimum: 1 }
 paths:
+  /api/oip/policies:
+    get:
+      tags: [Operational Intelligence]
+      summary: Read the seven approved Signal policies and configuration requirements
+      description: Governed families expose INACTIVE_UNCONFIGURED abstention when no authoritative effective threshold exists.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Policy catalog, including governed threshold abstention metadata. }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.read permission is required. }
+  /api/oip/reconcile:
+    post:
+      tags: [Operational Intelligence]
+      summary: Reconcile authoritative operational facts into OIP projections
+      description: Returns reconciliation counts plus projection status, watermark, policy version, projection version, freshness timestamp, and any last error. Requires oip.reconcile.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Deterministic reconciliation and projection status. }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.reconcile permission is required. }
+        '503': { description: Reconciliation failed; projection health is DEGRADED and operational truth is unaffected. }
+  /api/oip/projection/status:
+    get:
+      tags: [Operational Intelligence]
+      summary: Read and refresh OIP projection health
+      description: Applies the governed exact-watermark freshness policy. This describes derived intelligence, never operational status or readiness.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Current projection health.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties: { data: { $ref: '#/components/schemas/OipProjectionHealth' } }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.read permission is required. }
+  /api/oip/projection/rebuild:
+    post:
+      tags: [Operational Intelligence]
+      summary: Rebuild the disposable OIP attention projection
+      description: Exposes REBUILDING for the real governed operation, then FRESH on success or DEGRADED with sanitized failure evidence.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Successful rebuild and FRESH health. }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.reconcile permission is required. }
+        '503': { description: Rebuild failed and health is DEGRADED. }
+  /api/oip/attention:
+    get:
+      tags: [Operational Intelligence]
+      summary: Read the tenant attention queue
+      description: Returns eligible OPEN, ACKNOWLEDGED, IN_PROGRESS, and expired-SNOOZED Situations with DecisionContext ranking explanation and freshness/projection status.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Ranked attention projections containing opaque public IDs only. }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.read permission is required. }
+  /api/oip/situations/{public_id}:
+    parameters:
+      - { name: public_id, in: path, required: true, description: Opaque Situation public ID., schema: { type: string, format: uuid } }
+    get:
+      tags: [Operational Intelligence]
+      summary: Read Situation detail, Recommendation, evidence, history, and freshness
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Situation detail with advisory Recommendation and no automatic execution. }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.read permission is required. }
+        '404': { description: Not found, including cross-tenant opaque lookup. }
+  /api/oip/situations/{public_id}/decision-context:
+    parameters:
+      - { name: public_id, in: path, required: true, description: Opaque Situation public ID., schema: { type: string, format: uuid } }
+    get:
+      tags: [Operational Intelligence]
+      summary: Read the current read-only DecisionContext
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: DecisionContext with blockers, missing information, permissions, and versions. }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.read permission is required. }
+        '404': { description: Situation not found. }
+  /api/oip/situations/{public_id}/{action}:
+    parameters:
+      - { name: public_id, in: path, required: true, description: Opaque Situation public ID., schema: { type: string, format: uuid } }
+      - { name: action, in: path, required: true, schema: { type: string, enum: [acknowledge, claim, start, snooze, resolve, dismiss, assign, reassign] } }
+    post:
+      tags: [Operational Intelligence]
+      summary: Apply an optimistic Situation lifecycle transition
+      description: Lifecycle values are OPEN, ACKNOWLEDGED, IN_PROGRESS, SNOOZED, RESOLVED, DISMISSED, and EXPIRED. assign/reassign deliberately return ACTION_GAP until an opaque member identity contract exists.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [expected_version]
+              properties:
+                expected_version: { type: integer, minimum: 1, description: Current Situation version; stale writers fail with 409. }
+                reason: { type: string, minLength: 1, maxLength: 1000, description: Required for snooze, resolve, and dismiss. }
+                until: { type: string, format: date-time, description: Required future instant for snooze. }
+      responses:
+        '200': { description: Updated Situation projection. }
+        '401': { description: Authentication required. }
+        '403': { description: The oip.manage permission is required. }
+        '404': { description: Situation not found. }
+        '409': { description: VERSION_CONFLICT for stale expected_version or INVALID_TRANSITION. }
+        '422': { description: Missing reason, missing/invalid snooze time, or unsupported action. }
+        '501': { description: ACTION_GAP for assign/reassign; no numeric member identity is accepted. }
   /api/v2/projects/{projectId}/execution-units:
     get:
       tags: [Execution Units]

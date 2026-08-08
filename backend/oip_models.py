@@ -1,5 +1,6 @@
 """OIP-2 durable derived-intelligence models. Operational truth stays elsewhere."""
 from __future__ import annotations
+from uuid import uuid4
 
 from backend.extensions import db
 from backend.operational_models import BIGINT, utcnow
@@ -11,6 +12,48 @@ SITUATION_TYPES = (
     "EXECUTION_UNIT_STALE",
 )
 SITUATION_STATUSES = ("OPEN", "ACKNOWLEDGED", "IN_PROGRESS", "SNOOZED", "RESOLVED", "DISMISSED", "EXPIRED")
+
+
+class OipThresholdPolicy(db.Model):
+    """Governed, explicitly configured duration used by one OIP signal family."""
+    __tablename__ = "oip_threshold_policy"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "organization_id", "signal_type", "scope_type", "scope_public_id", "version",
+            name="uq_oip_threshold_policy_version",
+        ),
+        db.CheckConstraint(
+            "signal_type IN ('NEXT_MILESTONE_OVERDUE','EXECUTION_UNIT_STALE')",
+            name="ck_oip_threshold_policy_signal",
+        ),
+        db.CheckConstraint(
+            "scope_type IN ('PROJECT','SERVICE_MODE','ENTERPRISE')",
+            name="ck_oip_threshold_policy_scope",
+        ),
+        db.CheckConstraint("value > 0", name="ck_oip_threshold_policy_value"),
+        db.CheckConstraint("unit IN ('MINUTE','HOUR','DAY')", name="ck_oip_threshold_policy_unit"),
+        db.CheckConstraint("version >= 1", name="ck_oip_threshold_policy_version"),
+        db.CheckConstraint("effective_to IS NULL OR effective_to > effective_from", name="ck_oip_threshold_policy_effective"),
+        db.Index("ix_oip_threshold_policy_resolution", "organization_id", "signal_type", "scope_type", "scope_public_id", "is_active", "effective_from"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    signal_type = db.Column(db.String(48), nullable=False)
+    scope_type = db.Column(db.String(16), nullable=False)
+    scope_public_id = db.Column(db.String(64), nullable=False)
+    value = db.Column(db.Integer, nullable=False)
+    unit = db.Column(db.String(8), nullable=False)
+    authority = db.Column(db.String(120), nullable=False)
+    source = db.Column(db.String(200), nullable=False)
+    version = db.Column(db.Integer, nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.DateTime(timezone=True), nullable=False)
+    effective_to = db.Column(db.DateTime(timezone=True))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    updated_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
 
 
 class OipSituation(db.Model):
@@ -135,4 +178,29 @@ class OipProjectionState(db.Model):
     projection_version = db.Column(db.String(32), nullable=False)
     calculated_at = db.Column(db.DateTime(timezone=True), nullable=False)
     last_error = db.Column(db.Text)
+    processed_watermark = db.Column(db.String(160))
+    policy_version = db.Column(db.String(32), nullable=False, default="oip-health-watermark-v1")
+    last_success_at = db.Column(db.DateTime(timezone=True))
+    rebuild_started_at = db.Column(db.DateTime(timezone=True))
+    rebuild_completed_at = db.Column(db.DateTime(timezone=True))
+    last_failure_at = db.Column(db.DateTime(timezone=True))
+    failure_code = db.Column(db.String(64))
+    active_run_id = db.Column(db.String(36))
+    version = db.Column(db.Integer, nullable=False, default=1)
 
+
+class OipProjectionHealthHistory(db.Model):
+    __tablename__ = "oip_projection_health_history"
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    from_state = db.Column(db.String(16))
+    to_state = db.Column(db.String(16), nullable=False)
+    reason_code = db.Column(db.String(64), nullable=False)
+    reason = db.Column(db.String(200))
+    projection_version = db.Column(db.String(32), nullable=False)
+    policy_version = db.Column(db.String(32), nullable=False)
+    run_id = db.Column(db.String(36))
+    source_watermark = db.Column(db.String(160))
+    processed_watermark = db.Column(db.String(160))
+    occurred_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)

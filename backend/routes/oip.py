@@ -25,10 +25,23 @@ def reconcile():
     try:return jsonify({"data":service.reconcile(_user())})
     except OperationalError as exc:db.session.rollback();return _error(exc)
 
+@oip_bp.post("/api/oip/projection/rebuild")
+@require_auth
+def rebuild():
+    try:return jsonify({"data":service.rebuild_attention_projections(_user())})
+    except OperationalError as exc:db.session.rollback();return _error(exc)
+
+@oip_bp.get("/api/oip/projection/status")
+@require_auth
+def projection_status():
+    try:return jsonify({"data":service.projection_health(_user())})
+    except OperationalError as exc:db.session.rollback();return _error(exc)
+
 @oip_bp.get("/api/oip/attention")
 @require_auth
 def attention():
-    try:return jsonify({"data":service.queue(_user())})
+    try:
+        user=_user();return jsonify({"data":service.queue(user),"projection_health":service.projection_health(user)})
     except OperationalError as exc:return _error(exc)
 
 @oip_bp.get("/api/oip/situations/<string:public_id>")

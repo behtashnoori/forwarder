@@ -39,3 +39,34 @@ FRAMEWORK DELTA: **PATTERN CANDIDATE**; this implementation confirms EAAF bounda
 ## Current decision
 
 **OIP-2 IMPLEMENTED WITH EXPLICIT LIMITATIONS**
+
+---
+
+# Final promotion closure — CAND-FWD-OIP-2-PROMOTION-001
+
+## OIP-D20 evidence (2026-08-08)
+
+- Architecture: [OIP-D20](../../adr/ADR-032-oip-projection-health-lifecycle.md), contract `oip-projection-health-v1`.
+- Migration head: `20260816_oip_projection_health`, parent `20260815_oip_threshold_policy`.
+- Migration SHA-256: `3EE88CD1E7A24B6CFC60C0C4BB20F113498B335F6AF520C2B2C8F5C2864B7EC5`.
+- Threshold migration SHA-256: `B5DA78135E348B3604A0720B2B8EAF85E27820F31312FAE9A7DE6CAD6C855C1B`.
+- OpenAPI SHA-256 before candidate commit: `C48D256525CE7F7AF27EFCA1FB06EE6F2FDD11901028C09BF07B3DA3D94046E3`.
+- Projection/policy: `oip-attention-v1` / `oip-health-watermark-v1`.
+- PostgreSQL: fresh disposable `oip2_gate_health_20260808`; full migration to head passed; 13-race plus rebuild/recovery suite passed (`14 passed`).
+- Browser: authenticated disposable environment proved STALE, FRESH, active REBUILDING, DEGRADED (`REBUILD_FAILED`, sanitized), and recovery to FRESH. Queue/detail retained readable intelligence and operational controls. Clean matrix tabs had zero error-level console entries. Persian RTL and English LTR passed.
+- Regression: OIP targeted `16 passed, 1 skipped`; full backend `582 passed, 47 skipped`; full frontend `111 passed`; production build passed; lint passed with 12 pre-existing warnings and zero errors.
+- EAAF weakest mandatory link: all OIP-D20 mandatory implementation and local-validation links passed. No deployment, production access, or push occurred.
+
+## Remaining accepted limitations
+
+Opaque assign/reassign identity remains deferred; UNASSIGNED + Claim is supported. AI, Action Engine, financial, compliance, carrier, and predictive intelligence remain excluded. The active REBUILDING browser observation used a test-only pause after the real start commit; no timer or fake UI state exists in runtime/API.
+
+## Framework delta
+
+PROJECT RESULT: OIP-D20 closes trustworthy machine-health disclosure without crossing into operational truth.
+
+FRAMEWORK DELTA: **REFERENCE EXAMPLE CANDIDATE**. Evidence supports an implementation reference, not an automatic EAAF philosophy change or reusable framework promotion.
+
+## Promotion decision
+
+**OIP-2 PROMOTION CANDIDATE READY**

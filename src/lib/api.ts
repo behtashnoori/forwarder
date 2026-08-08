@@ -122,7 +122,7 @@ export interface ShipmentRequestPayload {
   // Customer details (optional)
   customer_first_name?: string;
   customer_last_name?: string;
-  transport_method?: string;  // Legacy field
+  transport_method?: string; // Legacy field
   international_transport_method?: string;
   domestic_transport_method?: string;
   transport_method_preference?: string;
@@ -155,12 +155,14 @@ export interface InternationalRouteSelection {
 }
 
 /** Iran uses the optional structured destination stage instead of the generic city dropdown. */
-export const isInternationalRouteComplete = (selection: InternationalRouteSelection): boolean =>
+export const isInternationalRouteComplete = (
+  selection: InternationalRouteSelection,
+): boolean =>
   Boolean(
-    selection.originCountry
-    && selection.originCity
-    && selection.destinationCountry
-    && (selection.isIranDestination || selection.destinationCity),
+    selection.originCountry &&
+    selection.originCity &&
+    selection.destinationCountry &&
+    (selection.isIranDestination || selection.destinationCity),
   );
 
 /** Build an optional, mutually-exclusive Iran destination payload fragment. */
@@ -168,11 +170,12 @@ export const buildIranDestinationPayload = (
   selection: IranDestinationSelection,
 ): Partial<ShipmentRequestPayload> => {
   const provinceId = selection.provinceId?.trim();
-  const selectedId = selection.type === "port"
-    ? selection.portId?.trim()
-    : selection.type === "customs"
-      ? selection.customsOfficeId?.trim()
-      : selection.cityId?.trim();
+  const selectedId =
+    selection.type === "port"
+      ? selection.portId?.trim()
+      : selection.type === "customs"
+        ? selection.customsOfficeId?.trim()
+        : selection.cityId?.trim();
 
   // Incomplete optional selections are omitted. In particular, Number("") is
   // never evaluated and no zero reference ID can leak into the payload.
@@ -182,7 +185,8 @@ export const buildIranDestinationPayload = (
     iran_dest_type: selection.type,
     iran_entry_province_id: Number(provinceId),
   };
-  if (selection.provinceName) payload.iran_entry_province = selection.provinceName;
+  if (selection.provinceName)
+    payload.iran_entry_province = selection.provinceName;
 
   if (selection.type === "port") {
     payload.iran_entry_port_id = Number(selectedId);
@@ -195,8 +199,11 @@ export const buildIranDestinationPayload = (
   return payload;
 };
 
-import { env } from './env';
-import { clearExpertSession, rememberCurrentRouteForLogin } from "./authContinuity";
+import { env } from "./env";
+import {
+  clearExpertSession,
+  rememberCurrentRouteForLogin,
+} from "./authContinuity";
 
 const API_BASE_URL = env.API_URL.replace(/\/+$/, "");
 
@@ -207,7 +214,10 @@ function buildPath(path: string): string {
   return path;
 }
 
-function withQuery(path: string, params?: Record<string, string | number | undefined>): string {
+function withQuery(
+  path: string,
+  params?: Record<string, string | number | undefined>,
+): string {
   if (!params) {
     return path;
   }
@@ -236,24 +246,32 @@ export function getLogoDisplayUrl(url: string | undefined): string {
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!import.meta.env.DEV && !API_BASE_URL) {
-    throw new Error("API URL is not configured. Set VITE_API_URL for production.");
+    throw new Error(
+      "API URL is not configured. Set VITE_API_URL for production.",
+    );
   }
   const url = `${API_BASE_URL}${buildPath(path)}`;
-  
+
   // Get token from localStorage
-  const token = localStorage.getItem('expert_token');
-  
+  const token = localStorage.getItem("expert_token");
+
   const requestInit: RequestInit = {
     ...init,
     headers: {
-      ...(!(init?.body instanceof FormData) && { "Content-Type": "application/json" }),
-      ...(token && { "Authorization": `Bearer ${token}` }),
+      ...(!(init?.body instanceof FormData) && {
+        "Content-Type": "application/json",
+      }),
+      ...(token && { Authorization: `Bearer ${token}` }),
       ...(init?.headers ?? {}),
     },
   };
   let response = await fetch(url, requestInit);
 
-  if (response.status === 401 && !path.includes("/auth/") && localStorage.getItem("expert_refresh_token")) {
+  if (
+    response.status === 401 &&
+    !path.includes("/auth/") &&
+    localStorage.getItem("expert_refresh_token")
+  ) {
     const refreshed = await refreshExpertSession();
     if (refreshed) {
       requestInit.headers = {
@@ -271,8 +289,17 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     let message = `Request failed with status ${response.status}`;
     try {
       const body = await response.json();
-      if (body?.error && typeof body.error === "object" && typeof body.error.message === "string") {
-        throw new ApiError(response.status, body.error.code || "API_ERROR", body.error.message, body.error.fields || []);
+      if (
+        body?.error &&
+        typeof body.error === "object" &&
+        typeof body.error.message === "string"
+      ) {
+        throw new ApiError(
+          response.status,
+          body.error.code || "API_ERROR",
+          body.error.message,
+          body.error.fields || [],
+        );
       } else if (body && typeof body.message === "string") {
         message = body.message;
       } else if (body && typeof body.error === "string") {
@@ -310,18 +337,25 @@ export function fetchCountries(): Promise<Country[]> {
   return request<Country[]>("/api/countries");
 }
 
-export function fetchInternationalCities(countryId: number): Promise<InternationalCity[]> {
-  const path = withQuery("/api/international-cities", { country_id: countryId });
+export function fetchInternationalCities(
+  countryId: number,
+): Promise<InternationalCity[]> {
+  const path = withQuery("/api/international-cities", {
+    country_id: countryId,
+  });
   return request<InternationalCity[]>(path);
 }
 
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
 ): Promise<{ message: string; id: number; tracking_code: string }> {
-  return request<{ message: string; id: number; tracking_code: string }>("/api/shipment-request", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return request<{ message: string; id: number; tracking_code: string }>(
+    "/api/shipment-request",
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
 }
 
 export interface PublicTrackingWorkflowStep {
@@ -347,93 +381,228 @@ export interface TransportUnitUpdate {
 }
 
 export interface TrackingLocationReference {
-  id: number; name_fa: string; name_en: string | null; country_code: string;
-  location_type: string; aliases: string[]; is_active: boolean;
-  internal_key?: string; reference_status?: string; sort_order?: number; notes?: string | null;
+  id: number;
+  name_fa: string;
+  name_en: string | null;
+  country_code: string;
+  location_type: string;
+  aliases: string[];
+  is_active: boolean;
+  internal_key?: string;
+  reference_status?: string;
+  sort_order?: number;
+  notes?: string | null;
 }
 
-export const fetchTrackingLocations = (q = ""): Promise<{ items: TrackingLocationReference[] }> =>
+export const fetchTrackingLocations = (
+  q = "",
+): Promise<{ items: TrackingLocationReference[] }> =>
   request(`/api/tracking-locations${q ? `?q=${encodeURIComponent(q)}` : ""}`);
-export const fetchAdminTrackingLocations = (q = ""): Promise<{ items: TrackingLocationReference[] }> =>
-  request(`/api/tracking-locations?include_inactive=true${q ? `&q=${encodeURIComponent(q)}` : ""}`);
-export const createTrackingLocation = (payload: Record<string, unknown>): Promise<TrackingLocationReference> =>
-  request("/api/tracking-locations",{method:"POST",body:JSON.stringify(payload)});
-export const updateTrackingLocation = (id:number,payload:Record<string,unknown>): Promise<TrackingLocationReference> =>
-  request(`/api/tracking-locations/${id}`,{method:"PATCH",body:JSON.stringify(payload)});
-export const deactivateTrackingLocation = (id:number): Promise<TrackingLocationReference> =>
-  request(`/api/tracking-locations/${id}`,{method:"DELETE"});
+export const fetchAdminTrackingLocations = (
+  q = "",
+): Promise<{ items: TrackingLocationReference[] }> =>
+  request(
+    `/api/tracking-locations?include_inactive=true${q ? `&q=${encodeURIComponent(q)}` : ""}`,
+  );
+export const createTrackingLocation = (
+  payload: Record<string, unknown>,
+): Promise<TrackingLocationReference> =>
+  request("/api/tracking-locations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const updateTrackingLocation = (
+  id: number,
+  payload: Record<string, unknown>,
+): Promise<TrackingLocationReference> =>
+  request(`/api/tracking-locations/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+export const deactivateTrackingLocation = (
+  id: number,
+): Promise<TrackingLocationReference> =>
+  request(`/api/tracking-locations/${id}`, { method: "DELETE" });
 
 // --- Admin location (origin/destination) management ------------------------
 // Admin serializers return richer records than the public read endpoints, so
 // these admin-facing shapes are separate from Province/County/City above.
 export interface AdminProvince {
-  id: number; name_fa: string; code: string | null; country_id: number | null; is_active: boolean;
+  id: number;
+  name_fa: string;
+  code: string | null;
+  country_id: number | null;
+  is_active: boolean;
 }
 export interface AdminCounty {
-  id: number; name_fa: string; code: string | null; province_id: number; province_name: string | null; is_active: boolean;
+  id: number;
+  name_fa: string;
+  code: string | null;
+  province_id: number;
+  province_name: string | null;
+  is_active: boolean;
 }
 export interface AdminCity {
-  id: number; name_fa: string; code: string | null; county_id: number; county_name: string | null;
-  province_id: number; province_name: string | null; is_active: boolean;
+  id: number;
+  name_fa: string;
+  code: string | null;
+  county_id: number;
+  county_name: string | null;
+  province_id: number;
+  province_name: string | null;
+  is_active: boolean;
 }
 export interface AdminCountry {
-  id: number; name_fa: string; name_en: string; code: string; is_active: boolean;
+  id: number;
+  name_fa: string;
+  name_en: string;
+  code: string;
+  is_active: boolean;
 }
 export interface AdminInternationalCity {
-  id: number; name_fa: string; name_en: string; country_id: number; country_name: string | null;
-  city_type: string; is_major_port: boolean; is_major_airport: boolean; is_active: boolean;
+  id: number;
+  name_fa: string;
+  name_en: string;
+  country_id: number;
+  country_name: string | null;
+  city_type: string;
+  is_major_port: boolean;
+  is_major_airport: boolean;
+  is_active: boolean;
 }
 export interface AdminIranPort {
-  id: number; name_fa: string; name_en: string; port_type: string; province_id: number;
-  province_name: string | null; country_id: number | null; is_major_port: boolean;
-  description: string | null; is_active: boolean;
+  id: number;
+  name_fa: string;
+  name_en: string;
+  port_type: string;
+  province_id: number;
+  province_name: string | null;
+  country_id: number | null;
+  is_major_port: boolean;
+  description: string | null;
+  is_active: boolean;
 }
 
 /** Admin location resource segments (match backend `_RESOURCES` keys). */
 export type AdminLocationResource =
-  | "provinces" | "counties" | "cities" | "countries" | "international-cities" | "iran-ports";
+  | "provinces"
+  | "counties"
+  | "cities"
+  | "countries"
+  | "international-cities"
+  | "iran-ports";
 
-function adminLocationPath(resource: AdminLocationResource, params?: Record<string, string | number | undefined>): string {
-  return withQuery(`/api/admin/locations/${resource}`, { include_inactive: "true", ...params });
+function adminLocationPath(
+  resource: AdminLocationResource,
+  params?: Record<string, string | number | undefined>,
+): string {
+  return withQuery(`/api/admin/locations/${resource}`, {
+    include_inactive: "true",
+    ...params,
+  });
 }
 
 export const fetchAdminProvinces = (): Promise<{ items: AdminProvince[] }> =>
   request(adminLocationPath("provinces"));
-export const fetchAdminCounties = (provinceId?: number): Promise<{ items: AdminCounty[] }> =>
+export const fetchAdminCounties = (
+  provinceId?: number,
+): Promise<{ items: AdminCounty[] }> =>
   request(adminLocationPath("counties", { province_id: provinceId }));
-export const fetchAdminCities = (countyId?: number): Promise<{ items: AdminCity[] }> =>
+export const fetchAdminCities = (
+  countyId?: number,
+): Promise<{ items: AdminCity[] }> =>
   request(adminLocationPath("cities", { county_id: countyId }));
 export const fetchAdminCountries = (): Promise<{ items: AdminCountry[] }> =>
   request(adminLocationPath("countries"));
-export const fetchAdminInternationalCities = (countryId?: number): Promise<{ items: AdminInternationalCity[] }> =>
+export const fetchAdminInternationalCities = (
+  countryId?: number,
+): Promise<{ items: AdminInternationalCity[] }> =>
   request(adminLocationPath("international-cities", { country_id: countryId }));
 export const fetchAdminIranPorts = (): Promise<{ items: AdminIranPort[] }> =>
   request(adminLocationPath("iran-ports"));
 
-export const createAdminLocation = <T>(resource: AdminLocationResource, payload: Record<string, unknown>): Promise<{ item: T }> =>
-  request(`/api/admin/locations/${resource}`, { method: "POST", body: JSON.stringify(payload) });
-export const updateAdminLocation = <T>(resource: AdminLocationResource, id: number, payload: Record<string, unknown>): Promise<{ item: T }> =>
-  request(`/api/admin/locations/${resource}/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
-export const deactivateAdminLocation = <T>(resource: AdminLocationResource, id: number): Promise<{ item: T }> =>
+export const createAdminLocation = <T>(
+  resource: AdminLocationResource,
+  payload: Record<string, unknown>,
+): Promise<{ item: T }> =>
+  request(`/api/admin/locations/${resource}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const updateAdminLocation = <T>(
+  resource: AdminLocationResource,
+  id: number,
+  payload: Record<string, unknown>,
+): Promise<{ item: T }> =>
+  request(`/api/admin/locations/${resource}/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+export const deactivateAdminLocation = <T>(
+  resource: AdminLocationResource,
+  id: number,
+): Promise<{ item: T }> =>
   request(`/api/admin/locations/${resource}/${id}`, { method: "DELETE" });
 
-export type MasterDataResource = "cargo-types" | "service-types" | "units-of-measure";
-export type MeasurementDimension = "COUNT" | "WEIGHT" | "VOLUME" | "LENGTH" | "OTHER_GOVERNED";
+export type MasterDataResource =
+  "cargo-types" | "service-types" | "units-of-measure";
+export type MeasurementDimension =
+  "COUNT" | "WEIGHT" | "VOLUME" | "LENGTH" | "OTHER_GOVERNED";
 export interface MasterDataItem {
-  public_id: string; immutable_code: string; fa_name: string; en_name: string;
-  description: string | null; display_order: number; is_active: boolean; version: number;
-  created_at: string; updated_at: string; parent_id?: string | null; symbol?: string;
+  public_id: string;
+  immutable_code: string;
+  fa_name: string;
+  en_name: string;
+  description: string | null;
+  display_order: number;
+  is_active: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
+  parent_id?: string | null;
+  symbol?: string;
   measurement_dimension?: MeasurementDimension;
 }
-export interface MasterDataPage { items: MasterDataItem[]; page: number; per_page: number; total: number; pages: number; }
-export const fetchMasterData = (resource: MasterDataResource, params: Record<string, string | number | undefined>) =>
-  request<MasterDataPage>(withQuery(`/api/admin/master-data/${resource}`, params));
-export const createMasterData = (resource: MasterDataResource, payload: Record<string, unknown>) =>
-  request<{ item: MasterDataItem }>(`/api/admin/master-data/${resource}`, { method: "POST", body: JSON.stringify(payload) });
-export const updateMasterData = (resource: MasterDataResource, publicId: string, payload: Record<string, unknown>) =>
-  request<{ item: MasterDataItem }>(`/api/admin/master-data/${resource}/${publicId}`, { method: "PATCH", body: JSON.stringify(payload) });
-export const setMasterDataActive = (resource: MasterDataResource, item: MasterDataItem, active: boolean) =>
-  request<{ item: MasterDataItem }>(`/api/admin/master-data/${resource}/${item.public_id}/${active ? "activate" : "deactivate"}`, { method: "POST", body: JSON.stringify({ version: item.version }) });
+export interface MasterDataPage {
+  items: MasterDataItem[];
+  page: number;
+  per_page: number;
+  total: number;
+  pages: number;
+}
+export const fetchMasterData = (
+  resource: MasterDataResource,
+  params: Record<string, string | number | undefined>,
+) =>
+  request<MasterDataPage>(
+    withQuery(`/api/admin/master-data/${resource}`, params),
+  );
+export const createMasterData = (
+  resource: MasterDataResource,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: MasterDataItem }>(`/api/admin/master-data/${resource}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const updateMasterData = (
+  resource: MasterDataResource,
+  publicId: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: MasterDataItem }>(
+    `/api/admin/master-data/${resource}/${publicId}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export const setMasterDataActive = (
+  resource: MasterDataResource,
+  item: MasterDataItem,
+  active: boolean,
+) =>
+  request<{ item: MasterDataItem }>(
+    `/api/admin/master-data/${resource}/${item.public_id}/${active ? "activate" : "deactivate"}`,
+    { method: "POST", body: JSON.stringify({ version: item.version }) },
+  );
 
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -504,10 +673,23 @@ export interface PublicTransportUnitTracking {
   timeline: TransportUnitUpdate[];
 }
 
-export type TrackingAggregateStatus = "not_started" | "in_progress" | "partially_delivered" | "attention_required" | "completed" | "cancelled";
+export type TrackingAggregateStatus =
+  | "not_started"
+  | "in_progress"
+  | "partially_delivered"
+  | "attention_required"
+  | "completed"
+  | "cancelled";
 export interface TrackingSummary {
-  total_units: number; without_updates: number; not_started: number; loading: number;
-  in_transit: number; delayed: number; arrived: number; delivered: number; cancelled: number;
+  total_units: number;
+  without_updates: number;
+  not_started: number;
+  loading: number;
+  in_transit: number;
+  delayed: number;
+  arrived: number;
+  delivered: number;
+  cancelled: number;
 }
 
 export interface MultiUnitTracking {
@@ -521,13 +703,23 @@ export interface MultiUnitTracking {
 }
 
 export interface InternalTransportUnitTracking {
-  id: number; unit_code: string; unit_type: string; display_name: string | null;
-  vehicle_reference: string | null; is_active: boolean; latest_status: string;
-  latest_location: string | null; latest_event_at: string | null;
+  id: number;
+  unit_code: string;
+  unit_type: string;
+  display_name: string | null;
+  vehicle_reference: string | null;
+  is_active: boolean;
+  latest_status: string;
+  latest_location: string | null;
+  latest_event_at: string | null;
 }
 export interface InternalMultiUnitTracking {
-  enabled: true; enabled_at: string | null; aggregate_status: TrackingAggregateStatus;
-  summary: TrackingSummary; last_updated_at: string | null; units: InternalTransportUnitTracking[];
+  enabled: true;
+  enabled_at: string | null;
+  aggregate_status: TrackingAggregateStatus;
+  summary: TrackingSummary;
+  last_updated_at: string | null;
+  units: InternalTransportUnitTracking[];
 }
 
 export interface PublicTrackingData {
@@ -609,7 +801,9 @@ export class PublicTrackingHttpError extends Error {
   }
 }
 
-export async function fetchPublicTracking(identifier: string): Promise<PublicTrackingData> {
+export async function fetchPublicTracking(
+  identifier: string,
+): Promise<PublicTrackingData> {
   const path = `/api/public/track/${encodeURIComponent(identifier)}`;
   const response = await fetch(`${API_BASE_URL}${buildPath(path)}`);
 
@@ -675,7 +869,9 @@ export class CustomerProfileHttpError extends Error {
   }
 }
 
-export async function fetchCustomerProfile(customerId: string): Promise<CustomerProfileData> {
+export async function fetchCustomerProfile(
+  customerId: string,
+): Promise<CustomerProfileData> {
   const path = `/api/customer/profile/${customerId}`;
   const response = await fetch(`${API_BASE_URL}${buildPath(path)}`);
 
@@ -768,7 +964,9 @@ export async function submitQuoteResponse(
 
   const data = (await res.json().catch(() => ({}))) as QuoteResponseResult;
   if (!res.ok) {
-    throw new Error(data.message || `Quote response failed with status ${res.status}`);
+    throw new Error(
+      data.message || `Quote response failed with status ${res.status}`,
+    );
   }
   return data;
 }
@@ -783,7 +981,9 @@ export interface CustomerEmailVerificationResult {
   data: CustomerEmailVerificationResponse;
 }
 
-export async function verifyCustomerEmail(token: string): Promise<CustomerEmailVerificationResult> {
+export async function verifyCustomerEmail(
+  token: string,
+): Promise<CustomerEmailVerificationResult> {
   const path = `/api/customer/verify-email?token=${encodeURIComponent(token)}`;
   const response = await fetch(`${API_BASE_URL}${buildPath(path)}`);
   const data = (await response.json()) as CustomerEmailVerificationResponse;
@@ -814,12 +1014,17 @@ export class AdminDashboardHttpError extends Error {
   }
 }
 
-export async function fetchAdminDashboard(token: string): Promise<AdminDashboardStats> {
-  const response = await fetch(`${API_BASE_URL}${buildPath("/api/admin/dashboard")}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+export async function fetchAdminDashboard(
+  token: string,
+): Promise<AdminDashboardStats> {
+  const response = await fetch(
+    `${API_BASE_URL}${buildPath("/api/admin/dashboard")}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     throw new AdminDashboardHttpError(response.status);
@@ -845,19 +1050,27 @@ export class AdminReportDownloadHttpError extends Error {
   }
 }
 
-export async function downloadAdminReportXlsx(token: string, period: AdminReportPeriod): Promise<AdminReportDownload> {
-  const response = await fetch(`${API_BASE_URL}${buildPath(`/api/admin/reports/export.xlsx?period=${period}`)}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
+export async function downloadAdminReportXlsx(
+  token: string,
+  period: AdminReportPeriod,
+): Promise<AdminReportDownload> {
+  const response = await fetch(
+    `${API_BASE_URL}${buildPath(`/api/admin/reports/export.xlsx?period=${period}`)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     },
-  });
+  );
 
   if (!response.ok) {
     throw new AdminReportDownloadHttpError(response.status);
   }
 
   const contentDisposition = response.headers.get("Content-Disposition") || "";
-  const filename = getFilenameFromContentDisposition(contentDisposition) || `forwarder-report-${period}.xlsx`;
+  const filename =
+    getFilenameFromContentDisposition(contentDisposition) ||
+    `forwarder-report-${period}.xlsx`;
 
   return {
     blob: await response.blob(),
@@ -865,7 +1078,9 @@ export async function downloadAdminReportXlsx(token: string, period: AdminReport
   };
 }
 
-function getFilenameFromContentDisposition(contentDisposition: string): string | null {
+function getFilenameFromContentDisposition(
+  contentDisposition: string,
+): string | null {
   const utf8Match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
   if (utf8Match?.[1]) {
     return decodeURIComponent(utf8Match[1].replace(/"/g, ""));
@@ -992,37 +1207,39 @@ export function fetchExpertRequests(params?: {
   return request(path);
 }
 
-export function fetchExpertRequestDetail(requestId: number): Promise<ExpertRequest & {
-  customer: {
-    first_name?: string;
-    last_name?: string;
-    phone: string;
-    full_name: string;
-  };
-  dates: {
-    pickup_date?: string;
-    delivery_date?: string;
-  };
-  timeline: Array<{
-    id: number;
-    action: string;
-    old_status?: string;
-    new_status?: string;
-    note?: string;
-    created_at: string;
-    created_by: string;
-  }>;
-  messages: ExpertMessage[];
-  latest_quote?: {
-    id: number;
-    amount: number;
-    currency: string;
-    note?: string | null;
-    valid_until?: string | null;
-    created_at: string;
-    created_by?: string | null;
-  } | null;
-}> {
+export function fetchExpertRequestDetail(requestId: number): Promise<
+  ExpertRequest & {
+    customer: {
+      first_name?: string;
+      last_name?: string;
+      phone: string;
+      full_name: string;
+    };
+    dates: {
+      pickup_date?: string;
+      delivery_date?: string;
+    };
+    timeline: Array<{
+      id: number;
+      action: string;
+      old_status?: string;
+      new_status?: string;
+      note?: string;
+      created_at: string;
+      created_by: string;
+    }>;
+    messages: ExpertMessage[];
+    latest_quote?: {
+      id: number;
+      amount: number;
+      currency: string;
+      note?: string | null;
+      valid_until?: string | null;
+      created_at: string;
+      created_by?: string | null;
+    } | null;
+  }
+> {
   return request(`/api/expert/requests/${requestId}`);
 }
 
@@ -1034,17 +1251,31 @@ export interface TrackingManagementData {
   unit_tracking: InternalMultiUnitTracking | null;
 }
 
-export const fetchTrackingManagement = (requestId: number): Promise<TrackingManagementData> =>
+export const fetchTrackingManagement = (
+  requestId: number,
+): Promise<TrackingManagementData> =>
   request(`/api/expert/requests/${requestId}/tracking`);
 
-export const enableTrackingManagement = (requestId: number): Promise<TrackingManagementData> =>
-  request(`/api/expert/requests/${requestId}/tracking/enable`, { method: "POST" });
+export const enableTrackingManagement = (
+  requestId: number,
+): Promise<TrackingManagementData> =>
+  request(`/api/expert/requests/${requestId}/tracking/enable`, {
+    method: "POST",
+  });
 
 export const addTrackingUnit = (
   requestId: number,
-  payload: { unit_code: string; unit_type: string; display_name?: string; vehicle_reference?: string },
+  payload: {
+    unit_code: string;
+    unit_type: string;
+    display_name?: string;
+    vehicle_reference?: string;
+  },
 ): Promise<TrackingManagementData> =>
-  request(`/api/expert/requests/${requestId}/tracking/units`, { method: "POST", body: JSON.stringify(payload) });
+  request(`/api/expert/requests/${requestId}/tracking/units`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 
 export const updateTrackingUnitMetadata = (
   requestId: number,
@@ -1070,10 +1301,13 @@ export const addTrackingUnitUpdate = (
     occurred_at: string;
   },
 ): Promise<TrackingManagementData> =>
-  request(`/api/expert/requests/${requestId}/tracking/units/${unitId}/updates`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  request(
+    `/api/expert/requests/${requestId}/tracking/units/${unitId}/updates`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+  );
 
 export interface SubmitQuotePayload {
   amount: number;
@@ -1084,152 +1318,625 @@ export interface SubmitQuotePayload {
 
 export type DocumentFormat = "jpeg" | "png" | "webp" | "pdf" | "docx" | "xlsx";
 export interface DocumentDefinition {
-  id: number; public_id: string; code: string; title: string; description?: string | null; is_required: boolean;
-  allowed_formats: DocumentFormat[]; max_file_size_bytes: number; max_active_file_count: number;
-  sort_order: number; is_active: boolean; applicability_scope: "all" | "domestic" | "international";
-  revision: number; usage_count: number;
+  id: number;
+  public_id: string;
+  code: string;
+  title: string;
+  description?: string | null;
+  is_required: boolean;
+  allowed_formats: DocumentFormat[];
+  max_file_size_bytes: number;
+  max_active_file_count: number;
+  sort_order: number;
+  is_active: boolean;
+  applicability_scope: "all" | "domestic" | "international";
+  revision: number;
+  usage_count: number;
 }
 export interface CaseDocumentFile {
-  id: number; requirement_id?: number | null; is_miscellaneous: boolean; custom_title?: string | null;
-  description?: string | null; original_filename: string; canonical_extension: string; file_size_bytes: number;
-  sha256_hash: string; version_number: number; status: "active" | "superseded" | "deleted"; uploaded_at: string;
+  id: number;
+  requirement_id?: number | null;
+  is_miscellaneous: boolean;
+  custom_title?: string | null;
+  description?: string | null;
+  original_filename: string;
+  canonical_extension: string;
+  file_size_bytes: number;
+  sha256_hash: string;
+  version_number: number;
+  status: "active" | "superseded" | "deleted";
+  uploaded_at: string;
 }
 export interface CaseDocumentRequirement {
-  id: number; code: string; title: string; description?: string | null; is_required: boolean;
-  allowed_formats: DocumentFormat[]; max_file_size_bytes: number; max_active_file_count: number;
-  complete: boolean; active_files: CaseDocumentFile[]; versions: CaseDocumentFile[];
+  id: number;
+  code: string;
+  title: string;
+  description?: string | null;
+  is_required: boolean;
+  allowed_formats: DocumentFormat[];
+  max_file_size_bytes: number;
+  max_active_file_count: number;
+  complete: boolean;
+  active_files: CaseDocumentFile[];
+  versions: CaseDocumentFile[];
 }
 export interface CaseDocumentsPayload {
-  requirements: CaseDocumentRequirement[]; miscellaneous: CaseDocumentFile[];
-  summary: { total_requirements: number; required_requirements: number; uploaded_requirements: number; missing_required_requirements: number; miscellaneous_file_count: number };
+  requirements: CaseDocumentRequirement[];
+  miscellaneous: CaseDocumentFile[];
+  summary: {
+    total_requirements: number;
+    required_requirements: number;
+    uploaded_requirements: number;
+    missing_required_requirements: number;
+    miscellaneous_file_count: number;
+  };
 }
-export const fetchDocumentDefinitions = () => request<{items: DocumentDefinition[]}>("/api/admin/document-definitions");
-export const createDocumentDefinition = (payload: Partial<DocumentDefinition>) =>
-  request<DocumentDefinition>("/api/admin/document-definitions", { method: "POST", body: JSON.stringify(payload) });
-export const updateDocumentDefinition = (id: number, payload: Partial<DocumentDefinition>) =>
-  request<DocumentDefinition>(`/api/admin/document-definitions/${id}`, { method: "PATCH", body: JSON.stringify(payload) });
+export const fetchDocumentDefinitions = () =>
+  request<{ items: DocumentDefinition[] }>("/api/admin/document-definitions");
+export const createDocumentDefinition = (
+  payload: Partial<DocumentDefinition>,
+) =>
+  request<DocumentDefinition>("/api/admin/document-definitions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const updateDocumentDefinition = (
+  id: number,
+  payload: Partial<DocumentDefinition>,
+) =>
+  request<DocumentDefinition>(`/api/admin/document-definitions/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 export const setDocumentDefinitionActive = (id: number, is_active: boolean) =>
-  request<DocumentDefinition>(`/api/admin/document-definitions/${id}/activation`, { method: "POST", body: JSON.stringify({is_active}) });
+  request<DocumentDefinition>(
+    `/api/admin/document-definitions/${id}/activation`,
+    { method: "POST", body: JSON.stringify({ is_active }) },
+  );
 export const fetchCaseDocuments = (caseId: number) =>
   request<CaseDocumentsPayload>(`/api/expert/requests/${caseId}/documents`);
-export const uploadCaseDocument = (caseId: number, requirementId: number | null, form: FormData, replace = false) =>
-  request<CaseDocumentFile>(requirementId == null
-    ? `/api/expert/requests/${caseId}/documents/miscellaneous`
-    : `/api/expert/requests/${caseId}/document-requirements/${requirementId}/${replace ? "replace" : "files"}`,
-    { method: "POST", body: form });
-export const deleteCaseDocument = (caseId: number, fileId: number, reason: string) =>
-  request<{id: number; status: string}>(`/api/expert/requests/${caseId}/documents/${fileId}`, { method: "DELETE", body: JSON.stringify({reason}) });
-export async function downloadCaseDocument(caseId: number, fileId: number, filename: string) {
+export const uploadCaseDocument = (
+  caseId: number,
+  requirementId: number | null,
+  form: FormData,
+  replace = false,
+) =>
+  request<CaseDocumentFile>(
+    requirementId == null
+      ? `/api/expert/requests/${caseId}/documents/miscellaneous`
+      : `/api/expert/requests/${caseId}/document-requirements/${requirementId}/${replace ? "replace" : "files"}`,
+    { method: "POST", body: form },
+  );
+export const deleteCaseDocument = (
+  caseId: number,
+  fileId: number,
+  reason: string,
+) =>
+  request<{ id: number; status: string }>(
+    `/api/expert/requests/${caseId}/documents/${fileId}`,
+    { method: "DELETE", body: JSON.stringify({ reason }) },
+  );
+export async function downloadCaseDocument(
+  caseId: number,
+  fileId: number,
+  filename: string,
+) {
   const token = localStorage.getItem("expert_token");
-  const response = await fetch(`${API_BASE_URL}${buildPath(`/api/expert/requests/${caseId}/documents/${fileId}/download`)}`, {
-    headers: token ? {Authorization: `Bearer ${token}`} : {},
-  });
+  const response = await fetch(
+    `${API_BASE_URL}${buildPath(`/api/expert/requests/${caseId}/documents/${fileId}/download`)}`,
+    {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    },
+  );
   if (!response.ok) throw new Error("دریافت فایل ناموفق بود");
   const url = URL.createObjectURL(await response.blob());
-  const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click();
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
   URL.revokeObjectURL(url);
 }
 
 export class ApiError extends Error {
-  constructor(public readonly status: number, public readonly code: string, message: string, public readonly fields: unknown[] = []) {
+  constructor(
+    public readonly status: number,
+    public readonly code: string,
+    message: string,
+    public readonly fields: unknown[] = [],
+  ) {
     super(message);
     this.name = "ApiError";
   }
 }
 
-export interface OperationalLocationRef { source_type: string; source_id: number }
+export interface OperationalLocationRef {
+  source_type: string;
+  source_id: number;
+}
 export interface OperationalShipmentSummary {
-  id: number; public_id: string; status: string; version: number;
-  customer?: string; current_milestone?: string | null; overdue: boolean; overdue_since?: string | null; open_work_item_count: number;
-  source: { accepted_quote_id: number; shipment_request_id: number; quote_amount?: number };
-  route_leg: { id: number; origin: { display_name: string }; destination: { display_name: string }; transport_mode: string; planned_departure: string; planned_arrival: string; version: number };
-  route_legs?: Array<OperationalShipmentSummary["route_leg"] & { sequence_number: number; status: string }>;
-  milestones: Array<{ id: number; type: string; planned_at: string; occurred_at?: string | null; verification_state: string; version: number }>;
-  recent_events: Array<{ id: number; milestone_id: number; event_type: string; occurred_at: string; reason?: string | null }>;
-  open_work_items: Array<{ id: number; milestone_id: number; type: string; due_at: string; status: string; version: number }>;
+  id: number;
+  public_id: string;
+  status: string;
+  version: number;
+  customer?: string;
+  current_milestone?: string | null;
+  overdue: boolean;
+  overdue_since?: string | null;
+  open_work_item_count: number;
+  source: {
+    accepted_quote_id: number;
+    shipment_request_id: number;
+    quote_amount?: number;
+  };
+  route_leg: {
+    id: number;
+    origin: { display_name: string };
+    destination: { display_name: string };
+    transport_mode: string;
+    planned_departure: string;
+    planned_arrival: string;
+    version: number;
+  };
+  route_legs?: Array<
+    OperationalShipmentSummary["route_leg"] & {
+      sequence_number: number;
+      status: string;
+    }
+  >;
+  milestones: Array<{
+    id: number;
+    type: string;
+    planned_at: string;
+    occurred_at?: string | null;
+    verification_state: string;
+    version: number;
+  }>;
+  recent_events: Array<{
+    id: number;
+    milestone_id: number;
+    event_type: string;
+    occurred_at: string;
+    reason?: string | null;
+  }>;
+  open_work_items: Array<{
+    id: number;
+    milestone_id: number;
+    type: string;
+    due_at: string;
+    status: string;
+    version: number;
+  }>;
   audit_summary: Array<{ id: number; action: string; recorded_at: string }>;
 }
 
-export interface OperationalWorkItem { id: number; shipment_id: number; shipment_public_id: string; milestone_id: number; type: string; status: string; due_at: string; planned_at: string; milestone_type: string; overdue_seconds: number; customer?: string; route_leg: OperationalShipmentSummary["route_leg"]; reason: string; assignee_user_id?: number | null; version: number }
-export function getOperationalContext(): Promise<{ data: { organization_id: number; permissions: string[] } }> { return request("/api/operational-context"); }
+export interface OperationalWorkItem {
+  id: number;
+  shipment_id: number;
+  shipment_public_id: string;
+  milestone_id: number;
+  type: string;
+  status: string;
+  due_at: string;
+  planned_at: string;
+  milestone_type: string;
+  overdue_seconds: number;
+  customer?: string;
+  route_leg: OperationalShipmentSummary["route_leg"];
+  reason: string;
+  assignee_user_id?: number | null;
+  version: number;
+}
+export function getOperationalContext(): Promise<{
+  data: { organization_id: number; permissions: string[] };
+}> {
+  return request("/api/operational-context");
+}
 
-export function listOperationalShipments(params = ""): Promise<{ data: OperationalShipmentSummary[]; meta: { page: number; has_more: boolean } }> {
+export function listOperationalShipments(
+  params = "",
+): Promise<{
+  data: OperationalShipmentSummary[];
+  meta: { page: number; has_more: boolean };
+}> {
   return request(`/api/operational-shipments${params ? `?${params}` : ""}`);
 }
-export function getOperationalShipment(publicId: string): Promise<{ data: OperationalShipmentSummary }> { return request(`/api/operational-shipments/by-public-id/${encodeURIComponent(publicId)}`); }
-export function createOperationalShipment(payload: { accepted_quote_id: number; planned_departure: string; planned_arrival: string; origin: OperationalLocationRef; destination: OperationalLocationRef; transport_mode: string }, key: string): Promise<{ data: OperationalShipmentSummary; meta: { created: boolean } }> {
-  return request("/api/operational-shipments/from-accepted-quote", { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(payload) });
+export function getOperationalShipment(
+  publicId: string,
+): Promise<{ data: OperationalShipmentSummary }> {
+  return request(
+    `/api/operational-shipments/by-public-id/${encodeURIComponent(publicId)}`,
+  );
 }
-export function recordOperationalEvent(shipmentId: number, milestoneId: number, occurred_at: string, key: string) { return request(`/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/events`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ occurred_at }) }); }
-export function verifyOperationalMilestone(shipmentId: number, milestoneId: number, expected_version: number) { return request(`/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/verify`, { method: "POST", body: JSON.stringify({ expected_version }) }); }
-export function correctOperationalMilestone(shipmentId: number, milestoneId: number, occurred_at: string, reason: string, expected_version: number, key: string) { return request(`/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/correct`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify({ occurred_at, reason, expected_version }) }); }
-export function listOperationalWorkItems(params = ""): Promise<{ data: OperationalWorkItem[]; meta: { page:number; has_more:boolean } }> { return request(`/api/operational-work-items${params ? `?${params}` : ""}`); }
-export function resolveOperationalWorkItem(id: number, expected_version: number) { return request(`/api/operational-work-items/${id}/resolve`, { method: "POST", body: JSON.stringify({ expected_version }) }); }
+export function createOperationalShipment(
+  payload: {
+    accepted_quote_id: number;
+    planned_departure: string;
+    planned_arrival: string;
+    origin: OperationalLocationRef;
+    destination: OperationalLocationRef;
+    transport_mode: string;
+  },
+  key: string,
+): Promise<{ data: OperationalShipmentSummary; meta: { created: boolean } }> {
+  return request("/api/operational-shipments/from-accepted-quote", {
+    method: "POST",
+    headers: { "Idempotency-Key": key },
+    body: JSON.stringify(payload),
+  });
+}
+export function recordOperationalEvent(
+  shipmentId: number,
+  milestoneId: number,
+  occurred_at: string,
+  key: string,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/events`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ occurred_at }),
+    },
+  );
+}
+export function verifyOperationalMilestone(
+  shipmentId: number,
+  milestoneId: number,
+  expected_version: number,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/verify`,
+    { method: "POST", body: JSON.stringify({ expected_version }) },
+  );
+}
+export function correctOperationalMilestone(
+  shipmentId: number,
+  milestoneId: number,
+  occurred_at: string,
+  reason: string,
+  expected_version: number,
+  key: string,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/milestones/${milestoneId}/correct`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ occurred_at, reason, expected_version }),
+    },
+  );
+}
+export function listOperationalWorkItems(
+  params = "",
+): Promise<{
+  data: OperationalWorkItem[];
+  meta: { page: number; has_more: boolean };
+}> {
+  return request(`/api/operational-work-items${params ? `?${params}` : ""}`);
+}
+export function resolveOperationalWorkItem(
+  id: number,
+  expected_version: number,
+) {
+  return request(`/api/operational-work-items/${id}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ expected_version }),
+  });
+}
 export interface RouteMilestone {
-  id:number; type:string; planned_at:string; projected_at?:string|null; occurred_at?:string|null;
-  verification_state:string; version:number; source_milestone_id?:number|null;
+  id: number;
+  type: string;
+  planned_at: string;
+  projected_at?: string | null;
+  occurred_at?: string | null;
+  verification_state: string;
+  version: number;
+  source_milestone_id?: number | null;
 }
 export interface RouteCheckpoint {
-  id:number; route_leg_id:number; sequence_number:number; checkpoint_type:string; status:string;
-  verification_state:string; planned_arrival_at?:string|null; planned_departure_at?:string|null;
-  projected_arrival_at?:string|null; projected_departure_at?:string|null;
-  actual_arrival_at?:string|null; actual_departure_at?:string|null; responsible_party?:string|null;
-  notes?:string|null; version:number; source_checkpoint_id?:number|null; milestones:RouteMilestone[];
+  id: number;
+  route_leg_id: number;
+  sequence_number: number;
+  checkpoint_type: string;
+  status: string;
+  verification_state: string;
+  planned_arrival_at?: string | null;
+  planned_departure_at?: string | null;
+  projected_arrival_at?: string | null;
+  projected_departure_at?: string | null;
+  actual_arrival_at?: string | null;
+  actual_departure_at?: string | null;
+  responsible_party?: string | null;
+  notes?: string | null;
+  version: number;
+  source_checkpoint_id?: number | null;
+  milestones: RouteMilestone[];
 }
 export interface RouteLeg {
-  id:number; sequence_number:number; origin:{display_name?:string}; destination:{display_name?:string};
-  transport_mode:string; carrier_reference?:string|null; planned_departure:string; planned_arrival:string;
-  projected_departure?:string|null; projected_arrival?:string|null; actual_departure?:string|null;
-  actual_arrival?:string|null; status:string; version:number; source_route_leg_id?:number|null;
+  id: number;
+  sequence_number: number;
+  origin: { display_name?: string };
+  destination: { display_name?: string };
+  transport_mode: string;
+  carrier_reference?: string | null;
+  planned_departure: string;
+  planned_arrival: string;
+  projected_departure?: string | null;
+  projected_arrival?: string | null;
+  actual_departure?: string | null;
+  actual_arrival?: string | null;
+  status: string;
+  version: number;
+  source_route_leg_id?: number | null;
 }
 export interface RoutePlanSummary {
-  id:number; revision_number:number; status:string; is_active:boolean; created_from_plan_id?:number|null;
-  replan_reason?:string|null; effective_at?:string|null; created_at?:string; version:number;
+  id: number;
+  revision_number: number;
+  status: string;
+  is_active: boolean;
+  created_from_plan_id?: number | null;
+  replan_reason?: string | null;
+  effective_at?: string | null;
+  created_at?: string;
+  version: number;
 }
 export interface RoutePlanDetail extends RoutePlanSummary {
-  legs:RouteLeg[]; checkpoints:RouteCheckpoint[];
-  dependencies:Array<{id:number;predecessor_checkpoint_id:number;successor_checkpoint_id:number;dependency_type:string}>;
+  legs: RouteLeg[];
+  checkpoints: RouteCheckpoint[];
+  dependencies: Array<{
+    id: number;
+    predecessor_checkpoint_id: number;
+    successor_checkpoint_id: number;
+    dependency_type: string;
+  }>;
 }
-export interface TimelinePoint { checkpoint_id:number; arrival_at:string|null; departure_at:string|null }
-export interface EffectiveTimelinePoint extends TimelinePoint { arrival_source:string; departure_source:string }
+export interface TimelinePoint {
+  checkpoint_id: number;
+  arrival_at: string | null;
+  departure_at: string | null;
+}
+export interface EffectiveTimelinePoint extends TimelinePoint {
+  arrival_source: string;
+  departure_source: string;
+}
 export interface RouteTimeline {
-  route_plan_id?:number; route_plan_revision?:number; reconciliation_version?:number; reconciled_at?:string|null;
-  planned:TimelinePoint[]; projected:TimelinePoint[]; actual:TimelinePoint[]; effective:EffectiveTimelinePoint[];
-  delays:Array<{checkpoint_id:number;seconds:number}>; dependencies:Array<{predecessor_checkpoint_id:number;successor_checkpoint_id:number;type:string}>;
-  open_exceptions:Array<{id:number;checkpoint_id?:number|null;type:string;severity:string;due_at:string;reason:string;version:number}>;
+  route_plan_id?: number;
+  route_plan_revision?: number;
+  reconciliation_version?: number;
+  reconciled_at?: string | null;
+  planned: TimelinePoint[];
+  projected: TimelinePoint[];
+  actual: TimelinePoint[];
+  effective: EffectiveTimelinePoint[];
+  delays: Array<{ checkpoint_id: number; seconds: number }>;
+  dependencies: Array<{
+    predecessor_checkpoint_id: number;
+    successor_checkpoint_id: number;
+    type: string;
+  }>;
+  open_exceptions: Array<{
+    id: number;
+    checkpoint_id?: number | null;
+    type: string;
+    severity: string;
+    due_at: string;
+    reason: string;
+    version: number;
+  }>;
 }
-export function listRoutePlans(shipmentId:number):Promise<{data:RoutePlanSummary[]}>{ return request(`/api/operational-shipments/${shipmentId}/route-plans`); }
-export function getRoutePlan(shipmentId:number,planId:number):Promise<{data:RoutePlanDetail}>{ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}`); }
-export function getRouteTimeline(shipmentId:number):Promise<{data:RouteTimeline}>{ return request(`/api/operational-shipments/${shipmentId}/timeline`); }
-export function reconcileRouteTimeline(shipmentId:number, expectedRoutePlanVersion:number, idempotencyKey:string):Promise<{data:{route_plan_id:number;revision:number;version:number;reconciled_at:string|null;updated_checkpoints:number;actual_override_count:number;replayed:boolean}}>{
-  return request(`/api/operational-shipments/${shipmentId}/timeline/reconcile`,{method:"POST",headers:{"Idempotency-Key":idempotencyKey},body:JSON.stringify({expected_route_plan_version:expectedRoutePlanVersion})});
+export function listRoutePlans(
+  shipmentId: number,
+): Promise<{ data: RoutePlanSummary[] }> {
+  return request(`/api/operational-shipments/${shipmentId}/route-plans`);
 }
-export function validateRoutePlan(shipmentId:number,planId:number){ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/validate`,{method:"POST"}); }
-export function activateRoutePlan(shipmentId:number,planId:number,expected_version:number){ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/activate`,{method:"POST",body:JSON.stringify({expected_version})}); }
-export function replanRoute(shipmentId:number,planId:number,expected_version:number,reason:string,key:string){ return request(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/replan`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_version,reason})}); }
-export function commandRouteCheckpoint(shipmentId:number,checkpointId:number,action:"arrive"|"complete-processing"|"depart",occurred_at:string,expected_version:number,key:string){return request(`/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/${action}`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({occurred_at,expected_version})});}
-export function verifyRouteMilestone(shipmentId:number,checkpointId:number,milestoneId:number,expected_version:number,key:string){return request(`/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/milestones/${milestoneId}/verify`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_version})});}
-export function correctRouteMilestone(shipmentId:number,checkpointId:number,milestoneId:number,occurred_at:string,reason:string,expected_version:number,key:string){return request(`/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/milestones/${milestoneId}/correct`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({occurred_at,reason,expected_version})});}
+export function getRoutePlan(
+  shipmentId: number,
+  planId: number,
+): Promise<{ data: RoutePlanDetail }> {
+  return request(
+    `/api/operational-shipments/${shipmentId}/route-plans/${planId}`,
+  );
+}
+export function getRouteTimeline(
+  shipmentId: number,
+): Promise<{ data: RouteTimeline }> {
+  return request(`/api/operational-shipments/${shipmentId}/timeline`);
+}
+export function reconcileRouteTimeline(
+  shipmentId: number,
+  expectedRoutePlanVersion: number,
+  idempotencyKey: string,
+): Promise<{
+  data: {
+    route_plan_id: number;
+    revision: number;
+    version: number;
+    reconciled_at: string | null;
+    updated_checkpoints: number;
+    actual_override_count: number;
+    replayed: boolean;
+  };
+}> {
+  return request(
+    `/api/operational-shipments/${shipmentId}/timeline/reconcile`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({
+        expected_route_plan_version: expectedRoutePlanVersion,
+      }),
+    },
+  );
+}
+export function validateRoutePlan(shipmentId: number, planId: number) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/route-plans/${planId}/validate`,
+    { method: "POST" },
+  );
+}
+export function activateRoutePlan(
+  shipmentId: number,
+  planId: number,
+  expected_version: number,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/route-plans/${planId}/activate`,
+    { method: "POST", body: JSON.stringify({ expected_version }) },
+  );
+}
+export function replanRoute(
+  shipmentId: number,
+  planId: number,
+  expected_version: number,
+  reason: string,
+  key: string,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/route-plans/${planId}/replan`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ expected_version, reason }),
+    },
+  );
+}
+export function commandRouteCheckpoint(
+  shipmentId: number,
+  checkpointId: number,
+  action: "arrive" | "complete-processing" | "depart",
+  occurred_at: string,
+  expected_version: number,
+  key: string,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/${action}`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ occurred_at, expected_version }),
+    },
+  );
+}
+export function verifyRouteMilestone(
+  shipmentId: number,
+  checkpointId: number,
+  milestoneId: number,
+  expected_version: number,
+  key: string,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/milestones/${milestoneId}/verify`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ expected_version }),
+    },
+  );
+}
+export function correctRouteMilestone(
+  shipmentId: number,
+  checkpointId: number,
+  milestoneId: number,
+  occurred_at: string,
+  reason: string,
+  expected_version: number,
+  key: string,
+) {
+  return request(
+    `/api/operational-shipments/${shipmentId}/checkpoints/${checkpointId}/milestones/${milestoneId}/correct`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({ occurred_at, reason, expected_version }),
+    },
+  );
+}
 export interface RouteException {
-  id:number; shipment_id:number; route_plan_id:number; checkpoint_id?:number|null; type:string; status:string;
-  severity:string; due_at:string; detected_at?:string; resolved_at?:string|null; resolution_source?:string|null;
-  resolution_reason?:string|null; reason:string; version:number;
+  id: number;
+  shipment_id: number;
+  route_plan_id: number;
+  checkpoint_id?: number | null;
+  type: string;
+  status: string;
+  severity: string;
+  due_at: string;
+  detected_at?: string;
+  resolved_at?: string | null;
+  resolution_source?: string | null;
+  resolution_reason?: string | null;
+  reason: string;
+  version: number;
 }
-export function listRouteExceptions(shipmentId:number,status=""):Promise<{data:RouteException[]}>{return request(`/api/operational-shipments/${shipmentId}/route-exceptions?status=${encodeURIComponent(status)}`);}
-export function reconcileRouteExceptions(shipmentId:number,expectedRoutePlanVersion:number,key:string):Promise<{data:{opened:number;resolved:number;reopened:number;unchanged:number;replayed:boolean}}>{return request(`/api/operational-shipments/${shipmentId}/route-exceptions/reconcile`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_route_plan_version:expectedRoutePlanVersion})});}
-export function resolveRouteException(id:number,expected_version:number,reason:string,key:string){return request(`/api/route-exceptions/${id}/resolve`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({expected_version,reason})});}
+export function listRouteExceptions(
+  shipmentId: number,
+  status = "",
+): Promise<{ data: RouteException[] }> {
+  return request(
+    `/api/operational-shipments/${shipmentId}/route-exceptions?status=${encodeURIComponent(status)}`,
+  );
+}
+export function reconcileRouteExceptions(
+  shipmentId: number,
+  expectedRoutePlanVersion: number,
+  key: string,
+): Promise<{
+  data: {
+    opened: number;
+    resolved: number;
+    reopened: number;
+    unchanged: number;
+    replayed: boolean;
+  };
+}> {
+  return request(
+    `/api/operational-shipments/${shipmentId}/route-exceptions/reconcile`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify({
+        expected_route_plan_version: expectedRoutePlanVersion,
+      }),
+    },
+  );
+}
+export function resolveRouteException(
+  id: number,
+  expected_version: number,
+  reason: string,
+  key: string,
+) {
+  return request(`/api/route-exceptions/${id}/resolve`, {
+    method: "POST",
+    headers: { "Idempotency-Key": key },
+    body: JSON.stringify({ expected_version, reason }),
+  });
+}
 
 export function submitQuote(
   requestId: number,
-  payload: SubmitQuotePayload
-): Promise<{ ok: boolean; quote: { id: number; amount: number; currency: string; note?: string | null; valid_until?: string | null; created_at: string }; request: { id: number; status: string } }> {
+  payload: SubmitQuotePayload,
+): Promise<{
+  ok: boolean;
+  quote: {
+    id: number;
+    amount: number;
+    currency: string;
+    note?: string | null;
+    valid_until?: string | null;
+    created_at: string;
+  };
+  request: { id: number; status: string };
+}> {
   return request(`/api/expert/requests/${requestId}/quote`, {
     method: "POST",
     body: JSON.stringify(payload),
   });
 }
 
-export function assignRequest(requestId: number, expertId: number): Promise<{
+export function assignRequest(
+  requestId: number,
+  expertId: number,
+): Promise<{
   message: string;
   assigned_to: { id: number; name: string };
 }> {
@@ -1242,7 +1949,7 @@ export function assignRequest(requestId: number, expertId: number): Promise<{
 export function changeRequestStatus(
   requestId: number,
   status: string,
-  note?: string
+  note?: string,
 ): Promise<{ message: string; status: string }> {
   return request(`/api/expert/requests/${requestId}/status`, {
     method: "POST",
@@ -1255,7 +1962,7 @@ export function addMessage(
   messageType: "internal_note" | "customer_message",
   content: string,
   subject?: string,
-  expertId?: number
+  expertId?: number,
 ): Promise<{ message: string; message_id: number }> {
   return request(`/api/expert/requests/${requestId}/messages`, {
     method: "POST",
@@ -1268,7 +1975,10 @@ export function addMessage(
   });
 }
 
-export function fetchNotifications(expertId: number, unreadOnly = false): Promise<{
+export function fetchNotifications(
+  expertId: number,
+  unreadOnly = false,
+): Promise<{
   notifications: ExpertNotification[];
   unread_count: number;
 }> {
@@ -1280,11 +1990,17 @@ export function fetchNotifications(expertId: number, unreadOnly = false): Promis
 }
 
 export function fetchKPIs(expertId?: number): Promise<KPIs> {
-  const path = withQuery("/api/expert/dashboard/kpis", expertId ? { expert_id: expertId } : undefined);
+  const path = withQuery(
+    "/api/expert/dashboard/kpis",
+    expertId ? { expert_id: expertId } : undefined,
+  );
   return request(path);
 }
 
-export function markRequestAsRead(requestId: number, expertId: number): Promise<{
+export function markRequestAsRead(
+  requestId: number,
+  expertId: number,
+): Promise<{
   message: string;
 }> {
   const path = withQuery(`/api/expert/requests/${requestId}/mark-read`, {
@@ -1304,7 +2020,9 @@ export function fetchSiteSettings(): Promise<SiteSettings> {
   return request("/api/site-settings");
 }
 
-export function updateSiteSettings(settings: SiteSettings): Promise<SiteSettings> {
+export function updateSiteSettings(
+  settings: SiteSettings,
+): Promise<SiteSettings> {
   return request("/api/admin/site-settings", {
     method: "PUT",
     body: JSON.stringify(settings),
@@ -1313,7 +2031,9 @@ export function updateSiteSettings(settings: SiteSettings): Promise<SiteSettings
 
 /** Upload logo image; returns { url: string }. Admin only. */
 export async function uploadLogo(file: File): Promise<{ url: string }> {
-  const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "");
+  const API_BASE_URL = import.meta.env.DEV
+    ? ""
+    : import.meta.env.VITE_API_URL || "";
   const path = (p: string) => (API_BASE_URL ? `${API_BASE_URL}${p}` : p);
   const url = path("/api/admin/upload");
   const token = localStorage.getItem("expert_token");
@@ -1321,10 +2041,16 @@ export async function uploadLogo(file: File): Promise<{ url: string }> {
   formData.append("file", file);
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
-  const response = await fetch(url, { method: "POST", body: formData, headers });
+  const response = await fetch(url, {
+    method: "POST",
+    body: formData,
+    headers,
+  });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error((body && body.error) || `Upload failed: ${response.status}`);
+    throw new Error(
+      (body && body.error) || `Upload failed: ${response.status}`,
+    );
   }
   return response.json();
 }
@@ -1452,7 +2178,14 @@ export interface CRMLinkCustomer {
 }
 
 export interface CRMShipmentRequestLinkState {
-  operation: "read" | "link" | "relink" | "unlink" | "noop" | "create" | "create_and_link";
+  operation:
+    | "read"
+    | "link"
+    | "relink"
+    | "unlink"
+    | "noop"
+    | "create"
+    | "create_and_link";
   shipment_request: {
     id: number;
     customer_id: number | null;
@@ -1558,13 +2291,15 @@ export function createCustomer(customerData: {
   });
 }
 
-export function fetchCustomerDetail(customerId: number): Promise<CustomerDetail> {
+export function fetchCustomerDetail(
+  customerId: number,
+): Promise<CustomerDetail> {
   return request(`/api/crm/customers/${customerId}`);
 }
 
 export function updateCustomer(
   customerId: number,
-  customerData: Partial<CustomerDetail>
+  customerData: Partial<CustomerDetail>,
 ): Promise<{ message: string }> {
   return request(`/api/crm/customers/${customerId}`, {
     method: "PUT",
@@ -1676,14 +2411,18 @@ export function searchCRMLinkCustomers(params?: {
   return request(path);
 }
 
-export function fetchShipmentRequestCustomerLink(requestId: number): Promise<CRMShipmentRequestLinkState> {
+export function fetchShipmentRequestCustomerLink(
+  requestId: number,
+): Promise<CRMShipmentRequestLinkState> {
   return request(`/api/crm/shipment-requests/${requestId}/customer-link`);
 }
 
 export function fetchShipmentRequestCustomerCreatePreview(
-  requestId: number
+  requestId: number,
 ): Promise<CRMCustomerCreatePreview> {
-  return request(`/api/crm/shipment-requests/${requestId}/customer-create-preview`);
+  return request(
+    `/api/crm/shipment-requests/${requestId}/customer-create-preview`,
+  );
 }
 
 export function createCustomerFromShipmentRequest(
@@ -1693,7 +2432,7 @@ export function createCustomerFromShipmentRequest(
     link: boolean;
     duplicate_acknowledged?: boolean;
     reason?: string;
-  }
+  },
 ): Promise<CRMCustomerCreateResult> {
   return request(`/api/crm/shipment-requests/${requestId}/create-customer`, {
     method: "POST",
@@ -1704,17 +2443,20 @@ export function createCustomerFromShipmentRequest(
 export function linkShipmentRequestCustomer(
   requestId: number,
   customerId: number,
-  note?: string
+  note?: string,
 ): Promise<CRMShipmentRequestLinkState> {
   return request(`/api/crm/shipment-requests/${requestId}/customer-link`, {
     method: "PUT",
-    body: JSON.stringify({ customer_id: customerId, note: note?.trim() || undefined }),
+    body: JSON.stringify({
+      customer_id: customerId,
+      note: note?.trim() || undefined,
+    }),
   });
 }
 
 export function unlinkShipmentRequestCustomer(
   requestId: number,
-  note?: string
+  note?: string,
 ): Promise<CRMShipmentRequestLinkState> {
   return request(`/api/crm/shipment-requests/${requestId}/customer-link`, {
     method: "DELETE",
@@ -1818,7 +2560,7 @@ export function createUser(userData: {
 
 export function updateUser(
   userId: number,
-  userData: Partial<User>
+  userData: Partial<User>,
 ): Promise<{ message: string }> {
   return request(`/api/user-management/users/${userId}`, {
     method: "PUT",
@@ -1826,7 +2568,9 @@ export function updateUser(
   });
 }
 
-export function fetchTransportMethods(): Promise<{ transport_methods: TransportMethod[] }> {
+export function fetchTransportMethods(): Promise<{
+  transport_methods: TransportMethod[];
+}> {
   return request("/api/user-management/transport-methods");
 }
 
@@ -1846,7 +2590,9 @@ export function createTransportMethod(transportData: {
   });
 }
 
-export function fetchAssignmentRules(): Promise<{ assignment_rules: AssignmentRule[] }> {
+export function fetchAssignmentRules(): Promise<{
+  assignment_rules: AssignmentRule[];
+}> {
   return request("/api/user-management/assignment-rules");
 }
 
@@ -1866,7 +2612,7 @@ export function createAssignmentRule(ruleData: {
 
 export function updateAssignmentRule(
   ruleId: number,
-  ruleData: Partial<AssignmentRule>
+  ruleData: Partial<AssignmentRule>,
 ): Promise<{ message: string }> {
   return request(`/api/user-management/assignment-rules/${ruleId}`, {
     method: "PUT",
@@ -1902,7 +2648,8 @@ export interface ReferralRuleActionPool {
   max_active_assignments_per_expert?: number | null;
 }
 
-export type ReferralRuleAction = ReferralRuleActionDirect | ReferralRuleActionPool;
+export type ReferralRuleAction =
+  ReferralRuleActionDirect | ReferralRuleActionPool;
 
 export interface ReferralRuleConditions {
   shipping_type?: "domestic" | "international" | null;
@@ -1927,7 +2674,9 @@ export interface ReferralRuleRow {
   strategy: string | null;
 }
 
-export function fetchReferralRules(): Promise<{ referral_rules: ReferralRuleRow[] }> {
+export function fetchReferralRules(): Promise<{
+  referral_rules: ReferralRuleRow[];
+}> {
   return request("/api/admin/referral-rules");
 }
 
@@ -1954,7 +2703,7 @@ export function updateReferralRule(
     conditions: ReferralRuleConditions;
     action: ReferralRuleAction;
     stop_on_match: boolean;
-  }>
+  }>,
 ): Promise<{ message: string }> {
   return request(`/api/admin/referral-rules/${ruleId}`, {
     method: "PUT",
@@ -1962,7 +2711,9 @@ export function updateReferralRule(
   });
 }
 
-export function deleteReferralRule(ruleId: number): Promise<{ message: string }> {
+export function deleteReferralRule(
+  ruleId: number,
+): Promise<{ message: string }> {
   return request(`/api/admin/referral-rules/${ruleId}`, { method: "DELETE" });
 }
 
@@ -1975,7 +2726,9 @@ export interface ReferralPreviewResult {
   error?: string;
 }
 
-export function previewReferralRule(requestId: number): Promise<ReferralPreviewResult> {
+export function previewReferralRule(
+  requestId: number,
+): Promise<ReferralPreviewResult> {
   return request("/api/admin/referral-rules/preview", {
     method: "POST",
     body: JSON.stringify({ request_id: requestId }),
@@ -1994,13 +2747,18 @@ export function fetchPortProvinceMappings(params: {
 }): Promise<PortProvinceMapping[]> {
   const queryParams = new URLSearchParams();
   if (params.port_id) queryParams.append("port_id", params.port_id.toString());
-  if (params.province_id) queryParams.append("province_id", params.province_id.toString());
-  
+  if (params.province_id)
+    queryParams.append("province_id", params.province_id.toString());
+
   const queryString = queryParams.toString();
-  return request(`/api/port-province-mappings${queryString ? `?${queryString}` : ""}`);
+  return request(
+    `/api/port-province-mappings${queryString ? `?${queryString}` : ""}`,
+  );
 }
 
-export function fetchRecommendedPorts(provinceId: number): Promise<RecommendedPort[]> {
+export function fetchRecommendedPorts(
+  provinceId: number,
+): Promise<RecommendedPort[]> {
   return request(`/api/recommended-ports?province_id=${provinceId}`);
 }
 
@@ -2009,97 +2767,930 @@ export function fetchBorderCustoms(): Promise<BorderCustoms[]> {
 }
 
 export interface ExecutionUnitView {
-  public_id:string; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null;
-  lifecycle_status:string; is_active:boolean; version?:number; latest_checkpoint?:string|null; last_update_at?:string|null;
-  alerts:{attention_required:boolean;delayed:boolean;stale:boolean};
+  public_id: string;
+  unit_code: string;
+  unit_type: string;
+  display_name?: string | null;
+  vehicle_reference?: string | null;
+  lifecycle_status: string;
+  is_active: boolean;
+  version?: number;
+  latest_checkpoint?: string | null;
+  last_update_at?: string | null;
+  alerts: { attention_required: boolean; delayed: boolean; stale: boolean };
 }
 
-export interface CargoAlias { public_id:string; alias_text:string; normalized_alias:string; language:string; alias_type:string; is_active:boolean }
-export interface CargoCatalogItem { public_id:string; immutable_code:string; fa_name:string; en_name?:string|null; part_number?:string|null; customer_item_code?:string|null; hs_code?:string|null; brand?:string|null; model?:string|null; description?:string|null; is_active:boolean; version:number; cargo_type:{public_id:string;code:string;fa_name:string;en_name:string}; default_uom?:{public_id:string;code:string;symbol:string}|null; aliases?:CargoAlias[] }
-export const listCargoCatalog=(params:{q?:string;active?:string;cargo_type?:string;page?:number;per_page?:number})=>request<{items:CargoCatalogItem[];page:number;per_page:number;total:number;pages:number}>(withQuery("/api/internal/cargo-catalog",params));
-export const createCargoCatalogItem=(payload:Record<string,unknown>)=>request<{item:CargoCatalogItem}>("/api/internal/cargo-catalog",{method:"POST",body:JSON.stringify(payload)});
-export const updateCargoCatalogItem=(id:string,payload:Record<string,unknown>)=>request<{item:CargoCatalogItem}>(`/api/internal/cargo-catalog/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(payload)});
-export const setCargoCatalogActive=(id:string,active:boolean,version:number)=>request<{item:CargoCatalogItem}>(`/api/internal/cargo-catalog/${encodeURIComponent(id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version})});
-export const createCargoAlias=(id:string,payload:Record<string,unknown>)=>request<{item:CargoAlias}>(`/api/internal/cargo-catalog/${encodeURIComponent(id)}/aliases`,{method:"POST",body:JSON.stringify(payload)});
-export const updateCargoAlias=(itemId:string,aliasId:string,payload:Record<string,unknown>)=>request<{item:CargoAlias}>(`/api/internal/cargo-catalog/${encodeURIComponent(itemId)}/aliases/${encodeURIComponent(aliasId)}`,{method:"PATCH",body:JSON.stringify(payload)});
-export interface ShipmentCargoItem { public_id:string; line_number:number; source:"catalog"|"manual"; catalog_item_public_id?:string|null; cargo_type_public_id:string; uom_public_id:string; quantity:string; display_name_snapshot:string; cargo_type_code_snapshot:string; cargo_type_fa_snapshot:string; cargo_type_en_snapshot:string; uom_code_snapshot:string; uom_symbol_snapshot:string; part_number_snapshot?:string|null; customer_item_code_snapshot?:string|null; hs_code_snapshot?:string|null; brand_snapshot?:string|null; model_snapshot?:string|null; description_snapshot?:string|null; version:number }
-export const listShipmentCargoItems=(shipmentId:string)=>request<{items:ShipmentCargoItem[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`);
-export const createShipmentCargoItem=(shipmentId:string,payload:Record<string,unknown>)=>request<{item:ShipmentCargoItem}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`,{method:"POST",body:JSON.stringify(payload)});
-export const updateShipmentCargoItem=(shipmentId:string,itemId:string,payload:Record<string,unknown>)=>request<{item:ShipmentCargoItem}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items/${encodeURIComponent(itemId)}`,{method:"PATCH",body:JSON.stringify(payload)});
-export interface ExecutionEventView { public_id:string; event_type:string; lifecycle_status?:string|null; checkpoint_text?:string|null; customer_message?:string|null; internal_note?:string|null; visibility:string; occurred_at:string; }
-export interface PageMeta { page:number; per_page:number; total:number; pages:number }
-export interface ProjectUnitSummary { project_public_id:string; project_code:string; status:string; total_units:number; delivered_units:number; in_progress_units:number; delayed_units:number; attention_required:number; units_without_recent_update:number; progress_percentage:number; last_update_at?:string|null; threshold_policy:{version:string;stale_after_hours:number} }
-export const listExecutionUnits=(projectId:string,params:URLSearchParams)=>request<{data:ExecutionUnitView[];meta:PageMeta}>(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units?${params}`);
-export const createExecutionUnit=(projectId:string,payload:{unit_type:string;display_name?:string;vehicle_reference?:string})=>request<{data:ExecutionUnitView}>(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units`,{method:"POST",body:JSON.stringify(payload)});
-export const getExecutionUnitTimeline=(projectId:string,unitId:string,page=1)=>request<{data:ExecutionEventView[];meta:PageMeta}>(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}/timeline?page=${page}&per_page=25`);
-export const createExecutionUnitEvent=(projectId:string,unitId:string,payload:Record<string,unknown>,key:string)=>request(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}/events`,{method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify(payload)});
-export const getPublicProjectSummary=(code:string)=>request<{data:ProjectUnitSummary}>(`/api/public/v2/projects/${encodeURIComponent(code)}/summary`);
-export const listPublicExecutionUnits=(code:string,params:URLSearchParams)=>request<{data:ExecutionUnitView[];meta:PageMeta}>(`/api/public/v2/projects/${encodeURIComponent(code)}/execution-units?${params}`);
-export const getPublicExecutionTimeline=(code:string,unitId:string,page=1)=>request<{data:ExecutionEventView[];meta:PageMeta}>(`/api/public/v2/projects/${encodeURIComponent(code)}/execution-units/${encodeURIComponent(unitId)}/timeline?page=${page}&per_page=25`);
+export interface CargoAlias {
+  public_id: string;
+  alias_text: string;
+  normalized_alias: string;
+  language: string;
+  alias_type: string;
+  is_active: boolean;
+}
+export interface CargoCatalogItem {
+  public_id: string;
+  immutable_code: string;
+  fa_name: string;
+  en_name?: string | null;
+  part_number?: string | null;
+  customer_item_code?: string | null;
+  hs_code?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  description?: string | null;
+  is_active: boolean;
+  version: number;
+  cargo_type: {
+    public_id: string;
+    code: string;
+    fa_name: string;
+    en_name: string;
+  };
+  default_uom?: { public_id: string; code: string; symbol: string } | null;
+  aliases?: CargoAlias[];
+}
+export const listCargoCatalog = (params: {
+  q?: string;
+  active?: string;
+  cargo_type?: string;
+  page?: number;
+  per_page?: number;
+}) =>
+  request<{
+    items: CargoCatalogItem[];
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+  }>(withQuery("/api/internal/cargo-catalog", params));
+export const createCargoCatalogItem = (payload: Record<string, unknown>) =>
+  request<{ item: CargoCatalogItem }>("/api/internal/cargo-catalog", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const updateCargoCatalogItem = (
+  id: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: CargoCatalogItem }>(
+    `/api/internal/cargo-catalog/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export const setCargoCatalogActive = (
+  id: string,
+  active: boolean,
+  version: number,
+) =>
+  request<{ item: CargoCatalogItem }>(
+    `/api/internal/cargo-catalog/${encodeURIComponent(id)}/${active ? "activate" : "deactivate"}`,
+    { method: "POST", body: JSON.stringify({ version }) },
+  );
+export const createCargoAlias = (
+  id: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: CargoAlias }>(
+    `/api/internal/cargo-catalog/${encodeURIComponent(id)}/aliases`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const updateCargoAlias = (
+  itemId: string,
+  aliasId: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: CargoAlias }>(
+    `/api/internal/cargo-catalog/${encodeURIComponent(itemId)}/aliases/${encodeURIComponent(aliasId)}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export interface ShipmentCargoItem {
+  public_id: string;
+  line_number: number;
+  source: "catalog" | "manual";
+  catalog_item_public_id?: string | null;
+  cargo_type_public_id: string;
+  uom_public_id: string;
+  quantity: string;
+  display_name_snapshot: string;
+  cargo_type_code_snapshot: string;
+  cargo_type_fa_snapshot: string;
+  cargo_type_en_snapshot: string;
+  uom_code_snapshot: string;
+  uom_symbol_snapshot: string;
+  part_number_snapshot?: string | null;
+  customer_item_code_snapshot?: string | null;
+  hs_code_snapshot?: string | null;
+  brand_snapshot?: string | null;
+  model_snapshot?: string | null;
+  description_snapshot?: string | null;
+  version: number;
+}
+export const listShipmentCargoItems = (shipmentId: string) =>
+  request<{ items: ShipmentCargoItem[] }>(
+    `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`,
+  );
+export const createShipmentCargoItem = (
+  shipmentId: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: ShipmentCargoItem }>(
+    `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const updateShipmentCargoItem = (
+  shipmentId: string,
+  itemId: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: ShipmentCargoItem }>(
+    `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items/${encodeURIComponent(itemId)}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export interface ExecutionEventView {
+  public_id: string;
+  event_type: string;
+  lifecycle_status?: string | null;
+  checkpoint_text?: string | null;
+  customer_message?: string | null;
+  internal_note?: string | null;
+  visibility: string;
+  occurred_at: string;
+}
+export interface PageMeta {
+  page: number;
+  per_page: number;
+  total: number;
+  pages: number;
+}
+export interface ProjectUnitSummary {
+  project_public_id: string;
+  project_code: string;
+  status: string;
+  total_units: number;
+  delivered_units: number;
+  in_progress_units: number;
+  delayed_units: number;
+  attention_required: number;
+  units_without_recent_update: number;
+  progress_percentage: number;
+  last_update_at?: string | null;
+  threshold_policy: { version: string; stale_after_hours: number };
+}
+export const listExecutionUnits = (
+  projectId: string,
+  params: URLSearchParams,
+) =>
+  request<{ data: ExecutionUnitView[]; meta: PageMeta }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/execution-units?${params}`,
+  );
+export const createExecutionUnit = (
+  projectId: string,
+  payload: {
+    unit_type: string;
+    display_name?: string;
+    vehicle_reference?: string;
+  },
+) =>
+  request<{ data: ExecutionUnitView }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/execution-units`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const getExecutionUnitTimeline = (
+  projectId: string,
+  unitId: string,
+  page = 1,
+) =>
+  request<{ data: ExecutionEventView[]; meta: PageMeta }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}/timeline?page=${page}&per_page=25`,
+  );
+export const createExecutionUnitEvent = (
+  projectId: string,
+  unitId: string,
+  payload: Record<string, unknown>,
+  key: string,
+) =>
+  request(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}/events`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": key },
+      body: JSON.stringify(payload),
+    },
+  );
+export const getPublicProjectSummary = (code: string) =>
+  request<{ data: ProjectUnitSummary }>(
+    `/api/public/v2/projects/${encodeURIComponent(code)}/summary`,
+  );
+export const listPublicExecutionUnits = (
+  code: string,
+  params: URLSearchParams,
+) =>
+  request<{ data: ExecutionUnitView[]; meta: PageMeta }>(
+    `/api/public/v2/projects/${encodeURIComponent(code)}/execution-units?${params}`,
+  );
+export const getPublicExecutionTimeline = (
+  code: string,
+  unitId: string,
+  page = 1,
+) =>
+  request<{ data: ExecutionEventView[]; meta: PageMeta }>(
+    `/api/public/v2/projects/${encodeURIComponent(code)}/execution-units/${encodeURIComponent(unitId)}/timeline?page=${page}&per_page=25`,
+  );
 
-export interface LogisticsPointTypeView { public_id:string; immutable_code:string; fa_name:string; en_name:string; definition?:string|null; display_order:number; is_active:boolean; version:number }
-export interface LogisticsPointView { public_id:string; immutable_code:string; fa_name:string; en_name?:string|null; short_address?:string|null; is_active:boolean; version:number; point_type:LogisticsPointTypeView; country:{code:string;fa_name:string;en_name:string}; province?:{code?:string|null;name_fa:string}|null; city?:{code?:string|null;name_fa:string}|null }
-export interface ProjectLogisticsPointView { public_id:string; project_role:string; sequence_number:number; display_label?:string|null; notes?:string|null; is_active:boolean; version:number; logistics_point:LogisticsPointView }
-export const listLogisticsPointTypes=(admin=false)=>request<{items:LogisticsPointTypeView[]}>(admin?"/api/admin/logistics-point-types":"/api/internal/logistics-point-types");
-export const createLogisticsPointType=(payload:Record<string,unknown>)=>request<{item:LogisticsPointTypeView}>("/api/admin/logistics-point-types",{method:"POST",body:JSON.stringify(payload)});
-export const updateLogisticsPointType=(id:string,payload:Record<string,unknown>)=>request<{item:LogisticsPointTypeView}>(`/api/admin/logistics-point-types/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(payload)});
-export const setLogisticsPointTypeActive=(item:LogisticsPointTypeView,active:boolean)=>request<{item:LogisticsPointTypeView}>(`/api/admin/logistics-point-types/${encodeURIComponent(item.public_id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version:item.version})});
-export const listLogisticsPoints=(params:Record<string,string|number|undefined>,admin=false)=>request<{items:LogisticsPointView[];page:number;pages:number;total:number}>(withQuery(admin?"/api/admin/logistics-points":"/api/internal/logistics-points",params));
-export const createLogisticsPoint=(payload:Record<string,unknown>)=>request<{item:LogisticsPointView}>("/api/admin/logistics-points",{method:"POST",body:JSON.stringify(payload)});
-export const updateLogisticsPoint=(id:string,payload:Record<string,unknown>)=>request<{item:LogisticsPointView}>(`/api/admin/logistics-points/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(payload)});
-export const setLogisticsPointActive=(item:LogisticsPointView,active:boolean)=>request<{item:LogisticsPointView}>(`/api/admin/logistics-points/${encodeURIComponent(item.public_id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version:item.version})});
-export const listProjectLogisticsPoints=(projectId:string)=>request<{items:ProjectLogisticsPointView[]}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points`);
-export const createProjectLogisticsPoint=(projectId:string,payload:Record<string,unknown>)=>request<{item:ProjectLogisticsPointView}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points`,{method:"POST",body:JSON.stringify(payload)});
-export const updateProjectLogisticsPoint=(projectId:string,id:string,payload:Record<string,unknown>)=>request<{item:ProjectLogisticsPointView}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/${encodeURIComponent(id)}`,{method:"PATCH",body:JSON.stringify(payload)});
-export const setProjectLogisticsPointActive=(projectId:string,item:ProjectLogisticsPointView,active:boolean)=>request<{item:ProjectLogisticsPointView}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/${encodeURIComponent(item.public_id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version:item.version})});
-export const reorderProjectLogisticsPoints=(projectId:string,items:ProjectLogisticsPointView[])=>request<{items:ProjectLogisticsPointView[]}>(`/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/reorder`,{method:"POST",body:JSON.stringify({items:items.map(x=>({public_id:x.public_id,version:x.version}))})});
-export interface ProjectConfigurationItem { public_id:string; is_active:boolean; version:number; display_label?:string|null; notes?:string|null; display_order?:number; is_required?:boolean; is_primary?:boolean; service_type_public_id?:string; document_definition_public_id?:string; document_definition_title?:string; requirement_level?:"REQUIRED"|"OPTIONAL"|"CONDITIONAL"; conditional_description?:string|null; milestone_type_public_id?:string; milestone_type_code?:string; sequence?:number; project_logistics_point_public_id?:string|null; target_duration_value?:number|null; warning_duration_value?:number|null; duration_unit?:"MINUTE"|"HOUR"|"DAY"|null }
-export type ProjectConfigurationResource="services"|"document-requirements"|"milestone-definitions";
-const configurationPath=(projectId:string,resource:ProjectConfigurationResource)=>`/api/v2/projects/${encodeURIComponent(projectId)}/configuration/${resource}`;
-export interface BoundedPage<T>{items:T[];page:number;per_page:number;total:number;pages:number}
-export const listProjectConfiguration=(projectId:string,resource:ProjectConfigurationResource,params:Record<string,string|number|undefined>={})=>request<BoundedPage<ProjectConfigurationItem>>(withQuery(configurationPath(projectId,resource),params));
-export const createProjectConfiguration=(projectId:string,resource:ProjectConfigurationResource,payload:Record<string,unknown>)=>request<{item:ProjectConfigurationItem}>(configurationPath(projectId,resource),{method:"POST",body:JSON.stringify(payload)});
-export const updateProjectConfiguration=(projectId:string,resource:ProjectConfigurationResource,item:ProjectConfigurationItem,payload:Record<string,unknown>)=>request<{item:ProjectConfigurationItem}>(`${configurationPath(projectId,resource)}/${encodeURIComponent(item.public_id)}`,{method:"PATCH",body:JSON.stringify({...payload,version:item.version})});
-export const setProjectConfigurationActive=(projectId:string,resource:ProjectConfigurationResource,item:ProjectConfigurationItem,active:boolean)=>request<{item:ProjectConfigurationItem}>(`${configurationPath(projectId,resource)}/${encodeURIComponent(item.public_id)}/${active?"activate":"deactivate"}`,{method:"POST",body:JSON.stringify({version:item.version})});
-export const reorderProjectMilestones=(projectId:string,items:ProjectConfigurationItem[])=>request<{items:ProjectConfigurationItem[]}>(`${configurationPath(projectId,"milestone-definitions")}/reorder`,{method:"POST",body:JSON.stringify({items:items.map(x=>({public_id:x.public_id,version:x.version}))})});
-export interface ConfigurationSelector {public_id:string;immutable_code?:string;code?:string;fa_name?:string;en_name?:string;title?:string;display_label?:string|null;project_role?:string;sequence_number?:number}
-export const listMilestoneTypes=(params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery("/api/internal/milestone-types",params));
-export const listProjectServiceTypes=(params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery("/api/internal/project-configuration/service-types",params));
-export const listProjectDocumentDefinitions=(params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery("/api/internal/project-configuration/document-definitions",params));
-export const listProjectLogisticsPointSelectors=(projectId:string,params:Record<string,string|number|undefined>={})=>request<BoundedPage<ConfigurationSelector>>(withQuery(`/api/v2/projects/${encodeURIComponent(projectId)}/configuration/selectors/logistics-points`,params));
-export type ExecutionMilestone = { public_id:string; sequence:number; milestone_type:string; milestone_type_snapshot?:{fa_name:string;en_name:string;code:string}; expected_point_snapshot?:{label?:string;role:string}|null; target_metadata?:Record<string,unknown>; status:"PENDING"|"READY"|"IN_PROGRESS"|"COMPLETED"|"SKIPPED"|"CANCELLED"|"BLOCKED"; prior_active_status?:string|null; planned_at?:string|null; started_at?:string|null; completed_at?:string|null; skipped_at?:string|null; cancelled_at?:string|null; blocked_at?:string|null; verification_state:string; version:number };
-export type ExecutionProgress = {initialized:boolean;total:number;counts:Record<ExecutionMilestone["status"],number>;current_milestone:ExecutionMilestone|null;completion_percentage:number;completion_rule:string;active_delay_count:number;active_exception_count:number};
-export type ExecutionReason = {public_id:string;immutable_code:string;fa_name:string;en_name:string;definition?:string|null;display_order:number;is_active:boolean;version:number};
-export type ExecutionCondition = {public_id:string;milestone_public_id?:string|null;reason:ExecutionReason;started_at?:string;occurred_at?:string;resolved_at?:string|null;active:boolean;note?:string|null;duration_seconds:number;version:number};
-export type ExecutionEvent = {public_id:string;milestone_public_id:string;event_type:string;effective_at:string;recorded_at:string;source_channel:string;reason?:string|null;note?:string|null;verification_state:string;verified_at?:string|null;correction_of_event_public_id?:string|null};
-export const getExecutionPreview=(shipmentId:string)=>request<{data:{project_public_id?:string|null;initialized:boolean;existing_count:number;milestones:Array<Record<string,unknown>>;findings:Array<{code:string;message:string}>;confirmation_allowed:boolean}}>(`/api/v2/operational-shipments/${shipmentId}/execution/initialization-preview`);
-export const initializeExecution=(shipmentId:string,expected_shipment_version:number)=>request<{data:ExecutionMilestone[];meta:{created:boolean}}>(`/api/v2/operational-shipments/${shipmentId}/execution/initialize`,{method:"POST",body:JSON.stringify({expected_shipment_version})});
-export const listExecutionMilestones=(shipmentId:string)=>request<{data:ExecutionMilestone[]}>(`/api/v2/operational-shipments/${shipmentId}/execution/milestones`);
-export const transitionExecutionMilestone=(shipmentId:string,milestone:ExecutionMilestone,target_status:string,reason?:string)=>request<{data:ExecutionMilestone}>(`/api/v2/operational-shipments/${shipmentId}/execution/milestones/${milestone.public_id}/transition`,{method:"POST",headers:{"Idempotency-Key":crypto.randomUUID()},body:JSON.stringify({target_status,reason,expected_version:milestone.version})});
-export const reopenExecutionMilestone=(shipmentId:string,milestone:ExecutionMilestone,reason:string)=>request<{data:ExecutionMilestone}>(`/api/v2/operational-shipments/${shipmentId}/execution/milestones/${milestone.public_id}/reopen`,{method:"POST",body:JSON.stringify({reason,expected_version:milestone.version})});
-export type DocumentReadinessRequirement={public_id:string;title:string;requirement_level:"REQUIRED"|"OPTIONAL"|"CONDITIONAL";applicability_state:"APPLICABLE"|"NOT_APPLICABLE"|"UNRESOLVED";required_assessment_level:"APPROVED"|"VERIFIED";target_milestone_type:string;target_status:string;version:number;artifact:null|{artifact_public_id:string;filename:string;version:number;assessment:string}};
-export type TransitionReadiness={allowed:boolean;target_action:string;blocking_requirements:Array<{code:string;requirement_public_id:string;title:string}>;warnings:Array<{code:string;requirement_public_id:string;title:string}>};
-export const getDocumentMaterializationPreview=(s:string)=>request<{data:{initialized:boolean;requirements:Array<unknown>;findings:Array<{code:string;message:string}>;confirmation_allowed:boolean}}>(`/api/v2/operational-shipments/${s}/document-readiness/materialization-preview`);
-export const materializeDocumentRequirements=(s:string,v:number)=>request(`/api/v2/operational-shipments/${s}/document-readiness/materialize`,{method:"POST",body:JSON.stringify({expected_shipment_version:v})});
-export const listDocumentReadinessRequirements=(s:string)=>request<{data:DocumentReadinessRequirement[]}>(`/api/v2/operational-shipments/${s}/document-readiness/requirements`);
-export const associateDocumentArtifact=(s:string,r:DocumentReadinessRequirement,a:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/artifacts`,{method:"POST",body:JSON.stringify({artifact_public_id:a,expected_requirement_version:r.version})});
-export const assessDocumentArtifact=(s:string,r:DocumentReadinessRequirement,d:string,reason?:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/assessments`,{method:"POST",body:JSON.stringify({decision:d,reason,expected_requirement_version:r.version})});
-export const resolveDocumentApplicability=(s:string,r:DocumentReadinessRequirement,d:string,reason:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/applicability`,{method:"POST",body:JSON.stringify({decision:d,reason,expected_requirement_version:r.version})});
-export const getTransitionReadiness=(s:string,m:ExecutionMilestone,t:string)=>request<{data:TransitionReadiness}>(`/api/v2/operational-shipments/${s}/document-readiness/milestones/${m.public_id}/readiness?target_status=${encodeURIComponent(t)}`);
-export const getNextTransitionReadiness=(s:string)=>request<{data:TransitionReadiness|null}>(`/api/v2/operational-shipments/${s}/document-readiness/next-action`);
-export const createTransitionOverride=(s:string,r:DocumentReadinessRequirement,m:ExecutionMilestone,authority:string,reason:string)=>request(`/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/overrides`,{method:"POST",body:JSON.stringify({milestone_public_id:m.public_id,target_status:r.target_status,authority,reason})});
-export const getExecutionProgress=(shipmentId:string)=>request<{data:ExecutionProgress}>(`/api/v2/operational-shipments/${shipmentId}/execution/progress`);
-export const listExecutionEvents=(shipmentId:string)=>request<{data:ExecutionEvent[]}>(`/api/v2/operational-shipments/${shipmentId}/execution/events`);
-export const verifyExecutionEvent=(shipmentId:string,eventId:string)=>request<{data:ExecutionEvent[]}>(`/api/v2/operational-shipments/${shipmentId}/execution/events/${eventId}/verify`,{method:"POST",body:"{}"});
-export const listExecutionReasons=(kind:"delay"|"exception")=>request<{data:ExecutionReason[]}>(`/api/v2/admin/reference-data/${kind}-reasons`);
-export const createExecutionReason=(kind:"delay"|"exception",payload:Record<string,unknown>)=>request<{data:ExecutionReason[]}>(`/api/v2/admin/reference-data/${kind}-reasons`,{method:"POST",body:JSON.stringify(payload)});
-export const updateExecutionReason=(kind:"delay"|"exception",row:ExecutionReason,payload:Record<string,unknown>)=>request<{data:ExecutionReason}>(`/api/v2/admin/reference-data/${kind}-reasons/${row.public_id}`,{method:"PATCH",body:JSON.stringify({...payload,version:row.version})});
-export const listExecutionConditions=(shipmentId:string,kind:"delay"|"exception")=>request<{data:ExecutionCondition[]}>(`/api/v2/operational-shipments/${shipmentId}/execution/${kind}s`);
-export const createExecutionCondition=(shipmentId:string,kind:"delay"|"exception",payload:Record<string,unknown>)=>request<{data:ExecutionCondition[]}>(`/api/v2/operational-shipments/${shipmentId}/execution/${kind}s`,{method:"POST",body:JSON.stringify(payload)});
-export const resolveExecutionCondition=(shipmentId:string,kind:"delay"|"exception",row:ExecutionCondition)=>request<{data:ExecutionCondition}>(`/api/v2/operational-shipments/${shipmentId}/execution/${kind}s/${row.public_id}/resolve`,{method:"POST",body:JSON.stringify({expected_version:row.version})});
+export interface LogisticsPointTypeView {
+  public_id: string;
+  immutable_code: string;
+  fa_name: string;
+  en_name: string;
+  definition?: string | null;
+  display_order: number;
+  is_active: boolean;
+  version: number;
+}
+export interface LogisticsPointView {
+  public_id: string;
+  immutable_code: string;
+  fa_name: string;
+  en_name?: string | null;
+  short_address?: string | null;
+  is_active: boolean;
+  version: number;
+  point_type: LogisticsPointTypeView;
+  country: { code: string; fa_name: string; en_name: string };
+  province?: { code?: string | null; name_fa: string } | null;
+  city?: { code?: string | null; name_fa: string } | null;
+}
+export interface ProjectLogisticsPointView {
+  public_id: string;
+  project_role: string;
+  sequence_number: number;
+  display_label?: string | null;
+  notes?: string | null;
+  is_active: boolean;
+  version: number;
+  logistics_point: LogisticsPointView;
+}
+export const listLogisticsPointTypes = (admin = false) =>
+  request<{ items: LogisticsPointTypeView[] }>(
+    admin
+      ? "/api/admin/logistics-point-types"
+      : "/api/internal/logistics-point-types",
+  );
+export const createLogisticsPointType = (payload: Record<string, unknown>) =>
+  request<{ item: LogisticsPointTypeView }>(
+    "/api/admin/logistics-point-types",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const updateLogisticsPointType = (
+  id: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: LogisticsPointTypeView }>(
+    `/api/admin/logistics-point-types/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export const setLogisticsPointTypeActive = (
+  item: LogisticsPointTypeView,
+  active: boolean,
+) =>
+  request<{ item: LogisticsPointTypeView }>(
+    `/api/admin/logistics-point-types/${encodeURIComponent(item.public_id)}/${active ? "activate" : "deactivate"}`,
+    { method: "POST", body: JSON.stringify({ version: item.version }) },
+  );
+export const listLogisticsPoints = (
+  params: Record<string, string | number | undefined>,
+  admin = false,
+) =>
+  request<{
+    items: LogisticsPointView[];
+    page: number;
+    pages: number;
+    total: number;
+  }>(
+    withQuery(
+      admin ? "/api/admin/logistics-points" : "/api/internal/logistics-points",
+      params,
+    ),
+  );
+export const createLogisticsPoint = (payload: Record<string, unknown>) =>
+  request<{ item: LogisticsPointView }>("/api/admin/logistics-points", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+export const updateLogisticsPoint = (
+  id: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: LogisticsPointView }>(
+    `/api/admin/logistics-points/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export const setLogisticsPointActive = (
+  item: LogisticsPointView,
+  active: boolean,
+) =>
+  request<{ item: LogisticsPointView }>(
+    `/api/admin/logistics-points/${encodeURIComponent(item.public_id)}/${active ? "activate" : "deactivate"}`,
+    { method: "POST", body: JSON.stringify({ version: item.version }) },
+  );
+export const listProjectLogisticsPoints = (projectId: string) =>
+  request<{ items: ProjectLogisticsPointView[] }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points`,
+  );
+export const createProjectLogisticsPoint = (
+  projectId: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: ProjectLogisticsPointView }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const updateProjectLogisticsPoint = (
+  projectId: string,
+  id: string,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: ProjectLogisticsPointView }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/${encodeURIComponent(id)}`,
+    { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export const setProjectLogisticsPointActive = (
+  projectId: string,
+  item: ProjectLogisticsPointView,
+  active: boolean,
+) =>
+  request<{ item: ProjectLogisticsPointView }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/${encodeURIComponent(item.public_id)}/${active ? "activate" : "deactivate"}`,
+    { method: "POST", body: JSON.stringify({ version: item.version }) },
+  );
+export const reorderProjectLogisticsPoints = (
+  projectId: string,
+  items: ProjectLogisticsPointView[],
+) =>
+  request<{ items: ProjectLogisticsPointView[] }>(
+    `/api/v2/projects/${encodeURIComponent(projectId)}/logistics-points/reorder`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        items: items.map((x) => ({
+          public_id: x.public_id,
+          version: x.version,
+        })),
+      }),
+    },
+  );
+export interface ProjectConfigurationItem {
+  public_id: string;
+  is_active: boolean;
+  version: number;
+  display_label?: string | null;
+  notes?: string | null;
+  display_order?: number;
+  is_required?: boolean;
+  is_primary?: boolean;
+  service_type_public_id?: string;
+  document_definition_public_id?: string;
+  document_definition_title?: string;
+  requirement_level?: "REQUIRED" | "OPTIONAL" | "CONDITIONAL";
+  conditional_description?: string | null;
+  milestone_type_public_id?: string;
+  milestone_type_code?: string;
+  sequence?: number;
+  project_logistics_point_public_id?: string | null;
+  target_duration_value?: number | null;
+  warning_duration_value?: number | null;
+  duration_unit?: "MINUTE" | "HOUR" | "DAY" | null;
+}
+export type ProjectConfigurationResource =
+  "services" | "document-requirements" | "milestone-definitions";
+const configurationPath = (
+  projectId: string,
+  resource: ProjectConfigurationResource,
+) =>
+  `/api/v2/projects/${encodeURIComponent(projectId)}/configuration/${resource}`;
+export interface BoundedPage<T> {
+  items: T[];
+  page: number;
+  per_page: number;
+  total: number;
+  pages: number;
+}
+export const listProjectConfiguration = (
+  projectId: string,
+  resource: ProjectConfigurationResource,
+  params: Record<string, string | number | undefined> = {},
+) =>
+  request<BoundedPage<ProjectConfigurationItem>>(
+    withQuery(configurationPath(projectId, resource), params),
+  );
+export const createProjectConfiguration = (
+  projectId: string,
+  resource: ProjectConfigurationResource,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: ProjectConfigurationItem }>(
+    configurationPath(projectId, resource),
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const updateProjectConfiguration = (
+  projectId: string,
+  resource: ProjectConfigurationResource,
+  item: ProjectConfigurationItem,
+  payload: Record<string, unknown>,
+) =>
+  request<{ item: ProjectConfigurationItem }>(
+    `${configurationPath(projectId, resource)}/${encodeURIComponent(item.public_id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ ...payload, version: item.version }),
+    },
+  );
+export const setProjectConfigurationActive = (
+  projectId: string,
+  resource: ProjectConfigurationResource,
+  item: ProjectConfigurationItem,
+  active: boolean,
+) =>
+  request<{ item: ProjectConfigurationItem }>(
+    `${configurationPath(projectId, resource)}/${encodeURIComponent(item.public_id)}/${active ? "activate" : "deactivate"}`,
+    { method: "POST", body: JSON.stringify({ version: item.version }) },
+  );
+export const reorderProjectMilestones = (
+  projectId: string,
+  items: ProjectConfigurationItem[],
+) =>
+  request<{ items: ProjectConfigurationItem[] }>(
+    `${configurationPath(projectId, "milestone-definitions")}/reorder`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        items: items.map((x) => ({
+          public_id: x.public_id,
+          version: x.version,
+        })),
+      }),
+    },
+  );
+export interface ConfigurationSelector {
+  public_id: string;
+  immutable_code?: string;
+  code?: string;
+  fa_name?: string;
+  en_name?: string;
+  title?: string;
+  display_label?: string | null;
+  project_role?: string;
+  sequence_number?: number;
+}
+export const listMilestoneTypes = (
+  params: Record<string, string | number | undefined> = {},
+) =>
+  request<BoundedPage<ConfigurationSelector>>(
+    withQuery("/api/internal/milestone-types", params),
+  );
+export const listProjectServiceTypes = (
+  params: Record<string, string | number | undefined> = {},
+) =>
+  request<BoundedPage<ConfigurationSelector>>(
+    withQuery("/api/internal/project-configuration/service-types", params),
+  );
+export const listProjectDocumentDefinitions = (
+  params: Record<string, string | number | undefined> = {},
+) =>
+  request<BoundedPage<ConfigurationSelector>>(
+    withQuery(
+      "/api/internal/project-configuration/document-definitions",
+      params,
+    ),
+  );
+export const listProjectLogisticsPointSelectors = (
+  projectId: string,
+  params: Record<string, string | number | undefined> = {},
+) =>
+  request<BoundedPage<ConfigurationSelector>>(
+    withQuery(
+      `/api/v2/projects/${encodeURIComponent(projectId)}/configuration/selectors/logistics-points`,
+      params,
+    ),
+  );
+export type ExecutionMilestone = {
+  public_id: string;
+  sequence: number;
+  milestone_type: string;
+  milestone_type_snapshot?: { fa_name: string; en_name: string; code: string };
+  expected_point_snapshot?: { label?: string; role: string } | null;
+  target_metadata?: Record<string, unknown>;
+  status:
+    | "PENDING"
+    | "READY"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "SKIPPED"
+    | "CANCELLED"
+    | "BLOCKED";
+  prior_active_status?: string | null;
+  planned_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  skipped_at?: string | null;
+  cancelled_at?: string | null;
+  blocked_at?: string | null;
+  verification_state: string;
+  version: number;
+};
+export type ExecutionProgress = {
+  initialized: boolean;
+  total: number;
+  counts: Record<ExecutionMilestone["status"], number>;
+  current_milestone: ExecutionMilestone | null;
+  completion_percentage: number;
+  completion_rule: string;
+  active_delay_count: number;
+  active_exception_count: number;
+};
+export type ExecutionReason = {
+  public_id: string;
+  immutable_code: string;
+  fa_name: string;
+  en_name: string;
+  definition?: string | null;
+  display_order: number;
+  is_active: boolean;
+  version: number;
+};
+export type ExecutionCondition = {
+  public_id: string;
+  milestone_public_id?: string | null;
+  reason: ExecutionReason;
+  started_at?: string;
+  occurred_at?: string;
+  resolved_at?: string | null;
+  active: boolean;
+  note?: string | null;
+  duration_seconds: number;
+  version: number;
+};
+export type ExecutionEvent = {
+  public_id: string;
+  milestone_public_id: string;
+  event_type: string;
+  effective_at: string;
+  recorded_at: string;
+  source_channel: string;
+  reason?: string | null;
+  note?: string | null;
+  verification_state: string;
+  verified_at?: string | null;
+  correction_of_event_public_id?: string | null;
+};
+export const getExecutionPreview = (shipmentId: string) =>
+  request<{
+    data: {
+      project_public_id?: string | null;
+      initialized: boolean;
+      existing_count: number;
+      milestones: Array<Record<string, unknown>>;
+      findings: Array<{ code: string; message: string }>;
+      confirmation_allowed: boolean;
+    };
+  }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/initialization-preview`,
+  );
+export const initializeExecution = (
+  shipmentId: string,
+  expected_shipment_version: number,
+) =>
+  request<{ data: ExecutionMilestone[]; meta: { created: boolean } }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/initialize`,
+    { method: "POST", body: JSON.stringify({ expected_shipment_version }) },
+  );
+export const listExecutionMilestones = (shipmentId: string) =>
+  request<{ data: ExecutionMilestone[] }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/milestones`,
+  );
+export const transitionExecutionMilestone = (
+  shipmentId: string,
+  milestone: ExecutionMilestone,
+  target_status: string,
+  reason?: string,
+) =>
+  request<{ data: ExecutionMilestone }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/milestones/${milestone.public_id}/transition`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": crypto.randomUUID() },
+      body: JSON.stringify({
+        target_status,
+        reason,
+        expected_version: milestone.version,
+      }),
+    },
+  );
+export const reopenExecutionMilestone = (
+  shipmentId: string,
+  milestone: ExecutionMilestone,
+  reason: string,
+) =>
+  request<{ data: ExecutionMilestone }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/milestones/${milestone.public_id}/reopen`,
+    {
+      method: "POST",
+      body: JSON.stringify({ reason, expected_version: milestone.version }),
+    },
+  );
+export type DocumentReadinessRequirement = {
+  public_id: string;
+  title: string;
+  requirement_level: "REQUIRED" | "OPTIONAL" | "CONDITIONAL";
+  applicability_state: "APPLICABLE" | "NOT_APPLICABLE" | "UNRESOLVED";
+  required_assessment_level: "APPROVED" | "VERIFIED";
+  target_milestone_type: string;
+  target_status: string;
+  version: number;
+  artifact: null | {
+    artifact_public_id: string;
+    filename: string;
+    version: number;
+    assessment: string;
+  };
+};
+export type TransitionReadiness = {
+  allowed: boolean;
+  target_action: string;
+  blocking_requirements: Array<{
+    code: string;
+    requirement_public_id: string;
+    title: string;
+  }>;
+  warnings: Array<{
+    code: string;
+    requirement_public_id: string;
+    title: string;
+  }>;
+};
+export const getDocumentMaterializationPreview = (s: string) =>
+  request<{
+    data: {
+      initialized: boolean;
+      requirements: Array<unknown>;
+      findings: Array<{ code: string; message: string }>;
+      confirmation_allowed: boolean;
+    };
+  }>(
+    `/api/v2/operational-shipments/${s}/document-readiness/materialization-preview`,
+  );
+export const materializeDocumentRequirements = (s: string, v: number) =>
+  request(`/api/v2/operational-shipments/${s}/document-readiness/materialize`, {
+    method: "POST",
+    body: JSON.stringify({ expected_shipment_version: v }),
+  });
+export const listDocumentReadinessRequirements = (s: string) =>
+  request<{ data: DocumentReadinessRequirement[] }>(
+    `/api/v2/operational-shipments/${s}/document-readiness/requirements`,
+  );
+export const associateDocumentArtifact = (
+  s: string,
+  r: DocumentReadinessRequirement,
+  a: string,
+) =>
+  request(
+    `/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/artifacts`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        artifact_public_id: a,
+        expected_requirement_version: r.version,
+      }),
+    },
+  );
+export const assessDocumentArtifact = (
+  s: string,
+  r: DocumentReadinessRequirement,
+  d: string,
+  reason?: string,
+) =>
+  request(
+    `/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/assessments`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        decision: d,
+        reason,
+        expected_requirement_version: r.version,
+      }),
+    },
+  );
+export const resolveDocumentApplicability = (
+  s: string,
+  r: DocumentReadinessRequirement,
+  d: string,
+  reason: string,
+) =>
+  request(
+    `/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/applicability`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        decision: d,
+        reason,
+        expected_requirement_version: r.version,
+      }),
+    },
+  );
+export const getTransitionReadiness = (
+  s: string,
+  m: ExecutionMilestone,
+  t: string,
+) =>
+  request<{ data: TransitionReadiness }>(
+    `/api/v2/operational-shipments/${s}/document-readiness/milestones/${m.public_id}/readiness?target_status=${encodeURIComponent(t)}`,
+  );
+export const getNextTransitionReadiness = (s: string) =>
+  request<{ data: TransitionReadiness | null }>(
+    `/api/v2/operational-shipments/${s}/document-readiness/next-action`,
+  );
+export const createTransitionOverride = (
+  s: string,
+  r: DocumentReadinessRequirement,
+  m: ExecutionMilestone,
+  authority: string,
+  reason: string,
+) =>
+  request(
+    `/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/overrides`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        milestone_public_id: m.public_id,
+        target_status: r.target_status,
+        authority,
+        reason,
+      }),
+    },
+  );
+export const getExecutionProgress = (shipmentId: string) =>
+  request<{ data: ExecutionProgress }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/progress`,
+  );
+export const listExecutionEvents = (shipmentId: string) =>
+  request<{ data: ExecutionEvent[] }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/events`,
+  );
+export const verifyExecutionEvent = (shipmentId: string, eventId: string) =>
+  request<{ data: ExecutionEvent[] }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/events/${eventId}/verify`,
+    { method: "POST", body: "{}" },
+  );
+export const listExecutionReasons = (kind: "delay" | "exception") =>
+  request<{ data: ExecutionReason[] }>(
+    `/api/v2/admin/reference-data/${kind}-reasons`,
+  );
+export const createExecutionReason = (
+  kind: "delay" | "exception",
+  payload: Record<string, unknown>,
+) =>
+  request<{ data: ExecutionReason[] }>(
+    `/api/v2/admin/reference-data/${kind}-reasons`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const updateExecutionReason = (
+  kind: "delay" | "exception",
+  row: ExecutionReason,
+  payload: Record<string, unknown>,
+) =>
+  request<{ data: ExecutionReason }>(
+    `/api/v2/admin/reference-data/${kind}-reasons/${row.public_id}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ ...payload, version: row.version }),
+    },
+  );
+export const listExecutionConditions = (
+  shipmentId: string,
+  kind: "delay" | "exception",
+) =>
+  request<{ data: ExecutionCondition[] }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/${kind}s`,
+  );
+export const createExecutionCondition = (
+  shipmentId: string,
+  kind: "delay" | "exception",
+  payload: Record<string, unknown>,
+) =>
+  request<{ data: ExecutionCondition[] }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/${kind}s`,
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+export const resolveExecutionCondition = (
+  shipmentId: string,
+  kind: "delay" | "exception",
+  row: ExecutionCondition,
+) =>
+  request<{ data: ExecutionCondition }>(
+    `/api/v2/operational-shipments/${shipmentId}/execution/${kind}s/${row.public_id}/resolve`,
+    { method: "POST", body: JSON.stringify({ expected_version: row.version }) },
+  );
 
-export type OipSituation={public_id:string;type:string;subject:{type:string;public_id:string};status:string;severity:string;urgency:string;priority:string;priority_explanation:{policy:string;drivers:Array<{name:string;value:string|null}>;tie_breaker:string};owner:{state:string;assignee_public_id:null};first_detected_at:string;last_changed_at:string;due_at?:string|null;occurrence_count:number;policy:{id:string;version:string};freshness:{status:"FRESH"|"STALE"|"REBUILDING"|"DEGRADED";calculated_at:string;source_watermark:string;projection_version:string;reason?:string|null};version:number};
-export type OipSituationDetail=OipSituation&{evidence:Array<{fact_public_id:string;source_domain:string;source_type:string;source_public_id:string;source_version:string;validity:string;reference:Record<string,unknown>;signal_public_id:string}>;timeline:Array<{event:string;from?:string|null;to:string;reason?:string|null;at:string}>;decision_context:{read_only:boolean;time_pressure:string;active_blockers:string[];missing_information:string[];permissions:{can_manage:boolean};versions:Record<string,string|number>};recommendation:{advisory:boolean;basis:OipSituation["priority_explanation"];suggested_action:string;allowed_command_reference:{method:string;path:string};automatic_execution:false}};
-export const listOipAttention=()=>request<{data:OipSituation[]}>("/api/oip/attention");
-export const getOipSituation=(id:string)=>request<{data:OipSituationDetail}>(`/api/oip/situations/${encodeURIComponent(id)}`);
-export const transitionOipSituation=(row:OipSituation,action:string,payload:Record<string,unknown>={})=>request<{data:OipSituation}>(`/api/oip/situations/${encodeURIComponent(row.public_id)}/${action}`,{method:"POST",body:JSON.stringify({...payload,expected_version:row.version})});
+export type OipSituation = {
+  public_id: string;
+  type: string;
+  subject: { type: string; public_id: string };
+  status: string;
+  severity: string;
+  urgency: string;
+  priority: string;
+  priority_explanation: {
+    policy: string;
+    drivers: Array<{ name: string; value: string | null }>;
+    tie_breaker: string;
+  };
+  owner: { state: string; assignee_public_id: null };
+  first_detected_at: string;
+  last_changed_at: string;
+  due_at?: string | null;
+  snoozed_until?: string | null;
+  occurrence_count: number;
+  policy: { id: string; version: string };
+  freshness: {
+    status: "FRESH" | "STALE" | "REBUILDING" | "DEGRADED";
+    calculated_at: string;
+    source_watermark: string;
+    projection_version: string;
+    reason?: string | null;
+  };
+  version: number;
+};
+export type OipProjectionHealth = {
+  health_state: "FRESH" | "STALE" | "REBUILDING" | "DEGRADED";
+  calculated_at: string;
+  source_watermark: string;
+  processed_watermark?: string | null;
+  projection_version: string;
+  policy_version: string;
+  reason_code?: string | null;
+  reason?: string | null;
+  last_success_at?: string | null;
+  rebuild_started_at?: string | null;
+  rebuild_completed_at?: string | null;
+  last_failure_at?: string | null;
+  run_id?: string | null;
+  version: number;
+};
+export type OipSituationDetail = OipSituation & {
+  projection_health: OipProjectionHealth;
+  evidence: Array<{
+    fact_public_id: string;
+    source_domain: string;
+    source_type: string;
+    source_public_id: string;
+    source_version: string;
+    validity: string;
+    reference: Record<string, unknown>;
+    signal_public_id: string;
+  }>;
+  timeline: Array<{
+    event: string;
+    from?: string | null;
+    to: string;
+    reason?: string | null;
+    at: string;
+  }>;
+  decision_context: {
+    read_only: boolean;
+    time_pressure: string;
+    active_blockers: string[];
+    missing_information: string[];
+    projection_health: OipProjectionHealth;
+    permissions: { can_manage: boolean };
+    versions: Record<string, string | number>;
+  };
+  recommendation: {
+    advisory: boolean;
+    basis: OipSituation["priority_explanation"];
+    suggested_action: string;
+    allowed_command_reference: { method: string; path: string };
+    automatic_execution: false;
+  };
+};
+export const listOipAttention = () =>
+  request<{ data: OipSituation[]; projection_health: OipProjectionHealth }>(
+    "/api/oip/attention",
+  );
+export const getOipProjectionHealth = () =>
+  request<{ data: OipProjectionHealth }>("/api/oip/projection/status");
+export const getOipSituation = (id: string) =>
+  request<{ data: OipSituationDetail }>(
+    `/api/oip/situations/${encodeURIComponent(id)}`,
+  );
+export const transitionOipSituation = (
+  row: OipSituation,
+  action: string,
+  payload: Record<string, unknown> = {},
+) =>
+  request<{ data: OipSituation }>(
+    `/api/oip/situations/${encodeURIComponent(row.public_id)}/${action}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ ...payload, expected_version: row.version }),
+    },
+  );

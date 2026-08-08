@@ -32,6 +32,7 @@ PHASE1B_ALL_PERMISSIONS = [
     "document_readiness.read", "document_readiness.manage",
     "document_readiness.assess", "document_readiness.verify",
     "document_readiness.override",
+    "oip.read", "oip.manage", "oip.reconcile",
 ]
 
 
