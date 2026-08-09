@@ -12,6 +12,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,6 +22,7 @@ PREVIOUS_VERSION = "1.8.0"
 TAG = "v1.9.0"
 RELEASE_DATE = "20260809"
 RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
+NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
 PRODUCTION_BASELINE_REVISION = "20260809_cargo_catalog_items"
 DATABASE_REVISION = "20260818_immutable_fx_provenance"
 UPGRADE_MIGRATIONS = [
@@ -87,8 +89,16 @@ def validate_source() -> str:
     return tag_status()
 
 
-def copy_file(source: Path, relative: Path) -> None:
-    target = RELEASE_DIR / relative
+def npm_version() -> str:
+    return run(NPM_EXECUTABLE, "--version")
+
+
+def build_frontend() -> None:
+    subprocess.check_call((NPM_EXECUTABLE, "run", "build"), cwd=ROOT)
+
+
+def copy_file(source: Path, relative: Path, package_root: Path) -> None:
+    target = package_root / relative
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
 
@@ -105,55 +115,57 @@ def build() -> None:
     commit = run("git", "rev-parse", "HEAD")
     tree = run("git", "rev-parse", "HEAD^{tree}")
     tag_object = run("git", "rev-parse", f"{TAG}^{{tag}}")
-    npm = "npm.cmd" if os.name == "nt" else "npm"
-    subprocess.check_call((npm, "run", "build"), cwd=ROOT)
+    build_frontend()
     if not (ROOT / "dist" / "index.html").is_file():
         raise SystemExit("Tagged-source production build did not create dist/index.html")
-    RELEASE_DIR.mkdir()
-    for source in sorted((ROOT / "dist").rglob("*")):
-        if source.is_file():
-            copy_file(source, source.relative_to(ROOT / "dist"))
+    with tempfile.TemporaryDirectory(
+        prefix=f".{RELEASE_DIR.name}-staging-", dir=ROOT
+    ) as temporary:
+        package_root = Path(temporary)
+        for source in sorted((ROOT / "dist").rglob("*")):
+            if source.is_file():
+                copy_file(source, source.relative_to(ROOT / "dist"), package_root)
 
-    root_files = [
-        "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml",
-        "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md",
-        "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1",
-    ]
-    for name in root_files:
-        copy_file(ROOT / name, Path(name))
+        root_files = [
+            "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml",
+            "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md",
+            "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1",
+        ]
+        for name in root_files:
+            copy_file(ROOT / name, Path(name), package_root)
 
-    for name in run("git", "ls-files", "backend").splitlines():
-        relative = Path(name)
-        if "tests" in relative.parts or relative.suffix in {".pyc", ".map"}:
-            continue
-        copy_file(ROOT / relative, relative)
+        for name in run("git", "ls-files", "backend").splitlines():
+            relative = Path(name)
+            if "tests" in relative.parts or relative.suffix in {".pyc", ".map"}:
+                continue
+            copy_file(ROOT / relative, relative, package_root)
 
-    index = (RELEASE_DIR / "index.html").read_text(encoding="utf-8")
-    js = re.search(r'src="/([^\"]+\.js)"', index).group(1)
-    css = re.search(r'href="/([^\"]+\.css)"', index).group(1)
-    requirements_hash = sha256(ROOT / "requirements.txt")
-    env_data = {
-        "node": run("node", "--version"),
-        "npm": run("npm", "--version"),
-        "python": platform.python_version(),
-        "package_lock_sha256": sha256(ROOT / "package-lock.json"),
-        "requirements_sha256": requirements_hash,
-    }
-    env_canonical = json.dumps(env_data, sort_keys=True, separators=(",", ":")).encode()
-    records = "".join(
-        f"{path.relative_to(RELEASE_DIR).as_posix()}\0{sha256(path)}\n"
-        for path in sorted(RELEASE_DIR.rglob("*")) if path.is_file()
-    )
-    package_hash = hashlib.sha256(records.encode()).hexdigest()
-    migration_files = [
-        {
-            "revision": revision,
-            "path": migration_path(revision).relative_to(ROOT).as_posix(),
-            "sha256": sha256(migration_path(revision)),
+        index = (package_root / "index.html").read_text(encoding="utf-8")
+        js = re.search(r'src="/([^\"]+\.js)"', index).group(1)
+        css = re.search(r'href="/([^\"]+\.css)"', index).group(1)
+        requirements_hash = sha256(ROOT / "requirements.txt")
+        env_data = {
+            "node": run("node", "--version"),
+            "npm": npm_version(),
+            "python": platform.python_version(),
+            "package_lock_sha256": sha256(ROOT / "package-lock.json"),
+            "requirements_sha256": requirements_hash,
         }
-        for revision in UPGRADE_REVISIONS
-    ]
-    manifest = {
+        env_canonical = json.dumps(env_data, sort_keys=True, separators=(",", ":")).encode()
+        records = "".join(
+            f"{path.relative_to(package_root).as_posix()}\0{sha256(path)}\n"
+            for path in sorted(package_root.rglob("*")) if path.is_file()
+        )
+        package_hash = hashlib.sha256(records.encode()).hexdigest()
+        migration_files = [
+            {
+                "revision": revision,
+                "path": migration_path(revision).relative_to(ROOT).as_posix(),
+                "sha256": sha256(migration_path(revision)),
+            }
+            for revision in UPGRADE_REVISIONS
+        ]
+        manifest = {
         "application_version": VERSION,
         "previous_version": PREVIOUS_VERSION,
         "release_name": "Integrated Operational Execution, MDPM, OIP, and Shipment Economics",
@@ -168,10 +180,10 @@ def build() -> None:
         "requirements_sha256": requirements_hash,
         "frontend_entry_js": js,
         "frontend_entry_css": css,
-        "frontend_entry_js_bytes": (RELEASE_DIR / js).stat().st_size,
-        "frontend_entry_js_gzip_bytes": len(gzip.compress((RELEASE_DIR / js).read_bytes())),
-        "frontend_entry_css_bytes": (RELEASE_DIR / css).stat().st_size,
-        "frontend_entry_css_gzip_bytes": len(gzip.compress((RELEASE_DIR / css).read_bytes())),
+        "frontend_entry_js_bytes": (package_root / js).stat().st_size,
+        "frontend_entry_js_gzip_bytes": len(gzip.compress((package_root / js).read_bytes())),
+        "frontend_entry_css_bytes": (package_root / css).stat().st_size,
+        "frontend_entry_css_gzip_bytes": len(gzip.compress((package_root / css).read_bytes())),
         "backend_revision": commit,
         "database_revision": DATABASE_REVISION,
         "production_baseline_revision": PRODUCTION_BASELINE_REVISION,
@@ -210,10 +222,11 @@ def build() -> None:
             "Reference Data and OIP policies/thresholds require separately authorized administrator initialization; no Seed runs during deployment.",
             "Database downgrade is fail-closed after durable Economics history and may require coordinated backup restore.",
         ],
-    }
-    (RELEASE_DIR / "release-manifest.json").write_text(
-        json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
-    )
+        }
+        (package_root / "release-manifest.json").write_text(
+            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+        )
+        package_root.replace(RELEASE_DIR)
     print(RELEASE_DIR)
 
 
