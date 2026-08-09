@@ -6,6 +6,9 @@ one. Production remains application 1.6.1 at database revision
 
 1. Verify the immutable package, annotated `v1.9.0` tag, source commit/tree,
    package hash, requirements hash, and ten migration hashes.
+   Package secret verification permits only the byte-exact immutable 2024
+   credential migration when the byte-exact mandatory remediation revision is
+   present in this release's declared upgrade path; every other match fails.
 2. Copy `release-v1.9.0-20260809` to a new immutable server directory.
 3. Create a release-local `.venv` and install only `requirements.txt`; do not
    rely on global packages.

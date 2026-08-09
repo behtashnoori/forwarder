@@ -140,7 +140,7 @@ def build() -> None:
         root_files = [
             "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml",
             "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md",
-            "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1",
+            "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1", "verify_package_secrets.py",
         ]
         for name in root_files:
             copy_file(ROOT / name, Path(name), package_root)

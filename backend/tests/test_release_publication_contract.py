@@ -3,6 +3,8 @@ import os
 from pathlib import Path
 
 import pytest
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -161,3 +163,31 @@ def test_publication_runbooks_and_dependency_contract_are_190_coherent():
 
     requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
     assert "psycopg2-binary==2.9.11" in requirements
+
+
+def test_package_builder_includes_fail_closed_secret_verifier():
+    builder = (ROOT / "scripts" / "build_release_package.py").read_text(encoding="utf-8")
+    verifier = (ROOT / "VERIFY-PACKAGE.ps1").read_text(encoding="utf-8")
+    assert '"verify_package_secrets.py"' in builder
+    assert '"verify_package_secrets.py"' in verifier
+    assert "Package secret policy failed" in verifier
+    assert '$_.Extension -in @(\'.ps1\',\'.bat\',\'.cmd\',\'.yml\',\'.yaml\')' in verifier
+    assert '$seedControlFiles = @("VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1")' in verifier
+
+
+def test_release_upgrade_chain_is_contiguous_and_remediation_is_mandatory():
+    builder = _builder()
+    config = Config(str(ROOT / "backend" / "migrations" / "alembic.ini"))
+    script = ScriptDirectory.from_config(config)
+    revisions = list(
+        reversed(
+            [
+                item.revision
+                for item in script.iterate_revisions(
+                    builder.DATABASE_REVISION, builder.PRODUCTION_BASELINE_REVISION
+                )
+            ]
+        )
+    )
+    assert revisions == builder.UPGRADE_REVISIONS
+    assert script.get_heads() == [builder.DATABASE_REVISION]

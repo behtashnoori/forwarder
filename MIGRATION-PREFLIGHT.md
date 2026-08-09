@@ -17,6 +17,12 @@
   9. `20260817_shipment_economics_core`
   10. `20260818_immutable_fx_provenance`
 
+- Do not prune pre-baseline revision modules: Alembic requires their revision
+  metadata to resolve `current`, `heads`, upgrades, and supported downgrade
+  traversal. The immutable 2024 shared-credential migration remains historical
+  graph evidence; step 3 disables every account retaining its exact hash before
+  the application is switched.
+
 - Inspect active connections, long transactions, locks, table scale, disk, and
   approved write-quiescence immediately before the change.
 - Run `python -m backend.migration_cli current` and `check` with sanitized output.

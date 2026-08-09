@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 
 
 MODULE = "backend.migrations.versions.security_credential_remediation"
@@ -39,3 +40,8 @@ def test_downgrade_never_reactivates_legacy_accounts(monkeypatch):
         lambda *_: (_ for _ in ()).throw(AssertionError("must not write")),
     )
     assert migration.downgrade() is None
+
+
+def test_authentication_excludes_disabled_accounts():
+    source = (Path(__file__).resolve().parents[1] / "auth.py").read_text(encoding="utf-8")
+    assert "filter_by(username=username, is_active=True)" in source
