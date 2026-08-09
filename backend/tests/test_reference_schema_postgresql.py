@@ -1,5 +1,6 @@
 """Explicit disposable-PostgreSQL checks for the reference schema expansion."""
 import os
+import re
 
 import pytest
 from sqlalchemy import inspect, text
@@ -13,7 +14,7 @@ def test_reference_schema_constraints_on_disposable_postgresql():
     if not url:
         pytest.skip("explicit disposable reference-schema PostgreSQL URL not provided")
     name = url.rstrip("/").rsplit("/", 1)[-1]
-    assert name == "forwarder_reference_schema_test_20260720"
+    assert re.fullmatch(r"forwarder_reference_schema_test_\d{14}[0-9a-f]{6}", name)
     app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": url, "SECRET_KEY": "synthetic-only"}, skip_startup=True)
     with app.app_context():
         inspector = inspect(db.engine)

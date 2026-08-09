@@ -4,6 +4,11 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from backend import create_app
 from backend.extensions import db
@@ -61,18 +66,29 @@ def main() -> int:
         requirements, _ = docs.materialize(shipment.public_id, {"expected_shipment_version": shipment.version}, actor)
         artifacts = []
         for definition in definitions:
-            case_req = CaseDocumentRequirement(shipment_request_id=shipment.shipment_request_id,
-                source_definition_id=definition.id, source_definition_code=definition.code, source_definition_revision=1,
-                title=definition.title, is_required=True, allowed_formats='["pdf"]', max_file_size_bytes=1000000,
-                max_active_file_count=5, sort_order=0)
-            db.session.add(case_req); db.session.flush()
+            case_req = CaseDocumentRequirement.query.filter_by(
+                shipment_request_id=shipment.shipment_request_id,
+                source_definition_id=definition.id,
+            ).one_or_none()
+            if case_req is None:
+                case_req = CaseDocumentRequirement(shipment_request_id=shipment.shipment_request_id,
+                    source_definition_id=definition.id, source_definition_code=definition.code, source_definition_revision=1,
+                    title=definition.title, is_required=True, allowed_formats='["pdf"]', max_file_size_bytes=1000000,
+                    max_active_file_count=5, sort_order=0)
+                db.session.add(case_req); db.session.flush()
             for version in (1, 2):
-                artifact = CaseDocumentFile(shipment_request_id=shipment.shipment_request_id, case_requirement_id=case_req.id,
-                    is_miscellaneous=False, original_filename=f"{definition.code.lower()}-v{version}.pdf",
-                    safe_download_filename=f"{definition.code.lower()}-v{version}.pdf", storage_key=f"mdpm-validation/{definition.code}/{version}",
-                    canonical_extension="pdf", detected_mime_type="application/pdf", file_size_bytes=100,
-                    sha256_hash=(str(version) * 64), version_number=version, status="active")
-                db.session.add(artifact); db.session.flush(); artifacts.append(artifact)
+                filename = f"{definition.code.lower()}-v{version}.pdf"
+                artifact = CaseDocumentFile.query.filter_by(
+                    case_requirement_id=case_req.id, version_number=version,
+                ).one_or_none()
+                if artifact is None:
+                    artifact = CaseDocumentFile(shipment_request_id=shipment.shipment_request_id, case_requirement_id=case_req.id,
+                        is_miscellaneous=False, original_filename=filename,
+                        safe_download_filename=filename, storage_key=f"mdpm-validation/{definition.code}/{version}",
+                        canonical_extension="pdf", detected_mime_type="application/pdf", file_size_bytes=100,
+                        sha256_hash=(str(version) * 64), version_number=version, status="active")
+                    db.session.add(artifact); db.session.flush()
+                artifacts.append(artifact)
         db.session.commit()
         payload = {"seed_lineage":"phase1b_uat + mdpm_validation_seed:v1", "organization":org.public_id,
                    "username":"phase1b_uat_admin", "shipment_numeric_id":shipment.id, "shipment_public_id":shipment.public_id,

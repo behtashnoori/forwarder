@@ -135,7 +135,7 @@ def test_identity_catalog_and_single_head(configured_app):
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260817_shipment_economics_core"
+            "20260818_immutable_fx_provenance"
     ]
 
 

@@ -1602,7 +1602,7 @@ from backend.mdpm_models import (  # noqa: E402
     TransitionOverride,
 )
 from backend.economics_models import (  # noqa: E402
-    EconomicAudit, EconomicEvidenceAssociation, EconomicFxRate,
+    EconomicAudit, EconomicEvidenceAssociation, EconomicFxRate, EconomicObservationFx,
     EconomicLine, EconomicObservation,
 )
 
@@ -1686,5 +1686,6 @@ __all__ = [
     "EconomicObservation",
     "EconomicEvidenceAssociation",
     "EconomicFxRate",
+    "EconomicObservationFx",
     "EconomicAudit",
 ]

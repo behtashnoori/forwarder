@@ -2,6 +2,7 @@
 
 from datetime import datetime, timedelta
 import os
+import re
 
 import pytest
 from sqlalchemy.exc import IntegrityError
@@ -22,7 +23,10 @@ def test_tracking_locations_on_disposable_postgresql():
     url = os.environ.get("FORWARDER_TRACKING_LOCATION_POSTGRES_URL")
     if not url:
         pytest.skip("explicit disposable tracking-location PostgreSQL URL not provided")
-    assert url.rstrip("/").rsplit("/", 1)[-1] == "forwarder_tracking_location_migration_test_20260726"
+    assert re.fullmatch(
+        r"forwarder_tracking_location_migration_test_\d{14}[0-9a-f]{6}",
+        url.rstrip("/").rsplit("/", 1)[-1],
+    )
 
     app = create_app(
         {

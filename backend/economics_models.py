@@ -84,6 +84,7 @@ class EconomicEvidenceAssociation(db.Model):
     evidence_role = db.Column(db.String(40), nullable=False)
     associated_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
     associated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    observation = db.relationship("EconomicObservation", backref=db.backref("evidence_associations", lazy="selectin"))
 
 
 class EconomicFxRate(db.Model):
@@ -111,6 +112,34 @@ class EconomicFxRate(db.Model):
     status = db.Column(db.String(16), nullable=False, default="AUTHORIZED")
     supersedes_rate_id = db.Column(BIGINT, db.ForeignKey("economic_fx_rate.id", ondelete="RESTRICT"))
     version = db.Column(db.Integer, nullable=False, default=1)
+
+
+class EconomicObservationFx(db.Model):
+    """Immutable provenance for the exact FX fact consumed by an observation."""
+    __tablename__ = "economic_observation_fx"
+    __table_args__ = (
+        db.UniqueConstraint("observation_id", name="uq_economic_observation_fx_observation"),
+        db.UniqueConstraint("public_id", name="uq_economic_observation_fx_public_id"),
+        db.CheckConstraint("rate > 0", name="ck_economic_observation_fx_positive"),
+        db.CheckConstraint("from_currency <> to_currency", name="ck_economic_observation_fx_pair"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid4()))
+    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    observation_id = db.Column(BIGINT, db.ForeignKey("economic_observation.id", ondelete="RESTRICT"), nullable=False)
+    fx_rate_id = db.Column(BIGINT, db.ForeignKey("economic_fx_rate.id", ondelete="RESTRICT"), nullable=False)
+    fx_rate_public_id = db.Column(db.String(36), nullable=False)
+    fx_rate_version = db.Column(db.Integer, nullable=False)
+    from_currency = db.Column(db.String(3), nullable=False)
+    to_currency = db.Column(db.String(3), nullable=False)
+    rate = db.Column(db.Numeric(24, 12), nullable=False)
+    rate_type = db.Column(db.String(24), nullable=False)
+    effective_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    authority = db.Column(db.String(120), nullable=False)
+    source = db.Column(db.String(120), nullable=False)
+    bound_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    observation = db.relationship("EconomicObservation", backref=db.backref("fx_binding", uselist=False, lazy="joined"))
+    fx_rate = db.relationship("EconomicFxRate")
 
 
 class EconomicAudit(db.Model):

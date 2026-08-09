@@ -768,6 +768,51 @@ components:
         blocked_at: { type: string, format: date-time, nullable: true }
         verification_state: { type: string }
         version: { type: integer, minimum: 1 }
+    EconomicMoney:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: { type: string, pattern: '^\d+(\.\d{1,6})?$' }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    EconomicFxBinding:
+      type: object
+      readOnly: true
+      description: Immutable snapshot of the exact authorized FX fact consumed by one historical observation.
+      required: [public_id, fx_rate_public_id, fx_rate_version, from_currency, to_currency, rate, rate_type, effective_at, authority, source, bound_at]
+      properties:
+        public_id: { type: string, format: uuid }
+        fx_rate_public_id: { type: string, format: uuid }
+        fx_rate_version: { type: integer, minimum: 1 }
+        from_currency: { type: string, minLength: 3, maxLength: 3 }
+        to_currency: { type: string, minLength: 3, maxLength: 3 }
+        rate: { type: string }
+        rate_type: { type: string, enum: [CONTRACTUAL, MANUAL_APPROVED] }
+        effective_at: { type: string, format: date-time }
+        authority: { type: string }
+        source: { type: string }
+        bound_at: { type: string, format: date-time }
+    EconomicLine:
+      type: object
+      description: Public economics line contract; persistence-only numeric identifiers are never exposed.
+      required: [public_id, side, service_public_id, service_code, service_title, lifecycle, version, observations]
+      properties:
+        public_id: { type: string, format: uuid }
+        side: { type: string, enum: [REVENUE, COST] }
+        service_public_id: { type: string, format: uuid }
+        service_code: { type: string }
+        service_title: { type: string }
+        lifecycle: { type: string, enum: [ACTIVE, CANCELLED] }
+        version: { type: integer, minimum: 1 }
+        observations: { type: array, items: { type: object } }
+    EconomicProjectionStage:
+      type: object
+      required: [completeness, missing_inputs, source_observation_ids, applied_fx_rate_ids]
+      properties:
+        completeness: { type: string, enum: [COMPLETE, INCOMPLETE, UNKNOWN, NOT_APPLICABLE] }
+        missing_inputs: { type: array, items: { type: string, enum: [FX_MISSING, REVENUE_MISSING, COST_MISSING, COST_VISIBILITY_RESTRICTED] } }
+        source_observation_ids: { type: array, items: { type: string, format: uuid } }
+        applied_fx_rate_ids: { type: array, description: Exact opaque FX fact identities used; never dynamically reselected., items: { type: string, format: uuid } }
     ExecutionTransition:
       type: object
       additionalProperties: false

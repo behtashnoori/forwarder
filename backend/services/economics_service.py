@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy import select
 
 from backend.extensions import db
-from backend.economics_models import EconomicAudit, EconomicEvidenceAssociation, EconomicFxRate, EconomicLine, EconomicObservation
+from backend.economics_models import EconomicAudit, EconomicEvidenceAssociation, EconomicFxRate, EconomicLine, EconomicObservation, EconomicObservationFx
 from backend.models import CaseDocumentFile, ExpertQuote, ServiceType
 from backend.operational_models import OperationalShipment, Project, utcnow
 from backend.services.operational_service import OperationalError, organization_for_user, require_permission, _lock_idempotency_scope
@@ -86,11 +86,13 @@ def _audit(shipment, user, event, entity, correlation=None, details=None):
 
 
 def serialize_observation(row: EconomicObservation) -> dict[str, Any]:
-    return {"public_id": row.public_id, "stage": row.stage, "money": money_json(row.amount, row.currency), "effective_at": row.effective_at.isoformat(), "recorded_at": row.recorded_at.isoformat(), "authority": row.authority, "source": {"type": row.source_type, "public_id": row.source_public_id, "version": row.source_version}, "status": row.status, "correction_type": row.correction_type, "version": row.version, "reason": row.reason}
+    binding = row.fx_binding
+    return {"public_id": row.public_id, "stage": row.stage, "money": money_json(row.amount, row.currency), "effective_at": row.effective_at.isoformat(), "recorded_at": row.recorded_at.isoformat(), "authority": row.authority, "source": {"type": row.source_type, "public_id": row.source_public_id, "version": row.source_version}, "status": row.status, "correction_type": row.correction_type, "version": row.version, "reason": row.reason, "evidence": [{"public_id": item.public_id, "artifact_public_id": item.artifact_public_id, "artifact_version": item.artifact_version, "role": item.evidence_role, "associated_at": item.associated_at.isoformat()} for item in row.evidence_associations], "fx_binding": ({"public_id": binding.public_id, "fx_rate_public_id": binding.fx_rate_public_id, "fx_rate_version": binding.fx_rate_version, "from_currency": binding.from_currency, "to_currency": binding.to_currency, "rate": format(binding.rate, "f"), "rate_type": binding.rate_type, "effective_at": binding.effective_at.isoformat(), "authority": binding.authority, "source": binding.source, "bound_at": binding.bound_at.isoformat()} if binding else None)}
 
 
 def serialize_line(row: EconomicLine, include_observations=True) -> dict[str, Any]:
-    payload = {"public_id": row.public_id, "side": row.side, "service_type_id": row.service_type_id, "counterparty": ({"type": row.counterparty_type, "public_id": row.counterparty_public_id} if row.counterparty_public_id else None), "quantity": (format(row.quantity, "f") if row.quantity is not None else None), "uom_code": row.uom_code, "description": row.description, "lifecycle": row.lifecycle, "version": row.version, "created_at": row.created_at.isoformat()}
+    service = db.session.get(ServiceType, row.service_type_id)
+    payload = {"public_id": row.public_id, "side": row.side, "service_public_id": service.public_id, "service_code": service.immutable_code, "service_title": service.en_name, "counterparty": ({"type": row.counterparty_type, "public_id": row.counterparty_public_id} if row.counterparty_public_id else None), "quantity": (format(row.quantity, "f") if row.quantity is not None else None), "uom_code": row.uom_code, "description": row.description, "lifecycle": row.lifecycle, "version": row.version, "created_at": row.created_at.isoformat()}
     if include_observations:
         payload["observations"] = [serialize_observation(o) for o in sorted(row.observations, key=lambda x: (x.recorded_at, x.id))]
     return payload
@@ -103,7 +105,7 @@ def create_line(shipment_id: str, payload: dict, user: dict) -> dict:
     require_permission(user, _permission(side, stage))
     shipment = _shipment(shipment_id, user, "economics.revenue.view" if side == "REVENUE" else "economics.cost.view", lock=True)
     amount, currency = money(payload.get("money"))
-    service = db.session.get(ServiceType, payload.get("service_type_id"))
+    service = db.session.scalar(select(ServiceType).where(ServiceType.public_id == payload.get("service_public_id")))
     if not service or not service.is_active:
         raise OperationalError("INVALID_ECONOMIC_SERVICE", "An active governed service type is required.")
     key = str(payload.get("idempotency_key") or "")
@@ -119,7 +121,7 @@ def create_line(shipment_id: str, payload: dict, user: dict) -> dict:
     db.session.add(line); db.session.flush()
     observation = EconomicObservation(organization_id=shipment.organization_id, line_id=line.id, stage=stage, amount=amount, currency=currency, effective_at=_time(payload.get("effective_at")), actor_user_id=user["id"], authority=str(payload.get("authority") or "").strip(), source_type=str(payload.get("source_type") or "MANUAL"), source_public_id=payload.get("source_public_id"), source_version=payload.get("source_version"), reason=payload.get("reason"), idempotency_key=key, request_hash=request_hash, correlation_id=payload.get("correlation_id"))
     if not observation.authority: raise OperationalError("AUTHORITY_REQUIRED", "Economic authority is required.")
-    db.session.add(observation); db.session.flush(); _associate_evidence(shipment, observation, payload.get("evidence", []), user)
+    db.session.add(observation); db.session.flush(); _bind_fx(shipment, observation, payload.get("fx_rate_public_id")); _associate_evidence(shipment, observation, payload.get("evidence", []), user)
     _audit(shipment, user, "economic_observation.created", observation, observation.correlation_id, {"line_public_id": line.public_id, "side": side, "stage": stage})
     db.session.commit()
     return {"line": serialize_line(line), "replayed": False}
@@ -130,9 +132,12 @@ def append_observation(shipment_id: str, line_id: str, payload: dict, user: dict
     if stage not in STAGES: raise OperationalError("INVALID_ECONOMIC_STAGE", "stage is invalid.")
     shipment = _shipment(shipment_id, user, _permission("", stage), lock=True); line = _line(shipment, line_id, lock=True)
     require_permission(user, "economics.revenue.view" if line.side == "REVENUE" else "economics.cost.view")
+    expected_line_version = payload.get("expected_line_version")
+    if expected_line_version is not None and line.version != expected_line_version:
+        raise OperationalError("ECONOMIC_LINE_VERSION_CONFLICT", "Economic line is stale.", 409)
     if stage != "ACTUAL" and any(o.stage == stage and o.status == "AUTHORIZED" for o in line.observations):
         raise OperationalError("CORRECTION_REQUIRED", "A current observation exists; use the correction command.", 409)
-    data = dict(payload, side=line.side, service_type_id=line.service_type_id)
+    data = dict(payload, side=line.side, service_public_id=db.session.get(ServiceType, line.service_type_id).public_id)
     amount, currency = money(payload.get("money")); key=str(payload.get("idempotency_key") or ""); request_hash=_hash(data)
     _lock_idempotency_scope(shipment.organization_id,"economics.append_observation","EconomicLine",line.id,key)
     existing=db.session.scalar(select(EconomicObservation).where(EconomicObservation.organization_id==shipment.organization_id,EconomicObservation.idempotency_key==key))
@@ -141,12 +146,13 @@ def append_observation(shipment_id: str, line_id: str, payload: dict, user: dict
         return {"observation":serialize_observation(existing),"replayed":True}
     row=EconomicObservation(organization_id=shipment.organization_id,line_id=line.id,stage=stage,amount=amount,currency=currency,effective_at=_time(payload.get("effective_at")),actor_user_id=user["id"],authority=str(payload.get("authority") or "").strip(),source_type=str(payload.get("source_type") or "MANUAL"),source_public_id=payload.get("source_public_id"),source_version=payload.get("source_version"),reason=payload.get("reason"),idempotency_key=key,request_hash=request_hash,correlation_id=payload.get("correlation_id"))
     if not key or not row.authority: raise OperationalError("VALIDATION_FAILED","idempotency_key and authority are required.")
-    db.session.add(row);db.session.flush();_associate_evidence(shipment,row,payload.get("evidence",[]),user);_audit(shipment,user,"economic_observation.created",row,row.correlation_id,{"line_public_id":line.public_id,"stage":stage});db.session.commit();return {"observation":serialize_observation(row),"replayed":False}
+    line.version += 1
+    db.session.add(row);db.session.flush();_bind_fx(shipment,row,payload.get("fx_rate_public_id"));_associate_evidence(shipment,row,payload.get("evidence",[]),user);_audit(shipment,user,"economic_observation.created",row,row.correlation_id,{"line_public_id":line.public_id,"stage":stage});db.session.commit();return {"observation":serialize_observation(row),"replayed":False}
 
 
 def correct(shipment_id: str, observation_id: str, payload: dict, user: dict) -> dict:
     shipment=_shipment(shipment_id,user,"economics.observation.correct",lock=True)
-    old=db.session.scalar(select(EconomicObservation).join(EconomicLine).where(EconomicObservation.public_id==observation_id,EconomicObservation.organization_id==shipment.organization_id,EconomicLine.operational_shipment_id==shipment.id).with_for_update())
+    old=db.session.scalar(select(EconomicObservation).join(EconomicLine).where(EconomicObservation.public_id==observation_id,EconomicObservation.organization_id==shipment.organization_id,EconomicLine.operational_shipment_id==shipment.id).with_for_update(of=EconomicObservation))
     if not old: raise OperationalError("ECONOMIC_OBSERVATION_NOT_FOUND","Economic observation was not found.",404)
     if old.status!="AUTHORIZED" or old.version!=payload.get("expected_version"): raise OperationalError("ECONOMIC_VERSION_CONFLICT","Observation is stale or already corrected.",409)
     kind=payload.get("correction_type")
@@ -161,9 +167,20 @@ def correct(shipment_id: str, observation_id: str, payload: dict, user: dict) ->
         if replay.request_hash!=h: raise OperationalError("IDEMPOTENCY_CONFLICT","Idempotency key was used with another payload.",409)
         return {"observation":serialize_observation(replay),"replayed":True}
     old.status="REVERSED" if kind=="REVERSAL" else "SUPERSEDED";old.version+=1
+    old.line.version += 1
     row=EconomicObservation(organization_id=old.organization_id,line_id=old.line_id,stage=old.stage,amount=amount,currency=currency,effective_at=_time(payload.get("effective_at")),actor_user_id=user["id"],authority=str(payload.get("authority") or "").strip(),source_type=str(payload.get("source_type") or "CORRECTION"),reason=payload["reason"],status="AUTHORIZED" if kind=="SUPERSESSION" else "REVERSED",correction_type=kind,corrects_observation_id=old.id,idempotency_key=key,request_hash=h,correlation_id=payload.get("correlation_id"))
     if not key or not row.authority: raise OperationalError("VALIDATION_FAILED","idempotency_key and authority are required.")
-    db.session.add(row);db.session.flush();_associate_evidence(shipment,row,payload.get("evidence",[]),user);_audit(shipment,user,"economic_observation.corrected",row,row.correlation_id,{"corrected_public_id":old.public_id,"correction_type":kind});db.session.commit();return {"observation":serialize_observation(row),"replayed":False}
+    db.session.add(row);db.session.flush();_bind_fx(shipment,row,payload.get("fx_rate_public_id"));_associate_evidence(shipment,row,payload.get("evidence",[]),user);_audit(shipment,user,"economic_observation.corrected",row,row.correlation_id,{"corrected_public_id":old.public_id,"correction_type":kind});db.session.commit();return {"observation":serialize_observation(row),"replayed":False}
+
+
+def _bind_fx(shipment, observation, rate_public_id):
+    if not rate_public_id:
+        return
+    rate = db.session.scalar(select(EconomicFxRate).where(EconomicFxRate.public_id == rate_public_id, EconomicFxRate.organization_id == shipment.organization_id).with_for_update())
+    def aware(value): return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if not rate or rate.status != "AUTHORIZED" or rate.from_currency != observation.currency or aware(rate.effective_at) > aware(observation.effective_at) or (rate.expires_at and aware(rate.expires_at) < aware(observation.effective_at)):
+        raise OperationalError("FX_BINDING_INVALID", "The exact authorized FX fact is not applicable to this observation.", 409)
+    db.session.add(EconomicObservationFx(organization_id=shipment.organization_id, observation_id=observation.id, fx_rate_id=rate.id, fx_rate_public_id=rate.public_id, fx_rate_version=rate.version, from_currency=rate.from_currency, to_currency=rate.to_currency, rate=rate.rate, rate_type=rate.rate_type, effective_at=rate.effective_at, authority=rate.authority, source=rate.source))
 
 
 def _associate_evidence(shipment, observation, evidence, user):
@@ -206,9 +223,9 @@ def projection(shipment_id:str,user:dict,reporting_currency:str|None=None)->dict
                 value=obs.amount
                 basis=target or obs.currency
                 if obs.currency!=basis:
-                    rate=db.session.scalar(select(EconomicFxRate).where(EconomicFxRate.organization_id==org,EconomicFxRate.from_currency==obs.currency,EconomicFxRate.to_currency==basis,EconomicFxRate.status=="AUTHORIZED",EconomicFxRate.effective_at<=utcnow(),(EconomicFxRate.expires_at.is_(None)| (EconomicFxRate.expires_at>=utcnow()))).order_by(EconomicFxRate.effective_at.desc()))
-                    if not rate: missing.append("FX_MISSING");continue
-                    value=(value*rate.rate).quantize(Decimal("0.000001"),rounding=ROUND_HALF_EVEN);fx_used.append(rate.public_id)
+                    binding=obs.fx_binding
+                    if not binding or binding.from_currency != obs.currency or binding.to_currency != basis: missing.append("FX_MISSING");continue
+                    value=(value*binding.rate).quantize(Decimal("0.000001"),rounding=ROUND_HALF_EVEN);fx_used.append(binding.fx_rate_public_id)
                 sums[line.side]+=value;seen[line.side]=True;sources.append(obs.public_id)
         if not seen["REVENUE"]: missing.append("REVENUE_MISSING")
         if can_cost and not seen["COST"]: missing.append("COST_MISSING")
@@ -242,7 +259,7 @@ def quote_confirm(shipment_id,payload,user):
     if preview["already_materialized"]: raise OperationalError("COMMERCIAL_INTENT_ALREADY_MATERIALIZED","Accepted quote was already materialized.",409)
     shipment=_shipment(shipment_id,user,"economics.revenue.view");quote=db.session.get(ExpertQuote,shipment.accepted_quote_id)
     source_identity=hashlib.sha256(f"accepted-quote|{shipment.public_id}|{quote.id}".encode()).hexdigest()
-    command={"side":"REVENUE","stage":"COMMITMENT","service_type_id":payload.get("service_type_id"),"money":{"amount":str(quote.amount),"currency":quote.currency},"effective_at":quote.responded_at.replace(tzinfo=timezone.utc).isoformat() if quote.responded_at and quote.responded_at.tzinfo is None else quote.responded_at.isoformat(),"authority":payload.get("authority"),"source_type":"ACCEPTED_QUOTE","source_public_id":source_identity,"source_version":hashlib.sha256(f"{quote.id}|{quote.amount}|{quote.currency}|{quote.responded_at}".encode()).hexdigest(),"reason":payload.get("reason"),"idempotency_key":payload.get("idempotency_key"),"evidence":payload.get("evidence",[]),"correlation_id":payload.get("correlation_id")}
+    command={"side":"REVENUE","stage":"COMMITMENT","service_public_id":payload.get("service_public_id"),"money":{"amount":str(quote.amount),"currency":quote.currency},"effective_at":quote.responded_at.replace(tzinfo=timezone.utc).isoformat() if quote.responded_at and quote.responded_at.tzinfo is None else quote.responded_at.isoformat(),"authority":payload.get("authority"),"source_type":"ACCEPTED_QUOTE","source_public_id":source_identity,"source_version":hashlib.sha256(f"{quote.id}|{quote.amount}|{quote.currency}|{quote.responded_at}".encode()).hexdigest(),"reason":payload.get("reason"),"idempotency_key":payload.get("idempotency_key"),"evidence":payload.get("evidence",[]),"correlation_id":payload.get("correlation_id"),"fx_rate_public_id":payload.get("fx_rate_public_id")}
     return create_line(shipment_id,command,user)
 
 

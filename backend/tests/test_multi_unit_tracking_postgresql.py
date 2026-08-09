@@ -1,6 +1,7 @@
 """Explicit disposable-PostgreSQL verification for multi-unit tracking."""
 from datetime import datetime, timedelta
 import os
+import re
 
 import pytest
 from sqlalchemy import inspect
@@ -22,10 +23,10 @@ def test_disposable_postgresql_tracking_contract():
     if not url:
         pytest.skip("explicit disposable PostgreSQL URL not provided")
     database_name = url.rstrip("/").rsplit("/", 1)[-1]
-    assert database_name in {
-        "forwarder_security_test_20260718",
-        "forwarder_session_test_20260719",
-    }, "refusing to mutate a non-approved disposable database"
+    assert re.fullmatch(
+        r"forwarder_(?:security_test_tracking|session_test)_\d{14}[0-9a-f]{6}",
+        database_name,
+    ), "refusing to mutate a non-approved disposable database"
 
     app = create_app(
         {"TESTING": True, "SQLALCHEMY_DATABASE_URI": url, "SECRET_KEY": "synthetic-only"},
