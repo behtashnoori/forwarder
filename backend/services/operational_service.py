@@ -185,10 +185,18 @@ def create_from_accepted_quote(payload: dict[str, Any], user: dict[str, Any], ke
     return shipment, True
 
 
-def scoped_shipment(shipment_id: int, user: dict[str, Any]) -> OperationalShipment:
+def scoped_shipment(shipment_id: str, user: dict[str, Any]) -> OperationalShipment:
+    """Resolve the externally supplied opaque shipment identity inside its tenant."""
     require_permission(user, "operational_shipment.read")
     org = organization_for_user(int(user["id"]))
-    shipment = db.session.scalar(select(OperationalShipment).where(OperationalShipment.id == shipment_id, OperationalShipment.organization_id == org))
+    identity_clause = (
+        OperationalShipment.id == shipment_id
+        if isinstance(shipment_id, int)
+        else OperationalShipment.public_id == str(shipment_id)
+    )
+    shipment = db.session.scalar(select(OperationalShipment).where(
+        identity_clause, OperationalShipment.organization_id == org,
+    ))
     if shipment is None:
         raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
     return shipment
@@ -196,17 +204,7 @@ def scoped_shipment(shipment_id: int, user: dict[str, Any]) -> OperationalShipme
 
 def scoped_shipment_by_public_id(public_id: str, user: dict[str, Any]) -> OperationalShipment:
     """Resolve the external identity inside the caller's tenant boundary."""
-    require_permission(user, "operational_shipment.read")
-    org = organization_for_user(int(user["id"]))
-    shipment = db.session.scalar(
-        select(OperationalShipment).where(
-            OperationalShipment.public_id == str(public_id),
-            OperationalShipment.organization_id == org,
-        )
-    )
-    if shipment is None:
-        raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
-    return shipment
+    return scoped_shipment(public_id, user)
 
 
 def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
@@ -227,7 +225,7 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
     overdue=[m for m in milestones if m.verification_state != "verified" and m.planned_at.replace(tzinfo=m.planned_at.tzinfo or timezone.utc) < now]
     customer=" ".join(filter(None,[getattr(request_row,"customer_first_name",None),getattr(request_row,"customer_last_name",None)])).strip() or getattr(request_row,"contact_phone",None)
     leg_data = lambda row: {"id": row.id, "sequence_number": row.sequence_number, "origin": row.origin_snapshot, "destination": row.destination_snapshot, "transport_mode": row.transport_mode, "planned_departure": row.planned_departure.isoformat(), "planned_arrival": row.planned_arrival.isoformat(), "status": row.status, "version": row.version}
-    return {"id": shipment.id, "public_id": shipment.public_id, "status": shipment.lifecycle_status, "version": shipment.version, "organization_id": shipment.organization_id, "customer": customer, "source": {"accepted_quote_id": shipment.accepted_quote_id, "shipment_request_id": shipment.shipment_request_id, "quote_amount": quote.amount if quote else None}, "route_plan": {"id": plan.id, "revision": plan.revision, "revision_number": plan.revision_number, "status": plan.status, "is_active": plan.is_active, "version": plan.version}, "route_leg": leg_data(leg), "route_legs": [leg_data(row) for row in legs], "current_milestone": current.milestone_type if current else None, "overdue": bool(overdue), "overdue_since": min((m.planned_at for m in overdue),default=None).isoformat() if overdue else None, "open_work_item_count": len(work), "milestones": [{"id": m.id, "type": m.milestone_type, "planned_at": m.planned_at.isoformat(), "occurred_at": m.occurred_at.isoformat() if m.occurred_at else None, "verification_state": m.verification_state, "version": m.version} for m in milestones], "recent_events": [{"id": e.id, "milestone_id": e.milestone_id, "event_type": e.event_type, "occurred_at": e.occurred_at.isoformat(), "recorded_at": e.recorded_at.isoformat(), "reason": e.reason, "supersedes_event_id": e.supersedes_event_id} for e in events], "open_work_items": [{"id": w.id, "milestone_id": w.milestone_id, "type": w.work_type, "due_at": w.due_at.isoformat(), "status": w.status, "version": w.version} for w in work], "audit_summary":[{"id":a.id,"action":a.action,"recorded_at":a.recorded_at.isoformat()} for a in audits]}
+    return {"public_id": shipment.public_id, "status": shipment.lifecycle_status, "version": shipment.version, "customer": customer, "source": {"accepted_quote_id": shipment.accepted_quote_id, "shipment_request_id": shipment.shipment_request_id, "quote_amount": quote.amount if quote else None}, "route_plan": {"id": plan.id, "revision": plan.revision, "revision_number": plan.revision_number, "status": plan.status, "is_active": plan.is_active, "version": plan.version}, "route_leg": leg_data(leg), "route_legs": [leg_data(row) for row in legs], "current_milestone": current.milestone_type if current else None, "overdue": bool(overdue), "overdue_since": min((m.planned_at for m in overdue),default=None).isoformat() if overdue else None, "open_work_item_count": len(work), "milestones": [{"id": m.id, "type": m.milestone_type, "planned_at": m.planned_at.isoformat(), "occurred_at": m.occurred_at.isoformat() if m.occurred_at else None, "verification_state": m.verification_state, "version": m.version} for m in milestones], "recent_events": [{"id": e.id, "milestone_id": e.milestone_id, "event_type": e.event_type, "occurred_at": e.occurred_at.isoformat(), "recorded_at": e.recorded_at.isoformat(), "reason": e.reason, "supersedes_event_id": e.supersedes_event_id} for e in events], "open_work_items": [{"id": w.id, "milestone_id": w.milestone_id, "type": w.work_type, "due_at": w.due_at.isoformat(), "status": w.status, "version": w.version} for w in work], "audit_summary":[{"id":a.id,"action":a.action,"recorded_at":a.recorded_at.isoformat()} for a in audits]}
 
 
 def _milestone_target(shipment_id: int, milestone_id: int, user: dict[str, Any], permission: str):

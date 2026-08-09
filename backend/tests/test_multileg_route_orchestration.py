@@ -388,7 +388,7 @@ def test_http_cross_plan_and_direct_id_isolation_contract(operational_app):
     with operational_app.app_context():
         shipment,plan,leg,_=_draft_with_checkpoint(operational_app,"http-scope")
         other=service.create_plan(shipment.id,{"legs":[]},_user(operational_app))
-        shipment_id,plan_id,other_plan_id,leg_id=shipment.id,plan.id,other["id"],leg.id
+        shipment_id,plan_id,other_plan_id,leg_id=shipment.public_id,plan.id,other["id"],leg.id
     client=operational_app.test_client()
     cross_plan=client.post(
         f"/api/operational-shipments/{shipment_id}/route-plans/{other_plan_id}/checkpoints",
@@ -418,7 +418,7 @@ def test_http_scoped_idempotency_and_membership_permission_contract(operational_
             "planned_arrival_at":(datetime.now(timezone.utc)+timedelta(hours=2)).isoformat()},
             _user(operational_app))
         db.session.commit()
-        shipment_id,first_id,second_id=shipment.id,first.id,second.id
+        shipment_id,first_id,second_id=shipment.public_id,first.id,second.id
     client=operational_app.test_client()
     occurred=datetime.now(timezone.utc).isoformat()
     headers={**_auth(operational_app),"Idempotency-Key":"http-shared"}
@@ -523,7 +523,7 @@ def test_reporter_checkpoint_correction_is_forbidden_without_side_effects(operat
             "checkpoint.report",
         ]
         db.session.commit()
-        shipment_id,checkpoint_id,milestone_id=shipment.id,checkpoint.id,arrival.id
+        shipment_id,checkpoint_id,milestone_id=shipment.public_id,checkpoint.id,arrival.id
         expected_version=arrival.version
         before={
             "events":MilestoneEvent.query.count(),
@@ -595,7 +595,7 @@ def test_http_checkpoint_lifecycle_correction_and_reverification(operational_app
         shipment,_,_,checkpoint=_draft_with_checkpoint(operational_app,"http-lifecycle")
         arrival=Milestone.query.filter_by(
             checkpoint_id=checkpoint.id,milestone_type="checkpoint_arrival").one()
-        shipment_id,checkpoint_id,milestone_id=shipment.id,checkpoint.id,arrival.id
+        shipment_id,checkpoint_id,milestone_id=shipment.public_id,checkpoint.id,arrival.id
     client=operational_app.test_client()
     occurred=datetime.now(timezone.utc)-timedelta(minutes=5)
     reported=client.post(
@@ -667,7 +667,7 @@ def test_http_checkpoint_verifier_authorization_and_tenant_isolation(operational
             {"expected_version":1,"occurred_at":datetime.now(timezone.utc).isoformat()},
             _user(operational_app),"verifier-auth-report","arrive",
         )
-        shipment_id,checkpoint_id,milestone_id=shipment.id,checkpoint.id,arrival.id
+        shipment_id,checkpoint_id,milestone_id=shipment.public_id,checkpoint.id,arrival.id
         reporter_membership=OperationalMembership.query.filter_by(
             user_id=operational_app.config["phase1a"]["user"]).one()
         reporter_membership.permissions=[

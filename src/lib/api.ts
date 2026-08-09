@@ -1470,7 +1470,6 @@ export interface OperationalLocationRef {
   source_id: number;
 }
 export interface OperationalShipmentSummary {
-  id: number;
   public_id: string;
   status: string;
   version: number;
@@ -1527,7 +1526,6 @@ export interface OperationalShipmentSummary {
 
 export interface OperationalWorkItem {
   id: number;
-  shipment_id: number;
   shipment_public_id: string;
   milestone_id: number;
   type: string;
@@ -1560,7 +1558,7 @@ export function getOperationalShipment(
   publicId: string,
 ): Promise<{ data: OperationalShipmentSummary }> {
   return request(
-    `/api/operational-shipments/by-public-id/${encodeURIComponent(publicId)}`,
+    `/api/operational-shipments/${encodeURIComponent(publicId)}`,
   );
 }
 export function createOperationalShipment(
@@ -1581,7 +1579,7 @@ export function createOperationalShipment(
   });
 }
 export function recordOperationalEvent(
-  shipmentId: number,
+  shipmentId: string,
   milestoneId: number,
   occurred_at: string,
   key: string,
@@ -1596,7 +1594,7 @@ export function recordOperationalEvent(
   );
 }
 export function verifyOperationalMilestone(
-  shipmentId: number,
+  shipmentId: string,
   milestoneId: number,
   expected_version: number,
 ) {
@@ -1606,7 +1604,7 @@ export function verifyOperationalMilestone(
   );
 }
 export function correctOperationalMilestone(
-  shipmentId: number,
+  shipmentId: string,
   milestoneId: number,
   occurred_at: string,
   reason: string,
@@ -1741,12 +1739,12 @@ export interface RouteTimeline {
   }>;
 }
 export function listRoutePlans(
-  shipmentId: number,
+  shipmentId: string,
 ): Promise<{ data: RoutePlanSummary[] }> {
   return request(`/api/operational-shipments/${shipmentId}/route-plans`);
 }
 export function getRoutePlan(
-  shipmentId: number,
+  shipmentId: string,
   planId: number,
 ): Promise<{ data: RoutePlanDetail }> {
   return request(
@@ -1754,12 +1752,12 @@ export function getRoutePlan(
   );
 }
 export function getRouteTimeline(
-  shipmentId: number,
+  shipmentId: string,
 ): Promise<{ data: RouteTimeline }> {
   return request(`/api/operational-shipments/${shipmentId}/timeline`);
 }
 export function reconcileRouteTimeline(
-  shipmentId: number,
+  shipmentId: string,
   expectedRoutePlanVersion: number,
   idempotencyKey: string,
 ): Promise<{
@@ -1784,14 +1782,14 @@ export function reconcileRouteTimeline(
     },
   );
 }
-export function validateRoutePlan(shipmentId: number, planId: number) {
+export function validateRoutePlan(shipmentId: string, planId: number) {
   return request(
     `/api/operational-shipments/${shipmentId}/route-plans/${planId}/validate`,
     { method: "POST" },
   );
 }
 export function activateRoutePlan(
-  shipmentId: number,
+  shipmentId: string,
   planId: number,
   expected_version: number,
 ) {
@@ -1801,7 +1799,7 @@ export function activateRoutePlan(
   );
 }
 export function replanRoute(
-  shipmentId: number,
+  shipmentId: string,
   planId: number,
   expected_version: number,
   reason: string,
@@ -1817,7 +1815,7 @@ export function replanRoute(
   );
 }
 export function commandRouteCheckpoint(
-  shipmentId: number,
+  shipmentId: string,
   checkpointId: number,
   action: "arrive" | "complete-processing" | "depart",
   occurred_at: string,
@@ -1834,7 +1832,7 @@ export function commandRouteCheckpoint(
   );
 }
 export function verifyRouteMilestone(
-  shipmentId: number,
+  shipmentId: string,
   checkpointId: number,
   milestoneId: number,
   expected_version: number,
@@ -1850,7 +1848,7 @@ export function verifyRouteMilestone(
   );
 }
 export function correctRouteMilestone(
-  shipmentId: number,
+  shipmentId: string,
   checkpointId: number,
   milestoneId: number,
   occurred_at: string,
@@ -1869,7 +1867,7 @@ export function correctRouteMilestone(
 }
 export interface RouteException {
   id: number;
-  shipment_id: number;
+  shipment_public_id: string;
   route_plan_id: number;
   checkpoint_id?: number | null;
   type: string;
@@ -1884,7 +1882,7 @@ export interface RouteException {
   version: number;
 }
 export function listRouteExceptions(
-  shipmentId: number,
+  shipmentId: string,
   status = "",
 ): Promise<{ data: RouteException[] }> {
   return request(
@@ -1892,7 +1890,7 @@ export function listRouteExceptions(
   );
 }
 export function reconcileRouteExceptions(
-  shipmentId: number,
+  shipmentId: string,
   expectedRoutePlanVersion: number,
   key: string,
 ): Promise<{

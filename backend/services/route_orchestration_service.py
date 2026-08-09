@@ -85,11 +85,16 @@ def _invalidate_checkpoint_actual(checkpoint: OperationalCheckpoint, milestone: 
         checkpoint.status = "ready_to_depart"
 
 
-def _shipment(shipment_id: int, user: dict, permission: str) -> OperationalShipment:
+def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipment:
     base.require_permission(user, permission)
     org = base.organization_for_user(int(user["id"]))
+    identity_clause = (
+        OperationalShipment.id == shipment_id
+        if isinstance(shipment_id, int)
+        else OperationalShipment.public_id == str(shipment_id)
+    )
     row = db.session.scalar(select(OperationalShipment).where(
-        OperationalShipment.id == shipment_id, OperationalShipment.organization_id == org
+        identity_clause, OperationalShipment.organization_id == org
     ))
     if row is None:
         raise base.OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
@@ -116,7 +121,7 @@ def _location(reference: Any):
 
 def _serialize_plan(plan: RoutePlan, include_children=True) -> dict:
     data = {
-        "id": plan.id, "operational_shipment_id": plan.operational_shipment_id,
+        "id": plan.id,
         "revision_number": plan.revision_number, "status": plan.status,
         "is_active": plan.is_active, "created_from_plan_id": plan.created_from_plan_id,
         "replan_reason": plan.replan_reason, "effective_at": plan.effective_at.isoformat() if plan.effective_at else None,
@@ -1107,7 +1112,15 @@ def list_route_exceptions(user: dict, status="open") -> list[dict]:
     )
     if status: query=query.where(OperationalWorkItem.status == status)
     rows=db.session.scalars(query.order_by(OperationalWorkItem.due_at)).all()
-    return [{"id":r.id,"shipment_id":r.operational_shipment_id,"route_plan_id":r.route_plan_id,
+    shipment_public_ids = {
+        row.id: row.public_id for row in db.session.scalars(
+            select(OperationalShipment).where(
+                OperationalShipment.organization_id == org,
+                OperationalShipment.id.in_({r.operational_shipment_id for r in rows}),
+            )
+        ).all()
+    }
+    return [{"id":r.id,"shipment_public_id":shipment_public_ids[r.operational_shipment_id],"route_plan_id":r.route_plan_id,
         "checkpoint_id":r.checkpoint_id,"type":r.work_type,"status":r.status,"severity":r.severity,
         "due_at":r.due_at.isoformat(),"detected_at":r.detected_at.isoformat(),"reason":r.reason,
         "resolved_at":r.resolved_at.isoformat() if r.resolved_at else None,

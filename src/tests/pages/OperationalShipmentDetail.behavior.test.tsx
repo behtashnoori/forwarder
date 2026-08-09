@@ -59,7 +59,7 @@ const timeline = {
   effective: [{ checkpoint_id: 30, arrival_at: "2026-01-01T00:25:00Z", departure_at: "2026-01-01T01:00:00Z", arrival_source: "actual", departure_source: "planned" }],
   delays: [{ checkpoint_id: 30, seconds: 1800 }], dependencies: [], open_exceptions: [],
 };
-const openException = { id: 40, shipment_id: 1, route_plan_id: 20, checkpoint_id: 30, type: "CHECKPOINT_OVERDUE", status: "open", severity: "high", due_at: "2026-01-01T00:00:00Z", detected_at: "2026-01-01T01:00:00Z", reason: "late", version: 2 };
+const openException = { id: 40, shipment_public_id: shipment.public_id, route_plan_id: 20, checkpoint_id: 30, type: "CHECKPOINT_OVERDUE", status: "open", severity: "high", due_at: "2026-01-01T00:00:00Z", detected_at: "2026-01-01T01:00:00Z", reason: "late", version: 2 };
 const resolvedException = { ...openException, id: 41, status: "resolved", resolved_at: "2026-01-02T00:00:00Z", resolution_source: "manual", resolution_reason: "carrier confirmed", version: 3 };
 
 function renderDetail() {
@@ -90,7 +90,7 @@ describe("Phase 1B shipment detail behavior", () => {
     vi.mocked(api.reconcileRouteTimeline).mockResolvedValue({ data: { route_plan_id: 20, revision: 2, version: 5, reconciled_at: null, updated_checkpoints: 1, actual_override_count: 1, replayed: false } });
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
-    await waitFor(() => expect(api.reconcileRouteTimeline).toHaveBeenCalledWith(1, 4, expect.any(String)));
+    await waitFor(() => expect(api.reconcileRouteTimeline).toHaveBeenCalledWith("uat", 4, expect.any(String)));
     expect(await screen.findByRole("status")).toHaveTextContent("Timeline reconciled.");
   });
 
@@ -162,9 +162,9 @@ describe("Phase 1B shipment detail behavior", () => {
     vi.mocked(api.verifyRouteMilestone).mockResolvedValue({});
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Report arrival" }));
-    await waitFor(() => expect(api.commandRouteCheckpoint).toHaveBeenCalledWith(1, 30, "arrive", expect.any(String), 7, expect.any(String)));
+    await waitFor(() => expect(api.commandRouteCheckpoint).toHaveBeenCalledWith("uat", 30, "arrive", expect.any(String), 7, expect.any(String)));
     fireEvent.click(screen.getByRole("button", { name: "Verify / re-verify" }));
-    await waitFor(() => expect(api.verifyRouteMilestone).toHaveBeenCalledWith(1, 30, 31, 5, expect.any(String)));
+    await waitFor(() => expect(api.verifyRouteMilestone).toHaveBeenCalledWith("uat", 30, 31, 5, expect.any(String)));
   });
 
   it("renders open/resolved exception history and validates manual resolution", async () => {

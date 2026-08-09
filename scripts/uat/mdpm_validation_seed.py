@@ -91,7 +91,7 @@ def main() -> int:
                 artifacts.append(artifact)
         db.session.commit()
         payload = {"seed_lineage":"phase1b_uat + mdpm_validation_seed:v1", "organization":org.public_id,
-                   "username":"phase1b_uat_admin", "shipment_numeric_id":shipment.id, "shipment_public_id":shipment.public_id,
+                   "username":"phase1b_uat_admin", "shipment_public_id":shipment.public_id,
                    "milestone_public_id":milestones[0].public_id,
                    "requirements":[{"public_id":r.public_id,"title":r.definition.title,"version":r.version} for r in requirements],
                    "artifacts":[{"public_id":a.public_id,"filename":a.original_filename} for a in artifacts]}

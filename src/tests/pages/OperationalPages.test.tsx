@@ -213,7 +213,6 @@ describe("Phase 1A operational pages", () => {
       data: [
         {
           id: 6,
-          shipment_id: 1,
           shipment_public_id: "11111111-1111-4111-8111-111111111111",
           milestone_id: 5,
           type: "OVERDUE_MILESTONE",

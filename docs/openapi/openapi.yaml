@@ -11,6 +11,7 @@ servers:
   - url: http://localhost:5000
     description: Local backend placeholder
 tags:
+  - name: Operational Shipments
   - name: Operational Intelligence
   - name: Document Readiness
   - name: Operational Execution
@@ -31,6 +32,12 @@ tags:
   - name: Site Settings
 components:
   parameters:
+    ShipmentPublicId:
+      name: shipment_id
+      in: path
+      required: true
+      description: Opaque tenant-scoped OperationalShipment public UUID. Numeric database IDs are rejected.
+      schema: { type: string, format: uuid }
     Page:
       name: page
       in: query
@@ -623,6 +630,24 @@ components:
         model_snapshot: { type: string, nullable: true }
         description_snapshot: { type: string, nullable: true }
         version: { type: integer, minimum: 1 }
+    OperationalShipmentSummary:
+      type: object
+      required: [public_id, status, version]
+      properties:
+        public_id: { type: string, format: uuid }
+        status: { type: string }
+        version: { type: integer, minimum: 1 }
+        customer: { type: string, nullable: true }
+      description: Browser-facing shipment projection. Internal numeric shipment identity is intentionally absent.
+    OperationalWorkItem:
+      type: object
+      required: [id, shipment_public_id, type, status, version]
+      properties:
+        id: { type: integer }
+        shipment_public_id: { type: string, format: uuid }
+        type: { type: string }
+        status: { type: string }
+        version: { type: integer, minimum: 1 }
     ProjectConfigurationPage:
       type: object
       additionalProperties: false
@@ -853,6 +878,85 @@ components:
         run_id: { type: string, format: uuid, nullable: true }
         version: { type: integer, minimum: 1 }
 paths:
+  /api/operational-shipments:
+    get: { tags: [Operational Shipments], summary: List tenant-scoped shipments using opaque identity, security: [{ bearerAuth: [] }], responses: { '200': { description: Shipment page. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } } }
+  /api/operational-shipments/from-accepted-quote:
+    post: { tags: [Operational Shipments], summary: Idempotently create a shipment from an accepted quote, security: [{ bearerAuth: [] }], parameters: [{ name: Idempotency-Key, in: header, required: true, schema: { type: string } }], responses: { '200': { description: Exact replay. }, '201': { description: Created with public_id. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '409': { description: Idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
+    get: { tags: [Operational Shipments], summary: Get tenant-scoped shipment detail, security: [{ bearerAuth: [] }], responses: { '200': { description: Opaque shipment projection., content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/OperationalShipmentSummary' } } } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/operational-shipments/{shipment_id}/route-plans:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
+    get: { tags: [Operational Shipments], summary: List route plans, security: [{ bearerAuth: [] }], responses: { '200': { description: Route plan list without numeric shipment identity. }, '404': { $ref: '#/components/responses/NotFound' } } }
+    post: { tags: [Operational Shipments], summary: Create a route plan, security: [{ bearerAuth: [] }], responses: { '201': { description: Route plan created. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '422': { description: Invalid route graph. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }]
+    get: { tags: [Operational Shipments], summary: Get a shipment-owned route plan, security: [{ bearerAuth: [] }], responses: { '200': { description: Route plan detail. }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/validate:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }]
+    post: { tags: [Operational Shipments], summary: Validate route graph, security: [{ bearerAuth: [] }], responses: { '200': { description: Validation result. }, '404': { $ref: '#/components/responses/NotFound' }, '422': { description: Invalid route graph. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/activate:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }]
+    post: { tags: [Operational Shipments], summary: Activate route plan using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Activated. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Stale version or state conflict. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/replan:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Idempotently create the next route revision using expected_version, security: [{ bearerAuth: [] }], responses: { '201': { description: Replanned. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version, state, or idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/legs:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }]
+    post: { tags: [Operational Shipments], summary: Add route leg, security: [{ bearerAuth: [] }], responses: { '201': { description: Leg created. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Membership conflict. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/legs/{leg_id}:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }, { name: leg_id, in: path, required: true, schema: { type: integer } }]
+    patch: { tags: [Operational Shipments], summary: Update route leg using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Leg updated. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
+    delete: { tags: [Operational Shipments], summary: Delete draft route leg, security: [{ bearerAuth: [] }], responses: { '204': { description: Deleted. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: State conflict. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/checkpoints:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }]
+    post: { tags: [Operational Shipments], summary: Add route checkpoint, security: [{ bearerAuth: [] }], responses: { '201': { description: Checkpoint created. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Cross-plan reference rejected. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/checkpoints/{checkpoint_id}:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }, { name: checkpoint_id, in: path, required: true, schema: { type: integer } }]
+    patch: { tags: [Operational Shipments], summary: Update checkpoint using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Checkpoint updated. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/dependencies:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: plan_id, in: path, required: true, schema: { type: integer } }]
+    post: { tags: [Operational Shipments], summary: Add checkpoint dependency, security: [{ bearerAuth: [] }], responses: { '201': { description: Dependency created. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Cross-plan reference rejected. } } }
+  /api/operational-shipments/{shipment_id}/checkpoints/{checkpoint_id}/arrive:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: checkpoint_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Report checkpoint arrival using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Arrival reported or replayed. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/checkpoints/{checkpoint_id}/complete-processing:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: checkpoint_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Report checkpoint processing completion using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Processing reported or replayed. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/checkpoints/{checkpoint_id}/depart:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: checkpoint_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Report checkpoint departure using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Departure reported or replayed. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/checkpoints/{checkpoint_id}/milestones/{milestone_id}/verify:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: checkpoint_id, in: path, required: true, schema: { type: integer } }, { name: milestone_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Verify checkpoint milestone using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Verified or replayed. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
+  /api/operational-shipments/{shipment_id}/checkpoints/{checkpoint_id}/milestones/{milestone_id}/correct:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: checkpoint_id, in: path, required: true, schema: { type: integer } }, { name: milestone_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Append milestone correction using expected_version, security: [{ bearerAuth: [] }], responses: { '201': { description: Correction appended. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. }, '422': { description: Correction reason required. } } }
+  /api/operational-shipments/{shipment_id}/timeline:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
+    get: { tags: [Operational Shipments], summary: Read planned projected actual and effective timeline, security: [{ bearerAuth: [] }], responses: { '200': { description: Shipment timeline. }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/operational-shipments/{shipment_id}/timeline/reconcile:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Reconcile timeline using expected_route_plan_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Reconciled or replayed. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/route-exceptions:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
+    get: { tags: [Operational Shipments], summary: List shipment route exceptions with shipment_public_id, security: [{ bearerAuth: [] }], responses: { '200': { description: Route exception list. }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/operational-shipments/{shipment_id}/route-exceptions/reconcile:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Reconcile route exceptions using expected_route_plan_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Reconciled or replayed. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/milestones/{milestone_id}/events:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: milestone_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Append milestone event, security: [{ bearerAuth: [] }], responses: { '201': { description: Event appended. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/milestones/{milestone_id}/verify:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: milestone_id, in: path, required: true, schema: { type: integer } }]
+    post: { tags: [Operational Shipments], summary: Verify milestone using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Verified. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
+  /api/operational-shipments/{shipment_id}/milestones/{milestone_id}/correct:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: milestone_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
+    post: { tags: [Operational Shipments], summary: Append milestone correction using expected_version, security: [{ bearerAuth: [] }], responses: { '201': { description: Correction appended. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. }, '422': { description: Correction reason required. } } }
+  /api/operational-work-items:
+    get: { tags: [Operational Shipments], summary: List tenant work queue with opaque shipment references, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_public_id, in: query, schema: { type: string, format: uuid } }], responses: { '200': { description: Work item page., content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/OperationalWorkItem' } } } } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
+  /api/operational-work-items/{item_id}/resolve:
+    post: { tags: [Operational Shipments], summary: Resolve a work item using expected_version, security: [{ bearerAuth: [] }], parameters: [{ name: item_id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: Work item resolved. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
   /api/oip/policies:
     get:
       tags: [Operational Intelligence]

@@ -124,36 +124,36 @@ def test_reporter_detail_reads_and_report_are_allowed_but_privileged_actions_are
     client = seed_app.test_client()
     headers = {"Authorization": f"Bearer {token}"}
     for path in (
-        f"/api/operational-shipments/{shipment.id}",
-        f"/api/operational-shipments/{shipment.id}/route-plans",
-        f"/api/operational-shipments/{shipment.id}/route-plans/{plan.id}",
-        f"/api/operational-shipments/{shipment.id}/route-exceptions",
+        f"/api/operational-shipments/{shipment.public_id}",
+        f"/api/operational-shipments/{shipment.public_id}/route-plans",
+        f"/api/operational-shipments/{shipment.public_id}/route-plans/{plan.id}",
+        f"/api/operational-shipments/{shipment.public_id}/route-exceptions",
     ):
         assert client.get(path, headers=headers).status_code == 200
 
     report = client.post(
-        f"/api/operational-shipments/{shipment.id}/checkpoints/{checkpoint.id}/arrive",
+        f"/api/operational-shipments/{shipment.public_id}/checkpoints/{checkpoint.id}/arrive",
         headers={**headers, "Idempotency-Key": "reporter-permission-boundary-arrive"},
         json={"occurred_at": "2030-01-03T12:00:00Z", "expected_version": checkpoint.version},
     )
     assert report.status_code == 200
     assert client.post(
-        f"/api/operational-shipments/{shipment.id}/checkpoints/{checkpoint.id}/milestones/{milestone.id}/verify",
+        f"/api/operational-shipments/{shipment.public_id}/checkpoints/{checkpoint.id}/milestones/{milestone.id}/verify",
         headers={**headers, "Idempotency-Key": "reporter-permission-boundary-verify"},
         json={"expected_version": milestone.version + 1},
     ).status_code == 403
     assert client.post(
-        f"/api/operational-shipments/{shipment.id}/route-plans/{plan.id}/replan",
+        f"/api/operational-shipments/{shipment.public_id}/route-plans/{plan.id}/replan",
         headers={**headers, "Idempotency-Key": "reporter-permission-boundary-replan"},
         json={"expected_version": plan.version, "reason": "must remain denied"},
     ).status_code == 403
     assert client.post(
-        f"/api/operational-shipments/{shipment.id}/timeline/reconcile",
+        f"/api/operational-shipments/{shipment.public_id}/timeline/reconcile",
         headers={**headers, "Idempotency-Key": "reporter-permission-boundary-timeline"},
         json={"expected_route_plan_version": plan.version},
     ).status_code == 403
     assert client.post(
-        f"/api/operational-shipments/{shipment.id}/route-exceptions/reconcile",
+        f"/api/operational-shipments/{shipment.public_id}/route-exceptions/reconcile",
         headers={**headers, "Idempotency-Key": "reporter-permission-boundary-exceptions"},
         json={"expected_route_plan_version": plan.version},
     ).status_code == 403

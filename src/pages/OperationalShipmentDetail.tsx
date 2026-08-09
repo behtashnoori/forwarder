@@ -56,7 +56,7 @@ export default function OperationalShipmentDetail() {
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
-  const shipmentId = data?.id ?? 0;
+  const shipmentId = data?.public_id ?? shipmentPublicId;
   const activePlan = useMemo(() => plans.find((item) => item.is_active), [plans]);
 
   const load = useCallback(async () => {

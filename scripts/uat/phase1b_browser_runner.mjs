@@ -92,10 +92,10 @@ try {
   check("runtime-target", list.status === 200, `status=${list.status}`);
   const shipments = list.body?.data || [];
   check("shipment-list-present", shipments.length >= 1, `count=${shipments.length}`);
-  const uniqueIds = new Set(shipments.map((item) => item.id));
+  const uniqueIds = new Set(shipments.map((item) => item.public_id));
   check("shipment-deduplication", uniqueIds.size === shipments.length, `rows=${shipments.length},unique=${uniqueIds.size}`);
   const shipment = shipments.find((item) => String(item?.customer || "").includes("UAT A")) || shipments[0];
-  const shipmentId = shipment.id;
+  const shipmentId = shipment.public_id;
 
   const plansResponse = await request(tokens.admin, `/api/operational-shipments/${shipmentId}/route-plans`);
   check("route-plans", plansResponse.status === 200, `status=${plansResponse.status}`);
@@ -197,7 +197,7 @@ try {
   const readonlyMutation = await request(tokens.readonly, reportRoute, { method: "POST", headers: { "Idempotency-Key": key("readonly") }, body: JSON.stringify(reportPayload) });
   check("permission-matrix", readonlyMutation.status === 403, `status=${readonlyMutation.status}`);
   const orgBList = await request(tokens.org_b_admin, "/api/operational-shipments");
-  check("organization-isolation", orgBList.status === 200 && !(orgBList.body?.data || []).some((s) => s.id === shipmentId));
+  check("organization-isolation", orgBList.status === 200 && !(orgBList.body?.data || []).some((s) => s.public_id === shipmentId));
   const direct = await request(tokens.org_b_admin, `/api/operational-shipments/${shipmentId}`);
   check("direct-id-isolation", [403, 404].includes(direct.status), `status=${direct.status}`);
   const noPermission = await request(tokens.no_permission, `/api/operational-shipments/${shipmentId}`);

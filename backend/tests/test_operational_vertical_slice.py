@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+import re
 
 import pytest
 
@@ -118,7 +120,7 @@ def test_cross_tenant_detail_and_queue_are_hidden(operational_app):
         public_id = shipment.public_id
 
     response = operational_app.test_client().get(
-        f"/api/operational-shipments/by-public-id/{public_id}",
+        f"/api/operational-shipments/{public_id}",
         headers=_auth(operational_app, "outsider"),
     )
     assert response.status_code == 404
@@ -143,16 +145,14 @@ def test_http_create_list_detail_and_error_envelopes(operational_app):
     created=client.post("/api/operational-shipments/from-accepted-quote",json=payload,headers=headers)
     assert created.status_code == 201 and created.json["meta"]["created"] is True
     replay=client.post("/api/operational-shipments/from-accepted-quote",json=payload,headers=headers)
-    assert replay.status_code == 200 and replay.json["data"]["id"] == created.json["data"]["id"]
+    assert replay.status_code == 200 and replay.json["data"]["public_id"] == created.json["data"]["public_id"]
     listing=client.get("/api/operational-shipments?status=planned&customer=0900&page=1&per_page=5",headers=_auth(operational_app))
     assert listing.status_code == 200 and listing.json["meta"]["page"] == 1
     assert {"customer","current_milestone","overdue","open_work_item_count"} <= listing.json["data"][0].keys()
-    detail=client.get(f"/api/operational-shipments/{created.json['data']['id']}",headers=_auth(operational_app))
+    detail=client.get(f"/api/operational-shipments/{created.json['data']['public_id']}",headers=_auth(operational_app))
     assert detail.status_code == 200 and "audit_summary" in detail.json["data"]
-    opaque_detail=client.get(f"/api/operational-shipments/by-public-id/{created.json['data']['public_id']}",headers=_auth(operational_app))
-    assert opaque_detail.status_code == 200
-    assert opaque_detail.json["data"]["public_id"] == created.json["data"]["public_id"]
-    missing=client.get("/api/operational-shipments/999999",headers=_auth(operational_app))
+    assert detail.json["data"]["public_id"] == created.json["data"]["public_id"]
+    missing=client.get("/api/operational-shipments/11111111-1111-4111-8111-111111111111",headers=_auth(operational_app))
     assert missing.status_code == 404 and missing.json["error"]["code"] == "RESOURCE_NOT_FOUND"
     mismatch=dict(_payload(operational_app));mismatch["transport_mode"]="rail"
     conflict=client.post("/api/operational-shipments/from-accepted-quote",json=mismatch,headers=headers)
@@ -164,7 +164,7 @@ def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(
         shipment, _ = service.create_from_accepted_quote(
             _payload(operational_app), _user(operational_app), "dedup-list"
         )
-        shipment_id = shipment.id
+        shipment_public_id = shipment.public_id
         plan = RoutePlan.query.filter_by(
             operational_shipment_id=shipment.id, is_active=True
         ).one()
@@ -189,7 +189,7 @@ def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(
     )
 
     assert response.status_code == 200
-    assert [row["id"] for row in response.json["data"]] == [shipment_id]
+    assert [row["public_id"] for row in response.json["data"]] == [shipment_public_id]
     assert response.json["meta"] == {
         "page": 1, "per_page": 1, "has_more": False,
     }
@@ -204,3 +204,64 @@ def test_http_permission_validation_transition_and_stale_conflicts(operational_a
     invalid=_payload(operational_app);invalid["planned_arrival"]="invalid"
     response=operational_app.test_client().post("/api/operational-shipments/from-accepted-quote",json=invalid,headers={**_auth(operational_app),"Idempotency-Key":"invalid-http"})
     assert response.status_code == 422 and response.json["error"]["code"] == "INVALID_ROUTE_TIMELINE" and "traceback" not in response.get_data(as_text=True).lower()
+
+
+def test_opaque_shipment_http_boundary_is_tenant_scoped(operational_app):
+    client = operational_app.test_client()
+    created = client.post(
+        "/api/operational-shipments/from-accepted-quote",
+        json=_payload(operational_app),
+        headers={**_auth(operational_app), "Idempotency-Key": "opaque-boundary"},
+    )
+    assert created.status_code == 201
+    public_id = created.json["data"]["public_id"]
+
+    for suffix in ("", "/route-plans", "/timeline", "/route-exceptions"):
+        same_tenant = client.get(
+            f"/api/operational-shipments/{public_id}{suffix}",
+            headers=_auth(operational_app),
+        )
+        assert same_tenant.status_code == 200
+        cross_tenant = client.get(
+            f"/api/operational-shipments/{public_id}{suffix}",
+            headers=_auth(operational_app, "outsider"),
+        )
+        assert cross_tenant.status_code == 404
+        assert cross_tenant.json["error"]["code"] == "RESOURCE_NOT_FOUND"
+
+    numeric = client.get("/api/operational-shipments/1", headers=_auth(operational_app))
+    unknown = client.get(
+        "/api/operational-shipments/11111111-1111-4111-8111-111111111111",
+        headers=_auth(operational_app),
+    )
+    assert numeric.status_code == 404
+    assert unknown.status_code == 404
+    assert "id" not in created.json["data"]
+
+
+def test_legacy_operational_openapi_exact_runtime_parity_and_opacity(operational_app):
+    text = (Path(__file__).resolve().parents[2] / "docs" / "openapi" / "openapi.yaml").read_text(encoding="utf-8")
+    documented: dict[str, set[str]] = {}
+    current = None
+    for line in text.splitlines():
+        match = re.match(r"^  (/api/(?:operational-shipments|operational-work-items)[^:]*):\s*$", line)
+        if match:
+            current = match.group(1)
+            documented[current] = set()
+            continue
+        if re.match(r"^  /api/", line):
+            current = None
+        method = re.match(r"^    (get|post|patch|delete):", line)
+        if current and method:
+            documented[current].add(method.group(1).upper())
+    runtime: dict[str, set[str]] = {}
+    for rule in operational_app.url_map.iter_rules():
+        if not rule.endpoint.startswith("operations."):
+            continue
+        path = re.sub(r"<(?:(?:int|uuid):)?([^>]+)>", r"{\1}", str(rule))
+        if path.startswith(("/api/operational-shipments", "/api/operational-work-items")):
+            runtime.setdefault(path, set()).update(set(rule.methods) - {"HEAD", "OPTIONS"})
+    assert documented == runtime
+    assert "format: uuid" in text
+    assert "Numeric database IDs are rejected" in text
+    assert "/api/operational-shipments/by-public-id" not in text
