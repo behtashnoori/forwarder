@@ -5,7 +5,7 @@
 - Deployment type: backend-frontend-migration
 - Migration: `20260812_operational_execution`
 - Previous migration: `security_credential_remediation`
-- Status: Implemented — Not Published — Not Deployed
+- Status: Integrated RC Frozen for Production Preflight — Not Published — Not Deployed
 - Reference Data: administrator-managed; Seed executed: false
 - Production: unchanged
 

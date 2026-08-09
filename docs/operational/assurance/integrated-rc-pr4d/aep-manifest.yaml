@@ -1,0 +1,29 @@
+package_id: AEP-FWD-INTEGRATED-RC-PR4D-001
+status: SEALED
+candidate_id: CAND-FWD-INTEGRATED-RC-PR4D-001
+candidate_manifest: docs/operational/assurance/integrated-rc-pr4d/candidate-manifest.yaml
+scope: non-production integrated certification and Production-preflight handoff
+mandatory_link_assessment:
+  candidate_identity: PASS
+  migration_identity: PASS
+  migration_hashes: PASS
+  openapi_binding: PASS
+  postgresql_18_matrix: PASS
+  race_evidence: PASS
+  browser_network: PASS
+  same_tenant_golden_path: PASS
+  security: PASS
+  backup_restore: PASS
+  performance: PASS
+  regression: PASS
+  documentation: PASS
+  evidence_integrity: PASS
+weakest_mandatory_link: Production-only evidence is outside RC certification
+package_confidence: SUFFICIENT_FOR_PRODUCTION_PREFLIGHT_NOT_DEPLOYMENT
+remaining_p0: []
+remaining_p1: []
+production_only_gaps:
+  - Production identity and configuration attestation
+  - Production secrets-delivery and access-control attestation
+  - Capacity/SLO, monitoring, backup custody, rollback window, and human risk acceptance
+prohibited_actions: [Production access, deployment, push]

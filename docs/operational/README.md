@@ -13,6 +13,10 @@
 
 ## Accepted Release 1.9.0 governance
 
+- [PR-4D Integrated RC certification](evidence/pr-4d-integrated-certification-report.md)
+- [PR-4D documentation certification](evidence/pr-4d-documentation-certification.md)
+- [Integrated RC AEP](assurance/integrated-rc-pr4d/aep-manifest.yaml)
+
 - [Security Track Completion — accepted Alembic parent](../security/forwarder_security_track_completion_20260804.md)
 - [PDR-018 — Operational Execution Foundation](PDR-018-operational-execution-foundation.md)
 - [ADR-029 — Operational Milestone and Event History Boundaries](adr/ADR-029-operational-milestone-event-boundaries.md)
@@ -21,7 +25,7 @@
 - [Operational Execution Discovery](discovery-operational-execution-foundation-20260804.md)
 - [Operational Execution Domain Matrix](operational-execution-domain-matrix.md)
 
-Security remediation is complete. Release 1.9.0 is waiting only for bounded implementation; its first migration must descend from `security_credential_remediation`.
+Security remediation and bounded implementation are complete. The non-production Integrated RC is frozen for Production preflight; Production remains unchanged.
 
 - **Status:** Living navigation index
 - **Domain Architecture:** DA-1.0

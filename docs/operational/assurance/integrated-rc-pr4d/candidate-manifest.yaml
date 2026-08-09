@@ -1,0 +1,31 @@
+candidate_id: CAND-FWD-INTEGRATED-RC-PR4D-001
+status: FROZEN
+classification: NON_PRODUCTION_INTEGRATED_RC
+source:
+  branch: codex/pr-4a-dms-gate-repair
+  commit: 9bef5eebab710b94cc49fd5af0380ccba9e53c32
+  tree: 0042286a853d4cae33a84ed6226eb04e5fb818d3
+  parent: 61ff80cfdf36dbd4cb956ac9df6dadba22358c30
+migration_head: 20260818_immutable_fx_provenance
+openapi_sha256: 2537daa975cd42c44147e961c577b60f24c2b985b95e67ae1aa042252b639bb3
+representative_backup:
+  engine: PostgreSQL 18
+  format: custom
+  bytes: 589191
+  sha256: 8f93cc992e00f1fdc83cae5ef4b8c2a8b04e9382f69d9c2253d5ffda25b4c35e
+  custody: D:/1-webapp/_db_backups/15-forwarder/pr4d-20260809
+validation:
+  typescript: PASS
+  frontend: 114_passed
+  backend: 597_passed_64_skipped
+  production_build: PASS
+  lint: 0_errors_12_accepted_warnings
+  shipment_identity: PASS
+  browser_network: PASS
+  same_tenant_golden_path: PASS
+  backup_restore: PASS
+  restored_authenticated_smoke: PASS
+  performance: 30_requests_avg_18.25ms_p95_19.57ms
+exclusions:
+  - Production access, deployment, and Production change authorization
+  - Pre-existing untracked local and historical release artifacts
