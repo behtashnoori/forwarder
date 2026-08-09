@@ -186,7 +186,7 @@ def test_checksum_and_operator_are_required(app):
         assert ReferenceDataSeedRun.query.count() == 0
 
 
-def test_cli_plan_confirmation_and_production_guards(app, capsys):
+def test_cli_plan_confirmation_and_production_guards(app, capsys, tmp_path):
     catalog = load_catalog()
     assert cli_main(["plan"], app=app) == 0
     assert '"created_count": 36' in capsys.readouterr().out
@@ -201,6 +201,7 @@ def test_cli_plan_confirmation_and_production_guards(app, capsys):
             "APP_ENV": "production",
             "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
             "SECRET_KEY": "reference-catalog-test",
+            "DOCUMENT_STORAGE_ROOT": str(tmp_path / "production-documents"),
         },
         skip_startup=True,
     )
