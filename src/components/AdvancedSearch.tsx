@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
-import { fa } from "date-fns/locale";
 
 interface SearchFilter {
   field: string;
@@ -40,7 +39,7 @@ const AdvancedSearch = ({
   const [filters, setFilters] = useState<SearchFilter[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Default search fields if none provided
   const defaultFields = [

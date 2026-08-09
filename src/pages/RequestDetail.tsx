@@ -75,7 +75,6 @@ interface RequestDetail {
   assigned_to?: {
     id: number;
     name: string;
-    username: string;
   };
   customer: {
     first_name?: string;

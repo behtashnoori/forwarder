@@ -27,7 +27,7 @@ import {
 type FieldType = "text" | "select" | "bool";
 
 interface FieldDef {
-  key: string;
+  key: keyof LocationItem;
   label: string;
   type: FieldType;
   required?: boolean;
@@ -38,7 +38,19 @@ interface LocationItem {
   id: number;
   name_fa: string;
   is_active: boolean;
-  [key: string]: unknown;
+  code?: string | null;
+  name_en?: string;
+  province_id?: number;
+  province_name?: string | null;
+  county_id?: number;
+  county_name?: string | null;
+  country_id?: number | null;
+  country_name?: string | null;
+  city_type?: string;
+  is_major_port?: boolean;
+  is_major_airport?: boolean;
+  port_type?: string;
+  description?: string | null;
 }
 
 interface ResourcePanelProps {

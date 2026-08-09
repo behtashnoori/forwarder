@@ -1220,7 +1220,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       t: (key) => translations[language][key],
       tf: (key, values) =>
         Object.entries(values).reduce(
-          (message, [name, value]) => message.replaceAll(`{${name}}`, String(value)),
+          (message, [name, value]) => message.split(`{${name}}`).join(String(value)),
           translations[language][key],
         ),
       statusLabel: (status) => translations[language][`status.${status}` as TranslationKey] ?? status,

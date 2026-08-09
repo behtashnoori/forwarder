@@ -80,7 +80,8 @@ export interface TransportMethod {
   name: string;
   name_fa: string;
   description?: string;
-  is_active?: boolean;
+  is_active: boolean;
+  created_at?: string;
 }
 
 export interface TransportMethodOptions {
@@ -216,7 +217,7 @@ function buildPath(path: string): string {
 
 function withQuery(
   path: string,
-  params?: Record<string, string | number | undefined>,
+  params?: Record<string, string | number | boolean | undefined>,
 ): string {
   if (!params) {
     return path;
@@ -386,7 +387,7 @@ export interface PublicTrackingWorkflowStep {
 }
 
 export interface TransportUnitUpdate {
-  status: string;
+  status: TrackingUnitStatus;
   location: string | null;
   customer_note: string | null;
   event_at: string;
@@ -396,6 +397,17 @@ export interface TransportUnitUpdate {
   country_code?: string | null;
   location_source?: "reference" | "manual" | null;
 }
+
+export type TrackingUnitStatus =
+  | "not_started"
+  | "loading"
+  | "departed"
+  | "in_transit"
+  | "at_checkpoint"
+  | "delayed"
+  | "arrived_destination"
+  | "delivered"
+  | "cancelled";
 
 export interface TrackingLocationReference {
   id: number;
@@ -684,7 +696,7 @@ export interface PublicTransportUnitTracking {
   unit_type: string;
   display_name: string | null;
   vehicle_reference: string | null;
-  latest_status: string;
+  latest_status: TrackingUnitStatus;
   latest_location: string | null;
   latest_event_at: string | null;
   timeline: TransportUnitUpdate[];
@@ -726,7 +738,7 @@ export interface InternalTransportUnitTracking {
   display_name: string | null;
   vehicle_reference: string | null;
   is_active: boolean;
-  latest_status: string;
+  latest_status: TrackingUnitStatus;
   latest_location: string | null;
   latest_event_at: string | null;
 }
@@ -2479,15 +2491,6 @@ export function unlinkShipmentRequestCustomer(
 }
 
 // User Management Interfaces
-export interface TransportMethod {
-  id: number;
-  name: string;
-  name_fa: string;
-  description?: string;
-  is_active: boolean;
-  created_at: string;
-}
-
 export interface UserSpecialization {
   id: number;
   transport_method: {

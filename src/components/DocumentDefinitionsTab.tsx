@@ -7,7 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { createDocumentDefinition, fetchDocumentDefinitions, setDocumentDefinitionActive, updateDocumentDefinition, type DocumentDefinition, type DocumentFormat } from "@/lib/api";
 
 const formats: Array<[DocumentFormat, string]> = [["jpeg","تصویر JPG/JPEG"],["png","تصویر PNG"],["webp","تصویر WebP"],["pdf","فایل PDF"],["docx","فایل Word"],["xlsx","فایل Excel"]];
-const blank = {code:"",title:"",description:"",is_required:false,allowed_formats:[] as DocumentFormat[],max_file_size_bytes:10*1024*1024,max_active_file_count:1,sort_order:0,applicability_scope:"all" as const};
+type DocumentDefinitionForm = Pick<DocumentDefinition, "code" | "title" | "is_required" | "allowed_formats" | "max_file_size_bytes" | "max_active_file_count" | "sort_order" | "applicability_scope"> & { description: string };
+const blank: DocumentDefinitionForm = {code:"",title:"",description:"",is_required:false,allowed_formats:[],max_file_size_bytes:10*1024*1024,max_active_file_count:1,sort_order:0,applicability_scope:"all"};
 
 export default function DocumentDefinitionsTab() {
   const [items,setItems]=useState<DocumentDefinition[]>([]); const [form,setForm]=useState(blank); const [editing,setEditing]=useState<number|null>(null); const [error,setError]=useState("");
@@ -24,7 +25,7 @@ export default function DocumentDefinitionsTab() {
       <label>حداکثر تعداد فایل<Input type="number" min={1} value={form.max_active_file_count} onChange={e=>setForm({...form,max_active_file_count:Number(e.target.value)})}/></label>
       <label>ترتیب نمایش<Input type="number" value={form.sort_order} onChange={e=>setForm({...form,sort_order:Number(e.target.value)})}/></label>
       <label className="flex items-center gap-2"><Checkbox checked={form.is_required} onCheckedChange={v=>setForm({...form,is_required:!!v})}/>الزامی</label>
-      <select aria-label="دامنه کاربرد" value={form.applicability_scope} onChange={e=>setForm({...form,applicability_scope:e.target.value as "all"})}><option value="all">همه پرونده‌ها</option><option value="domestic">حمل داخلی</option><option value="international">حمل بین‌المللی</option></select>
+      <select aria-label="دامنه کاربرد" value={form.applicability_scope} onChange={e=>setForm({...form,applicability_scope:e.target.value as DocumentDefinitionForm["applicability_scope"]})}><option value="all">همه پرونده‌ها</option><option value="domestic">حمل داخلی</option><option value="international">حمل بین‌المللی</option></select>
       {error&&<p className="md:col-span-2 text-red-600">{error}</p>}
       <Button onClick={submit}>{editing?"ذخیره تغییرات":"ایجاد تعریف"}</Button>
     </CardContent></Card>
