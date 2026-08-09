@@ -15,6 +15,11 @@ export default defineConfig(({ mode }) => ({
     host: "0.0.0.0",
     port: 8080,
     allowedHosts: ["server.logisticmarket.ir"],
+    watch: {
+      // A Windows directory rename is denied while Vite watches a release staging tree.
+      // Release staging is immutable build output and must never trigger HMR.
+      ignored: ["**/.release-v*-staging-*"],
+    },
     proxy: {
       "/api": {
         target: getBackendTarget(),

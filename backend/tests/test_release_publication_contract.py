@@ -93,6 +93,30 @@ def test_release_promotion_refuses_existing_final_and_keeps_staging(tmp_path):
     assert (final / "existing.txt").read_text(encoding="utf-8") == "existing"
 
 
+def test_release_promotion_requires_sibling_directories(tmp_path):
+    builder = _builder()
+    staging = tmp_path / "staging-parent" / ".release-staging"
+    final = tmp_path / "final-parent" / "release-final"
+    staging.mkdir(parents=True)
+
+    with pytest.raises(ValueError, match="must be siblings"):
+        builder.promote_release_directory(staging, final)
+
+    assert staging.is_dir()
+    assert not final.exists()
+
+
+def test_release_promotion_requires_existing_staging_directory(tmp_path):
+    builder = _builder()
+    staging = tmp_path / ".release-staging"
+    final = tmp_path / "release-final"
+
+    with pytest.raises(FileNotFoundError, match="does not exist"):
+        builder.promote_release_directory(staging, final)
+
+    assert not final.exists()
+
+
 def test_failed_release_promotion_is_cleaned_by_staging_context(tmp_path, monkeypatch):
     builder = _builder()
     final = tmp_path / "release-final"
@@ -114,6 +138,12 @@ def test_failed_release_promotion_is_cleaned_by_staging_context(tmp_path, monkey
 
     assert not final.exists()
     assert not list(tmp_path.glob(".release-final-staging-*"))
+
+
+def test_vite_does_not_watch_immutable_release_staging_directories():
+    config = (ROOT / "vite.config.ts").read_text(encoding="utf-8")
+
+    assert 'ignored: ["**/.release-v*-staging-*"]' in config
 
 
 def test_publication_runbooks_and_dependency_contract_are_190_coherent():
