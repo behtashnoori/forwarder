@@ -97,6 +97,17 @@ def build_frontend() -> None:
     subprocess.check_call((NPM_EXECUTABLE, "run", "build"), cwd=ROOT)
 
 
+def promote_release_directory(staging: Path, final: Path) -> None:
+    """Atomically publish a complete sibling directory without overwriting."""
+    if staging.parent != final.parent:
+        raise ValueError("Release staging and final directories must be siblings")
+    if not staging.is_dir():
+        raise FileNotFoundError(f"Release staging directory does not exist: {staging}")
+    if final.exists():
+        raise FileExistsError(f"Refusing to overwrite {final}")
+    os.rename(staging, final)
+
+
 def copy_file(source: Path, relative: Path, package_root: Path) -> None:
     target = package_root / relative
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -226,7 +237,7 @@ def build() -> None:
         (package_root / "release-manifest.json").write_text(
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
         )
-        package_root.replace(RELEASE_DIR)
+        promote_release_directory(package_root, RELEASE_DIR)
     print(RELEASE_DIR)
 
 

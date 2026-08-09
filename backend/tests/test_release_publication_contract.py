@@ -2,6 +2,8 @@ import importlib.util
 import os
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -57,6 +59,61 @@ def test_windows_npm_executable_is_used_for_build_and_fingerprint(monkeypatch):
 
     assert version_calls == [(expected, "--version")]
     assert build_calls == [((expected, "run", "build"), builder.ROOT)]
+
+
+def test_complete_release_directory_is_promoted_without_copying(tmp_path):
+    builder = _builder()
+    staging = tmp_path / ".release-staging"
+    final = tmp_path / "release-final"
+    (staging / "assets").mkdir(parents=True)
+    (staging / "release-manifest.json").write_text("complete\n", encoding="utf-8")
+    (staging / "assets" / "application.js").write_bytes(b"immutable-content")
+
+    assert not final.exists()
+    builder.promote_release_directory(staging, final)
+
+    assert not staging.exists()
+    assert (final / "release-manifest.json").read_text(encoding="utf-8") == "complete\n"
+    assert (final / "assets" / "application.js").read_bytes() == b"immutable-content"
+
+
+def test_release_promotion_refuses_existing_final_and_keeps_staging(tmp_path):
+    builder = _builder()
+    staging = tmp_path / ".release-staging"
+    final = tmp_path / "release-final"
+    staging.mkdir()
+    final.mkdir()
+    (staging / "new.txt").write_text("new", encoding="utf-8")
+    (final / "existing.txt").write_text("existing", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="Refusing to overwrite"):
+        builder.promote_release_directory(staging, final)
+
+    assert (staging / "new.txt").read_text(encoding="utf-8") == "new"
+    assert (final / "existing.txt").read_text(encoding="utf-8") == "existing"
+
+
+def test_failed_release_promotion_is_cleaned_by_staging_context(tmp_path, monkeypatch):
+    builder = _builder()
+    final = tmp_path / "release-final"
+
+    with pytest.raises(PermissionError, match="simulated rename failure"):
+        with builder.tempfile.TemporaryDirectory(
+            prefix=".release-final-staging-", dir=tmp_path
+        ) as temporary:
+            staging = Path(temporary)
+            (staging / "release-manifest.json").write_text("complete\n", encoding="utf-8")
+            monkeypatch.setattr(
+                builder.os,
+                "rename",
+                lambda source, destination: (_ for _ in ()).throw(
+                    PermissionError("simulated rename failure")
+                ),
+            )
+            builder.promote_release_directory(staging, final)
+
+    assert not final.exists()
+    assert not list(tmp_path.glob(".release-final-staging-*"))
 
 
 def test_publication_runbooks_and_dependency_contract_are_190_coherent():
