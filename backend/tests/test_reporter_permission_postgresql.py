@@ -81,7 +81,7 @@ def test_reporter_detail_lifecycle_and_least_privilege_boundary():
             operational_shipment_id=shipment.id, status="open"
         ).first()
         ids = {
-            "shipment": shipment.id, "other_shipment": other_shipment.id,
+            "shipment": shipment.public_id, "other_shipment": other_shipment.public_id,
             "plan": plan.id, "plan_version": plan.version,
             "checkpoint": checkpoint.id, "checkpoint_version": checkpoint.version,
             "milestone": milestone.id, "exception": exception.id,

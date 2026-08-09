@@ -50,18 +50,18 @@ def test_seeded_multileg_shipment_is_unique_filtered_paginated_and_tenant_scoped
         headers=_headers(app, "phase1b_uat_admin"),
     )
     assert response.status_code == 200
-    assert [row["id"] for row in response.json["data"]] == [shipment_a.id]
+    assert [row["public_id"] for row in response.json["data"]] == [shipment_a.public_id]
     assert response.json["meta"]["has_more"] is False
 
     filtered = client.get(
         "/api/operational-shipments?origin=Location&destination=Location",
         headers=_headers(app, "phase1b_uat_admin"),
     )
-    assert [row["id"] for row in filtered.json["data"]] == [shipment_a.id]
+    assert [row["public_id"] for row in filtered.json["data"]] == [shipment_a.public_id]
 
     other_org = client.get(
         "/api/operational-shipments",
         headers=_headers(app, "phase1b_uat_org_b_admin"),
     )
     assert other_org.status_code == 200
-    assert shipment_a.id not in {row["id"] for row in other_org.json["data"]}
+    assert shipment_a.public_id not in {row["public_id"] for row in other_org.json["data"]}

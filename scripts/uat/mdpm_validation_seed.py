@@ -96,6 +96,7 @@ def main() -> int:
                    "requirements":[{"public_id":r.public_id,"title":r.definition.title,"version":r.version} for r in requirements],
                    "artifacts":[{"public_id":a.public_id,"filename":a.original_filename} for a in artifacts]}
         output = Path("instance/mdpm_validation_20260807_2215/seed-lineage.json")
+        output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(payload, indent=2), encoding="utf-8")
         print(json.dumps(payload))
     return 0
