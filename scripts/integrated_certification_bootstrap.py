@@ -53,6 +53,7 @@ NOW = datetime(2026, 8, 9, 8, 0, tzinfo=timezone.utc)
 PERMISSIONS = [
     "operational_shipment.read", "operational_shipment.create", "work_item.read",
     "work_item.manage", "route_plan.read", "operational_execution.read",
+    "route_exception.read",
     "operational_execution.manage", "document_readiness.read",
     "document_readiness.manage", "document_readiness.assess",
     "document_readiness.verify", "oip.read", "oip.manage", "oip.reconcile",
