@@ -20,6 +20,10 @@ RULES = (
     (re.compile(r'"shipment_numeric_id"\s*:'), "exported numeric shipment identity"),
     (re.compile(r"/operational-shipments/\d+(?:/|[\"'`])"), "literal numeric shipment URL"),
 )
+FRONTEND_RULES = (
+    (re.compile(r"shipment\.data\.id\b"), "frontend Shipment detail persistence-ID addressing"),
+    (re.compile(r"\bshipment\.id\b"), "frontend Shipment persistence-ID addressing"),
+)
 
 
 def files():
@@ -38,6 +42,11 @@ def main() -> int:
             for match in pattern.finditer(text):
                 line = text.count("\n", 0, match.start()) + 1
                 leaks.append(f"{path.relative_to(ROOT)}:{line}: {label}")
+        if path.is_relative_to(ROOT / "src"):
+            for pattern, label in FRONTEND_RULES:
+                for match in pattern.finditer(text):
+                    line = text.count("\n", 0, match.start()) + 1
+                    leaks.append(f"{path.relative_to(ROOT)}:{line}: {label}")
     if leaks:
         print("Shipment identity fitness gate: FAIL")
         print("\n".join(leaks))

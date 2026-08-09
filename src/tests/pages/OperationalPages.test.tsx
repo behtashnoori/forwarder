@@ -38,7 +38,6 @@ vi.mock("../../lib/api", async () => {
   };
 });
 const shipment = {
-  id: 1,
   public_id: "11111111-1111-4111-8111-111111111111",
   status: "planned",
   version: 1,

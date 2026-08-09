@@ -43,9 +43,12 @@ const safeError = (error: unknown) => {
 };
 const when = (value: string | null | undefined, locale: string) =>
   value ? new Date(value).toLocaleString(locale, { timeZoneName: "short" }) : "Not recorded";
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const invalidIdentityMessage = "This shipment link does not contain a valid resource identity.";
+const inconsistentIdentityMessage = "The shipment identity returned by the server does not match this link.";
 
 export default function OperationalShipmentDetail() {
-  const shipmentPublicId = useParams().id || "";
+  const routeShipmentPublicId = useParams().id || "";
   const { t, direction, locale } = useI18n();
   const [data, setData] = useState<OperationalShipmentSummary>();
   const [plans, setPlans] = useState<RoutePlanSummary[]>([]);
@@ -56,25 +59,32 @@ export default function OperationalShipmentDetail() {
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
-  const shipmentId = data?.public_id ?? shipmentPublicId;
+  const shipmentPublicId = UUID_PATTERN.test(routeShipmentPublicId) ? routeShipmentPublicId : "";
   const activePlan = useMemo(() => plans.find((item) => item.is_active), [plans]);
 
   const load = useCallback(async () => {
+    if (!shipmentPublicId) {
+      setError(invalidIdentityMessage);
+      return;
+    }
     try {
       setError("");
       const shipment = await getOperationalShipment(shipmentPublicId);
-      const internalShipmentId = shipment.data.id;
+      if (!UUID_PATTERN.test(shipment.data.public_id) || shipment.data.public_id.toLowerCase() !== shipmentPublicId.toLowerCase()) {
+        setError(inconsistentIdentityMessage);
+        return;
+      }
       const [revisions, routeTimeline, routeExceptions] = await Promise.all([
-        listRoutePlans(internalShipmentId),
-        getRouteTimeline(internalShipmentId),
-        listRouteExceptions(internalShipmentId),
+        listRoutePlans(shipmentPublicId),
+        getRouteTimeline(shipmentPublicId),
+        listRouteExceptions(shipmentPublicId),
       ]);
       setData(shipment.data);
       setPlans(revisions.data);
       setTimeline(routeTimeline.data);
       setExceptions(routeExceptions.data);
       const active = revisions.data.find((item) => item.is_active);
-      setPlan(active ? (await getRoutePlan(internalShipmentId, active.id)).data : undefined);
+      setPlan(active ? (await getRoutePlan(shipmentPublicId, active.id)).data : undefined);
     } catch (caught) {
       setError(safeError(caught));
     }
@@ -164,7 +174,7 @@ export default function OperationalShipmentDetail() {
                 </table>
               </div>
               {!timeline?.planned.length && <p>No timeline entries.</p>}
-              {activePlan && <OperationalPermission permission="route_plan.replan"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("timeline", () => reconcileRouteTimeline(shipmentId, activePlan.version, key()), "Timeline reconciled.")}>{pending === "timeline" ? "Reconciling…" : "Reconcile timeline"}</Button></OperationalPermission>}
+              {activePlan && <OperationalPermission permission="route_plan.replan"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("timeline", () => reconcileRouteTimeline(shipmentPublicId, activePlan.version, key()), "Timeline reconciled.")}>{pending === "timeline" ? "Reconciling…" : "Reconcile timeline"}</Button></OperationalPermission>}
             </CardContent>
           </Card>
 
@@ -179,9 +189,9 @@ export default function OperationalShipmentDetail() {
                 <p>Actual arrival/departure: {when(checkpoint.actual_arrival_at, locale)} / {when(checkpoint.actual_departure_at, locale)}</p>
                 <div className="my-3 flex flex-wrap gap-2">
                   <OperationalPermission permission="checkpoint.report">
-                    {(checkpoint.status === "planned" || checkpoint.status === "approaching") && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-arrive`, () => commandRouteCheckpoint(shipmentId, checkpoint.id, "arrive", new Date().toISOString(), checkpoint.version, key()), "Arrival recorded.")}>Report arrival</Button>}
-                    {(checkpoint.status === "arrived" || checkpoint.status === "processing") && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-complete-processing`, () => commandRouteCheckpoint(shipmentId, checkpoint.id, "complete-processing", new Date().toISOString(), checkpoint.version, key()), "Processing completion recorded.")}>Report processing complete</Button>}
-                    {checkpoint.status === "ready_to_depart" && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-depart`, () => commandRouteCheckpoint(shipmentId, checkpoint.id, "depart", new Date().toISOString(), checkpoint.version, key()), "Departure recorded.")}>Report departure</Button>}
+                    {(checkpoint.status === "planned" || checkpoint.status === "approaching") && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-arrive`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "arrive", new Date().toISOString(), checkpoint.version, key()), "Arrival recorded.")}>Report arrival</Button>}
+                    {(checkpoint.status === "arrived" || checkpoint.status === "processing") && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-complete-processing`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "complete-processing", new Date().toISOString(), checkpoint.version, key()), "Processing completion recorded.")}>Report processing complete</Button>}
+                    {checkpoint.status === "ready_to_depart" && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-depart`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "depart", new Date().toISOString(), checkpoint.version, key()), "Departure recorded.")}>Report departure</Button>}
                   </OperationalPermission>
                 </div>
                 <div className="grid gap-3 lg:grid-cols-2">{checkpoint.milestones.map((milestone) => {
@@ -190,9 +200,9 @@ export default function OperationalShipmentDetail() {
                     <strong>{milestone.type}</strong> · {milestone.verification_state} · milestone v{milestone.version}
                     <p>Planned {when(milestone.planned_at, locale)} · Projected {when(milestone.projected_at, locale)} · Actual {when(milestone.occurred_at, locale)}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
-                      {milestone.verification_state === "reported" && <OperationalPermission permission="checkpoint.verify"><Button className="min-h-11" disabled={!!pending} onClick={() => void run(`verify-${milestone.id}`, () => verifyRouteMilestone(shipmentId, checkpoint.id, milestone.id, milestone.version, key()), "Milestone verified or re-verified.")}>Verify / re-verify</Button></OperationalPermission>}
+                      {milestone.verification_state === "reported" && <OperationalPermission permission="checkpoint.verify"><Button className="min-h-11" disabled={!!pending} onClick={() => void run(`verify-${milestone.id}`, () => verifyRouteMilestone(shipmentPublicId, checkpoint.id, milestone.id, milestone.version, key()), "Milestone verified or re-verified.")}>Verify / re-verify</Button></OperationalPermission>}
                     </div>
-                    {milestone.verification_state === "verified" && <OperationalPermission permission="milestone.correct"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Correction reason for ${milestone.type}`} placeholder="Correction reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} variant="secondary" onClick={() => requireReason(reasonKey, (reason) => correctRouteMilestone(shipmentId, checkpoint.id, milestone.id, new Date().toISOString(), reason, milestone.version, key()), "Milestone corrected.")}>Correct</Button></div></OperationalPermission>}
+                    {milestone.verification_state === "verified" && <OperationalPermission permission="milestone.correct"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Correction reason for ${milestone.type}`} placeholder="Correction reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} variant="secondary" onClick={() => requireReason(reasonKey, (reason) => correctRouteMilestone(shipmentPublicId, checkpoint.id, milestone.id, new Date().toISOString(), reason, milestone.version, key()), "Milestone corrected.")}>Correct</Button></div></OperationalPermission>}
                   </div>;
                 })}</div>
               </article>)}
@@ -203,14 +213,14 @@ export default function OperationalShipmentDetail() {
             <CardHeader><CardTitle>Replan and revision history</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>Revision {item.revision_number}</strong> · {item.is_active ? "Active target" : item.status} · v{item.version}{item.created_from_plan_id ? " · supersedes the prior plan" : ""}<br />{item.replan_reason && `Reason: ${item.replan_reason}`}</div>)}
-              {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Replan reason" placeholder="Replan reason (required)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentId, activePlan.id, activePlan.version, reason, key()), "A new active revision was created.")}>Replan future segments</Button></div><p className="text-sm text-slate-600">Completed segments remain read-only; only future segments are copied into the new revision.</p></OperationalPermission>}
+              {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Replan reason" placeholder="Replan reason (required)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "A new active revision was created.")}>Replan future segments</Button></div><p className="text-sm text-slate-600">Completed segments remain read-only; only future segments are copied into the new revision.</p></OperationalPermission>}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader><CardTitle>Route exceptions and work items</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {activePlan && <OperationalPermission permission="route_exception.manage"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("exceptions", () => reconcileRouteExceptions(shipmentId, activePlan.version, key()), "Route exceptions reconciled.")}>Reconcile exceptions</Button></OperationalPermission>}
+              {activePlan && <OperationalPermission permission="route_exception.manage"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("exceptions", () => reconcileRouteExceptions(shipmentPublicId, activePlan.version, key()), "Route exceptions reconciled.")}>Reconcile exceptions</Button></OperationalPermission>}
               {!exceptions.length && <p>No route-exception history.</p>}
               {exceptions.map((exception) => {
                 const reasonKey = `exception-${exception.id}`;

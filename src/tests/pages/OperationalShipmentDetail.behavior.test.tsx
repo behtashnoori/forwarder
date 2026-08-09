@@ -12,6 +12,10 @@ vi.mock("../../components/OperationalPermission", () => ({
   default: ({ permission, children }: { permission: string; children: unknown }) =>
     controls.permissions.has(permission) ? children : null,
 }));
+vi.mock("../../components/ShipmentCargoItems", () => ({ default: () => null }));
+vi.mock("../../components/OperationalExecutionSection", () => ({ default: () => null }));
+vi.mock("../../components/DocumentReadinessSection", () => ({ default: () => null }));
+vi.mock("../../components/ShipmentEconomicsSection", () => ({ default: () => null }));
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
   return {
@@ -25,7 +29,7 @@ vi.mock("../../lib/api", async () => {
 });
 
 const shipment = {
-  id: 1, public_id: "uat", status: "active", version: 3, customer: "UAT Customer",
+  public_id: "11111111-1111-4111-8111-111111111111", status: "active", version: 3, customer: "UAT Customer",
   overdue: true, open_work_item_count: 1, source: { accepted_quote_id: 2, shipment_request_id: 3 },
   route_leg: { id: 10, origin: { display_name: "Origin" }, destination: { display_name: "Hub" }, transport_mode: "road", planned_departure: "2026-01-01T00:00:00Z", planned_arrival: "2026-01-02T00:00:00Z", version: 1 },
   milestones: [], recent_events: [],
@@ -86,11 +90,43 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.getByRole("button", { name: "Report arrival" })).toHaveClass("min-h-11");
   });
 
+  it("uses the route UUID for every detail subrequest when the response has no numeric id", async () => {
+    renderDetail();
+    await screen.findByText("Timeline reconciliation");
+    const publicId = shipment.public_id;
+    expect(api.getOperationalShipment).toHaveBeenCalledWith(publicId);
+    expect(api.listRoutePlans).toHaveBeenCalledWith(publicId);
+    expect(api.getRouteTimeline).toHaveBeenCalledWith(publicId);
+    expect(api.listRouteExceptions).toHaveBeenCalledWith(publicId);
+    expect(api.getRoutePlan).toHaveBeenCalledWith(publicId, plan.id);
+    for (const mock of [api.listRoutePlans, api.getRouteTimeline, api.listRouteExceptions, api.getRoutePlan]) {
+      expect(vi.mocked(mock).mock.calls.flat()).not.toContain(undefined);
+    }
+  });
+
+  it("does not request anything for an invalid route identity", async () => {
+    render(<MemoryRouter initialEntries={["/operations/shipments/undefined"]}><Routes><Route path="/operations/shipments/:id" element={<OperationalShipmentDetail />} /></Routes></MemoryRouter>);
+    expect(await screen.findByRole("alert")).toHaveTextContent("valid resource identity");
+    expect(api.getOperationalShipment).not.toHaveBeenCalled();
+    expect(api.listRoutePlans).not.toHaveBeenCalled();
+    expect(api.getRouteTimeline).not.toHaveBeenCalled();
+    expect(api.listRouteExceptions).not.toHaveBeenCalled();
+  });
+
+  it("stops before subrequests when response public_id disagrees with the route", async () => {
+    vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, public_id: "22222222-2222-4222-8222-222222222222" } });
+    renderDetail();
+    expect(await screen.findByRole("alert")).toHaveTextContent("does not match this link");
+    expect(api.listRoutePlans).not.toHaveBeenCalled();
+    expect(api.getRouteTimeline).not.toHaveBeenCalled();
+    expect(api.listRouteExceptions).not.toHaveBeenCalled();
+  });
+
   it("reconciles a timeline and reports success", async () => {
     vi.mocked(api.reconcileRouteTimeline).mockResolvedValue({ data: { route_plan_id: 20, revision: 2, version: 5, reconciled_at: null, updated_checkpoints: 1, actual_override_count: 1, replayed: false } });
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
-    await waitFor(() => expect(api.reconcileRouteTimeline).toHaveBeenCalledWith("uat", 4, expect.any(String)));
+    await waitFor(() => expect(api.reconcileRouteTimeline).toHaveBeenCalledWith(shipment.public_id, 4, expect.any(String)));
     expect(await screen.findByRole("status")).toHaveTextContent("Timeline reconciled.");
   });
 
@@ -162,9 +198,9 @@ describe("Phase 1B shipment detail behavior", () => {
     vi.mocked(api.verifyRouteMilestone).mockResolvedValue({});
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Report arrival" }));
-    await waitFor(() => expect(api.commandRouteCheckpoint).toHaveBeenCalledWith("uat", 30, "arrive", expect.any(String), 7, expect.any(String)));
+    await waitFor(() => expect(api.commandRouteCheckpoint).toHaveBeenCalledWith(shipment.public_id, 30, "arrive", expect.any(String), 7, expect.any(String)));
     fireEvent.click(screen.getByRole("button", { name: "Verify / re-verify" }));
-    await waitFor(() => expect(api.verifyRouteMilestone).toHaveBeenCalledWith("uat", 30, 31, 5, expect.any(String)));
+    await waitFor(() => expect(api.verifyRouteMilestone).toHaveBeenCalledWith(shipment.public_id, 30, 31, 5, expect.any(String)));
   });
 
   it("renders open/resolved exception history and validates manual resolution", async () => {
