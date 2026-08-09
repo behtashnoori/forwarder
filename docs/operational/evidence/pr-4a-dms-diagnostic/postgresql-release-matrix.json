@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "run_id": "202608090950299f4980",
+  "generated_at": "2026-08-09T09:50:36.188706+00:00",
+  "postgresql_gate": "FAIL",
+  "suites": [
+    {
+      "suite_id": "dms_historical",
+      "classification": "HISTORICAL_RELEASE_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_case_documents_postgresql.py",
+        "backend/tests/test_case_documents_schema_parity.py"
+      ],
+      "evidence_context": "historical",
+      "git_worktree_identity": "7ae1517fa20266116be723c8fdb8294a8b895d88",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "dms1a_historical_202608090950299f4980"
+      ],
+      "migration_revision": "20260804_case_documents",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "DMS_DISPOSABLE_POSTGRES_URL",
+        "DMS_DISPOSABLE_STORAGE_ROOT",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 5,
+      "failed": 1,
+      "skipped": 0,
+      "duration_seconds": 6.46,
+      "status": "FAILED",
+      "evidence_path": "docs\\operational\\evidence\\pr-4a-dms-diagnostic\\202608090950299f4980-dms_historical.log",
+      "evidence_sha256": "c0fb2f20f8d6f5ef982939187beaed65336dddd13995c400fa2dfef36495cf5e",
+      "cleanup_result": [
+        "dms1a_historical_202608090950299f4980:dropped",
+        "worktree:removed",
+        "disposable-storage:removed"
+      ]
+    }
+  ]
+}

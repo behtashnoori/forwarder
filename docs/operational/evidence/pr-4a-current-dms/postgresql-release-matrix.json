@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "run_id": "20260809095258ec4dea",
+  "generated_at": "2026-08-09T09:53:04.906279+00:00",
+  "postgresql_gate": "PASS",
+  "suites": [
+    {
+      "suite_id": "dms_current_head",
+      "classification": "CURRENT_HEAD_COMPATIBILITY_REQUIRED",
+      "source_test_path": [
+        "backend/tests/test_dms_current_head_compatibility_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "6bfa22ddaf94de66ecf4b01b2258445e09bbe9d7",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_integrated_rc_dms_20260809095258ec4dea"
+      ],
+      "migration_revision": "20260818_immutable_fx_provenance",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "DMS_DISPOSABLE_STORAGE_ROOT",
+        "FORWARDER_UAT_PASSWORD",
+        "INTEGRATED_RC_POSTGRES_URL"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 6.089,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\pr-4a-current-dms\\20260809095258ec4dea-dms_current_head.log",
+      "evidence_sha256": "188b31a5d0538fc6d6e49625d21468a30f4c83c5dd4c548f54349ff2466671fa",
+      "cleanup_result": [
+        "forwarder_integrated_rc_dms_20260809095258ec4dea:dropped",
+        "disposable-storage:removed"
+      ]
+    }
+  ]
+}
