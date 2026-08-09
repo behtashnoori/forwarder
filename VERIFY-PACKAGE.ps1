@@ -2,20 +2,27 @@ $ErrorActionPreference = "Stop"
 $manifestPath = Join-Path $PSScriptRoot "release-manifest.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing release-manifest.json" }
 $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-if ($manifest.application_version -ne "1.8.0" -or $manifest.previous_version -ne "1.7.0") { throw "Version mismatch" }
-if ($manifest.git_tag -ne "v1.8.0" -or $manifest.git_commit -ne $manifest.backend_revision) { throw "Git identity mismatch" }
-if ($manifest.database_revision -ne "20260811_project_configuration" -or $manifest.previous_database_revision -ne "20260810_logistics_network" -or -not $manifest.database_migration_included) { throw "Database metadata mismatch" }
+if ($manifest.application_version -ne "1.9.0" -or $manifest.previous_version -ne "1.8.0") { throw "Version mismatch" }
+if ($manifest.git_tag -ne "v1.9.0" -or $manifest.git_commit -ne $manifest.backend_revision -or -not $manifest.git_tree -or -not $manifest.git_tag_object) { throw "Git identity mismatch" }
+$expectedRevisions = @("20260810_logistics_network", "20260811_project_configuration", "security_credential_remediation", "20260812_operational_execution", "20260813_mdpm_readiness", "20260814_oip_situations", "20260815_oip_threshold_policy", "20260816_oip_projection_health", "20260817_shipment_economics_core", "20260818_immutable_fx_provenance")
+if ($manifest.database_revision -ne "20260818_immutable_fx_provenance" -or $manifest.production_baseline_revision -ne "20260809_cargo_catalog_items" -or $manifest.previous_database_revision -ne "20260809_cargo_catalog_items" -or -not $manifest.database_migration_included) { throw "Database metadata mismatch" }
+if ((@($manifest.upgrade_revisions) -join "|") -ne ($expectedRevisions -join "|")) { throw "Migration path mismatch" }
+if ($manifest.rollback_release -ne "release-v1.6.1-20260802" -or $manifest.rollback_restore_required_from_revision -ne "20260817_shipment_economics_core") { throw "Rollback metadata mismatch" }
 if ($manifest.production_seed_executed -ne $false) { throw "Seed metadata mismatch" }
 if ($manifest.milestone_type_catalog_apply_status -ne "not applied") { throw "Catalog apply metadata mismatch" }
 $python = (Get-Command python -ErrorAction Stop).Source
 $actualHash = & $python -c "import hashlib,pathlib,sys;r=pathlib.Path(sys.argv[1]);s=''.join(p.relative_to(r).as_posix()+chr(0)+hashlib.sha256(p.read_bytes()).hexdigest()+chr(10) for p in sorted(x for x in r.rglob('*') if x.is_file() and x.name!='release-manifest.json'));print(hashlib.sha256(s.encode()).hexdigest())" $PSScriptRoot
 if ($actualHash -ne $manifest.package_hash) { throw "Package hash mismatch: actual=$actualHash expected=$($manifest.package_hash)" }
-$required = @("index.html", $manifest.frontend_entry_js, $manifest.frontend_entry_css, "web.config", "manage.py", "requirements.txt", "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md", "VERIFY-SERVER.ps1", "backend/migrations/versions/20260810_logistics_network.py", "backend/migrations/versions/20260811_project_configuration.py", $manifest.milestone_type_catalog_filename)
+$required = @("index.html", $manifest.frontend_entry_js, $manifest.frontend_entry_css, "web.config", "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml", "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md", "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1", $manifest.milestone_type_catalog_filename)
+foreach ($migration in @($manifest.migration_files)) { $required += $migration.path }
 foreach ($item in $required) { if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $item))) { throw "Missing required file: $item" } }
+$requirementsHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot "requirements.txt")).Hash.ToLowerInvariant()
+if ($requirementsHash -ne $manifest.requirements_sha256) { throw "Requirements checksum mismatch" }
 $requirements = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot "requirements.txt") | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith("#") })
 if ($requirements -notcontains "psycopg2-binary==2.9.11") { throw "Missing exact PostgreSQL runtime driver declaration: psycopg2-binary==2.9.11" }
 $catalogHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot $manifest.milestone_type_catalog_filename)).Hash.ToLowerInvariant()
 if ($catalogHash -ne $manifest.milestone_type_catalog_sha256) { throw "Catalog checksum mismatch" }
+foreach ($migration in @($manifest.migration_files)) { $migrationHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot $migration.path)).Hash.ToLowerInvariant(); if ($migrationHash -ne $migration.sha256) { throw "Migration checksum mismatch: $($migration.revision)" } }
 $forbiddenNames = @(".env", "node_modules", "venv", ".venv", "__pycache__", ".pytest_cache", ".ruff_cache", ".git", ".github", ".codex", "tests")
 $forbidden = Get-ChildItem -LiteralPath $PSScriptRoot -Recurse -Force | Where-Object { $_.Name -in $forbiddenNames -or $_.Extension -in @(".map", ".pyc", ".tsbuildinfo", ".log", ".db", ".sqlite") -or ($_.PSIsContainer -and $_.Name -like "release-v*") }
 if ($forbidden) { throw "Forbidden package content detected: $($forbidden[0].FullName)" }

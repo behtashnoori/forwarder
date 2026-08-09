@@ -1,15 +1,15 @@
 param(
     [string]$ReleasePath = $PSScriptRoot,
-    [string]$BaseUrl = "http://server.logisticmarket.ir",
+    [string]$BaseUrl = "https://server.logisticmarket.ir",
     [string]$SiteName,
     [string]$TaskName,
-    [int]$BackendPort = 8000,
+    [int]$BackendPort = 5101,
     [string]$DatabaseRevisionCommand
 )
 $ErrorActionPreference = "Stop"
 & (Join-Path $ReleasePath "VERIFY-PACKAGE.ps1")
 $manifest = Get-Content -Raw -LiteralPath (Join-Path $ReleasePath "release-manifest.json") | ConvertFrom-Json
-if ($manifest.git_tag -ne "v1.8.0" -or $manifest.application_version -ne "1.8.0" -or $manifest.milestone_type_catalog_apply_status -ne "not applied") { throw "Manifest identity mismatch" }
+if ($manifest.git_tag -ne "v1.9.0" -or $manifest.application_version -ne "1.9.0" -or $manifest.database_revision -ne "20260818_immutable_fx_provenance" -or $manifest.milestone_type_catalog_apply_status -ne "not applied") { throw "Manifest identity mismatch" }
 $releasePython = Join-Path $ReleasePath ".venv\Scripts\python.exe"
 if (-not (Test-Path -LiteralPath $releasePython -PathType Leaf)) { throw "Release Python environment missing: $releasePython" }
 & $releasePython -c "import importlib.metadata, psycopg2; expected='2.9.11'; actual=importlib.metadata.version('psycopg2-binary'); assert actual == expected, f'psycopg2-binary version mismatch: {actual} != {expected}'"
