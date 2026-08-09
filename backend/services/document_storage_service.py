@@ -42,9 +42,12 @@ class PrivateDocumentStorage:
 
     def write(self, case_id: int, extension: str, stream, maximum: int) -> tuple[str, int, str]:
         partition = Path(str(case_id)) / uuid4().hex[:2]
-        directory = (self.root / partition).resolve()
-        if self.root != directory and self.root not in directory.parents:
+        # Both components are generated internally.  Resolving the child before
+        # it exists is unnecessary and races on Windows when independent uploads
+        # create sibling partitions concurrently.
+        if partition.is_absolute() or ".." in partition.parts:
             raise DocumentStorageError("Invalid storage destination")
+        directory = self.root / partition
         directory.mkdir(parents=True, exist_ok=True)
         name = f"{uuid4().hex}.{extension}"
         final_path = directory / name

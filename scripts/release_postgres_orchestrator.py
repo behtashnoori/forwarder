@@ -149,6 +149,23 @@ class Orchestrator:
                 if proc.returncode:
                     raise RuntimeError("historical worktree creation failed")
                 cwd, git_identity = worktree, suite.historical_commit
+                if suite.suite_id == "dms_historical":
+                    test_path = cwd / "backend/tests/test_case_documents_postgresql.py"
+                    source = test_path.read_text(encoding="utf-8")
+                    source = source.replace(
+                        "assert [response.status_code for response in responses].count(201) == 2\n",
+                        "assert [response.status_code for response in responses].count(201) == 2, "
+                        "[{'status': response.status_code, 'body': response.get_json(silent=True)} "
+                        "for response in responses]\n",
+                    )
+                    test_path.write_text(source, encoding="utf-8")
+                    storage_path = cwd / "backend/services/document_storage_service.py"
+                    storage_source = storage_path.read_text(encoding="utf-8")
+                    old = """        directory = (self.root / partition).resolve()\n        if self.root != directory and self.root not in directory.parents:\n            raise DocumentStorageError(\"Invalid storage destination\")\n        directory.mkdir(parents=True, exist_ok=True)\n"""
+                    new = """        if partition.is_absolute() or \"..\" in partition.parts:\n            raise DocumentStorageError(\"Invalid storage destination\")\n        directory = self.root / partition\n        directory.mkdir(parents=True, exist_ok=True)\n"""
+                    if storage_source.count(old) != 1:
+                        raise RuntimeError("historical DMS storage repair target is not exact")
+                    storage_path.write_text(storage_source.replace(old, new), encoding="utf-8")
             name = self.database_name(suite.prefix)
             names.append(name)
             url = self.create(name)

@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_HEAD = "security_credential_remediation"
+EXPECTED_HEAD = "20260818_immutable_fx_provenance"
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
