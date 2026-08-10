@@ -307,8 +307,24 @@ class OperationalShipment(db.Model):
             "lifecycle_status IN ('planned','in_progress','completed','cancelled')",
             name="ck_operational_shipment_status",
         ),
+        db.CheckConstraint(
+            "(source_type = 'accepted_quote' "
+            "AND shipment_request_id IS NOT NULL "
+            "AND accepted_quote_id IS NOT NULL) OR "
+            "(source_type = 'direct' "
+            "AND customer_id IS NOT NULL "
+            "AND shipment_request_id IS NULL "
+            "AND accepted_quote_id IS NULL)",
+            name="ck_operational_shipment_source_shape",
+        ),
         db.Index(
             "ix_operational_shipment_org_status", "organization_id", "lifecycle_status"
+        ),
+        db.Index(
+            "ix_operational_shipment_org_customer_status",
+            "organization_id",
+            "customer_id",
+            "lifecycle_status",
         ),
     )
     id = db.Column(BIGINT, primary_key=True)
@@ -321,14 +337,23 @@ class OperationalShipment(db.Model):
         nullable=False,
     )
     project_id = db.Column(BIGINT, nullable=True, index=True)
+    source_type = db.Column(
+        db.String(24), nullable=False, default="accepted_quote"
+    )
+    customer_id = db.Column(
+        BIGINT,
+        db.ForeignKey("customer.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     shipment_request_id = db.Column(
         BIGINT,
         db.ForeignKey("shipment_request.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
         index=True,
     )
     accepted_quote_id = db.Column(
-        BIGINT, db.ForeignKey("expert_quote.id", ondelete="RESTRICT"), nullable=False
+        BIGINT, db.ForeignKey("expert_quote.id", ondelete="RESTRICT"), nullable=True
     )
     lifecycle_status = db.Column(db.String(20), nullable=False, default="planned")
     version = db.Column(db.Integer, nullable=False, default=1)
@@ -339,6 +364,8 @@ class OperationalShipment(db.Model):
     updated_at = db.Column(
         db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
+
+    customer = db.relationship("Customer", foreign_keys=[customer_id])
 
 
 class RoutePlan(db.Model):

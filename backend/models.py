@@ -361,9 +361,29 @@ class ShipmentRequest(db.Model):
     )
     
     # International shipping fields (nullable for domestic)
+    origin_country_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("country.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    origin_international_city_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("international_city.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     origin_country = db.Column(db.String(100), nullable=True)
     origin_city_international = db.Column(db.String(100), nullable=True)
     origin_address_international = db.Column(db.Text, nullable=True)
+    dest_country_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("country.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    dest_international_city_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("international_city.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
     dest_country = db.Column(db.String(100), nullable=True)
     dest_city_international = db.Column(db.String(100), nullable=True)
     dest_address_international = db.Column(db.Text, nullable=True)
@@ -433,6 +453,14 @@ class ShipmentRequest(db.Model):
     customer = db.relationship("Customer", back_populates="requests")
     project = db.relationship("Project", back_populates="shipment_requests")
     gamification_customer = db.relationship("CustomerGamification", back_populates="requests")
+    origin_country_ref = db.relationship("Country", foreign_keys=[origin_country_id])
+    origin_international_city_ref = db.relationship(
+        "InternationalCity", foreign_keys=[origin_international_city_id]
+    )
+    dest_country_ref = db.relationship("Country", foreign_keys=[dest_country_id])
+    dest_international_city_ref = db.relationship(
+        "InternationalCity", foreign_keys=[dest_international_city_id]
+    )
     iran_entry_port_ref = db.relationship("IranPort", foreign_keys=[iran_entry_port_id])
     iran_dest_customs_office = db.relationship("CustomsOffice", foreign_keys=[iran_dest_customs_office_id])
     iran_dest_city = db.relationship("City", foreign_keys=[iran_dest_city_id])

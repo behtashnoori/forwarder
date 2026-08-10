@@ -190,4 +190,7 @@ def test_release_upgrade_chain_is_contiguous_and_remediation_is_mandatory():
         )
     )
     assert revisions == builder.UPGRADE_REVISIONS
-    assert script.get_heads() == [builder.DATABASE_REVISION]
+    # The immutable v1.9.0 builder remains pinned to its release revision while
+    # repository development advances additively for v1.9.1.
+    assert script.get_revision(builder.DATABASE_REVISION) is not None
+    assert script.get_heads() == ["20260819_v191_acceptance_corrections"]

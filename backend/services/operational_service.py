@@ -161,7 +161,15 @@ def create_from_accepted_quote(payload: dict[str, Any], user: dict[str, Any], ke
     mode = str(payload.get("transport_mode") or "").strip()
     if not mode or len(mode) > 32:
         raise OperationalError("VALIDATION_FAILED", "transport_mode is required.")
-    shipment = OperationalShipment(organization_id=org, shipment_request_id=request_row.id, accepted_quote_id=quote.id, lifecycle_status="planned", created_by_user_id=user["id"])
+    shipment = OperationalShipment(
+        organization_id=org,
+        source_type="accepted_quote",
+        customer_id=request_row.customer_id,
+        shipment_request_id=request_row.id,
+        accepted_quote_id=quote.id,
+        lifecycle_status="planned",
+        created_by_user_id=user["id"],
+    )
     db.session.add(shipment); db.session.flush()
     plan = RoutePlan(operational_shipment_id=shipment.id, revision=1, is_active=True, created_by_user_id=user["id"])
     db.session.add(plan); db.session.flush()
