@@ -4,6 +4,16 @@ import ReleaseIdentity, { compareReleaseIdentity } from "@/components/ReleaseIde
 import * as api from "@/lib/api";
 
 vi.mock("@/lib/api", () => ({ getReleaseIdentity: vi.fn() }));
+vi.mock("@/i18n", () => ({ useI18n: () => ({ t: (key: string) => ({
+  "operations.systemInformation":"System information",
+  "operations.frontendVersion":"Frontend Version",
+  "operations.backendVersion":"Backend Version",
+  "operations.releaseTag":"Release Tag",
+  "operations.shortCommit":"Short Commit",
+  "operations.databaseRevision":"Database Revision",
+  "operations.matchStatus":"Match status",
+  "operations.unavailable":"Unavailable",
+} as Record<string,string>)[key] || key }) }));
 
 describe("ReleaseIdentity", () => {
   beforeEach(() => vi.resetAllMocks());

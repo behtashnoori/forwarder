@@ -127,12 +127,12 @@ export default function OperationalShipmentDetail() {
           </header>
 
           <OperationsNav />
-          <Card><CardHeader><CardTitle>Source</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>Source: {data.source.type === "direct" ? "Direct" : "Accepted quote"}</p><p>Customer: {typeof data.customer === "string" ? data.customer : data.customer?.display_name || "Governed incomplete state"}</p><p>Project: {data.project_public_id || "—"}</p><p>Request: {data.source.shipment_request_id ?? "Not applicable"}</p><p>Quote: {data.source.accepted_quote_id ?? "Not applicable"}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? t("operations.source.direct") : t("operations.source.quote")}</p><p>{t("operations.customerLabel")}: {typeof data.customer === "string" ? data.customer : data.customer?.display_name || t("operations.governedIncomplete")}</p><p>{t("operations.projectLabel")}: {data.project_public_id || "—"}</p><p>{t("operations.requestLabel")}: {data.source.shipment_request_id ?? t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ?? t("operations.notApplicable")}</p></CardContent></Card>
 
           <Card>
-            <CardHeader><CardTitle>Active route plan</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <p>{activePlan ? `Revision ${activePlan.revision_number} · ${activePlan.status} · plan v${activePlan.version}` : "No active route plan"}</p>
+              <p>{activePlan ? `Revision ${activePlan.revision_number} · ${activePlan.status} · plan v${activePlan.version}` : t("operations.noActiveRoute")}</p>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="Multi-leg route">
                 {(plan?.legs || data.route_legs || [data.route_leg]).map((leg, index) => (
                   <article key={leg.id} className="min-w-0 rounded border p-3">
@@ -151,11 +151,11 @@ export default function OperationalShipmentDetail() {
 
           <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>Documents / MDPM</CardTitle></CardHeader><CardContent>Request-scoped documents and readiness: Not applicable</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
+          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>{t("operations.documentsMdpm")}</CardTitle></CardHeader><CardContent>{t("operations.requestDocumentsNa")}</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
 
           <Card>
-            <CardHeader><CardTitle>Timeline reconciliation</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t("operations.timelineReconciliation")}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <p>Revision {timeline?.route_plan_revision ?? "—"} · reconciliation v{timeline?.reconciliation_version ?? "—"} · reconciled {when(timeline?.reconciled_at, locale)}</p>
               <div className="overflow-x-auto rounded border">
@@ -177,15 +177,15 @@ export default function OperationalShipmentDetail() {
                   })}</tbody>
                 </table>
               </div>
-              {!timeline?.planned.length && <p>No timeline entries.</p>}
+              {!timeline?.planned.length && <p>{t("operations.noTimeline")}</p>}
               {activePlan && <OperationalPermission permission="route_plan.replan"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("timeline", () => reconcileRouteTimeline(shipmentPublicId, activePlan.version, key()), "Timeline reconciled.")}>{pending === "timeline" ? "Reconciling…" : "Reconcile timeline"}</Button></OperationalPermission>}
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Checkpoints and milestone lifecycle</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t("operations.lifecycle")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              {!plan?.checkpoints.length && <p>No checkpoints.</p>}
+              {!plan?.checkpoints.length && <p>{t("operations.noCheckpoints")}</p>}
               {plan?.checkpoints.map((checkpoint) => <article key={checkpoint.id} className="rounded border p-3">
                 <h3 className="font-semibold">Checkpoint {checkpoint.sequence_number} · {checkpoint.checkpoint_type} · {checkpoint.status} · v{checkpoint.version}</h3>
                 <p>Planned arrival/departure: {when(checkpoint.planned_arrival_at, locale)} / {when(checkpoint.planned_departure_at, locale)}</p>
@@ -222,10 +222,10 @@ export default function OperationalShipmentDetail() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Route exceptions and work items</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{t("operations.routeExceptions")}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {activePlan && <OperationalPermission permission="route_exception.manage"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("exceptions", () => reconcileRouteExceptions(shipmentPublicId, activePlan.version, key()), "Route exceptions reconciled.")}>Reconcile exceptions</Button></OperationalPermission>}
-              {!exceptions.length && <p>No route-exception history.</p>}
+              {!exceptions.length && <p>{t("operations.noExceptions")}</p>}
               {exceptions.map((exception) => {
                 const reasonKey = `exception-${exception.id}`;
                 return <article key={exception.id} className="rounded border p-3">

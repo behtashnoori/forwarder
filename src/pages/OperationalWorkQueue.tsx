@@ -75,26 +75,24 @@ export default function OperationalWorkQueue() {
     <main className="min-h-screen bg-slate-50 p-4 md:p-8" dir={direction}>
       <div className="mx-auto max-w-6xl space-y-5">
         <header>
-          <Link to="/operations/shipments">← Operations</Link>
-          <h1 className="mt-2 text-3xl font-bold">Attention queue</h1>
-          <p className="text-slate-600">
-            Deterministic operational intelligence—not operational truth.
-          </p>
+          <Link to="/operations/shipments">← {t("operations.shipmentsTitle")}</Link>
+          <h1 className="mt-2 text-3xl font-bold">{t("operations.attentionTitle")}</h1>
+          <p className="text-slate-600">{t("operations.attentionSubtitle")}</p>
         </header>
         {health && <ProjectionHealthNotice health={health} />}
         {error && (
           <div role="alert" className="rounded bg-red-50 p-3 text-red-700">
             {error}{" "}
             <Button variant="link" onClick={() => void load()}>
-              Retry
+              {t("operations.retry")}
             </Button>
           </div>
         )}
         {loading ? (
-          <p>Loading attention…</p>
+          <p>{t("operations.attentionLoading")}</p>
         ) : rows.length === 0 && legacy.length === 0 ? (
           <p className="rounded bg-white p-8 text-center">
-            No current situations require attention.
+            {t("operations.attentionEmpty")}
           </p>
         ) : (
           <>
@@ -106,7 +104,7 @@ export default function OperationalWorkQueue() {
                       <span
                         className={`rounded px-2 py-1 text-xs font-bold ${tone[row.priority]}`}
                       >
-                        {row.priority} priority
+                        {row.priority} {t("operations.priority")}
                       </span>
                       <span className="rounded bg-slate-100 px-2 py-1 text-xs">
                         {row.type}
@@ -119,20 +117,20 @@ export default function OperationalWorkQueue() {
                       {row.subject.type}: {row.subject.public_id}
                     </Link>
                     <p>
-                      Why:{" "}
+                      {t("operations.why")}:{" "}
                       {row.priority_explanation.drivers
-                        .map((x) => `${x.name} ${x.value ?? "not supplied"}`)
+                        .map((x) => `${x.name} ${x.value ?? t("operations.notSupplied")}`)
                         .join(" · ")}
                     </p>
                     <p>
-                      Owner: {row.owner.state} · Since{" "}
+                      {t("operations.owner")}: {row.owner.state} · {t("operations.since")}{" "}
                       {new Date(row.first_detected_at).toLocaleString(locale)}
                       {row.due_at
-                        ? ` · Due ${new Date(row.due_at).toLocaleString(locale)}`
+                        ? ` · ${t("operations.due")} ${new Date(row.due_at).toLocaleString(locale)}`
                         : ""}
                     </p>
                     <p className="text-xs text-slate-500">
-                      Policy {row.policy.id} {row.policy.version} · calculated{" "}
+                      {t("operations.policy")} {row.policy.id} {row.policy.version} · {t("operations.calculated")}{" "}
                       {new Date(row.freshness.calculated_at).toLocaleString(
                         locale,
                       )}
@@ -141,11 +139,11 @@ export default function OperationalWorkQueue() {
                   <div className="flex items-center gap-2">
                     {row.status === "OPEN" && (
                       <Button onClick={() => void acknowledge(row)}>
-                        Acknowledge
+                        {t("operations.acknowledge")}
                       </Button>
                     )}
                     <Link to={`/operations/intelligence/${row.public_id}`}>
-                      <Button variant="outline">Decision context</Button>
+                      <Button variant="outline">{t("operations.decisionContext")}</Button>
                     </Link>
                   </div>
                 </CardContent>
@@ -165,8 +163,7 @@ export default function OperationalWorkQueue() {
                       {row.milestone_type} · {row.reason}
                     </p>
                     <p className="text-xs">
-                      Existing Control Tower work item · intelligence projection
-                      unavailable
+                      {t("operations.legacyWorkItem")}
                     </p>
                   </div>
                   <Button onClick={() => void resolveLegacy(row)}>

@@ -6,7 +6,12 @@ import * as api from "../../lib/api";
 
 const controls = vi.hoisted(() => ({ permissions: new Set<string>() }));
 vi.mock("../../i18n", () => ({
-  useI18n: () => ({ t: (key: string) => key, direction: "ltr", locale: "en-US" }),
+  useI18n: () => ({ t: (key: string) => ({
+    "operations.activeRoutePlan":"Active route plan",
+    "operations.timelineReconciliation":"Timeline reconciliation",
+    "operations.lifecycle":"Checkpoints and milestone lifecycle",
+    "operations.routeExceptions":"Route exceptions and work items",
+  } as Record<string,string>)[key] || key, direction: "ltr", locale: "en-US" }),
 }));
 vi.mock("../../components/OperationalPermission", () => ({
   default: ({ permission, children }: { permission: string; children: unknown }) =>

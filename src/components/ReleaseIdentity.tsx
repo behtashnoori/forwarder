@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { getReleaseIdentity, type ReleaseIdentityResponse } from "@/lib/api";
 import { env } from "@/lib/env";
+import { useI18n } from "@/i18n";
 
 export type IdentityState = "MATCH" | "MISMATCH" | "BACKEND_UNAVAILABLE" | "IDENTITY_UNAVAILABLE";
 
@@ -12,6 +13,7 @@ export const compareReleaseIdentity = (frontend: string, response?: ReleaseIdent
 };
 
 export default function ReleaseIdentity({ details = false }: { details?: boolean }) {
+  const { t } = useI18n();
   const frontend = env.APP_VERSION || "unknown";
   const [response, setResponse] = useState<ReleaseIdentityResponse>();
   const [unavailable, setUnavailable] = useState(false);
@@ -21,15 +23,16 @@ export default function ReleaseIdentity({ details = false }: { details?: boolean
     return () => { active = false; };
   }, []);
   const state = useMemo(() => compareReleaseIdentity(frontend, response, unavailable), [frontend, response, unavailable]);
-  return <section aria-label="System information" className="min-w-0 text-xs text-slate-500" data-identity-state={state}>
-    <p className="font-medium text-slate-600">Forwarder {frontend}</p>
+  const unavailableLabel = t("operations.unavailable");
+  return <section aria-label={t("operations.systemInformation")} className="min-w-0 text-xs text-slate-500" data-identity-state={state}>
+    <p className="font-medium text-slate-600" dir="ltr">Forwarder {frontend}</p>
     {details && <dl className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">
-      <div><dt>Frontend Version</dt><dd>{frontend}</dd></div>
-      <div><dt>Backend Version</dt><dd>{response?.data.backend_version || "Unavailable"}</dd></div>
-      <div><dt>Release Tag</dt><dd>{response?.data.release_tag || "Unavailable"}</dd></div>
-      <div><dt>Short Commit</dt><dd>{response?.data.short_commit || "Unavailable"}</dd></div>
-      <div><dt>Database Revision</dt><dd className="break-all">{response?.data.database_revision || "Unavailable"}</dd></div>
-      <div><dt>Match status</dt><dd>{state}</dd></div>
+      <div><dt>{t("operations.frontendVersion")}</dt><dd dir="ltr">{frontend}</dd></div>
+      <div><dt>{t("operations.backendVersion")}</dt><dd dir="ltr">{response?.data.backend_version || unavailableLabel}</dd></div>
+      <div><dt>{t("operations.releaseTag")}</dt><dd dir="ltr">{response?.data.release_tag || unavailableLabel}</dd></div>
+      <div><dt>{t("operations.shortCommit")}</dt><dd dir="ltr">{response?.data.short_commit || unavailableLabel}</dd></div>
+      <div><dt>{t("operations.databaseRevision")}</dt><dd dir="ltr" className="break-all">{response?.data.database_revision || unavailableLabel}</dd></div>
+      <div><dt>{t("operations.matchStatus")}</dt><dd dir="ltr">{state}</dd></div>
     </dl>}
   </section>;
 }
