@@ -26,7 +26,7 @@ const consoleErrors = [];
 const pageFor = async (name, viewport={width:1280,height:800}) => {
   const context = await browser.newContext({viewport}); const page = await context.newPage();
   page.on("console", m => { if (m.type()==="error" && !/favicon|status of 403/i.test(m.text())) consoleErrors.push(m.text()); });
-  await page.goto(base); await page.evaluate(({token,user})=>{localStorage.setItem("expert_token",token);localStorage.setItem("expert_user",JSON.stringify(user));},{token:sessions[name].tokens.access_token,user:sessions[name].expert});
+  await page.goto(base); await page.evaluate(({token,user})=>{localStorage.setItem("expert_token",token);localStorage.setItem("expert_user",JSON.stringify(user));localStorage.setItem("forwarder.language","en");},{token:sessions[name].tokens.access_token,user:sessions[name].expert});
   return {context,page};
 };
 try {
@@ -38,7 +38,7 @@ try {
     await context.close();
   }
   const {context,page}=await pageFor("direct_only"); await page.goto(`${base}/operations/shipments/new?source=direct`,{waitUntil:"networkidle"});
-  await page.getByLabel("Customer", {exact:true}).selectOption({index:1}); await page.getByLabel("Origin province", {exact:true}).selectOption({index:1}); await page.getByLabel("Destination province", {exact:true}).selectOption({index:2});
+  await page.getByLabel("Customer", {exact:true}).selectOption({index:1}); await page.getByLabel("Origin Province", {exact:true}).selectOption({index:1}); await page.getByLabel("Destination Province", {exact:true}).selectOption({index:2});
   await page.getByLabel("Planned departure").fill("2030-03-01T10:00"); await page.getByLabel("Planned arrival").fill("2030-03-02T10:00");
   await page.getByRole("button",{name:"Create operation"}).dblclick(); await page.waitForURL(/operations\/shipments\/[0-9a-f-]+$/,{timeout:20000});
   await page.getByText("Source: Direct", {exact:true}).waitFor({timeout:20000});
