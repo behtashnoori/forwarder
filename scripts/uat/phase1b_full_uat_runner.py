@@ -27,7 +27,7 @@ from typing import IO, Iterable, Mapping, Sequence
 
 
 EXPECTED_BRANCH = "codex/pr-4a-dms-gate-repair"
-EXPECTED_HEAD = "fdd700542f4a6765116608fc6c282bae8211bd0e"
+EXPECTED_HEAD = "7c5eb9f0624a1f924c4471f20dada548ce5b6449"
 DATABASE_PREFIX = "forwarder_phase1b_uat_"
 PYTHON = Path(r"C:\Users\pc\AppData\Local\Programs\Python\Python313\python.exe")
 PG_BIN = Path(r"C:\Program Files\PostgreSQL\18\bin")

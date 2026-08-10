@@ -36,13 +36,15 @@ def main() -> None:
         admin.role = "admin"
         membership = OperationalMembership.query.filter_by(user_id=admin.id).one()
         membership.permissions = sorted(set(PHASE1B_ALL_PERMISSIONS) | {"operational_shipment.create_direct", "operational_shipment.create_from_quote"})
-        customer = Customer(first_name="Governed", last_name="Slice 6 Customer", phone="09000000606", status="active")
-        db.session.add(customer)
-        db.session.flush()
-        request = ShipmentRequest(contact_phone="09000000606", customer_first_name="Governed", customer_last_name="Slice 6 Customer", status="waiting_for_customer", status_request_status="new", assigned_to=admin.id, customer_id=customer.id)
-        db.session.add(request)
-        db.session.flush()
-        db.session.add(ExpertQuote(shipment_request_id=request.id, amount=1910, currency="USD", created_by_expert_id=admin.id, created_at=PHASE1B_NOW, customer_response="accepted", responded_at=PHASE1B_NOW, operational_organization_id=organization.id))
+        for sequence in range(1, 9):
+            phone = f"090000006{sequence:02d}"
+            customer = Customer(first_name="Governed", last_name=f"Slice 6 Customer {sequence}", phone=phone, status="active")
+            db.session.add(customer)
+            db.session.flush()
+            request = ShipmentRequest(contact_phone=phone, customer_first_name="Governed", customer_last_name=f"Slice 6 Customer {sequence}", status="waiting_for_customer", status_request_status="new", assigned_to=admin.id, customer_id=customer.id)
+            db.session.add(request)
+            db.session.flush()
+            db.session.add(ExpertQuote(shipment_request_id=request.id, amount=1910 + sequence, currency="USD", created_by_expert_id=admin.id, created_at=PHASE1B_NOW, customer_response="accepted", responded_at=PHASE1B_NOW, operational_organization_id=organization.id))
         db.session.commit()
 
 
