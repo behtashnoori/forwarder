@@ -1,5 +1,14 @@
 # Architecture and Governance Decision Index
 
+## Release 1.9.1 accepted architecture records
+
+Implementation state: **Slice 1 contract only — runtime implementation not started; not published; not deployed**. Production 1.9.0 remains immutable.
+
+| ID | Title | Status | Domain | Date | Authority |
+| --- | --- | --- | --- | --- | --- |
+| ADR-034 | [Optional Commercial Lineage and One OperationalShipment Aggregate](adr/ADR-034-optional-commercial-lineage-single-operational-shipment.md) | Accepted | Operations / Commercial lineage | 2026-08-10 | Slices 2–8 bounded by contract |
+| R191-S1 | [Forwarder 1.9.1 Acceptance-Correction Architecture Contract](release-1.9.1-acceptance-correction-architecture-contract.md) | Accepted architecture; implementation not started | Operations / Location / Release identity | 2026-08-10 | Contract authority only |
+
 ## Release 1.9.0 accepted records
 
 Implementation reconciliation: **Implemented — Not Published — Not Deployed**; migration `20260812_operational_execution` descends from `security_credential_remediation`.
