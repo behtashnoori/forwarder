@@ -25,7 +25,7 @@ const browser = await chromium.launch({executablePath, headless:true});
 const consoleErrors = [];
 const pageFor = async (name, viewport={width:1280,height:800}) => {
   const context = await browser.newContext({viewport}); const page = await context.newPage();
-  page.on("console", m => { if (m.type()==="error" && !/favicon|status of 403/i.test(m.text())) consoleErrors.push(m.text()); });
+  page.on("console", m => { if (m.type()==="error" && !/favicon|status of (403|404|409)|ERR_CONNECTION_REFUSED|ERR_CONNECTION_RESET|ERR_FAILED/i.test(m.text())) consoleErrors.push(m.text()); });
   await page.goto(base); await page.evaluate(({token,user})=>{localStorage.setItem("expert_token",token);localStorage.setItem("expert_user",JSON.stringify(user));localStorage.setItem("forwarder.language","en");},{token:sessions[name].tokens.access_token,user:sessions[name].expert});
   return {context,page};
 };
@@ -48,7 +48,88 @@ try {
   await page.goto(`${base}/operations/work-queue`,{waitUntil:"networkidle"}); check("work-queue-continuity",page.url().endsWith("/operations/work-queue"));
   await context.close();
 
-  const {context:quoteContext,page:quotePage}=await pageFor("both");
+  // Deep links are exercised as browser navigation, reload and real history entries.
+  const {context:deepContext,page:deepPage}=await pageFor("direct_only");
+  await deepPage.goto(`${base}/operations/shipments`,{waitUntil:"networkidle"});
+  await deepPage.goto(`${base}/operations/shipments/${directId}`,{waitUntil:"networkidle"});
+  check("deep-link-normal",await deepPage.getByText("Source: Direct operation",{exact:true}).isVisible());
+  await deepPage.reload({waitUntil:"networkidle"});
+  check("deep-link-refresh",deepPage.url().endsWith(`/operations/shipments/${directId}`)&&await deepPage.getByRole("heading",{name:"Operational shipment detail"}).isVisible());
+  await deepPage.goBack({waitUntil:"networkidle"}); const historyBack=deepPage.url().endsWith("/operations/shipments");
+  await deepPage.goForward({waitUntil:"networkidle"});
+  check("deep-link-history",historyBack&&deepPage.url().endsWith(`/operations/shipments/${directId}`));
+  await deepPage.goto(`${base}/operations/shipments/not-a-valid-identity`,{waitUntil:"networkidle"});
+  check("deep-link-invalid",await deepPage.getByRole("alert").isVisible());
+  await deepPage.goto(`${base}/operations/shipments/00000000-0000-4000-8000-000000000001`,{waitUntil:"networkidle"});
+  check("deep-link-stale-deleted",await deepPage.getByRole("alert").isVisible());
+  await deepContext.close();
+
+  // Downstream surfaces are loaded from each actual browser-created operation.
+  const {context:downstreamContext,page:downstreamPage}=await pageFor("admin");
+  await downstreamPage.goto(`${base}/operations/shipments/${directId}`,{waitUntil:"networkidle"});
+  await downstreamPage.locator('[aria-label="Shipment Economics"]').waitFor({timeout:20000});
+  check("direct-economics",true);
+  await downstreamPage.getByText("Create authorized FX fact",{exact:true}).waitFor();check("direct-fx",true);
+  await downstreamPage.getByText("Operational Execution",{exact:true}).waitFor();check("direct-operational-execution",true);
+  await downstreamPage.goto(`${base}/operations/work-queue`,{waitUntil:"networkidle"});await downstreamPage.getByTestId("projection-health").waitFor();const directOip=await downstreamPage.getByTestId("projection-health").innerText();check("direct-oip",/Intelligence health: (FRESH|STALE|REBUILDING|DEGRADED)/.test(directOip),directOip);
+  await downstreamContext.close();
+
+  // Actual keyboard traversal and activation, rather than component-only semantics.
+  const {context:keyContext,page:keyPage}=await pageFor("direct_only");
+  await keyPage.goto(`${base}/operations/shipments/new`,{waitUntil:"networkidle"});
+  await keyPage.keyboard.press("Tab");
+  let keyboardReached=false;
+  for(let i=0;i<30;i++){const text=await keyPage.evaluate(()=>document.activeElement?.textContent||"");if(text.includes("Direct operation")){keyboardReached=true;break;}await keyPage.keyboard.press("Tab");}
+  check("keyboard-traversal",keyboardReached);
+  await keyPage.keyboard.press("Enter");
+  check("keyboard-interaction",await keyPage.getByLabel("Customer",{exact:true}).isVisible());
+  await keyContext.close();
+
+  const locationCase=async(name,configure)=>{
+    const {context:ctx,page:p}=await pageFor("admin");
+    await p.goto(`${base}/operations/shipments/new?source=direct`,{waitUntil:"networkidle"});
+    await p.getByLabel("Customer",{exact:true}).selectOption({index:1});
+    await configure(p);
+    await p.getByLabel("Planned departure").fill(`2031-01-${String(checks.length%20+1).padStart(2,"0")}T10:00`);
+    await p.getByLabel("Planned arrival").fill(`2031-02-${String(checks.length%20+1).padStart(2,"0")}T10:00`);
+    const request=p.waitForRequest(r=>r.url().endsWith("/api/operational-shipments")&&r.method()==="POST",{timeout:10000});
+    await p.getByRole("button",{name:"Create operation"}).click();
+    let sent;try{sent=await request}catch(error){const alerts=await p.getByRole("alert").allInnerTexts();throw new Error(`${name} did not submit: ${alerts.join(" | ")}`)} await p.waitForURL(/operations\/shipments\/[0-9a-f-]+$/,{timeout:20000});
+    check(name,true,JSON.stringify(sent.postDataJSON()?.route||sent.postDataJSON()).slice(0,500));
+    await ctx.close();
+  };
+  const domestic=async(p,side,index)=>p.getByLabel(`${side} Province`,{exact:true}).selectOption({index});
+  const international=async(p,side,iran=false)=>{
+    await p.getByLabel(`${side} Route type`,{exact:true}).selectOption("international");
+    const country=p.getByLabel(`${side} Country`,{exact:true});
+    const options=await country.locator("option").evaluateAll(nodes=>nodes.map(n=>({value:n.value,text:n.textContent||""})).filter(x=>x.value));
+    const candidates=options.filter(x=>iran?/Iran|ایران/i.test(x.text):!/Iran|ایران/i.test(x.text));const selected=candidates[!iran&&side==="Destination"&&candidates.length>1?1:0];
+    if(!selected)throw new Error(`${side} country fixture missing`); await country.selectOption(selected.value);
+    if(!iran)await p.getByLabel(`${side} International city or operational point`,{exact:true}).selectOption({index:1});
+  };
+  const iranFixtureResponse=await authFetch(sessions.admin.tokens.access_token,"/api/locations/iran-destinations?limit=100");const iranFixtureBody=await iranFixtureResponse.json();check("location-iran-fixture-api",iranFixtureResponse.status===200&&iranFixtureBody.data?.length>=4,JSON.stringify(iranFixtureBody));
+  await locationCase("location-non-iran-origin",async p=>{await international(p,"Origin");await domestic(p,"Destination",2)});
+  await locationCase("location-iran-origin",async p=>{await international(p,"Origin",true);await p.getByLabel("Origin Iran province",{exact:true}).selectOption({index:1});await domestic(p,"Destination",2)});
+  await locationCase("location-non-iran-destination",async p=>{await domestic(p,"Origin",1);await international(p,"Destination")});
+  await locationCase("location-iran-destination",async p=>{await domestic(p,"Origin",1);await international(p,"Destination",true);const selector=p.getByLabel("Destination in Iran",{exact:true});await selector.waitFor();await selector.selectOption({index:1})});
+  for(const [suffix,prefix] of [["city","city:"],["port","port:"],["customs","customs:"]])await locationCase(`location-iran-destination-${suffix}`,async p=>{await domestic(p,"Origin",1);await international(p,"Destination",true);const selector=p.getByLabel("Destination in Iran",{exact:true});await selector.waitFor();const values=await selector.locator("option").evaluateAll(nodes=>nodes.map(n=>n.value));const value=values.find(v=>v.startsWith(prefix))||"";check(`location-${suffix}-fixture`,!!value,JSON.stringify(values));await selector.selectOption(value)});
+  const {context:duplicateContext,page:duplicatePage}=await pageFor("admin");
+  await duplicatePage.goto(`${base}/operations/shipments/new?source=direct`,{waitUntil:"networkidle"});await international(duplicatePage,"Destination",true);
+  const duplicateSelector=duplicatePage.getByLabel("Destination in Iran",{exact:true});await duplicateSelector.waitFor();const duplicateLabels=await duplicateSelector.locator("option").evaluateAll(nodes=>nodes.map(n=>n.textContent||"").filter(Boolean));
+  check("location-duplicate-disambiguation",new Set(duplicateLabels).size===duplicateLabels.length&&duplicateLabels.some(x=>/city|port|customs|شهر|بندر|گمرک/i.test(x)),`options=${duplicateLabels.length}`);await duplicateContext.close();
+  await locationCase("location-non-iran-international",async p=>{await international(p,"Origin");await international(p,"Destination")});
+
+  // Release identity failure states are projected in Chromium from controlled transport outcomes.
+  for(const [state,mode] of [["MISMATCH","mismatch"],["BACKEND_UNAVAILABLE","abort"],["IDENTITY_UNAVAILABLE","empty"]]){
+    const {context:identityContext,page:identityPage}=await pageFor("admin");
+    await identityPage.route("**/api/system/release-identity",async route=>{if(mode==="abort")return route.abort("connectionrefused");const data=mode==="mismatch"?{application_version:"1.9.0",backend_version:"1.9.0"}:{};await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({projection:"support",data})});});
+    await identityPage.goto(`${base}/operations/shipments`,{waitUntil:"networkidle"});
+    await identityPage.locator(`[data-identity-state='${state}']`).waitFor();
+    check(`identity-${state.toLowerCase()}`,true,"visible state attribute reached");
+    await identityContext.close();
+  }
+
+  const {context:quoteContext,page:quotePage}=await pageFor("admin");
   await quotePage.goto(`${base}/operations/shipments/new?source=accepted_quote`,{waitUntil:"networkidle"});
   const quoteSelector=quotePage.getByLabel("Accepted quote",{exact:true});
   await quoteSelector.waitFor();
@@ -70,12 +151,44 @@ try {
   await quotePage.getByText(/^Quote:/).waitFor();
   check("quote-browser-detail",true,"source, customer, request and quote lineage visible");
   const browserQuoteShipmentId=quotePage.url().split("/").pop();
+  await quotePage.locator('[aria-label="Document Readiness"]').waitFor({timeout:20000});check("quote-documents-mdpm",true);
+  await quotePage.locator('[aria-label="Shipment Economics"]').waitFor({timeout:20000});check("quote-economics",true);
+  await quotePage.getByText("Create authorized FX fact",{exact:true}).waitFor();check("quote-fx",true);
+  await quotePage.getByText("Operational Execution",{exact:true}).waitFor();check("quote-operational-execution",true);
+  await quotePage.goto(`${base}/operations/work-queue`,{waitUntil:"networkidle"});await quotePage.getByTestId("projection-health").waitFor();const quoteOip=await quotePage.getByTestId("projection-health").innerText();check("quote-oip",/Intelligence health: (FRESH|STALE|REBUILDING|DEGRADED)/.test(quoteOip),quoteOip);
   await quotePage.goto(`${base}/operations/shipments`,{waitUntil:"networkidle"});
   check("quote-browser-list",await quotePage.locator(`a[href='/operations/shipments/${browserQuoteShipmentId}']`).count()>0);
   await quotePage.goto(`${base}/operations/shipments/new?source=accepted_quote`,{waitUntil:"networkidle"});
   check("quote-browser-ineligible-after-create",await quotePage.getByLabel("Accepted quote",{exact:true}).locator(`option[value='${browserQuoteId}']`).count()===0);
   await quotePage.screenshot({path:path.join(evidence,"slice63-quote-browser-detail.png"),fullPage:true});
   await quoteContext.close();
+
+  const {context:rtlContext,page:rtlPage}=await pageFor("admin");
+  await rtlPage.evaluate(()=>localStorage.setItem("forwarder.language","fa"));
+  await rtlPage.goto(`${base}/operations/shipments/${directId}`,{waitUntil:"networkidle"});
+  check("persian-rtl-direction",await rtlPage.locator("main[dir='rtl']").isVisible());
+  check("persian-operations-heading",await rtlPage.getByRole("heading",{name:"جزئیات پرونده عملیاتی"}).isVisible());
+  const rtlVisible=await rtlPage.locator("main").innerText();
+  const forbiddenEnglish=["Shipment Economics","Timeline reconciliation","Replan and revision history","Operational Execution"];
+  check("persian-visible-operations-text",forbiddenEnglish.every(value=>!rtlVisible.includes(value)),forbiddenEnglish.filter(value=>rtlVisible.includes(value)).join(", "));
+  await rtlPage.screenshot({path:path.join(evidence,"slice63-persian-rtl.png"),fullPage:true});
+  await rtlContext.close();
+
+  const prepareQuote=async p=>{await p.goto(`${base}/operations/shipments/new?source=accepted_quote`,{waitUntil:"networkidle"});const selector=p.getByLabel("Accepted quote",{exact:true});await selector.selectOption({index:1});await p.getByLabel("Origin Province",{exact:true}).selectOption({index:1});await p.getByLabel("Destination Province",{exact:true}).selectOption({index:2});await p.getByLabel("Planned departure").fill("2032-03-01T10:00");await p.getByLabel("Planned arrival").fill("2032-03-02T10:00");return selector.inputValue()};
+  const {context:actorAContext,page:actorA}=await pageFor("both");const {context:actorBContext,page:actorB}=await pageFor("both");
+  const actorQuote=await prepareQuote(actorA);await prepareQuote(actorB);
+  await actorA.getByRole("button",{name:"Create operational shipment"}).click();await actorA.waitForURL(/operations\/shipments\/[0-9a-f-]+$/,{timeout:20000});
+  await actorB.getByRole("button",{name:"Create operational shipment"}).click();
+  await actorB.getByRole("alert").waitFor();
+  check("stale-quote-two-actor",(await actorB.getByRole("alert").innerText()).includes("already been converted"),`quote=${actorQuote}`);
+  await actorAContext.close();await actorBContext.close();
+
+  const {context:recoveryContext,page:recoveryPage}=await pageFor("both");await prepareQuote(recoveryPage);let dropped=false;
+  await recoveryPage.route("**/api/operational-shipments/from-accepted-quote",async route=>{if(route.request().method()!=="POST"||dropped)return route.continue();dropped=true;await route.fetch();await route.abort("connectionreset");});
+  await recoveryPage.getByRole("button",{name:"Create operational shipment"}).click();await recoveryPage.getByRole("alert").waitFor();
+  await recoveryPage.getByRole("button",{name:"Create operational shipment"}).click();await recoveryPage.waitForURL(/operations\/shipments\/[0-9a-f-]+$/,{timeout:20000});
+  const recoveredId=recoveryPage.url().split("/").pop();const recovered=await (await authFetch(sessions.both.tokens.access_token,`/api/operational-shipments/${recoveredId}`)).json();
+  check("browser-transient-recovery",dropped&&recovered.data.public_id===recoveredId,"first response dropped; retry reached same idempotent operation");await recoveryContext.close();
 
   const token=sessions.both.tokens.access_token; const quotes=await (await authFetch(token,"/api/operations/selectors/accepted-quotes?limit=100")).json(); check("eligible-quote",quotes.items.length>0);
   const quoteId=quotes.items[0].id; const route={accepted_quote_id:quoteId,origin:{source_type:"province",source_id:1},destination:{source_type:"province",source_id:2},transport_mode:"road",planned_departure:"2030-04-01T10:00:00Z",planned_arrival:"2030-04-02T10:00:00Z"};

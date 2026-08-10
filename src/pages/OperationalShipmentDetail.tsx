@@ -214,7 +214,7 @@ export default function OperationalShipmentDetail() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Replan and revision history</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{direction === "rtl" ? "بازبرنامه‌ریزی و تاریخچه بازبینی" : "Replan and revision history"}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>Revision {item.revision_number}</strong> · {item.is_active ? "Active target" : item.status} · v{item.version}{item.created_from_plan_id ? " · supersedes the prior plan" : ""}<br />{item.replan_reason && `Reason: ${item.replan_reason}`}</div>)}
               {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Replan reason" placeholder="Replan reason (required)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "A new active revision was created.")}>Replan future segments</Button></div><p className="text-sm text-slate-600">Completed segments remain read-only; only future segments are copied into the new revision.</p></OperationalPermission>}

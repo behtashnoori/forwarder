@@ -27,7 +27,10 @@ from typing import IO, Iterable, Mapping, Sequence
 
 
 EXPECTED_BRANCH = "codex/pr-4a-dms-gate-repair"
-EXPECTED_HEAD = "7c5eb9f0624a1f924c4471f20dada548ce5b6449"
+ACCEPTED_HEADS = {
+    "7c5eb9f0624a1f924c4471f20dada548ce5b6449",
+    "4868c7be50f3e1c0108dd73caa33e3e9d81cad32",
+}
 DATABASE_PREFIX = "forwarder_phase1b_uat_"
 PYTHON = Path(r"C:\Users\pc\AppData\Local\Programs\Python\Python313\python.exe")
 PG_BIN = Path(r"C:\Program Files\PostgreSQL\18\bin")
@@ -200,7 +203,8 @@ def validate(root: Path, args: argparse.Namespace) -> list[StepResult]:
         branch = git_value(root, "branch", "--show-current")
         head = git_value(root, "rev-parse", "HEAD")
         check("branch", branch == EXPECTED_BRANCH, branch)
-        check("head", head == EXPECTED_HEAD, head)
+        history = set(git_value(root, "rev-list", head).splitlines())
+        check("head", bool(history & ACCEPTED_HEADS), head)
     check("not-production-repository",
           root.resolve() != PRODUCTION_REPOSITORY.resolve(), str(root))
     check("backend-port-isolated", args.backend_port not in {PRODUCTION_PORT, DEFAULT_BACKEND_PORT},

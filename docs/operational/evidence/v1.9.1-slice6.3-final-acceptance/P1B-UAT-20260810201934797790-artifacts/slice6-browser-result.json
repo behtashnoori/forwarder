@@ -1,0 +1,422 @@
+{
+  "generated_at": "2026-08-10T20:21:32.288Z",
+  "playwright_version": "1.57.0",
+  "chromium": "C:\\Users\\pc\\AppData\\Local\\ms-playwright\\chromium-1200\\chrome-win64\\chrome.exe",
+  "viewports": [
+    360,
+    390,
+    412,
+    768,
+    1440
+  ],
+  "personas": [
+    "direct_only",
+    "quote_only",
+    "legacy_quote",
+    "both",
+    "no_permission",
+    "admin"
+  ],
+  "checks": [
+    {
+      "name": "login-direct_only",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "name": "login-quote_only",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "name": "login-legacy_quote",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "name": "login-both",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "name": "login-no_permission",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "name": "login-admin",
+      "status": "PASS",
+      "detail": "status=200"
+    },
+    {
+      "name": "direct_only-direct-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "direct_only-quote-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote_only-direct-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote_only-quote-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "legacy_quote-direct-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "legacy_quote-quote-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "both-direct-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "both-quote-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "no_permission-direct-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "no_permission-quote-source",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "no_permission-cannot-create",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "direct-detail-source",
+      "status": "PASS",
+      "detail": "visible locator reached"
+    },
+    {
+      "name": "direct-no-commercial-lineage",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "work-queue-continuity",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "deep-link-normal",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "deep-link-refresh",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "deep-link-history",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "deep-link-invalid",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "deep-link-stale-deleted",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "direct-economics",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "direct-fx",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "direct-operational-execution",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "direct-oip",
+      "status": "PASS",
+      "detail": "Intelligence health: STALE\n\nIntelligence may be outdated. Operational truth and actions remain authoritative.\n\nCode: SOURCE_AHEAD_OF_PROJECTION"
+    },
+    {
+      "name": "keyboard-traversal",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "keyboard-interaction",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "location-iran-fixture-api",
+      "status": "PASS",
+      "detail": "{\"data\":[{\"identity\":{\"id\":1,\"type\":\"port\"},\"label\":\"بندر پذیرش — port — [PHASE1B-UAT] Location 2\",\"province\":{\"id\":2,\"name\":\"[PHASE1B-UAT] Location 2\"},\"secondary_label\":\"port — [PHASE1B-UAT] Location 2\"},{\"identity\":{\"id\":1,\"type\":\"city\"},\"label\":\"مقصد تکراری — city — [PHASE1B-UAT] Location 1\",\"province\":{\"id\":1,\"name\":\"[PHASE1B-UAT] Location 1\"},\"secondary_label\":\"city — [PHASE1B-UAT] Location 1\"},{\"identity\":{\"id\":2,\"type\":\"city\"},\"label\":\"مقصد تکراری — city — [PHASE1B-UAT] Location 2\",\"province\":{\"id\":2,\"name\":\"[PHASE1B-UAT] Location 2\"},\"secondary_label\":\"city — [PHASE1B-UAT] Location 2\"},{\"identity\":{\"id\":1,\"type\":\"customs\"},\"label\":\"مقصد تکراری — customs — [PHASE1B-UAT] Location 1\",\"province\":{\"id\":1,\"name\":\"[PHASE1B-UAT] Location 1\"},\"secondary_label\":\"customs — [PHASE1B-UAT] Location 1\"}],\"meta\":{\"count\":4,\"limit\":100}}"
+    },
+    {
+      "name": "location-non-iran-origin",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"international_city\",\"source_id\":2},\"destination\":{\"source_type\":\"province\",\"source_id\":4},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-13T06:30:00.000Z\",\"planned_arrival\":\"2031-02-13T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "location-iran-origin",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"province\",\"source_id\":3},\"destination\":{\"source_type\":\"province\",\"source_id\":4},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-14T06:30:00.000Z\",\"planned_arrival\":\"2031-02-14T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "location-non-iran-destination",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"province\",\"source_id\":3},\"destination\":{\"source_type\":\"international_city\",\"source_id\":1},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-15T06:30:00.000Z\",\"planned_arrival\":\"2031-02-15T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "location-iran-destination",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"province\",\"source_id\":3},\"destination\":{\"source_type\":\"iran_port\",\"source_id\":1},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-16T06:30:00.000Z\",\"planned_arrival\":\"2031-02-16T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "location-city-fixture",
+      "status": "PASS",
+      "detail": "[\"\",\"port:1\",\"city:1\",\"city:2\",\"customs:1\"]"
+    },
+    {
+      "name": "location-iran-destination-city",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"province\",\"source_id\":3},\"destination\":{\"source_type\":\"city\",\"source_id\":1},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-18T06:30:00.000Z\",\"planned_arrival\":\"2031-02-18T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "location-port-fixture",
+      "status": "PASS",
+      "detail": "[\"\",\"port:1\",\"city:1\",\"city:2\",\"customs:1\"]"
+    },
+    {
+      "name": "location-iran-destination-port",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"province\",\"source_id\":3},\"destination\":{\"source_type\":\"iran_port\",\"source_id\":1},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-20T06:30:00.000Z\",\"planned_arrival\":\"2031-02-20T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "location-customs-fixture",
+      "status": "PASS",
+      "detail": "[\"\",\"port:1\",\"city:1\",\"city:2\",\"customs:1\"]"
+    },
+    {
+      "name": "location-iran-destination-customs",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"province\",\"source_id\":3},\"destination\":{\"source_type\":\"customs_office\",\"source_id\":1},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-02T06:30:00.000Z\",\"planned_arrival\":\"2031-02-02T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "location-duplicate-disambiguation",
+      "status": "PASS",
+      "detail": "options=5"
+    },
+    {
+      "name": "location-non-iran-international",
+      "status": "PASS",
+      "detail": "{\"origin\":{\"source_type\":\"international_city\",\"source_id\":2},\"destination\":{\"source_type\":\"international_city\",\"source_id\":1},\"transport_mode\":\"road\",\"planned_departure\":\"2031-01-04T06:30:00.000Z\",\"planned_arrival\":\"2031-02-04T06:30:00.000Z\",\"source_type\":\"direct\",\"customer_id\":1}"
+    },
+    {
+      "name": "identity-mismatch",
+      "status": "PASS",
+      "detail": "visible state attribute reached"
+    },
+    {
+      "name": "identity-backend_unavailable",
+      "status": "PASS",
+      "detail": "visible state attribute reached"
+    },
+    {
+      "name": "identity-identity_unavailable",
+      "status": "PASS",
+      "detail": "visible state attribute reached"
+    },
+    {
+      "name": "quote-browser-selector-populated",
+      "status": "PASS",
+      "detail": "options=9"
+    },
+    {
+      "name": "quote-browser-submit",
+      "status": "PASS",
+      "detail": "status=201"
+    },
+    {
+      "name": "quote-browser-detail",
+      "status": "PASS",
+      "detail": "source, customer, request and quote lineage visible"
+    },
+    {
+      "name": "quote-documents-mdpm",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote-economics",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote-fx",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote-operational-execution",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote-oip",
+      "status": "PASS",
+      "detail": "Intelligence health: STALE\n\nIntelligence may be outdated. Operational truth and actions remain authoritative.\n\nCode: SOURCE_AHEAD_OF_PROJECTION"
+    },
+    {
+      "name": "quote-browser-list",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote-browser-ineligible-after-create",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "persian-rtl-direction",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "persian-operations-heading",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "persian-visible-operations-text",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "stale-quote-two-actor",
+      "status": "PASS",
+      "detail": "quote=9"
+    },
+    {
+      "name": "browser-transient-recovery",
+      "status": "PASS",
+      "detail": "first response dropped; retry reached same idempotent operation"
+    },
+    {
+      "name": "eligible-quote",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote-real-http",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "quote-idempotent-replay",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "concurrent-quote-conflict",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "changed-payload-conflict",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "responsive-360",
+      "status": "PASS",
+      "detail": "{\"scroll\":360,\"client\":360}"
+    },
+    {
+      "name": "version-360",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "responsive-390",
+      "status": "PASS",
+      "detail": "{\"scroll\":390,\"client\":390}"
+    },
+    {
+      "name": "version-390",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "responsive-412",
+      "status": "PASS",
+      "detail": "{\"scroll\":412,\"client\":412}"
+    },
+    {
+      "name": "version-412",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "responsive-768",
+      "status": "PASS",
+      "detail": "{\"scroll\":768,\"client\":768}"
+    },
+    {
+      "name": "version-768",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "responsive-1440",
+      "status": "PASS",
+      "detail": "{\"scroll\":1440,\"client\":1440}"
+    },
+    {
+      "name": "version-1440",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "identity-normal-minimal",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "identity-admin-support",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "browser-console",
+      "status": "PASS",
+      "detail": "count=0; "
+    }
+  ]
+}

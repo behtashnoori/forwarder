@@ -1,0 +1,457 @@
+{
+  "classification": "AUTOMATED_EXECUTOR_CAPABILITY_LIMITATION",
+  "commands": [
+    {
+      "argv": [
+        "[REDACTED]\\initdb.exe",
+        "-D",
+        "[REDACTED]\\P[REDACTED]B-UAT-202608[REDACTED]020[REDACTED]934797790\\pgdata",
+        "-U",
+        "postgres",
+        "--auth-host=trust",
+        "--auth-local=trust",
+        "--encoding=UTF8"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "PATH": "C:\\Program Files\\PostgreSQL\\18\\bin",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "postgres-init",
+      "shell": false
+    },
+    {
+      "argv": [
+        "[REDACTED]\\pg_ctl.exe",
+        "start",
+        "-D",
+        "[REDACTED]\\P[REDACTED]B-UAT-202608[REDACTED]020[REDACTED]934797790\\pgdata",
+        "-l",
+        "[REDACTED]\\P[REDACTED]B-UAT-202608[REDACTED]020[REDACTED]934797790\\logs\\postgres.server.log",
+        "-o",
+        "-h [REDACTED]27.0.0.[REDACTED] -p 5550[REDACTED]",
+        "-w"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "PATH": "C:\\Program Files\\PostgreSQL\\18\\bin",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "postgres-start",
+      "shell": false
+    },
+    {
+      "argv": [
+        "[REDACTED]\\pg_isready.exe",
+        "-h",
+        "[REDACTED]27.0.0.[REDACTED]",
+        "-p",
+        "5550[REDACTED]",
+        "-d",
+        "postgres",
+        "-U",
+        "postgres"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "PATH": "C:\\Program Files\\PostgreSQL\\18\\bin",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "postgres-ready",
+      "shell": false
+    },
+    {
+      "argv": [
+        "[REDACTED]\\pg_ctl.exe",
+        "stop",
+        "-D",
+        "[REDACTED]\\P[REDACTED]B-UAT-202608[REDACTED]020[REDACTED]934797790\\pgdata",
+        "-m",
+        "fast",
+        "-w"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "PATH": "C:\\Program Files\\PostgreSQL\\18\\bin",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "postgres-stop",
+      "shell": false
+    },
+    {
+      "argv": [
+        "[REDACTED]\\createdb.exe",
+        "-h",
+        "[REDACTED]27.0.0.[REDACTED]",
+        "-p",
+        "5550[REDACTED]",
+        "-U",
+        "postgres",
+        "forwarder_phase[REDACTED]b_uat_202608[REDACTED]020[REDACTED]934797790"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "PATH": "C:\\Program Files\\PostgreSQL\\18\\bin",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "database-create",
+      "shell": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python3[REDACTED]3\\python.exe",
+        "-m",
+        "backend.migration_cli",
+        "upgrade",
+        "--confirm"
+      ],
+      "env": {
+        "APP_ENV": "uat",
+        "AUTO_MIGRATE_ON_STARTUP": "false",
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "DATABASE_URL": "[REDACTED]",
+        "FORWARDER_UAT_PASSWORD": "[REDACTED]",
+        "JWT_SECRET_KEY": "[REDACTED]",
+        "PATH": "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python313;C:\\Program Files\\PostgreSQL\\18\\bin;C:\\Program Files\\nodejs",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SECRET_KEY": "[REDACTED]",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "migration",
+      "shell": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python3[REDACTED]3\\python.exe",
+        "scripts/[REDACTED]/v[REDACTED]9[REDACTED]_slice6_seed.py"
+      ],
+      "env": {
+        "APP_ENV": "uat",
+        "AUTO_MIGRATE_ON_STARTUP": "false",
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "DATABASE_URL": "[REDACTED]",
+        "FORWARDER_UAT_PASSWORD": "[REDACTED]",
+        "JWT_SECRET_KEY": "[REDACTED]",
+        "PATH": "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python313;C:\\Program Files\\PostgreSQL\\18\\bin;C:\\Program Files\\nodejs",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SECRET_KEY": "[REDACTED]",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "seed",
+      "shell": false
+    },
+    {
+      "argv": [
+        "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python3[REDACTED]3\\python.exe",
+        "-m",
+        "waitress",
+        "--listen=[REDACTED]27.0.0.[REDACTED]:57[REDACTED]4[REDACTED]",
+        "backend.wsgi:app"
+      ],
+      "env": {
+        "APP_ENV": "uat",
+        "AUTO_MIGRATE_ON_STARTUP": "false",
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "DATABASE_URL": "[REDACTED]",
+        "FORWARDER_UAT_PASSWORD": "[REDACTED]",
+        "JWT_SECRET_KEY": "[REDACTED]",
+        "PATH": "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python313;C:\\Program Files\\PostgreSQL\\18\\bin;C:\\Program Files\\nodejs",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SECRET_KEY": "[REDACTED]",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": true,
+      "name": "backend",
+      "shell": false
+    },
+    {
+      "argv": [
+        "[REDACTED]\\node.exe",
+        "D:\\[REDACTED]-webapp\\[REDACTED]5-forwarder\\node_modules\\vite\\bin\\vite.js",
+        "--host",
+        "[REDACTED]27.0.0.[REDACTED]",
+        "--port",
+        "5245",
+        "--strictPort"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "NODE_ENV": "development",
+        "PATH": "C:\\Program Files\\nodejs",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "VITE_BACKEND_URL": "http://127.0.0.1:57141",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": true,
+      "name": "vite",
+      "shell": false
+    },
+    {
+      "argv": [
+        "[REDACTED]\\node.exe",
+        "D:\\[REDACTED]-webapp\\[REDACTED]5-forwarder\\scripts\\uat\\v[REDACTED]9[REDACTED]_slice6_browser_runner.mjs"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "PATH": "C:\\Program Files\\nodejs",
+        "PHASE1B_UAT_API_URL": "http://127.0.0.1:57141",
+        "PHASE1B_UAT_BASE_URL": "http://127.0.0.1:5245",
+        "PHASE1B_UAT_EVIDENCE_DIR": "C:\\Users\\pc\\AppData\\Local\\Temp\\P1B-UAT-20260810201934797790\\evidence",
+        "PHASE1B_UAT_MODE": "full",
+        "PHASE1B_UAT_PASSWORD": "[REDACTED]",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "browser",
+      "shell": false
+    },
+    {
+      "argv": [
+        "[REDACTED]\\dropdb.exe",
+        "-h",
+        "[REDACTED]27.0.0.[REDACTED]",
+        "-p",
+        "5550[REDACTED]",
+        "-U",
+        "postgres",
+        "--if-exists",
+        "forwarder_phase[REDACTED]b_uat_202608[REDACTED]020[REDACTED]934797790"
+      ],
+      "env": {
+        "COMSPEC": "C:\\WINDOWS\\system32\\cmd.exe",
+        "PATH": "C:\\Program Files\\PostgreSQL\\18\\bin",
+        "PYTHONUNBUFFERED": "1",
+        "PYTHONUTF8": "1",
+        "SYSTEMROOT": "C:\\WINDOWS",
+        "TEMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "TMP": "C:\\Users\\pc\\AppData\\Local\\Temp",
+        "WINDIR": "C:\\WINDOWS"
+      },
+      "long_running": false,
+      "name": "database-drop",
+      "shell": false
+    }
+  ],
+  "generated_at_utc": "2026-08-10T20:21:33.076898+00:00",
+  "mode": "run",
+  "persistent_applied": false,
+  "results": [
+    {
+      "detail": "D:\\1-webapp\\15-forwarder",
+      "duration_seconds": 0.0,
+      "name": "repository",
+      "status": "PASS"
+    },
+    {
+      "detail": "codex/pr-4a-dms-gate-repair",
+      "duration_seconds": 0.0,
+      "name": "branch",
+      "status": "PASS"
+    },
+    {
+      "detail": "d2fb4839a3dc9dcbffe8ab4a404ba104cf10b098",
+      "duration_seconds": 0.0,
+      "name": "head",
+      "status": "PASS"
+    },
+    {
+      "detail": "D:\\1-webapp\\15-forwarder",
+      "duration_seconds": 0.0,
+      "name": "not-production-repository",
+      "status": "PASS"
+    },
+    {
+      "detail": "isolated loopback port 57141",
+      "duration_seconds": 0.0,
+      "name": "backend-port-isolated",
+      "status": "PASS"
+    },
+    {
+      "detail": "ignored by allowlisted child environment; count=1",
+      "duration_seconds": 0.0,
+      "name": "repository-env-files-isolated",
+      "status": "PASS"
+    },
+    {
+      "detail": "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python313\\python.exe",
+      "duration_seconds": 0.0,
+      "name": "python",
+      "status": "PASS"
+    },
+    {
+      "detail": "C:\\Program Files\\PostgreSQL\\18\\bin",
+      "duration_seconds": 0.0,
+      "name": "postgresql-18",
+      "status": "PASS"
+    },
+    {
+      "detail": "C:\\Program Files\\nodejs\\node.exe",
+      "duration_seconds": 0.0,
+      "name": "node",
+      "status": "PASS"
+    },
+    {
+      "detail": "node_modules/vite/bin/vite.js",
+      "duration_seconds": 0.0,
+      "name": "vite-cli",
+      "status": "PASS"
+    },
+    {
+      "detail": "D:\\1-webapp\\15-forwarder\\scripts\\uat\\v191_slice6_browser_runner.mjs",
+      "duration_seconds": 0.0,
+      "name": "browser-runner",
+      "status": "PASS"
+    },
+    {
+      "detail": "5001 and 5432 are forbidden",
+      "duration_seconds": 0.0,
+      "name": "forbidden-ports",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 4.982,
+      "name": "postgres-init",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 0.43,
+      "name": "postgres-start",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 0.094,
+      "name": "postgres-ready",
+      "status": "PASS"
+    },
+    {
+      "detail": "loopback ready",
+      "duration_seconds": 0.0,
+      "name": "postgres",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 0.243,
+      "name": "database-create",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 3.282,
+      "name": "migration",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 4.708,
+      "name": "seed",
+      "status": "PASS"
+    },
+    {
+      "detail": "ready",
+      "duration_seconds": 0.0,
+      "name": "backend",
+      "status": "PASS"
+    },
+    {
+      "detail": "ready",
+      "duration_seconds": 0.0,
+      "name": "vite",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 100.992,
+      "name": "browser",
+      "status": "PASS"
+    },
+    {
+      "detail": "stopped",
+      "duration_seconds": 0.0,
+      "name": "vite-cleanup",
+      "status": "PASS"
+    },
+    {
+      "detail": "stopped",
+      "duration_seconds": 0.0,
+      "name": "backend-cleanup",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 0.275,
+      "name": "database-drop",
+      "status": "PASS"
+    },
+    {
+      "detail": "completed",
+      "duration_seconds": 0.163,
+      "name": "postgres-stop",
+      "status": "PASS"
+    },
+    {
+      "detail": "D:\\1-webapp\\15-forwarder\\docs\\operational\\evidence\\v1.9.1-slice6.3-final-acceptance\\P1B-UAT-20260810201934797790-artifacts",
+      "duration_seconds": 0.0,
+      "name": "browser-artifacts",
+      "status": "PASS"
+    }
+  ],
+  "run_id": "P1B-UAT-20260810201934797790",
+  "schema_version": 1
+}
