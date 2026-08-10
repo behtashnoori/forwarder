@@ -1,10 +1,10 @@
-# Forwarder 1.9.0 smoke test
+# Forwarder 1.9.1 smoke test
 
 ## Platform and security
 
 - HTTPS root and same-origin API succeed; external HTTP redirects to HTTPS.
 - `/api/health/ping`, `/api/health`, and `/api/health/ready` return the approved
-  healthy responses with revision `20260818_immutable_fx_provenance`.
+  healthy responses with revision `20260819_v191_acceptance_corrections`.
 - Release-local Python imports `psycopg2-binary 2.9.11`.
 - Unauthenticated protected routes return 401 and cross-tenant reads remain 404.
 - HTML is no-store/revalidate; hashed assets are immutable; manifest/icons
@@ -13,6 +13,8 @@
 ## Integrated application
 
 - Existing request, Project, Shipment, and document reads remain available.
+- Direct and accepted-quote Operational Shipment creation, list, detail, and
+  source-aware lineage behave correctly with canonical location references.
 - Operational Execution initialization, milestones, events, delays, exceptions,
   progress, and work queue use opaque Shipment identity.
 - MDPM requirements, exact document versions, assessments, applicability,
@@ -30,5 +32,4 @@
   are changed only under separate authorization.
 - Existing shipments receive no automatic Operational Execution, MDPM, OIP, or
   Economics rows.
-- Confirm manifest-named JS/CSS assets; version 1.9.0 is embedded but is not
-  visibly rendered in the UI.
+- Confirm manifest-named JS/CSS assets and visible/support release identity 1.9.1.

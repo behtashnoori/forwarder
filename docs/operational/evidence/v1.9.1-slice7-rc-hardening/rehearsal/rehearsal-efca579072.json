@@ -1,0 +1,150 @@
+{
+  "run_id": "efca579072",
+  "baseline": "20260818_immutable_fx_provenance",
+  "head": "20260819_v191_acceptance_corrections",
+  "status": "PASS",
+  "migration_seconds": 0.147612,
+  "wal_bytes": 48064,
+  "lock_samples": [
+    {
+      "mode": "AccessShareLock",
+      "granted": true,
+      "count": 5
+    },
+    {
+      "mode": "AccessShareLock",
+      "granted": true,
+      "count": 9
+    },
+    {
+      "mode": "AccessExclusiveLock",
+      "granted": true,
+      "count": 1
+    },
+    {
+      "mode": "AccessShareLock",
+      "granted": true,
+      "count": 10
+    },
+    {
+      "mode": "RowExclusiveLock",
+      "granted": true,
+      "count": 1
+    },
+    {
+      "mode": "AccessShareLock",
+      "granted": true,
+      "count": 18
+    },
+    {
+      "mode": "RowShareLock",
+      "granted": true,
+      "count": 1
+    },
+    {
+      "mode": "ShareRowExclusiveLock",
+      "granted": true,
+      "count": 2
+    },
+    {
+      "mode": "AccessExclusiveLock",
+      "granted": true,
+      "count": 4
+    },
+    {
+      "mode": "AccessShareLock",
+      "granted": true,
+      "count": 41
+    },
+    {
+      "mode": "RowShareLock",
+      "granted": true,
+      "count": 2
+    },
+    {
+      "mode": "ShareLock",
+      "granted": true,
+      "count": 1
+    },
+    {
+      "mode": "ShareRowExclusiveLock",
+      "granted": true,
+      "count": 4
+    },
+    {
+      "mode": "AccessExclusiveLock",
+      "granted": true,
+      "count": 7
+    },
+    {
+      "mode": "AccessShareLock",
+      "granted": true,
+      "count": 50
+    },
+    {
+      "mode": "RowShareLock",
+      "granted": true,
+      "count": 3
+    },
+    {
+      "mode": "ShareLock",
+      "granted": true,
+      "count": 2
+    },
+    {
+      "mode": "ShareRowExclusiveLock",
+      "granted": true,
+      "count": 5
+    },
+    {
+      "mode": "AccessExclusiveLock",
+      "granted": true,
+      "count": 10
+    },
+    {
+      "mode": "AccessShareLock",
+      "granted": true,
+      "count": 54
+    },
+    {
+      "mode": "RowExclusiveLock",
+      "granted": true,
+      "count": 12
+    },
+    {
+      "mode": "RowShareLock",
+      "granted": true,
+      "count": 50
+    },
+    {
+      "mode": "ShareUpdateExclusiveLock",
+      "granted": true,
+      "count": 1
+    }
+  ],
+  "blocking_locks_observed": false,
+  "revision": "20260819_v191_acceptance_corrections",
+  "row_counts_before": {
+    "shipment_request": 2,
+    "expert_quote": 2,
+    "operational_shipment": 2
+  },
+  "row_counts_after": {
+    "shipment_request": 2,
+    "expert_quote": 2,
+    "operational_shipment": 2
+  },
+  "accepted_quote_rows": 2,
+  "direct_rows": 1,
+  "dump_bytes": 584028,
+  "restore_revision": "20260819_v191_acceptance_corrections",
+  "restore_row_counts": {
+    "shipment_request": 2,
+    "expert_quote": 2,
+    "operational_shipment": 3
+  },
+  "restore_operational_shipments": 3,
+  "document_backup_bytes": 197,
+  "document_hash_match": true,
+  "total_seconds": 4.428
+}

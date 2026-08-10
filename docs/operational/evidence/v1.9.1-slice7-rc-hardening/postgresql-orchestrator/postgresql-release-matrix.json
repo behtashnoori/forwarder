@@ -1,0 +1,576 @@
+{
+  "schema_version": 1,
+  "run_id": "20260810203200e852f4",
+  "generated_at": "2026-08-10T20:34:55.072206+00:00",
+  "postgresql_gate": "FAIL",
+  "suites": [
+    {
+      "suite_id": "phase02_current_head",
+      "classification": "CURRENT_HEAD_COMPATIBILITY_REQUIRED",
+      "source_test_path": [
+        "backend/tests/test_phase0_2_current_head_compatibility_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_integrated_rc_phase02_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_UAT_PASSWORD",
+        "INTEGRATED_RC_POSTGRES_URL"
+      ],
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 6.78,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase02_current_head.log",
+      "evidence_sha256": "d31f5eae1a3a0cce0ec4649dbc26e351299d916aa5edda140c3ff37791e67e1c",
+      "cleanup_result": [
+        "forwarder_integrated_rc_phase02_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "dms_current_head",
+      "classification": "CURRENT_HEAD_COMPATIBILITY_REQUIRED",
+      "source_test_path": [
+        "backend/tests/test_dms_current_head_compatibility_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_integrated_rc_dms_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "DMS_DISPOSABLE_STORAGE_ROOT",
+        "FORWARDER_UAT_PASSWORD",
+        "INTEGRATED_RC_POSTGRES_URL"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 6.01,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-dms_current_head.log",
+      "evidence_sha256": "1f92c1ddc49772d6bbe886d61778482c8951ce2ebac0b4a936d391c8df95aeb5",
+      "cleanup_result": [
+        "forwarder_integrated_rc_dms_20260810203200e852f4:dropped",
+        "disposable-storage:removed"
+      ]
+    },
+    {
+      "suite_id": "phase1a_operational",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_operational_vertical_slice_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase1a_test_rc_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_PHASE1A_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 6.308,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase1a_operational.log",
+      "evidence_sha256": "766a2e7a5c24b87eed31ffce33b09e872b790a9d045fd41465c73fb32a3667e2",
+      "cleanup_result": [
+        "forwarder_phase1a_test_rc_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "phase1b_operational",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_multileg_route_orchestration_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase1b_uat_ops_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "phase1b_uat:v1 (twice)",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_PHASE1B_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "duration_seconds": 11.344,
+      "status": "FAILED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase1b_operational.log",
+      "evidence_sha256": "8d9f10f53750a9899d5a852e314058b7addb87d2b3138485c72a7b9efceda57b",
+      "cleanup_result": [
+        "forwarder_phase1b_uat_ops_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "phase1b_races",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_exception_reconciliation_races_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase1a_test_phase1b_races_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_PHASE1B_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 0,
+      "failed": 2,
+      "skipped": 0,
+      "duration_seconds": 6.219,
+      "status": "FAILED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase1b_races.log",
+      "evidence_sha256": "3b3889e5a9b933e425043d80179c9d176d75ce6bbe64a347c64df946f14cb206",
+      "cleanup_result": [
+        "forwarder_phase1a_test_phase1b_races_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "phase1b_reporter",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_reporter_permission_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase1b_uat_reporter_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "phase1b_uat:v1 (twice)",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_PHASE1B_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 11.555,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase1b_reporter.log",
+      "evidence_sha256": "ebfd11c9833d3e19ad19d0c36556c71f55a26628d3d60a65074ac8c140205c86",
+      "cleanup_result": [
+        "forwarder_phase1b_uat_reporter_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "phase1b_dedup",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_shipment_list_deduplication_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase1b_uat_dedup_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "phase1b_uat:v1 (twice)",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_PHASE1B_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 11.451,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase1b_dedup.log",
+      "evidence_sha256": "044203db6efdc951e30a709f2d84b637e9383d07b7ee58ba8dedb6cf087deb46",
+      "cleanup_result": [
+        "forwarder_phase1b_uat_dedup_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "multi_unit_tracking",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_multi_unit_tracking_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_security_test_tracking_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_POSTGRES_TRACKING_TEST_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 6.499,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-multi_unit_tracking.log",
+      "evidence_sha256": "1112c377cfd6d2a58633aa413472c7fd63f3b96a1b569dfd0aacc2af1e4a0b45",
+      "cleanup_result": [
+        "forwarder_security_test_tracking_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "tracking_locations",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_tracking_locations_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_tracking_location_migration_test_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_TRACKING_LOCATION_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 6.839,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-tracking_locations.log",
+      "evidence_sha256": "e1ce932a6ad8e89c8b8580bf9a175aae44353495b3b8e76fe11828aad915780c",
+      "cleanup_result": [
+        "forwarder_tracking_location_migration_test_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "reference_schema",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_reference_schema_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_reference_schema_test_20260810203200e852f4"
+      ],
+      "migration_revision": "20260720_expand_reference_data_identity",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_REFERENCE_SCHEMA_TEST_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 4.999,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-reference_schema.log",
+      "evidence_sha256": "7d0a3c2a0891c4bb0d519394e0999cd433ae643b57e08c7db06a0745cc58cbd6",
+      "cleanup_result": [
+        "forwarder_reference_schema_test_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "mdpm_races",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_mdpm_races_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase1b_uat_mdpm_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "phase1b_uat:v1 (twice) + mdpm_validation_seed:v1 (twice)",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_UAT_PASSWORD",
+        "MDPM_POSTGRES_URL"
+      ],
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 37.685,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-mdpm_races.log",
+      "evidence_sha256": "557de11bf80f6713c73612c7aa203b7d7d9e6efe4eb0bcd132383b5478897477",
+      "cleanup_result": [
+        "forwarder_phase1b_uat_mdpm_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "oip_races",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_oip_races_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_oip2_gate_races_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_UAT_PASSWORD",
+        "OIP_POSTGRES_URL"
+      ],
+      "passed": 13,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 9.97,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-oip_races.log",
+      "evidence_sha256": "0afb1c025e4007d449ad8fbe94cefe3d822f5796424bfb67e7ce476477ea0809",
+      "cleanup_result": [
+        "forwarder_oip2_gate_races_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "oip_rebuild_recovery",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_oip_rebuild_recovery_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_oip2_gate_recovery_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_UAT_PASSWORD",
+        "OIP_POSTGRES_URL"
+      ],
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 6.257,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-oip_rebuild_recovery.log",
+      "evidence_sha256": "b987f145161fc837770bb5d9c459a5bdce1d9ef334e2412d37bc5f1f1a9e04e8",
+      "cleanup_result": [
+        "forwarder_oip2_gate_recovery_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "fe2_races",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_fe2_races_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_fe2_gate_races_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FE2_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 14,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 10.582,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-fe2_races.log",
+      "evidence_sha256": "facd80585f49cca2f191f69adfd14b80bc136afa6d5b937e1e2faac721f99272",
+      "cleanup_result": [
+        "forwarder_fe2_gate_races_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "fe2_migration",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "scripts/fe2_postgres_migration_gate.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_fe2_gate_migration_20260810203200e852f4"
+      ],
+      "migration_revision": "20260819_v191_acceptance_corrections",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FE2_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "duration_seconds": 8.277,
+      "status": "FAILED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-fe2_migration.log",
+      "evidence_sha256": "c570037e4ac083330b097eca26abd2e9c2ca120ac95b199184332dce5902b1c0",
+      "cleanup_result": [
+        "forwarder_fe2_gate_migration_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "phase1b_safe_downgrade",
+      "classification": "CURRENT_HEAD_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_phase1b_safe_downgrade_postgresql.py"
+      ],
+      "evidence_context": "current-head",
+      "git_worktree_identity": "5b144f7f5032a44ef60fde1065bb1a3b24e8bfa6",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase1a_test_phase1b_safehead_20260810203200e852f4",
+        "forwarder_phase1a_test_phase1b_safebase_20260810203200e852f4"
+      ],
+      "migration_revision": "20260801_route_exception",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_PHASE1B_SAFE_DOWNGRADE_HEAD_URL",
+        "FORWARDER_PHASE1B_SAFE_DOWNGRADE_PHASE1B_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 2,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 9.145,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase1b_safe_downgrade.log",
+      "evidence_sha256": "b3821fe91e4d2326e58e694ddecde225d2f04699c7de2f979ad4775f8ac187fe",
+      "cleanup_result": [
+        "forwarder_phase1a_test_phase1b_safebase_20260810203200e852f4:dropped",
+        "forwarder_phase1a_test_phase1b_safehead_20260810203200e852f4:dropped"
+      ]
+    },
+    {
+      "suite_id": "phase02_historical",
+      "classification": "HISTORICAL_RELEASE_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_phase0_2_postgresql_gate.py"
+      ],
+      "evidence_context": "historical",
+      "git_worktree_identity": "57c9e34da51f8471432debb44ed41ac0200dc05a",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "forwarder_phase02_test_historical_20260810203200e852f4"
+      ],
+      "migration_revision": "20260729_operational_vertical_slice",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "FORWARDER_PHASE02_POSTGRES_URL",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 7.15,
+      "status": "PASSED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-phase02_historical.log",
+      "evidence_sha256": "acc0717f93e3a60fc02a3decb42a70312d3b82632e4592e40a3e34b506e30981",
+      "cleanup_result": [
+        "forwarder_phase02_test_historical_20260810203200e852f4:dropped",
+        "worktree:removed"
+      ]
+    },
+    {
+      "suite_id": "dms_historical",
+      "classification": "HISTORICAL_RELEASE_MANDATORY",
+      "source_test_path": [
+        "backend/tests/test_case_documents_postgresql.py",
+        "backend/tests/test_case_documents_schema_parity.py"
+      ],
+      "evidence_context": "historical",
+      "git_worktree_identity": "7ae1517fa20266116be723c8fdb8294a8b895d88",
+      "postgresql_version": "18.0",
+      "database_identity": [
+        "dms1a_historical_20260810203200e852f4"
+      ],
+      "migration_revision": "20260804_case_documents",
+      "seed_identity_version": "none",
+      "environment_variable_names": [
+        "APP_ENV",
+        "DATABASE_URL",
+        "DMS_DISPOSABLE_POSTGRES_URL",
+        "DMS_DISPOSABLE_STORAGE_ROOT",
+        "FORWARDER_UAT_PASSWORD"
+      ],
+      "passed": 2,
+      "failed": 4,
+      "skipped": 0,
+      "duration_seconds": 7.627,
+      "status": "FAILED",
+      "evidence_path": "docs\\operational\\evidence\\v1.9.1-slice7-rc-hardening\\postgresql-orchestrator\\20260810203200e852f4-dms_historical.log",
+      "evidence_sha256": "896b86b7403620d950ede68d23e8ea4fb6f348c3c681c0f39f59134709585d01",
+      "cleanup_result": [
+        "dms1a_historical_20260810203200e852f4:dropped",
+        "worktree:removed",
+        "disposable-storage:removed"
+      ]
+    }
+  ]
+}
