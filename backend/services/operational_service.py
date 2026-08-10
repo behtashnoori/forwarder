@@ -7,7 +7,7 @@ import hashlib
 import json
 from typing import Any
 
-from sqlalchemy import select, text
+from sqlalchemy import exists, or_, select, text
 from sqlalchemy.exc import IntegrityError
 
 from backend.extensions import db
@@ -98,6 +98,188 @@ def operational_context(user: dict[str, Any]) -> dict[str, Any]:
         "organization_id": membership.organization_id,
         "permissions": sorted(set(membership.permissions or [])),
     }
+
+
+def _selector_organization(
+    user: dict[str, Any], permissions: set[str]
+) -> int:
+    """Resolve one active tenant and authorize without relying on role names."""
+    membership = _membership_for_user(int(user["id"]))
+    if not permissions.intersection(membership.permissions or []):
+        raise OperationalError(
+            "FORBIDDEN_OPERATION", "You are not allowed to perform this operation.", 403
+        )
+    return int(membership.organization_id)
+
+
+def _selector_terms(args: dict[str, Any]) -> tuple[str, int]:
+    q = str(args.get("q") or "").strip()
+    if len(q) > 160:
+        raise OperationalError("VALIDATION_FAILED", "q must not exceed 160 characters.")
+    try:
+        limit = int(args.get("limit", 25))
+    except (TypeError, ValueError) as exc:
+        raise OperationalError(
+            "VALIDATION_FAILED", "limit must be an integer."
+        ) from exc
+    if limit < 1 or limit > 100:
+        raise OperationalError("VALIDATION_FAILED", "limit must be between 1 and 100.")
+    return q, limit
+
+
+def _customer_label(customer: Customer) -> str:
+    return (
+        customer.company_name
+        or " ".join(
+            value for value in (customer.first_name, customer.last_name) if value
+        ).strip()
+    )
+
+
+def customer_selector(args: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
+    """Return active canonical customers without implying organization ownership."""
+    _selector_organization(user, {"operational_shipment.create_direct"})
+    q, limit = _selector_terms(args)
+    query = select(Customer).where(Customer.status == "active")
+    if q:
+        pattern = f"%{q}%"
+        query = query.where(
+            or_(
+                Customer.company_name.ilike(pattern),
+                Customer.first_name.ilike(pattern),
+                Customer.last_name.ilike(pattern),
+            )
+        )
+    rows = db.session.scalars(
+        query.order_by(
+            Customer.company_name.asc().nullslast(),
+            Customer.last_name.asc(),
+            Customer.first_name.asc(),
+            Customer.id.asc(),
+        ).limit(limit)
+    ).all()
+    return {
+        "items": [{"id": row.id, "label": _customer_label(row)} for row in rows],
+        "meta": {"count": len(rows), "limit": limit},
+    }
+
+
+def project_selector(args: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
+    org = _selector_organization(
+        user,
+        {
+            "operational_shipment.create_direct",
+            "operational_shipment.create_from_quote",
+            "operational_shipment.create",
+        },
+    )
+    q, limit = _selector_terms(args)
+    query = select(Project).where(
+        Project.organization_id == org,
+        Project.lifecycle_status.not_in(("completed", "cancelled")),
+    )
+    customer_id = args.get("customer_id")
+    if customer_id not in (None, ""):
+        try:
+            customer_id = int(customer_id)
+        except (TypeError, ValueError) as exc:
+            raise OperationalError(
+                "VALIDATION_FAILED", "customer_id must be an integer."
+            ) from exc
+        query = query.where(Project.primary_customer_id == customer_id)
+    if q:
+        pattern = f"%{q}%"
+        query = query.where(
+            or_(
+                Project.project_code.ilike(pattern),
+                Project.tracking_code.ilike(pattern),
+            )
+        )
+    rows = db.session.scalars(
+        query.order_by(
+            Project.project_code.asc(), Project.tracking_code.asc(), Project.id.asc()
+        ).limit(limit)
+    ).all()
+    return {
+        "items": [
+            {
+                "public_id": row.public_id,
+                "label": row.project_code,
+                "project_code": row.project_code,
+                "primary_customer_id": row.primary_customer_id,
+                "lifecycle_status": row.lifecycle_status,
+            }
+            for row in rows
+        ],
+        "meta": {"count": len(rows), "limit": limit},
+    }
+
+
+def _eligible_quote_query(org: int):
+    return (
+        select(ExpertQuote)
+        .join(ShipmentRequest, ShipmentRequest.id == ExpertQuote.shipment_request_id)
+        .where(
+            ExpertQuote.operational_organization_id == org,
+            ExpertQuote.customer_response == "accepted",
+            ShipmentRequest.customer_id.is_not(None),
+            ~exists(
+                select(OperationalShipment.id).where(
+                    OperationalShipment.accepted_quote_id == ExpertQuote.id
+                )
+            ),
+        )
+    )
+
+
+def accepted_quote_selector(
+    args: dict[str, Any], user: dict[str, Any]
+) -> dict[str, Any]:
+    org = _selector_organization(
+        user,
+        {"operational_shipment.create_from_quote", "operational_shipment.create"},
+    )
+    q, limit = _selector_terms(args)
+    query = _eligible_quote_query(org)
+    if q:
+        pattern = f"%{q}%"
+        query = query.where(
+            or_(
+                ShipmentRequest.tracking_code.ilike(pattern),
+                ShipmentRequest.customer_first_name.ilike(pattern),
+                ShipmentRequest.customer_last_name.ilike(pattern),
+            )
+        )
+    rows = db.session.scalars(
+        query.order_by(
+            ExpertQuote.responded_at.desc().nullslast(), ExpertQuote.id.desc()
+        ).limit(limit)
+    ).all()
+    items = []
+    for quote in rows:
+        request_row = db.session.get(ShipmentRequest, quote.shipment_request_id)
+        customer = db.session.get(Customer, request_row.customer_id)
+        items.append(
+            {
+                "id": quote.id,
+                "request_public_id": request_row.tracking_code,
+                "customer_label": _customer_label(customer),
+                "route_label": " → ".join(
+                    value
+                    for value in (
+                        request_row.origin_city_international,
+                        request_row.dest_city_international,
+                    )
+                    if value
+                )
+                or None,
+                "quote_label": f"{quote.amount} {quote.currency}",
+                "accepted_at": quote.responded_at.isoformat()
+                if quote.responded_at
+                else None,
+            }
+        )
+    return {"items": items, "meta": {"count": len(items), "limit": limit}}
 
 
 def _parse_utc(value: Any, field: str) -> datetime:

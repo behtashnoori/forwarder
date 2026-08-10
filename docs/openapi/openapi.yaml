@@ -877,7 +877,39 @@ components:
         last_failure_at: { type: string, format: date-time, nullable: true }
         run_id: { type: string, format: uuid, nullable: true }
         version: { type: integer, minimum: 1 }
+    SelectorMeta:
+      type: object
+      additionalProperties: false
+      required: [count, limit]
+      properties: { count: { type: integer, minimum: 0 }, limit: { type: integer, minimum: 1, maximum: 100 } }
+    CustomerSelectorPage:
+      type: object
+      additionalProperties: false
+      required: [items, meta]
+      properties:
+        items: { type: array, items: { type: object, additionalProperties: false, required: [id, label], properties: { id: { type: integer, description: Canonical Customer compatibility ID; Customer has no public ID in the current schema. }, label: { type: string } } } }
+        meta: { $ref: '#/components/schemas/SelectorMeta' }
+    ProjectSelectorPage:
+      type: object
+      additionalProperties: false
+      required: [items, meta]
+      properties:
+        items: { type: array, items: { type: object, additionalProperties: false, required: [public_id, label, project_code, primary_customer_id, lifecycle_status], properties: { public_id: { type: string, format: uuid }, label: { type: string }, project_code: { type: string }, primary_customer_id: { type: integer, description: Canonical Customer compatibility ID. }, lifecycle_status: { type: string, enum: [not_started, in_progress, partially_delivered] } } } }
+        meta: { $ref: '#/components/schemas/SelectorMeta' }
+    AcceptedQuoteSelectorPage:
+      type: object
+      additionalProperties: false
+      required: [items, meta]
+      properties:
+        items: { type: array, items: { type: object, additionalProperties: false, required: [id, request_public_id, customer_label, route_label, quote_label, accepted_at], properties: { id: { type: integer, description: Accepted Quote compatibility ID; ExpertQuote has no public ID in the current schema. }, request_public_id: { type: string }, customer_label: { type: string }, route_label: { type: string, nullable: true }, quote_label: { type: string }, accepted_at: { type: string, format: date-time, nullable: true } } } }
+        meta: { $ref: '#/components/schemas/SelectorMeta' }
 paths:
+  /api/operations/selectors/customers:
+    get: { tags: [Operational Shipments], summary: Search minimal canonical customer selectors for direct creation permission, description: Requires operational_shipment.create_direct and exactly one active operational membership. Customers are canonical identities, not evidence of tenant ownership., security: [{ bearerAuth: [] }], parameters: [{ name: q, in: query, schema: { type: string, maxLength: 160 } }, { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }], responses: { '200': { description: Stable, bounded minimal customer results with no contact or CRM details., content: { application/json: { schema: { $ref: '#/components/schemas/CustomerSelectorPage' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { description: Invalid selector query. } } }
+  /api/operations/selectors/projects:
+    get: { tags: [Operational Shipments], summary: Search usable tenant-scoped Projects for authorized shipment creation, description: Requires a direct, quote-derived, or legacy shipment creation permission and exactly one active operational membership. Foreign Projects are excluded., security: [{ bearerAuth: [] }], parameters: [{ name: q, in: query, schema: { type: string, maxLength: 160 } }, { name: customer_id, in: query, description: Canonical Customer compatibility ID; the current schema has no public Customer ID., schema: { type: integer } }, { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }], responses: { '200': { description: Stable, bounded same-organization Project results using opaque Project identity., content: { application/json: { schema: { $ref: '#/components/schemas/ProjectSelectorPage' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { description: Invalid selector query. } } }
+  /api/operations/selectors/accepted-quotes:
+    get: { tags: [Operational Shipments], summary: Search same-organization accepted quotes eligible for conversion, description: Requires operational_shipment.create_from_quote or legacy operational_shipment.create and exactly one active operational membership. Creation remains authoritative for concurrent changes., security: [{ bearerAuth: [] }], parameters: [{ name: q, in: query, description: Matches request identity or customer name snapshot., schema: { type: string, maxLength: 160 } }, { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }], responses: { '200': { description: Stable, bounded eligible results; foreign, incomplete, declined, and converted quotes are excluded., content: { application/json: { schema: { $ref: '#/components/schemas/AcceptedQuoteSelectorPage' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { description: Invalid selector query. } } }
   /api/operational-shipments:
     get: { tags: [Operational Shipments], summary: List tenant-scoped shipments using opaque identity, security: [{ bearerAuth: [] }], responses: { '200': { description: Shipment page. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } } }
     post: { tags: [Operational Shipments], summary: Idempotently create a direct operational shipment, security: [{ bearerAuth: [] }], parameters: [{ name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }], responses: { '200': { description: Exact replay. }, '201': { description: Direct shipment created. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Idempotency or source-capability conflict. }, '422': { description: Invalid direct operation command. } } }

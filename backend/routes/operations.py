@@ -49,6 +49,33 @@ def context():
         return _error(exc)
 
 
+@operations_bp.get("/api/operations/selectors/customers")
+@require_auth
+def selector_customers():
+    try:
+        return jsonify(service.customer_selector(request.args, _user()))
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.get("/api/operations/selectors/projects")
+@require_auth
+def selector_projects():
+    try:
+        return jsonify(service.project_selector(request.args, _user()))
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.get("/api/operations/selectors/accepted-quotes")
+@require_auth
+def selector_accepted_quotes():
+    try:
+        return jsonify(service.accepted_quote_selector(request.args, _user()))
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
 @operations_bp.post("/api/operational-shipments/from-accepted-quote")
 @require_auth
 def create_from_quote():
