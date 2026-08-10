@@ -1,4 +1,5 @@
 """Disposable PostgreSQL replay for the Forwarder 1.9.1 persistence revision."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -149,7 +150,12 @@ def test_v191_upgrade_constraints_backfill_and_guarded_downgrade_postgresql():
 
     command.upgrade(config, "head")
     with engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD
+        assert (
+            connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one()
+            == HEAD
+        )
         rows = connection.execute(
             text(
                 "SELECT id, source_type, customer_id, shipment_request_id, accepted_quote_id "
@@ -190,6 +196,52 @@ def test_v191_upgrade_constraints_backfill_and_guarded_downgrade_postgresql():
                     "(id, public_id, organization_id, source_type, customer_id, "
                     "shipment_request_id, accepted_quote_id, lifecycle_status, version, "
                     "created_by_user_id, created_at, updated_at) SELECT "
+                    "9203, :public_id, organization_id, 'direct', 999999, NULL, NULL, "
+                    "lifecycle_status, version, created_by_user_id, created_at, updated_at "
+                    "FROM operational_shipment WHERE id=9101"
+                ),
+                {"public_id": str(uuid4())},
+            )
+
+    with pytest.raises((IntegrityError, DBAPIError)):
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO operational_shipment "
+                    "(id, public_id, organization_id, source_type, customer_id, "
+                    "shipment_request_id, accepted_quote_id, lifecycle_status, version, "
+                    "created_by_user_id, created_at, updated_at) SELECT "
+                    "9204, :public_id, organization_id, 'accepted_quote', customer_id, "
+                    "NULL, NULL, lifecycle_status, version, created_by_user_id, created_at, updated_at "
+                    "FROM operational_shipment WHERE id=9101"
+                ),
+                {"public_id": str(uuid4())},
+            )
+
+    with pytest.raises((IntegrityError, DBAPIError)):
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO operational_shipment "
+                    "(id, public_id, organization_id, source_type, customer_id, "
+                    "shipment_request_id, accepted_quote_id, lifecycle_status, version, "
+                    "created_by_user_id, created_at, updated_at) SELECT "
+                    "9205, :public_id, organization_id, source_type, customer_id, "
+                    "shipment_request_id, accepted_quote_id, lifecycle_status, version, "
+                    "created_by_user_id, created_at, updated_at "
+                    "FROM operational_shipment WHERE id=9101"
+                ),
+                {"public_id": str(uuid4())},
+            )
+
+    with pytest.raises((IntegrityError, DBAPIError)):
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO operational_shipment "
+                    "(id, public_id, organization_id, source_type, customer_id, "
+                    "shipment_request_id, accepted_quote_id, lifecycle_status, version, "
+                    "created_by_user_id, created_at, updated_at) SELECT "
                     "9301, :public_id, organization_id, 'direct', customer_id, "
                     "shipment_request_id, NULL, lifecycle_status, version, "
                     "created_by_user_id, created_at, updated_at "
@@ -201,7 +253,9 @@ def test_v191_upgrade_constraints_backfill_and_guarded_downgrade_postgresql():
     with pytest.raises(RuntimeError, match="direct OperationalShipment"):
         command.downgrade(config, BASELINE)
     with engine.begin() as connection:
-        connection.execute(text("DELETE FROM operational_shipment WHERE id IN (9201,9202)"))
+        connection.execute(
+            text("DELETE FROM operational_shipment WHERE id IN (9201,9202)")
+        )
         connection.execute(
             text(
                 "UPDATE shipment_request SET origin_country_id=9101, "
@@ -219,11 +273,19 @@ def test_v191_upgrade_constraints_backfill_and_guarded_downgrade_postgresql():
         )
     command.downgrade(config, BASELINE)
     with engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == BASELINE
-        assert connection.execute(
-            text(
-                "SELECT count(*) FROM information_schema.columns "
-                "WHERE table_name='operational_shipment' AND column_name='source_type'"
-            )
-        ).scalar_one() == 0
+        assert (
+            connection.execute(
+                text("SELECT version_num FROM alembic_version")
+            ).scalar_one()
+            == BASELINE
+        )
+        assert (
+            connection.execute(
+                text(
+                    "SELECT count(*) FROM information_schema.columns "
+                    "WHERE table_name='operational_shipment' AND column_name='source_type'"
+                )
+            ).scalar_one()
+            == 0
+        )
     engine.dispose()

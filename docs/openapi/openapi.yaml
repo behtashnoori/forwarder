@@ -880,6 +880,7 @@ components:
 paths:
   /api/operational-shipments:
     get: { tags: [Operational Shipments], summary: List tenant-scoped shipments using opaque identity, security: [{ bearerAuth: [] }], responses: { '200': { description: Shipment page. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } } }
+    post: { tags: [Operational Shipments], summary: Idempotently create a direct operational shipment, security: [{ bearerAuth: [] }], parameters: [{ name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }], responses: { '200': { description: Exact replay. }, '201': { description: Direct shipment created. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Idempotency or source-capability conflict. }, '422': { description: Invalid direct operation command. } } }
   /api/operational-shipments/from-accepted-quote:
     post: { tags: [Operational Shipments], summary: Idempotently create a shipment from an accepted quote, security: [{ bearerAuth: [] }], parameters: [{ name: Idempotency-Key, in: header, required: true, schema: { type: string } }], responses: { '200': { description: Exact replay. }, '201': { description: Created with public_id. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '409': { description: Idempotency conflict. } } }
   /api/operational-shipments/{shipment_id}:

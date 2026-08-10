@@ -1,4 +1,5 @@
 """Characterization tests for expert console, assignment, and referral contracts."""
+
 from __future__ import annotations
 
 import json
@@ -22,18 +23,20 @@ from backend.models import (
     ReferralRule,
     ShipmentRequest,
 )
-from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
 
 
 @pytest.fixture
 def expert_contract_app():
     """App with isolated DB and expert/assignment/referral seed data."""
-    app = create_app({
-        "TESTING": True,
-        "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
-        "SECRET_KEY": "test-secret",
-    }, skip_startup=True)
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SECRET_KEY": "test-secret",
+        },
+        skip_startup=True,
+    )
     with app.app_context():
         db.create_all()
         password_hash = bcrypt.hashpw(b"test123", bcrypt.gensalt()).decode("utf-8")
@@ -115,11 +118,13 @@ def expert_contract_app():
             is_active=True,
             priority=1,
             conditions=json.dumps({"shipping_type": "domestic"}),
-            action=json.dumps({
-                "type": "pool_assign",
-                "expert_ids": [expert.id, other_expert.id],
-                "strategy": "round_robin",
-            }),
+            action=json.dumps(
+                {
+                    "type": "pool_assign",
+                    "expert_ids": [expert.id, other_expert.id],
+                    "strategy": "round_robin",
+                }
+            ),
             stop_on_match=True,
             created_by=admin.id,
         )
@@ -136,7 +141,9 @@ def expert_contract_app():
             "referral_rule_id": referral_rule.id,
             "admin_token": create_session_tokens(admin.id)["access_token"],
             "expert_token": create_session_tokens(expert.id)["access_token"],
-            "other_expert_token": create_session_tokens(other_expert.id)["access_token"],
+            "other_expert_token": create_session_tokens(other_expert.id)[
+                "access_token"
+            ],
         }
 
 
@@ -173,8 +180,16 @@ def test_expert_auth_login_refresh_logout_contract(expert_contract_app):
     login_data = login_response.get_json()
     assert set(login_data.keys()) == {"success", "expert", "tokens"}
     assert login_data["success"] is True
-    assert set(login_data["expert"].keys()) == {"id", "username", "full_name", "email", "role"}
-    assert {"access_token", "refresh_token", "token_type", "expires_in"}.issubset(login_data["tokens"].keys())
+    assert set(login_data["expert"].keys()) == {
+        "id",
+        "username",
+        "full_name",
+        "email",
+        "role",
+    }
+    assert {"access_token", "refresh_token", "token_type", "expires_in"}.issubset(
+        login_data["tokens"].keys()
+    )
     assert login_response.headers["Access-Control-Allow-Credentials"] == "true"
 
     refresh_response = client.post(
@@ -182,7 +197,9 @@ def test_expert_auth_login_refresh_logout_contract(expert_contract_app):
         json={"refresh_token": login_data["tokens"]["refresh_token"]},
     )
     assert refresh_response.status_code == 200
-    assert {"access_token", "refresh_token", "token_type", "expires_in"}.issubset(refresh_response.get_json().keys())
+    assert {"access_token", "refresh_token", "token_type", "expires_in"}.issubset(
+        refresh_response.get_json().keys()
+    )
 
     logout_response = client.post(
         "/api/expert/auth/logout",
@@ -202,15 +219,26 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     assert unauthenticated.status_code == 401
     assert unauthenticated.get_json() == {"error": "Token is missing"}
 
-    unauthenticated_detail = client.get(f"/api/expert/requests/{expert_contract_app['request_id']}")
+    unauthenticated_detail = client.get(
+        f"/api/expert/requests/{expert_contract_app['request_id']}"
+    )
     assert unauthenticated_detail.status_code == 401
     assert unauthenticated_detail.get_json() == {"error": "Token is missing"}
 
-    list_response = client.get("/api/expert/requests?per_page=1", headers=expert_headers)
+    list_response = client.get(
+        "/api/expert/requests?per_page=1", headers=expert_headers
+    )
     assert list_response.status_code == 200
     list_data = list_response.get_json()
     assert set(list_data.keys()) == {"requests", "pagination"}
-    assert set(list_data["pagination"].keys()) == {"page", "per_page", "total", "pages", "has_next", "has_prev"}
+    assert set(list_data["pagination"].keys()) == {
+        "page",
+        "per_page",
+        "total",
+        "pages",
+        "has_next",
+        "has_prev",
+    }
     assert len(list_data["requests"]) == 1
     assert set(list_data["requests"][0].keys()) == {
         "id",
@@ -269,13 +297,45 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     }
     assert set(detail_data["assigned_to"].keys()) == {"id", "name", "username"}
     assert detail_data["assigned_to"]["id"] == expert_contract_app["expert_id"]
-    assert set(detail_data["customer"].keys()) == {"first_name", "last_name", "phone", "full_name"}
+    assert set(detail_data["customer"].keys()) == {
+        "first_name",
+        "last_name",
+        "phone",
+        "full_name",
+    }
     assert detail_data["customer"]["full_name"] == "Ali Rahimi"
-    assert set(detail_data["route"].keys()) == {"origin", "destination", "shipping_type", "iran_destination"}
-    endpoint_keys = {"province", "county", "city", "country", "international_city", "address"}
+    assert set(detail_data["route"].keys()) == {
+        "origin",
+        "destination",
+        "shipping_type",
+        "iran_destination",
+        "canonical_ids",
+        "location_state",
+    }
+    assert detail_data["route"]["location_state"] == "canonical"
+    assert detail_data["route"]["canonical_ids"] == {
+        "origin_country_id": None,
+        "origin_international_city_id": None,
+        "dest_country_id": None,
+        "dest_international_city_id": None,
+    }
+    endpoint_keys = {
+        "province",
+        "county",
+        "city",
+        "country",
+        "international_city",
+        "address",
+    }
     assert set(detail_data["route"]["origin"].keys()) == endpoint_keys
     assert set(detail_data["route"]["destination"].keys()) == endpoint_keys
-    assert set(detail_data["cargo"].keys()) == {"description", "weight", "volume", "value", "special_instructions"}
+    assert set(detail_data["cargo"].keys()) == {
+        "description",
+        "weight",
+        "volume",
+        "value",
+        "special_instructions",
+    }
     assert detail_data["cargo"]["description"] == "Phase 4H cargo"
     assert set(detail_data["dates"].keys()) == {"pickup_date", "delivery_date"}
     assert detail_data["latest_quote"] is None
@@ -294,7 +354,9 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
     base_time = datetime(2026, 1, 1, 10, 0, 0)
 
     with expert_contract_app["app"].app_context():
-        original_request = db.session.get(ShipmentRequest, expert_contract_app["request_id"])
+        original_request = db.session.get(
+            ShipmentRequest, expert_contract_app["request_id"]
+        )
         original_request.created_at = base_time
 
         other_request = ShipmentRequest(
@@ -345,7 +407,9 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
     expert_response = client.get("/api/expert/requests", headers=expert_headers)
     assert expert_response.status_code == 200
     expert_payload = expert_response.get_json()
-    assert [item["id"] for item in expert_payload["requests"]] == [expert_contract_app["request_id"]]
+    assert [item["id"] for item in expert_payload["requests"]] == [
+        expert_contract_app["request_id"]
+    ]
     assert expert_payload["pagination"]["total"] == 1
 
     other_response = client.get("/api/expert/requests", headers=other_headers)
@@ -358,7 +422,9 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
     }
     assert other_payload["requests"][0]["has_unread"] is False
 
-    admin_response = client.get("/api/expert/requests?per_page=1&page=1", headers=admin_headers)
+    admin_response = client.get(
+        "/api/expert/requests?per_page=1&page=1", headers=admin_headers
+    )
     assert admin_response.status_code == 200
     admin_payload = admin_response.get_json()
     assert [item["id"] for item in admin_payload["requests"]] == [other_request_id]
@@ -403,18 +469,18 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
         headers=admin_headers,
     )
     assert stale_legacy_new_response.status_code == 200
-    assert [item["id"] for item in stale_legacy_new_response.get_json()["requests"]] == [
-        expert_contract_app["request_id"]
-    ]
+    assert [
+        item["id"] for item in stale_legacy_new_response.get_json()["requests"]
+    ] == [expert_contract_app["request_id"]]
 
     canonical_waiting_response = client.get(
         "/api/expert/requests?status=waiting_for_customer",
         headers=admin_headers,
     )
     assert canonical_waiting_response.status_code == 200
-    assert [item["id"] for item in canonical_waiting_response.get_json()["requests"]] == [
-        other_request_id
-    ]
+    assert [
+        item["id"] for item in canonical_waiting_response.get_json()["requests"]
+    ] == [other_request_id]
 
     priority_search_response = client.get(
         "/api/expert/requests?priority=high&search=Needle",
@@ -422,7 +488,9 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
     )
     assert priority_search_response.status_code == 200
     priority_search_payload = priority_search_response.get_json()
-    assert [item["id"] for item in priority_search_payload["requests"]] == [other_request_id]
+    assert [item["id"] for item in priority_search_payload["requests"]] == [
+        other_request_id
+    ]
     assert priority_search_payload["requests"][0]["customer"] == {
         "name": "Sara Karimi",
         "phone": "09120000002",
@@ -458,7 +526,9 @@ def test_expert_request_filters_and_kpis_use_canonical_status_only(expert_contra
         db.session.commit()
         stale_legacy_request_id = stale_legacy_request.id
 
-    new_filter_response = client.get("/api/expert/requests?status=new", headers=admin_headers)
+    new_filter_response = client.get(
+        "/api/expert/requests?status=new", headers=admin_headers
+    )
     assert new_filter_response.status_code == 200
     assert stale_legacy_request_id not in [
         item["id"] for item in new_filter_response.get_json()["requests"]
@@ -506,14 +576,20 @@ def test_expert_message_contracts_access_creation_and_listing(expert_contract_ap
     message_response = client.post(
         f"/api/expert/requests/{request_id}/messages",
         headers=expert_headers,
-        json={"type": "internal_note", "subject": "Internal subject", "content": "Internal content"},
+        json={
+            "type": "internal_note",
+            "subject": "Internal subject",
+            "content": "Internal content",
+        },
     )
     assert message_response.status_code == 200
     message_payload = message_response.get_json()
     assert set(message_payload.keys()) == {"message", "message_id"}
     assert message_payload["message"] == "پیام با موفقیت اضافه شد"
 
-    detail_response = client.get(f"/api/expert/requests/{request_id}", headers=expert_headers)
+    detail_response = client.get(
+        f"/api/expert/requests/{request_id}", headers=expert_headers
+    )
     assert detail_response.status_code == 200
     detail_messages = detail_response.get_json()["messages"]
     assert detail_messages[0] == {
@@ -530,34 +606,43 @@ def test_expert_message_contracts_access_creation_and_listing(expert_contract_ap
     with expert_contract_app["app"].app_context():
         request_row = db.session.get(ShipmentRequest, request_id)
         assert request_row.status == "new"
-        assert ExpertConsoleMessage.query.filter_by(
-            shipment_request_id=request_id,
-            message_type="internal_note",
-            subject="Internal subject",
-            content="Internal content",
-        ).count() == 1
-        assert ExpertConsoleLog.query.filter_by(
-            shipment_request_id=request_id,
-            action="message_added",
-            note="پیام internal_note اضافه شد",
-        ).count() == 1
+        assert (
+            ExpertConsoleMessage.query.filter_by(
+                shipment_request_id=request_id,
+                message_type="internal_note",
+                subject="Internal subject",
+                content="Internal content",
+            ).count()
+            == 1
+        )
+        assert (
+            ExpertConsoleLog.query.filter_by(
+                shipment_request_id=request_id,
+                action="message_added",
+                note="پیام internal_note اضافه شد",
+            ).count()
+            == 1
+        )
 
 
-def test_expert_assignment_contracts_access_not_found_and_side_effects(expert_contract_app):
+def test_expert_assignment_contracts_access_not_found_and_side_effects(
+    expert_contract_app,
+):
     """Assignment endpoint keeps access, not-found responses, and assignment side effects."""
     client = expert_contract_app["app"].test_client()
     admin_headers = _auth_headers(expert_contract_app["admin_token"])
     other_headers = _auth_headers(expert_contract_app["other_expert_token"])
     request_id = expert_contract_app["request_id"]
     other_expert_id = expert_contract_app["other_expert_id"]
-
     forbidden_assignment = client.post(
         f"/api/expert/requests/{request_id}/assign",
         headers=other_headers,
         json={"expert_id": other_expert_id},
     )
     assert forbidden_assignment.status_code == 403
-    assert forbidden_assignment.get_json() == {"error": "شما به این درخواست دسترسی ندارید"}
+    assert forbidden_assignment.get_json() == {
+        "error": "شما به این درخواست دسترسی ندارید"
+    }
 
     missing_request_assignment = client.post(
         "/api/expert/requests/999999/assign",
@@ -613,7 +698,9 @@ def test_expert_assignment_contracts_access_not_found_and_side_effects(expert_co
         assert assignment_notification.created_at is not None
 
 
-def test_expert_assignment_status_quote_message_notification_contracts(expert_contract_app):
+def test_expert_assignment_status_quote_message_notification_contracts(
+    expert_contract_app,
+):
     """Mutation endpoints keep assignment/status/quote/message/notification response and side-effect contracts."""
     client = expert_contract_app["app"].test_client()
     admin_headers = _auth_headers(expert_contract_app["admin_token"])
@@ -655,11 +742,18 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
         json={"status": "in_progress", "note": "Started"},
     )
     assert status_response.status_code == 200
-    assert status_response.get_json() == {"message": "وضعیت با موفقیت به‌روزرسانی شد", "status": "in_progress"}
+    assert status_response.get_json() == {
+        "message": "وضعیت با موفقیت به‌روزرسانی شد",
+        "status": "in_progress",
+    }
 
-    forbidden_latest_quote = client.get(f"/api/expert/requests/{request_id}/quote/latest", headers=expert_headers)
+    forbidden_latest_quote = client.get(
+        f"/api/expert/requests/{request_id}/quote/latest", headers=expert_headers
+    )
     assert forbidden_latest_quote.status_code == 403
-    assert forbidden_latest_quote.get_json() == {"error": "شما به این درخواست دسترسی ندارید"}
+    assert forbidden_latest_quote.get_json() == {
+        "error": "شما به این درخواست دسترسی ندارید"
+    }
 
     missing_quote_target = client.post(
         "/api/expert/requests/999999/quote",
@@ -669,7 +763,9 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
     assert missing_quote_target.status_code == 404
     assert missing_quote_target.get_json() == {"error": "درخواست یافت نشد"}
 
-    missing_amount = client.post(f"/api/expert/requests/{request_id}/quote", headers=other_headers, json={})
+    missing_amount = client.post(
+        f"/api/expert/requests/{request_id}/quote", headers=other_headers, json={}
+    )
     assert missing_amount.status_code == 400
     assert missing_amount.get_json() == {"error": "مبلغ الزامی است"}
 
@@ -692,7 +788,12 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
     quote_response = client.post(
         f"/api/expert/requests/{request_id}/quote",
         headers=other_headers,
-        json={"amount": "12345", "currency": "IRR", "note": "Quote note", "valid_until": "2026-08-01"},
+        json={
+            "amount": "12345",
+            "currency": "IRR",
+            "note": "Quote note",
+            "valid_until": "2026-08-01",
+        },
     )
     assert quote_response.status_code == 200
     quote_data = quote_response.get_json()
@@ -702,7 +803,9 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
     assert quote_data["quote"]["valid_until"] == "2026-08-01"
     assert quote_data["request"] == {"id": request_id, "status": "waiting_for_customer"}
 
-    latest_quote_response = client.get(f"/api/expert/requests/{request_id}/quote/latest", headers=other_headers)
+    latest_quote_response = client.get(
+        f"/api/expert/requests/{request_id}/quote/latest", headers=other_headers
+    )
     assert latest_quote_response.status_code == 200
     assert set(latest_quote_response.get_json()["quote"].keys()) == {
         "id",
@@ -727,13 +830,19 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
     message_response = client.post(
         f"/api/expert/requests/{request_id}/messages",
         headers=other_headers,
-        json={"type": "customer_message", "subject": "Follow up", "content": "Please review quote"},
+        json={
+            "type": "customer_message",
+            "subject": "Follow up",
+            "content": "Please review quote",
+        },
     )
     assert message_response.status_code == 200
     assert set(message_response.get_json().keys()) == {"message", "message_id"}
     assert message_response.get_json()["message"] == "پیام با موفقیت اضافه شد"
 
-    notifications_response = client.get("/api/expert/notifications?unread_only=true", headers=other_headers)
+    notifications_response = client.get(
+        "/api/expert/notifications?unread_only=true", headers=other_headers
+    )
     assert notifications_response.status_code == 200
     notifications_data = notifications_response.get_json()
     assert set(notifications_data.keys()) == {"notifications", "unread_count"}
@@ -761,9 +870,20 @@ def test_expert_assignment_status_quote_message_notification_contracts(expert_co
         assert request_row.assigned_to == other_expert_id
         assert request_row.status == "waiting_for_customer"
         assert ExpertQuote.query.filter_by(shipment_request_id=request_id).count() == 1
-        assert ExpertConsoleMessage.query.filter_by(shipment_request_id=request_id).count() == 1
-        assert ExpertConsoleLog.query.filter_by(shipment_request_id=request_id).count() >= 3
-        assert ExpertConsoleNotification.query.filter_by(expert_user_id=other_expert_id).count() >= 3
+        assert (
+            ExpertConsoleMessage.query.filter_by(shipment_request_id=request_id).count()
+            == 1
+        )
+        assert (
+            ExpertConsoleLog.query.filter_by(shipment_request_id=request_id).count()
+            >= 3
+        )
+        assert (
+            ExpertConsoleNotification.query.filter_by(
+                expert_user_id=other_expert_id
+            ).count()
+            >= 3
+        )
 
 
 def test_expert_notification_contracts_scope_order_and_mark_read(expert_contract_app):
@@ -826,7 +946,9 @@ def test_expert_notification_contracts_scope_order_and_mark_read(expert_contract
         json={},
     )
     assert invalid_mark_read.status_code == 400
-    assert invalid_mark_read.get_json() == {"error": "شناسه اعلان‌ها یا mark_all الزامی است"}
+    assert invalid_mark_read.get_json() == {
+        "error": "شناسه اعلان‌ها یا mark_all الزامی است"
+    }
 
     mark_specific_response = client.post(
         "/api/expert/notifications/mark-read",
@@ -841,7 +963,12 @@ def test_expert_notification_contracts_scope_order_and_mark_read(expert_contract
 
     with expert_contract_app["app"].app_context():
         assert db.session.get(ExpertConsoleNotification, newest_id).is_read is True
-        assert db.session.get(ExpertConsoleNotification, other_expert_notification_id).is_read is False
+        assert (
+            db.session.get(
+                ExpertConsoleNotification, other_expert_notification_id
+            ).is_read
+            is False
+        )
 
 
 def test_referral_rule_crud_contracts(expert_contract_app):
@@ -864,7 +991,9 @@ def test_referral_rule_crud_contracts(expert_contract_app):
         json={"name": "Invalid referral", "action": {"type": "invalid"}},
     )
     assert invalid_action.status_code == 400
-    assert invalid_action.get_json() == {"error": "action باید نوع direct_assign یا pool_assign داشته باشد"}
+    assert invalid_action.get_json() == {
+        "error": "action باید نوع direct_assign یا pool_assign داشته باشد"
+    }
 
     create_response = client.post(
         "/api/admin/referral-rules",
@@ -889,7 +1018,9 @@ def test_referral_rule_crud_contracts(expert_contract_app):
         json={"action": {"type": "invalid"}},
     )
     assert update_invalid_action.status_code == 400
-    assert update_invalid_action.get_json() == {"error": "action.type باید direct_assign یا pool_assign باشد"}
+    assert update_invalid_action.get_json() == {
+        "error": "action.type باید direct_assign یا pool_assign باشد"
+    }
 
     update_response = client.put(
         f"/api/admin/referral-rules/{rule_id}",
@@ -899,11 +1030,15 @@ def test_referral_rule_crud_contracts(expert_contract_app):
     assert update_response.status_code == 200
     assert update_response.get_json() == {"message": "قانون ارجاع به‌روزرسانی شد"}
 
-    delete_missing = client.delete("/api/admin/referral-rules/999999", headers=admin_headers)
+    delete_missing = client.delete(
+        "/api/admin/referral-rules/999999", headers=admin_headers
+    )
     assert delete_missing.status_code == 404
     assert delete_missing.get_json() == {"error": "قانون ارجاع یافت نشد"}
 
-    delete_response = client.delete(f"/api/admin/referral-rules/{rule_id}", headers=admin_headers)
+    delete_response = client.delete(
+        f"/api/admin/referral-rules/{rule_id}", headers=admin_headers
+    )
     assert delete_response.status_code == 200
     assert delete_response.get_json() == {"message": "قانون ارجاع حذف شد"}
 
@@ -948,9 +1083,15 @@ def test_referral_engine_uses_matching_active_referral_rule(expert_contract_app)
         assert updated_request.sla_due_at is not None
         original_deadline = updated_request.sla_due_at
         assert referral_engine.auto_assign_request(request_id) == selected_expert_id
-        assert db.session.get(ShipmentRequest, request_id).sla_due_at == original_deadline
+        assert (
+            db.session.get(ShipmentRequest, request_id).sla_due_at == original_deadline
+        )
 
-        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
+        referral_log = (
+            db.session.query(ReferralAssignmentLog)
+            .filter_by(request_id=request_id)
+            .one()
+        )
         assert referral_log.rule_id == expert_contract_app["referral_rule_id"]
         assert referral_log.strategy_used == "round_robin"
         assert json.loads(referral_log.candidate_expert_ids) == [
@@ -958,11 +1099,15 @@ def test_referral_engine_uses_matching_active_referral_rule(expert_contract_app)
             expert_contract_app["other_expert_id"],
         ]
 
-        console_log = db.session.query(ExpertConsoleLog).filter_by(
-            shipment_request_id=request_id,
-            action="assignment",
-            new_status="assigned",
-        ).one()
+        console_log = (
+            db.session.query(ExpertConsoleLog)
+            .filter_by(
+                shipment_request_id=request_id,
+                action="assignment",
+                new_status="assigned",
+            )
+            .one()
+        )
         assert console_log.expert_user_id == selected_expert_id
 
 
@@ -1005,12 +1150,18 @@ def test_referral_engine_falls_back_when_no_referral_rule_matches(expert_contrac
         assert updated_request.status == "assigned"
         assert updated_request.sla_due_at is not None
 
-        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
+        referral_log = (
+            db.session.query(ReferralAssignmentLog)
+            .filter_by(request_id=request_id)
+            .one()
+        )
         assert referral_log.rule_id is None
         assert referral_log.strategy_used == "round_robin"
 
 
-def test_assignment_engine_sets_once_and_no_candidate_leaves_null(expert_contract_app, monkeypatch):
+def test_assignment_engine_sets_once_and_no_candidate_leaves_null(
+    expert_contract_app, monkeypatch
+):
     from backend.assignment_engine import AssignmentEngine
 
     with expert_contract_app["app"].app_context():
@@ -1079,17 +1230,23 @@ def test_referral_preview_does_not_set_deadline(expert_contract_app):
         assert db.session.get(ShipmentRequest, request_row.id).sla_due_at is None
 
 
-def test_public_request_creation_distributes_between_active_experts_round_robin(expert_contract_app):
+def test_public_request_creation_distributes_between_active_experts_round_robin(
+    expert_contract_app,
+):
     """Public request creation uses global round-robin when no referral rule matches."""
     client = expert_contract_app["app"].test_client()
 
     first_response = client.post(
         "/api/shipment-request",
-        json=_international_request_payload("09123456782", "Round robin public request 1"),
+        json=_international_request_payload(
+            "09123456782", "Round robin public request 1"
+        ),
     )
     second_response = client.post(
         "/api/shipment-request",
-        json=_international_request_payload("09123456783", "Round robin public request 2"),
+        json=_international_request_payload(
+            "09123456783", "Round robin public request 2"
+        ),
     )
 
     assert first_response.status_code == 201
@@ -1109,23 +1266,39 @@ def test_public_request_creation_distributes_between_active_experts_round_robin(
         assert first_request.status == "assigned"
         assert second_request.status == "assigned"
 
-        first_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=first_request_id).one()
-        second_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=second_request_id).one()
+        first_log = (
+            db.session.query(ReferralAssignmentLog)
+            .filter_by(request_id=first_request_id)
+            .one()
+        )
+        second_log = (
+            db.session.query(ReferralAssignmentLog)
+            .filter_by(request_id=second_request_id)
+            .one()
+        )
         assert first_log.rule_id is None
         assert second_log.rule_id is None
         assert first_log.strategy_used == "round_robin"
         assert second_log.strategy_used == "round_robin"
 
-        assert db.session.query(ExpertConsoleLog).filter_by(
-            shipment_request_id=first_request_id,
-            action="assignment",
-            new_status="assigned",
-        ).one()
-        assert db.session.query(ExpertConsoleNotification).filter_by(
-            shipment_request_id=first_request_id,
-            expert_user_id=expert_contract_app["expert_id"],
-            notification_type="request_assigned",
-        ).one()
+        assert (
+            db.session.query(ExpertConsoleLog)
+            .filter_by(
+                shipment_request_id=first_request_id,
+                action="assignment",
+                new_status="assigned",
+            )
+            .one()
+        )
+        assert (
+            db.session.query(ExpertConsoleNotification)
+            .filter_by(
+                shipment_request_id=first_request_id,
+                expert_user_id=expert_contract_app["expert_id"],
+                notification_type="request_assigned",
+            )
+            .one()
+        )
 
 
 def test_public_request_creation_skips_inactive_experts(expert_contract_app):
@@ -1133,13 +1306,17 @@ def test_public_request_creation_skips_inactive_experts(expert_contract_app):
     client = expert_contract_app["app"].test_client()
 
     with expert_contract_app["app"].app_context():
-        other_expert = db.session.get(ExpertUser, expert_contract_app["other_expert_id"])
+        other_expert = db.session.get(
+            ExpertUser, expert_contract_app["other_expert_id"]
+        )
         other_expert.is_active = False
         db.session.commit()
 
     response = client.post(
         "/api/shipment-request",
-        json=_international_request_payload("09123456784", "Inactive expert skip request"),
+        json=_international_request_payload(
+            "09123456784", "Inactive expert skip request"
+        ),
     )
 
     assert response.status_code == 201
@@ -1150,17 +1327,27 @@ def test_public_request_creation_skips_inactive_experts(expert_contract_app):
         assert created_request.assigned_to == expert_contract_app["expert_id"]
         assert created_request.status == "assigned"
 
-        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
-        assert json.loads(referral_log.candidate_expert_ids) == [expert_contract_app["expert_id"]]
+        referral_log = (
+            db.session.query(ReferralAssignmentLog)
+            .filter_by(request_id=request_id)
+            .one()
+        )
+        assert json.loads(referral_log.candidate_expert_ids) == [
+            expert_contract_app["expert_id"]
+        ]
 
 
-def test_public_request_creation_remains_unassigned_when_no_active_expert_exists(expert_contract_app):
+def test_public_request_creation_remains_unassigned_when_no_active_expert_exists(
+    expert_contract_app,
+):
     """No active expert leaves the created request unassigned without changing the API response shape."""
     client = expert_contract_app["app"].test_client()
 
     with expert_contract_app["app"].app_context():
         db.session.get(ExpertUser, expert_contract_app["expert_id"]).is_active = False
-        db.session.get(ExpertUser, expert_contract_app["other_expert_id"]).is_active = False
+        db.session.get(
+            ExpertUser, expert_contract_app["other_expert_id"]
+        ).is_active = False
         db.session.commit()
 
     response = client.post(
@@ -1176,8 +1363,18 @@ def test_public_request_creation_remains_unassigned_when_no_active_expert_exists
         created_request = db.session.get(ShipmentRequest, request_id)
         assert created_request.assigned_to is None
         assert created_request.status == "new"
-        assert db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).count() == 0
-        assert db.session.query(ExpertConsoleNotification).filter_by(shipment_request_id=request_id).count() == 0
+        assert (
+            db.session.query(ReferralAssignmentLog)
+            .filter_by(request_id=request_id)
+            .count()
+            == 0
+        )
+        assert (
+            db.session.query(ExpertConsoleNotification)
+            .filter_by(shipment_request_id=request_id)
+            .count()
+            == 0
+        )
 
 
 def test_public_request_creation_triggers_matching_referral_rule(expert_contract_app):
@@ -1212,23 +1409,32 @@ def test_public_request_creation_triggers_matching_referral_rule(expert_contract
         }
         assert created_request.status == "assigned"
 
-        referral_log = db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).one()
+        referral_log = (
+            db.session.query(ReferralAssignmentLog)
+            .filter_by(request_id=request_id)
+            .one()
+        )
         assert referral_log.rule_id == expert_contract_app["referral_rule_id"]
 
 
-def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(expert_contract_app):
+def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(
+    expert_contract_app,
+):
     """Assignment/referral admin endpoints keep auth, read shapes, preview, and manual assignment behavior."""
     client = expert_contract_app["app"].test_client()
     admin_headers = _auth_headers(expert_contract_app["admin_token"])
     expert_headers = _auth_headers(expert_contract_app["expert_token"])
     request_id = expert_contract_app["request_id"]
-    other_expert_id = expert_contract_app["other_expert_id"]
 
-    forbidden_assignment_rules = client.get("/api/user-management/assignment-rules", headers=expert_headers)
+    forbidden_assignment_rules = client.get(
+        "/api/user-management/assignment-rules", headers=expert_headers
+    )
     assert forbidden_assignment_rules.status_code == 403
     assert forbidden_assignment_rules.get_json()["required_roles"] == ["admin"]
 
-    assignment_rules_response = client.get("/api/user-management/assignment-rules", headers=admin_headers)
+    assignment_rules_response = client.get(
+        "/api/user-management/assignment-rules", headers=admin_headers
+    )
     assert assignment_rules_response.status_code == 200
     assignment_rules_data = assignment_rules_response.get_json()
     assert set(assignment_rules_data.keys()) == {"assignment_rules"}
@@ -1245,7 +1451,9 @@ def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(exper
         "updated_at",
     }
 
-    referral_rules_response = client.get("/api/admin/referral-rules", headers=admin_headers)
+    referral_rules_response = client.get(
+        "/api/admin/referral-rules", headers=admin_headers
+    )
     assert referral_rules_response.status_code == 200
     referral_rules_data = referral_rules_response.get_json()
     assert set(referral_rules_data.keys()) == {"referral_rules"}
@@ -1265,7 +1473,9 @@ def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(exper
         "strategy",
     }
 
-    preview_missing_id = client.post("/api/admin/referral-rules/preview", headers=admin_headers, json={})
+    preview_missing_id = client.post(
+        "/api/admin/referral-rules/preview", headers=admin_headers, json={}
+    )
     assert preview_missing_id.status_code == 400
     assert preview_missing_id.get_json() == {"error": "request_id الزامی است"}
 
@@ -1275,11 +1485,16 @@ def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(exper
         json={"request_id": request_id},
     )
     assert preview_response.status_code == 200
-    assert {"matched_rule", "candidates", "selected_expert", "strategy_used", "debug_trace"}.issubset(
-        preview_response.get_json().keys()
-    )
+    assert {
+        "matched_rule",
+        "candidates",
+        "selected_expert",
+        "strategy_used",
+        "debug_trace",
+    }.issubset(preview_response.get_json().keys())
     with expert_contract_app["app"].app_context():
         assert db.session.get(ShipmentRequest, request_id).sla_due_at is not None
+
 
 def test_user_management_manual_assignment_fix_contract(expert_contract_app):
     """Manual assignment now uses the shared assignment path and side effects."""
@@ -1288,7 +1503,9 @@ def test_user_management_manual_assignment_fix_contract(expert_contract_app):
     request_id = expert_contract_app["request_id"]
     other_expert_id = expert_contract_app["other_expert_id"]
 
-    missing_request = client.post("/api/user-management/manual-assignment", headers=admin_headers, json={})
+    missing_request = client.post(
+        "/api/user-management/manual-assignment", headers=admin_headers, json={}
+    )
     assert missing_request.status_code == 400
     assert missing_request.get_json() == {"error": "شناسه درخواست الزامی است"}
 
@@ -1303,7 +1520,11 @@ def test_user_management_manual_assignment_fix_contract(expert_contract_app):
     manual_response = client.post(
         "/api/user-management/manual-assignment",
         headers=admin_headers,
-        json={"request_id": request_id, "expert_id": other_expert_id, "reason": "Phase 5I manual"},
+        json={
+            "request_id": request_id,
+            "expert_id": other_expert_id,
+            "reason": "Phase 5I manual",
+        },
     )
     assert manual_response.status_code == 200
     assert manual_response.get_json() == {
@@ -1317,17 +1538,25 @@ def test_user_management_manual_assignment_fix_contract(expert_contract_app):
         assert request_row.status == "assigned"
         assert request_row.has_unread_for_assignee is True
         assert request_row.sla_due_at is not None
-        assert AssignmentLog.query.filter_by(shipment_request_id=request_id).count() == 0
-        assert ExpertConsoleLog.query.filter_by(
-            shipment_request_id=request_id,
-            expert_user_id=other_expert_id,
-            action="assignment",
-            old_status="new",
-            new_status="assigned",
-        ).count() == 1
-        assert ExpertConsoleNotification.query.filter_by(
-            shipment_request_id=request_id,
-            expert_user_id=other_expert_id,
-            notification_type="assignment",
-            is_read=False,
-        ).count() == 1
+        assert (
+            AssignmentLog.query.filter_by(shipment_request_id=request_id).count() == 0
+        )
+        assert (
+            ExpertConsoleLog.query.filter_by(
+                shipment_request_id=request_id,
+                expert_user_id=other_expert_id,
+                action="assignment",
+                old_status="new",
+                new_status="assigned",
+            ).count()
+            == 1
+        )
+        assert (
+            ExpertConsoleNotification.query.filter_by(
+                shipment_request_id=request_id,
+                expert_user_id=other_expert_id,
+                notification_type="assignment",
+                is_read=False,
+            ).count()
+            == 1
+        )

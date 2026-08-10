@@ -1,4 +1,5 @@
 """Phase 1A domain, transaction, permission, and API contracts."""
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
@@ -9,113 +10,457 @@ import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import ExpertQuote, ExpertUser, Province, ShipmentRequest
+from backend.models import Customer, ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.operational_models import (
-    Milestone, MilestoneEvent, OperationalAudit, OperationalMembership,
-    OperationalOrganization, OperationalOutbox, OperationalShipment,
-    OperationalWorkItem, RouteLeg, RoutePlan,
+    Milestone,
+    MilestoneEvent,
+    OperationalAudit,
+    OperationalMembership,
+    OperationalOrganization,
+    OperationalOutbox,
+    OperationalShipment,
+    OperationalWorkItem,
+    RouteLeg,
+    RoutePlan,
 )
 from backend.services import operational_service as service
+from backend.services import document_readiness_service, economics_service
 from backend.auth import auth_manager
 
 
 @pytest.fixture()
 def operational_app():
-    app=create_app({"TESTING":True,"SQLALCHEMY_DATABASE_URI":"sqlite:///:memory:","SECRET_KEY":"phase1a-test"})
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:",
+            "SECRET_KEY": "phase1a-test",
+        }
+    )
     with app.app_context():
-        org=OperationalOrganization(name="Synthetic Operations")
-        other_org=OperationalOrganization(name="Other Synthetic Operations")
-        user=ExpertUser(username="phase1a-operator",password_hash="unused",full_name="Phase1A Operator",role="expert",is_active=True)
-        outsider=ExpertUser(username="phase1a-outsider",password_hash="unused",full_name="Phase1A Outsider",role="expert",is_active=True)
-        verifier=ExpertUser(username="phase1a-verifier",password_hash="unused",full_name="Phase1A Verifier",role="manager",is_active=True)
-        db.session.add_all([org,other_org,user,outsider,verifier]); db.session.flush()
-        all_permissions=["operational_shipment.read","operational_shipment.create","milestone_event.create","milestone.verify","milestone.correct","work_item.read","work_item.manage","route_plan.read","route_plan.create","route_plan.activate","route_plan.replan","route_leg.manage","checkpoint.read","checkpoint.report","checkpoint.verify","route_exception.read","route_exception.manage"]
-        db.session.add_all([OperationalMembership(organization_id=org.id,user_id=user.id,permissions=all_permissions),OperationalMembership(organization_id=org.id,user_id=verifier.id,permissions=all_permissions),OperationalMembership(organization_id=other_org.id,user_id=outsider.id,permissions=all_permissions)])
-        origin=Province(name_fa="مبدأ",code="P1A-O"); destination=Province(name_fa="مقصد",code="P1A-D")
-        request=ShipmentRequest(contact_phone="09000000000",status="waiting_for_customer",status_request_status="new",assigned_to=user.id)
-        db.session.add_all([origin,destination,request]); db.session.flush()
-        accepted=ExpertQuote(shipment_request_id=request.id,amount=1000,currency="IRR",created_by_expert_id=user.id,created_at=datetime.now(timezone.utc),customer_response="accepted",responded_at=datetime.now(timezone.utc),operational_organization_id=org.id)
-        declined=ExpertQuote(shipment_request_id=request.id,amount=900,currency="IRR",created_by_expert_id=user.id,created_at=datetime.now(timezone.utc),customer_response="declined",responded_at=datetime.now(timezone.utc),operational_organization_id=org.id)
-        db.session.add_all([accepted,declined]); db.session.commit()
-        app.config["phase1a"]={"org":org.id,"other_org":other_org.id,"user":user.id,"verifier":verifier.id,"outsider":outsider.id,"accepted":accepted.id,"declined":declined.id,"origin":origin.id,"destination":destination.id}
+        org = OperationalOrganization(name="Synthetic Operations")
+        other_org = OperationalOrganization(name="Other Synthetic Operations")
+        user = ExpertUser(
+            username="phase1a-operator",
+            password_hash="unused",
+            full_name="Phase1A Operator",
+            role="expert",
+            is_active=True,
+        )
+        outsider = ExpertUser(
+            username="phase1a-outsider",
+            password_hash="unused",
+            full_name="Phase1A Outsider",
+            role="expert",
+            is_active=True,
+        )
+        verifier = ExpertUser(
+            username="phase1a-verifier",
+            password_hash="unused",
+            full_name="Phase1A Verifier",
+            role="manager",
+            is_active=True,
+        )
+        db.session.add_all([org, other_org, user, outsider, verifier])
+        db.session.flush()
+        all_permissions = [
+            "operational_shipment.read",
+            "operational_shipment.create",
+            "operational_shipment.create_direct",
+            "milestone_event.create",
+            "milestone.verify",
+            "milestone.correct",
+            "work_item.read",
+            "work_item.manage",
+            "route_plan.read",
+            "route_plan.create",
+            "route_plan.activate",
+            "route_plan.replan",
+            "route_leg.manage",
+            "checkpoint.read",
+            "checkpoint.report",
+            "checkpoint.verify",
+            "route_exception.read",
+            "route_exception.manage",
+            "document_readiness.read",
+            "economics.commitment.create",
+        ]
+        db.session.add_all(
+            [
+                OperationalMembership(
+                    organization_id=org.id, user_id=user.id, permissions=all_permissions
+                ),
+                OperationalMembership(
+                    organization_id=org.id,
+                    user_id=verifier.id,
+                    permissions=all_permissions,
+                ),
+                OperationalMembership(
+                    organization_id=other_org.id,
+                    user_id=outsider.id,
+                    permissions=all_permissions,
+                ),
+            ]
+        )
+        origin = Province(name_fa="مبدأ", code="P1A-O")
+        destination = Province(name_fa="مقصد", code="P1A-D")
+        customer = Customer(
+            first_name="Canonical",
+            last_name="Customer",
+            phone="09000000000",
+            status="active",
+        )
+        db.session.add_all([origin, destination, customer])
+        db.session.flush()
+        request = ShipmentRequest(
+            contact_phone="09000000000",
+            status="waiting_for_customer",
+            status_request_status="new",
+            assigned_to=user.id,
+            customer_id=customer.id,
+        )
+        db.session.add(request)
+        db.session.flush()
+        accepted = ExpertQuote(
+            shipment_request_id=request.id,
+            amount=1000,
+            currency="IRR",
+            created_by_expert_id=user.id,
+            created_at=datetime.now(timezone.utc),
+            customer_response="accepted",
+            responded_at=datetime.now(timezone.utc),
+            operational_organization_id=org.id,
+        )
+        declined = ExpertQuote(
+            shipment_request_id=request.id,
+            amount=900,
+            currency="IRR",
+            created_by_expert_id=user.id,
+            created_at=datetime.now(timezone.utc),
+            customer_response="declined",
+            responded_at=datetime.now(timezone.utc),
+            operational_organization_id=org.id,
+        )
+        db.session.add_all([accepted, declined])
+        db.session.commit()
+        app.config["phase1a"] = {
+            "org": org.id,
+            "other_org": other_org.id,
+            "user": user.id,
+            "verifier": verifier.id,
+            "outsider": outsider.id,
+            "accepted": accepted.id,
+            "declined": declined.id,
+            "origin": origin.id,
+            "destination": destination.id,
+            "customer": customer.id,
+        }
     yield app
 
 
 def _user(app, key="user"):
-    ids=app.config["phase1a"]
-    return {"id":ids[key],"role":"expert","username":key}
+    ids = app.config["phase1a"]
+    return {"id": ids[key], "role": "expert", "username": key}
 
 
 def _payload(app, quote="accepted", departure=None, arrival=None):
-    ids=app.config["phase1a"]; departure=departure or datetime.now(timezone.utc)+timedelta(hours=1); arrival=arrival or departure+timedelta(hours=5)
-    return {"accepted_quote_id":ids[quote],"planned_departure":departure.isoformat(),"planned_arrival":arrival.isoformat(),"origin":{"source_type":"province","source_id":ids["origin"]},"destination":{"source_type":"province","source_id":ids["destination"]},"transport_mode":"road"}
+    ids = app.config["phase1a"]
+    departure = departure or datetime.now(timezone.utc) + timedelta(hours=1)
+    arrival = arrival or departure + timedelta(hours=5)
+    return {
+        "accepted_quote_id": ids[quote],
+        "planned_departure": departure.isoformat(),
+        "planned_arrival": arrival.isoformat(),
+        "origin": {"source_type": "province", "source_id": ids["origin"]},
+        "destination": {"source_type": "province", "source_id": ids["destination"]},
+        "transport_mode": "road",
+    }
+
+
+def _direct_payload(app, departure=None, arrival=None):
+    payload = _payload(app, departure=departure, arrival=arrival)
+    payload.pop("accepted_quote_id")
+    return {
+        "source_type": "direct",
+        "customer_id": app.config["phase1a"]["customer"],
+        "project_public_id": None,
+        "route": payload,
+    }
+
+
+def test_direct_create_converges_on_shared_aggregate_and_replays(operational_app):
+    with operational_app.app_context():
+        before_requests = ShipmentRequest.query.count()
+        before_quotes = ExpertQuote.query.count()
+        payload = _direct_payload(operational_app)
+        shipment, created = service.create_direct(
+            payload, _user(operational_app), "direct-1"
+        )
+        replay, recreated = service.create_direct(
+            payload, _user(operational_app), "direct-1"
+        )
+
+        assert created is True and recreated is False and replay.id == shipment.id
+        assert (
+            shipment.source_type == "direct"
+            and shipment.customer_id == operational_app.config["phase1a"]["customer"]
+        )
+        assert (
+            shipment.shipment_request_id is None and shipment.accepted_quote_id is None
+        )
+        assert ShipmentRequest.query.count() == before_requests
+        assert ExpertQuote.query.count() == before_quotes
+        assert RoutePlan.query.count() == 1 and RouteLeg.query.count() == 1
+        assert {row.milestone_type for row in Milestone.query.all()} == {
+            "departure",
+            "arrival",
+        }
+        assert (
+            OperationalAudit.query.filter_by(
+                action="operational_shipment.created"
+            ).count()
+            == 1
+        )
+        assert (
+            OperationalOutbox.query.filter_by(
+                event_type="operational_shipment.created"
+            ).count()
+            == 1
+        )
+
+        changed = _direct_payload(operational_app)
+        changed["route"]["transport_mode"] = "rail"
+        with pytest.raises(service.OperationalError) as conflict:
+            service.create_direct(changed, _user(operational_app), "direct-1")
+        assert conflict.value.code == "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD"
+
+
+def test_direct_permission_is_not_implied_by_legacy_or_quote_permission(
+    operational_app,
+):
+    with operational_app.app_context():
+        membership = OperationalMembership.query.filter_by(
+            user_id=operational_app.config["phase1a"]["user"]
+        ).one()
+        for permission in (
+            "operational_shipment.create",
+            "operational_shipment.create_from_quote",
+        ):
+            membership.permissions = ["operational_shipment.read", permission]
+            db.session.commit()
+            with pytest.raises(service.OperationalError) as forbidden:
+                service.create_direct(
+                    _direct_payload(operational_app),
+                    _user(operational_app),
+                    f"denied-{permission}",
+                )
+            assert forbidden.value.code == "FORBIDDEN_OPERATION"
+
+
+def test_direct_http_list_detail_and_source_specific_capabilities(operational_app):
+    client = operational_app.test_client()
+    created = client.post(
+        "/api/operational-shipments",
+        json=_direct_payload(operational_app),
+        headers={**_auth(operational_app), "Idempotency-Key": "direct-http"},
+    )
+    assert created.status_code == 201
+    source = created.json["data"]["source"]
+    assert source["type"] == "direct"
+    assert source["shipment_request_id"] is None and source["accepted_quote_id"] is None
+
+    listing = client.get(
+        "/api/operational-shipments?customer=0900", headers=_auth(operational_app)
+    )
+    assert listing.status_code == 200
+    assert [row["public_id"] for row in listing.json["data"]] == [
+        created.json["data"]["public_id"]
+    ]
+
+    with operational_app.app_context():
+        shipment = OperationalShipment.query.filter_by(
+            public_id=created.json["data"]["public_id"]
+        ).one()
+        milestone = Milestone.query.filter_by(
+            operational_shipment_id=shipment.id, milestone_type="departure"
+        ).one()
+        readiness = document_readiness_service.transition_readiness(
+            shipment, milestone, "READY"
+        )
+        assert (
+            readiness["applicability"] == "NOT_APPLICABLE"
+            and readiness["allowed"] is True
+        )
+        with pytest.raises(service.OperationalError) as documents:
+            document_readiness_service.materialization_preview(
+                shipment.public_id, _user(operational_app)
+            )
+        assert documents.value.code == "SOURCE_CAPABILITY_NOT_APPLICABLE"
+        with pytest.raises(service.OperationalError) as economics:
+            economics_service.quote_preview(shipment.public_id, _user(operational_app))
+        assert economics.value.code == "SOURCE_CAPABILITY_NOT_APPLICABLE"
 
 
 def _auth(app, key="user"):
-    with app.app_context(): token=auth_manager.generate_tokens(app.config["phase1a"][key])["access_token"]
-    return {"Authorization":f"Bearer {token}"}
+    with app.app_context():
+        token = auth_manager.generate_tokens(app.config["phase1a"][key])["access_token"]
+    return {"Authorization": f"Bearer {token}"}
 
 
 def test_create_from_accepted_quote_is_complete_and_idempotent(operational_app):
     with operational_app.app_context():
         payload = _payload(operational_app)
-        first,created=service.create_from_accepted_quote(payload,_user(operational_app),"create-1")
-        replay,recreated=service.create_from_accepted_quote(payload,_user(operational_app),"create-1")
+        first, created = service.create_from_accepted_quote(
+            payload, _user(operational_app), "create-1"
+        )
+        replay, recreated = service.create_from_accepted_quote(
+            payload, _user(operational_app), "create-1"
+        )
         assert created is True and recreated is False and replay.id == first.id
         assert OperationalShipment.query.count() == 1
         assert RoutePlan.query.count() == 1 and RouteLeg.query.count() == 1
-        assert {m.milestone_type for m in Milestone.query.all()} == {"departure","arrival"}
-        assert OperationalAudit.query.filter_by(action="operational_shipment.created").count() == 1
-        assert OperationalOutbox.query.filter_by(event_type="operational_shipment.created").count() == 1
+        assert {m.milestone_type for m in Milestone.query.all()} == {
+            "departure",
+            "arrival",
+        }
+        assert (
+            OperationalAudit.query.filter_by(
+                action="operational_shipment.created"
+            ).count()
+            == 1
+        )
+        assert (
+            OperationalOutbox.query.filter_by(
+                event_type="operational_shipment.created"
+            ).count()
+            == 1
+        )
+        with pytest.raises(service.OperationalError) as reused_quote:
+            service.create_from_accepted_quote(
+                payload, _user(operational_app), "create-2"
+            )
+        assert reused_quote.value.code == "OPERATIONAL_SHIPMENT_ALREADY_EXISTS"
 
 
 def test_create_guards_quote_timeline_location_and_tenant(operational_app):
     with operational_app.app_context():
         with pytest.raises(service.OperationalError) as rejected:
-            service.create_from_accepted_quote(_payload(operational_app,"declined"),_user(operational_app),"declined")
+            service.create_from_accepted_quote(
+                _payload(operational_app, "declined"),
+                _user(operational_app),
+                "declined",
+            )
         assert rejected.value.code == "QUOTE_NOT_ACCEPTED"
-        bad=_payload(operational_app); bad["planned_arrival"]=bad["planned_departure"][:-6]
-        with pytest.raises(service.OperationalError): service.create_from_accepted_quote(bad,_user(operational_app),"bad-time")
-        same=_payload(operational_app); same["destination"]=same["origin"]
-        with pytest.raises(service.OperationalError) as invalid: service.create_from_accepted_quote(same,_user(operational_app),"same")
+        bad = _payload(operational_app)
+        bad["planned_arrival"] = bad["planned_departure"][:-6]
+        with pytest.raises(service.OperationalError):
+            service.create_from_accepted_quote(bad, _user(operational_app), "bad-time")
+        same = _payload(operational_app)
+        same["destination"] = same["origin"]
+        with pytest.raises(service.OperationalError) as invalid:
+            service.create_from_accepted_quote(same, _user(operational_app), "same")
         assert invalid.value.code == "INVALID_ROUTE_TIMELINE"
-        with pytest.raises(service.OperationalError) as no_scope: service.create_from_accepted_quote(_payload(operational_app),{"id":999999,"role":"expert"},"none")
+        with pytest.raises(service.OperationalError) as no_scope:
+            service.create_from_accepted_quote(
+                _payload(operational_app), {"id": 999999, "role": "expert"}, "none"
+            )
         assert no_scope.value.code == "TENANT_SCOPE_VIOLATION"
 
 
 def test_report_verify_correct_and_work_item_lifecycle(operational_app):
     with operational_app.app_context():
-        shipment,_=service.create_from_accepted_quote(_payload(operational_app),_user(operational_app),"events")
-        milestone=Milestone.query.filter_by(milestone_type="departure").one()
-        occurred=datetime.now(timezone.utc)-timedelta(minutes=10)
-        event=service.record_event(shipment.id,milestone.id,{"occurred_at":occurred.isoformat()},_user(operational_app),"report-1")
-        assert event.event_type == "reported" and milestone.verification_state == "reported"
-        assert service.record_event(shipment.id,milestone.id,{"occurred_at":occurred.isoformat()},_user(operational_app),"report-1").id == event.id
-        old_version=milestone.version
-        service.verify_milestone(shipment.id,milestone.id,old_version,_user(operational_app,"verifier"))
+        shipment, _ = service.create_from_accepted_quote(
+            _payload(operational_app), _user(operational_app), "events"
+        )
+        milestone = Milestone.query.filter_by(milestone_type="departure").one()
+        occurred = datetime.now(timezone.utc) - timedelta(minutes=10)
+        event = service.record_event(
+            shipment.id,
+            milestone.id,
+            {"occurred_at": occurred.isoformat()},
+            _user(operational_app),
+            "report-1",
+        )
+        assert (
+            event.event_type == "reported"
+            and milestone.verification_state == "reported"
+        )
+        assert (
+            service.record_event(
+                shipment.id,
+                milestone.id,
+                {"occurred_at": occurred.isoformat()},
+                _user(operational_app),
+                "report-1",
+            ).id
+            == event.id
+        )
+        old_version = milestone.version
+        service.verify_milestone(
+            shipment.id, milestone.id, old_version, _user(operational_app, "verifier")
+        )
         assert milestone.verification_state == "verified"
-        with pytest.raises(service.OperationalError) as stale: service.verify_milestone(shipment.id,milestone.id,old_version,_user(operational_app))
+        with pytest.raises(service.OperationalError) as stale:
+            service.verify_milestone(
+                shipment.id, milestone.id, old_version, _user(operational_app)
+            )
         assert stale.value.code == "STALE_AGGREGATE_VERSION"
-        corrected=service.correct_milestone(shipment.id,milestone.id,{"occurred_at":occurred.isoformat(),"reason":"Corrected operator timestamp","expected_version":milestone.version},_user(operational_app),"correct-1")
+        corrected = service.correct_milestone(
+            shipment.id,
+            milestone.id,
+            {
+                "occurred_at": occurred.isoformat(),
+                "reason": "Corrected operator timestamp",
+                "expected_version": milestone.version,
+            },
+            _user(operational_app),
+            "correct-1",
+        )
         assert corrected.event_type == "corrected" and corrected.supersedes_event_id
         assert MilestoneEvent.query.count() == 3
 
 
 def test_reconcile_is_idempotent_and_verify_resolves_work(operational_app):
     with operational_app.app_context():
-        past=datetime.now(timezone.utc)-timedelta(hours=3)
-        shipment,_=service.create_from_accepted_quote(_payload(operational_app,departure=past,arrival=past+timedelta(hours=1)),_user(operational_app),"overdue")
+        past = datetime.now(timezone.utc) - timedelta(hours=3)
+        shipment, _ = service.create_from_accepted_quote(
+            _payload(
+                operational_app, departure=past, arrival=past + timedelta(hours=1)
+            ),
+            _user(operational_app),
+            "overdue",
+        )
         assert service.reconcile_overdue(user_id=_user(operational_app)["id"]) == 2
         assert service.reconcile_overdue(user_id=_user(operational_app)["id"]) == 0
-        milestone=Milestone.query.filter_by(milestone_type="departure").one(); service.record_event(shipment.id,milestone.id,{"occurred_at":past.isoformat()},_user(operational_app),"late-report")
-        service.verify_milestone(shipment.id,milestone.id,milestone.version,_user(operational_app,"verifier"))
-        assert OperationalWorkItem.query.filter_by(milestone_id=milestone.id,status="resolved").count() == 1
+        milestone = Milestone.query.filter_by(milestone_type="departure").one()
+        service.record_event(
+            shipment.id,
+            milestone.id,
+            {"occurred_at": past.isoformat()},
+            _user(operational_app),
+            "late-report",
+        )
+        service.verify_milestone(
+            shipment.id,
+            milestone.id,
+            milestone.version,
+            _user(operational_app, "verifier"),
+        )
+        assert (
+            OperationalWorkItem.query.filter_by(
+                milestone_id=milestone.id, status="resolved"
+            ).count()
+            == 1
+        )
 
 
 def test_cross_tenant_detail_and_queue_are_hidden(operational_app):
     with operational_app.app_context():
-        shipment,_=service.create_from_accepted_quote(_payload(operational_app),_user(operational_app),"tenant")
-        with pytest.raises(service.OperationalError) as hidden: service.scoped_shipment(shipment.id,_user(operational_app,"outsider"))
+        shipment, _ = service.create_from_accepted_quote(
+            _payload(operational_app), _user(operational_app), "tenant"
+        )
+        with pytest.raises(service.OperationalError) as hidden:
+            service.scoped_shipment(shipment.id, _user(operational_app, "outsider"))
         assert hidden.value.status == 404
         public_id = shipment.public_id
 
@@ -129,37 +474,103 @@ def test_cross_tenant_detail_and_queue_are_hidden(operational_app):
 
 def test_permission_denied_and_correction_reason_required(operational_app):
     with operational_app.app_context():
-        membership=OperationalMembership.query.filter_by(user_id=operational_app.config["phase1a"]["user"]).one(); membership.permissions=["operational_shipment.read"]; db.session.commit()
-        readonly={"id":operational_app.config["phase1a"]["user"],"role":"business_expert"}
-        with pytest.raises(service.OperationalError) as forbidden: service.create_from_accepted_quote(_payload(operational_app),readonly,"forbidden")
+        membership = OperationalMembership.query.filter_by(
+            user_id=operational_app.config["phase1a"]["user"]
+        ).one()
+        membership.permissions = ["operational_shipment.read"]
+        db.session.commit()
+        readonly = {
+            "id": operational_app.config["phase1a"]["user"],
+            "role": "business_expert",
+        }
+        with pytest.raises(service.OperationalError) as forbidden:
+            service.create_from_accepted_quote(
+                _payload(operational_app), readonly, "forbidden"
+            )
         assert forbidden.value.code == "FORBIDDEN_OPERATION"
-        membership.permissions=["operational_shipment.read","operational_shipment.create","milestone_event.create","milestone.verify","milestone.correct","work_item.read","work_item.manage"]; db.session.commit()
-        shipment,_=service.create_from_accepted_quote(_payload(operational_app),_user(operational_app),"reason")
-        milestone=Milestone.query.first()
-        with pytest.raises(service.OperationalError) as reason: service.correct_milestone(shipment.id,milestone.id,{"occurred_at":datetime.now(timezone.utc).isoformat(),"expected_version":milestone.version},_user(operational_app),"correct")
+        membership.permissions = [
+            "operational_shipment.read",
+            "operational_shipment.create",
+            "milestone_event.create",
+            "milestone.verify",
+            "milestone.correct",
+            "work_item.read",
+            "work_item.manage",
+        ]
+        db.session.commit()
+        shipment, _ = service.create_from_accepted_quote(
+            _payload(operational_app), _user(operational_app), "reason"
+        )
+        milestone = Milestone.query.first()
+        with pytest.raises(service.OperationalError) as reason:
+            service.correct_milestone(
+                shipment.id,
+                milestone.id,
+                {
+                    "occurred_at": datetime.now(timezone.utc).isoformat(),
+                    "expected_version": milestone.version,
+                },
+                _user(operational_app),
+                "correct",
+            )
         assert reason.value.code == "CORRECTION_REASON_REQUIRED"
 
 
 def test_http_create_list_detail_and_error_envelopes(operational_app):
-    client=operational_app.test_client(); headers={**_auth(operational_app),"Idempotency-Key":"http-create"}; payload=_payload(operational_app)
-    created=client.post("/api/operational-shipments/from-accepted-quote",json=payload,headers=headers)
+    client = operational_app.test_client()
+    headers = {**_auth(operational_app), "Idempotency-Key": "http-create"}
+    payload = _payload(operational_app)
+    created = client.post(
+        "/api/operational-shipments/from-accepted-quote", json=payload, headers=headers
+    )
     assert created.status_code == 201 and created.json["meta"]["created"] is True
-    replay=client.post("/api/operational-shipments/from-accepted-quote",json=payload,headers=headers)
-    assert replay.status_code == 200 and replay.json["data"]["public_id"] == created.json["data"]["public_id"]
-    listing=client.get("/api/operational-shipments?status=planned&customer=0900&page=1&per_page=5",headers=_auth(operational_app))
+    replay = client.post(
+        "/api/operational-shipments/from-accepted-quote", json=payload, headers=headers
+    )
+    assert (
+        replay.status_code == 200
+        and replay.json["data"]["public_id"] == created.json["data"]["public_id"]
+    )
+    listing = client.get(
+        "/api/operational-shipments?status=planned&customer=0900&page=1&per_page=5",
+        headers=_auth(operational_app),
+    )
     assert listing.status_code == 200 and listing.json["meta"]["page"] == 1
-    assert {"customer","current_milestone","overdue","open_work_item_count"} <= listing.json["data"][0].keys()
-    detail=client.get(f"/api/operational-shipments/{created.json['data']['public_id']}",headers=_auth(operational_app))
+    assert {
+        "customer",
+        "current_milestone",
+        "overdue",
+        "open_work_item_count",
+    } <= listing.json["data"][0].keys()
+    detail = client.get(
+        f"/api/operational-shipments/{created.json['data']['public_id']}",
+        headers=_auth(operational_app),
+    )
     assert detail.status_code == 200 and "audit_summary" in detail.json["data"]
     assert detail.json["data"]["public_id"] == created.json["data"]["public_id"]
-    missing=client.get("/api/operational-shipments/11111111-1111-4111-8111-111111111111",headers=_auth(operational_app))
-    assert missing.status_code == 404 and missing.json["error"]["code"] == "RESOURCE_NOT_FOUND"
-    mismatch=dict(_payload(operational_app));mismatch["transport_mode"]="rail"
-    conflict=client.post("/api/operational-shipments/from-accepted-quote",json=mismatch,headers=headers)
-    assert conflict.status_code == 409 and conflict.json["error"]["code"] == "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD"
+    missing = client.get(
+        "/api/operational-shipments/11111111-1111-4111-8111-111111111111",
+        headers=_auth(operational_app),
+    )
+    assert (
+        missing.status_code == 404
+        and missing.json["error"]["code"] == "RESOURCE_NOT_FOUND"
+    )
+    mismatch = dict(_payload(operational_app))
+    mismatch["transport_mode"] = "rail"
+    conflict = client.post(
+        "/api/operational-shipments/from-accepted-quote", json=mismatch, headers=headers
+    )
+    assert (
+        conflict.status_code == 409
+        and conflict.json["error"]["code"]
+        == "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD"
+    )
 
 
-def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(operational_app):
+def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(
+    operational_app,
+):
     with operational_app.app_context():
         shipment, _ = service.create_from_accepted_quote(
             _payload(operational_app), _user(operational_app), "dedup-list"
@@ -170,17 +581,21 @@ def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(
         ).one()
         first_leg = RouteLeg.query.filter_by(route_plan_id=plan.id).one()
         for sequence in (2, 3):
-            db.session.add(RouteLeg(
-                route_plan_id=plan.id,
-                sequence_number=sequence,
-                origin_location_id=first_leg.origin_location_id,
-                destination_location_id=first_leg.destination_location_id,
-                origin_snapshot=first_leg.origin_snapshot,
-                destination_snapshot=first_leg.destination_snapshot,
-                transport_mode=first_leg.transport_mode,
-                planned_departure=first_leg.planned_departure + timedelta(hours=sequence),
-                planned_arrival=first_leg.planned_arrival + timedelta(hours=sequence),
-            ))
+            db.session.add(
+                RouteLeg(
+                    route_plan_id=plan.id,
+                    sequence_number=sequence,
+                    origin_location_id=first_leg.origin_location_id,
+                    destination_location_id=first_leg.destination_location_id,
+                    origin_snapshot=first_leg.origin_snapshot,
+                    destination_snapshot=first_leg.destination_snapshot,
+                    transport_mode=first_leg.transport_mode,
+                    planned_departure=first_leg.planned_departure
+                    + timedelta(hours=sequence),
+                    planned_arrival=first_leg.planned_arrival
+                    + timedelta(hours=sequence),
+                )
+            )
         db.session.commit()
 
     response = operational_app.test_client().get(
@@ -191,19 +606,54 @@ def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(
     assert response.status_code == 200
     assert [row["public_id"] for row in response.json["data"]] == [shipment_public_id]
     assert response.json["meta"] == {
-        "page": 1, "per_page": 1, "has_more": False,
+        "page": 1,
+        "per_page": 1,
+        "has_more": False,
     }
 
 
 def test_http_permission_validation_transition_and_stale_conflicts(operational_app):
     with operational_app.app_context():
-        membership=OperationalMembership.query.filter_by(user_id=operational_app.config["phase1a"]["user"]).one();membership.permissions=["operational_shipment.read"];db.session.commit()
-    forbidden=operational_app.test_client().post("/api/operational-shipments/from-accepted-quote",json=_payload(operational_app),headers={**_auth(operational_app),"Idempotency-Key":"forbidden-http"})
-    assert forbidden.status_code == 403 and forbidden.json["error"]["code"] == "FORBIDDEN_OPERATION"
-    with operational_app.app_context(): membership=OperationalMembership.query.filter_by(user_id=operational_app.config["phase1a"]["user"]).one();membership.permissions=["operational_shipment.read","operational_shipment.create","milestone_event.create","milestone.verify","milestone.correct","work_item.read","work_item.manage"];db.session.commit()
-    invalid=_payload(operational_app);invalid["planned_arrival"]="invalid"
-    response=operational_app.test_client().post("/api/operational-shipments/from-accepted-quote",json=invalid,headers={**_auth(operational_app),"Idempotency-Key":"invalid-http"})
-    assert response.status_code == 422 and response.json["error"]["code"] == "INVALID_ROUTE_TIMELINE" and "traceback" not in response.get_data(as_text=True).lower()
+        membership = OperationalMembership.query.filter_by(
+            user_id=operational_app.config["phase1a"]["user"]
+        ).one()
+        membership.permissions = ["operational_shipment.read"]
+        db.session.commit()
+    forbidden = operational_app.test_client().post(
+        "/api/operational-shipments/from-accepted-quote",
+        json=_payload(operational_app),
+        headers={**_auth(operational_app), "Idempotency-Key": "forbidden-http"},
+    )
+    assert (
+        forbidden.status_code == 403
+        and forbidden.json["error"]["code"] == "FORBIDDEN_OPERATION"
+    )
+    with operational_app.app_context():
+        membership = OperationalMembership.query.filter_by(
+            user_id=operational_app.config["phase1a"]["user"]
+        ).one()
+        membership.permissions = [
+            "operational_shipment.read",
+            "operational_shipment.create",
+            "milestone_event.create",
+            "milestone.verify",
+            "milestone.correct",
+            "work_item.read",
+            "work_item.manage",
+        ]
+        db.session.commit()
+    invalid = _payload(operational_app)
+    invalid["planned_arrival"] = "invalid"
+    response = operational_app.test_client().post(
+        "/api/operational-shipments/from-accepted-quote",
+        json=invalid,
+        headers={**_auth(operational_app), "Idempotency-Key": "invalid-http"},
+    )
+    assert (
+        response.status_code == 422
+        and response.json["error"]["code"] == "INVALID_ROUTE_TIMELINE"
+        and "traceback" not in response.get_data(as_text=True).lower()
+    )
 
 
 def test_opaque_shipment_http_boundary_is_tenant_scoped(operational_app):
@@ -240,11 +690,16 @@ def test_opaque_shipment_http_boundary_is_tenant_scoped(operational_app):
 
 
 def test_legacy_operational_openapi_exact_runtime_parity_and_opacity(operational_app):
-    text = (Path(__file__).resolve().parents[2] / "docs" / "openapi" / "openapi.yaml").read_text(encoding="utf-8")
+    text = (
+        Path(__file__).resolve().parents[2] / "docs" / "openapi" / "openapi.yaml"
+    ).read_text(encoding="utf-8")
     documented: dict[str, set[str]] = {}
     current = None
     for line in text.splitlines():
-        match = re.match(r"^  (/api/(?:operational-shipments|operational-work-items)[^:]*):\s*$", line)
+        match = re.match(
+            r"^  (/api/(?:operational-shipments|operational-work-items)[^:]*):\s*$",
+            line,
+        )
         if match:
             current = match.group(1)
             documented[current] = set()
@@ -259,8 +714,12 @@ def test_legacy_operational_openapi_exact_runtime_parity_and_opacity(operational
         if not rule.endpoint.startswith("operations."):
             continue
         path = re.sub(r"<(?:(?:int|uuid):)?([^>]+)>", r"{\1}", str(rule))
-        if path.startswith(("/api/operational-shipments", "/api/operational-work-items")):
-            runtime.setdefault(path, set()).update(set(rule.methods) - {"HEAD", "OPTIONS"})
+        if path.startswith(
+            ("/api/operational-shipments", "/api/operational-work-items")
+        ):
+            runtime.setdefault(path, set()).update(
+                set(rule.methods) - {"HEAD", "OPTIONS"}
+            )
     assert documented == runtime
     assert "format: uuid" in text
     assert "Numeric database IDs are rejected" in text
