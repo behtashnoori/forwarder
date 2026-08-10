@@ -19,12 +19,12 @@ def _builder():
     return module
 
 
-def test_integrated_190_builder_identity_and_migration_boundary():
+def test_integrated_191_builder_identity_and_migration_boundary():
     builder = _builder()
 
-    assert builder.VERSION == "1.9.0"
+    assert builder.VERSION == "1.9.1"
     assert builder.PREVIOUS_VERSION == "1.8.0"
-    assert builder.TAG == "v1.9.0"
+    assert builder.TAG == "v1.9.1"
     assert builder.PRODUCTION_BASELINE_REVISION == "20260809_cargo_catalog_items"
     assert builder.DATABASE_REVISION == "20260818_immutable_fx_provenance"
     assert builder.UPGRADE_REVISIONS == [
