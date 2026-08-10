@@ -29,6 +29,13 @@ UPGRADE_MIGRATIONS = [
     ("20260819_v191_acceptance_corrections", "backend/migrations/versions/20260819_v191_acceptance_corrections.py"),
 ]
 UPGRADE_REVISIONS = [revision for revision, _ in UPGRADE_MIGRATIONS]
+HISTORICAL_SECURITY_REMEDIATION = {
+    "policy": "exact-credential-migration-remediated-in-ancestry-v1",
+    "legacy_revision": "20240926_add_password_to_expert_user",
+    "legacy_file_sha256": "6ed41e455ed80e69922f201dbe2e8fd4e9db3e1c60f49bf64fb39a4451013554",
+    "remediation_revision": "security_credential_remediation",
+    "remediation_sha256": "72e19843e625054dac4f338ee7f54772bc2ebef332dabdab7417e50fab6635ee",
+}
 
 
 def run(*args: str) -> str:
@@ -192,6 +199,7 @@ def build() -> None:
         "previous_database_revision": PRODUCTION_BASELINE_REVISION,
         "upgrade_revisions": UPGRADE_REVISIONS,
         "migration_files": migration_files,
+        "historical_security_remediation": HISTORICAL_SECURITY_REMEDIATION,
         "database_migration_included": True,
         "deployment_type": "backend-frontend-migration",
         "api_base": "same-origin",
