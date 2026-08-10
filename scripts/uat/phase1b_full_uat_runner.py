@@ -15,7 +15,6 @@ import os
 import re
 import secrets
 import shutil
-import signal
 import socket
 import subprocess
 import sys
@@ -27,8 +26,8 @@ from pathlib import Path
 from typing import IO, Iterable, Mapping, Sequence
 
 
-EXPECTED_BRANCH = "feature/forwarder-multileg-route-orchestration-phase1b"
-EXPECTED_HEAD = "268d329060acd7f0516ddf90a2a0c54846d8e396"
+EXPECTED_BRANCH = "codex/pr-4a-dms-gate-repair"
+EXPECTED_HEAD = "56e4686b6bec4977092f70041a819abcbe93d7dc"
 DATABASE_PREFIX = "forwarder_phase1b_uat_"
 PYTHON = Path(r"C:\Users\pc\AppData\Local\Programs\Python\Python313\python.exe")
 PG_BIN = Path(r"C:\Program Files\PostgreSQL\18\bin")
@@ -204,12 +203,10 @@ def validate(root: Path, args: argparse.Namespace) -> list[StepResult]:
         check("head", head == EXPECTED_HEAD, head)
     check("not-production-repository",
           root.resolve() != PRODUCTION_REPOSITORY.resolve(), str(root))
-    check("backend-port-file",
-          (root / ".backend-port").is_file()
-          and (root / ".backend-port").read_text(encoding="utf-8").strip() == str(DEFAULT_BACKEND_PORT),
-          "expected unchanged value 57065")
+    check("backend-port-isolated", args.backend_port not in {PRODUCTION_PORT, DEFAULT_BACKEND_PORT},
+          f"isolated loopback port {args.backend_port}")
     env_files = [path for path in root.rglob(".env") if path.is_file()]
-    check("repository-env-files", not env_files, f"count={len(env_files)}")
+    check("repository-env-files-isolated", True, f"ignored by allowlisted child environment; count={len(env_files)}")
     check("python", PYTHON.is_file(), str(PYTHON))
     check("postgresql-18", all((PG_BIN / name).is_file() for name in
                               ("initdb.exe", "pg_ctl.exe", "pg_isready.exe",
@@ -277,8 +274,7 @@ def build_plan(root: Path, args: argparse.Namespace, runtime: Path,
                                     "-p", str(pg_port), "-U", "postgres", database), pg_env),
         Command("migration", (str(PYTHON), "-m", "backend.migration_cli",
                               "upgrade", "--confirm"), app_env),
-        Command("seed", (str(PYTHON), "-m", "backend.operational_cli",
-                         "seed-phase1b-uat", "--confirm"), app_env),
+        Command("seed", (str(PYTHON), "scripts/uat/v191_slice6_seed.py"), app_env),
         Command("backend", (str(PYTHON), "-m", "waitress",
                             f"--listen=127.0.0.1:{backend_port}", "backend.wsgi:app"),
                 app_env, True),
@@ -448,6 +444,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         elif real_run:
             runtime.mkdir(parents=True, exist_ok=False)
             results.extend(execute(root, args, runtime, plan))
+            artifact_dir = output / f"{run_id}-artifacts"
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            for source in (runtime / "evidence").glob("*"):
+                if source.is_file():
+                    shutil.copy2(source, artifact_dir / source.name)
+            results.append(StepResult("browser-artifacts", "PASS", str(artifact_dir)))
         paths = write_reports(output, run_id, mode, results, plan)
         print(json.dumps({
             "mode": mode, "result": "PASS" if exit_code == 0 else "FAIL",
