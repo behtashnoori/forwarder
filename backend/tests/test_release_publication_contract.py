@@ -23,21 +23,12 @@ def test_integrated_191_builder_identity_and_migration_boundary():
     builder = _builder()
 
     assert builder.VERSION == "1.9.1"
-    assert builder.PREVIOUS_VERSION == "1.8.0"
+    assert builder.PREVIOUS_VERSION == "1.9.0"
     assert builder.TAG == "v1.9.1"
-    assert builder.PRODUCTION_BASELINE_REVISION == "20260809_cargo_catalog_items"
-    assert builder.DATABASE_REVISION == "20260818_immutable_fx_provenance"
+    assert builder.PRODUCTION_BASELINE_REVISION == "20260818_immutable_fx_provenance"
+    assert builder.DATABASE_REVISION == "20260819_v191_acceptance_corrections"
     assert builder.UPGRADE_REVISIONS == [
-        "20260810_logistics_network",
-        "20260811_project_configuration",
-        "security_credential_remediation",
-        "20260812_operational_execution",
-        "20260813_mdpm_readiness",
-        "20260814_oip_situations",
-        "20260815_oip_threshold_policy",
-        "20260816_oip_projection_health",
-        "20260817_shipment_economics_core",
-        "20260818_immutable_fx_provenance",
+        "20260819_v191_acceptance_corrections",
     ]
     assert all(builder.migration_path(revision).is_file() for revision in builder.UPGRADE_REVISIONS)
 
@@ -148,7 +139,7 @@ def test_vite_does_not_watch_immutable_release_staging_directories():
     assert 'ignored: ["**/.release-v*-staging-*"]' in config
 
 
-def test_publication_runbooks_and_dependency_contract_are_190_coherent():
+def test_publication_runbooks_and_dependency_contract_are_191_coherent():
     for name in (
         "DEPLOYMENT.md",
         "ROLLBACK.md",
@@ -158,8 +149,8 @@ def test_publication_runbooks_and_dependency_contract_are_190_coherent():
         "VERIFY-SERVER.ps1",
     ):
         text = (ROOT / name).read_text(encoding="utf-8")
-        assert "1.9.0" in text or name == "VERIFY-PACKAGE.ps1"
-        assert "20260818_immutable_fx_provenance" in text
+        assert "1.9.1" in text
+        assert "20260819_v191_acceptance_corrections" in text
 
     requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
     assert "psycopg2-binary==2.9.11" in requirements
@@ -190,7 +181,6 @@ def test_release_upgrade_chain_is_contiguous_and_remediation_is_mandatory():
         )
     )
     assert revisions == builder.UPGRADE_REVISIONS
-    # The immutable v1.9.0 builder remains pinned to its release revision while
-    # repository development advances additively for v1.9.1.
+    # The v1.9.1 builder must be pinned to the repository's sole release head.
     assert script.get_revision(builder.DATABASE_REVISION) is not None
     assert script.get_heads() == ["20260819_v191_acceptance_corrections"]

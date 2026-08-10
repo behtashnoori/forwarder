@@ -66,6 +66,7 @@ CURRENT: tuple[Suite, ...] = (
     Suite("oip_rebuild_recovery", "CURRENT_HEAD_MANDATORY", ("backend/tests/test_oip_rebuild_recovery_postgresql.py",), "OIP_POSTGRES_URL", "forwarder_oip2_gate_recovery"),
     Suite("fe2_races", "CURRENT_HEAD_MANDATORY", ("backend/tests/test_fe2_races_postgresql.py",), "FE2_POSTGRES_URL", "forwarder_fe2_gate_races"),
     Suite("fe2_migration", "CURRENT_HEAD_MANDATORY", ("scripts/fe2_postgres_migration_gate.py",), "FE2_POSTGRES_URL", "forwarder_fe2_gate_migration"),
+    Suite("v191_persistence", "CURRENT_HEAD_MANDATORY", ("backend/tests/test_v191_persistence_postgresql.py",), "FORWARDER_V191_POSTGRES_URL", "forwarder_v191_slice2_test", revision="20260818_immutable_fx_provenance"),
     Suite("phase1b_safe_downgrade", "CURRENT_HEAD_MANDATORY", ("backend/tests/test_phase1b_safe_downgrade_postgresql.py",), "FORWARDER_PHASE1B_SAFE_DOWNGRADE_HEAD_URL", "forwarder_phase1a_test_phase1b_safehead", revision="20260801_route_exception", extra_databases=(("FORWARDER_PHASE1B_SAFE_DOWNGRADE_PHASE1B_URL", "forwarder_phase1a_test_phase1b_safebase", "20260730_multileg_route"),)),
 )
 

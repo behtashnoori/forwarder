@@ -11,7 +11,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import ExpertQuote, ExpertUser, Province, ShipmentRequest
+from backend.models import Customer, ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.operational_models import (
     OperationalAudit,
     OperationalCheckpoint,
@@ -91,13 +91,17 @@ def _seed(app, label):
         destination = Province(
             name_fa=f"Race destination {suffix}", code=f"S{os.urandom(3).hex()}"
         )
+        customer = Customer(first_name="Race", last_name=suffix, status="active")
+        db.session.add_all([origin, destination, customer])
+        db.session.flush()
         request = ShipmentRequest(
             contact_phone=f"09{os.urandom(5).hex()[:9]}",
             status="waiting_for_customer",
             status_request_status="new",
             assigned_to=actor.id,
+            customer_id=customer.id,
         )
-        db.session.add_all([origin, destination, request])
+        db.session.add(request)
         db.session.flush()
         quote = ExpertQuote(
             shipment_request_id=request.id,

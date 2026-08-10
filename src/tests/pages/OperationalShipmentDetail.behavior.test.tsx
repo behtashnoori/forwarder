@@ -35,7 +35,7 @@ vi.mock("../../lib/api", async () => {
 
 const shipment = {
   public_id: "11111111-1111-4111-8111-111111111111", status: "active", version: 3, customer: "UAT Customer",
-  overdue: true, open_work_item_count: 1, source: { accepted_quote_id: 2, shipment_request_id: 3 },
+  overdue: true, open_work_item_count: 1, source: { type: "accepted_quote" as const, accepted_quote_id: 2, shipment_request_id: 3 },
   route_leg: { id: 10, origin: { display_name: "Origin" }, destination: { display_name: "Hub" }, transport_mode: "road", planned_departure: "2026-01-01T00:00:00Z", planned_arrival: "2026-01-02T00:00:00Z", version: 1 },
   milestones: [], recent_events: [],
   open_work_items: [{ id: 90, milestone_id: 31, type: "ROUTE_DEPENDENCY_BLOCKED", due_at: "2026-01-01T00:00:00Z", status: "open", version: 2 }],

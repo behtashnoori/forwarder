@@ -10,7 +10,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import ExpertQuote, ExpertUser, Province, ShipmentRequest
+from backend.models import Customer, ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.operational_models import (
     Milestone, MilestoneEvent, OperationalCheckpoint, OperationalMembership,
     OperationalAudit, OperationalIdempotency, OperationalOrganization,
@@ -45,8 +45,10 @@ def test_phase1b_postgresql_integrity_lifecycle_and_concurrency():
             OperationalMembership(organization_id=org.id,user_id=verifier.id,permissions=permissions)])
         origin=Province(name_fa=f"Origin {suffix}",code=f"O{suffix[:5]}")
         destination=Province(name_fa=f"Destination {suffix}",code=f"D{suffix[:5]}")
-        request=ShipmentRequest(contact_phone=f"09{suffix[:8]}",status="waiting_for_customer",status_request_status="new",assigned_to=reporter.id)
-        db.session.add_all([origin,destination,request]);db.session.flush()
+        customer=Customer(first_name="Phase1B",last_name=f"Customer {suffix}",status="active")
+        db.session.add_all([origin,destination,customer]);db.session.flush()
+        request=ShipmentRequest(contact_phone=f"09{suffix[:8]}",status="waiting_for_customer",status_request_status="new",assigned_to=reporter.id,customer_id=customer.id)
+        db.session.add(request);db.session.flush()
         quote=ExpertQuote(shipment_request_id=request.id,amount=100,currency="IRR",created_by_expert_id=reporter.id,
             created_at=datetime.now(timezone.utc),customer_response="accepted",responded_at=datetime.now(timezone.utc),
             operational_organization_id=org.id)
