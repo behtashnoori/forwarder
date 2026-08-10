@@ -1478,22 +1478,29 @@ export class ApiError extends Error {
 }
 
 export interface OperationalLocationRef {
-  source_type: string;
+  source_type: "province" | "city" | "country" | "international_city" | "iran_port" | "customs_office";
   source_id: number;
 }
+export interface OperationalCustomerSelector { id: number; label: string }
+export interface OperationalProjectSelector { public_id: string; label: string; project_code: string; primary_customer_id: number; lifecycle_status: string }
+export interface OperationalQuoteSelector { id: number; request_public_id: string; customer_label: string; route_label: string | null; quote_label: string; accepted_at: string | null }
+export interface IranDestinationOption { identity: { type: "city" | "port" | "customs"; id: number }; label: string; province: { id: number; name: string }; secondary_label: string }
+export interface SelectorPage<T> { items: T[]; meta: { count: number; limit: number } }
 export interface OperationalShipmentSummary {
   public_id: string;
   status: string;
   version: number;
-  customer?: string;
+  customer?: string | { id: number; display_name: string } | null;
+  project_public_id?: string | null;
   current_milestone?: string | null;
   overdue: boolean;
   overdue_since?: string | null;
   open_work_item_count: number;
   source: {
-    accepted_quote_id: number;
-    shipment_request_id: number;
-    quote_amount?: number;
+    type: "direct" | "accepted_quote";
+    accepted_quote_id: number | null;
+    shipment_request_id: number | null;
+    quote_amount?: number | null;
   };
   route_leg: {
     id: number;
@@ -1590,6 +1597,23 @@ export function createOperationalShipment(
     body: JSON.stringify(payload),
   });
 }
+export type OperationalRouteCommand = {
+  origin: OperationalLocationRef;
+  destination: OperationalLocationRef;
+  transport_mode: string;
+  planned_departure: string;
+  planned_arrival: string;
+};
+export type DirectOperationCommand = OperationalRouteCommand & { source_type: "direct"; customer_id: number; project_public_id?: string };
+export type QuoteOperationCommand = OperationalRouteCommand & { accepted_quote_id: number; project_public_id?: string };
+const selectorQuery = (path: string, q = "", limit = 25, extra?: Record<string, string | number | undefined>) =>
+  request(`${path}?${new URLSearchParams(Object.entries({ q, limit, ...extra }).filter((entry): entry is [string, string | number] => entry[1] !== undefined).map(([key,value]) => [key,String(value)])).toString()}`);
+export const searchOperationalCustomers = (q = "", limit = 25) => selectorQuery("/api/operations/selectors/customers", q, limit) as Promise<SelectorPage<OperationalCustomerSelector>>;
+export const searchOperationalProjects = (q = "", customerId?: number, limit = 25) => selectorQuery("/api/operations/selectors/projects", q, limit, { customer_id: customerId }) as Promise<SelectorPage<OperationalProjectSelector>>;
+export const searchAcceptedOperationalQuotes = (q = "", limit = 25) => selectorQuery("/api/operations/selectors/accepted-quotes", q, limit) as Promise<SelectorPage<OperationalQuoteSelector>>;
+export const searchIranDestinations = (q = "", limit = 50) => request<{data:IranDestinationOption[];meta:{count:number;limit:number}}>(withQuery("/api/locations/iran-destinations", { q, limit }));
+export const createDirectOperationalShipment = (payload: DirectOperationCommand, key: string) => request<{data:OperationalShipmentSummary;meta:{created:boolean;replayed:boolean}}>("/api/operational-shipments", { method:"POST", headers:{"Idempotency-Key":key}, body:JSON.stringify(payload) });
+export const createQuoteOperationalShipment = (payload: QuoteOperationCommand, key: string) => request<{data:OperationalShipmentSummary;meta:{created:boolean}}>("/api/operational-shipments/from-accepted-quote", { method:"POST", headers:{"Idempotency-Key":key}, body:JSON.stringify(payload) });
 export function recordOperationalEvent(
   shipmentId: string,
   milestoneId: number,

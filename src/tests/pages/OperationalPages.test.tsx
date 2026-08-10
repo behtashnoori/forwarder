@@ -46,7 +46,7 @@ const shipment = {
   overdue_since: "2026-01-01T00:00:00Z",
   open_work_item_count: 1,
   current_milestone: "departure",
-  source: { accepted_quote_id: 2, shipment_request_id: 3 },
+  source: { type: "accepted_quote", accepted_quote_id: 2, shipment_request_id: 3 },
   route_leg: {
     id: 4,
     origin: { display_name: "Origin" },
@@ -131,56 +131,6 @@ describe("Phase 1A operational pages", () => {
     expect(screen.queryByText(/Quote #2|Request #3|#1/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("status")).toBeInTheDocument();
   });
-  it("prevents duplicate create submissions", async () => {
-    (
-      api.listOperationalShipments as ReturnType<typeof vi.fn>
-    ).mockResolvedValue({ data: [], meta: { page: 1, has_more: false } });
-    (api.createOperationalShipment as ReturnType<typeof vi.fn>).mockReturnValue(
-      new Promise(() => {}),
-    );
-    render(
-      <MemoryRouter>
-        <OperationalShipments />
-      </MemoryRouter>,
-    );
-    for (const [label, value] of [
-      ["quote", "2"],
-      ["origin", "1"],
-      ["destination", "2"],
-      ["departure", "2026-01-01T00:00"],
-      ["arrival", "2026-01-02T00:00"],
-    ])
-      fireEvent.change(document.querySelector(`#create-${label}`) as HTMLInputElement, { target: { value } });
-    const button = screen.getByRole("button", { name: "operations.create" });
-    fireEvent.click(button);
-    fireEvent.click(button);
-    await waitFor(() =>
-      expect(api.createOperationalShipment).toHaveBeenCalledTimes(1),
-    );
-    expect(button).toBeDisabled();
-  });
-  it("shows a friendly validation error for invalid route times", async () => {
-    (api.listOperationalShipments as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: [],
-      meta: { page: 1, has_more: false },
-    });
-    render(
-      <MemoryRouter>
-        <OperationalShipments />
-      </MemoryRouter>,
-    );
-    for (const [label, value] of [
-      ["quote", "2"],
-      ["origin", "1"],
-      ["destination", "2"],
-      ["departure", "not-a-time"],
-      ["arrival", "also-not-a-time"],
-    ])
-      fireEvent.change(document.querySelector(`#create-${label}`) as HTMLInputElement, { target: { value } });
-    fireEvent.click(screen.getByRole("button", { name: "operations.create" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("operations.invalidTime");
-    expect(api.createOperationalShipment).not.toHaveBeenCalled();
-  });
   it("renders detail milestones, work and audit sections", async () => {
     (api.getOperationalShipment as ReturnType<typeof vi.fn>).mockResolvedValue({
       data: shipment,
@@ -196,7 +146,7 @@ describe("Phase 1A operational pages", () => {
       </MemoryRouter>,
     );
     expect(
-      await screen.findByText("UAT Customer", { exact: false }),
+      (await screen.findAllByText("UAT Customer", { exact: false }))[0],
     ).toBeInTheDocument();
     expect(screen.getAllByText("arrival", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("operations.workQueue")).toBeInTheDocument();

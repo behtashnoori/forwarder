@@ -31,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PageNav from "@/components/PageNav";
+import OperationsNav from "@/components/OperationsNav";
 import { useToast } from "@/hooks/use-toast";
 import {
   assignRequest,
@@ -313,7 +314,7 @@ const ExpertConsole = () => {
         <section className="overflow-hidden rounded-3xl border border-blue-100 bg-white shadow-sm">
           <div className="flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-7">
             <div className="flex min-w-0 flex-col gap-4">
-              <PageNav backTo="/" showLogout className="flex-wrap" />
+              <div className="space-y-3"><PageNav backTo="/" showLogout className="flex-wrap" /><OperationsNav /></div>
               <div className="flex items-start gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-sm">
                   <BarChart3 className="h-7 w-7" />

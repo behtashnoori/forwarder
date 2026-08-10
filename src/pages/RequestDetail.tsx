@@ -34,6 +34,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PageNav from "@/components/PageNav";
 import OperationalPermission from "@/components/OperationalPermission";
+import OperationalAnyPermission from "@/components/OperationalAnyPermission";
 import CaseDocumentsTab from "@/components/CaseDocumentsTab";
 import { QuoteModal } from "@/components/QuoteModal";
 import { useToast } from "@/hooks/use-toast";
@@ -774,7 +775,7 @@ const RequestDetail = () => {
                         {request.latest_quote.customer_response === "accepted" ? (
                           <div className="space-y-3 rounded-2xl bg-green-50 p-3 text-sm font-medium text-green-800">
                             <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0" />{t("requestDetail.customerAccepted")}</div>
-                            <OperationalPermission permission="operational_shipment.create"><Button asChild size="sm"><Link to={`/operations/shipments?accepted_quote_id=${request.latest_quote.id}&request_id=${request.id}`}>{t("operations.create")}</Link></Button></OperationalPermission>
+                            <OperationalAnyPermission permissions={["operational_shipment.create_from_quote","operational_shipment.create"]}><Button asChild size="sm"><Link to={`/operations/shipments/new?source=accepted_quote&accepted_quote_id=${request.latest_quote.id}&request_ref=${encodeURIComponent(request.tracking_number)}`}>{t("operations.create")}</Link></Button></OperationalAnyPermission>
                           </div>
                         ) : request.latest_quote.customer_response === "declined" ? (
                           <div className="flex items-center gap-2 rounded-2xl bg-red-50 p-3 text-sm font-medium text-red-800">

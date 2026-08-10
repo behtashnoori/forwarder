@@ -29,6 +29,7 @@ import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
 import DocumentReadinessSection from "@/components/DocumentReadinessSection";
 import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
+import OperationsNav from "@/components/OperationsNav";
 
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
@@ -122,8 +123,11 @@ export default function OperationalShipmentDetail() {
         {data && <>
           <header>
             <h1 className="text-2xl font-bold">{t("operations.shipmentDetail")}</h1>
-            <p>{data.customer || "Not provided"} · {data.status} · Shipment v{data.version}</p>
+            <p>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "Not provided"} · {data.status} · Shipment v{data.version}</p>
           </header>
+
+          <OperationsNav />
+          <Card><CardHeader><CardTitle>Source</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>Source: {data.source.type === "direct" ? "Direct" : "Accepted quote"}</p><p>Customer: {typeof data.customer === "string" ? data.customer : data.customer?.display_name || "Governed incomplete state"}</p><p>Project: {data.project_public_id || "—"}</p><p>Request: {data.source.shipment_request_id ?? "Not applicable"}</p><p>Quote: {data.source.accepted_quote_id ?? "Not applicable"}</p></CardContent></Card>
 
           <Card>
             <CardHeader><CardTitle>Active route plan</CardTitle></CardHeader>
@@ -147,8 +151,8 @@ export default function OperationalShipmentDetail() {
 
           <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} /></OperationalPermission>}
+          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>Documents / MDPM</CardTitle></CardHeader><CardContent>Request-scoped documents and readiness: Not applicable</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
+          {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
 
           <Card>
             <CardHeader><CardTitle>Timeline reconciliation</CardTitle></CardHeader>
