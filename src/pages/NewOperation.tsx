@@ -112,7 +112,7 @@ function FieldMessage({ id, message }: { id: string; message?: string }) {
   ) : null;
 }
 
-function SearchSelect<T extends { label: string }>({
+function SearchSelect<T>({
   id,
   label,
   value,
@@ -135,7 +135,7 @@ function SearchSelect<T extends { label: string }>({
   error: string;
   onSearch: (query: string) => void;
   getId: (item: T) => string;
-  render?: (item: T) => string;
+  render: (item: T) => string;
   required?: boolean;
   fieldError?: string;
 }) {
@@ -186,7 +186,7 @@ function SearchSelect<T extends { label: string }>({
           </option>
           {items.map((item) => (
             <option key={getId(item)} value={getId(item)}>
-              {render?.(item) || item.label}
+              {render(item)}
             </option>
           ))}
         </select>
@@ -718,6 +718,7 @@ export default function NewOperation() {
                 error={selectorError}
                 onSearch={loadCustomers}
                 getId={(customer) => String(customer.id)}
+                render={(customer) => customer.label}
                 required
                 fieldError={fieldErrors.customer}
               />

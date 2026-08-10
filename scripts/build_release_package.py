@@ -1,4 +1,4 @@
-"""Build the immutable Forwarder 1.9.0 package from its exact annotated tag."""
+"""Build the immutable Forwarder 1.9.1 package from its exact annotated tag."""
 
 from __future__ import annotations
 
@@ -18,24 +18,15 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = "1.9.1"
-PREVIOUS_VERSION = "1.8.0"
+PREVIOUS_VERSION = "1.9.0"
 TAG = "v1.9.1"
-RELEASE_DATE = "20260809"
+RELEASE_DATE = "20260811"
 RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
 NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
-PRODUCTION_BASELINE_REVISION = "20260809_cargo_catalog_items"
-DATABASE_REVISION = "20260818_immutable_fx_provenance"
+PRODUCTION_BASELINE_REVISION = "20260818_immutable_fx_provenance"
+DATABASE_REVISION = "20260819_v191_acceptance_corrections"
 UPGRADE_MIGRATIONS = [
-    ("20260810_logistics_network", "backend/migrations/versions/20260810_logistics_network.py"),
-    ("20260811_project_configuration", "backend/migrations/versions/20260811_project_configuration.py"),
-    ("security_credential_remediation", "backend/migrations/versions/security_credential_remediation.py"),
-    ("20260812_operational_execution", "backend/migrations/versions/20260812_operational_execution.py"),
-    ("20260813_mdpm_readiness", "backend/migrations/versions/20260813_mdpm_document_readiness.py"),
-    ("20260814_oip_situations", "backend/migrations/versions/20260814_oip_situations.py"),
-    ("20260815_oip_threshold_policy", "backend/migrations/versions/20260815_oip_threshold_policy.py"),
-    ("20260816_oip_projection_health", "backend/migrations/versions/20260816_oip_projection_health.py"),
-    ("20260817_shipment_economics_core", "backend/migrations/versions/20260817_shipment_economics_core.py"),
-    ("20260818_immutable_fx_provenance", "backend/migrations/versions/20260818_immutable_fx_provenance.py"),
+    ("20260819_v191_acceptance_corrections", "backend/migrations/versions/20260819_v191_acceptance_corrections.py"),
 ]
 UPGRADE_REVISIONS = [revision for revision, _ in UPGRADE_MIGRATIONS]
 
@@ -179,8 +170,8 @@ def build() -> None:
         manifest = {
         "application_version": VERSION,
         "previous_version": PREVIOUS_VERSION,
-        "release_name": "Integrated Operational Execution, MDPM, OIP, and Shipment Economics",
-        "change_type": "MINOR",
+        "release_name": "Operational Shipment acceptance corrections",
+        "change_type": "PATCH",
         "git_commit": commit,
         "git_tree": tree,
         "git_tag": TAG,
@@ -206,9 +197,9 @@ def build() -> None:
         "api_base": "same-origin",
         "environment_fingerprint": "sha256:" + hashlib.sha256(env_canonical).hexdigest(),
         "environment_fingerprint_definition": "SHA-256 of canonical secret-free JSON containing Python, Node, npm, package-lock SHA-256, and requirements SHA-256",
-        "rollback_release": "release-v1.6.1-20260802",
-        "rollback_strategy": "forward-fix before durable use; restore coordinated pre-deployment database and document-storage backups when schema rollback is required after durable MDPM/OIP/Economics/FX facts",
-        "rollback_restore_required_from_revision": "20260817_shipment_economics_core",
+        "rollback_release": "release-v1.9.0-20260809",
+        "rollback_strategy": "prefer forward recovery; restore coordinated pre-migration database and document-storage backups when v1.9.1 direct operations or canonical international locations make downgrade fail closed",
+        "rollback_restore_required_from_revision": "20260819_v191_acceptance_corrections",
         "milestone_type_catalog_filename": "backend/reference_data/milestone-types-v1.0.0.json",
         "milestone_type_catalog_version": "1.0.0",
         "milestone_type_catalog_sha256": sha256(ROOT / "backend/reference_data/milestone-types-v1.0.0.json"),
@@ -226,12 +217,13 @@ def build() -> None:
         "build_warnings": [
             "Browserslist data age and frontend chunk-size advisories are accepted non-blocking build warnings when reproduced by the final tagged build."
         ],
-        "ui_version_display_status": "not visibly rendered",
+        "ui_version_display_status": "visible in application and support identity views",
         "known_limitations": [
             "Existing shipments receive no automatic Operational Execution, MDPM, OIP, or Economics rows.",
             "ACTUAL Shipment Economics remains incomplete when authoritative revenue or cost facts are unavailable.",
             "Reference Data and OIP policies/thresholds require separately authorized administrator initialization; no Seed runs during deployment.",
-            "Database downgrade is fail-closed after durable Economics history and may require coordinated backup restore.",
+            "Direct operations do not inherit request-scoped documents or MDPM requirements in 1.9.1.",
+            "Database downgrade is fail-closed after v1.9.1-only direct-operation or canonical-location facts and may require coordinated backup restore.",
         ],
         }
         (package_root / "release-manifest.json").write_text(
@@ -243,7 +235,7 @@ def build() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check-source", action="store_true", help="validate 1.9 source metadata without creating a package")
+    parser.add_argument("--check-source", action="store_true", help="validate 1.9.1 source metadata without creating a package")
     args = parser.parse_args()
     if args.check_source:
         status = validate_source()

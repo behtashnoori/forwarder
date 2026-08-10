@@ -27,7 +27,7 @@ try:
     with engine.connect() as connection:
         revision=connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
         tables={row[0] for row in connection.execute(text("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_name LIKE 'economic_%'"))}
-    assert revision=="20260818_immutable_fx_provenance"
+    assert revision=="20260819_v191_acceptance_corrections"
     assert tables=={"economic_line","economic_observation","economic_observation_fx","economic_evidence_association","economic_fx_rate","economic_audit"}
     try: command.downgrade(cfg,"20260816_oip_projection_health")
     except RuntimeError as exc: assert "fail-closed" in str(exc).lower() or "downgrade refused" in str(exc).lower()

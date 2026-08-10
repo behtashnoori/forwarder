@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import os
 import secrets
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from flask import current_app
@@ -519,7 +519,7 @@ def record_quote_response(
     if quote_row.customer_response is not None:
         return {"message": "شما قبلاً به این پیشنهاد پاسخ داده‌اید"}, 409
 
-    if quote_row.valid_until is not None and quote_row.valid_until < datetime.utcnow().date():
+    if quote_row.valid_until is not None and quote_row.valid_until < date.today():
         return {"message": "مهلت این پیشنهاد به پایان رسیده است"}, 400
 
     try:

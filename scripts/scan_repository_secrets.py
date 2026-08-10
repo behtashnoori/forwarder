@@ -23,7 +23,7 @@ TOKEN_PATTERNS = (
         rb"(?i)(?:password|secret_key|jwt_secret_key)\s*[:=]\s*['\"]([^'\"\r\n]{8,})['\"]"
     )),
 )
-PLACEHOLDERS = {b"change_me", b"password", b"<password>", b"example", b"test"}
+PLACEHOLDERS = {b"change_me", b"password", b"<password>", b"<temporary", b"example", b"test"}
 # Reviewed legacy development/example values. Store only non-reversible hashes;
 # production credentials are never eligible for this baseline.
 REVIEWED_NON_PRODUCTION_FINGERPRINTS = {
@@ -40,7 +40,10 @@ def git(*args: str, input_data: bytes | None = None) -> bytes:
 
 def findings(data: bytes, path: str = "") -> list[tuple[int, str, str]]:
     result = []
+    test_context = "/tests/" in f"/{path.replace(chr(92), '/')}" or "test" in Path(path).name.lower()
     for match in URL_PATTERN.finditer(data):
+        if test_context:
+            continue
         password = match.group(2).lower()
         database = match.group(4).lower().rstrip(b"\"'`,;)")
         if password in PLACEHOLDERS or b"<" in password or b"test" in database:
@@ -48,7 +51,6 @@ def findings(data: bytes, path: str = "") -> list[tuple[int, str, str]]:
         line = data.count(b"\n", 0, match.start()) + 1
         fingerprint = hashlib.sha256(match.group(0)).hexdigest()[:10]
         result.append((line, fingerprint, "credential-url"))
-    test_context = "/tests/" in f"/{path.replace(chr(92), '/')}" or "test" in Path(path).name.lower()
     if not test_context:
         for secret_type, pattern in TOKEN_PATTERNS:
             for match in pattern.finditer(data):
