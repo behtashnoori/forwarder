@@ -10,12 +10,14 @@ from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError
 
 from backend.extensions import db
-from backend.models import City, Country, ExpertQuote, InternationalCity, IranPort, Province, ShipmentRequest, CustomsOffice
+from backend.models import ExpertQuote, ShipmentRequest
 from backend.operational_models import (
     CanonicalLocation, Milestone, MilestoneEvent, OperationalAudit,
     OperationalIdempotency, OperationalMembership, OperationalOutbox,
     OperationalShipment, OperationalWorkItem, RouteLeg, RoutePlan, utcnow,
 )
+from backend.services.location_resolver import LocationResolutionError, ResolvedLocation
+from backend.services.location_resolver import resolve_location as resolve_canonical_location
 
 
 class OperationalError(Exception):
@@ -95,34 +97,18 @@ def _outbox(org: int, event_type: str, aggregate_type: str, aggregate_id: int, p
     db.session.add(OperationalOutbox(organization_id=org, event_type=event_type, aggregate_type=aggregate_type, aggregate_id=aggregate_id, payload=payload or {}))
 
 
-LOCATION_MODELS = {
-    "province": (Province, "name_fa", "province"),
-    "city": (City, "name_fa", "city"),
-    "country": (Country, "name_fa", "country"),
-    "international_city": (InternationalCity, "name_fa", "city"),
-    "iran_port": (IranPort, "name_fa", "port"),
-    "customs_office": (CustomsOffice, "name_fa", "customs"),
-}
+def resolve_location(reference: dict[str, Any]) -> ResolvedLocation:
+    """Expose the shared resolver through the existing operational service boundary."""
+    try:
+        return resolve_canonical_location(reference)
+    except LocationResolutionError as exc:
+        raise OperationalError(exc.code, exc.message, exc.status) from exc
 
 
-def resolve_location(reference: dict[str, Any]) -> CanonicalLocation:
-    source_type, source_id = reference.get("source_type"), reference.get("source_id")
-    if source_type not in LOCATION_MODELS or not isinstance(source_id, int):
-        raise OperationalError("LOCATION_MAPPING_REQUIRED", "A supported location source_type and numeric source_id are required.")
-    existing = db.session.scalar(select(CanonicalLocation).where(CanonicalLocation.source_type == source_type, CanonicalLocation.source_id == source_id))
-    if existing:
-        return existing
-    model, label_field, location_type = LOCATION_MODELS[source_type]
-    source = db.session.get(model, source_id)
-    if source is None:
-        raise OperationalError("LOCATION_MAPPING_REQUIRED", f"No {source_type} exists for source_id={source_id}.")
-    location = CanonicalLocation(source_type=source_type, source_id=source_id, location_type=location_type, display_name=str(getattr(source, label_field)), country_code=getattr(source, "code", None) if source_type == "country" else None, verification_state="verified")
-    db.session.add(location)
-    db.session.flush()
-    return location
-
-
-def _location_snapshot(location: CanonicalLocation) -> dict[str, Any]:
+def _location_snapshot(location: ResolvedLocation | CanonicalLocation) -> dict[str, Any]:
+    if isinstance(location, ResolvedLocation):
+        return location.snapshot()
+    # Backward-compatible support for callers holding an existing canonical row.
     return {"canonical_location_id": location.id, "display_name": location.display_name, "location_type": location.location_type, "country_code": location.country_code, "verification_state": location.verification_state}
 
 
@@ -156,7 +142,7 @@ def create_from_accepted_quote(payload: dict[str, Any], user: dict[str, Any], ke
     if arrival < departure:
         raise OperationalError("INVALID_ROUTE_TIMELINE", "Planned arrival cannot be before planned departure.")
     origin, destination = resolve_location(payload.get("origin") or {}), resolve_location(payload.get("destination") or {})
-    if origin.id == destination.id:
+    if origin.canonical_location.id == destination.canonical_location.id:
         raise OperationalError("INVALID_ROUTE_TIMELINE", "Origin and destination must be different.")
     mode = str(payload.get("transport_mode") or "").strip()
     if not mode or len(mode) > 32:
@@ -173,7 +159,7 @@ def create_from_accepted_quote(payload: dict[str, Any], user: dict[str, Any], ke
     db.session.add(shipment); db.session.flush()
     plan = RoutePlan(operational_shipment_id=shipment.id, revision=1, is_active=True, created_by_user_id=user["id"])
     db.session.add(plan); db.session.flush()
-    leg = RouteLeg(route_plan_id=plan.id, sequence_number=1, origin_location_id=origin.id, destination_location_id=destination.id, origin_snapshot=_location_snapshot(origin), destination_snapshot=_location_snapshot(destination), transport_mode=mode, planned_departure=departure, planned_arrival=arrival, status="planned")
+    leg = RouteLeg(route_plan_id=plan.id, sequence_number=1, origin_location_id=origin.canonical_location.id, destination_location_id=destination.canonical_location.id, origin_snapshot=_location_snapshot(origin), destination_snapshot=_location_snapshot(destination), transport_mode=mode, planned_departure=departure, planned_arrival=arrival, status="planned")
     db.session.add(leg); db.session.flush()
     db.session.add_all([
         Milestone(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, route_plan_id=plan.id, route_leg_id=leg.id, milestone_type="departure", planned_at=departure, projected_at=departure),

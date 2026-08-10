@@ -211,7 +211,8 @@ def _add_leg(plan: RoutePlan, payload: dict) -> RouteLeg:
     if arrival < departure:
         raise base.OperationalError("INVALID_ROUTE_TIMELINE", "Arrival cannot precede departure.")
     row = RouteLeg(route_plan_id=plan.id, sequence_number=int(payload.get("sequence_number")),
-        origin_location_id=origin.id, destination_location_id=destination.id,
+        origin_location_id=origin.canonical_location.id,
+        destination_location_id=destination.canonical_location.id,
         origin_snapshot=base._location_snapshot(origin), destination_snapshot=base._location_snapshot(destination),
         transport_mode=mode, carrier_reference=payload.get("carrier_reference"),
         planned_departure=departure, planned_arrival=arrival, status="planned")

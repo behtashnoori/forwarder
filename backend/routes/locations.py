@@ -6,8 +6,25 @@ from sqlalchemy import text
 
 from backend.extensions import db
 from backend.models import City, County, Province, Country, InternationalCity, IranPort, PortProvinceMapping, CustomsOffice
+from backend.services.location_resolver import LocationResolutionError, iran_destination_results
 
 location_bp = Blueprint("location", __name__, url_prefix="/api")
+
+
+@location_bp.get("/locations/iran-destinations")
+def list_iran_destinations():
+    """Return one bounded, typed projection of eligible Iranian endpoints."""
+    try:
+        limit = min(max(request.args.get("limit", default=50, type=int), 1), 100)
+        rows = iran_destination_results(
+            q=request.args.get("q"),
+            source_type=request.args.get("type"),
+            province_id=request.args.get("province_id", type=int),
+            limit=limit,
+        )
+        return jsonify({"data": rows, "meta": {"count": len(rows), "limit": limit}})
+    except LocationResolutionError as exc:
+        return jsonify({"error": {"code": exc.code, "message": exc.message}}), exc.status
 
 
 @location_bp.get("/provinces")

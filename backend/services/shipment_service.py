@@ -16,6 +16,7 @@ from backend.models import (
     TransportMethod,
 )
 from backend.referral_engine import referral_engine
+from backend.services.location_resolver import LocationResolutionError, resolve_location
 
 INTERNATIONAL_METHOD_NAMES = ["sea freight", "air freight", "land transport", "rail transport"]
 DOMESTIC_METHOD_NAMES = ["road transport", "rail transport", "air transport"]
@@ -44,10 +45,11 @@ IRAN_DEST_KEYS = (
 class ShipmentValidationError(ValueError):
     """Raised when shipment request payload validation should return a 400 response."""
 
-    def __init__(self, message: str, status_code: int = 400):
+    def __init__(self, message: str, status_code: int = 400, code: str = "VALIDATION_FAILED"):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
+        self.code = code
 
 
 def get_transport_methods_payload() -> dict:
@@ -131,29 +133,11 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         except (KeyError, TypeError, ValueError):
             raise ShipmentValidationError(DOMESTIC_LOCATION_ERROR) from None
     else:
-        origin_country = payload.get("origin_country", "").strip()
-        origin_city_international = payload.get("origin_city_international", "").strip()
-        dest_country = payload.get("dest_country", "").strip()
-        dest_city_international = _optional_text(payload.get("dest_city_international"))
-        is_iran_destination = is_iran_destination_country(dest_country)
-
-        if (
-            not origin_country
-            or not origin_city_international
-            or not dest_country
-            or (not is_iran_destination and not dest_city_international)
-        ):
-            raise ShipmentValidationError("اطلاعات مبدا و مقصد بین‌المللی نامعتبر است.")
-
-        normalized.update({
-            "origin_country": origin_country,
-            "origin_city_international": origin_city_international,
-            "origin_address_international": payload.get("origin_address_international", "").strip() or None,
-            "dest_country": dest_country,
-            "dest_city_international": dest_city_international,
-            "dest_address_international": payload.get("dest_address_international", "").strip() or None,
-        })
-        normalized.update(normalize_iran_destination(payload))
+        canonical_keys = ("origin_country_id", "origin_international_city_id", "dest_country_id", "dest_international_city_id")
+        if any(payload.get(key) not in (None, "") for key in canonical_keys):
+            normalized.update(_normalize_international_locations(payload))
+        else:
+            normalized.update(_normalize_legacy_international(payload))
 
     contact_phone = payload.get("contact_phone", "")
     if not is_valid_phone(contact_phone):
@@ -192,6 +176,160 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
 def _optional_text(value: Any) -> str | None:
     return value.strip() or None if isinstance(value, str) else None
+
+
+def _normalize_legacy_international(payload: dict[str, Any]) -> dict[str, Any]:
+    """Preserve N-1 text submissions without inferring canonical identity."""
+    origin_country = _optional_text(payload.get("origin_country"))
+    origin_city = _optional_text(payload.get("origin_city_international"))
+    dest_country = _optional_text(payload.get("dest_country"))
+    dest_city = _optional_text(payload.get("dest_city_international"))
+    is_iran_destination = is_iran_destination_country(dest_country or "")
+    if not origin_country or not origin_city or not dest_country or (not is_iran_destination and not dest_city):
+        raise ShipmentValidationError("اطلاعات مبدا و مقصد بین‌المللی نامعتبر است.")
+    return {
+        "origin_country_id": None,
+        "origin_international_city_id": None,
+        "dest_country_id": None,
+        "dest_international_city_id": None,
+        "origin_country": origin_country,
+        "origin_city_international": origin_city,
+        "origin_address_international": _optional_text(payload.get("origin_address_international")),
+        "dest_country": dest_country,
+        "dest_city_international": dest_city,
+        "dest_address_international": _optional_text(payload.get("dest_address_international")),
+        "origin_province_id": None,
+        "origin_county_id": None,
+        "origin_city_id": None,
+        **normalize_iran_destination(payload),
+    }
+
+
+def _location_error(exc: LocationResolutionError) -> ShipmentValidationError:
+    return ShipmentValidationError(exc.message, exc.status, exc.code)
+
+
+def _required_ref_id(payload: dict[str, Any], key: str) -> int:
+    try:
+        return parse_required_int(payload.get(key))
+    except (TypeError, ValueError):
+        raise ShipmentValidationError(f"{key} is required.", code="LOCATION_MAPPING_REQUIRED") from None
+
+
+def _normalize_international_locations(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize new international writes from canonical IDs only."""
+    origin_country_id = _required_ref_id(payload, "origin_country_id")
+    dest_country_id = _required_ref_id(payload, "dest_country_id")
+    try:
+        origin_country = resolve_location({"source_type": "country", "source_id": origin_country_id})
+        dest_country = resolve_location({"source_type": "country", "source_id": dest_country_id})
+    except LocationResolutionError as exc:
+        raise _location_error(exc) from exc
+
+    result = {
+        "origin_country_id": origin_country_id,
+        "origin_international_city_id": None,
+        "origin_country": origin_country.display_label,
+        "origin_city_international": None,
+        "origin_address_international": _optional_text(payload.get("origin_address_international")),
+        "dest_country_id": dest_country_id,
+        "dest_international_city_id": None,
+        "dest_country": dest_country.display_label,
+        "dest_city_international": None,
+        "dest_address_international": _optional_text(payload.get("dest_address_international")),
+        "origin_province_id": None,
+        "origin_county_id": None,
+        "origin_city_id": None,
+        **{key: None for key in IRAN_DEST_KEYS},
+    }
+
+    if origin_country.country_code == "IR":
+        province_id = _required_ref_id(payload, "origin_province_id")
+        try:
+            province = resolve_location(
+                {"source_type": "province", "source_id": province_id},
+                expected_country_id=origin_country_id,
+            )
+            lower = payload.get("origin_location")
+            if lower:
+                resolved_lower = resolve_location(
+                    _canonical_reference(lower),
+                    expected_country_id=origin_country_id,
+                    expected_province_id=province_id,
+                )
+                if resolved_lower.source_type == "city":
+                    result["origin_city_id"] = resolved_lower.source_id
+                    result["origin_county_id"] = resolved_lower.county_id
+            result["origin_province_id"] = province.source_id
+            result["origin_city_international"] = province.display_label
+        except LocationResolutionError as exc:
+            raise _location_error(exc) from exc
+    else:
+        city_id = _required_ref_id(payload, "origin_international_city_id")
+        try:
+            city = resolve_location(
+                {"source_type": "international_city", "source_id": city_id},
+                expected_country_id=origin_country_id,
+            )
+        except LocationResolutionError as exc:
+            raise _location_error(exc) from exc
+        result["origin_international_city_id"] = city_id
+        result["origin_city_international"] = city.display_label
+
+    if dest_country.country_code == "IR":
+        selection = payload.get("iran_destination")
+        if selection is None and payload.get("iran_dest_type"):
+            legacy_ids = {
+                "port": payload.get("iran_entry_port_id"),
+                "customs": payload.get("iran_dest_customs_office_id"),
+                "city": payload.get("iran_dest_city_id"),
+            }
+            selection = {"type": payload.get("iran_dest_type"), "id": legacy_ids.get(payload.get("iran_dest_type"))}
+        if not isinstance(selection, dict):
+            raise ShipmentValidationError("Iran destination selection is required.", code="LOCATION_MAPPING_REQUIRED")
+        if payload.get("iran_entry_province_id") not in (None, ""):
+            raise ShipmentValidationError("Iran destination province is derived and must not be submitted.")
+        reference = _canonical_reference(selection, public_types=True)
+        try:
+            destination = resolve_location(reference, expected_country_id=dest_country_id)
+        except LocationResolutionError as exc:
+            raise _location_error(exc) from exc
+        if destination.province_id is None:
+            raise ShipmentValidationError("Iran destination lacks governed province ancestry.", code="LOCATION_MAPPING_REQUIRED")
+        public_type = {"iran_port": "port", "customs_office": "customs", "city": "city"}[destination.source_type]
+        result.update({
+            "iran_dest_type": public_type,
+            "iran_entry_province_id": destination.province_id,
+            "iran_entry_province": destination.province_name,
+            "iran_entry_port_id": destination.source_id if public_type == "port" else None,
+            "iran_entry_port": destination.display_label if public_type == "port" else None,
+            "iran_dest_customs_office_id": destination.source_id if public_type == "customs" else None,
+            "iran_dest_city_id": destination.source_id if public_type == "city" else None,
+        })
+    else:
+        city_id = _required_ref_id(payload, "dest_international_city_id")
+        try:
+            city = resolve_location(
+                {"source_type": "international_city", "source_id": city_id},
+                expected_country_id=dest_country_id,
+            )
+        except LocationResolutionError as exc:
+            raise _location_error(exc) from exc
+        result["dest_international_city_id"] = city_id
+        result["dest_city_international"] = city.display_label
+    return result
+
+
+def _canonical_reference(value: dict[str, Any], public_types: bool = False) -> dict[str, Any]:
+    source_type = value.get("source_type", value.get("type"))
+    if public_types:
+        source_type = {"port": "iran_port", "customs": "customs_office", "city": "city"}.get(source_type)
+    source_id = value.get("source_id", value.get("id"))
+    try:
+        source_id = parse_required_int(source_id)
+    except (TypeError, ValueError):
+        raise ShipmentValidationError("A canonical location selection is required.", code="LOCATION_MAPPING_REQUIRED") from None
+    return {"source_type": source_type, "source_id": source_id}
 
 
 def is_iran_destination_country(country_name: str) -> bool:
@@ -314,9 +452,13 @@ def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime)
         })
     else:
         shipment_request_data.update({
+            "origin_country_id": normalized["origin_country_id"],
+            "origin_international_city_id": normalized["origin_international_city_id"],
             "origin_country": normalized["origin_country"],
             "origin_city_international": normalized["origin_city_international"],
             "origin_address_international": normalized["origin_address_international"],
+            "dest_country_id": normalized["dest_country_id"],
+            "dest_international_city_id": normalized["dest_international_city_id"],
             "dest_country": normalized["dest_country"],
             "dest_city_international": normalized["dest_city_international"],
             "dest_address_international": normalized["dest_address_international"],
@@ -327,6 +469,9 @@ def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime)
             "iran_entry_province_id": normalized.get("iran_entry_province_id"),
             "iran_dest_customs_office_id": normalized.get("iran_dest_customs_office_id"),
             "iran_dest_city_id": normalized.get("iran_dest_city_id"),
+            "origin_province_id": normalized.get("origin_province_id"),
+            "origin_county_id": normalized.get("origin_county_id"),
+            "origin_city_id": normalized.get("origin_city_id"),
         })
 
     return shipment_request_data

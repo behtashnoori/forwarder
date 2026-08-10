@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from backend.extensions import db
-from backend.models import City, County, CustomsOffice, IranPort, Province, ShipmentRequest
+from backend.models import City, Country, County, CustomsOffice, InternationalCity, IranPort, Province, ShipmentRequest
 
 UNKNOWN = "نامشخص"
 
@@ -57,14 +57,18 @@ def build_route_payload(req: ShipmentRequest) -> dict[str, Any]:
     destination = _empty_endpoint()
 
     if req.shipping_type == "international":
+        origin_country = db.session.get(Country, req.origin_country_id) if req.origin_country_id else None
+        origin_city = db.session.get(InternationalCity, req.origin_international_city_id) if req.origin_international_city_id else None
+        dest_country = db.session.get(Country, req.dest_country_id) if req.dest_country_id else None
+        dest_city = db.session.get(InternationalCity, req.dest_international_city_id) if req.dest_international_city_id else None
         origin.update({
-            "country": req.origin_country or UNKNOWN,
-            "international_city": req.origin_city_international or UNKNOWN,
+            "country": (origin_country.name_fa if origin_country else None) or req.origin_country or UNKNOWN,
+            "international_city": (origin_city.name_fa if origin_city else None) or req.origin_city_international or UNKNOWN,
             "address": req.origin_address_international,
         })
         destination.update({
-            "country": req.dest_country or UNKNOWN,
-            "international_city": req.dest_city_international or UNKNOWN,
+            "country": (dest_country.name_fa if dest_country else None) or req.dest_country or UNKNOWN,
+            "international_city": (dest_city.name_fa if dest_city else None) or req.dest_city_international or UNKNOWN,
             "address": req.dest_address_international,
         })
     else:
@@ -87,7 +91,39 @@ def build_route_payload(req: ShipmentRequest) -> dict[str, Any]:
 
     return {
         "shipping_type": req.shipping_type,
+        "location_state": _location_state(req),
+        "canonical_ids": {
+            "origin_country_id": req.origin_country_id,
+            "origin_international_city_id": req.origin_international_city_id,
+            "dest_country_id": req.dest_country_id,
+            "dest_international_city_id": req.dest_international_city_id,
+        },
         "origin": origin,
         "destination": destination,
         "iran_destination": build_iran_destination_payload(req),
     }
+
+
+def _location_state(req: ShipmentRequest) -> str:
+    if req.shipping_type != "international":
+        return "canonical"
+    origin_country = db.session.get(Country, req.origin_country_id) if req.origin_country_id else None
+    dest_country = db.session.get(Country, req.dest_country_id) if req.dest_country_id else None
+    origin_complete = bool(origin_country and (
+        req.origin_province_id if origin_country.code == "IR" else req.origin_international_city_id
+    ))
+    iran_destination_ids = (
+        req.iran_entry_port_id,
+        req.iran_dest_customs_office_id,
+        req.iran_dest_city_id,
+    )
+    destination_complete = bool(dest_country and (
+        sum(value is not None for value in iran_destination_ids) == 1
+        if dest_country.code == "IR" else req.dest_international_city_id
+    ))
+    if origin_complete and destination_complete:
+        return "canonical"
+    if req.origin_country_id or req.dest_country_id:
+        return "legacy_incomplete"
+    labels = [req.origin_country, req.origin_city_international, req.dest_country, req.dest_city_international]
+    return "legacy_ambiguous" if all(labels) else "legacy_incomplete"

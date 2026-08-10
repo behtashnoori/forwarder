@@ -31,11 +31,18 @@ def get_transport_methods():
 def create_shipment_request():
     """Create a shipment request from public form submissions."""
     data: Dict[str, Any] = request.get_json(silent=True) or {}
+    canonical_submission = any(
+        data.get(key) not in (None, "")
+        for key in ("origin_country_id", "origin_international_city_id", "dest_country_id", "dest_international_city_id")
+    )
 
     try:
         shipment_request = shipment_service.create_shipment_request(data, request.remote_addr)
     except shipment_service.ShipmentValidationError as e:
-        return jsonify({"message": e.message}), e.status_code
+        body = {"message": e.message}
+        if canonical_submission or e.code != "VALIDATION_FAILED":
+            body["error"] = {"code": e.code, "message": e.message}
+        return jsonify(body), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.exception("Failed to create shipment request")
