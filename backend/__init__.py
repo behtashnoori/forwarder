@@ -12,6 +12,8 @@ import backend.config  # noqa: F401 - load .env once (single source of truth in 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
+__version__ = "1.9.1"
+
 from backend.extensions import db, migrate
 from backend.routes import register_routes
 from backend.security import security
@@ -19,7 +21,6 @@ from backend.app_logging import logger
 from backend.cors_config import get_cors_config, is_cors_origin_allowed, log_cors_info
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-__version__ = "1.9.0"
 
 
 def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = False) -> Flask:

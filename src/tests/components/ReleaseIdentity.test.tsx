@@ -1,0 +1,29 @@
+import { render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import ReleaseIdentity, { compareReleaseIdentity } from "@/components/ReleaseIdentity";
+import * as api from "@/lib/api";
+
+vi.mock("@/lib/api", () => ({ getReleaseIdentity: vi.fn() }));
+
+describe("ReleaseIdentity", () => {
+  beforeEach(() => vi.resetAllMocks());
+  it("classifies match, mismatch, missing identity and backend failure", () => {
+    expect(compareReleaseIdentity("1.9.1", {projection:"normal",data:{application_version:"1.9.1"}})).toBe("MATCH");
+    expect(compareReleaseIdentity("1.9.1", {projection:"support",data:{application_version:"1.9.0",backend_version:"1.9.0"}})).toBe("MISMATCH");
+    expect(compareReleaseIdentity("1.9.1")).toBe("IDENTITY_UNAVAILABLE");
+    expect(compareReleaseIdentity("1.9.1", undefined, true)).toBe("BACKEND_UNAVAILABLE");
+  });
+  it("always renders the compile-time label and exposes sanitized support details", async () => {
+    vi.mocked(api.getReleaseIdentity).mockResolvedValue({projection:"support",data:{application_version:"1.9.1",backend_version:"1.9.1",release_tag:"v1.9.1",short_commit:"1234567890ab",database_revision:"head"}});
+    render(<ReleaseIdentity details />);
+    expect(screen.getByText("Forwarder 1.9.1")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("MATCH")).toBeInTheDocument());
+    expect(screen.getByText("1234567890ab")).toBeInTheDocument();
+  });
+  it("does not block the visible version when backend identity is unavailable", async () => {
+    vi.mocked(api.getReleaseIdentity).mockRejectedValue(new Error("offline"));
+    render(<ReleaseIdentity details />);
+    expect(screen.getByText("Forwarder 1.9.1")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("BACKEND_UNAVAILABLE")).toBeInTheDocument());
+  });
+});

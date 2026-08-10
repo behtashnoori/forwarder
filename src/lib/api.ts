@@ -320,6 +320,12 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
+export interface ReleaseIdentityResponse {
+  projection: "normal" | "support";
+  data: { application_version: string; frontend_version?: string; backend_version?: string; release_tag?: string | null; short_commit?: string | null; database_revision?: string | null };
+}
+export const getReleaseIdentity = () => request<ReleaseIdentityResponse>("/api/system/release-identity");
+
 export type MoneyValue={amount:string;currency:string};
 export type EconomicFxBinding={public_id:string;fx_rate_public_id:string;fx_rate_version:number;from_currency:string;to_currency:string;rate:string;rate_type:string;effective_at:string;authority:string;source:string;bound_at:string};
 export type EconomicEvidence={public_id:string;artifact_public_id:string;artifact_version:number;role:string;associated_at:string};

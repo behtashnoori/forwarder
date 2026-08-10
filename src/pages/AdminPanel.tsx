@@ -38,6 +38,7 @@ import OperationalReasonsAdminTab from "@/components/OperationalReasonsAdminTab"
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
+import ReleaseIdentity from "@/components/ReleaseIdentity";
 
 type MetricCardProps = {
   label: string;
@@ -483,6 +484,7 @@ const AdminPanel = () => {
           <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab /></TabsContent>
           <TabsContent value="operational-reasons" className="space-y-4"><OperationalReasonsAdminTab /></TabsContent>
         </Tabs>
+        <footer className="rounded-2xl border border-slate-200 bg-white p-4"><ReleaseIdentity details /></footer>
       </div>
     </div>
   );

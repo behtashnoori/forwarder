@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Home, LogOut } from "lucide-react";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
+import ReleaseIdentity from "@/components/ReleaseIdentity";
 
 interface PageNavProps {
   /** مسیر بازگشت؛ اگر نباشد از history برمی‌گردد */
@@ -48,6 +49,7 @@ const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, logou
           خروج
         </Button>
       )}
+      <div className="ms-auto shrink-0"><ReleaseIdentity /></div>
     </div>
   );
 };

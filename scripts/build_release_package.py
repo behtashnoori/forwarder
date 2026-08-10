@@ -17,9 +17,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.9.0"
+VERSION = "1.9.1"
 PREVIOUS_VERSION = "1.8.0"
-TAG = "v1.9.0"
+TAG = "v1.9.1"
 RELEASE_DATE = "20260809"
 RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
 NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
