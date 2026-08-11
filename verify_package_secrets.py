@@ -29,6 +29,11 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def canonical_line_ending_sha256(path: Path) -> str:
+    """Hash bytes after converting CRLF to LF; preserve every other byte."""
+    return hashlib.sha256(path.read_bytes().replace(b"\r\n", b"\n")).hexdigest()
+
+
 def migration_ancestry_contains(root: Path, head: str, ancestor: str) -> bool:
     """Establish ancestry from packaged migration metadata without importing it."""
     parents: dict[str, str | None] = {}
@@ -109,7 +114,7 @@ def historical_exception_is_valid(root: Path, manifest: dict) -> bool:
                 )
             }
             and remediation.is_file()
-            and sha256(remediation) == REMEDIATION_SHA256
+            and canonical_line_ending_sha256(remediation) == REMEDIATION_SHA256
         )
     except (OSError, TypeError, ValueError):
         return False

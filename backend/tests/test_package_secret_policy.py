@@ -62,6 +62,44 @@ def test_later_release_baseline_uses_independent_historical_ancestry(tmp_path):
     assert MODULE.findings(root) == []
 
 
+def test_lf_and_crlf_remediation_have_same_canonical_fingerprint(tmp_path):
+    root = package_fixture(tmp_path)
+    remediation = root / MODULE.REMEDIATION_PATH
+    lf_bytes = remediation.read_bytes().replace(b"\r\n", b"\n")
+    remediation.write_bytes(lf_bytes)
+    lf_hash = MODULE.canonical_line_ending_sha256(remediation)
+    assert MODULE.findings(root) == []
+
+    remediation.write_bytes(lf_bytes.replace(b"\n", b"\r\n"))
+    assert MODULE.canonical_line_ending_sha256(remediation) == lf_hash
+    assert lf_hash == MODULE.REMEDIATION_SHA256
+    assert MODULE.findings(root) == []
+
+
+def test_non_newline_remediation_byte_change_fails_closed(tmp_path):
+    root = package_fixture(tmp_path)
+    remediation = root / MODULE.REMEDIATION_PATH
+    data = remediation.read_bytes()
+    remediation.write_bytes(data.replace(b"Revision ID", b"Revision Id", 1))
+    assert MODULE.findings(root) == [MODULE.LEGACY_PATH.as_posix()]
+
+
+def test_non_newline_whitespace_change_fails_closed(tmp_path):
+    root = package_fixture(tmp_path)
+    remediation = root / MODULE.REMEDIATION_PATH
+    data = remediation.read_bytes()
+    remediation.write_bytes(data.replace(b"Revision ID", b"Revision  ID", 1))
+    assert MODULE.findings(root) == [MODULE.LEGACY_PATH.as_posix()]
+
+
+def test_lone_carriage_return_is_not_normalized(tmp_path):
+    root = package_fixture(tmp_path)
+    remediation = root / MODULE.REMEDIATION_PATH
+    data = remediation.read_bytes().replace(b"\r\n", b"\n")
+    remediation.write_bytes(data.replace(b"\n", b"\r", 1))
+    assert MODULE.findings(root) == [MODULE.LEGACY_PATH.as_posix()]
+
+
 def test_missing_historical_remediation_declaration_fails_closed(tmp_path):
     root = package_fixture(tmp_path)
     manifest_path = root / "release-manifest.json"
@@ -115,7 +153,10 @@ def test_unrelated_future_baseline_does_not_inherit_exception(tmp_path):
 
 def test_exact_credential_and_migration_fingerprints_are_pinned():
     assert MODULE.sha256(ROOT / MODULE.LEGACY_PATH) == MODULE.LEGACY_FILE_SHA256
-    assert MODULE.sha256(ROOT / MODULE.REMEDIATION_PATH) == MODULE.REMEDIATION_SHA256
+    assert (
+        MODULE.canonical_line_ending_sha256(ROOT / MODULE.REMEDIATION_PATH)
+        == MODULE.REMEDIATION_SHA256
+    )
 
 
 def test_builder_and_scanner_share_the_exact_historical_contract():
