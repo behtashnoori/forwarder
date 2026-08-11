@@ -15,6 +15,7 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from backend import create_app
+from backend.census_context import CensusTransitioned
 from backend.extensions import db
 from backend.models import Customer, ExpertQuote, ExpertUser, ShipmentRequest
 from backend.ownership_census import (
@@ -35,11 +36,7 @@ from backend.operational_models import (
     Project,
     project_party_relationship,
 )
-from backend.quarantine import (
-    QuarantinedResource,
-    assert_instance_current,
-    is_quarantined_identity,
-)
+from backend.quarantine import assert_instance_current, is_quarantined_identity
 from backend.resource_identity import (
     composite_identity,
     project_party_identity,
@@ -188,6 +185,7 @@ def test_mt1d_postgresql_atomic_rollback_concurrency_and_lineage(monkeypatch):
             ))
         db.session.rollback()
         assert is_quarantined_identity(root) is True
+        db.session.rollback()
         with Session(engine) as session, session.begin():
             session.execute(OwnershipCensusScope.__table__.delete())
             session.execute(OwnershipCensus.__table__.delete())
@@ -302,8 +300,11 @@ def test_mt1d_postgresql_atomic_rollback_concurrency_and_lineage(monkeypatch):
                 release.set()
                 transitioned = future.result(timeout=10)
             assert transitioned.cache_version == first.cache_version + 1
-            with pytest.raises(QuarantinedResource):
+            with pytest.raises(CensusTransitioned):
                 assert_instance_current(held)
+            # End the rejected reader UOW so its shared publication fence is
+            # released before the independent concurrent publishers start.
+            db.session.rollback()
 
             start = Barrier(2)
             candidates = [
@@ -342,6 +343,7 @@ def test_mt1d_postgresql_atomic_rollback_concurrency_and_lineage(monkeypatch):
             assert is_quarantined_identity(root) is True
             assert is_quarantined_identity(child) is True
             assert is_quarantined_identity(composite) is False
+            db.session.rollback()
             with Session(engine) as session:
                 active_id = session.get(OwnershipActiveCensus, 1).census_id
                 rows = session.execute(
@@ -425,7 +427,7 @@ def test_mt1d_postgresql_migration_preserves_mt1c_and_enforces_history(monkeypat
             )).scalar_one() == "legacy-preserved"
             assert connection.execute(text(
                 "SELECT version_num FROM alembic_version"
-            )).scalar_one() == "20260821_mt1d_canonical_census"
+            )).scalar_one() == "20260822_mt1c1_census_fence"
             assert connection.execute(text(
                 "SELECT has_table_privilege('public', 'ownership_census', 'INSERT')"
             )).scalar_one() is False

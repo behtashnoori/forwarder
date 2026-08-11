@@ -8,6 +8,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.orm import Session
 
 from backend import create_app
+from backend.census_context import CensusTransitioned
 from backend.extensions import db
 from backend.models import Activity, Customer, ExpertQuote, ExpertUser, ShipmentRequest
 from backend.ownership_census import (
@@ -23,7 +24,6 @@ from backend.ownership_census import (
     publish_census,
 )
 from backend.quarantine import (
-    QuarantinedResource,
     assert_instance_current,
     decision_epoch_token,
     is_quarantined_identity,
@@ -223,9 +223,11 @@ def test_cache_transition_lineage_and_decision_versions(mt1d_app):
             _publication("lineage-1", 1, [_decision(root), _decision(child, root=root)]),
             authority=_authority(),
         )
+    # MT-1C.1 makes the pre-publication implicit transaction an immutable
+    # census unit.  End it before asserting the newly active publication.
+    db.session.rollback()
     assert is_quarantined_identity(child) is False
     assert decision_epoch_token() == (first.cache_version, first.cache_token)
-    db.session.rollback()
 
     with Session(db.engine) as session:
         second = publish_census(
@@ -319,10 +321,10 @@ def test_held_instance_revalidated_after_root_publication(mt1d_app):
             ),
             authority=_authority(),
         )
-    with pytest.raises(QuarantinedResource):
+    with pytest.raises(CensusTransitioned):
         assert_instance_current(held)
     held.contact_phone = "must-not-write"
-    with pytest.raises(QuarantinedResource):
+    with pytest.raises(CensusTransitioned):
         db.session.flush()
     db.session.rollback()
     result = db.session.execute(
@@ -401,7 +403,7 @@ def test_held_descendant_follows_current_root_without_copied_hold(mt1d_app):
             ),
             authority=_authority(),
         )
-    with pytest.raises(QuarantinedResource):
+    with pytest.raises(CensusTransitioned):
         assert_instance_current(held)
 
 

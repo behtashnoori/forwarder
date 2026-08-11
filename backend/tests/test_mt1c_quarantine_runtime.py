@@ -21,6 +21,7 @@ from backend.quarantine import (
     decision_epoch_token,
     is_quarantined,
 )
+from backend.census_context import clear_census_context
 from backend.services.tracking_service import get_public_tracking_payload
 
 
@@ -173,10 +174,12 @@ def test_quarantined_parent_cannot_be_laundered_into_new_child(quarantine_app):
 def test_bulk_mutation_cannot_bypass_quarantine(quarantine_app):
     app, _ids, user_id = quarantine_app
     with app.app_context():
-        updated = ExpertConsoleNotification.query.filter_by(
-            expert_user_id=user_id
-        ).update({"is_read": True}, synchronize_session=False)
-        assert updated == 0
+        # Set-based mutation of a side-effect table has no mapped parent on
+        # which to run the census eligibility contract, so it fails closed.
+        with pytest.raises(QuarantinedResource):
+            ExpertConsoleNotification.query.filter_by(
+                expert_user_id=user_id
+            ).update({"is_read": True}, synchronize_session=False)
         db.session.rollback()
 
 
@@ -203,4 +206,5 @@ def test_cache_epoch_changes_when_new_census_is_activated(quarantine_app):
         scope = db.session.get(OwnershipCertificationScope, "ShipmentRequest")
         scope.decision_epoch += 1
         db.session.commit()
+        clear_census_context(db.session)
         assert decision_epoch_token()[0] == before[0] + 1

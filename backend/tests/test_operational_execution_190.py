@@ -336,7 +336,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260821_mt1d_canonical_census"
+            "20260822_mt1c1_census_fence"
     ]
 
 
@@ -407,7 +407,9 @@ def test_opaque_event_create_and_append_only_correction(execution_app):
             payload = svc.events(shipment.public_id, actor(execution_app))
         finally:
             sqlalchemy_event.remove(engine, "before_cursor_execute", capture)
-        assert len(statements) <= 6
+        # One bounded census-context/fence validation precedes the existing
+        # event queries after the preceding commit starts a new transaction.
+        assert len(statements) <= 7
         assert len(str(payload).encode("utf-8")) < 16_384
 
 

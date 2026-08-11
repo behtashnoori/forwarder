@@ -221,12 +221,14 @@ def test_direct_create_converges_on_shared_aggregate_and_replays(operational_app
             ).count()
             == 1
         )
-        assert (
-            OperationalOutbox.query.filter_by(
-                event_type="operational_shipment.created"
-            ).count()
-            == 1
-        )
+        outbox = OperationalOutbox.query.filter_by(
+            event_type="operational_shipment.created"
+        ).one()
+        assert outbox.payload["_ownership_census"] == {
+            "census_id": "legacy-mt1c",
+            "cache_version": 0,
+            "cache_token": 0,
+        }
 
         changed = _direct_payload(operational_app)
         changed["route"]["transport_mode"] = "rail"

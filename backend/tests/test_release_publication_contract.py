@@ -198,4 +198,4 @@ def test_release_upgrade_chain_is_contiguous_and_remediation_is_mandatory():
     # The v1.9.1 builder stays pinned to its immutable release revision while
     # later feature migrations advance the repository's sole current head.
     assert script.get_revision(builder.DATABASE_REVISION) is not None
-    assert script.get_heads() == ["20260821_mt1d_canonical_census"]
+    assert script.get_heads() == ["20260822_mt1c1_census_fence"]
