@@ -8,18 +8,24 @@ the current runtime behavior until a later census is activated.
 from __future__ import annotations
 
 from datetime import datetime
+import re
 from typing import Any
 
-from sqlalchemy import CheckConstraint, UniqueConstraint, and_, event, exists, func, or_, select
+from sqlalchemy import CheckConstraint, String, UniqueConstraint, and_, cast, event, exists, or_, select
+from sqlalchemy.engine import Engine
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.orm import Query, Session, with_loader_criteria
+from sqlalchemy.sql import visitors
+from sqlalchemy.sql.elements import TextClause
 
 from backend.extensions import db
 from backend.ownership_census import (
-    OwnershipActiveCensus,
     OwnershipCensusScope,
     OwnershipDecision,
+    OwnershipDecisionComponent,
 )
+from backend.census_context import ensure_census_context
+from backend.census_context import CensusUnavailable
 from backend.resource_identity import ResourceIdentity, scalar_identity
 
 
@@ -46,6 +52,28 @@ CERTIFIED_ENTITIES = frozenset(
     }
 )
 CANONICAL_RESOURCE_TYPES = frozenset({*CERTIFIED_ENTITIES, "project_party_relationship"})
+SIDE_EFFECT_ENTITIES = frozenset(
+    {
+        "AssignmentLog",
+        "DocumentAuditEvent",
+        "ExpertConsoleLog",
+        "ExpertConsoleNotification",
+        "OperationalAudit",
+        "OperationalOutbox",
+        "ReferralAssignmentLog",
+    }
+)
+SIDE_EFFECT_TABLES = frozenset(
+    {
+        "assignment_log",
+        "document_audit_event",
+        "expert_console_log",
+        "expert_console_notification",
+        "operational_audit",
+        "operational_outbox",
+        "referral_assignment_log",
+    }
+)
 
 # A newly materialized child must not point at a denied parent.  The analyzer
 # republishes all descendant decisions atomically when an existing root changes.
@@ -152,7 +180,7 @@ class QuarantinedResource(LookupError):
     """Non-disclosing signal used by internal runtime boundaries."""
 
 
-def visible_expression(entity_type: str, entity_id):
+def visible_expression(entity_type: str, entity_id, *, session: Session | None = None):
     """SQL predicate implementing explicit-deny and watermark fail-closed rules."""
 
     decisions = OwnershipCertificationDecision.__table__
@@ -173,7 +201,9 @@ def visible_expression(entity_type: str, entity_id):
     )
     legacy_visible = ~denied & or_(~covered, cleared)
 
-    active = OwnershipActiveCensus.__table__
+    context = ensure_census_context(session)
+    if context.legacy:
+        return legacy_visible
     modern_scopes = OwnershipCensusScope.__table__
     modern_decisions = OwnershipDecision.__table__
     roots = modern_decisions.alias("effective_ownership_root")
@@ -182,14 +212,13 @@ def visible_expression(entity_type: str, entity_id):
     # A missing pointer therefore fails closed instead of falling back to MT-1C.
     modern_required = exists().where(modern_scopes.c.resource_type == entity_type)
     modern_clear = exists().where(
-        active.c.singleton_id == 1,
-        modern_scopes.c.census_id == active.c.census_id,
+        modern_scopes.c.census_id == context.census_id,
         modern_scopes.c.resource_type == entity_type,
-        modern_decisions.c.census_id == active.c.census_id,
+        modern_decisions.c.census_id == context.census_id,
         modern_decisions.c.resource_type == entity_type,
         modern_decisions.c.scalar_integer_id == entity_id,
         modern_decisions.c.enforcement_state == "CLEAR",
-        roots.c.census_id == active.c.census_id,
+        roots.c.census_id == context.census_id,
         roots.c.resource_type == modern_decisions.c.root_resource_type,
         roots.c.resource_key_hash == modern_decisions.c.root_resource_key_hash,
         roots.c.resource_key_payload == modern_decisions.c.root_resource_key_payload,
@@ -204,46 +233,48 @@ def exclude_quarantined(query, model):
     entity_type = model.__name__
     if entity_type not in CERTIFIED_ENTITIES:
         raise ValueError(f"{entity_type} is outside the ownership certification contract")
-    return query.filter(visible_expression(entity_type, model.id))
+    return query.filter(visible_expression(entity_type, model.id, session=query.session))
 
 
-def is_quarantined_identity(identity: ResourceIdentity) -> bool:
+def is_quarantined_identity(
+    identity: ResourceIdentity, *, session: Session | None = None
+) -> bool:
     """Resolve a canonical decision and its current authoritative lineage root."""
 
     if identity.resource_type not in CANONICAL_RESOURCE_TYPES:
         return True
-    active = db.session.execute(
-        select(OwnershipActiveCensus)
-        .where(OwnershipActiveCensus.singleton_id == 1)
-        .execution_options(include_quarantined_for_certification=True)
-    ).scalar_one_or_none()
-    scoped = db.session.execute(
+    session = session or db.session
+    try:
+        context = ensure_census_context(session)
+    except CensusUnavailable:
+        return True
+    scoped = session.execute(
         select(OwnershipCensusScope.census_id)
         .where(OwnershipCensusScope.resource_type == identity.resource_type)
         .limit(1)
         .execution_options(include_quarantined_for_certification=True)
     ).scalar_one_or_none()
-    if active is None:
-        if scoped is not None:
-            return True
+    if context.legacy:
         if identity.scalar_integer is None:
             return True
-        return _is_quarantined_legacy(identity.resource_type, identity.scalar_integer)
-    scope = db.session.get(
+        return _is_quarantined_legacy(
+            identity.resource_type, identity.scalar_integer, session=session
+        )
+    scope = session.get(
         OwnershipCensusScope,
-        (active.census_id, identity.resource_type),
+        (context.census_id, identity.resource_type),
         execution_options={"include_quarantined_for_certification": True},
     )
     if scope is None:
         if scoped is None and identity.scalar_integer is not None:
             return _is_quarantined_legacy(
-                identity.resource_type, identity.scalar_integer
+                identity.resource_type, identity.scalar_integer, session=session
             )
         return True
-    decision = db.session.execute(
+    decision = session.execute(
         select(OwnershipDecision)
         .where(
-            OwnershipDecision.census_id == active.census_id,
+            OwnershipDecision.census_id == context.census_id,
             OwnershipDecision.resource_type == identity.resource_type,
             OwnershipDecision.resource_key_hash == identity.key_hash,
         )
@@ -251,10 +282,10 @@ def is_quarantined_identity(identity: ResourceIdentity) -> bool:
     ).scalar_one_or_none()
     if decision is None or decision.resource_key_payload != identity.key_payload:
         return True
-    root = db.session.execute(
+    root = session.execute(
         select(OwnershipDecision)
         .where(
-            OwnershipDecision.census_id == active.census_id,
+            OwnershipDecision.census_id == context.census_id,
             OwnershipDecision.resource_type == decision.root_resource_type,
             OwnershipDecision.resource_key_hash == decision.root_resource_key_hash,
         )
@@ -268,26 +299,49 @@ def is_quarantined_identity(identity: ResourceIdentity) -> bool:
     )
 
 
-def _is_quarantined_legacy(entity_type: str, entity_id: int) -> bool:
-    statement = select(visible_expression(entity_type, entity_id))
-    return not bool(db.session.execute(statement).scalar_one())
+def _is_quarantined_legacy(
+    entity_type: str, entity_id: int, *, session: Session | None = None
+) -> bool:
+    session = session or db.session
+    decisions = OwnershipCertificationDecision.__table__
+    scopes = OwnershipCertificationScope.__table__
+    denied = exists().where(
+        decisions.c.entity_type == entity_type,
+        decisions.c.entity_id == entity_id,
+        decisions.c.classification != SAFE_CLASSIFICATION,
+    )
+    covered = exists().where(scopes.c.entity_type == entity_type)
+    cleared = exists().where(
+        decisions.c.entity_type == entity_type,
+        decisions.c.entity_id == entity_id,
+        decisions.c.classification == SAFE_CLASSIFICATION,
+    )
+    return not bool(session.execute(select(~denied & or_(~covered, cleared))).scalar_one())
 
 
-def is_quarantined(entity_type: str, entity_id: int | None) -> bool:
+def is_quarantined(
+    entity_type: str, entity_id: int | None, *, session: Session | None = None
+) -> bool:
     """Return True for denied, invalid, unknown, or missing covered metadata."""
 
     if entity_type not in CERTIFIED_ENTITIES or entity_id is None:
         return True
-    return is_quarantined_identity(scalar_identity(entity_type, entity_id))
+    return is_quarantined_identity(
+        scalar_identity(entity_type, entity_id), session=session
+    )
 
 
-def assert_not_quarantined(entity_type: str, entity_id: int | None) -> None:
-    if is_quarantined(entity_type, entity_id):
+def assert_not_quarantined(
+    entity_type: str, entity_id: int | None, *, session: Session | None = None
+) -> None:
+    if is_quarantined(entity_type, entity_id, session=session):
         raise QuarantinedResource("resource not found")
 
 
-def assert_identity_not_quarantined(identity: ResourceIdentity) -> None:
-    if is_quarantined_identity(identity):
+def assert_identity_not_quarantined(
+    identity: ResourceIdentity, *, session: Session | None = None
+) -> None:
+    if is_quarantined_identity(identity, session=session):
         raise QuarantinedResource("resource not found")
 
 
@@ -304,8 +358,9 @@ def assert_instance_current(instance: Any, *, purpose: str = "read") -> tuple[in
     entity_id = state.identity[0] if state.identity and len(state.identity) == 1 else None
     if entity_type not in CERTIFIED_ENTITIES or entity_id is None:
         raise QuarantinedResource("resource not found")
-    assert_not_quarantined(entity_type, entity_id)
-    token = decision_epoch_token()
+    session = state.session or db.session
+    assert_not_quarantined(entity_type, entity_id, session=session)
+    token = decision_epoch_token(session=session)
     state.info["ownership_census_guard"] = {
         "purpose": purpose,
         "token": token,
@@ -317,37 +372,173 @@ def refresh_guarded(instance: Any, *, attributes: list[str] | None = None) -> An
     """Refresh a held instance without allowing a stale-clear resurrection."""
 
     assert_instance_current(instance, purpose="refresh")
-    db.session.refresh(instance, attribute_names=attributes)
+    (sa_inspect(instance).session or db.session).refresh(
+        instance, attribute_names=attributes
+    )
     assert_instance_current(instance, purpose="refresh")
     return instance
 
 
-def decision_epoch_token() -> tuple[int, str | int]:
+def decision_epoch_token(*, session: Session | None = None) -> tuple[int, str | int]:
     """Cheap cache token; census activation must monotonically bump its epoch."""
 
-    active = db.session.execute(
-        select(OwnershipActiveCensus.cache_version, OwnershipActiveCensus.cache_token)
-        .where(OwnershipActiveCensus.singleton_id == 1)
-        .execution_options(include_quarantined_for_certification=True)
-    ).one_or_none()
-    if active is not None:
-        return int(active.cache_version), str(active.cache_token)
-    epoch = db.session.execute(
-        select(func.coalesce(func.max(OwnershipCertificationScope.decision_epoch), 0))
-        .execution_options(include_quarantined_for_certification=True)
-    ).scalar_one()
-    decision_count = db.session.execute(
-        select(func.count(OwnershipCertificationDecision.id))
-        .execution_options(include_quarantined_for_certification=True)
-    ).scalar_one()
-    return int(epoch), int(decision_count)
+    return ensure_census_context(session or db.session).token
 
 
-def _criterion_for(entity_type: str):
-    def criterion(model):
-        return visible_expression(entity_type, model.id)
+def project_party_visible_expression(table_or_alias, *, session: Session | None = None):
+    """Correlated effective-clear predicate for the canonical association row."""
 
-    return criterion
+    context = ensure_census_context(session or db.session)
+    if context.legacy:
+        return True
+    decisions = OwnershipDecision.__table__
+    roots = decisions.alias("project_party_effective_root")
+    components = OwnershipDecisionComponent.__table__
+    project_component = components.alias("project_party_project_component")
+    customer_component = components.alias("project_party_customer_component")
+    role_component = components.alias("project_party_role_component")
+    scopes = OwnershipCensusScope.__table__
+    ever_scoped = exists().where(
+        scopes.c.resource_type == "project_party_relationship"
+    )
+    clear = exists(
+        select(decisions.c.id)
+        .select_from(
+            decisions.join(
+                project_component,
+                and_(
+                    project_component.c.decision_id == decisions.c.id,
+                    project_component.c.ordinal == 0,
+                ),
+            )
+            .join(
+                customer_component,
+                and_(
+                    customer_component.c.decision_id == decisions.c.id,
+                    customer_component.c.ordinal == 1,
+                ),
+            )
+            .join(
+                role_component,
+                and_(
+                    role_component.c.decision_id == decisions.c.id,
+                    role_component.c.ordinal == 2,
+                ),
+            )
+            .join(
+                roots,
+                and_(
+                    roots.c.census_id == decisions.c.census_id,
+                    roots.c.resource_type == decisions.c.root_resource_type,
+                    roots.c.resource_key_hash == decisions.c.root_resource_key_hash,
+                    roots.c.resource_key_payload == decisions.c.root_resource_key_payload,
+                ),
+            )
+        )
+        .where(
+            decisions.c.census_id == context.census_id,
+            decisions.c.resource_type == "project_party_relationship",
+            decisions.c.enforcement_state == "CLEAR",
+            roots.c.enforcement_state == "CLEAR",
+            project_component.c.component_name == "project_id",
+            project_component.c.component_kind == "INTEGER",
+            project_component.c.canonical_value
+            == cast(table_or_alias.c.project_id, String),
+            customer_component.c.component_name == "customer_id",
+            customer_component.c.component_kind == "INTEGER",
+            customer_component.c.canonical_value
+            == cast(table_or_alias.c.customer_id, String),
+            role_component.c.component_name == "party_role",
+            role_component.c.component_kind == "STRING",
+            role_component.c.canonical_value == table_or_alias.c.party_role,
+        )
+    )
+    return or_(~ever_scoped, clear)
+
+
+def _project_party_occurrences(statement) -> tuple[Any, ...]:
+    from sqlalchemy.sql.selectable import Join  # noqa: PLC0415
+    from backend.operational_models import project_party_relationship  # noqa: PLC0415
+
+    found = []
+
+    def visit(node):
+        if isinstance(node, Join):
+            visit(node.left)
+            visit(node.right)
+            return
+        if node is project_party_relationship or getattr(node, "original", None) is project_party_relationship:
+            found.append(node)
+
+    for from_clause in getattr(statement, "get_final_froms", lambda: ())():
+        visit(from_clause)
+    return tuple(found)
+
+
+def _mentioned_protected_tables(statement) -> frozenset[str]:
+    protected = SIDE_EFFECT_TABLES.union({"project_party_relationship"})
+    if isinstance(statement, TextClause):
+        sql = statement.text.lower()
+        return frozenset(
+            name for name in protected
+            if re.search(rf"(?<![a-z0-9_]){re.escape(name)}(?![a-z0-9_])", sql)
+        )
+    found = set()
+    for node in visitors.iterate(statement):
+        name = getattr(node, "name", None)
+        original_name = getattr(getattr(node, "original", None), "name", None)
+        for candidate in (name, original_name):
+            if candidate in protected:
+                found.add(candidate)
+    return frozenset(found)
+
+
+@event.listens_for(Engine, "before_execute", retval=True)
+def _reject_unfenced_connection_core(
+    _connection, clauseelement, multiparams, params, execution_options
+):
+    """Reject raw/direct-Connection access that cannot carry the Session fence."""
+
+    if execution_options.get("include_quarantined_for_certification", False):
+        return clauseelement, multiparams, params
+    mentioned = _mentioned_protected_tables(clauseelement)
+    protected_project_access = "project_party_relationship" in mentioned
+    text_write = isinstance(clauseelement, TextClause) and bool(
+        re.match(r"\s*(?:insert|update|delete)\b", clauseelement.text, re.IGNORECASE)
+    )
+    protected_side_effect_write = bool(mentioned.intersection(SIDE_EFFECT_TABLES)) and (
+        text_write
+        or any(
+            bool(getattr(clauseelement, attribute, False))
+            for attribute in ("is_insert", "is_update", "is_delete")
+        )
+    )
+    orm_flush = bool(_connection.info.get("ownership_census_orm_flush", False))
+    if (
+        (protected_project_access or (protected_side_effect_write and not orm_flush))
+        and not execution_options.get("ownership_census_core_guarded", False)
+    ):
+        raise QuarantinedResource("protected Core resource requires census repository")
+    return clauseelement, multiparams, params
+
+
+@event.listens_for(Engine, "commit")
+@event.listens_for(Engine, "rollback")
+def _clear_connection_flush_capability(connection) -> None:
+    connection.info.pop("ownership_census_orm_flush", None)
+
+
+def assert_session_materializable(session: Session | None = None):
+    """Final response/export/download boundary for all held certified instances."""
+
+    session = session or db.session
+    context = ensure_census_context(session)
+    if context.legacy and context.token == (0, 0):
+        return context
+    for instance in tuple(session.identity_map.values()):
+        if type(instance).__name__ in CERTIFIED_ENTITIES:
+            assert_instance_current(instance, purpose="materialize")
+    return context
 
 
 @event.listens_for(Query, "before_compile", retval=True)
@@ -358,7 +549,7 @@ def _enforce_legacy_query_before_subquery(query):
         model = description.get("entity")
         if getattr(model, "__name__", None) in CERTIFIED_ENTITIES:
             query = query.enable_assertions(False).filter(
-                visible_expression(model.__name__, model.id)
+                visible_expression(model.__name__, model.id, session=query.session)
             )
     return query
 
@@ -377,10 +568,32 @@ def _enforce_legacy_bulk_delete(query, _delete_context):
 def _enforce_on_every_orm_select(execute_state) -> None:
     if execute_state.execution_options.get("include_quarantined_for_certification", False):
         return
+    statement_table = getattr(execute_state.statement, "table", None)
+    statement_table_name = getattr(statement_table, "name", None)
+    if execute_state.is_insert:
+        if statement_table_name in SIDE_EFFECT_TABLES:
+            # Core DML has no mapped instance on which the parent-reference
+            # contract can run.  Side effects must use the mapped/service path
+            # so before_flush validates every certified input under pinned N.
+            raise QuarantinedResource("protected side effect requires census repository")
+        if statement_table_name == "project_party_relationship":
+            context = ensure_census_context(execute_state.session)
+            # A canonical census is a complete immutable set. A newly inserted
+            # association has no decision in pinned N and therefore fails closed.
+            if not context.legacy or context.token != (0, 0):
+                raise QuarantinedResource("referenced resource not found")
+        if statement_table_name == "project_party_relationship":
+            execute_state.statement = execute_state.statement.execution_options(
+                ownership_census_core_guarded=True
+            )
+        return
     if execute_state.is_update or execute_state.is_delete:
+        if statement_table_name in SIDE_EFFECT_TABLES:
+            # As with Core INSERT, set-based side-effect mutation cannot prove
+            # the eligibility of each referenced certified resource.
+            raise QuarantinedResource("protected side effect requires census repository")
         mapper = execute_state.bind_arguments.get("mapper")
         model = getattr(mapper, "class_", None)
-        statement_table = getattr(execute_state.statement, "table", None)
         if model is None and statement_table is not None:
             model = next(
                 (
@@ -391,8 +604,28 @@ def _enforce_on_every_orm_select(execute_state) -> None:
                 None,
             )
         if getattr(model, "__name__", None) in CERTIFIED_ENTITIES:
+            ensure_census_context(execute_state.session)
             execute_state.statement = execute_state.statement.where(
-                visible_expression(model.__name__, model.id)
+                visible_expression(
+                    model.__name__, model.id, session=execute_state.session
+                )
+            )
+        occurrences = _project_party_occurrences(execute_state.statement)
+        if not occurrences and getattr(statement_table, "name", None) == "project_party_relationship":
+            occurrences = (statement_table,)
+        if occurrences:
+            ensure_census_context(execute_state.session)
+        for occurrence in occurrences:
+            execute_state.statement = execute_state.statement.where(
+                project_party_visible_expression(
+                    occurrence, session=execute_state.session
+                )
+            )
+        if getattr(model, "__name__", None) in CERTIFIED_ENTITIES or occurrences:
+            execute_state.session.info["ownership_census_sensitive_write"] = True
+        if occurrences:
+            execute_state.statement = execute_state.statement.execution_options(
+                ownership_census_core_guarded=True
             )
         return
     if not execute_state.is_select:
@@ -408,14 +641,31 @@ def _enforce_on_every_orm_select(execute_state) -> None:
     }
     for model in statement_entities:
         if getattr(model, "__name__", None) in CERTIFIED_ENTITIES:
-            statement = statement.where(visible_expression(model.__name__, model.id))
-    for mapper in tuple(db.Model.registry.mappers):
-        model = mapper.class_
-        if model.__name__ in CERTIFIED_ENTITIES:
+            statement = statement.where(
+                visible_expression(
+                    model.__name__, model.id, session=execute_state.session
+                )
+            )
+    occurrences = _project_party_occurrences(statement)
+    mentions = _mentioned_protected_tables(statement)
+    if "project_party_relationship" in mentions and not occurrences:
+        raise QuarantinedResource("unsupported protected Core statement shape")
+    for occurrence in occurrences:
+        statement = statement.where(
+            project_party_visible_expression(
+                occurrence, session=execute_state.session
+            )
+        )
+    if occurrences:
+        statement = statement.execution_options(ownership_census_core_guarded=True)
+    for model in statement_entities:
+        if getattr(model, "__name__", None) in CERTIFIED_ENTITIES:
             statement = statement.options(
                 with_loader_criteria(
                     model,
-                    _criterion_for(model.__name__),
+                    visible_expression(
+                        model.__name__, model.id, session=execute_state.session
+                    ),
                     include_aliases=True,
                 )
             )
@@ -424,6 +674,12 @@ def _enforce_on_every_orm_select(execute_state) -> None:
 
 @event.listens_for(Session, "before_flush")
 def _prevent_quarantine_laundering(session: Session, _context: Any, _instances: Any) -> None:
+    if any(
+        type(obj).__name__ in CERTIFIED_ENTITIES.union(SIDE_EFFECT_ENTITIES)
+        for obj in session.new.union(session.dirty).union(session.deleted)
+    ):
+        ensure_census_context(session)
+        session.connection().info["ownership_census_orm_flush"] = True
     for obj in session.dirty.union(session.deleted):
         if type(obj).__name__ in CERTIFIED_ENTITIES:
             assert_instance_current(obj, purpose="delete" if obj in session.deleted else "mutate")
@@ -432,14 +688,34 @@ def _prevent_quarantine_laundering(session: Session, _context: Any, _instances: 
             type(obj).__name__, ()
         ):
             parent_id = getattr(obj, attribute, None)
-            if parent_id is not None and is_quarantined(parent_type, parent_id):
+            if parent_id is not None and is_quarantined(
+                parent_type, parent_id, session=session
+            ):
                 raise QuarantinedResource("referenced resource not found")
+
+
+@event.listens_for(Session, "after_flush_postexec")
+def _clear_orm_flush_capability(session: Session, _context: Any) -> None:
+    if session.in_transaction():
+        session.connection().info.pop("ownership_census_orm_flush", None)
+
+
+@event.listens_for(Session, "before_commit")
+def _validate_side_effect_fence_before_commit(session: Session) -> None:
+    changed = session.new.union(session.dirty).union(session.deleted)
+    if session.info.get("ownership_census_sensitive_write") or any(
+        type(obj).__name__ in CERTIFIED_ENTITIES.union(SIDE_EFFECT_ENTITIES)
+        for obj in changed
+    ):
+        ensure_census_context(session)
 
 
 __all__ = [
     "CANONICAL_RESOURCE_TYPES", "CERTIFIED_ENTITIES", "CLASSIFICATIONS", "DENIED_CLASSIFICATIONS",
     "OwnershipCertificationDecision", "OwnershipCertificationScope",
     "QuarantinedResource", "assert_identity_not_quarantined", "assert_instance_current",
+    "assert_session_materializable",
     "assert_not_quarantined", "decision_epoch_token", "exclude_quarantined",
-    "is_quarantined", "is_quarantined_identity", "refresh_guarded", "visible_expression",
+    "is_quarantined", "is_quarantined_identity", "project_party_visible_expression",
+    "refresh_guarded", "visible_expression",
 ]

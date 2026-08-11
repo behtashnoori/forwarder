@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, current_app
 from sqlalchemy.exc import SQLAlchemyError
 
+from backend.quarantine import QuarantinedResource
 from backend.services import timeline_service, tracking_service
 
 public_tracking_bp = Blueprint("public_tracking", __name__, url_prefix="/api/public")
@@ -18,15 +19,21 @@ _get_assigned_at = timeline_service.get_assigned_at
 _get_latest_quote = tracking_service.get_latest_quote
 
 
+def _tracking_not_found():
+    return jsonify({"message": "درخواست یافت نشد"}), 404
+
+
 @public_tracking_bp.get("/track/<identifier>")
 def get_public_tracking_info(identifier: str):
     """Get public tracking information by request id (numeric) or tracking_code."""
     try:
         response_data = tracking_service.get_public_tracking_payload(identifier)
         if not response_data:
-            return jsonify({"message": "درخواست یافت نشد"}), 404
+            return _tracking_not_found()
         return jsonify(response_data), 200
 
+    except QuarantinedResource:
+        return _tracking_not_found()
     except SQLAlchemyError as e:
         current_app.logger.error(f"Database error in public tracking: {e}")
         return jsonify({"message": "خطا در دریافت اطلاعات"}), 500

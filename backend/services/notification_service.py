@@ -21,7 +21,7 @@ def list_notifications_for_expert(
     )
 
     if unread_only:
-        query = query.filter(ExpertConsoleNotification.is_read == False)
+        query = query.filter(ExpertConsoleNotification.is_read.is_(False))
 
     notifications = query.order_by(
         desc(ExpertConsoleNotification.created_at)
@@ -62,7 +62,7 @@ def get_unread_count(expert_id: int) -> int:
     return db.session.query(func.count(ExpertConsoleNotification.id)).filter(
         and_(
             ExpertConsoleNotification.expert_user_id == expert_id,
-            ExpertConsoleNotification.is_read == False,
+            ExpertConsoleNotification.is_read.is_(False),
         )
     ).scalar() or 0
 
@@ -77,22 +77,27 @@ def mark_notifications_read(
     mark_all = payload.get("mark_all", False)
 
     if mark_all:
-        updated = db.session.query(ExpertConsoleNotification).filter(
+        notifications = db.session.query(ExpertConsoleNotification).filter(
             and_(
                 ExpertConsoleNotification.expert_user_id == expert_id,
-                ExpertConsoleNotification.is_read == False,
+                ExpertConsoleNotification.is_read.is_(False),
             )
-        ).update({"is_read": True}, synchronize_session=False)
+        ).all()
     elif notification_ids:
-        updated = db.session.query(ExpertConsoleNotification).filter(
+        notifications = db.session.query(ExpertConsoleNotification).filter(
             and_(
                 ExpertConsoleNotification.id.in_(notification_ids),
                 ExpertConsoleNotification.expert_user_id == expert_id,
             )
-        ).update({"is_read": True}, synchronize_session=False)
+        ).all()
     else:
         return None
 
+    # Use mapped instances so the quarantine flush boundary can validate each
+    # notification's ShipmentRequest reference under the pinned census.
+    for notification in notifications:
+        notification.is_read = True
+    updated = len(notifications)
     db.session.commit()
 
     return {

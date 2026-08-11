@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Mapping, MutableMapping
 
 import backend.config  # noqa: F401 - load .env once (single source of truth in backend.config)
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, stream_with_context
 from flask_cors import CORS
 
 __version__ = "1.9.1"
@@ -166,6 +166,63 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
                 response.headers.add('Access-Control-Max-Age', '3600')
                 return response
 
+    @app.before_request
+    def pin_request_census():
+        """Resolve and transaction-fence one immutable census per request."""
+
+        from backend.census_context import ensure_census_context
+
+        ensure_census_context(db.session)
+
+    @app.teardown_request
+    def clear_request_census(_error):
+        from backend.census_context import clear_census_context
+
+        clear_census_context(db.session)
+
+    def _nondisclosing_not_found():
+        return jsonify({"error": "Resource not found"}), 404
+
+    @app.after_request
+    def enforce_materialization_boundary(response):
+        """Revalidate held resources before bytes leave the request boundary."""
+
+        from backend.census_context import (
+            CensusTransitioned,
+            CensusUnavailable,
+            ensure_census_context,
+        )
+        from backend.quarantine import QuarantinedResource, assert_session_materializable
+
+        try:
+            assert_session_materializable(db.session)
+        except QuarantinedResource:
+            return app.make_response(_nondisclosing_not_found())
+        except CensusUnavailable:
+            if request.path.startswith("/api/public/"):
+                return app.make_response(_nondisclosing_not_found())
+            return app.make_response(
+                (jsonify({"error": "Ownership census unavailable"}), 503)
+            )
+        except CensusTransitioned:
+            return app.make_response(
+                (jsonify({"error": "Ownership census changed; retry"}), 409)
+            )
+
+        if response.is_streamed and not response.direct_passthrough:
+            original = response.response
+
+            def guarded_stream():
+                for chunk in original:
+                    assert_session_materializable(db.session)
+                    yield chunk
+
+            response.response = stream_with_context(guarded_stream())
+        context = ensure_census_context(db.session)
+        response.headers["X-Ownership-Census-Version"] = str(context.cache_version)
+        response.headers["X-Ownership-Census-Token"] = str(context.cache_token)
+        return response
+
     # Test apps should be self-contained and must not depend on external schema
     # state, migrations, or developer databases. This is test-only and does not
     # affect production startup behavior.
@@ -185,6 +242,24 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     # Global error handler: no silent 500; log full trace and return JSON (with details in dev)
     _MAX_BODY_LOG = 2000
     _is_dev = os.getenv("FLASK_ENV", "").lower() in ("development", "dev") or os.getenv("FLASK_DEBUG", "").lower() in ("true", "1", "yes")
+
+    from backend.census_context import CensusTransitioned, CensusUnavailable
+    from backend.quarantine import QuarantinedResource
+
+    @app.errorhandler(QuarantinedResource)
+    def _handle_quarantined_resource(_err):
+        return _nondisclosing_not_found()
+
+    @app.errorhandler(CensusUnavailable)
+    def _handle_census_unavailable(_err):
+        if request.path.startswith("/api/public/"):
+            return _nondisclosing_not_found()
+        return jsonify({"error": "Ownership census unavailable"}), 503
+
+    @app.errorhandler(CensusTransitioned)
+    def _handle_census_transition(_err):
+        db.session.rollback()
+        return jsonify({"error": "Ownership census changed; retry"}), 409
 
     def _make_error_response(tb: str, path: str, method: str, body: str, err: Exception | None = None):
         app.logger.error(

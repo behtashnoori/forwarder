@@ -13,6 +13,7 @@
     "OwnershipCensus": {"kind":"persisted_model","table":"ownership_census","scope":"PLATFORM_SCOPED","rationale":"Immutable platform security metadata describes one complete ownership analysis publication."},
     "OwnershipCensusScope": {"kind":"persisted_model","table":"ownership_census_scope","scope":"PLATFORM_SCOPED","rationale":"Immutable publication cardinality and evidence metadata; it assigns no tenant."},
     "OwnershipDecision": {"kind":"persisted_model","table":"ownership_decision","scope":"PLATFORM_SCOPED","rationale":"Append-only canonical ownership classification and runtime enforcement history."},
+    "OwnershipDecisionComponent": {"kind":"persisted_model","table":"ownership_decision_component","scope":"PLATFORM_SCOPED","rationale":"Append-only normalized canonical identity components used by portable Core-table enforcement."},
     "OwnershipActiveCensus": {"kind":"persisted_model","table":"ownership_active_census","scope":"PLATFORM_SCOPED","rationale":"Singleton platform authority atomically selects the effective ownership census and cache token."},
     "OwnershipCensusActivation": {"kind":"persisted_model","table":"ownership_census_activation","scope":"PLATFORM_SCOPED","rationale":"Append-only audit trail of authoritative census and cache-version transitions."},
     "ExpertSpecialization": {"kind":"persisted_model","table":"expert_specialization","scope":"PLATFORM_SCOPED","rationale":"Global identity-to-platform transport catalog association; future tenant overlays require reclassification."},

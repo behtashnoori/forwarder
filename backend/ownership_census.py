@@ -23,7 +23,7 @@ CLASSIFICATIONS = frozenset(
 )
 ENFORCEMENT_STATES = frozenset({"CLEAR", "QUARANTINED"})
 _SHA256 = re.compile(r"[0-9a-f]{64}")
-_PUBLISH_LOCK_KEY = 0x4D543144  # ASCII "MT1D"; transaction-scoped in PostgreSQL.
+CENSUS_PUBLISH_LOCK_KEY = 0x4D543144  # ASCII "MT1D"; transaction-scoped in PostgreSQL.
 
 
 class CensusPublicationError(RuntimeError):
@@ -197,6 +197,35 @@ class OwnershipDecision(db.Model):
     )
 
 
+class OwnershipDecisionComponent(db.Model):
+    """Normalized canonical key parts used by portable Core-table guards."""
+
+    __tablename__ = "ownership_decision_component"
+    decision_id = db.Column(
+        BIGINT, db.ForeignKey("ownership_decision.id", ondelete="CASCADE"), primary_key=True
+    )
+    ordinal = db.Column(db.Integer, primary_key=True)
+    component_name = db.Column(db.String(80), nullable=False)
+    component_kind = db.Column(db.String(16), nullable=False)
+    canonical_value = db.Column(db.String(1024), nullable=False)
+    __table_args__ = (
+        UniqueConstraint(
+            "decision_id", "component_name", name="uq_ownership_component_name"
+        ),
+        Index(
+            "ix_ownership_component_lookup",
+            "component_name",
+            "component_kind",
+            "canonical_value",
+        ),
+        CheckConstraint("ordinal >= 0", name="ck_ownership_component_ordinal"),
+        CheckConstraint(
+            "component_kind IN ('INTEGER','STRING','UUID')",
+            name="ck_ownership_component_kind",
+        ),
+    )
+
+
 class OwnershipActiveCensus(db.Model):
     __tablename__ = "ownership_active_census"
     singleton_id = db.Column(db.Integer, primary_key=True)
@@ -354,7 +383,7 @@ def _lock_publisher(session: Session) -> None:
     if session.get_bind().dialect.name == "postgresql":
         session.execute(
             text("SELECT pg_advisory_xact_lock(:lock_key)"),
-            {"lock_key": _PUBLISH_LOCK_KEY},
+            {"lock_key": CENSUS_PUBLISH_LOCK_KEY},
         )
 
 
@@ -617,13 +646,14 @@ def publish_census(
                 if key in keys and key not in prior:
                     prior[key] = row
 
+        persisted_decisions = []
         for item in publication.decisions:
             identity = item.identity
             root = item.root_identity or identity
             previous = prior.get((identity.resource_type, identity.key_hash))
             if previous is not None and previous.resource_key_payload != identity.key_payload:
                 raise CensusIntegrityError("stored identity hash collision")
-            session.add(OwnershipDecision(
+            row = OwnershipDecision(
                 census_id=publication.census_id,
                 resource_type=identity.resource_type,
                 resource_key_hash=identity.key_hash,
@@ -638,7 +668,21 @@ def publish_census(
                 root_resource_type=root.resource_type,
                 root_resource_key_hash=root.key_hash,
                 root_resource_key_payload=root.key_payload,
-            ))
+            )
+            session.add(row)
+            persisted_decisions.append((row, item))
+        session.flush()
+        for row, item in persisted_decisions:
+            session.add_all(
+                OwnershipDecisionComponent(
+                    decision_id=row.id,
+                    ordinal=ordinal,
+                    component_name=component.name,
+                    component_kind=component.kind,
+                    canonical_value=component.value,
+                )
+                for ordinal, component in enumerate(item.identity.components)
+            )
         session.flush()
         if failure_hook is not None:
             failure_hook()
@@ -677,7 +721,13 @@ def publish_census(
 
 @event.listens_for(Session, "before_flush")
 def _prevent_history_rewrite(session: Session, _context, _instances) -> None:
-    immutable = (OwnershipCensus, OwnershipCensusScope, OwnershipDecision, OwnershipCensusActivation)
+    immutable = (
+        OwnershipCensus,
+        OwnershipCensusScope,
+        OwnershipDecision,
+        OwnershipDecisionComponent,
+        OwnershipCensusActivation,
+    )
     if any(isinstance(row, immutable) for row in session.dirty.union(session.deleted)):
         raise CensusIntegrityError("ownership census history is append-only")
     for row in session.dirty:
@@ -703,6 +753,7 @@ def _prevent_history_rewrite(session: Session, _context, _instances) -> None:
 
 
 __all__ = [
+    "CENSUS_PUBLISH_LOCK_KEY",
     "CLASSIFICATIONS",
     "ENFORCEMENT_STATES",
     "CensusDecisionInput",
@@ -714,6 +765,7 @@ __all__ = [
     "OwnershipCensusActivation",
     "OwnershipCensusScope",
     "OwnershipDecision",
+    "OwnershipDecisionComponent",
     "PublicationResult",
     "StaleCensusPublication",
     "UnauthorizedCensusPublisher",

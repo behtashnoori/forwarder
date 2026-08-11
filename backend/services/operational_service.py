@@ -11,6 +11,7 @@ from sqlalchemy import exists, or_, select, text
 from sqlalchemy.exc import IntegrityError
 
 from backend.extensions import db
+from backend.census_context import ensure_census_context
 from backend.models import Customer, ExpertQuote, ShipmentRequest
 from backend.operational_models import (
     CanonicalLocation,
@@ -363,13 +364,20 @@ def _outbox(
     aggregate_id: int,
     payload: dict | None = None,
 ) -> None:
+    context = ensure_census_context(db.session)
+    event_payload = dict(payload or {})
+    event_payload["_ownership_census"] = {
+        "census_id": context.census_id,
+        "cache_version": context.cache_version,
+        "cache_token": context.cache_token,
+    }
     db.session.add(
         OperationalOutbox(
             organization_id=org,
             event_type=event_type,
             aggregate_type=aggregate_type,
             aggregate_id=aggregate_id,
-            payload=payload or {},
+            payload=event_payload,
         )
     )
 
