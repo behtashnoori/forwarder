@@ -24,23 +24,33 @@ const renderPage = () => render(
 describe("Forwarder Command Center", () => {
   beforeEach(() => localStorage.clear());
 
-  it("shows the three primary intents without obsolete long-form sections", () => {
+  it("presents the integrated platform with one dedicated tracking form", () => {
     renderPage();
-    expect(screen.getByRole("button", { name: "ثبت درخواست حمل" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "عملیات حمل، یکپارچه و هوشمند" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "شروع یک حمل جدید" })).toBeInTheDocument();
     expect(screen.getByLabelText("کد رهگیری")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "ورود کارشناسان" })).not.toBeInTheDocument();
-    expect(screen.queryByText(/هفت گام/)).not.toBeInTheDocument();
+    expect(screen.getAllByLabelText("کد رهگیری")).toHaveLength(1);
+    expect(document.querySelectorAll("form input#command-tracking")).toHaveLength(1);
+    expect(document.querySelectorAll("h1")).toHaveLength(1);
+    expect(screen.getByText("نرخ‌گذاری")).toBeInTheDocument();
   });
 
-  it("reveals the single staff login only from the header menu", async () => {
+  it("locks the English public brand and platform positioning", async () => {
     renderPage();
-    await userEvent.click(screen.getByRole("button", { name: "منوی سامانه" }));
-    expect(screen.getAllByRole("button", { name: "ورود کارشناسان" })).toHaveLength(1);
+    await userEvent.click(screen.getByRole("button", { name: "تغییر زبان به انگلیسی" }));
+    expect(screen.getAllByText("Forwarderet").length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Transport operations, connected and intelligent" })).toBeInTheDocument();
+    expect(screen.queryByText("Forwardert")).not.toBeInTheDocument();
+  });
+
+  it("uses sign-in as the restrained primary account action", () => {
+    renderPage();
+    expect(screen.getAllByRole("button", { name: "ورود به سامانه" })).toHaveLength(1);
   });
 
   it("opens the existing domestic/international request choice from the primary CTA", async () => {
     renderPage();
-    await userEvent.click(screen.getByRole("button", { name: "ثبت درخواست حمل" }));
+    await userEvent.click(screen.getByRole("button", { name: "شروع یک حمل جدید" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ثبت درخواست حمل داخلی" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ثبت درخواست حمل بین‌المللی" })).toBeInTheDocument();
@@ -48,7 +58,7 @@ describe("Forwarder Command Center", () => {
 
   it("validates an empty tracking submission and associates the error", async () => {
     renderPage();
-    await userEvent.click(screen.getByRole("button", { name: "رهگیری" }));
+    await userEvent.click(screen.getByRole("button", { name: "پیگیری" }));
     expect(screen.getByRole("alert")).toHaveTextContent("لطفاً کد رهگیری را وارد کنید.");
     expect(screen.getByLabelText("کد رهگیری")).toHaveAttribute("aria-invalid", "true");
   });
