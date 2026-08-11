@@ -187,4 +187,141 @@ archive is publishable: `Forwarder-v1.9.1-17108c7.zip` remains superseded, and
 no longer present locally. No package was rebuilt, no tag moved, no ref pushed,
 and no deployment or Production operation occurred. Human retag authorization
 is required before any new candidate may be built or published.
+
+## Final retag authorization and controlled publication attempt
+
+Human authorization was received to replace the local-only tag, build and
+verify a new package, run disposable package smoke, and publish only if every
+gate passed. Final preflight confirmed release commit
+`8ebd85591586010b7b12db340bb7d21d15787ad9`, a clean tracked tree, version
+`1.9.1`, sole Alembic head `20260819_v191_acceptance_corrections`, and absent
+remote release branch/tag. The authorized commit delta remained limited to the
+canonicalized package verifier, its tests, and sanitized evidence.
+
+`.codex/slice8-tracked-source.tar` was confirmed untracked. The builder copies
+an explicit root allowlist, built frontend files, and tracked `backend` runtime
+files only, so `.codex` and unrelated diagnostic archives cannot enter the
+package. Classification: `UNRELATED PRESERVED LOCAL MATERIAL — EXCLUDED FROM
+RELEASE PACKAGE`. `scripts/verify_release_security.py` was confirmed legacy,
+non-authoritative diagnostic tooling: it is not referenced by the builder,
+package verifier, active release runbooks, or release workflows. The
+authoritative path is `VERIFY-PACKAGE.ps1` plus the packaged
+`verify_package_secrets.py`.
+
+The local annotated tag was replaced as authorized. New tag object
+`fe65b344adce3b598b668d0b2c5088f5515f2ec0` has message
+`Forwarder v1.9.1` and targets exactly
+`8ebd85591586010b7b12db340bb7d21d15787ad9`. The prior extracted package was
+preserved as `release-v1.9.1-20260811-17108c7-superseded` before the approved
+builder invocation `python scripts/build_release_package.py`.
+
+New candidate `Forwarder-v1.9.1-8ebd855.zip` is 890,143 bytes with SHA-256
+`c69e265f5c27283807fd3f024ae3deba9d22abc720b615ff1fbaf5a83a16df0a`.
+Its manifest content hash is
+`eff8da9e4df0b93452c8d0bc660097399b369ce507639b3fa49c91f5d0f5062d`,
+build timestamp `2026-08-11T15:30:22Z`, release commit
+`8ebd85591586010b7b12db340bb7d21d15787ad9`, and tag object
+`fe65b344adce3b598b668d0b2c5088f5515f2ec0`.
+
+`VERIFY-PACKAGE.ps1` passed from a fresh extraction: 242 files, 3,073,787
+bytes, manifest hash matched, package secret policy passed, and no `.codex` or
+forbidden diagnostic content was present. Direct packaged-byte checks passed
+for LF/CRLF canonical equivalence, non-newline tamper rejection, lone-CR
+rejection, commit identity, and tag-object identity.
+
+Disposable PostgreSQL initialization, packaged explicit migration through the
+package migration CLI, exact head observation, synthetic seed, packaged backend
+startup, readiness, packaged frontend serving, login, and same-origin API
+gateway checks passed. Chromium publication smoke did not pass. After the
+synthetic direct-operation persona authenticated and the packaged API returned
+its expected `operational_shipment.create_direct` permission through both the
+backend and same-origin gateway, the packaged UI failed the first mandatory
+permission assertion because the Direct operation source was not rendered.
+The run stopped immediately; accepted-quote, bilingual, console, and remaining
+browser checks therefore have no passing result.
+
+No branch or tag was pushed. Both remote refs remain absent. Disposable
+backend, frontend gateway, Chromium, and private PostgreSQL processes were
+stopped and test ports closed. The safety layer blocked recursive deletion, so
+the disposable extraction remains at
+`C:/Users/pc/AppData/Local/Temp/forwarder-v191-final-420f7687de5348cb8473d9fac341c5e2`.
+Production was not accessed or changed. Publication and Production cutover
+remain blocked.
 Final classification: `RELEASE PUBLICATION BLOCKED — PRODUCTION CUTOVER NO-GO`.
+
+## Packaged Chromium blocker closure investigation
+
+Preflight reconfirmed branch `codex/pr-4a-dms-gate-repair`, release-source
+commit `8ebd85591586010b7b12db340bb7d21d15787ad9`, local annotated tag object
+`fe65b344adce3b598b668d0b2c5088f5515f2ec0` targeting that commit, version
+`1.9.1`, sole Alembic head `20260819_v191_acceptance_corrections`, and absent
+remote release branch/tag. Existing user-owned untracked material was preserved.
+
+Read-only package investigation proved the ZIP, extracted release, and retained
+runtime contain the same frontend bundle. The ZIP SHA-256 remains
+`c69e265f5c27283807fd3f024ae3deba9d22abc720b615ff1fbaf5a83a16df0a`;
+its canonical manifest content hash remains
+`eff8da9e4df0b93452c8d0bc660097399b369ce507639b3fa49c91f5d0f5062d`.
+The package bundle SHA-256 is
+`1c3dfa0fdda7e13f623ea6b1f554e8263b56b2219346480442c580e24fe85e2a`
+and contains the Direct implementation, its exact
+`operational_shipment.create_direct` predicate, and English/Persian labels.
+Stale or missing Direct code was rejected.
+
+The preserved fresh-extraction Chromium result reproduced the blocker: all six
+synthetic personas authenticated, but the first mandatory
+`direct_only-direct-source` assertion failed. Direct backend and same-origin
+gateway probes returned the expected permission. The component initializes
+permissions to an empty array and renders Direct only when the operational
+context request succeeds and the exact permission is present.
+
+The source/package A/B comparison classified both fresh production output and
+the immutable package as affected. Both were byte-identical because the plain
+Vite build consumed the same ignored `.env.production`. Static bundle evidence
+showed `VITE_API_URL=http://server.logisticmarket.ir` compiled into the asset,
+contradicting manifest `api_base=same-origin` and diverting UI API calls away
+from the disposable gateway. Development acceptance used the relative Vite
+proxy and was not equivalent. Fixture/session, locale, feature flag, permission
+normalization, frontend render logic, stale artifact, and harness-defect
+hypotheses were rejected.
+
+`ROOT_CAUSE=The release builder accepted an ignored local VITE_API_URL and
+compiled an external API origin into an artifact declared and served as
+same-origin, so New Operation never populated its permission state from the
+packaged gateway.`
+
+`DEFECT_CLASS=BUILD`
+
+`AFFECTED_FILES=scripts/build_release_package.py, src/lib/env.ts,
+src/lib/api.ts, backend/tests/test_release_publication_contract.py`
+
+`TAG_IMPACT=STALE_IF_FIXED`
+
+The minimum remediation pins the package build to the explicit
+`__FORWARDER_SAME_ORIGIN__` build sentinel, resolves that sentinel to a relative
+API base, removes the contradictory production-empty request failure, and
+reuses the canonical API base for logo upload. Permission predicates and
+backend authorization are unchanged. Regression coverage proves the builder
+overrides contaminating local environment input and that the frontend retains
+the same-origin contract.
+
+Validation passed: focused New Operation tests (10), full frontend tests (125),
+release/version pytest (13), TypeScript, ESLint (zero errors; 12 pre-existing
+warnings), production build, Python compile, Ruff, source metadata, version,
+sole Alembic head, and `git diff --check`. A builder-driven build contained no
+`server.logisticmarket.ir` API origin, retained the Direct permission literal,
+and produced `assets/index-DDHITCwo.js` with SHA-256
+`b2b77b7032f6b59e3b4793709f690b03bd236c1fb397a3529064f47f34200df6`.
+
+Independent gatekeeper result: `IMPLEMENTATION REVIEW — PASS`. The reviewer
+confirmed the root cause, minimum fix, unchanged permission/security gates,
+mandatory new release-source commit, stale-tag consequence, and mandatory
+post-retag package/runtime/Chromium rerun. No package was rebuilt for
+publication, no tag was moved, and no ref was pushed. The current
+`Forwarder-v1.9.1-8ebd855.zip` remains blocked and must not be published.
+`VERIFY-PACKAGE`, disposable runtime, packaged Chromium, and
+`PACKAGED_DIRECT_SOURCE_RENDERING` remain not rerun because the tag is stale.
+All run-owned disposable services were stopped; Production was not accessed or
+changed.
+
+Final classification: `RELEASE SOURCE CHANGE REQUIRED — HUMAN RETAG AUTHORIZATION NEEDED`.

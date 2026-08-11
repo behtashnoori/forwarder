@@ -44,14 +44,28 @@ def test_windows_npm_executable_is_used_for_build_and_fingerprint(monkeypatch):
     monkeypatch.setattr(
         builder.subprocess,
         "check_call",
-        lambda args, cwd: build_calls.append((tuple(args), cwd)),
+        lambda args, cwd, env: build_calls.append((tuple(args), cwd, env)),
     )
 
     assert builder.npm_version() == "10.0.0"
     builder.build_frontend()
 
     assert version_calls == [(expected, "--version")]
-    assert build_calls == [((expected, "run", "build"), builder.ROOT)]
+    assert len(build_calls) == 1
+    args, cwd, build_env = build_calls[0]
+    assert args == (expected, "run", "build")
+    assert cwd == builder.ROOT
+    assert build_env["VITE_API_URL"] == "__FORWARDER_SAME_ORIGIN__"
+
+
+def test_packaged_frontend_is_pinned_to_same_origin():
+    env_source = (ROOT / "src" / "lib" / "env.ts").read_text(encoding="utf-8")
+    api_source = (ROOT / "src" / "lib" / "api.ts").read_text(encoding="utf-8")
+
+    assert "import.meta.env.VITE_API_URL === '__FORWARDER_SAME_ORIGIN__'" in env_source
+    assert "return import.meta.env.VITE_API_URL || '';" in env_source
+    assert "env.API_URL.replace" in api_source
+    assert "API URL is not configured" not in api_source
 
 
 def test_complete_release_directory_is_promoted_without_copying(tmp_path):

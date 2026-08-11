@@ -246,11 +246,6 @@ export function getLogoDisplayUrl(url: string | undefined): string {
 }
 
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!import.meta.env.DEV && !API_BASE_URL) {
-    throw new Error(
-      "API URL is not configured. Set VITE_API_URL for production.",
-    );
-  }
   const url = `${API_BASE_URL}${buildPath(path)}`;
 
   // Get token from localStorage
@@ -2087,9 +2082,6 @@ export function updateSiteSettings(
 
 /** Upload logo image; returns { url: string }. Admin only. */
 export async function uploadLogo(file: File): Promise<{ url: string }> {
-  const API_BASE_URL = import.meta.env.DEV
-    ? ""
-    : import.meta.env.VITE_API_URL || "";
   const path = (p: string) => (API_BASE_URL ? `${API_BASE_URL}${p}` : p);
   const url = path("/api/admin/upload");
   const token = localStorage.getItem("expert_token");

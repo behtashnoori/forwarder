@@ -3,9 +3,13 @@
  * This ensures consistent environment variable handling across the application
  */
 
-// Validate required environment variables (VITE_API_URL only required in production when not using proxy)
+// An empty VITE_API_URL intentionally selects the packaged same-origin gateway.
 function validateEnv() {
-  if (import.meta.env.DEV) return; // In dev we use relative /api via Vite proxy; no base URL needed
+  if (
+    import.meta.env.DEV ||
+    !import.meta.env.VITE_API_URL ||
+    import.meta.env.VITE_API_URL === '__FORWARDER_SAME_ORIGIN__'
+  ) return;
   const requiredVars = ['VITE_API_URL'] as const;
   const missingVars: string[] = [];
   for (const varName of requiredVars) {
@@ -20,6 +24,7 @@ function validateEnv() {
 // API base URL: in dev use empty string so all requests go to same origin and Vite proxies /api to backend
 const getApiUrl = (): string => {
   if (import.meta.env.DEV) return '';
+  if (import.meta.env.VITE_API_URL === '__FORWARDER_SAME_ORIGIN__') return '';
   return import.meta.env.VITE_API_URL || '';
 };
 

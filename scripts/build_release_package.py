@@ -92,7 +92,13 @@ def npm_version() -> str:
 
 
 def build_frontend() -> None:
-    subprocess.check_call((NPM_EXECUTABLE, "run", "build"), cwd=ROOT)
+    build_env = os.environ.copy()
+    # Packages are served behind the same-origin gateway. Pin this Vite input
+    # so ignored developer .env files cannot change immutable release bytes.
+    build_env["VITE_API_URL"] = "__FORWARDER_SAME_ORIGIN__"
+    subprocess.check_call(
+        (NPM_EXECUTABLE, "run", "build"), cwd=ROOT, env=build_env
+    )
 
 
 def promote_release_directory(staging: Path, final: Path) -> None:
