@@ -1,0 +1,20 @@
+{
+  "classification": "MT-1C.1 SECURITY REVIEW — PASS",
+  "review_type": "independent adversarial re-review",
+  "attacks": {
+    "held_object_after_activation": "PASS",
+    "lazy_relationship_after_activation": "PASS",
+    "multi_query_version_mixing": "PASS",
+    "pagination_version_mixing": "PASS",
+    "core_composite_direct_and_alias_access": "PASS",
+    "core_composite_subquery_cte_and_insert": "PASS - unsupported/uncertified shapes fail closed",
+    "job_context_transition": "PASS - expected N is retained and mismatch aborts",
+    "outbox_atomicity_and_provenance": "PASS",
+    "side_effect_core_insert_update_delete_and_raw_sql": "PASS - rejected with zero rows persisted",
+    "cache_version_transition": "PASS",
+    "public_exception_mapping": "PASS - exact ordinary missing 404",
+    "missing_canonical_context": "PASS - fails closed once canonical scope history exists"
+  },
+  "bounded_compatibility": "Legacy (0,0) applies only before any canonical scope has ever existed.",
+  "remaining_scope": "Full 15-surface real-path certification is MT-1C.2."
+}

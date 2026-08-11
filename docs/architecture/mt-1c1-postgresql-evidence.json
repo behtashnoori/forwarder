@@ -1,0 +1,25 @@
+{
+  "classification": "MT-1C.1 FOUNDATION READY",
+  "database": "disposable PostgreSQL 18.0, loopback only",
+  "test_file": "backend/tests/test_mt1c1_census_postgresql.py",
+  "cases": {
+    "A": "PASS - request/unit pins census N",
+    "B": "PASS - N+1 publisher starts while N reader is active",
+    "C": "PASS - shared advisory transaction fence prevents mixed response",
+    "D": "PASS - held ORM instance remains validated under pinned N",
+    "E": "PASS - held instance mutation commits before N+1 activation",
+    "F": "PASS - final materialization/download boundary uses pinned N",
+    "G": "PASS - side-effect transaction holds the publication fence",
+    "H": "PASS - business/outbox creation retains one transaction and stamped context",
+    "I": "PASS - count and rows use the same context token",
+    "J": "PASS - limited page and source count use the same context token",
+    "K": "PASS - composite Core SELECT is filtered by exact typed components",
+    "L": "PASS - composite Core update/delete affect zero denied rows",
+    "M": "PASS - MT-1D rollback preserves the prior active census",
+    "N": "PASS - concurrent publisher waits for fenced reader/mutator",
+    "O": "PASS - public guard exception equals ordinary nondisclosing 404",
+    "P": "PASS - ordinary CLEAR resources remain visible and mutable"
+  },
+  "full_15_surface_certification": false,
+  "next": "RESUME MT-1C.2 FULL SURFACE CERTIFICATION"
+}
