@@ -1,0 +1,39 @@
+{
+  "certification": "MT-1D",
+  "executed_at": "2026-08-12",
+  "database_backend": "PostgreSQL",
+  "server_major": 18,
+  "loopback_only": true,
+  "database_name_prefix": "forwarder_mt1d_cert_",
+  "disposable_database_dropped": true,
+  "test_file": "backend/tests/test_mt1d_census_postgresql.py",
+  "result": {
+    "passed": 2,
+    "failed": 0,
+    "skipped": 0
+  },
+  "scenarios": {
+    "A": "PASS - integer canonical identities published and resolved",
+    "B": "PASS - exact string canonical identity published without numeric coercion",
+    "C": "PASS - project_party_relationship three-component identity published",
+    "D": "PASS - resource namespaces and explicit (1,23)/(12,3) composite pairs remain distinct",
+    "E": "PASS - reader observed complete old census while next census was uncommitted",
+    "F": "PASS - injected publisher failure rolled back rows, pointer and cache token",
+    "G": "PASS - advisory-lock serialization allowed one concurrent predecessor winner and rejected the stale peer",
+    "H": "PASS - stale predecessor and historical census replay rejected",
+    "I": "PASS - held ExpertQuote loaded before root quarantine failed current-census revalidation",
+    "J": "PASS - ShipmentRequest root transition hid its clear ExpertQuote descendant",
+    "K": "PASS - every CLEAR/QUARANTINED and classification transition produced a unique monotonic cache token/version",
+    "L": "PASS - exact active-census replay was a no-op and preserved its cache token",
+    "M": "PASS - UNRESOLVED plus CLEAR was rejected before publication",
+    "N": "PASS - persisted certification scope without an active marker failed closed"
+  },
+  "migration": {
+    "from": "20260820_mt1c_quarantine_runtime",
+    "to": "20260821_mt1d_canonical_census",
+    "legacy_mt1c_rows_preserved": true,
+    "append_only_database_trigger_verified": true,
+    "active_token_rotation_trigger_verified": true
+  },
+  "production_accessed": false
+}

@@ -1,0 +1,31 @@
+{
+  "review": "MT-1D independent security review",
+  "executed_at": "2026-08-12",
+  "independent": true,
+  "classification": "MT-1D SECURITY REVIEW — PASS",
+  "reviewed_invariants": [
+    "typed canonical scalar and composite identity",
+    "namespace and composite collision resistance",
+    "database census cardinality",
+    "actual recursive FK lineage and multi-parent consistency",
+    "append-only decision and activation history",
+    "atomic rollback-safe PostgreSQL publication",
+    "concurrent and stale publisher rejection",
+    "idempotent active replay",
+    "cache token rotation",
+    "held-instance revalidation",
+    "ORM and Core bulk DML quarantine predicates",
+    "publisher token and database-role authorization",
+    "missing active census fail-closed behavior"
+  ],
+  "findings_remediated": [
+    "Core Table update/delete initially lacked mapper resolution",
+    "declared root initially was not checked against actual database lineage",
+    "publisher capability initially had no deployment token or database-role allowlist",
+    "PostgreSQL A-N cases were expanded to cover every required scenario",
+    "multi-parent clear state initially could mask a quarantined alternate parent"
+  ],
+  "focused_result": "11 passed",
+  "postgresql_evidence": "docs/architecture/mt-1d-postgresql-evidence.json",
+  "production_accessed": false
+}
