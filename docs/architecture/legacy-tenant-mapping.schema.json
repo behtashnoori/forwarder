@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forwarderet.example/schemas/legacy-tenant-mapping-v2.schema.json",
+  "title": "Forwarderet append-only reviewed legacy tenant decisions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format_version", "mappings"],
+  "properties": {
+    "format_version": {"const": 2},
+    "mappings": {"type": "array", "items": {"$ref": "#/$defs/decision"}}
+  },
+  "$defs": {
+    "decision": {
+      "type": "object", "additionalProperties": false,
+      "required": ["entity_type", "entity_id", "target_organization_id", "reason", "operator_identity", "reviewer_identity", "created_at", "decision_version", "decision_id", "review_status"],
+      "properties": {
+        "entity_type": {"enum": ["Activity", "AssignmentLog", "AssignmentRule", "CRMCustomerLinkAudit", "CaseDocumentFile", "CaseDocumentRequirement", "Customer", "CustomerContact", "CustomerGamification", "CustomerWorkflowStep", "DocumentAuditEvent", "ExpertConsoleLog", "ExpertConsoleMessage", "ExpertConsoleNotification", "ExpertQuote", "Opportunity", "ReferralAssignmentLog", "ReferralAutoAssignState", "ReferralRule", "ReferralRuleState", "Report", "ShipmentRequest", "ShipmentRequestLog", "ShipmentTracking", "ShipmentTransportUnit", "ShipmentTransportUnitUpdate", "Task"]},
+        "entity_id": {"type": "integer", "minimum": 1},
+        "target_organization_id": {"type": "integer", "minimum": 1},
+        "reason": {"type": "string", "minLength": 10, "maxLength": 1000},
+        "operator_identity": {"type": "string", "minLength": 1, "maxLength": 200},
+        "reviewer_identity": {"type": "string", "minLength": 1, "maxLength": 200},
+        "created_at": {"type": "string", "format": "date-time"},
+        "decision_version": {"type": "integer", "minimum": 1},
+        "decision_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"},
+        "supersedes_decision_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$"},
+        "review_status": {"enum": ["ACTIVE", "SUPERSEDED", "REJECTED", "PENDING_REVIEW"]},
+        "conflict_adjudication": {
+          "type": "object", "additionalProperties": false,
+          "required": ["candidate_organization_ids", "evidence_reference", "policy_version"],
+          "properties": {
+            "candidate_organization_ids": {"type": "array", "minItems": 2, "uniqueItems": true, "items": {"type": "integer", "minimum": 1}},
+            "evidence_reference": {"type": "string", "minLength": 8, "maxLength": 500},
+            "policy_version": {"type": "string", "minLength": 1, "maxLength": 100}
+          }
+        }
+      }
+    }
+  }
+}

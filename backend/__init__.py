@@ -102,6 +102,10 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
 
     db.init_app(app)
     migrate.init_app(app, db)
+
+    # Import once before test schema creation.  The module registers the central
+    # ORM read/write quarantine policy and its persistent decision models.
+    import backend.quarantine  # noqa: F401,WPS433
     
     # Initialize security
     security.init_app(app)

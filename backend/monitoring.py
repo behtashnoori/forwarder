@@ -1,19 +1,19 @@
 """Monitoring and analytics system for the application."""
 import time
 import psutil
-import json
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from functools import wraps
 from collections import defaultdict, deque
 
 from flask import request, g, current_app
-from sqlalchemy import text, func
+from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest, Customer, Opportunity, Activity
 from backend.services.utc_timestamp import current_utc_timestamp
+from backend.quarantine import decision_epoch_token
 
 
 class SystemMonitor:
@@ -135,11 +135,16 @@ class SystemMonitor:
             with db.session.begin():
                 # Table sizes
                 table_sizes = {}
-                tables = ['shipment_request', 'customer', 'opportunity', 'activity', 'expert_user']
-                
-                for table in tables:
-                    result = db.session.execute(text(f"SELECT COUNT(*) FROM {table}"))
-                    table_sizes[table] = result.scalar()
+                certified_models = {
+                    'shipment_request': ShipmentRequest,
+                    'customer': Customer,
+                    'opportunity': Opportunity,
+                    'activity': Activity,
+                }
+                for table, model in certified_models.items():
+                    table_sizes[table] = db.session.query(model).count()
+                # ExpertUser is platform identity rather than tenant business data.
+                table_sizes['expert_user'] = db.session.query(ExpertUser).count()
                 
                 # Recent activity counts
                 today = datetime.utcnow().date()
@@ -205,7 +210,7 @@ class SystemMonitor:
                 
                 # Expert metrics
                 total_experts = db.session.query(ExpertUser).filter(
-                    ExpertUser.is_active == True
+                    ExpertUser.is_active
                 ).count()
                 
                 return {
@@ -372,7 +377,7 @@ class AnalyticsEngine:
     
     def get_customer_analytics(self, days: int = 30) -> Dict[str, Any]:
         """Get customer analytics for the specified period."""
-        cache_key = f"customer_analytics_{days}"
+        cache_key = f"customer_analytics_{days}_{decision_epoch_token()}"
         
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
@@ -428,7 +433,7 @@ class AnalyticsEngine:
     
     def get_sales_analytics(self, days: int = 30) -> Dict[str, Any]:
         """Get sales analytics for the specified period."""
-        cache_key = f"sales_analytics_{days}"
+        cache_key = f"sales_analytics_{days}_{decision_epoch_token()}"
         
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
@@ -490,7 +495,7 @@ class AnalyticsEngine:
     
     def get_performance_analytics(self, days: int = 30) -> Dict[str, Any]:
         """Get performance analytics for the specified period."""
-        cache_key = f"performance_analytics_{days}"
+        cache_key = f"performance_analytics_{days}_{decision_epoch_token()}"
         
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
