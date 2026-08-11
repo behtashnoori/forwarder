@@ -123,7 +123,7 @@ def test_summary_alerts_stale_policy_and_500_unit_10000_event_bounded_queries(eu
 
 def test_execution_unit_migration_is_single_head():
     root=Path(__file__).resolve().parents[1]; config=Config(str(root/"migrations"/"alembic.ini")); config.set_main_option("script_location",str(root/"migrations"))
-    assert ScriptDirectory.from_config(config).get_heads()==["20260819_v191_acceptance_corrections"]
+    assert ScriptDirectory.from_config(config).get_heads()==["20260821_mt1d_canonical_census"]
 
 
 def test_execution_unit_migration_parent_round_trip_and_indexes(tmp_path):
@@ -138,3 +138,4 @@ def test_execution_unit_migration_parent_round_trip_and_indexes(tmp_path):
     inspector=sa.inspect(engine); assert {"execution_unit","operational_event"}<=set(inspector.get_table_names()); assert "tracking_code" in {c["name"] for c in inspector.get_columns("project")}; assert {"ix_execution_unit_project_status_active","ix_execution_unit_project_updated"}<={i["name"] for i in inspector.get_indexes("execution_unit")}
     command.downgrade(config,"20260805_project_foundation"); inspector=sa.inspect(engine); assert "execution_unit" not in inspector.get_table_names() and "tracking_code" not in {c["name"] for c in inspector.get_columns("project")}
     command.upgrade(config,"20260806_execution_units"); assert "operational_event" in sa.inspect(engine).get_table_names()
+# ruff: noqa: E701, E702, F541

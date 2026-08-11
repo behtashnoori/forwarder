@@ -195,6 +195,7 @@ def test_release_upgrade_chain_is_contiguous_and_remediation_is_mandatory():
         )
     )
     assert revisions == builder.UPGRADE_REVISIONS
-    # The v1.9.1 builder must be pinned to the repository's sole release head.
+    # The v1.9.1 builder stays pinned to its immutable release revision while
+    # later feature migrations advance the repository's sole current head.
     assert script.get_revision(builder.DATABASE_REVISION) is not None
-    assert script.get_heads() == ["20260819_v191_acceptance_corrections"]
+    assert script.get_heads() == ["20260821_mt1d_canonical_census"]
