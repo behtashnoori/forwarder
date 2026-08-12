@@ -1,0 +1,21 @@
+{
+  "date": "2026-08-12",
+  "production_touched": false,
+  "database": {
+    "engine": "PostgreSQL 18.0",
+    "network": "127.0.0.1:55462 loopback only",
+    "identity": "forwarder_mt1c2_cert_20260812_02 and three isolated companion certification databases",
+    "disposable": true,
+    "cleanup": "cluster stopped after certification"
+  },
+  "alembic_head": "20260822_mt1c1_census_fence",
+  "matrix": "15/15 PASS",
+  "six_state": "PASS",
+  "transaction_concurrency": "PASS",
+  "postgresql_tests": {"passed": 10, "skipped": 0, "xfailed": 0, "failed": 0},
+  "broad_regression": {"passed": 698, "skipped": 75, "xfailed": 1, "failed": 0},
+  "known_xfail": "MT-3 public tracking numeric-ID characterization remains unresolved",
+  "security_review": "MT-1C.2 SECURITY REVIEW — PASS",
+  "QUARANTINE_RUNTIME_CERTIFIED": true,
+  "MT1C_FULL_SURFACE_CERTIFIED": true
+}
