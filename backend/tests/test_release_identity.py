@@ -14,9 +14,9 @@ from backend.models import ExpertUser
 def identity_app(tmp_path):
     manifest = tmp_path / "release-manifest.json"
     manifest.write_text(json.dumps({
-        "application_version": "1.9.2", "git_tag": "v1.9.2",
+        "application_version": "1.9.3", "git_tag": "v1.9.3",
         "git_commit": "1234567890abcdef1234567890abcdef12345678",
-        "database_revision": "20260824_mt1_graph",
+        "database_revision": "20260825_admin_multitenant",
         "package_hash": "secret-hash", "git_tree": "secret-tree",
         "git_tag_object": "secret-tag-object", "environment_fingerprint": "secret-env",
         "database_url": "postgresql://secret", "absolute_path": "C:/secret",
@@ -38,16 +38,16 @@ def test_release_identity_requires_auth_and_minimizes_normal_projection(identity
     assert client.get("/api/system/release-identity").status_code == 401
     response = client.get("/api/system/release-identity", headers={"Authorization": f"Bearer {identity_app.config['identity_tokens'][0]}"})
     assert response.status_code == 200
-    assert response.json == {"data": {"application_version": "1.9.2"}, "projection": "normal"}
+    assert response.json == {"data": {"application_version": "1.9.3"}, "projection": "normal"}
 
 
 def test_release_identity_support_projection_is_explicitly_allowlisted(identity_app):
     response = identity_app.test_client().get("/api/system/release-identity", headers={"Authorization": f"Bearer {identity_app.config['identity_tokens'][1]}"})
     assert response.status_code == 200 and response.json["projection"] == "support"
     assert response.json["data"] == {
-        "application_version": "1.9.2", "frontend_version": "1.9.2", "backend_version": "1.9.2",
-        "release_tag": "v1.9.2", "short_commit": "1234567890ab",
-        "database_revision": "20260824_mt1_graph",
+        "application_version": "1.9.3", "frontend_version": "1.9.3", "backend_version": "1.9.3",
+        "release_tag": "v1.9.3", "short_commit": "1234567890ab",
+        "database_revision": "20260825_admin_multitenant",
     }
     body = response.get_data(as_text=True).lower()
     for forbidden in ("package_hash", "git_tree", "git_tag_object", "environment_fingerprint", "postgresql://", "c:/secret"):

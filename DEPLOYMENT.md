@@ -1,21 +1,18 @@
-# Forwarder 1.9.2 deployment preparation
+# Forwarder 1.9.3 deployment preparation
 
-This runbook prepares a future authorized Windows/IIS deployment; it does not authorize one or access Production.
+Release baseline is immutable Production `v1.9.2`; target is `v1.9.3` at Alembic head `20260825_admin_multitenant`. Deployment requires separate Production authorization.
 
-1. Verify the immutable archive, SHA-256, manifest, annotated `v1.9.2` tag, source commit/tree, requirements hash, and all five migration hashes.
-2. Copy the verified package to a new immutable server directory.
-3. Create a release-local `.venv` and install only `requirements.txt`; do not rely on global packages.
-4. Run `VERIFY-PACKAGE.ps1`; confirm `psycopg2-binary 2.9.11` imports from the release-local environment.
-5. Record current IIS and backend Scheduled Task paths without exposing secrets.
-6. Confirm deployed database revision `20260819_v191_acceptance_corrections`, PostgreSQL version, capacity, active transactions, and approved quiescence.
-7. Take and verify coordinated PostgreSQL and private document-storage backups.
-8. Stop/quiesce application writers under approved change authority.
-9. Run the preflight and explicitly upgrade to `20260824_mt1_graph`.
-10. Confirm current/head equality and readiness before switching processes.
-11. Reuse the existing production environment through protected server configuration; never copy `.env` from the package or print secrets.
-12. Point the backend Scheduled Task WorkingDirectory, `--repo`, and `PYTHONPATH` consistently at the immutable 1.9.2 directory and start it.
-13. Point IIS at the immutable 1.9.2 frontend and verify HTTPS, same-origin API routing, cache headers, and health.
-14. Run backend, frontend, authentication, intake, tenant-isolation, quarantine, and browser/UAT smoke gates.
-15. Capture artifact, backup, migration, smoke, operator, and timestamp evidence before publication acceptance.
+1. Verify the archive SHA-256, manifest, annotated tag, commit, and package contents with `VERIFY-PACKAGE.ps1`.
+2. Back up the Production database and document storage and record restore locations before stopping services.
+3. Expand the archive into a new immutable release directory; never overwrite the v1.9.2 directory.
+4. Stop the IIS Forwarder site/application pool and the backend Scheduled Task/service using the server's existing controlled procedure.
+5. Install the pinned Python dependencies and retain the existing secret-managed Production environment configuration.
+6. Run `python -m backend.migration_cli current`, then `python -m backend.migration_cli check`.
+7. Apply exactly `python -m backend.migration_cli upgrade 20260825_admin_multitenant --confirm`.
+8. Re-run `current` and `check`; require sole current head `20260825_admin_multitenant` and no pending migration.
+9. Point the backend working directory, `--repo`, and `PYTHONPATH` consistently at the immutable v1.9.3 directory, then start the backend.
+10. Require the backend to listen only on `127.0.0.1:5101`; verify its health endpoint returns HTTP 200.
+11. Point IIS at the v1.9.3 frontend, start the site/application pool, and require the public URL and `/api/health` to return HTTP 200.
+12. Perform admin login, exactly-one-Organization context, normal shipment/admin page, and Platform Admin versus Organization Admin authority smoke tests. Do not onboard another company during acceptance.
 
-Reference Data and OIP policy/threshold initialization are separate administrator actions. No seed or catalog apply occurs during build, migration, startup, or basic acceptance.
+If acceptance fails, stop traffic and prefer a reviewed forward fix. If recovery requires rollback across the migration, restore the coordinated pre-migration database and document-storage backups before reactivating immutable v1.9.2; do not run an ad-hoc downgrade or mutate quarantined data.

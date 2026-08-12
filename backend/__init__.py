@@ -12,7 +12,7 @@ import backend.config  # noqa: F401 - load .env once (single source of truth in 
 from flask import Flask, jsonify, request, stream_with_context
 from flask_cors import CORS
 
-__version__ = "1.9.2"
+__version__ = "1.9.3"
 
 from backend.extensions import db, migrate
 from backend.routes import register_routes

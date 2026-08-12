@@ -2,12 +2,12 @@ $ErrorActionPreference = "Stop"
 $manifestPath = Join-Path $PSScriptRoot "release-manifest.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing release-manifest.json" }
 $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-if ($manifest.application_version -ne "1.9.2" -or $manifest.previous_version -ne "1.9.1") { throw "Version mismatch" }
-if ($manifest.git_tag -ne "v1.9.2" -or $manifest.git_commit -ne $manifest.backend_revision -or -not $manifest.git_tree -or -not $manifest.git_tag_object) { throw "Git identity mismatch" }
-$expectedRevisions = @("20260820_mt1c_quarantine_runtime", "20260821_mt1d_canonical_census", "20260822_mt1c1_census_fence", "20260823_mt1_ownership_expand", "20260824_mt1_graph")
-if ($manifest.database_revision -ne "20260824_mt1_graph" -or $manifest.production_baseline_revision -ne "20260819_v191_acceptance_corrections" -or $manifest.previous_database_revision -ne "20260819_v191_acceptance_corrections" -or -not $manifest.database_migration_included) { throw "Database metadata mismatch" }
+if ($manifest.application_version -ne "1.9.3" -or $manifest.previous_version -ne "1.9.2") { throw "Version mismatch" }
+if ($manifest.git_tag -ne "v1.9.3" -or $manifest.git_commit -ne $manifest.backend_revision -or -not $manifest.git_tree -or -not $manifest.git_tag_object) { throw "Git identity mismatch" }
+$expectedRevisions = @("20260825_admin_multitenant")
+if ($manifest.database_revision -ne "20260825_admin_multitenant" -or $manifest.production_baseline_revision -ne "20260824_mt1_graph" -or $manifest.previous_database_revision -ne "20260824_mt1_graph" -or -not $manifest.database_migration_included) { throw "Database metadata mismatch" }
 if ((@($manifest.upgrade_revisions) -join "|") -ne ($expectedRevisions -join "|")) { throw "Migration path mismatch" }
-if ($manifest.rollback_release -ne "release-v1.9.1-20260811" -or $manifest.rollback_restore_required_from_revision -ne "20260820_mt1c_quarantine_runtime") { throw "Rollback metadata mismatch" }
+if ($manifest.rollback_release -ne "release-v1.9.2-20260812" -or $manifest.rollback_restore_required_from_revision -ne "20260825_admin_multitenant") { throw "Rollback metadata mismatch" }
 if ($manifest.production_seed_executed -ne $false) { throw "Seed metadata mismatch" }
 if ($manifest.milestone_type_catalog_apply_status -ne "not applied") { throw "Catalog apply metadata mismatch" }
 $python = (Get-Command python -ErrorAction Stop).Source

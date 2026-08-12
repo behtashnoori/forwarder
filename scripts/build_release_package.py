@@ -1,4 +1,4 @@
-"""Build the immutable Forwarder 1.9.2 package from its exact annotated tag."""
+"""Build the immutable Forwarder 1.9.3 package from its exact annotated tag."""
 
 from __future__ import annotations
 
@@ -17,20 +17,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.9.2"
-PREVIOUS_VERSION = "1.9.1"
-TAG = "v1.9.2"
+VERSION = "1.9.3"
+PREVIOUS_VERSION = "1.9.2"
+TAG = "v1.9.3"
 RELEASE_DATE = "20260812"
 RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
 NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
-PRODUCTION_BASELINE_REVISION = "20260819_v191_acceptance_corrections"
-DATABASE_REVISION = "20260824_mt1_graph"
+PRODUCTION_BASELINE_REVISION = "20260824_mt1_graph"
+DATABASE_REVISION = "20260825_admin_multitenant"
 UPGRADE_MIGRATIONS = [
-    ("20260820_mt1c_quarantine_runtime", "backend/migrations/versions/20260820_mt1c_quarantine_runtime.py"),
-    ("20260821_mt1d_canonical_census", "backend/migrations/versions/20260821_mt1d_canonical_census.py"),
-    ("20260822_mt1c1_census_fence", "backend/migrations/versions/20260822_mt1c1_census_fence.py"),
-    ("20260823_mt1_ownership_expand", "backend/migrations/versions/20260823_mt1_ownership_expand.py"),
-    ("20260824_mt1_graph", "backend/migrations/versions/20260824_mt1_graph.py"),
+    ("20260825_admin_multitenant", "backend/migrations/versions/20260825_admin_multitenant.py"),
 ]
 UPGRADE_REVISIONS = [revision for revision, _ in UPGRADE_MIGRATIONS]
 HISTORICAL_SECURITY_REMEDIATION = {
@@ -187,7 +183,7 @@ def build() -> None:
         manifest = {
         "application_version": VERSION,
         "previous_version": PREVIOUS_VERSION,
-        "release_name": "MT-1 tenant data integrity foundation",
+        "release_name": "Admin multi-tenant isolation",
         "change_type": "PATCH",
         "git_commit": commit,
         "git_tree": tree,
@@ -215,9 +211,9 @@ def build() -> None:
         "api_base": "same-origin",
         "environment_fingerprint": "sha256:" + hashlib.sha256(env_canonical).hexdigest(),
         "environment_fingerprint_definition": "SHA-256 of canonical secret-free JSON containing Python, Node, npm, package-lock SHA-256, and requirements SHA-256",
-        "rollback_release": "release-v1.9.1-20260811",
-        "rollback_strategy": "prefer forward recovery; restore coordinated pre-migration database and document-storage backups if the MT-1 migration or application acceptance gate fails",
-        "rollback_restore_required_from_revision": "20260820_mt1c_quarantine_runtime",
+        "rollback_release": "release-v1.9.2-20260812",
+        "rollback_strategy": "prefer forward recovery; restore coordinated pre-migration database and document-storage backups if the admin multi-tenant migration or application acceptance gate fails",
+        "rollback_restore_required_from_revision": "20260825_admin_multitenant",
         "milestone_type_catalog_filename": "backend/reference_data/milestone-types-v1.0.0.json",
         "milestone_type_catalog_version": "1.0.0",
         "milestone_type_catalog_sha256": sha256(ROOT / "backend/reference_data/milestone-types-v1.0.0.json"),
@@ -241,7 +237,7 @@ def build() -> None:
             "ACTUAL Shipment Economics remains incomplete when authoritative revenue or cost facts are unavailable.",
             "Reference Data and OIP policies/thresholds require separately authorized administrator initialization; no Seed runs during deployment.",
             "Synthetic legacy rows remain quarantined and are not assigned fabricated Organization ownership.",
-            "MT-2 central request tenant context and later multi-tenant milestones remain outside 1.9.2.",
+            "Organization onboarding remains a controlled operational procedure; no Organization-management UI is included.",
         ],
         }
         (package_root / "release-manifest.json").write_text(
@@ -253,7 +249,7 @@ def build() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check-source", action="store_true", help="validate 1.9.2 source metadata without creating a package")
+    parser.add_argument("--check-source", action="store_true", help="validate 1.9.3 source metadata without creating a package")
     args = parser.parse_args()
     if args.check_source:
         status = validate_source()
