@@ -848,6 +848,74 @@ def evaluate_readiness(
     }
 
 
+def evaluate_dataset_provenance(rows, provenance=None, *, observed_census_hashes=None):
+    """Evaluate the dataset-level MT-1 gate without changing row ownership."""
+    provenance = _load_evidence(provenance)
+    classification = provenance.get("dataset_classification", "UNKNOWN")
+    result = {
+        "LEGACY_DATA_PROVENANCE_CLASSIFIED": False,
+        "LEGACY_DATASET_CLASSIFICATION": classification,
+        "REAL_LEGACY_OWNERSHIP_ADJUDICATION_REQUIRED": True,
+        "SYNTHETIC_LEGACY_DISPOSITION_READY": False,
+        "MT1_REAL_DATA_GATE_APPLICABLE": True,
+        "LEGACY_SYNTHETIC_ADJUDICATION_STATUS": "NOT_APPLICABLE_TO_UNKNOWN",
+        "provenance_gate_pass": False,
+    }
+    if classification == "SYNTHETIC_ONLY":
+        required = {
+            "legacy_real_customer_data_present": False,
+            "human_ownership_adjudication_required_for_this_dataset": False,
+            "auto_tenant_assignment_allowed": False,
+            "synthetic_data_may_be_disposed_only_by_explicit_policy": True,
+            "real_data_census_required_if_real_legacy_data_is_ever_introduced": True,
+        }
+        assertions_valid = all(provenance.get(key) is value for key, value in required.items())
+        declared_hashes = provenance.get("source_census_hashes")
+        hash_binding_valid = (
+            isinstance(declared_hashes, dict)
+            and declared_hashes == observed_census_hashes
+            and set(declared_hashes) == {"csv_sha256", "summary_sha256"}
+            and all(
+                isinstance(value, str) and len(value) == 64
+                for value in declared_hashes.values()
+            )
+        )
+        row_count_valid = provenance.get("total_rows") == len(rows)
+        no_candidates = all(not row.get("candidate_organization_ids") for row in rows)
+        no_active_mappings = all(
+            row.get("mapping_status", "NONE") not in {"ACTIVE", "ACTIVE_ADJUDICATED"}
+            for row in rows
+        )
+        valid = (
+            assertions_valid
+            and hash_binding_valid
+            and row_count_valid
+            and no_candidates
+            and no_active_mappings
+        )
+        result.update(
+            {
+                "LEGACY_DATA_PROVENANCE_CLASSIFIED": valid,
+                "REAL_LEGACY_OWNERSHIP_ADJUDICATION_REQUIRED": False if valid else True,
+                "SYNTHETIC_LEGACY_DISPOSITION_READY": bool(
+                    valid and provenance.get("recommended_disposition")
+                    == "KEEP_QUARANTINED_SYNTHETIC"
+                ),
+                "MT1_REAL_DATA_GATE_APPLICABLE": False if valid else True,
+                "LEGACY_SYNTHETIC_ADJUDICATION_STATUS": (
+                    "NOT_APPLICABLE" if valid else "INVALID_CLASSIFICATION"
+                ),
+                "provenance_gate_pass": valid,
+            }
+        )
+        return result
+    if classification == "REAL_NON_PRODUCTION_CLONE":
+        result["LEGACY_DATA_PROVENANCE_CLASSIFIED"] = True
+        result["provenance_gate_pass"] = True
+        return result
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--database-url", required=True)
@@ -856,6 +924,9 @@ def main():
     parser.add_argument("--quarantine-matrix")
     parser.add_argument("--postgresql-evidence")
     parser.add_argument("--security-review-evidence")
+    parser.add_argument("--dataset-provenance")
+    parser.add_argument("--source-census-csv-sha256")
+    parser.add_argument("--source-census-summary-sha256")
     args = parser.parse_args()
     engine = create_engine(args.database_url)
     with engine.connect() as connection:
@@ -871,12 +942,24 @@ def main():
         postgresql_evidence=args.postgresql_evidence,
         security_review_evidence=args.security_review_evidence,
     )
+    observed_census_hashes = None
+    if args.source_census_csv_sha256 and args.source_census_summary_sha256:
+        observed_census_hashes = {
+            "csv_sha256": args.source_census_csv_sha256,
+            "summary_sha256": args.source_census_summary_sha256,
+        }
+    dataset_gate = evaluate_dataset_provenance(
+        rows,
+        args.dataset_provenance,
+        observed_census_hashes=observed_census_hashes,
+    )
     report = {
         "report_version": 2,
         "read_only": True,
         "rows": rows,
         "counts": dict(sorted(Counter(r["classification"] for r in rows).items())),
         "readiness": readiness,
+        "dataset_gate": dataset_gate,
     }
     output = json.dumps(report, indent=2, sort_keys=True) + "\n"
     Path(args.output).write_text(output, encoding="utf-8") if args.output else print(

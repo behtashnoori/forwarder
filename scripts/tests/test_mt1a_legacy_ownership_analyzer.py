@@ -327,3 +327,90 @@ def test_mapping_rejects_extra_property_and_stale_conflict_adjudication():
     bad = decision(review_status="APPROVED")
     with pytest.raises(ValueError, match="invalid mapping document"):
         ANALYZER.load_mappings({"format_version": 2, "mappings": [bad]})
+
+
+def synthetic_provenance(**overrides):
+    hashes = {"csv_sha256": "a" * 64, "summary_sha256": "b" * 64}
+    value = {
+        "dataset_classification": "SYNTHETIC_ONLY",
+        "legacy_real_customer_data_present": False,
+        "human_ownership_adjudication_required_for_this_dataset": False,
+        "auto_tenant_assignment_allowed": False,
+        "synthetic_data_may_be_disposed_only_by_explicit_policy": True,
+        "real_data_census_required_if_real_legacy_data_is_ever_introduced": True,
+        "recommended_disposition": "KEEP_QUARANTINED_SYNTHETIC",
+        "source_census_hashes": hashes,
+        "total_rows": 1,
+    }
+    value.update(overrides)
+    return value
+
+
+def test_synthetic_only_skips_mapping_but_does_not_clear_ownership():
+    rows = [{
+        "classification": "UNRESOLVED",
+        "candidate_organization_ids": [],
+        "mapping_status": "NONE",
+        "quarantine_status": "QUARANTINED",
+    }]
+    gate = ANALYZER.evaluate_dataset_provenance(
+        rows,
+        synthetic_provenance(),
+        observed_census_hashes=synthetic_provenance()["source_census_hashes"],
+    )
+    assert gate["provenance_gate_pass"] is True
+    assert gate["REAL_LEGACY_OWNERSHIP_ADJUDICATION_REQUIRED"] is False
+    assert gate["SYNTHETIC_LEGACY_DISPOSITION_READY"] is True
+    assert rows[0]["classification"] == "UNRESOLVED"
+    assert rows[0]["quarantine_status"] == "QUARANTINED"
+
+
+def test_synthetic_classification_rejects_candidates_and_active_mappings():
+    candidate = [{"candidate_organization_ids": [1], "mapping_status": "NONE"}]
+    mapped = [{"candidate_organization_ids": [], "mapping_status": "ACTIVE"}]
+    assert not ANALYZER.evaluate_dataset_provenance(
+        candidate,
+        synthetic_provenance(),
+        observed_census_hashes=synthetic_provenance()["source_census_hashes"],
+    )["provenance_gate_pass"]
+    assert not ANALYZER.evaluate_dataset_provenance(
+        mapped,
+        synthetic_provenance(),
+        observed_census_hashes=synthetic_provenance()["source_census_hashes"],
+    )["provenance_gate_pass"]
+
+
+def test_real_and_unknown_provenance_fail_closed_for_ownership():
+    rows = [{"candidate_organization_ids": [], "mapping_status": "NONE"}]
+    unknown = ANALYZER.evaluate_dataset_provenance(rows)
+    assert unknown["REAL_LEGACY_OWNERSHIP_ADJUDICATION_REQUIRED"] is True
+    assert unknown["provenance_gate_pass"] is False
+    real = ANALYZER.evaluate_dataset_provenance(
+        rows, {"dataset_classification": "REAL_NON_PRODUCTION_CLONE"}
+    )
+    assert real["REAL_LEGACY_OWNERSHIP_ADJUDICATION_REQUIRED"] is True
+    assert real["MT1_REAL_DATA_GATE_APPLICABLE"] is True
+
+
+def test_future_real_dataset_cannot_reuse_synthetic_exemption():
+    rows = [{"candidate_organization_ids": [], "mapping_status": "NONE"}]
+    malformed = synthetic_provenance(legacy_real_customer_data_present=True)
+    gate = ANALYZER.evaluate_dataset_provenance(
+        rows,
+        malformed,
+        observed_census_hashes=malformed["source_census_hashes"],
+    )
+    assert gate["provenance_gate_pass"] is False
+    assert gate["REAL_LEGACY_OWNERSHIP_ADJUDICATION_REQUIRED"] is True
+
+
+def test_future_dataset_cannot_reuse_synthetic_manifest_hashes():
+    rows = [{"candidate_organization_ids": [], "mapping_status": "NONE"}]
+    provenance = synthetic_provenance()
+    gate = ANALYZER.evaluate_dataset_provenance(
+        rows,
+        provenance,
+        observed_census_hashes={"csv_sha256": "c" * 64, "summary_sha256": "d" * 64},
+    )
+    assert gate["provenance_gate_pass"] is False
+    assert gate["REAL_LEGACY_OWNERSHIP_ADJUDICATION_REQUIRED"] is True
