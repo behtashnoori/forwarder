@@ -132,7 +132,10 @@ class SystemMonitor:
     def get_database_metrics(self) -> Dict[str, Any]:
         """Get database performance metrics."""
         try:
-            with db.session.begin():
+            # decision_epoch_token() already pins and begins the request UoW.
+            # A savepoint composes with that transaction without attempting a
+            # second root transaction.
+            with db.session.begin_nested():
                 # Table sizes
                 table_sizes = {}
                 certified_models = {
@@ -178,7 +181,7 @@ class SystemMonitor:
     def get_business_metrics(self) -> Dict[str, Any]:
         """Get business-specific metrics."""
         try:
-            with db.session.begin():
+            with db.session.begin_nested():
                 # Customer metrics
                 total_customers = db.session.query(Customer).count()
                 active_customers = db.session.query(Customer).filter(
@@ -385,7 +388,7 @@ class AnalyticsEngine:
                 return cached_data
         
         try:
-            with db.session.begin():
+            with db.session.begin_nested():
                 end_date = datetime.utcnow()
                 start_date = end_date - timedelta(days=days)
                 

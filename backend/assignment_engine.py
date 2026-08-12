@@ -2,8 +2,8 @@
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import List, Dict, Any, Optional, Tuple
-from sqlalchemy import and_, or_, func, desc
+from typing import List, Dict, Any, Optional
+from sqlalchemy import and_, or_, desc, select
 from sqlalchemy.orm import Session
 
 from backend.models import (
@@ -11,9 +11,12 @@ from backend.models import (
     AssignmentRule, AssignmentLog, CustomerGamification, CustomerWorkflowStep
 )
 from backend.extensions import db
+from backend.census_context import CensusTransitioned, CensusUnavailable
+from backend.quarantine import QuarantinedResource, assert_not_quarantined
 from backend.services.expert_scope_service import eligible_experts
 
 logger = logging.getLogger(__name__)
+SECURITY_FENCE_ERRORS = (QuarantinedResource, CensusTransitioned, CensusUnavailable)
 
 
 class AssignmentEngine:
@@ -35,6 +38,13 @@ class AssignmentEngine:
             ID of assigned expert or None if no suitable expert found
         """
         try:
+            physically_present = self.db.execute(
+                select(ShipmentRequest.id)
+                .where(ShipmentRequest.id == request_id)
+                .execution_options(include_quarantined_for_certification=True)
+            ).scalar_one_or_none()
+            if physically_present is not None:
+                assert_not_quarantined("ShipmentRequest", request_id, session=self.db)
             # Get the shipment request
             request = self.db.query(ShipmentRequest).get(request_id)
             if not request:
@@ -60,14 +70,14 @@ class AssignmentEngine:
                 
         except Exception as e:
             logger.error(f"Error assigning request {request_id}: {e}")
-            return None
+            raise
     
     def _find_best_expert(self, request: ShipmentRequest) -> Optional[int]:
         """Find the best expert for a shipment request."""
         try:
             # Get active assignment rules ordered by priority
             rules = self.db.query(AssignmentRule).filter(
-                AssignmentRule.is_active == True
+                AssignmentRule.is_active
             ).order_by(desc(AssignmentRule.priority)).all()
             
             # Try each rule in order of priority
@@ -81,6 +91,8 @@ class AssignmentEngine:
             return self._get_default_assignment(request)
             
         except Exception as e:
+            if isinstance(e, SECURITY_FENCE_ERRORS):
+                raise
             logger.error(f"Error finding best expert: {e}")
             return None
     
@@ -103,6 +115,8 @@ class AssignmentEngine:
                 return []
                 
         except Exception as e:
+            if isinstance(e, SECURITY_FENCE_ERRORS):
+                raise
             logger.error(f"Error applying rule {rule.id}: {e}")
             return []
     
@@ -124,7 +138,7 @@ class AssignmentEngine:
         experts = self.db.query(ExpertUser).join(ExpertSpecialization).filter(
             and_(
                 ExpertSpecialization.transport_method_id == transport.id,
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"])
             )
         ).all()
@@ -137,19 +151,18 @@ class AssignmentEngine:
         # For now, return all active experts
         return self.db.query(ExpertUser).filter(
             and_(
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"])
             )
         ).all()
     
     def _filter_by_priority(self, request: ShipmentRequest, conditions: Dict) -> List[ExpertUser]:
         """Filter experts by priority handling capability."""
-        priority = request.priority or "normal"
         
         # Get experts who can handle this priority level
         experts = self.db.query(ExpertUser).filter(
             and_(
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"])
             )
         ).all()
@@ -164,7 +177,7 @@ class AssignmentEngine:
         # Get experts with workload below threshold
         experts = self.db.query(ExpertUser).filter(
             and_(
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"])
             )
         ).all()
@@ -330,7 +343,7 @@ class AssignmentEngine:
         # Get all active experts
         experts = self.db.query(ExpertUser).filter(
             and_(
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"])
             )
         ).all()
@@ -450,16 +463,17 @@ class AssignmentEngine:
                         logger.info(f"Gamification: Customer {request.gamification_customer_id} got expert assigned for request {request.id}, earned 15 points")
                         
                 except Exception as e:
+                    if isinstance(e, SECURITY_FENCE_ERRORS):
+                        raise
                     logger.error(f"Error in gamification for expert assignment: {e}")
                     # Don't fail the assignment if gamification fails
             
-            # Commit changes
-            self.db.commit()
+            # Materialize failures while the caller still owns the transaction.
+            self.db.flush()
             
             logger.info(f"Request {request.id} assigned to expert {expert_id} ({expert.full_name}) - Method: {assignment_method}")
             
         except Exception as e:
-            self.db.rollback()
             logger.error(f"Error assigning request {request.id} to expert {expert_id}: {e}")
             raise
     
@@ -473,7 +487,7 @@ class AssignmentEngine:
                 shipment_request_id=request_id,
                 notification_type="request_assigned",
                 title="درخواست جدید ارجاع داده شد",
-                message=f"یک درخواست حمل و نقل جدید به شما ارجاع داده شد.",
+                message="یک درخواست حمل و نقل جدید به شما ارجاع داده شد.",
                 is_read=False,
                 created_at=datetime.utcnow()
             )
@@ -481,6 +495,8 @@ class AssignmentEngine:
             # Note: Don't commit here, let the caller commit
             
         except Exception as e:
+            if isinstance(e, SECURITY_FENCE_ERRORS):
+                raise
             logger.error(f"Error creating assignment notification: {e}")
             # Don't fail assignment if notification fails
     
@@ -502,7 +518,7 @@ class AssignmentEngine:
             # Expert workload distribution
             expert_workloads = []
             experts = self.db.query(ExpertUser).filter(
-                ExpertUser.is_active == True
+                ExpertUser.is_active
             ).all()
             
             for expert in experts:

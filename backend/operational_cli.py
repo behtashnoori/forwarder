@@ -6,6 +6,7 @@ import os
 import sys
 from datetime import datetime, timedelta, timezone
 import bcrypt
+from flask import has_app_context
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from backend import create_app
@@ -332,9 +333,18 @@ def main(argv=None) -> int:
 
 
 def run(argv=None):
-    try: return main(argv)
-    except OperationalError as exc: print(f"Operational command failed ({exc.code}).", file=sys.stderr); return 1
-    except Exception: print("Operational command failed.", file=sys.stderr); return 1
+    try:
+        return main(argv)
+    except OperationalError as exc:
+        if has_app_context():
+            db.session.rollback()
+        print(f"Operational command failed ({exc.code}).", file=sys.stderr)
+        return 1
+    except Exception:
+        if has_app_context():
+            db.session.rollback()
+        print("Operational command failed.", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__": raise SystemExit(run())

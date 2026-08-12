@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, select
 from sqlalchemy.orm import Session
 
 from backend.models import (
@@ -19,9 +19,12 @@ from backend.models import (
     CustomerWorkflowStep,
 )
 from backend.extensions import db
+from backend.census_context import CensusTransitioned, CensusUnavailable
+from backend.quarantine import QuarantinedResource, assert_not_quarantined
 from backend.services.expert_scope_service import can_handle_request, eligible_experts
 
 logger = logging.getLogger(__name__)
+SECURITY_FENCE_ERRORS = (QuarantinedResource, CensusTransitioned, CensusUnavailable)
 
 
 def _get_assignable_experts(
@@ -32,7 +35,7 @@ def _get_assignable_experts(
         session.query(ExpertUser)
         .filter(
             and_(
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"]),
             )
         )
@@ -67,7 +70,7 @@ def _select_expert_by_last_assignment(
         .outerjoin(last_assigned_subq, ExpertUser.id == last_assigned_subq.c.expert_id)
         .filter(
             and_(
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"]),
             )
         )
@@ -155,7 +158,7 @@ def _assignable_pool(
         .filter(
             and_(
                 ExpertUser.id.in_(expert_ids),
-                ExpertUser.is_active == True,
+                ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"]),
             )
         )
@@ -201,10 +204,17 @@ class ReferralEngine:
     def auto_assign_request(self, request_id: int) -> Optional[int]:
         """
         Assign a shipment request to the expert with oldest last-assignment time.
-        Returns expert_id if assigned, None if no experts. Commits on success.
+        Returns expert_id if assigned, None if no experts. Caller owns commit.
         Uses row lock on ReferralAutoAssignState(id=1) for concurrency safety.
         """
         try:
+            physically_present = self.db.execute(
+                select(ShipmentRequest.id)
+                .where(ShipmentRequest.id == request_id)
+                .execution_options(include_quarantined_for_certification=True)
+            ).scalar_one_or_none()
+            if physically_present is not None:
+                assert_not_quarantined("ShipmentRequest", request_id, session=self.db)
             request = self.db.get(ShipmentRequest, request_id)
             if not request:
                 logger.error(f"Shipment request {request_id} not found")
@@ -261,7 +271,6 @@ class ReferralEngine:
             )
             return expert_id
         except Exception as e:
-            self.db.rollback()
             logger.error(f"Error in referral auto_assign_request {request_id}: {e}")
             raise
 
@@ -313,7 +322,7 @@ class ReferralEngine:
     def _select_matching_rule_assignment(self, request: ShipmentRequest, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         rules = (
             self.db.query(ReferralRule)
-            .filter(ReferralRule.is_active == True)
+            .filter(ReferralRule.is_active)
             .order_by(ReferralRule.priority.asc(), ReferralRule.name.asc())
             .all()
         )
@@ -406,7 +415,7 @@ class ReferralEngine:
         rule_id: Optional[int] = None,
         strategy_used: str = "round_robin",
     ) -> None:
-        """Update request, create ReferralAssignmentLog, ExpertConsoleLog, notification, gamification. Commits."""
+        """Stage request, logs, notification, and gamification atomically."""
         expert = self.db.get(ExpertUser, expert_id)
         if not expert or not can_handle_request(expert, request):
             raise ValueError(f"Expert {expert_id} is not active or does not exist")
@@ -455,8 +464,10 @@ class ReferralEngine:
                 if customer:
                     customer.update_loyalty_points(15)
             except Exception as e:
+                if isinstance(e, SECURITY_FENCE_ERRORS):
+                    raise
                 logger.error(f"Gamification on referral assign: {e}")
-        self.db.commit()
+        self.db.flush()
         logger.info(f"Auto-assign: request {request.id} -> expert {expert_id} ({strategy_used})")
 
     def _create_assignment_notification(self, expert_id: int, request_id: int) -> None:

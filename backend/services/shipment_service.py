@@ -7,6 +7,8 @@ from typing import Any
 from flask import current_app
 
 from backend.extensions import db
+from backend.census_context import CensusTransitioned, CensusUnavailable
+from backend.quarantine import QuarantinedResource
 from backend.models import (
     CustomerGamification,
     CustomerWorkflowStep,
@@ -27,6 +29,7 @@ PREFERENCE_OPTIONS = [
 VALID_SHIPPING_TYPES = ["domestic", "international"]
 VALID_TRANSPORT_PREFERENCES = ["customer_choice", "forwarder_suggestion"]
 VALID_IRAN_DEST_TYPES = ["port", "customs", "city"]
+SECURITY_FENCE_ERRORS = (QuarantinedResource, CensusTransitioned, CensusUnavailable)
 DOMESTIC_LOCATION_ERROR = "اطلاعات مبدا و مقصد داخلی نامعتبر است."
 
 # Keys carrying the structured Iran destination point. Absent for domestic and
@@ -82,7 +85,22 @@ def get_transport_methods_payload() -> dict:
 
 
 def create_shipment_request(payload: dict[str, Any], remote_addr: str | None = None) -> ShipmentRequest:
-    """Create, commit, and optionally auto-assign a public shipment request."""
+    """Create and optionally auto-assign one request in one census-bound UoW."""
+    from backend.census_context import census_unit_of_work
+
+    try:
+        with census_unit_of_work(db.session):
+            shipment_request = _stage_shipment_request(payload, remote_addr)
+            assign_request_with_referral(shipment_request)
+            db.session.commit()
+            return shipment_request
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def _stage_shipment_request(payload: dict[str, Any], remote_addr: str | None = None) -> ShipmentRequest:
+    """Stage request creation without finalizing the caller's transaction."""
     normalized = normalize_shipment_payload(payload)
     timestamp = datetime.utcnow()
 
@@ -107,8 +125,6 @@ def create_shipment_request(payload: dict[str, Any], remote_addr: str | None = N
     from backend.services.case_document_service import initialize_requirements
     initialize_requirements(shipment_request, None)
 
-    db.session.commit()
-    assign_request_with_referral(shipment_request)
     return shipment_request
 
 
@@ -496,7 +512,9 @@ def generate_tracking_code(shipment_request: ShipmentRequest) -> str:
             if db.session.query(ShipmentRequest).filter(ShipmentRequest.tracking_code == code).first() is None:
                 return code
         return "SR-" + secrets.token_hex(3).upper()
-    except Exception:
+    except Exception as exc:
+        if isinstance(exc, SECURITY_FENCE_ERRORS):
+            raise
         return f"SR{shipment_request.id:06d}"
 
 
@@ -527,21 +545,20 @@ def handle_gamification(shipment_request: ShipmentRequest, gamification_customer
                 f"Gamification: Customer {gamification_customer_id} submitted request {shipment_request.id}, earned 20 points"
             )
     except Exception as e:
+        if isinstance(e, SECURITY_FENCE_ERRORS):
+            raise
         current_app.logger.error(f"Error in gamification for request {shipment_request.id}: {e}")
 
 
 def assign_request_with_referral(shipment_request: ShipmentRequest) -> None:
-    """Run referral assignment after creation without failing public request creation."""
-    try:
-        assigned_expert_id = referral_engine.auto_assign_request(shipment_request.id)
-        if assigned_expert_id:
-            current_app.logger.info(
-                f"Request {shipment_request.id} assigned to expert {assigned_expert_id} via referral rules"
-            )
-        else:
-            current_app.logger.info("No active experts available for request %s; status remains new", shipment_request.id)
-    except Exception as e:
-        current_app.logger.error(f"Error in referral assignment for request {shipment_request.id}: {e}")
+    """Stage referral assignment in the caller-owned transaction."""
+    assigned_expert_id = referral_engine.auto_assign_request(shipment_request.id)
+    if assigned_expert_id:
+        current_app.logger.info(
+            f"Request {shipment_request.id} assigned to expert {assigned_expert_id} via referral rules"
+        )
+    else:
+        current_app.logger.info("No active experts available for request %s; status remains new", shipment_request.id)
 
 
 def parse_float_or_none(value):

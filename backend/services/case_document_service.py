@@ -16,6 +16,7 @@ from werkzeug.utils import secure_filename
 
 from backend.extensions import db
 from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentAuditEvent, DocumentDefinition, ShipmentRequest
+from backend.quarantine import assert_instance_current
 from backend.services.document_storage_service import DocumentStorageError, PrivateDocumentStorage
 
 FORMAT_CATALOG = {
@@ -239,6 +240,7 @@ def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, re
 
 
 def serialize_file(row: CaseDocumentFile) -> dict[str, Any]:
+    assert_instance_current(row, purpose="document-metadata-serialize")
     return {
         "id": row.id, "requirement_id": row.case_requirement_id, "is_miscellaneous": row.is_miscellaneous,
         "public_id": row.public_id, "custom_title": row.custom_title, "description": row.description, "original_filename": row.original_filename,
@@ -250,6 +252,7 @@ def serialize_file(row: CaseDocumentFile) -> dict[str, Any]:
 
 
 def case_payload(case: ShipmentRequest) -> dict[str, Any]:
+    assert_instance_current(case, purpose="document-metadata-serialize")
     requirements = CaseDocumentRequirement.query.filter_by(shipment_request_id=case.id).order_by(CaseDocumentRequirement.sort_order).all()
     files = CaseDocumentFile.query.filter_by(shipment_request_id=case.id).order_by(CaseDocumentFile.uploaded_at.desc()).all()
     result = []

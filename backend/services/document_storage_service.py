@@ -9,6 +9,8 @@ from uuid import uuid4
 
 from flask import current_app
 
+from backend.quarantine import QuarantinedResource, assert_instance_current
+
 
 class DocumentStorageError(Exception):
     pass
@@ -75,12 +77,27 @@ class PrivateDocumentStorage:
             raise
         return (partition / name).as_posix(), size, digest.hexdigest()
 
-    def resolve(self, storage_key: str) -> Path:
+    def _resolve_key(self, storage_key: str) -> Path:
         candidate = (self.root / storage_key).resolve()
         if self.root not in candidate.parents:
             raise DocumentStorageError("Invalid storage key")
         return candidate
 
+    def resolve_for_download(self, document, *, case) -> Path:
+        """Resolve storage only after canonical owner and file revalidation."""
+        assert_instance_current(case, purpose="document-download")
+        assert_instance_current(document, purpose="document-download")
+        if (
+            document.shipment_request_id != case.id
+            or document.status == "deleted"
+            or not document.storage_key
+        ):
+            raise QuarantinedResource("resource not found")
+        parts = Path(document.storage_key).parts
+        if not parts or parts[0] != str(case.id):
+            raise QuarantinedResource("resource not found")
+        return self._resolve_key(document.storage_key)
+
     def remove_after_failed_transaction(self, storage_key: str | None) -> None:
         if storage_key:
-            self.resolve(storage_key).unlink(missing_ok=True)
+            self._resolve_key(storage_key).unlink(missing_ok=True)

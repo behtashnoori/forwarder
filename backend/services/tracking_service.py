@@ -4,6 +4,7 @@ from backend.models import City, County, ExpertQuote, ExpertUser, Province, Ship
 from backend.services import timeline_service
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.multi_unit_tracking_service import build_public_unit_tracking
+from backend.quarantine import assert_instance_current, is_quarantined
 
 
 def resolve_request(identifier: str):
@@ -159,8 +160,9 @@ def build_tracking_response(req, *, include_unit_tracking: bool = False):
 def get_public_tracking_payload(identifier: str):
     """Return the public tracking payload for an identifier, or None when not found."""
     req = resolve_request(identifier)
-    if not req:
+    if not req or is_quarantined("ShipmentRequest", req.id):
         return None
+    assert_instance_current(req, purpose="public-tracking-serialize")
     normalized_identifier = (identifier or "").strip()
     include_unit_tracking = bool(req.tracking_code and normalized_identifier == req.tracking_code)
     return build_tracking_response(req, include_unit_tracking=include_unit_tracking)

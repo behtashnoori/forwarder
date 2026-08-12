@@ -170,6 +170,13 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     def pin_request_census():
         """Resolve and transaction-fence one immutable census per request."""
 
+        if request.endpoint in {
+            "health_bp.health_root",
+            "health_bp.health_ready",
+            "health_bp.health_ping",
+        }:
+            return None
+
         from backend.census_context import ensure_census_context
 
         ensure_census_context(db.session)
@@ -186,6 +193,13 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     @app.after_request
     def enforce_materialization_boundary(response):
         """Revalidate held resources before bytes leave the request boundary."""
+
+        if request.endpoint in {
+            "health_bp.health_root",
+            "health_bp.health_ready",
+            "health_bp.health_ping",
+        }:
+            return response
 
         from backend.census_context import (
             CensusTransitioned,

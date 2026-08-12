@@ -1,7 +1,6 @@
 """Authorized admin definition and expert case-document APIs."""
 from __future__ import annotations
 
-import json
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request, send_file
@@ -12,8 +11,9 @@ from backend.extensions import db
 from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentDefinition, ShipmentRequest
 from backend.security import require_auth, require_role
 from backend.services import case_document_service as service
-from backend.services.document_storage_service import PrivateDocumentStorage
+from backend.services.document_storage_service import DocumentStorageError, PrivateDocumentStorage
 from backend.services.expert_request_detail_service import can_access_request_detail
+from backend.quarantine import QuarantinedResource, is_quarantined
 
 document_bp = Blueprint("case_documents", __name__)
 
@@ -24,7 +24,7 @@ def _current():
 
 def _case_or_error(case_id: int):
     case = db.session.get(ShipmentRequest, case_id)
-    if not case:
+    if not case or is_quarantined("ShipmentRequest", case_id):
         return None, (jsonify({"error": "پرونده یافت نشد"}), 404)
     if not can_access_request_detail(case, _current()):
         return None, (jsonify({"error": "شما به این پرونده دسترسی ندارید"}), 403)
@@ -201,9 +201,13 @@ def file_download(case_id: int, file_id: int):
     if error:
         return error
     row = db.session.get(CaseDocumentFile, file_id)
-    if not row or row.shipment_request_id != case.id or row.status == "deleted":
+    if (not row or is_quarantined("CaseDocumentFile", file_id)
+            or row.shipment_request_id != case.id or row.status == "deleted"):
         return jsonify({"error": "فایل یافت نشد"}), 404
-    path = PrivateDocumentStorage().resolve(row.storage_key)
+    try:
+        path = PrivateDocumentStorage().resolve_for_download(row, case=case)
+    except (DocumentStorageError, QuarantinedResource):
+        return jsonify({"error": "فایل یافت نشد"}), 404
     if not path.is_file():
         return jsonify({"error": "فایل ذخیره‌شده در دسترس نیست"}), 404
     service.audit("file_downloaded", _current()["id"], case_id=case.id, file_id=row.id)
@@ -218,7 +222,8 @@ def file_delete(case_id: int, file_id: int):
     if error:
         return error
     row = db.session.get(CaseDocumentFile, file_id)
-    if not row or row.shipment_request_id != case.id or row.status == "deleted":
+    if (not row or is_quarantined("CaseDocumentFile", file_id)
+            or row.shipment_request_id != case.id or row.status == "deleted"):
         return jsonify({"error": "فایل یافت نشد"}), 404
     reason = str((request.get_json(silent=True) or {}).get("reason", "")).strip()
     if not reason:

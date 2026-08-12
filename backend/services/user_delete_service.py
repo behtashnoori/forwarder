@@ -76,20 +76,27 @@ def cleanup_user_related_records(target_user: ExpertUser) -> None:
     """Delete records that directly reference the target expert user."""
     expert_id = target_user.id
 
-    db.session.query(ExpertConsoleNotification).filter(
-        ExpertConsoleNotification.expert_user_id == expert_id
-    ).delete(synchronize_session=False)
+    protected_rows = [
+        *db.session.query(ExpertConsoleNotification).filter(
+            ExpertConsoleNotification.expert_user_id == expert_id
+        ).all(),
+        *db.session.query(ExpertConsoleLog).filter(
+            ExpertConsoleLog.expert_user_id == expert_id
+        ).all(),
+        *db.session.query(AssignmentLog).filter(
+            AssignmentLog.assigned_expert_id == expert_id
+        ).all(),
+        *db.session.query(ReferralAssignmentLog).filter(
+            ReferralAssignmentLog.selected_expert_id == expert_id
+        ).all(),
+    ]
+    for row in protected_rows:
+        db.session.delete(row)
     db.session.query(ExpertQuote).filter(
         ExpertQuote.created_by_expert_id == expert_id
     ).delete(synchronize_session=False)
     db.session.query(ExpertConsoleMessage).filter(
         ExpertConsoleMessage.expert_user_id == expert_id
-    ).delete(synchronize_session=False)
-    db.session.query(ExpertConsoleLog).filter(
-        ExpertConsoleLog.expert_user_id == expert_id
-    ).delete(synchronize_session=False)
-    db.session.query(AssignmentLog).filter(
-        AssignmentLog.assigned_expert_id == expert_id
     ).delete(synchronize_session=False)
     db.session.query(ExpertSpecialization).filter(
         ExpertSpecialization.expert_user_id == expert_id
@@ -103,9 +110,6 @@ def cleanup_user_related_records(target_user: ExpertUser) -> None:
     db.session.query(Report).filter(Report.created_by == expert_id).delete(
         synchronize_session=False
     )
-    db.session.query(ReferralAssignmentLog).filter(
-        ReferralAssignmentLog.selected_expert_id == expert_id
-    ).delete(synchronize_session=False)
 
 
 def cleanup_user_owned_rules(target_user: ExpertUser) -> None:
@@ -115,9 +119,11 @@ def cleanup_user_owned_rules(target_user: ExpertUser) -> None:
     assignment_rule_ids = db.session.query(AssignmentRule.id).filter(
         AssignmentRule.created_by == expert_id
     )
-    db.session.query(AssignmentLog).filter(
+    assignment_logs = db.session.query(AssignmentLog).filter(
         AssignmentLog.assignment_rule_id.in_(assignment_rule_ids)
-    ).update({AssignmentLog.assignment_rule_id: None}, synchronize_session=False)
+    ).all()
+    for log in assignment_logs:
+        log.assignment_rule_id = None
     db.session.query(AssignmentRule).filter(
         AssignmentRule.created_by == expert_id
     ).delete(synchronize_session=False)
@@ -125,9 +131,11 @@ def cleanup_user_owned_rules(target_user: ExpertUser) -> None:
     referral_rule_ids = db.session.query(ReferralRule.id).filter(
         ReferralRule.created_by == expert_id
     )
-    db.session.query(ReferralAssignmentLog).filter(
+    referral_logs = db.session.query(ReferralAssignmentLog).filter(
         ReferralAssignmentLog.rule_id.in_(referral_rule_ids)
-    ).update({ReferralAssignmentLog.rule_id: None}, synchronize_session=False)
+    ).all()
+    for log in referral_logs:
+        log.rule_id = None
     db.session.query(ReferralRuleState).filter(
         ReferralRuleState.rule_id.in_(referral_rule_ids)
     ).delete(synchronize_session=False)

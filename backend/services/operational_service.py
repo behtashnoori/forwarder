@@ -1187,6 +1187,23 @@ def reconcile_overdue(
     organization_id: int | None = None,
     now: datetime | None = None,
 ) -> int:
+    from backend.census_context import census_unit_of_work
+
+    try:
+        with census_unit_of_work(db.session):
+            created = _reconcile_overdue_mutations(user_id, organization_id, now)
+            db.session.commit()
+            return created
+    except Exception:
+        db.session.rollback()
+        raise
+
+
+def _reconcile_overdue_mutations(
+    user_id: int | None = None,
+    organization_id: int | None = None,
+    now: datetime | None = None,
+) -> int:
     if organization_id is None:
         if user_id is None:
             raise OperationalError(
@@ -1244,7 +1261,6 @@ def reconcile_overdue(
             organization_id, actor, "work_item.opened", "OperationalWorkItem", item.id
         )
         _outbox(organization_id, "work_item.opened", "OperationalWorkItem", item.id)
-    db.session.commit()
     return created
 
 
