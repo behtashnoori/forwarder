@@ -1,0 +1,25 @@
+{
+  "package_version": 1,
+  "source_hashes": {
+    "csv_sha256": "DC1E9559B1AF53F6DE8AA35F0F02B2B77D068BF7C2E9EB763DE53D99630EC707",
+    "summary_sha256": "666CAB8B882B253E34F96F698B178CB85D9C64DC51B1683819336670E35AE6FE"
+  },
+  "total_rows": 135,
+  "entity_counts": {
+    "CaseDocumentRequirement": 2, "Customer": 1, "CustomerGamification": 6,
+    "DocumentAuditEvent": 3, "ExpertConsoleLog": 29,
+    "ExpertConsoleNotification": 29, "ExpertQuote": 3,
+    "ReferralAssignmentLog": 12, "ReferralAutoAssignState": 1,
+    "ShipmentRequest": 13, "ShipmentRequestLog": 13,
+    "ShipmentTracking": 6, "ShipmentTransportUnit": 6,
+    "ShipmentTransportUnitUpdate": 11
+  },
+  "classifications": {"UNRESOLVED": 135},
+  "quarantine": {"QUARANTINED": 135},
+  "organization_candidates": 0,
+  "MT1_OWNERSHIP_RESOLUTION_READY": false,
+  "AUTO_BACKFILL_ALLOWED": false,
+  "HUMAN_ADJUDICATION_REQUIRED": true,
+  "QUARANTINE_MUST_REMAIN": true,
+  "pii_included": false
+}
