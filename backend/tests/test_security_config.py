@@ -136,6 +136,8 @@ def test_testing_mode_uses_isolated_database_even_with_production_env(monkeypatc
 def test_crm_customers_requires_authentication():
     """CRM customer data is sensitive and must require a bearer token."""
     app = create_app({"TESTING": True}, skip_startup=True)
+    with app.app_context():
+        db.create_all()
     client = app.test_client()
 
     response = client.get("/api/crm/customers")
