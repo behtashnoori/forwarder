@@ -5,6 +5,7 @@ from sqlalchemy import or_
 from backend.auth import get_current_user
 from backend.extensions import db
 from backend.security import require_auth, require_role
+from backend.services.admin_authorization_service import require_platform_admin
 from backend.models import DocumentDefinition, ServiceType
 from backend.logistics_network_models import ProjectLogisticsPoint
 from backend.project_configuration_models import (
@@ -115,7 +116,7 @@ def logistics_point_selector(project_id):
 
 
 @project_configuration_bp.route("/api/admin/milestone-types", methods=["GET", "POST"])
-@require_role("admin")
+@require_platform_admin()
 def types_collection():
     try:
         if request.method == "GET":
@@ -170,7 +171,7 @@ def types_collection():
 @project_configuration_bp.route(
     "/api/admin/milestone-types/<public_id>/<action>", methods=["POST"]
 )
-@require_role("admin")
+@require_platform_admin()
 def type_item(public_id, action=None):
     try:
         row = db.session.query(MilestoneType).filter_by(public_id=public_id).first()

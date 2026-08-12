@@ -7,6 +7,7 @@ from backend.models import TrackingLocationReference
 from backend.security import require_auth,require_role
 from backend.services import tracking_location_service
 from backend.services.multi_unit_tracking_service import TrackingValidationError
+from backend.services.admin_authorization_service import require_platform_admin
 
 tracking_locations_bp=Blueprint("tracking_locations",__name__,url_prefix="/api/tracking-locations")
 
@@ -18,7 +19,7 @@ def list_locations():
     return jsonify({"items":[tracking_location_service.serialize(x,admin=admin) for x in rows]})
 
 @tracking_locations_bp.post("")
-@require_role("admin")
+@require_platform_admin()
 def create_location():
     try:
         row=tracking_location_service.apply_fields(TrackingLocationReference(),request.get_json(silent=True) or {},creating=True); db.session.add(row);db.session.commit()
@@ -27,7 +28,7 @@ def create_location():
     except IntegrityError: db.session.rollback();return jsonify({"error":"internal_key already exists"}),409
 
 @tracking_locations_bp.patch("/<int:location_id>")
-@require_role("admin")
+@require_platform_admin()
 def update_location(location_id):
     row=db.session.get(TrackingLocationReference,location_id)
     if not row:return jsonify({"error":"tracking location not found"}),404
@@ -36,7 +37,7 @@ def update_location(location_id):
     except IntegrityError: db.session.rollback();return jsonify({"error":"internal_key already exists"}),409
 
 @tracking_locations_bp.delete("/<int:location_id>")
-@require_role("admin")
+@require_platform_admin()
 def deactivate_location(location_id):
     row=db.session.get(TrackingLocationReference,location_id)
     if not row:return jsonify({"error":"tracking location not found"}),404

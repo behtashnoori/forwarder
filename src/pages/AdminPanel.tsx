@@ -102,6 +102,13 @@ const AdminPanel = () => {
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const isPlatformAdmin = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("expert_user") || "{}").authority === "PLATFORM_ADMIN";
+    } catch {
+      return false;
+    }
+  }, []);
 
   const adminLabel = useMemo(() => {
     try {
@@ -273,23 +280,23 @@ const AdminPanel = () => {
               <Scale className="h-4 w-4" />
               {t("admin.referralRules")}
             </TabsTrigger>
-            <TabsTrigger
+            {isPlatformAdmin && <TabsTrigger
               value="site-settings"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <Settings className="h-4 w-4" />
               {t("admin.siteSettings")}
-            </TabsTrigger>
-            <TabsTrigger
+            </TabsTrigger>}
+            {isPlatformAdmin && <TabsTrigger
               value="locations"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <MapPin className="h-4 w-4" />
               مبدا و مقصد
-            </TabsTrigger>
-            <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>
-            <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>مدیریت مستندات</TabsTrigger>
-            <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>
+            </TabsTrigger>}
+            {isPlatformAdmin && <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>}
+            {isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>مدیریت مستندات</TabsTrigger>}
+            {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>}
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
             <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی</TabsTrigger>
             <TabsTrigger value="operational-reasons" className="gap-2 rounded-2xl py-3">دلایل عملیاتی</TabsTrigger>
@@ -473,15 +480,15 @@ const AdminPanel = () => {
             <ReferralRulesTab />
           </TabsContent>
 
-          <TabsContent value="site-settings" className="space-y-4">
+          {isPlatformAdmin && <TabsContent value="site-settings" className="space-y-4">
             <SiteSettingsTab />
-          </TabsContent>
-          <TabsContent value="locations" className="space-y-4"><LocationsAdminTab /></TabsContent>
-          <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>
-          <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>
-          <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>
+          </TabsContent>}
+          {isPlatformAdmin && <TabsContent value="locations" className="space-y-4"><LocationsAdminTab /></TabsContent>}
+          {isPlatformAdmin && <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>}
+          {isPlatformAdmin && <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>}
+          {isPlatformAdmin && <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>}
           <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>
-          <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab /></TabsContent>
+          <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab isPlatformAdmin={isPlatformAdmin} /></TabsContent>
           <TabsContent value="operational-reasons" className="space-y-4"><OperationalReasonsAdminTab /></TabsContent>
         </Tabs>
         <footer className="rounded-2xl border border-slate-200 bg-white p-4"><ReleaseIdentity details /></footer>

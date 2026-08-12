@@ -10,31 +10,33 @@ from backend.extensions import db
 from backend.models import Province, ShipmentRequest
 
 
-def get_admin_dashboard_payload() -> dict[str, Any]:
+def get_admin_dashboard_payload(context=None) -> dict[str, Any]:
     """Return the current admin dashboard metrics payload."""
-    return build_admin_dashboard_metrics()
+    return build_admin_dashboard_metrics(context)
 
 
-def build_admin_dashboard_metrics() -> dict[str, Any]:
+def build_admin_dashboard_metrics(context=None) -> dict[str, Any]:
     """Build the admin dashboard metrics using the existing query behavior."""
-    total_requests = ShipmentRequest.query.count()
+    base = ShipmentRequest.query
+    if context is not None: base = base.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    total_requests = base.count()
 
-    requests_per_transport_method = build_transport_method_summary()
-    requests_per_status = build_status_summary()
+    requests_per_transport_method = build_transport_method_summary(context)
+    requests_per_status = build_status_summary(context)
 
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
-    last_7_days_count = ShipmentRequest.query.filter(
+    last_7_days_count = base.filter(
         ShipmentRequest.created_at >= seven_days_ago
     ).count()
 
-    top_provinces = build_top_provinces_payload()
+    top_provinces = build_top_provinces_payload(context)
 
     one_day_ago = datetime.utcnow() - timedelta(days=1)
-    last_24h_count = ShipmentRequest.query.filter(
+    last_24h_count = base.filter(
         ShipmentRequest.created_at >= one_day_ago
     ).count()
 
-    unassigned_count = ShipmentRequest.query.filter(
+    unassigned_count = base.filter(
         and_(
             ShipmentRequest.assigned_to.is_(None),
             ShipmentRequest.status.in_(["new", "pending"]),
@@ -52,7 +54,7 @@ def build_admin_dashboard_metrics() -> dict[str, Any]:
     }
 
 
-def build_transport_method_summary() -> dict[str, int]:
+def build_transport_method_summary(context=None) -> dict[str, int]:
     """Return request counts grouped by the current transport method expression."""
     transport_method_stats = db.session.query(
         func.coalesce(
@@ -64,22 +66,26 @@ def build_transport_method_summary() -> dict[str, int]:
             "unknown",
         ).label("method"),
         func.count(ShipmentRequest.id).label("count"),
-    ).group_by("method").all()
+    )
+    if context is not None: transport_method_stats = transport_method_stats.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    transport_method_stats = transport_method_stats.group_by("method").all()
 
     return {stat.method: stat.count for stat in transport_method_stats}
 
 
-def build_status_summary() -> dict[str, int]:
+def build_status_summary(context=None) -> dict[str, int]:
     """Return request counts grouped by status."""
     status_stats = db.session.query(
         ShipmentRequest.status,
         func.count(ShipmentRequest.id).label("count"),
-    ).group_by(ShipmentRequest.status).all()
+    )
+    if context is not None: status_stats = status_stats.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    status_stats = status_stats.group_by(ShipmentRequest.status).all()
 
     return {stat.status: stat.count for stat in status_stats}
 
 
-def build_top_provinces_payload() -> list[dict[str, Any]]:
+def build_top_provinces_payload(context=None) -> list[dict[str, Any]]:
     """Return the current top-origin-provinces payload."""
     top_provinces_query = (
         db.session.query(
@@ -90,7 +96,9 @@ def build_top_provinces_payload() -> list[dict[str, Any]]:
             ShipmentRequest,
             ShipmentRequest.origin_province_id == Province.id,
         )
-        .group_by(Province.id, Province.name_fa)
+    )
+    if context is not None: top_provinces_query = top_provinces_query.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    top_provinces_query = (top_provinces_query.group_by(Province.id, Province.name_fa)
         .order_by(desc("count"))
         .limit(10)
         .all()

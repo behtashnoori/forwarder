@@ -34,6 +34,7 @@ from backend.models import (
 from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
 from backend.services import assignment_service, user_delete_service
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture
@@ -56,6 +57,7 @@ def user_management_app():
             full_name="Phase 5B Admin",
             email="phase5b-admin@example.test",
             role="admin",
+            authority="PLATFORM_ADMIN",
             is_active=True,
         )
         expert = ExpertUser(
@@ -77,6 +79,10 @@ def user_management_app():
         )
         db.session.add_all([admin, expert, other_expert])
         db.session.flush()
+        organization = OperationalOrganization(public_id="um-org-a", name="Organization A", is_active=True)
+        db.session.add(organization)
+        db.session.flush()
+        db.session.add_all([OperationalMembership(organization_id=organization.id, user_id=user.id, is_active=True, permissions=[]) for user in (admin, expert, other_expert)])
 
         road = TransportMethod(
             name="road",
@@ -116,6 +122,8 @@ def user_management_app():
             status_request_status="new",
             status="assigned",
             assigned_to=expert.id,
+            operational_organization_id=organization.id,
+            ownership_scope="TENANT",
         )
         high_rule = AssignmentRule(
             name="High priority",
@@ -125,6 +133,7 @@ def user_management_app():
             priority=10,
             is_active=True,
             created_by=admin.id,
+            operational_organization_id=organization.id,
         )
         low_rule = AssignmentRule(
             name="Low workload",
@@ -134,6 +143,7 @@ def user_management_app():
             priority=2,
             is_active=False,
             created_by=admin.id,
+            operational_organization_id=organization.id,
         )
         db.session.add_all([specialization, assigned_request, high_rule, low_rule])
         db.session.commit()

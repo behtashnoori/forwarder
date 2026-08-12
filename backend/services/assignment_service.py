@@ -38,6 +38,7 @@ def assign_request_to_expert(
     actor: Optional[dict[str, Any]] = None,
     payload: Optional[dict[str, Any]] = None,
     remote_addr: Optional[str] = None,
+    organization_context=None,
 ) -> dict[str, Any]:
     """Assign a shipment request to an expert and return the current response payload."""
     target_expert_id = expert_id
@@ -57,6 +58,14 @@ def assign_request_to_expert(
         raise AssignmentNotFoundError("کارشناس یافت نشد", 404)
     if not expert.is_active:
         raise AssignmentValidationError("کارشناس غیرفعال است")
+
+    if organization_context is not None:
+        from backend.operational_models import OperationalMembership
+        if req.ownership_scope != "TENANT" or req.operational_organization_id != organization_context.organization_id:
+            raise AssignmentNotFoundError("Request not found", 404)
+        memberships = db.session.query(OperationalMembership).filter(OperationalMembership.user_id == expert.id, OperationalMembership.is_active.is_(True)).all()
+        if len(memberships) != 1 or memberships[0].organization_id != organization_context.organization_id:
+            raise AssignmentNotFoundError("Expert not found", 404)
 
     if not can_handle_request(expert, req):
         raise AssignmentValidationError("حوزه فعالیت کارشناس با نوع درخواست سازگار نیست")
@@ -79,6 +88,7 @@ def manual_assign_request(
     payload: dict[str, Any],
     actor: Optional[dict[str, Any]] = None,
     remote_addr: Optional[str] = None,
+    organization_context=None,
 ) -> dict[str, Any]:
     """Validate the user-management manual assignment payload and use the shared assignment path."""
     normalized = normalize_manual_assignment_payload(payload)
@@ -87,6 +97,7 @@ def manual_assign_request(
         expert_id=normalized["expert_id"],
         actor=actor,
         remote_addr=remote_addr,
+        organization_context=organization_context,
     )
 
 
@@ -125,7 +136,7 @@ def can_assign_request(req: ShipmentRequest, actor: dict[str, Any] | None) -> bo
     """Preserve current assignment access behavior: admin or assigned expert only."""
     if not actor:
         return False
-    if actor.get("role") == "admin":
+    if actor.get("role") == "admin" or actor.get("authority") == "PLATFORM_ADMIN":
         return True
     return req.assigned_to == actor.get("id")
 

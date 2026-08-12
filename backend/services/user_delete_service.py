@@ -25,6 +25,7 @@ from backend.models import (
     ShipmentRequest,
     Task,
 )
+from backend.operational_models import OperationalMembership
 
 
 class DeleteAuthenticationRequired(Exception):
@@ -164,10 +165,25 @@ def build_delete_user_response_payload(target_user: ExpertUser) -> dict[str, str
     return {"message": "کاربر و تمام داده‌های مرتبط با موفقیت حذف شدند"}
 
 
-def delete_user_with_cleanup(user_id: int, current_user: dict[str, Any] | None) -> dict[str, str]:
+def delete_user_with_cleanup(user_id: int, current_user: dict[str, Any] | None, context=None) -> dict[str, str]:
     """Permanently delete a user and all non-nullable owned dependencies."""
-    target_user = get_delete_target_user_or_none(user_id)
+    if context is not None:
+        target_user = (db.session.query(ExpertUser).join(OperationalMembership, OperationalMembership.user_id == ExpertUser.id).filter(ExpertUser.id == user_id, OperationalMembership.organization_id == context.organization_id, OperationalMembership.is_active.is_(True)).one_or_none())
+    else:
+        target_user = get_delete_target_user_or_none(user_id)
     target_user = validate_user_delete_allowed(target_user, current_user, user_id)
+    if getattr(target_user, "authority", "EXPERT") == "PLATFORM_ADMIN":
+        raise AdminDeleteNotAllowed()
+    if context is not None:
+        memberships = db.session.query(OperationalMembership).filter(OperationalMembership.user_id == target_user.id, OperationalMembership.is_active.is_(True)).all()
+        if len(memberships) != 1 or memberships[0].organization_id != context.organization_id:
+            raise DeleteTargetNotFound()
+        target_user.is_active = False
+        memberships[0].is_active = False
+        from backend.services.auth_session_service import revoke_all_user_sessions
+        revoke_all_user_sessions(target_user.id, "account_deactivated", commit=False)
+        db.session.commit()
+        return {"message": "User disabled safely."}
 
     expert_id = target_user.id
     expert_username = target_user.username

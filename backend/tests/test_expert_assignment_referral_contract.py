@@ -119,6 +119,7 @@ def expert_contract_app():
             priority=10,
             is_active=True,
             created_by=admin.id,
+            operational_organization_id=organization.id,
         )
         referral_rule = ReferralRule(
             name="Pool referral rule",
@@ -134,6 +135,7 @@ def expert_contract_app():
             ),
             stop_on_match=True,
             created_by=admin.id,
+            operational_organization_id=organization.id,
         )
         db.session.add_all([notification, assignment_rule, referral_rule])
         db.session.commit()
@@ -194,6 +196,7 @@ def test_expert_auth_login_refresh_logout_contract(expert_contract_app):
         "full_name",
         "email",
         "role",
+        "authority",
     }
     assert {"access_token", "refresh_token", "token_type", "expires_in"}.issubset(
         login_data["tokens"].keys()
@@ -1077,6 +1080,8 @@ def test_referral_engine_uses_matching_active_referral_rule(expert_contract_app)
             priority="normal",
             assigned_to=None,
             has_unread_for_assignee=True,
+            ownership_scope="TENANT",
+            operational_organization_id=expert_contract_app["organization_id"],
         )
         db.session.add(request_row)
         db.session.commit()
@@ -1145,6 +1150,8 @@ def test_referral_engine_falls_back_when_no_referral_rule_matches(expert_contrac
             priority="normal",
             assigned_to=None,
             has_unread_for_assignee=True,
+            ownership_scope="TENANT",
+            operational_organization_id=expert_contract_app["organization_id"],
         )
         db.session.add(request_row)
         db.session.commit()
@@ -1184,6 +1191,8 @@ def test_assignment_engine_sets_once_and_no_candidate_leaves_null(
             domestic_transport_method="road",
             status_request_status="new",
             status="new",
+            ownership_scope="TENANT",
+            operational_organization_id=expert_contract_app["organization_id"],
         )
         db.session.add(request_row)
         db.session.commit()
@@ -1234,6 +1243,8 @@ def test_referral_preview_does_not_set_deadline(expert_contract_app):
             domestic_transport_method="road",
             status_request_status="new",
             status="new",
+            ownership_scope="TENANT",
+            operational_organization_id=expert_contract_app["organization_id"],
         )
         db.session.add(request_row)
         db.session.commit()
@@ -1241,10 +1252,10 @@ def test_referral_preview_does_not_set_deadline(expert_contract_app):
         assert db.session.get(ShipmentRequest, request_row.id).sla_due_at is None
 
 
-def test_public_request_creation_distributes_between_active_experts_round_robin(
+def test_public_request_creation_does_not_use_tenant_round_robin_before_ownership(
     expert_contract_app,
 ):
-    """Public request creation uses global round-robin when no referral rule matches."""
+    """Public intake remains unassigned until organization ownership is certified."""
     client = expert_contract_app["app"].test_client()
 
     first_response = client.post(
@@ -1272,48 +1283,13 @@ def test_public_request_creation_distributes_between_active_experts_round_robin(
         first_request = db.session.get(ShipmentRequest, first_request_id)
         second_request = db.session.get(ShipmentRequest, second_request_id)
 
-        assert first_request.assigned_to == expert_contract_app["expert_id"]
-        assert second_request.assigned_to == expert_contract_app["other_expert_id"]
-        assert first_request.status == "assigned"
-        assert second_request.status == "assigned"
-
-        first_log = (
-            db.session.query(ReferralAssignmentLog)
-            .filter_by(request_id=first_request_id)
-            .one()
-        )
-        second_log = (
-            db.session.query(ReferralAssignmentLog)
-            .filter_by(request_id=second_request_id)
-            .one()
-        )
-        assert first_log.rule_id is None
-        assert second_log.rule_id is None
-        assert first_log.strategy_used == "round_robin"
-        assert second_log.strategy_used == "round_robin"
-
-        assert (
-            db.session.query(ExpertConsoleLog)
-            .filter_by(
-                shipment_request_id=first_request_id,
-                action="assignment",
-                new_status="assigned",
-            )
-            .one()
-        )
-        assert (
-            db.session.query(ExpertConsoleNotification)
-            .filter_by(
-                shipment_request_id=first_request_id,
-                expert_user_id=expert_contract_app["expert_id"],
-                notification_type="request_assigned",
-            )
-            .one()
-        )
+        assert first_request.assigned_to is None and second_request.assigned_to is None
+        assert first_request.ownership_scope == "INTAKE" and second_request.ownership_scope == "INTAKE"
+        assert db.session.query(ReferralAssignmentLog).filter(ReferralAssignmentLog.request_id.in_([first_request_id, second_request_id])).count() == 0
 
 
-def test_public_request_creation_skips_inactive_experts(expert_contract_app):
-    """Inactive experts are excluded from automatic round-robin assignment."""
+def test_public_request_creation_with_inactive_expert_still_waits_for_tenant(expert_contract_app):
+    """Expert state cannot bypass the unowned-intake referral fence."""
     client = expert_contract_app["app"].test_client()
 
     with expert_contract_app["app"].app_context():
@@ -1335,17 +1311,9 @@ def test_public_request_creation_skips_inactive_experts(expert_contract_app):
 
     with expert_contract_app["app"].app_context():
         created_request = db.session.get(ShipmentRequest, request_id)
-        assert created_request.assigned_to == expert_contract_app["expert_id"]
-        assert created_request.status == "assigned"
-
-        referral_log = (
-            db.session.query(ReferralAssignmentLog)
-            .filter_by(request_id=request_id)
-            .one()
-        )
-        assert json.loads(referral_log.candidate_expert_ids) == [
-            expert_contract_app["expert_id"]
-        ]
+        assert created_request.assigned_to is None
+        assert created_request.ownership_scope == "INTAKE"
+        assert db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).count() == 0
 
 
 def test_public_request_creation_remains_unassigned_when_no_active_expert_exists(
@@ -1388,8 +1356,8 @@ def test_public_request_creation_remains_unassigned_when_no_active_expert_exists
         )
 
 
-def test_public_request_creation_triggers_matching_referral_rule(expert_contract_app):
-    """Public request creation runs the referral engine and applies matching rules."""
+def test_public_request_creation_waits_for_certified_tenant_before_referral(expert_contract_app):
+    """Unowned public intake cannot consume tenant referral policy."""
     client = expert_contract_app["app"].test_client()
 
     response = client.post(
@@ -1414,18 +1382,9 @@ def test_public_request_creation_triggers_matching_referral_rule(expert_contract
 
     with expert_contract_app["app"].app_context():
         created_request = db.session.get(ShipmentRequest, request_id)
-        assert created_request.assigned_to in {
-            expert_contract_app["expert_id"],
-            expert_contract_app["other_expert_id"],
-        }
-        assert created_request.status == "assigned"
-
-        referral_log = (
-            db.session.query(ReferralAssignmentLog)
-            .filter_by(request_id=request_id)
-            .one()
-        )
-        assert referral_log.rule_id == expert_contract_app["referral_rule_id"]
+        assert created_request.assigned_to is None
+        assert created_request.ownership_scope == "INTAKE"
+        assert db.session.query(ReferralAssignmentLog).filter_by(request_id=request_id).count() == 0
 
 
 def test_assignment_and_referral_rule_read_and_manual_assignment_contracts(

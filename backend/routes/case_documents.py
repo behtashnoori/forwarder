@@ -14,6 +14,7 @@ from backend.services import case_document_service as service
 from backend.services.document_storage_service import DocumentStorageError, PrivateDocumentStorage
 from backend.services.expert_request_detail_service import can_access_request_detail
 from backend.quarantine import QuarantinedResource, is_quarantined
+from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 
 document_bp = Blueprint("case_documents", __name__)
 
@@ -32,14 +33,14 @@ def _case_or_error(case_id: int):
 
 
 @document_bp.get("/api/admin/document-definitions")
-@require_role("admin")
+@require_organization_admin_context()
 def definitions_list():
     rows = DocumentDefinition.query.order_by(DocumentDefinition.sort_order, DocumentDefinition.id).all()
     return jsonify({"items": [service.serialize_definition(row) for row in rows]})
 
 
 @document_bp.post("/api/admin/document-definitions")
-@require_role("admin")
+@require_platform_admin()
 def definitions_create():
     actor = _current()
     try:
@@ -61,14 +62,14 @@ def definitions_create():
 
 
 @document_bp.get("/api/admin/document-definitions/<int:definition_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def definitions_read(definition_id: int):
     row = db.session.get(DocumentDefinition, definition_id)
     return (jsonify(service.serialize_definition(row)), 200) if row else (jsonify({"error": "تعریف یافت نشد"}), 404)
 
 
 @document_bp.patch("/api/admin/document-definitions/<int:definition_id>")
-@require_role("admin")
+@require_platform_admin()
 def definitions_update(definition_id: int):
     row = db.session.get(DocumentDefinition, definition_id)
     if not row:
@@ -90,7 +91,7 @@ def definitions_update(definition_id: int):
 
 
 @document_bp.post("/api/admin/document-definitions/<int:definition_id>/activation")
-@require_role("admin")
+@require_platform_admin()
 def definitions_activation(definition_id: int):
     row = db.session.get(DocumentDefinition, definition_id)
     if not row:

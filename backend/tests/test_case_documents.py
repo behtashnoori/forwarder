@@ -23,7 +23,7 @@ def document_app(tmp_path):
         "DOCUMENT_STORAGE_ROOT": str(tmp_path / "private"),
     })
     with app.app_context():
-        admin = ExpertUser(username="doc-admin", password_hash="x", full_name="Admin", role="admin", is_active=True)
+        admin = ExpertUser(username="doc-admin", password_hash="x", full_name="Admin", role="admin", authority="PLATFORM_ADMIN", is_active=True)
         expert = ExpertUser(username="doc-expert", password_hash="x", full_name="Expert", role="expert", is_active=True)
         outsider = ExpertUser(username="doc-other", password_hash="x", full_name="Other", role="expert", is_active=True)
         organization = OperationalOrganization(name="Case Documents Organization")

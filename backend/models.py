@@ -174,7 +174,8 @@ class ExpertUser(db.Model):
     full_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=True)
     phone = db.Column(db.String(20), nullable=True)
-    role = db.Column(db.String(20), default="expert")  # expert, supervisor, crm_manager, business_expert
+    role = db.Column(db.String(20), default="expert")  # legacy workflow role
+    authority = db.Column(db.String(32), nullable=False, default="EXPERT", server_default="EXPERT")
     is_active = db.Column(db.Boolean, default=True)
     can_handle_domestic = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
     can_handle_international = db.Column(db.Boolean, nullable=False, default=True, server_default="1")
@@ -1250,6 +1251,7 @@ class AssignmentRule(db.Model):
     """Represents rules for automatic assignment of shipment requests."""
     
     __tablename__ = "assignment_rule"
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
@@ -1294,6 +1296,7 @@ class AssignmentLog(db.Model):
 class ReferralRule(db.Model):
     """Rules for referral-based assignment with direct or pool actions."""
     __tablename__ = "referral_rule"
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
@@ -1317,6 +1320,7 @@ class ReferralRule(db.Model):
 class ReferralRuleState(db.Model):
     """Round-robin state per rule (one row per rule)."""
     __tablename__ = "referral_rule_state"
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     rule_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("referral_rule.id"), nullable=False, unique=True)
@@ -1353,6 +1357,7 @@ class ReferralAutoAssignState(db.Model):
     __tablename__ = "referral_auto_assign_state"
 
     id = db.Column(db.Integer, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, unique=True, index=True)
     last_index = db.Column(db.Integer, default=0)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 

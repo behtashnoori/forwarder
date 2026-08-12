@@ -9,6 +9,7 @@ from backend.logistics_network_models import LogisticsPointType
 from backend.security import require_auth, require_role
 from backend.services import logistics_network_service as svc
 from backend.services.operational_service import OperationalError
+from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 
 logistics_network_bp = Blueprint("logistics_network", __name__)
 
@@ -35,13 +36,13 @@ def _type(public_id):
 
 
 @logistics_network_bp.get("/api/admin/logistics-point-types")
-@require_role("admin")
+@require_organization_admin_context()
 def type_list():
     return jsonify(svc.list_types(request.args, admin=True))
 
 
 @logistics_network_bp.post("/api/admin/logistics-point-types")
-@require_role("admin")
+@require_platform_admin()
 def type_create():
     try:
         row = svc.create_type(request.get_json(silent=True) or {}, _user())
@@ -52,7 +53,7 @@ def type_create():
 
 
 @logistics_network_bp.get("/api/admin/logistics-point-types/<public_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def type_detail(public_id):
     try:
         return jsonify({"item": svc.type_projection(_type(public_id))})
@@ -61,7 +62,7 @@ def type_detail(public_id):
 
 
 @logistics_network_bp.patch("/api/admin/logistics-point-types/<public_id>")
-@require_role("admin")
+@require_platform_admin()
 def type_update(public_id):
     try:
         row = svc.update_type(
@@ -74,7 +75,7 @@ def type_update(public_id):
 
 
 @logistics_network_bp.post("/api/admin/logistics-point-types/<public_id>/<action>")
-@require_role("admin")
+@require_platform_admin()
 def type_active(public_id, action):
     try:
         if action not in {"activate", "deactivate"}:
@@ -92,7 +93,7 @@ def type_active(public_id, action):
 
 
 @logistics_network_bp.get("/api/admin/logistics-points")
-@require_role("admin")
+@require_organization_admin_context()
 def admin_point_list():
     try:
         return jsonify(svc.list_points(request.args, _user(), admin=True))
@@ -101,7 +102,7 @@ def admin_point_list():
 
 
 @logistics_network_bp.post("/api/admin/logistics-points")
-@require_role("admin")
+@require_organization_admin_context()
 def point_create():
     try:
         row = svc.create_point(request.get_json(silent=True) or {}, _user())
@@ -112,7 +113,7 @@ def point_create():
 
 
 @logistics_network_bp.get("/api/admin/logistics-points/<public_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def point_detail(public_id):
     try:
         return jsonify(
@@ -123,7 +124,7 @@ def point_detail(public_id):
 
 
 @logistics_network_bp.patch("/api/admin/logistics-points/<public_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def point_update(public_id):
     try:
         user = _user()
@@ -139,7 +140,7 @@ def point_update(public_id):
 
 
 @logistics_network_bp.post("/api/admin/logistics-points/<public_id>/<action>")
-@require_role("admin")
+@require_organization_admin_context()
 def point_active(public_id, action):
     try:
         if action not in {"activate", "deactivate"}:

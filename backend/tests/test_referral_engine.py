@@ -17,6 +17,7 @@ def run_tests():
         Province,
     )
     from backend.referral_engine import referral_engine
+    from backend.operational_models import OperationalMembership, OperationalOrganization
 
     overrides = {"TESTING": True}
     if os.environ.get("TEST_DATABASE_URL"):
@@ -51,14 +52,20 @@ def run_tests():
             db.session.commit()
             experts = [e1]
 
+        organization=OperationalOrganization(public_id="referral-engine-test",name="Referral Test",is_active=True)
+        db.session.add(organization);db.session.flush()
+        for expert in experts:
+            if not OperationalMembership.query.filter_by(user_id=expert.id,organization_id=organization.id).first():
+                db.session.add(OperationalMembership(user_id=expert.id,organization_id=organization.id,is_active=True,permissions=[]))
+        db.session.commit()
         province = db.session.query(Province).first()
         pid = province.id if province else None
 
         # Ensure auto-assign state row exists
-        state = db.session.query(ReferralAutoAssignState).filter(ReferralAutoAssignState.id == 1).first()
+        state = db.session.query(ReferralAutoAssignState).filter(ReferralAutoAssignState.operational_organization_id == organization.id).first()
         if not state:
             from datetime import datetime, timezone
-            state = ReferralAutoAssignState(id=1, last_index=0, updated_at=datetime.now(timezone.utc))
+            state = ReferralAutoAssignState(operational_organization_id=organization.id, last_index=0, updated_at=datetime.now(timezone.utc))
             db.session.add(state)
             db.session.commit()
 
@@ -73,6 +80,8 @@ def run_tests():
             contact_phone="09121234567",
             status="new",
             assigned_to=None,
+            ownership_scope="TENANT",
+            operational_organization_id=organization.id,
         )
         db.session.add(req)
         db.session.commit()

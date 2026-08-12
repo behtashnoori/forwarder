@@ -45,21 +45,25 @@ def build_assignment_rule_payload(rule: AssignmentRule) -> dict[str, Any]:
     }
 
 
-def list_assignment_rules() -> list[dict[str, Any]]:
+def list_assignment_rules(context=None) -> list[dict[str, Any]]:
     """List assignment rules in the existing priority/name order."""
-    rules = db.session.query(AssignmentRule).order_by(
+    query = db.session.query(AssignmentRule)
+    if context is not None: query = query.filter(AssignmentRule.operational_organization_id == context.organization_id)
+    rules = query.order_by(
         desc(AssignmentRule.priority),
         AssignmentRule.name,
     ).all()
     return [build_assignment_rule_payload(rule) for rule in rules]
 
 
-def get_assignment_rule_or_none(rule_id: int) -> AssignmentRule | None:
+def get_assignment_rule_or_none(rule_id: int, context=None) -> AssignmentRule | None:
     """Return an assignment rule by id, preserving the existing lookup behavior."""
-    return db.session.query(AssignmentRule).get(rule_id)
+    query = db.session.query(AssignmentRule).filter(AssignmentRule.id == rule_id)
+    if context is not None: query = query.filter(AssignmentRule.operational_organization_id == context.organization_id)
+    return query.one_or_none()
 
 
-def create_assignment_rule(payload: dict[str, Any] | None, created_by_user_id: int) -> AssignmentRule:
+def create_assignment_rule(payload: dict[str, Any] | None, created_by_user_id: int, context=None) -> AssignmentRule:
     """Create and commit an assignment rule using the existing field defaults."""
     data = normalize_assignment_rule_payload(payload)
     rule = AssignmentRule(
@@ -70,6 +74,7 @@ def create_assignment_rule(payload: dict[str, Any] | None, created_by_user_id: i
         priority=data.get("priority", 1),
         is_active=data.get("is_active", True),
         created_by=created_by_user_id,
+        operational_organization_id=context.organization_id if context else None,
     )
 
     db.session.add(rule)
@@ -77,9 +82,9 @@ def create_assignment_rule(payload: dict[str, Any] | None, created_by_user_id: i
     return rule
 
 
-def update_assignment_rule(rule_id: int, payload: dict[str, Any] | None) -> AssignmentRule | None:
+def update_assignment_rule(rule_id: int, payload: dict[str, Any] | None, context=None) -> AssignmentRule | None:
     """Update and commit an assignment rule, returning None for current not-found behavior."""
-    rule = get_assignment_rule_or_none(rule_id)
+    rule = get_assignment_rule_or_none(rule_id, context)
     if not rule:
         return None
 

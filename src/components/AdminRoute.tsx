@@ -15,7 +15,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 
   try {
     const user = JSON.parse(expertUser);
-    if (user.role !== 'admin') {
+    if (user.authority !== 'PLATFORM_ADMIN' && user.authority !== 'ORGANIZATION_ADMIN' && user.role !== 'admin') {
       return <Navigate to="/expert" replace />;
     }
   } catch (error) {

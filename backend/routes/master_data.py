@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from backend.extensions import db
 from backend.security import require_role
 from backend.services import master_data_service as svc
+from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 
 master_data_bp = Blueprint("master_data", __name__, url_prefix="/api/admin/master-data")
 
@@ -26,7 +27,7 @@ def _failure(exc):
 
 
 @master_data_bp.get("/<resource>")
-@require_role("admin")
+@require_organization_admin_context()
 def list_resource(resource):
     model, error = _resource(resource)
     if error:
@@ -46,7 +47,7 @@ def list_resource(resource):
 
 
 @master_data_bp.get("/<resource>/<public_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def detail_resource(resource, public_id):
     model, error = _resource(resource)
     if error: return error
@@ -55,7 +56,7 @@ def detail_resource(resource, public_id):
 
 
 @master_data_bp.post("/<resource>")
-@require_role("admin")
+@require_platform_admin()
 def create_resource(resource):
     if svc.model_for(resource) is None:
         return jsonify({"error": "unknown resource"}), 404
@@ -66,7 +67,7 @@ def create_resource(resource):
 
 
 @master_data_bp.patch("/<resource>/<public_id>")
-@require_role("admin")
+@require_platform_admin()
 def update_resource(resource, public_id):
     model, error = _resource(resource)
     if error: return error
@@ -79,7 +80,7 @@ def update_resource(resource, public_id):
 
 
 @master_data_bp.post("/<resource>/<public_id>/<action>")
-@require_role("admin")
+@require_platform_admin()
 def activation_resource(resource, public_id, action):
     if action not in {"activate", "deactivate"}:
         return jsonify({"error": "unknown action"}), 404

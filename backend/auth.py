@@ -44,7 +44,8 @@ class AuthManager:
                     'username': user.username,
                     'full_name': user.full_name,
                     'email': user.email,
-                    'role': user.role
+                    'role': user.role,
+                    'authority': user.authority
                 }
             else:
                 self._record_failed_attempt(client_ip)
@@ -132,6 +133,7 @@ def get_current_user() -> Optional[Dict[str, Any]]:
             'full_name': user.full_name,
             'email': user.email,
             'role': user.role,
+            'authority': user.authority,
             'manager_id': user.manager_id
         }
     except SQLAlchemyError:

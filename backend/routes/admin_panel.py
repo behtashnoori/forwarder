@@ -1,7 +1,7 @@
 """Admin panel routes for shipment request insights."""
 from io import BytesIO
 
-from flask import Blueprint, jsonify, request, current_app, send_file
+from flask import Blueprint, jsonify, request, current_app, send_file, g
 from backend.extensions import db
 from backend.security import require_role
 from backend.auth import get_current_user
@@ -13,15 +13,16 @@ from backend.services import (
     admin_shipment_request_service,
     referral_service,
 )
+from backend.services.admin_authorization_service import require_organization_admin_context
 
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api/admin")
 
 
 @admin_bp.get("/shipment-requests/<int:request_id>")
-@require_role('admin')
+@require_organization_admin_context()
 def get_shipment_request_detail(request_id: int):
     """Return a shipment request with human-readable location names."""
-    payload = admin_shipment_request_service.get_admin_shipment_request_detail(request_id)
+    payload = admin_shipment_request_service.get_admin_shipment_request_detail(request_id, getattr(g, "organization_context", None))
 
     if payload is None:
         return jsonify({"error": "درخواست موردنظر یافت نشد"}), 404
@@ -30,7 +31,7 @@ def get_shipment_request_detail(request_id: int):
 
 
 @admin_bp.get("/shipment-requests")
-@require_role('admin')
+@require_organization_admin_context()
 def list_shipment_requests():
     """
     Return shipment requests with pagination and filtering.
@@ -45,7 +46,7 @@ def list_shipment_requests():
     - date_to: Filter to date (ISO format)
     """
     try:
-        return jsonify(admin_shipment_request_service.list_admin_shipment_requests(request.args))
+        return jsonify(admin_shipment_request_service.list_admin_shipment_requests(request.args, getattr(g, "organization_context", None)))
     except admin_shipment_request_service.AdminShipmentRequestFilterError as e:
         return jsonify({"error": e.message}), e.status_code
 
@@ -55,7 +56,7 @@ def list_shipment_requests():
 
 
 @admin_bp.get("/dashboard")
-@require_role('admin')
+@require_organization_admin_context()
 def get_admin_dashboard():
     """
     Get admin dashboard statistics.
@@ -68,7 +69,7 @@ def get_admin_dashboard():
     - top_provinces: Top 10 provinces by request count
     """
     try:
-        return jsonify(admin_dashboard_service.get_admin_dashboard_payload())
+        return jsonify(admin_dashboard_service.get_admin_dashboard_payload(getattr(g, "organization_context", None)))
         
     except Exception as e:
         current_app.logger.error(f"Error getting admin dashboard: {e}")
@@ -76,7 +77,7 @@ def get_admin_dashboard():
 
 
 @admin_bp.get("/reports/assignment-summary")
-@require_role('admin')
+@require_organization_admin_context()
 def get_assignment_summary():
     """
     Get comprehensive assignment summary report.
@@ -88,7 +89,7 @@ def get_assignment_summary():
     - sla_violations: Count of SLA violations
     """
     try:
-        return jsonify(admin_report_service.get_assignment_summary_payload())
+        return jsonify(admin_report_service.get_assignment_summary_payload(getattr(g, "organization_context", None)))
         
     except Exception as e:
         current_app.logger.error(f"Error generating assignment summary: {e}")
@@ -96,11 +97,11 @@ def get_assignment_summary():
 
 
 @admin_bp.get("/reports/overview")
-@require_role('admin')
+@require_organization_admin_context()
 def get_report_overview():
     """Return admin report overview JSON for a supported reporting period."""
     try:
-        return jsonify(admin_report_overview_service.get_report_overview_payload(request.args.get("period")))
+        return jsonify(admin_report_overview_service.get_report_overview_payload(request.args.get("period"), getattr(g, "organization_context", None)))
     except admin_report_overview_service.AdminReportOverviewError as e:
         return jsonify({"error": e.message}), e.status_code
     except Exception as e:
@@ -109,11 +110,11 @@ def get_report_overview():
 
 
 @admin_bp.get("/reports/export.xlsx")
-@require_role('admin')
+@require_organization_admin_context()
 def export_report_xlsx():
     """Return admin report overview as an XLSX workbook download."""
     try:
-        workbook_bytes, filename = admin_report_xlsx_service.build_report_xlsx(request.args.get("period"))
+        workbook_bytes, filename = admin_report_xlsx_service.build_report_xlsx(request.args.get("period"), getattr(g, "organization_context", None))
         return send_file(
             BytesIO(workbook_bytes),
             mimetype=admin_report_xlsx_service.XLSX_MIME_TYPE,
@@ -130,22 +131,22 @@ def export_report_xlsx():
 # --- Referral rules (قوانین ارجاع) ---
 
 @admin_bp.get("/referral-rules")
-@require_role('admin')
+@require_organization_admin_context()
 def get_referral_rules():
     """List all referral rules ordered by priority ASC."""
     try:
-        return jsonify(referral_service.list_referral_rules())
+        return jsonify(referral_service.list_referral_rules(context=getattr(g, "organization_context", None)))
     except Exception as e:
         current_app.logger.error(f"Error getting referral rules: {e}")
         return jsonify({"error": "خطا در دریافت قوانین ارجاع"}), 500
 
 
 @admin_bp.post("/referral-rules")
-@require_role('admin')
+@require_organization_admin_context()
 def create_referral_rule():
     """Create a new referral rule."""
     try:
-        payload = referral_service.create_referral_rule(request.get_json() or {}, get_current_user())
+        payload = referral_service.create_referral_rule(request.get_json() or {}, get_current_user(), getattr(g, "organization_context", None))
         return jsonify(payload), 201
     except referral_service.ReferralServiceError as e:
         db.session.rollback()
@@ -160,11 +161,11 @@ def create_referral_rule():
 
 
 @admin_bp.put("/referral-rules/<int:rule_id>")
-@require_role('admin')
+@require_organization_admin_context()
 def update_referral_rule(rule_id: int):
     """Update a referral rule."""
     try:
-        return jsonify(referral_service.update_referral_rule(rule_id, request.get_json() or {}))
+        return jsonify(referral_service.update_referral_rule(rule_id, request.get_json() or {}, getattr(g, "organization_context", None)))
     except referral_service.ReferralServiceError as e:
         db.session.rollback()
         return jsonify({"error": e.message}), e.status_code
@@ -178,11 +179,11 @@ def update_referral_rule(rule_id: int):
 
 
 @admin_bp.delete("/referral-rules/<int:rule_id>")
-@require_role('admin')
+@require_organization_admin_context()
 def delete_referral_rule(rule_id: int):
     """Delete a referral rule and its state (logs kept for audit)."""
     try:
-        return jsonify(referral_service.delete_referral_rule(rule_id))
+        return jsonify(referral_service.delete_referral_rule(rule_id, getattr(g, "organization_context", None)))
     except referral_service.ReferralServiceError as e:
         db.session.rollback()
         return jsonify({"error": e.message}), e.status_code
@@ -193,14 +194,14 @@ def delete_referral_rule(rule_id: int):
 
 
 @admin_bp.post("/referral-rules/preview")
-@require_role('admin')
+@require_organization_admin_context()
 def preview_referral_rule():
     """
     Preview which rule would match and which expert would be selected for a request.
     Body: { "request_id": number }. Does not change DB.
     """
     try:
-        return jsonify(referral_service.preview_referral_assignment(request.get_json() or {}))
+        return jsonify(referral_service.preview_referral_assignment(request.get_json() or {}, getattr(g, "organization_context", None)))
     except referral_service.ReferralServiceError as e:
         return jsonify({"error": e.message}), e.status_code
     except Exception as e:

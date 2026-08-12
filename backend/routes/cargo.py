@@ -10,6 +10,7 @@ from backend.cargo_models import ShipmentCargoItem
 from backend.extensions import db
 from backend.security import require_auth, require_role
 from backend.services import cargo_service as svc
+from backend.services.admin_authorization_service import require_organization_admin_context
 
 cargo_bp = Blueprint("cargo", __name__, url_prefix="/api/internal")
 
@@ -27,7 +28,7 @@ def _error(exc):
 
 
 @cargo_bp.get("/cargo-catalog")
-@require_role("admin")
+@require_organization_admin_context()
 def catalog_list():
     try:
         return jsonify(svc.list_catalog(_user(), request.args))
@@ -36,7 +37,7 @@ def catalog_list():
 
 
 @cargo_bp.post("/cargo-catalog")
-@require_role("admin")
+@require_organization_admin_context()
 def catalog_create():
     try:
         return jsonify(
@@ -52,7 +53,7 @@ def catalog_create():
 
 
 @cargo_bp.get("/cargo-catalog/<public_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def catalog_detail(public_id):
     try:
         return jsonify(
@@ -63,7 +64,7 @@ def catalog_detail(public_id):
 
 
 @cargo_bp.patch("/cargo-catalog/<public_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def catalog_update(public_id):
     try:
         return jsonify(
@@ -83,7 +84,7 @@ def catalog_update(public_id):
 
 
 @cargo_bp.post("/cargo-catalog/<public_id>/<action>")
-@require_role("admin")
+@require_organization_admin_context()
 def catalog_activation(public_id, action):
     if action not in {"activate", "deactivate"}:
         return jsonify({"error": "not found"}), 404
@@ -106,7 +107,7 @@ def catalog_activation(public_id, action):
 
 
 @cargo_bp.get("/cargo-catalog/<public_id>/aliases")
-@require_role("admin")
+@require_organization_admin_context()
 def aliases(public_id):
     try:
         return jsonify(
@@ -122,7 +123,7 @@ def aliases(public_id):
 
 
 @cargo_bp.post("/cargo-catalog/<public_id>/aliases")
-@require_role("admin")
+@require_organization_admin_context()
 def alias_create(public_id):
     try:
         return jsonify(
@@ -141,7 +142,7 @@ def alias_create(public_id):
 
 
 @cargo_bp.patch("/cargo-catalog/<public_id>/aliases/<alias_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def alias_update(public_id, alias_id):
     try:
         item = svc.scoped_catalog(_user(), public_id)
@@ -161,7 +162,7 @@ def alias_update(public_id, alias_id):
 
 
 @cargo_bp.post("/cargo-catalog/<public_id>/aliases/<alias_id>/deactivate")
-@require_role("admin")
+@require_organization_admin_context()
 def alias_deactivate(public_id, alias_id):
     try:
         item = svc.scoped_catalog(_user(), public_id)

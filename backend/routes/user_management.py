@@ -1,7 +1,7 @@
 """User management API routes for CRM hierarchy system."""
 from typing import Any, Dict, List, Optional
 
-from flask import Blueprint, jsonify, request, current_app
+from flask import Blueprint, jsonify, request, current_app, g
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 
 from backend.extensions import db
@@ -20,13 +20,14 @@ from backend.services import (
     user_delete_service,
     user_service,
 )
+from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 
 user_management_bp = Blueprint("user_management", __name__, url_prefix="/api/user-management")
 
 
 # Transport Methods Management (admin only for consistency with user management panel)
 @user_management_bp.get("/transport-methods")
-@require_role("admin")
+@require_organization_admin_context()
 def get_transport_methods():
     """Get all transport methods."""
     try:
@@ -42,7 +43,7 @@ def get_transport_methods():
 
 
 @user_management_bp.post("/transport-methods")
-@require_role("admin")
+@require_platform_admin()
 def create_transport_method():
     """Create a new transport method."""
     try:
@@ -62,11 +63,11 @@ def create_transport_method():
 
 # User Management (admin only)
 @user_management_bp.get("/users")
-@require_role("admin")
+@require_organization_admin_context()
 def get_users():
     """Get all users with hierarchy information."""
     try:
-        users_data = user_service.list_users_payload()
+        users_data = user_service.list_users_payload(getattr(g, "organization_context", None))
         
         return jsonify({
             "users": users_data
@@ -78,12 +79,12 @@ def get_users():
 
 
 @user_management_bp.post("/users")
-@require_role("admin")
+@require_organization_admin_context()
 def create_user():
     """Create a new user."""
     try:
         data = request.get_json()
-        user = user_service.create_user(data)
+        user = user_service.create_user(data, getattr(g, "organization_context", None))
         
         return jsonify({
             "message": "کاربر با موفقیت ایجاد شد",
@@ -104,13 +105,23 @@ def create_user():
         return jsonify({"error": err_msg}), 500
 
 
+@user_management_bp.get("/users/<int:user_id>")
+@require_organization_admin_context()
+def get_user(user_id: int):
+    try:
+        user = user_service.get_user_or_raise(user_id, getattr(g, "organization_context", None))
+        return jsonify({"user": user_service.build_user_payload(user)})
+    except user_service.UserNotFoundError:
+        return jsonify({"error": "User not found"}), 404
+
+
 @user_management_bp.put("/users/<int:user_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def update_user(user_id: int):
     """Update user information."""
     try:
         data = request.get_json()
-        user_service.update_user(user_id, data)
+        user_service.update_user(user_id, data, getattr(g, "organization_context", None))
         
         return jsonify({
             "message": "اطلاعات کاربر به‌روزرسانی شد"
@@ -127,7 +138,7 @@ def update_user(user_id: int):
 
 
 @user_management_bp.delete("/users/<int:user_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def delete_user(user_id: int):
     """
     Delete an expert user and all related data.
@@ -135,7 +146,7 @@ def delete_user(user_id: int):
     """
     try:
         current_user = get_current_user()
-        payload = user_delete_service.delete_user_with_cleanup(user_id, current_user)
+        payload = user_delete_service.delete_user_with_cleanup(user_id, current_user, getattr(g, "organization_context", None))
         return jsonify(payload)
 
     except user_delete_service.DeleteAuthenticationRequired:
@@ -158,11 +169,11 @@ def delete_user(user_id: int):
 
 # Assignment Rules Management (admin only for consistency)
 @user_management_bp.get("/assignment-rules")
-@require_role("admin")
+@require_organization_admin_context()
 def get_assignment_rules():
     """Get all assignment rules."""
     try:
-        rules_data = assignment_rule_service.list_assignment_rules()
+        rules_data = assignment_rule_service.list_assignment_rules(getattr(g, "organization_context", None))
         
         return jsonify({
             "assignment_rules": rules_data
@@ -174,13 +185,13 @@ def get_assignment_rules():
 
 
 @user_management_bp.post("/assignment-rules")
-@require_role("admin")
+@require_organization_admin_context()
 def create_assignment_rule():
     """Create a new assignment rule."""
     try:
         current_user = get_current_user()
         data = request.get_json()
-        rule = assignment_rule_service.create_assignment_rule(data, current_user.get("id"))
+        rule = assignment_rule_service.create_assignment_rule(data, current_user.get("id"), getattr(g, "organization_context", None))
         
         return jsonify({
             "message": "قانون ارجاع با موفقیت ایجاد شد",
@@ -194,16 +205,16 @@ def create_assignment_rule():
 
 
 @user_management_bp.put("/assignment-rules/<int:rule_id>")
-@require_role("admin")
+@require_organization_admin_context()
 def update_assignment_rule(rule_id: int):
     """Update an assignment rule."""
     try:
-        existing_rule = assignment_rule_service.get_assignment_rule_or_none(rule_id)
+        existing_rule = assignment_rule_service.get_assignment_rule_or_none(rule_id, getattr(g, "organization_context", None))
         if not existing_rule:
             return jsonify({"error": "قانون ارجاع یافت نشد"}), 404
 
         data = request.get_json()
-        rule = assignment_rule_service.update_assignment_rule(rule_id, data)
+        rule = assignment_rule_service.update_assignment_rule(rule_id, data, getattr(g, "organization_context", None))
         if not rule:
             return jsonify({"error": "قانون ارجاع یافت نشد"}), 404
         
@@ -219,11 +230,11 @@ def update_assignment_rule(rule_id: int):
 
 # Assignment Statistics (admin only)
 @user_management_bp.get("/assignment-statistics")
-@require_role("admin")
+@require_organization_admin_context()
 def get_assignment_statistics():
     """Get assignment statistics."""
     try:
-        stats = assignment_statistics_service.get_assignment_statistics_payload()
+        stats = assignment_statistics_service.get_assignment_statistics_payload(getattr(g, "organization_context", None))
         
         return jsonify(stats)
         
@@ -234,7 +245,7 @@ def get_assignment_statistics():
 
 # Manual Assignment (admin only)
 @user_management_bp.post("/manual-assignment")
-@require_role("admin")
+@require_organization_admin_context()
 def manual_assignment():
     """Manually assign a request to an expert."""
     try:
@@ -242,6 +253,7 @@ def manual_assignment():
             request.get_json(silent=True) or {},
             actor=get_current_user(),
             remote_addr=request.remote_addr,
+            organization_context=getattr(g, "organization_context", None),
         )
         return jsonify(payload)
 

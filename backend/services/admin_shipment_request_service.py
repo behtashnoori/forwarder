@@ -38,11 +38,13 @@ class AdminRequestFilters:
     date_to: str | None
 
 
-def get_admin_shipment_request_detail(request_id: int) -> dict[str, Any] | None:
+def get_admin_shipment_request_detail(request_id: int, context=None) -> dict[str, Any] | None:
     """Return the existing admin shipment request detail payload."""
-    shipment_request = ShipmentRequest.query.options(
+    query = ShipmentRequest.query.options(
         joinedload(ShipmentRequest.assigned_expert)
-    ).get(request_id)
+    ).filter(ShipmentRequest.id == request_id)
+    if context is not None: query = query.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    shipment_request = query.one_or_none()
 
     if shipment_request is None:
         return None
@@ -50,10 +52,12 @@ def get_admin_shipment_request_detail(request_id: int) -> dict[str, Any] | None:
     return build_admin_request_detail_payload(shipment_request)
 
 
-def list_admin_shipment_requests(args) -> dict[str, Any]:
+def list_admin_shipment_requests(args, context=None) -> dict[str, Any]:
     """Return the existing admin shipment request list payload."""
     filters = normalize_admin_request_filters(args)
-    query = apply_admin_request_filters(ShipmentRequest.query, filters)
+    query = ShipmentRequest.query
+    if context is not None: query = query.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    query = apply_admin_request_filters(query, filters)
 
     total_count = query.count()
     shipment_requests = (

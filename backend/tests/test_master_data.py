@@ -67,7 +67,7 @@ def test_cargo_hierarchy_cycle_and_inactive_parent_rules(app):
 
 def _headers(app, role="admin"):
     with app.app_context():
-        user = ExpertUser(username=f"{role}_master", password_hash=bcrypt.hashpw(b"password", bcrypt.gensalt()).decode(), full_name="Master Admin", email=f"{role}@example.test", role=role, is_active=True)
+        user = ExpertUser(username=f"{role}_master", password_hash=bcrypt.hashpw(b"password", bcrypt.gensalt()).decode(), full_name="Master Admin", email=f"{role}@example.test", role=role, authority="PLATFORM_ADMIN" if role == "admin" else "EXPERT", is_active=True)
         db.session.add(user); db.session.commit()
         token = create_session_tokens(user.id)["access_token"]
     return {"Authorization": f"Bearer {token}"}

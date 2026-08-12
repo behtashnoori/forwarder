@@ -11,25 +11,25 @@ from backend.models import AssignmentLog, ExpertConsoleLog, ExpertUser, Shipment
 from backend.services.utc_timestamp import current_utc_timestamp
 
 
-def get_assignment_summary_payload() -> dict[str, Any]:
+def get_assignment_summary_payload(context=None) -> dict[str, Any]:
     """Return the current admin assignment summary report payload."""
-    return build_assignment_summary_response_payload()
+    return build_assignment_summary_response_payload(context)
 
 
-def build_assignment_summary_response_payload() -> dict[str, Any]:
+def build_assignment_summary_response_payload(context=None) -> dict[str, Any]:
     """Build the assignment summary payload with the existing report calculations."""
-    assignments_per_expert, total_assignments, total_won = build_assignments_per_expert()
+    assignments_per_expert, total_assignments, total_won = build_assignments_per_expert(context)
 
     return {
         "assignments_per_expert": assignments_per_expert,
-        "overall_stats": build_overall_assignment_stats(total_assignments, total_won),
+        "overall_stats": build_overall_assignment_stats(total_assignments, total_won, context),
         "generated_at": current_utc_timestamp(),
     }
 
 
-def build_assignments_per_expert() -> tuple[list[dict[str, Any]], int, int]:
+def build_assignments_per_expert(context=None) -> tuple[list[dict[str, Any]], int, int]:
     """Return per-expert assignment rows and the aggregate totals used by the report."""
-    experts_with_assignments = (
+    query = (
         db.session.query(
             ExpertUser.id,
             ExpertUser.full_name,
@@ -47,9 +47,10 @@ def build_assignments_per_expert() -> tuple[list[dict[str, Any]], int, int]:
             ShipmentRequest.assigned_to == ExpertUser.id,
         )
         .filter(ExpertUser.is_active == True)
-        .group_by(ExpertUser.id, ExpertUser.full_name, ExpertUser.username, ExpertUser.role)
-        .all()
     )
+    if context is not None:
+        query = query.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    experts_with_assignments = query.group_by(ExpertUser.id, ExpertUser.full_name, ExpertUser.username, ExpertUser.role).all()
 
     assignments_per_expert = []
     total_won = 0
@@ -85,9 +86,9 @@ def build_assignments_per_expert() -> tuple[list[dict[str, Any]], int, int]:
     return assignments_per_expert, total_assignments, total_won
 
 
-def build_overall_assignment_stats(total_assignments: int, total_won: int) -> dict[str, Any]:
+def build_overall_assignment_stats(total_assignments: int, total_won: int, context=None) -> dict[str, Any]:
     """Return the existing overall assignment summary fields."""
-    avg_response_time = calculate_avg_response_time_hours()
+    avg_response_time = calculate_avg_response_time_hours(context)
 
     return {
         "total_assignments": total_assignments,
@@ -97,13 +98,13 @@ def build_overall_assignment_stats(total_assignments: int, total_won: int) -> di
             2,
         ),
         "avg_response_time_hours": round(avg_response_time, 2) if avg_response_time else None,
-        "sla_violations": calculate_sla_violations(),
+        "sla_violations": calculate_sla_violations(context),
     }
 
 
-def calculate_avg_response_time_hours() -> float | None:
+def calculate_avg_response_time_hours(context=None) -> float | None:
     """Calculate response time in Python to keep the report SQLite-compatible."""
-    response_time_rows = (
+    query = (
         db.session.query(
             AssignmentLog.created_at.label("assignment_created_at"),
             ExpertConsoleLog.created_at.label("action_created_at"),
@@ -118,8 +119,10 @@ def calculate_avg_response_time_hours() -> float | None:
                 ExpertConsoleLog.created_at > AssignmentLog.created_at,
             )
         )
-        .all()
     )
+    if context is not None:
+        query = query.join(ShipmentRequest, ShipmentRequest.id == AssignmentLog.shipment_request_id).filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    response_time_rows = query.all()
 
     response_time_hours = [
         (row.action_created_at - row.assignment_created_at).total_seconds() / 3600
@@ -138,10 +141,13 @@ def calculate_conversion_rate(won_count: int, total_count: int) -> float:
     return (won_count / total_count * 100) if total_count > 0 else 0
 
 
-def calculate_sla_violations() -> int:
+def calculate_sla_violations(context=None) -> int:
     """Return active assigned requests that are past their SLA due date."""
+    query = db.session.query(func.count(ShipmentRequest.id))
+    if context is not None:
+        query = query.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
     return (
-        db.session.query(func.count(ShipmentRequest.id))
+        query
         .filter(
             and_(
                 ShipmentRequest.sla_due_at.isnot(None),

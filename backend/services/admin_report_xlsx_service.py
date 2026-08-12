@@ -24,9 +24,9 @@ SHEET_DETAILS = "جزئیات درخواست‌ها"
 MISSING_FIELD_LABEL = admin_report_overview_service.MISSING_FIELD_LABEL
 
 
-def build_report_xlsx(period: str | None) -> tuple[bytes, str]:
+def build_report_xlsx(period: str | None, organization_context=None) -> tuple[bytes, str]:
     """Build XLSX bytes from the Phase 12B report overview payload."""
-    payload = admin_report_overview_service.get_report_overview_payload(period)
+    payload = admin_report_overview_service.get_report_overview_payload(period, organization_context)
     workbook = Workbook()
     workbook.remove(workbook.active)
 

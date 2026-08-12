@@ -7,6 +7,7 @@ from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 from backend.referral_engine import ReferralEngine
 from backend.services import assignment_service, user_service
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture
@@ -29,19 +30,26 @@ def scope_app():
                        is_active=False, can_handle_domestic=True, can_handle_international=True),
         ]
         db.session.add_all(experts)
+        organization=OperationalOrganization(public_id="scope-org",name="Scope Org",is_active=True)
+        db.session.add(organization);db.session.flush()
+        db.session.add_all([OperationalMembership(organization_id=organization.id,user_id=expert.id,is_active=True,permissions=[]) for expert in experts])
         db.session.commit()
+        app.config["SCOPE_ORG_ID"]=organization.id
         yield app
         db.session.remove()
         db.drop_all()
 
 
 def _request(shipping_type: str, code: str) -> ShipmentRequest:
+    from flask import current_app
     row = ShipmentRequest(
         tracking_code=code,
         shipping_type=shipping_type,
         contact_phone="09120000000",
         status="new",
         status_request_status="new",
+        ownership_scope="TENANT",
+        operational_organization_id=current_app.config["SCOPE_ORG_ID"],
     )
     db.session.add(row)
     db.session.commit()

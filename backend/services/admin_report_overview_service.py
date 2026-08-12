@@ -68,10 +68,10 @@ class PeriodBounds:
     now: datetime
 
 
-def get_report_overview_payload(period: str | None) -> dict[str, Any]:
+def get_report_overview_payload(period: str | None, organization_context=None) -> dict[str, Any]:
     """Return admin report overview payload for the requested period."""
     bounds = get_period_bounds(period or "weekly")
-    requests = fetch_period_requests(bounds)
+    requests = fetch_period_requests(bounds, organization_context)
     context = build_report_context(requests)
 
     return {
@@ -111,18 +111,19 @@ def get_period_bounds(period: str) -> PeriodBounds:
     return PeriodBounds(period=period, start=start, end=end, now=now)
 
 
-def fetch_period_requests(bounds: PeriodBounds) -> list[ShipmentRequest]:
+def fetch_period_requests(bounds: PeriodBounds, organization_context=None) -> list[ShipmentRequest]:
     """Fetch shipment requests for the selected report period, newest first."""
-    return (
+    query = (
         ShipmentRequest.query.options(
             joinedload(ShipmentRequest.assigned_expert),
             joinedload(ShipmentRequest.customer),
         )
         .filter(ShipmentRequest.created_at >= bounds.start)
         .filter(ShipmentRequest.created_at < bounds.end)
-        .order_by(ShipmentRequest.created_at.desc(), ShipmentRequest.id.desc())
-        .all()
     )
+    if organization_context is not None:
+        query = query.filter(ShipmentRequest.operational_organization_id == organization_context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
+    return query.order_by(ShipmentRequest.created_at.desc(), ShipmentRequest.id.desc()).all()
 
 
 def build_report_context(requests: list[ShipmentRequest]) -> dict[str, dict[int, str]]:

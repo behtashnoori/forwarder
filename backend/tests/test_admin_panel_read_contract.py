@@ -44,6 +44,7 @@ def admin_panel_app():
             full_name="Phase 5M Admin",
             email="phase5m-admin@example.test",
             role="admin",
+            authority="PLATFORM_ADMIN",
             is_active=True,
         )
         expert = ExpertUser(
@@ -165,6 +166,7 @@ def admin_empty_report_app():
             full_name="Phase 12B Empty Admin",
             email="phase12b-empty-admin@example.test",
             role="admin",
+            authority="PLATFORM_ADMIN",
             is_active=True,
         )
         db.session.add(admin)

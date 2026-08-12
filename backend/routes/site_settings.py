@@ -1,6 +1,6 @@
 """Public and admin routes for site-wide editable settings."""
 from flask import Blueprint, jsonify, request, send_file
-from backend.security import require_role
+from backend.services.admin_authorization_service import require_platform_admin
 from backend.services import settings_service, upload_service
 
 # Public blueprint: no auth
@@ -18,14 +18,14 @@ admin_site_bp = Blueprint("admin_site", __name__, url_prefix="/api/admin")
 
 
 @admin_site_bp.get("/site-settings")
-@require_role("admin")
+@require_platform_admin()
 def admin_get_site_settings():
     """Return all site settings for admin form."""
     return jsonify(settings_service.get_admin_settings())
 
 
 @admin_site_bp.put("/site-settings")
-@require_role("admin")
+@require_platform_admin()
 def admin_update_site_settings():
     """Update site settings. Body: { "key1": "value1", ... }."""
     try:
@@ -39,7 +39,7 @@ def admin_update_site_settings():
 
 
 @admin_site_bp.post("/upload")
-@require_role("admin")
+@require_platform_admin()
 def admin_upload_logo():
     """Accept a single image file (logo), save to instance/uploads, return public URL."""
     if "file" not in request.files and "logo" not in request.files:

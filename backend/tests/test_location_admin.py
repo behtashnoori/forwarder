@@ -92,6 +92,7 @@ def _admin_headers(app):
             full_name="Location Admin",
             email="loc-admin@example.test",
             role="admin",
+            authority="PLATFORM_ADMIN",
             is_active=True,
         )
         db.session.add(admin)

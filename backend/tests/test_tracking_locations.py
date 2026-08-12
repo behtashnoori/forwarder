@@ -63,7 +63,7 @@ def test_search_permissions_filters_and_admin_deactivation():
  app=_app()
  with app.app_context():
   db.create_all();bootstrap(apply=True)
-  expert=ExpertUser(username="e",password_hash="x",full_name="E",role="expert",is_active=True);admin=ExpertUser(username="a",password_hash="x",full_name="A",role="admin",is_active=True);db.session.add_all([expert,admin]);db.session.commit()
+  expert=ExpertUser(username="e",password_hash="x",full_name="E",role="expert",is_active=True);admin=ExpertUser(username="a",password_hash="x",full_name="A",role="admin",authority="PLATFORM_ADMIN",is_active=True);db.session.add_all([expert,admin]);db.session.commit()
   et=create_session_tokens(expert.id)["access_token"];at=create_session_tokens(admin.id)["access_token"];client=app.test_client();h=lambda t:{"Authorization":f"Bearer {t}"}
   assert client.get("/api/tracking-locations").status_code==401
   fa=client.get("/api/tracking-locations?q=ایوو",headers=h(et));assert fa.status_code==200;assert fa.get_json()["items"][0]["name_en"]=="Yiwu"

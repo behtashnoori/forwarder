@@ -62,7 +62,7 @@ const ExpertLogin = ({ triggerClassName = "" }: { triggerClassName?: string }) =
           description: `به پنل ${data.expert.full_name} خوش آمدید`
         });
         
-        const roleFallback = data.expert.role === 'admin'
+        const roleFallback = ['PLATFORM_ADMIN', 'ORGANIZATION_ADMIN'].includes(data.expert.authority) || data.expert.role === 'admin'
           ? '/admin'
           : crmPrimaryRoles.has(data.expert.role) ? '/crm' : '/expert';
         navigate(consumeReturnTo(roleFallback), { replace: true });

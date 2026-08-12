@@ -1,0 +1,1 @@
+{"version":1,"shared_domain":"server.logisticmarket.ir","authorities":{"PLATFORM_ADMIN":{"scope":"platform"},"ORGANIZATION_ADMIN":{"scope":"exactly_one_active_membership"},"EXPERT":{"scope":"operational_permissions"}},"legacy":{"admin":"ORGANIZATION_ADMIN only after exactly-one-membership migration; never PLATFORM_ADMIN","expert":"EXPERT"}}

@@ -20,6 +20,7 @@ from backend.models import (
 )
 from backend.security import require_role
 from backend.services import location_admin_service as svc
+from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 
 location_admin_bp = Blueprint("location_admin", __name__, url_prefix="/api/admin/locations")
 
@@ -94,7 +95,7 @@ def _error(message, status=400):
 
 
 @location_admin_bp.get("/<resource>")
-@require_role("admin")
+@require_organization_admin_context()
 def list_resource(resource):
     cfg, err = _resource_or_404(resource)
     if err:
@@ -106,7 +107,7 @@ def list_resource(resource):
 
 
 @location_admin_bp.post("/<resource>")
-@require_role("admin")
+@require_platform_admin()
 def create_resource(resource):
     cfg, err = _resource_or_404(resource)
     if err:
@@ -122,7 +123,7 @@ def create_resource(resource):
 
 @location_admin_bp.put("/<resource>/<int:entity_id>")
 @location_admin_bp.patch("/<resource>/<int:entity_id>")
-@require_role("admin")
+@require_platform_admin()
 def update_resource(resource, entity_id):
     cfg, err = _resource_or_404(resource)
     if err:
@@ -140,7 +141,7 @@ def update_resource(resource, entity_id):
 
 
 @location_admin_bp.delete("/<resource>/<int:entity_id>")
-@require_role("admin")
+@require_platform_admin()
 def deactivate_resource(resource, entity_id):
     cfg, err = _resource_or_404(resource)
     if err:

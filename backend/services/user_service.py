@@ -8,6 +8,7 @@ from sqlalchemy import and_
 
 from backend.extensions import db
 from backend.models import ExpertSpecialization, ExpertUser
+from backend.operational_models import OperationalMembership
 
 
 class UserValidationError(Exception):
@@ -70,9 +71,12 @@ def build_user_payload(user: ExpertUser) -> dict[str, Any]:
     }
 
 
-def list_users_payload() -> list[dict[str, Any]]:
+def list_users_payload(context=None) -> list[dict[str, Any]]:
     """List all users in the current full_name order."""
-    users = db.session.query(ExpertUser).order_by(ExpertUser.full_name).all()
+    query = db.session.query(ExpertUser)
+    if context is not None:
+        query = query.join(OperationalMembership, OperationalMembership.user_id == ExpertUser.id).filter(OperationalMembership.organization_id == context.organization_id, OperationalMembership.is_active.is_(True))
+    users = query.order_by(ExpertUser.full_name).all()
     return [build_user_payload(user) for user in users]
 
 
@@ -104,9 +108,13 @@ def add_user_specializations(user_id: int, specializations: list[dict[str, Any]]
         db.session.add(specialization)
 
 
-def create_user(payload: dict[str, Any]) -> ExpertUser:
+def create_user(payload: dict[str, Any], context=None) -> ExpertUser:
     """Create and commit a user using the current route behavior."""
     data = payload
+    if context is not None and str(data.get("authority", "EXPERT")).upper() != "EXPERT":
+        raise UserValidationError("Organization administrators cannot grant administrative authority.")
+    if str(data.get("role", "")).lower() == "admin":
+        raise UserValidationError("Administrative roles require controlled onboarding.")
 
     if not data.get("username"):
         raise UserValidationError("نام کاربری الزامی است")
@@ -148,14 +156,21 @@ def create_user(payload: dict[str, Any]) -> ExpertUser:
 
     db.session.add(user)
     db.session.flush()
+    if context is not None:
+        if data.get("manager_id") and not user_in_organization(data["manager_id"], context.organization_id):
+            raise UserValidationError("Manager must belong to the same organization.")
+        db.session.add(OperationalMembership(organization_id=context.organization_id, user_id=user.id, is_active=True, permissions=[]))
     add_user_specializations(user.id, data.get("specializations", []))
     db.session.commit()
     return user
 
 
-def get_user_or_raise(user_id: int) -> ExpertUser:
+def get_user_or_raise(user_id: int, context=None) -> ExpertUser:
     """Return a user or raise the current not-found route outcome."""
-    user = db.session.query(ExpertUser).get(user_id)
+    query = db.session.query(ExpertUser)
+    if context is not None:
+        query = query.join(OperationalMembership, OperationalMembership.user_id == ExpertUser.id).filter(OperationalMembership.organization_id == context.organization_id, OperationalMembership.is_active.is_(True))
+    user = query.filter(ExpertUser.id == user_id).one_or_none()
     if not user:
         raise UserNotFoundError()
     return user
@@ -169,10 +184,14 @@ def replace_user_specializations(user_id: int, specializations: list[dict[str, A
     add_user_specializations(user_id, specializations)
 
 
-def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
+def update_user(user_id: int, payload: dict[str, Any], context=None) -> ExpertUser:
     """Update and commit a user using the current route behavior."""
-    user = get_user_or_raise(user_id)
+    user = get_user_or_raise(user_id, context)
     data = payload
+    if context is not None:
+        if getattr(user, "authority", "EXPERT") == "PLATFORM_ADMIN": raise UserNotFoundError()
+        if "authority" in data or data.get("role") == "admin": raise UserValidationError("Administrative authority cannot be changed here.")
+        if data.get("manager_id") and not user_in_organization(data["manager_id"], context.organization_id): raise UserValidationError("Manager must belong to the same organization.")
     password_changed = False
     deactivated = False
     role_changed = False
@@ -235,6 +254,9 @@ def update_user(user_id: int, payload: dict[str, Any]) -> ExpertUser:
         revoke_all_user_sessions(user_id, reason, commit=False)
     db.session.commit()
     return user
+
+def user_in_organization(user_id: int, organization_id: int) -> bool:
+    return db.session.query(OperationalMembership.id).filter(OperationalMembership.user_id == user_id, OperationalMembership.organization_id == organization_id, OperationalMembership.is_active.is_(True)).first() is not None
 
 
 def validate_sla_minutes(value: Any) -> int:

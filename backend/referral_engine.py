@@ -22,6 +22,7 @@ from backend.extensions import db
 from backend.census_context import CensusTransitioned, CensusUnavailable
 from backend.quarantine import QuarantinedResource, assert_not_quarantined
 from backend.services.expert_scope_service import can_handle_request, eligible_experts
+from backend.operational_models import OperationalMembership
 
 logger = logging.getLogger(__name__)
 SECURITY_FENCE_ERRORS = (QuarantinedResource, CensusTransitioned, CensusUnavailable)
@@ -31,7 +32,7 @@ def _get_assignable_experts(
     session: Session, request: ShipmentRequest | None = None
 ) -> List[ExpertUser]:
     """Return active experts (expert, business_expert) ordered by id for deterministic tie-break."""
-    experts = (
+    query = (
         session.query(ExpertUser)
         .filter(
             and_(
@@ -39,9 +40,18 @@ def _get_assignable_experts(
                 ExpertUser.role.in_(["expert", "business_expert"]),
             )
         )
-        .order_by(ExpertUser.id.asc())
-        .all()
     )
+    if request is not None and request.operational_organization_id is not None:
+        active_membership_count = select(func.count(OperationalMembership.id)).where(
+            OperationalMembership.user_id == ExpertUser.id,
+            OperationalMembership.is_active.is_(True),
+        ).correlate(ExpertUser).scalar_subquery()
+        query = query.join(OperationalMembership, OperationalMembership.user_id == ExpertUser.id).filter(
+            OperationalMembership.organization_id == request.operational_organization_id,
+            OperationalMembership.is_active.is_(True),
+            active_membership_count == 1,
+        )
+    experts = query.order_by(ExpertUser.id.asc()).all()
     return eligible_experts(experts, request) if request is not None else experts
 
 
@@ -70,6 +80,7 @@ def _select_expert_by_last_assignment(
         .outerjoin(last_assigned_subq, ExpertUser.id == last_assigned_subq.c.expert_id)
         .filter(
             and_(
+                ExpertUser.id.in_([expert.id for expert in experts]),
                 ExpertUser.is_active,
                 ExpertUser.role.in_(["expert", "business_expert"]),
             )
@@ -219,6 +230,9 @@ class ReferralEngine:
             if not request:
                 logger.error(f"Shipment request {request_id} not found")
                 return None
+            if request.ownership_scope != "TENANT" or request.operational_organization_id is None:
+                logger.info("Request %s has no certified tenant; referral skipped", request_id)
+                return None
             if request.assigned_to:
                 logger.info(f"Request {request_id} already assigned to {request.assigned_to}")
                 return request.assigned_to
@@ -242,14 +256,14 @@ class ReferralEngine:
                 return rule_assignment["expert_id"]
 
             # Ensure lock row exists, then take row lock for concurrency
-            state = self.db.query(ReferralAutoAssignState).filter(ReferralAutoAssignState.id == 1).first()
+            state = self.db.query(ReferralAutoAssignState).filter(ReferralAutoAssignState.operational_organization_id == request.operational_organization_id).first()
             if not state:
-                state = ReferralAutoAssignState(id=1, last_index=0, updated_at=datetime.now(timezone.utc))
+                state = ReferralAutoAssignState(operational_organization_id=request.operational_organization_id, last_index=0, updated_at=datetime.now(timezone.utc))
                 self.db.add(state)
                 self.db.flush()
             state = (
                 self.db.query(ReferralAutoAssignState)
-                .filter(ReferralAutoAssignState.id == 1)
+                .filter(ReferralAutoAssignState.operational_organization_id == request.operational_organization_id)
                 .with_for_update()
                 .first()
             )
@@ -290,6 +304,9 @@ class ReferralEngine:
             if not request:
                 result["error"] = "request_not_found"
                 return result
+            if request.ownership_scope != "TENANT" or request.operational_organization_id is None:
+                result["error"] = "tenant_scope_required"
+                return result
             experts = _get_assignable_experts(self.db, request)
             if not experts:
                 result["error"] = "no_experts"
@@ -322,7 +339,7 @@ class ReferralEngine:
     def _select_matching_rule_assignment(self, request: ShipmentRequest, dry_run: bool = False) -> Optional[Dict[str, Any]]:
         rules = (
             self.db.query(ReferralRule)
-            .filter(ReferralRule.is_active)
+            .filter(ReferralRule.is_active, ReferralRule.operational_organization_id == request.operational_organization_id)
             .order_by(ReferralRule.priority.asc(), ReferralRule.name.asc())
             .all()
         )
@@ -371,7 +388,7 @@ class ReferralEngine:
                 if strategy == "least_workload":
                     selected = min(candidates, key=lambda expert: (_active_assignment_count(self.db, expert.id), expert.id))
                 else:
-                    state = self.db.query(ReferralRuleState).filter(ReferralRuleState.rule_id == rule.id).first()
+                    state = self.db.query(ReferralRuleState).filter(ReferralRuleState.rule_id == rule.id, ReferralRuleState.operational_organization_id == request.operational_organization_id).first()
                     rr_index = state.rr_index if state else 0
                     selected_index = rr_index % len(candidates)
                     selected = candidates[selected_index]
@@ -397,9 +414,10 @@ class ReferralEngine:
     def _advance_rule_state(self, assignment: Dict[str, Any]) -> None:
         if assignment.get("strategy_used") != "round_robin" or not assignment.get("rule_id"):
             return
-        state = self.db.query(ReferralRuleState).filter(ReferralRuleState.rule_id == assignment["rule_id"]).first()
+        rule = self.db.get(ReferralRule, assignment["rule_id"])
+        state = self.db.query(ReferralRuleState).filter(ReferralRuleState.rule_id == assignment["rule_id"], ReferralRuleState.operational_organization_id == rule.operational_organization_id).first()
         if not state:
-            state = ReferralRuleState(rule_id=assignment["rule_id"], rr_index=0)
+            state = ReferralRuleState(rule_id=assignment["rule_id"], operational_organization_id=rule.operational_organization_id, rr_index=0)
             self.db.add(state)
             self.db.flush()
         candidate_count = max(len(assignment.get("candidate_expert_ids") or []), 1)
@@ -425,6 +443,7 @@ class ReferralEngine:
         from backend.services.sla_service import set_initial_assignment_sla
         set_initial_assignment_sla(request, expert)
         log = ReferralAssignmentLog(
+            operational_organization_id=request.operational_organization_id,
             request_id=request.id,
             rule_id=rule_id,
             selected_expert_id=expert_id,

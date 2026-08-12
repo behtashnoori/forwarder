@@ -38,10 +38,13 @@ class ReferralNotFoundError(ReferralServiceError):
         super().__init__(message, 404)
 
 
-def list_referral_rules(filters: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+def list_referral_rules(filters: Optional[dict[str, Any]] = None, context=None) -> dict[str, Any]:
     """Return the current referral-rules list response payload."""
     _ = filters
-    rules = db.session.query(ReferralRule).order_by(
+    query = db.session.query(ReferralRule)
+    if context is not None:
+        query = query.filter(ReferralRule.operational_organization_id == context.organization_id)
+    rules = query.order_by(
         ReferralRule.priority.asc(), ReferralRule.name
     ).all()
     return {"referral_rules": [build_referral_rule_payload(rule) for rule in rules]}
@@ -77,11 +80,12 @@ def build_referral_rule_payload(rule: ReferralRule) -> dict[str, Any]:
     }
 
 
-def create_referral_rule(payload: dict[str, Any], actor: Optional[dict[str, Any]]) -> dict[str, Any]:
+def create_referral_rule(payload: dict[str, Any], actor: Optional[dict[str, Any]], context=None) -> dict[str, Any]:
     """Create a referral rule and return the current success payload."""
     if not actor:
         raise ReferralUnauthorizedError()
     normalized = normalize_referral_payload(payload, require_name=True)
+    validate_referral_experts(normalized["action"], context)
     rule = ReferralRule(
         name=normalized["name"],
         is_active=payload.get("is_active", True),
@@ -90,15 +94,18 @@ def create_referral_rule(payload: dict[str, Any], actor: Optional[dict[str, Any]
         action=json.dumps(normalized["action"]),
         stop_on_match=payload.get("stop_on_match", True),
         created_by=actor.get("id"),
+        operational_organization_id=context.organization_id if context else None,
     )
     db.session.add(rule)
     db.session.commit()
     return {"message": "قانون ارجاع با موفقیت ایجاد شد", "rule_id": rule.id}
 
 
-def update_referral_rule(rule_id: int, payload: dict[str, Any]) -> dict[str, Any]:
+def update_referral_rule(rule_id: int, payload: dict[str, Any], context=None) -> dict[str, Any]:
     """Update a referral rule and return the current success payload."""
-    rule = db.session.get(ReferralRule, rule_id)
+    query = db.session.query(ReferralRule).filter(ReferralRule.id == rule_id)
+    if context is not None: query = query.filter(ReferralRule.operational_organization_id == context.organization_id)
+    rule = query.one_or_none()
     if not rule:
         raise ReferralNotFoundError()
 
@@ -115,15 +122,18 @@ def update_referral_rule(rule_id: int, payload: dict[str, Any]) -> dict[str, Any
     if "action" in payload:
         action = payload["action"]
         validate_referral_action_for_update(action)
+        validate_referral_experts(action, context)
         rule.action = json.dumps(action)
     rule.updated_at = datetime.utcnow()
     db.session.commit()
     return {"message": "قانون ارجاع به‌روزرسانی شد"}
 
 
-def delete_referral_rule(rule_id: int) -> dict[str, Any]:
+def delete_referral_rule(rule_id: int, context=None) -> dict[str, Any]:
     """Delete a referral rule and its state while preserving audit logs."""
-    rule = db.session.get(ReferralRule, rule_id)
+    query = db.session.query(ReferralRule).filter(ReferralRule.id == rule_id)
+    if context is not None: query = query.filter(ReferralRule.operational_organization_id == context.organization_id)
+    rule = query.one_or_none()
     if not rule:
         raise ReferralNotFoundError()
     db.session.query(ReferralRuleState).filter(ReferralRuleState.rule_id == rule_id).delete()
@@ -132,11 +142,15 @@ def delete_referral_rule(rule_id: int) -> dict[str, Any]:
     return {"message": "قانون ارجاع حذف شد"}
 
 
-def preview_referral_assignment(payload: dict[str, Any]) -> dict[str, Any]:
+def preview_referral_assignment(payload: dict[str, Any], context=None) -> dict[str, Any]:
     """Run the current dry-run referral preview behavior."""
     request_id = payload.get("request_id")
     if request_id is None:
         raise ReferralValidationError("request_id الزامی است")
+    if context is not None:
+        from backend.models import ShipmentRequest
+        visible = db.session.query(ShipmentRequest.id).filter(ShipmentRequest.id == int(request_id), ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT").first()
+        if not visible: raise ReferralNotFoundError("Request not found")
     result = referral_engine.preview_assignment(int(request_id))
     return build_referral_preview_payload(result)
 
@@ -165,6 +179,21 @@ def create_referral_log_if_needed(*args: Any, **kwargs: Any) -> None:
     """Referral logs are currently created by the referral engine."""
     _ = args, kwargs
     return None
+
+
+def validate_referral_experts(action: dict[str, Any], context=None) -> None:
+    if context is None:
+        return
+    from backend.operational_models import OperationalMembership
+    values = [action.get("expert_id")] if action.get("type") == "direct_assign" else list(action.get("expert_ids") or [])
+    expert_ids = {int(value) for value in values if value is not None}
+    matched = db.session.query(OperationalMembership.user_id).filter(
+        OperationalMembership.organization_id == context.organization_id,
+        OperationalMembership.user_id.in_(expert_ids),
+        OperationalMembership.is_active.is_(True),
+    ).distinct().count()
+    if matched != len(expert_ids):
+        raise ReferralValidationError("All referral experts must belong to the same organization.")
 
 
 def normalize_referral_payload(payload: dict[str, Any], require_name: bool = False) -> dict[str, Any]:
