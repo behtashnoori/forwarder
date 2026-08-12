@@ -331,8 +331,21 @@ class ShipmentRequest(db.Model):
     """Represents a shipment request submitted by a user."""
 
     __tablename__ = "shipment_request"
+    __table_args__ = (
+        db.UniqueConstraint("id", "operational_organization_id", name="uq_shipment_request_id_operational_org"),
+        db.CheckConstraint(
+            "ownership_scope IS NULL OR "
+            "(ownership_scope = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
+            "(ownership_scope IN ('INTAKE','LEGACY_QUARANTINED') AND operational_organization_id IS NULL)",
+            name="ck_shipment_request_ownership_envelope",
+        ),
+    )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    ownership_scope = db.Column(db.String(24), nullable=True)
 
     # Public tracking code (unique, non-guessable); used for /customer/track/:identifier
     tracking_code = db.Column(db.String(32), unique=True, nullable=True, index=True)
@@ -484,6 +497,7 @@ class ShipmentTracking(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     shipment_request_id = db.Column(
         SQLITE_COMPAT_BIGINT,
         db.ForeignKey("shipment_request.id", ondelete="CASCADE"),
@@ -650,6 +664,7 @@ class ShipmentRequestLog(db.Model):
     __tablename__ = "shipment_request_log"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     shipment_request_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
     )
@@ -670,6 +685,7 @@ class ExpertConsoleLog(db.Model):
     __tablename__ = "expert_console_log"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     shipment_request_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
     )
@@ -735,6 +751,7 @@ class ExpertConsoleMessage(db.Model):
     __tablename__ = "expert_console_message"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     shipment_request_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
     )
@@ -761,6 +778,7 @@ class ExpertConsoleNotification(db.Model):
     __tablename__ = "expert_console_notification"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     expert_user_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False
     )
@@ -820,8 +838,19 @@ class Customer(db.Model):
     """Represents a customer in the CRM system."""
     
     __tablename__ = "customer"
+    __table_args__ = (
+        db.UniqueConstraint("id", "operational_organization_id", name="uq_customer_id_operational_org"),
+        db.CheckConstraint(
+            "ownership_scope IS NULL OR "
+            "(ownership_scope = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
+            "(ownership_scope = 'LEGACY_QUARANTINED' AND operational_organization_id IS NULL)",
+            name="ck_customer_ownership_envelope",
+        ),
+    )
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
+    ownership_scope = db.Column(db.String(24), nullable=True)
     company_name = db.Column(db.String(200), nullable=True)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
@@ -860,6 +889,7 @@ class CustomerContact(db.Model):
     __tablename__ = "customer_contact"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=False)
     first_name = db.Column(db.String(100), nullable=False)
     last_name = db.Column(db.String(100), nullable=False)
@@ -884,6 +914,7 @@ class Opportunity(db.Model):
     __tablename__ = "opportunity"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
@@ -1115,6 +1146,7 @@ class ReferralAssignmentLog(db.Model):
     __tablename__ = "referral_assignment_log"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False)
     rule_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("referral_rule.id"), nullable=True)  # None = system auto-assign
     selected_expert_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
@@ -1531,6 +1563,7 @@ class CaseDocumentRequirement(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="CASCADE"), nullable=False, index=True)
     source_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
     source_definition_code = db.Column(db.String(64), nullable=False)
@@ -1561,6 +1594,7 @@ class CaseDocumentFile(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
     shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="CASCADE"), nullable=False, index=True)
     case_requirement_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("case_document_requirement.id", ondelete="RESTRICT"), nullable=True, index=True)
@@ -1589,7 +1623,17 @@ class DocumentAuditEvent(db.Model):
     """Append-only audit trail for document policy and file actions."""
 
     __tablename__ = "document_audit_event"
+    __table_args__ = (
+        db.CheckConstraint(
+            "scope_type IS NULL OR "
+            "(scope_type = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
+            "(scope_type = 'PLATFORM' AND operational_organization_id IS NULL)",
+            name="ck_document_audit_event_scope",
+        ),
+    )
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    scope_type = db.Column(db.String(16), nullable=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     event_type = db.Column(db.String(64), nullable=False, index=True)
     actor_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True, index=True)
     shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="SET NULL"), nullable=True, index=True)

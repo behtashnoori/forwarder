@@ -10,6 +10,7 @@ from backend.models import (
     ExpertUser,
     ShipmentRequest,
 )
+from backend.services.ownership_service import OwnershipContractError, require_tenant_resource
 
 
 class QuoteServiceError(Exception):
@@ -52,6 +53,11 @@ def create_quote_for_request(
     if not can_access_quote_request(req, user):
         raise QuoteAccessError("شما به این درخواست دسترسی ندارید", 403)
 
+    try:
+        request_organization_id = require_tenant_resource(req)
+    except OwnershipContractError as exc:
+        raise QuoteAccessError(str(exc), 409) from exc
+
     expert = db.session.get(ExpertUser, expert_id)
     if not expert:
         raise QuoteNotFoundError("کارشناس یافت نشد", 404)
@@ -64,6 +70,7 @@ def create_quote_for_request(
         valid_until=normalized["valid_until"],
         created_by_expert_id=expert_id,
         created_at=datetime.utcnow(),
+        operational_organization_id=request_organization_id,
     )
     from backend.operational_models import OperationalMembership, OperationalOrganization
     memberships = db.session.query(OperationalMembership).join(
@@ -74,8 +81,8 @@ def create_quote_for_request(
         OperationalMembership.is_active.is_(True),
         OperationalOrganization.is_active.is_(True),
     ).all()
-    if len(memberships) == 1:
-        quote.operational_organization_id = memberships[0].organization_id
+    if not any(m.organization_id == request_organization_id for m in memberships):
+        raise QuoteAccessError("Expert is not a member of the request Organization", 403)
     db.session.add(quote)
     db.session.flush()
 

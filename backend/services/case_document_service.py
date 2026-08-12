@@ -42,9 +42,13 @@ def _json(value) -> str:
 
 
 def audit(event_type: str, actor_id: int | None, *, case_id=None, definition_id=None, file_id=None, details=None):
+    case = db.session.get(ShipmentRequest, case_id) if case_id is not None else None
+    organization_id = case.operational_organization_id if case is not None else None
     db.session.add(DocumentAuditEvent(
         event_type=event_type, actor_id=actor_id, shipment_request_id=case_id,
         definition_id=definition_id, document_file_id=file_id,
+        scope_type="TENANT" if organization_id is not None else "PLATFORM",
+        operational_organization_id=organization_id,
         details=_json(details) if details else None,
     ))
 
@@ -107,6 +111,7 @@ def initialize_requirements(case: ShipmentRequest, actor_id: int | None) -> int:
             continue
         db.session.add(CaseDocumentRequirement(
             shipment_request_id=case.id, source_definition_id=definition.id,
+            operational_organization_id=case.operational_organization_id,
             source_definition_code=definition.code, source_definition_revision=definition.revision,
             title=definition.title, description=definition.description, is_required=definition.is_required,
             allowed_formats=definition.allowed_formats, max_file_size_bytes=definition.max_file_size_bytes,
@@ -199,6 +204,7 @@ def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, re
         safe_download = secure_filename(f"{title}-{case.tracking_code or case.id}-v{version}.{extension}") or f"document-{case.id}-v{version}.{extension}"
         row = CaseDocumentFile(
             shipment_request_id=case.id, case_requirement_id=requirement.id if requirement else None,
+            operational_organization_id=case.operational_organization_id,
             is_miscellaneous=miscellaneous, custom_title=str(custom_title).strip() if miscellaneous else None,
             description=str(description or "").strip() or None, original_filename=original,
             safe_download_filename=safe_download, storage_key=key, canonical_extension=extension,

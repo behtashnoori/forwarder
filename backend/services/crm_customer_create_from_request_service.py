@@ -7,6 +7,7 @@ from sqlalchemy import or_
 
 from backend.extensions import db
 from backend.models import Customer, ShipmentRequest
+from backend.services.ownership_service import require_tenant_resource, tenant_organization_for_user
 from backend.services.crm_customer_link_service import (
     add_customer_link_audit_records,
     build_customer_summary,
@@ -258,6 +259,8 @@ def create_customer_from_request(
     shipment_request = db.session.get(ShipmentRequest, request_id)
     if shipment_request is None:
         raise CrmCustomerCreatePreviewNotFoundError("Shipment request not found", 404)
+    organization_id = tenant_organization_for_user(user)
+    require_tenant_resource(shipment_request, expected_organization_id=organization_id)
 
     link_to_request = payload.get("link", True)
     if not isinstance(link_to_request, bool):
@@ -286,6 +289,8 @@ def create_customer_from_request(
         raise CrmCustomerCreateConflictError("Strong duplicate candidates require acknowledgement")
 
     customer = Customer(
+        ownership_scope="TENANT",
+        operational_organization_id=organization_id,
         company_name=reviewed_customer.get("company_name"),
         first_name=reviewed_customer.get("first_name"),
         last_name=reviewed_customer.get("last_name"),

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "canonical_organization_table": "operational_organization",
+  "canonical_legacy_domain_key": "operational_organization_id",
+  "expand_revision": "20260823_mt1_ownership_expand",
+  "classifications": {
+    "TENANT_ROOT": ["shipment_request", "customer", "project", "operational_shipment"],
+    "TENANT_DESCENDANT": [
+      "shipment_request_log", "shipment_tracking", "shipment_transport_unit",
+      "shipment_transport_unit_update", "expert_quote", "case_document_requirement",
+      "case_document_file", "customer_contact", "opportunity"
+    ],
+    "PARENT_TENANT_DERIVED": [
+      "expert_console_log", "expert_console_message", "expert_console_notification",
+      "referral_assignment_log"
+    ],
+    "PLATFORM": [
+      "referral_auto_assign_state", "customer_gamification", "document_definition",
+      "province", "county", "city", "country", "international_city"
+    ],
+    "MIXED_SCOPE": ["document_audit_event"],
+    "QUARANTINED_LEGACY_COMPAT": ["shipment_request", "customer", "expert_quote"]
+  },
+  "decisions": {
+    "public_shipment_request": "INTAKE until explicit audited tenant acceptance",
+    "assignment_establishes_ownership": false,
+    "referral_establishes_ownership": false,
+    "gamification_establishes_ownership": false,
+    "referral_auto_assign_state": "PLATFORM_OR_SINGLETON",
+    "document_audit_event": "TENANT or PLATFORM execution scope",
+    "transport_unit_ownership": "derived transitively through shipment_tracking"
+  },
+  "validate_requirements": [
+    "every non-quarantined TENANT root has an Organization",
+    "every direct owned descendant agrees with its parent",
+    "every document audit scope envelope is valid",
+    "all remaining NULL root owners equal the certified quarantined synthetic cohort",
+    "the expert_quote NOT VALID foreign key validates"
+  ],
+  "contract_deferred": [
+    "NOT NULL tenant ownership after server validation",
+    "remove nullable unknown-scope compatibility",
+    "validate deferred PostgreSQL constraints"
+  ]
+}

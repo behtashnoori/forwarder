@@ -3,6 +3,7 @@ from datetime import datetime
 
 from backend.extensions import db
 from backend.models import Activity, Customer, Opportunity
+from backend.services.ownership_service import tenant_organization_for_user
 
 CUSTOMER_WRITE_FIELDS = [
     "company_name",
@@ -26,9 +27,11 @@ CUSTOMER_WRITE_FIELDS = [
 ]
 
 
-def create_customer(data: dict) -> Customer:
+def create_customer(data: dict, user: dict) -> Customer:
     """Create and commit a CRM customer using the existing route defaults."""
     customer = Customer(
+        ownership_scope="TENANT",
+        operational_organization_id=tenant_organization_for_user(user),
         company_name=data.get("company_name"),
         first_name=data.get("first_name"),
         last_name=data.get("last_name"),
@@ -69,9 +72,14 @@ def update_customer(customer_id: int, data: dict) -> Customer | None:
     return customer
 
 
-def create_opportunity(data: dict) -> Opportunity:
+def create_opportunity(data: dict, user: dict) -> Opportunity:
     """Create and commit a CRM opportunity using the existing route defaults."""
+    organization_id = tenant_organization_for_user(user)
+    customer = db.session.get(Customer, data.get("customer_id"))
+    if customer is None or customer.operational_organization_id != organization_id:
+        raise ValueError("Opportunity customer must belong to the same Organization")
     opportunity = Opportunity(
+        operational_organization_id=organization_id,
         customer_id=data.get("customer_id"),
         title=data.get("title"),
         description=data.get("description"),

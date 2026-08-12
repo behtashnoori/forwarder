@@ -104,7 +104,10 @@ def _stage_shipment_request(payload: dict[str, Any], remote_addr: str | None = N
     normalized = normalize_shipment_payload(payload)
     timestamp = datetime.utcnow()
 
-    shipment_request = ShipmentRequest(**build_shipment_request_data(normalized, timestamp))
+    shipment_request = ShipmentRequest(
+        ownership_scope="INTAKE", operational_organization_id=None,
+        **build_shipment_request_data(normalized, timestamp),
+    )
     db.session.add(shipment_request)
     db.session.flush()
 
@@ -112,6 +115,7 @@ def _stage_shipment_request(payload: dict[str, Any], remote_addr: str | None = N
 
     log_entry = ShipmentRequestLog(
         shipment_request_id=shipment_request.id,
+        operational_organization_id=None,
         created_at=timestamp,
         note="ثبت اولیه درخواست",
         ip_address=remote_addr,

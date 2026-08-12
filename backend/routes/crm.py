@@ -43,7 +43,7 @@ def create_customer():
     try:
         data = request.get_json()
         
-        customer = crm_write_service.create_customer(data)
+        customer = crm_write_service.create_customer(data, get_current_user())
         
         return jsonify({
             "message": "مشتری با موفقیت ایجاد شد",
@@ -231,7 +231,7 @@ def create_opportunity():
     try:
         data = request.get_json()
         
-        opportunity = crm_write_service.create_opportunity(data)
+        opportunity = crm_write_service.create_opportunity(data, get_current_user())
         
         return jsonify({
             "message": "فرصت فروش با موفقیت ایجاد شد",
