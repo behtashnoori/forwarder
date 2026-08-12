@@ -1,5 +1,10 @@
 # MT-1 adjudication cohort reduction
 
+> **Subsequent provenance status (2026-08-12):** This projection was valid under
+> unknown provenance. All 135 rows are now authoritatively synthetic/test data,
+> so its tenant-adjudication events are not applicable. Retain this package as
+> historical evidence only.
+
 ## 1. Current real census facts
 
 There are 135 UNRESOLVED, QUARANTINED rows, zero Organization candidates,

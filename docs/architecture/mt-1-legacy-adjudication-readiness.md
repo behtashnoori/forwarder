@@ -1,5 +1,11 @@
 # MT-1 legacy adjudication readiness
 
+> **Subsequent provenance status (2026-08-12):** The human repository owner
+> classified all 135 rows as synthetic/test data. The analysis below remains
+> historical evidence from the unknown-provenance state. Its 22-event tenant
+> review is now `LEGACY_SYNTHETIC_ADJUDICATION_STATUS=NOT_APPLICABLE` for this
+> dataset. Reviewers must not populate Organization IDs.
+
 ## Real census observed
 
 - 135 UNRESOLVED and 135 QUARANTINED rows.

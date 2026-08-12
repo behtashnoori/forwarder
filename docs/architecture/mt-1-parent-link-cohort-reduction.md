@@ -1,5 +1,10 @@
 # MT-1 real parent-link cohort reduction
 
+> **Subsequent provenance status (2026-08-12):** The analysis remains historical
+> technical evidence. The human owner later classified all 135 rows as synthetic,
+> so the projected 22 tenant-adjudication events are not applicable and must not
+> be populated with Organization IDs.
+
 ## 1. Parent-link package integrity
 
 All three authoritative hashes match: CSV `57265f19...12bce6`, JSON

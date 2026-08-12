@@ -1,0 +1,54 @@
+{
+  "manifest_version": 1,
+  "recorded_at": "2026-08-12",
+  "dataset_classification": "SYNTHETIC_ONLY",
+  "human_provenance_assertion": {
+    "asserted_by": "human_repository_owner",
+    "assertion": "All 135 legacy census rows are test/synthetic data and are not real customer or tenant business records.",
+    "authoritative_for_this_dataset": true
+  },
+  "source_census_hashes": {
+    "csv_sha256": "DC1E9559B1AF53F6DE8AA35F0F02B2B77D068BF7C2E9EB763DE53D99630EC707",
+    "summary_sha256": "666CAB8B882B253E34F96F698B178CB85D9C64DC51B1683819336670E35AE6FE"
+  },
+  "parent_link_package_hashes": {
+    "csv_sha256": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+    "json_sha256": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+    "summary_sha256": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+  },
+  "total_rows": 135,
+  "entity_counts": {
+    "CaseDocumentRequirement": 2,
+    "Customer": 1,
+    "CustomerGamification": 6,
+    "DocumentAuditEvent": 3,
+    "ExpertConsoleLog": 29,
+    "ExpertConsoleNotification": 29,
+    "ExpertQuote": 3,
+    "ReferralAssignmentLog": 12,
+    "ReferralAutoAssignState": 1,
+    "ShipmentRequest": 13,
+    "ShipmentRequestLog": 13,
+    "ShipmentTracking": 6,
+    "ShipmentTransportUnit": 6,
+    "ShipmentTransportUnitUpdate": 11
+  },
+  "legacy_real_customer_data_present": false,
+  "human_ownership_adjudication_required_for_this_dataset": false,
+  "ownership_adjudication_applicable": false,
+  "organization_assignment_allowed": false,
+  "auto_tenant_assignment_allowed": false,
+  "quarantine_currently_preserved": true,
+  "synthetic_data_may_be_disposed_only_by_explicit_policy": true,
+  "real_data_census_required_if_real_legacy_data_is_ever_introduced": true,
+  "recommended_disposition": "KEEP_QUARANTINED_SYNTHETIC",
+  "destructive_action_executed": false,
+  "production_affected": false,
+  "pii_included": false,
+  "predecessor_evidence": [
+    "legacy-human-adjudication-summary.json",
+    "legacy-adjudication-cohort-plan-v2.json",
+    "../mt-1-parent-link-cohort-reduction.md",
+    "../mt-1-legacy-adjudication-readiness.md"
+  ]
+}

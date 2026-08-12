@@ -1,5 +1,10 @@
 # MT-1 human adjudication policy
 
+> **Dataset-specific status (2026-08-12):** This general real-data policy remains
+> in force, but it is not applicable to the hash-bound 135-row `SYNTHETIC_ONLY`
+> dataset. Review packages are historical evidence and must not receive invented
+> Organization IDs.
+
 Human mapping is reviewed evidence, never an override. There is no precedence,
 default tenant, session fallback, or inference from names, companies, email,
 users, departments, phone numbers, or free text. Only stable entity type and
