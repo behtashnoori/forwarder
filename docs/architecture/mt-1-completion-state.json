@@ -1,0 +1,59 @@
+{
+  "model_version": 1,
+  "evaluated_at": "2026-08-12",
+  "baseline_head": "79506e323f1fdd3583f088271e47454a1c1e50ab",
+  "states": {
+    "RUNTIME_TENANT_FENCING": {
+      "status": "FAIL",
+      "reason": "Quarantine fencing is certified, but canonical ownership keys and same-tenant relationship constraints are not implemented for the legacy business roots."
+    },
+    "QUARANTINE_RUNTIME": {
+      "status": "PASS",
+      "reason": "QUARANTINE_RUNTIME_CERTIFIED=true."
+    },
+    "FULL_SURFACE_PROTECTION": {
+      "status": "PASS",
+      "reason": "MT1C_FULL_SURFACE_CERTIFIED=true with a 15/15 surface matrix."
+    },
+    "LEGACY_DATA_PROVENANCE": {
+      "status": "PASS",
+      "reason": "The hash-bound 135-row census is classified SYNTHETIC_ONLY."
+    },
+    "REAL_LEGACY_OWNERSHIP": {
+      "status": "NOT_APPLICABLE",
+      "reason": "No real customer data is present in the certified 135-row census."
+    },
+    "SYNTHETIC_LEGACY_DISPOSITION": {
+      "status": "PASS",
+      "reason": "KEEP_QUARANTINED_SYNTHETIC is the selected non-destructive terminal disposition for MT-1."
+    },
+    "MAPPING_BACKFILL": {
+      "status": "NOT_APPLICABLE",
+      "reason": "Organization mapping/backfill is prohibited for this synthetic dataset; any future real dataset requires a fresh gate."
+    },
+    "MIGRATION_STATE": {
+      "status": "FAIL",
+      "reason": "The MT-1 migrations implement quarantine/census controls only; the canonical ownership expand/validate/contract migration has not been designed or implemented."
+    },
+    "LOCAL_TEST_CERTIFICATION": {
+      "status": "PASS",
+      "reason": "Implemented quarantine, census, full-surface, provenance, analyzer, and architecture controls have focused local test coverage."
+    },
+    "SERVER_CERTIFICATION": {
+      "status": "PENDING_EXTERNAL",
+      "reason": "Existing disposable PostgreSQL evidence certifies current controls; the future ownership migration will require new PostgreSQL upgrade, constraint, concurrency, rollback, and rehearsal evidence."
+    },
+    "PRODUCTION_READINESS": {
+      "status": "PENDING_EXTERNAL",
+      "reason": "MT-1 is incomplete and later MT-2/MT-3 isolation milestones remain required before multi-company Production readiness."
+    }
+  },
+  "completion_blockers": [
+    "MT1-G01",
+    "MT1-G02",
+    "MT1-G03",
+    "MT1-G04"
+  ],
+  "next_action": "Obtain an explicit architecture decision for staged nullable ownership/quarantine, future public-intake ownership, singleton policy roots, and tenant audit envelopes; then implement the bounded canonical ownership expand migration.",
+  "decision": "MT-1 BLOCKED — EXTERNAL ACTION REQUIRED"
+}
