@@ -1,0 +1,2994 @@
+{
+  "plan_version": 1,
+  "source_rows": 135,
+  "source_state": {
+    "classification": "UNRESOLVED",
+    "quarantine_status": "QUARANTINED",
+    "organization_candidates": 0
+  },
+  "projection": {
+    "root_rows": 20,
+    "derived_descendant_rows": 82,
+    "conditional_descendant_rows": 32,
+    "independent_legacy_artifact_rows": 0,
+    "redesign_singleton_rows": 1,
+    "safe_multi_member_cohorts": 0,
+    "cohorts": 135,
+    "minimum_human_decision_events": 135
+  },
+  "MT1_OWNERSHIP_RESOLUTION_READY": false,
+  "AUTO_BACKFILL_ALLOWED": false,
+  "QUARANTINE_MUST_REMAIN": true,
+  "cohorts": [
+    {
+      "cohort_id": "single:CaseDocumentRequirement:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CaseDocumentRequirement",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:CaseDocumentRequirement:2",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CaseDocumentRequirement",
+          "entity_id": 2
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:Customer:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "Customer",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:CustomerGamification:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:CustomerGamification:2",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 2
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:CustomerGamification:3",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 3
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:CustomerGamification:4",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 4
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:CustomerGamification:5",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 5
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:CustomerGamification:6",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 6
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:DocumentAuditEvent:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "DocumentAuditEvent",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest and DocumentFile nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:DocumentAuditEvent:2",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "DocumentAuditEvent",
+          "entity_id": 2
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest and DocumentFile nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:DocumentAuditEvent:3",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "DocumentAuditEvent",
+          "entity_id": 3
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest and DocumentFile nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:77",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 77
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:78",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 78
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:79",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 79
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:80",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 80
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:81",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 81
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:82",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 82
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:83",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 83
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:84",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 84
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:85",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 85
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:86",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 86
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:87",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 87
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:88",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 88
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:89",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 89
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:90",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 90
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:91",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 91
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:92",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 92
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:93",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 93
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:94",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 94
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:95",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 95
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:96",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 96
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:97",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 97
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:98",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 98
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:99",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 99
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:100",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 100
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:101",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 101
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:102",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 102
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:103",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 103
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:104",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 104
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleLog:105",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 105
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:48",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 48
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:49",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 49
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:50",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 50
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:51",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 51
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:52",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 52
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:53",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 53
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:54",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 54
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:55",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 55
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:56",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 56
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:57",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 57
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:58",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 58
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:59",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 59
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:60",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 60
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:61",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 61
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:62",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 62
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:63",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 63
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:64",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 64
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:65",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 65
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:66",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 66
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:67",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 67
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:68",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 68
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:69",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 69
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:70",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 70
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:71",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 71
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:72",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 72
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:73",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 73
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:74",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 74
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:75",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 75
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertConsoleNotification:76",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 76
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "CONDITIONAL_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest nullable",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertQuote:4",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertQuote",
+          "entity_id": 4
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertQuote:5",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertQuote",
+          "entity_id": 5
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ExpertQuote:6",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ExpertQuote",
+          "entity_id": 6
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:8",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 8
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:9",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 9
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:10",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 10
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:11",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 11
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:12",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 12
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:13",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 13
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:14",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 14
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:15",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 15
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:16",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 16
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:17",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 17
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:18",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 18
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAssignmentLog:19",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 19
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required); ReferralRule optional",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ReferralAutoAssignState:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ReferralAutoAssignState",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "PLATFORM_OR_SINGLETON_REDESIGN",
+      "known_parent_contract": "none; singleton",
+      "permitted_decision_classes": [
+        "REDESIGN_REQUIRED",
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:82",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 82
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:83",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 83
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:84",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 84
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:85",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 85
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:86",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 86
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:87",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 87
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:88",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 88
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:89",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 89
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:90",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 90
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:91",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 91
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:92",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 92
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:93",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 93
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequest:94",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 94
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "ROOT_DECISION",
+      "known_parent_contract": "none",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:57",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 57
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:58",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 58
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:59",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 59
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:60",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 60
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:61",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 61
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:62",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 62
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:63",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 63
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:64",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 64
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:65",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 65
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:66",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 66
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:67",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 67
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:68",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 68
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentRequestLog:69",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 69
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTracking:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTracking:2",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 2
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTracking:3",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 3
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTracking:4",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 4
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTracking:5",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 5
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTracking:6",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 6
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentRequest (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnit:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTracking (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnit:2",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 2
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTracking (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnit:3",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 3
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTracking (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnit:4",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 4
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTracking (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnit:5",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 5
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTracking (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnit:6",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 6
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTracking (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:1",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 1
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:2",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 2
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:3",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 3
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:4",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 4
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:5",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 5
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:6",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 6
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:7",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 7
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:8",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 8
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:9",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 9
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:10",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 10
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    },
+    {
+      "cohort_id": "single:ShipmentTransportUnitUpdate:11",
+      "cohort_type": "SINGLE_MEMBER_FAIL_CLOSED",
+      "members": [
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 11
+        }
+      ],
+      "structural_root": null,
+      "structural_class": "DERIVED_DESCENDANT",
+      "known_parent_contract": "ShipmentTransportUnit (required)",
+      "permitted_decision_classes": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "target_organization_assignment_allowed": false,
+      "member_decisions_may_inherit_disposition": false,
+      "cohorting_safety_reason": "Sanitized package omits row-level parent IDs; no multi-row root equivalence can be proven.",
+      "expansion_rule": "One approved two-person cohort decision expands to exactly this one stable member with a distinct row-level decision_id; quarantine remains until full row-level validation."
+    }
+  ]
+}
