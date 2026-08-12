@@ -34,8 +34,13 @@ CREATE TABLE project_party_relationship (project_id INTEGER NOT NULL, customer_i
 
 
 def database():
-    engine = create_engine("sqlite://")
+    engine = create_engine("sqlite://").execution_options(
+        include_quarantined_for_certification=True
+    )
     with engine.begin() as connection:
+        connection = connection.execution_options(
+            include_quarantined_for_certification=True
+        )
         for statement in DDL.split(";"):
             if statement.strip():
                 connection.execute(text(statement))
