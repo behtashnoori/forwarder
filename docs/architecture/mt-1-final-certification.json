@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "certified_at": "2026-08-12",
+  "classification": "MT-1 COMPLETE — READY FOR NEXT MASTER-PLAN MILESTONE",
+  "repository": {
+    "branch": "codex/pr-4a-dms-gate-repair",
+    "certified_commit": "e34112f4e4a4e54221ba5d57e4f464db11b2134e",
+    "alembic_head": "20260824_mt1_graph",
+    "v1_9_1_peeled_commit": "05414d7d5b17153c3f1efcb5beff0adf7a600af6"
+  },
+  "local_certification": {"passed": 709, "skipped": 79, "xfailed": 1, "failed": 0, "errors": 0, "postgresql_passed": 21, "postgresql_failed": 0},
+  "server_certification": {
+    "database": "forwarder_mt1_cert_20260812",
+    "disposable_restored_clone": true,
+    "baseline_alembic": "20260818_immutable_fx_provenance",
+    "final_alembic": "20260824_mt1_graph",
+    "canonical_ownership_schema": "PASS",
+    "postgresql_constraint_schema": "PASS",
+    "downgrade_reupgrade": "PASS",
+    "cert_database_read_only": "PASS",
+    "json_sha256": "CB2A4EDF855043A8760E55E2CCBD1E20BA3CFE027E0F1E951C93EB720A1D6334",
+    "report_sha256": "8A422B9A84F81A0FD0883F5FB3E742B3A4E3CFF44BD9C03251A3F104E698AB33"
+  },
+  "legacy_dataset": {"classification": "SYNTHETIC_ONLY", "census_rows": 135, "directly_checked_synthetic_rows": 34, "synthetic_rows_with_owner": 0, "disposition": "KEEP_QUARANTINED_SYNTHETIC", "backfill_performed": false, "organization_fabricated": false},
+  "assertions": {"MT1_IMPLEMENTATION_COMPLETE": true, "MT1_LOCAL_CERTIFIED": true, "MT1_SERVER_CERTIFIED": true, "MT1_CANONICAL_TENANT_FENCING": true, "MT1_QUARANTINE_CERTIFIED": true, "MT1_SYNTHETIC_LEGACY_DISPOSITION_CERTIFIED": true, "MT1_REAL_LEGACY_OWNERSHIP_APPLICABLE": false, "MT1_OWNERSHIP_RESOLUTION_READY": false},
+  "gates": {"RUNTIME_CANONICAL_TENANT_FENCING": "PASS", "QUARANTINE_RUNTIME": "PASS", "FULL_SURFACE_PROTECTION": "PASS", "LEGACY_DATA_PROVENANCE": "PASS", "REAL_LEGACY_OWNERSHIP": "NOT_APPLICABLE", "SYNTHETIC_LEGACY_DISPOSITION": "PASS", "MAPPING_BACKFILL": "NOT_APPLICABLE", "OWNERSHIP_MIGRATION": "PASS", "SAME_TENANT_CONSTRAINTS": "PASS", "APPLICATION_WRITE_ENFORCEMENT": "PASS", "TENANT_READ_ENFORCEMENT": "PASS", "INTAKE_ACCEPTANCE": "PASS", "REPARENTING_PROTECTION": "PASS", "LOCAL_TEST_CERTIFICATION": "PASS", "LOCAL_POSTGRESQL_CERTIFICATION": "PASS", "SERVER_MIGRATION_CERTIFICATION": "PASS", "AUTHORITATIVE_CENSUS_SERVER_CERTIFICATION": "PASS"},
+  "production_accessed": false,
+  "server_database_accessed_by_this_run": false,
+  "security_review": "MT-1 FINAL CERTIFICATION SECURITY REVIEW — PASS"
+}
