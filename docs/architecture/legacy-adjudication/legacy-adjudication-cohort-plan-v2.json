@@ -1,0 +1,2691 @@
+{
+  "plan_version": 2,
+  "cohort_version": 2,
+  "source_rows": 135,
+  "parent_link_hashes": {
+    "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+    "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+    "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+  },
+  "projection": {
+    "root": 20,
+    "derived": 82,
+    "conditional": 31,
+    "platform_singleton": 1,
+    "unproven": 1,
+    "connected_root_components": 21,
+    "safe_multi_member_cohorts": 13,
+    "single_member_cohorts": 9,
+    "minimum_human_decision_events": 22
+  },
+  "MT1_OWNERSHIP_RESOLUTION_READY": false,
+  "AUTO_BACKFILL_ALLOWED": false,
+  "QUARANTINE_MUST_REMAIN": true,
+  "cohorts": [
+    {
+      "cohort_id": "root:Customer:1",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "Customer",
+      "structural_root_entity_id": 1,
+      "members": [
+        {
+          "entity_type": "Customer",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "Customer",
+              "entity_id": 1
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:CustomerGamification:1",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "CustomerGamification",
+      "structural_root_entity_id": 1,
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "CustomerGamification",
+              "entity_id": 1
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:CustomerGamification:2",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "CustomerGamification",
+      "structural_root_entity_id": 2,
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 2,
+          "path_proof": [
+            {
+              "entity_type": "CustomerGamification",
+              "entity_id": 2
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:CustomerGamification:3",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "CustomerGamification",
+      "structural_root_entity_id": 3,
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 3,
+          "path_proof": [
+            {
+              "entity_type": "CustomerGamification",
+              "entity_id": 3
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:CustomerGamification:4",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "CustomerGamification",
+      "structural_root_entity_id": 4,
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 4,
+          "path_proof": [
+            {
+              "entity_type": "CustomerGamification",
+              "entity_id": 4
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:CustomerGamification:5",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "CustomerGamification",
+      "structural_root_entity_id": 5,
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 5,
+          "path_proof": [
+            {
+              "entity_type": "CustomerGamification",
+              "entity_id": 5
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:CustomerGamification:6",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "CustomerGamification",
+      "structural_root_entity_id": 6,
+      "members": [
+        {
+          "entity_type": "CustomerGamification",
+          "entity_id": 6,
+          "path_proof": [
+            {
+              "entity_type": "CustomerGamification",
+              "entity_id": 6
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ReferralAutoAssignState:1",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ReferralAutoAssignState",
+      "structural_root_entity_id": 1,
+      "members": [
+        {
+          "entity_type": "ReferralAutoAssignState",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAutoAssignState",
+              "entity_id": 1
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "REDESIGN_REQUIRED"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:82",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 82,
+      "members": [
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 82,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 82
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 57,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 57
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 82
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 2,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:83",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 83,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 77,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 77
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 78,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 78
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 79,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 79
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 48,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 48
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 49,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 49
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 50,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 50
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 8,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 8
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 83,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 58,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 58
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 1
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 83
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 10,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:84",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 84,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 80,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 80
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 81,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 81
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 82,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 82
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 84,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 84
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 85,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 85
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 51,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 51
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 52,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 52
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 53,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 53
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 55,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 55
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 56,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 56
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertQuote",
+          "entity_id": 4,
+          "path_proof": [
+            {
+              "entity_type": "ExpertQuote",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 9,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 9
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 84,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 59,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 59
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 2,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 1
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 1
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 1
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 84
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 17,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:85",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 85,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 83,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 83
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 85
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 54,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 54
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 85
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 10,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 10
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 85
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 85,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 85
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 60,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 60
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 85
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 5,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:86",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 86,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 86,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 86
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 86
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 57,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 57
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 86
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 11,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 11
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 86
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 86,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 86
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 61,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 61
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 86
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 5,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:87",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 87,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 87,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 87
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 88,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 88
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 89,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 89
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 90,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 90
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 58,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 58
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 59,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 59
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 60,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 60
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 61,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 61
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertQuote",
+          "entity_id": 5,
+          "path_proof": [
+            {
+              "entity_type": "ExpertQuote",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 12,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 12
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 87,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 62,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 62
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 3,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 2,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 2,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 87
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 15,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:88",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 88,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 91,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 91
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 88
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 62,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 62
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 88
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 13,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 13
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 88
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 88,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 88
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 63,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 63
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 88
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 5,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:89",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 89,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 92,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 92
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 93,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 93
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 94,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 94
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 63,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 63
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 64,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 64
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 65,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 65
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 14,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 14
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 89,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 64,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 64
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 4,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 3,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 3,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 4,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 89
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 13,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:90",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 90,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 95,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 95
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 96,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 96
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 97,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 97
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 98,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 98
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 99,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 99
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 66,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 66
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 67,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 67
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 68,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 68
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 69,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 69
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 70,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 70
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 15,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 15
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 90,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 65,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 65
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 5,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 4,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 5,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 6,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 4
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 90
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 17,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:91",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 91,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 100,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 100
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 91
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 71,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 71
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 91
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 16,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 16
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 91
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 91,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 91
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 66,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 66
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 91
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 5,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:92",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 92,
+      "members": [
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 101,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 101
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 92
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 72,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 72
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 92
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 17,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 17
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 92
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 92,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 92
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 67,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 67
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 92
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 5,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:93",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 93,
+      "members": [
+        {
+          "entity_type": "CaseDocumentRequirement",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "CaseDocumentRequirement",
+              "entity_id": 1
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "DocumentAuditEvent",
+          "entity_id": 2,
+          "path_proof": [
+            {
+              "entity_type": "DocumentAuditEvent",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 102,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 102
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 103,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 103
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 104,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 104
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 73,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 73
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 74,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 74
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 75,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 75
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertQuote",
+          "entity_id": 6,
+          "path_proof": [
+            {
+              "entity_type": "ExpertQuote",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 18,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 18
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 93,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 68,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 68
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTracking",
+          "entity_id": 6,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 5,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnit",
+          "entity_id": 6,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 7,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 7
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 8,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 8
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 9,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 9
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 10,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 10
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 5
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentTransportUnitUpdate",
+          "entity_id": 11,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentTransportUnitUpdate",
+              "entity_id": 11
+            },
+            {
+              "entity_type": "ShipmentTransportUnit",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentTracking",
+              "entity_id": 6
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 93
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 20,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "root:ShipmentRequest:94",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": "ShipmentRequest",
+      "structural_root_entity_id": 94,
+      "members": [
+        {
+          "entity_type": "CaseDocumentRequirement",
+          "entity_id": 2,
+          "path_proof": [
+            {
+              "entity_type": "CaseDocumentRequirement",
+              "entity_id": 2
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 94
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "DocumentAuditEvent",
+          "entity_id": 3,
+          "path_proof": [
+            {
+              "entity_type": "DocumentAuditEvent",
+              "entity_id": 3
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 94
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleLog",
+          "entity_id": 105,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleLog",
+              "entity_id": 105
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 94
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ExpertConsoleNotification",
+          "entity_id": 76,
+          "path_proof": [
+            {
+              "entity_type": "ExpertConsoleNotification",
+              "entity_id": 76
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 94
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ReferralAssignmentLog",
+          "entity_id": 19,
+          "path_proof": [
+            {
+              "entity_type": "ReferralAssignmentLog",
+              "entity_id": 19
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 94
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequest",
+          "entity_id": 94,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 94
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        },
+        {
+          "entity_type": "ShipmentRequestLog",
+          "entity_id": 69,
+          "path_proof": [
+            {
+              "entity_type": "ShipmentRequestLog",
+              "entity_id": 69
+            },
+            {
+              "entity_type": "ShipmentRequest",
+              "entity_id": 94
+            }
+          ],
+          "path_completeness": "COMPLETE"
+        }
+      ],
+      "member_count": 7,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    },
+    {
+      "cohort_id": "individual:DocumentAuditEvent:1",
+      "cohort_version": 2,
+      "predecessor_cohort_id": null,
+      "predecessor_cohort_version": null,
+      "structural_root_entity_type": null,
+      "structural_root_entity_id": null,
+      "members": [
+        {
+          "entity_type": "DocumentAuditEvent",
+          "entity_id": 1,
+          "path_proof": [
+            {
+              "entity_type": "DocumentAuditEvent",
+              "entity_id": 1
+            }
+          ],
+          "path_completeness": "BROKEN"
+        }
+      ],
+      "member_count": 1,
+      "allowed_disposition_decisions": [
+        "KEEP_QUARANTINED",
+        "NEEDS_MORE_EVIDENCE",
+        "RETIRE_INACTIVE_LEGACY_ROW"
+      ],
+      "organization_assignment_allowed": false,
+      "expansion_rule": "Expand one current two-person approved disposition to exactly all enumerated members with unique row decision IDs; retain quarantine.",
+      "approval_requirements": {
+        "distinct_reviewers": 2,
+        "evidence_required": true
+      },
+      "evidence_source_hash": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+      "parent_link_package_hashes": {
+        "csv": "57265f19fd0e8695a0e60c310f68f14d730d7898d2bc4ab55a6351ec2212bce6",
+        "json": "7b400ff3f8499b59b289faba390537aabcc7893f06acb005654c549405cf5df3",
+        "summary": "50f9613c9f7f913bc7591a55d4babee3c721ff510584e758a68cc222692b6fef"
+      }
+    }
+  ]
+}
