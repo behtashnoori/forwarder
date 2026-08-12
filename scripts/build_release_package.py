@@ -1,4 +1,4 @@
-"""Build the immutable Forwarder 1.9.1 package from its exact annotated tag."""
+"""Build the immutable Forwarder 1.9.2 package from its exact annotated tag."""
 
 from __future__ import annotations
 
@@ -17,16 +17,20 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.9.1"
-PREVIOUS_VERSION = "1.9.0"
-TAG = "v1.9.1"
-RELEASE_DATE = "20260811"
+VERSION = "1.9.2"
+PREVIOUS_VERSION = "1.9.1"
+TAG = "v1.9.2"
+RELEASE_DATE = "20260812"
 RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
 NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
-PRODUCTION_BASELINE_REVISION = "20260818_immutable_fx_provenance"
-DATABASE_REVISION = "20260819_v191_acceptance_corrections"
+PRODUCTION_BASELINE_REVISION = "20260819_v191_acceptance_corrections"
+DATABASE_REVISION = "20260824_mt1_graph"
 UPGRADE_MIGRATIONS = [
-    ("20260819_v191_acceptance_corrections", "backend/migrations/versions/20260819_v191_acceptance_corrections.py"),
+    ("20260820_mt1c_quarantine_runtime", "backend/migrations/versions/20260820_mt1c_quarantine_runtime.py"),
+    ("20260821_mt1d_canonical_census", "backend/migrations/versions/20260821_mt1d_canonical_census.py"),
+    ("20260822_mt1c1_census_fence", "backend/migrations/versions/20260822_mt1c1_census_fence.py"),
+    ("20260823_mt1_ownership_expand", "backend/migrations/versions/20260823_mt1_ownership_expand.py"),
+    ("20260824_mt1_graph", "backend/migrations/versions/20260824_mt1_graph.py"),
 ]
 UPGRADE_REVISIONS = [revision for revision, _ in UPGRADE_MIGRATIONS]
 HISTORICAL_SECURITY_REMEDIATION = {
@@ -183,7 +187,7 @@ def build() -> None:
         manifest = {
         "application_version": VERSION,
         "previous_version": PREVIOUS_VERSION,
-        "release_name": "Operational Shipment acceptance corrections",
+        "release_name": "MT-1 tenant data integrity foundation",
         "change_type": "PATCH",
         "git_commit": commit,
         "git_tree": tree,
@@ -211,9 +215,9 @@ def build() -> None:
         "api_base": "same-origin",
         "environment_fingerprint": "sha256:" + hashlib.sha256(env_canonical).hexdigest(),
         "environment_fingerprint_definition": "SHA-256 of canonical secret-free JSON containing Python, Node, npm, package-lock SHA-256, and requirements SHA-256",
-        "rollback_release": "release-v1.9.0-20260809",
-        "rollback_strategy": "prefer forward recovery; restore coordinated pre-migration database and document-storage backups when v1.9.1 direct operations or canonical international locations make downgrade fail closed",
-        "rollback_restore_required_from_revision": "20260819_v191_acceptance_corrections",
+        "rollback_release": "release-v1.9.1-20260811",
+        "rollback_strategy": "prefer forward recovery; restore coordinated pre-migration database and document-storage backups if the MT-1 migration or application acceptance gate fails",
+        "rollback_restore_required_from_revision": "20260820_mt1c_quarantine_runtime",
         "milestone_type_catalog_filename": "backend/reference_data/milestone-types-v1.0.0.json",
         "milestone_type_catalog_version": "1.0.0",
         "milestone_type_catalog_sha256": sha256(ROOT / "backend/reference_data/milestone-types-v1.0.0.json"),
@@ -236,8 +240,8 @@ def build() -> None:
             "Existing shipments receive no automatic Operational Execution, MDPM, OIP, or Economics rows.",
             "ACTUAL Shipment Economics remains incomplete when authoritative revenue or cost facts are unavailable.",
             "Reference Data and OIP policies/thresholds require separately authorized administrator initialization; no Seed runs during deployment.",
-            "Direct operations do not inherit request-scoped documents or MDPM requirements in 1.9.1.",
-            "Database downgrade is fail-closed after v1.9.1-only direct-operation or canonical-location facts and may require coordinated backup restore.",
+            "Synthetic legacy rows remain quarantined and are not assigned fabricated Organization ownership.",
+            "MT-2 central request tenant context and later multi-tenant milestones remain outside 1.9.2.",
         ],
         }
         (package_root / "release-manifest.json").write_text(
@@ -249,7 +253,7 @@ def build() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check-source", action="store_true", help="validate 1.9.1 source metadata without creating a package")
+    parser.add_argument("--check-source", action="store_true", help="validate 1.9.2 source metadata without creating a package")
     args = parser.parse_args()
     if args.check_source:
         status = validate_source()

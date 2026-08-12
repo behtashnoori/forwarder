@@ -19,16 +19,20 @@ def _builder():
     return module
 
 
-def test_integrated_191_builder_identity_and_migration_boundary():
+def test_integrated_192_builder_identity_and_migration_boundary():
     builder = _builder()
 
-    assert builder.VERSION == "1.9.1"
-    assert builder.PREVIOUS_VERSION == "1.9.0"
-    assert builder.TAG == "v1.9.1"
-    assert builder.PRODUCTION_BASELINE_REVISION == "20260818_immutable_fx_provenance"
-    assert builder.DATABASE_REVISION == "20260819_v191_acceptance_corrections"
+    assert builder.VERSION == "1.9.2"
+    assert builder.PREVIOUS_VERSION == "1.9.1"
+    assert builder.TAG == "v1.9.2"
+    assert builder.PRODUCTION_BASELINE_REVISION == "20260819_v191_acceptance_corrections"
+    assert builder.DATABASE_REVISION == "20260824_mt1_graph"
     assert builder.UPGRADE_REVISIONS == [
-        "20260819_v191_acceptance_corrections",
+        "20260820_mt1c_quarantine_runtime",
+        "20260821_mt1d_canonical_census",
+        "20260822_mt1c1_census_fence",
+        "20260823_mt1_ownership_expand",
+        "20260824_mt1_graph",
     ]
     assert all(builder.migration_path(revision).is_file() for revision in builder.UPGRADE_REVISIONS)
 
@@ -153,7 +157,7 @@ def test_vite_does_not_watch_immutable_release_staging_directories():
     assert 'ignored: ["**/.release-v*-staging-*"]' in config
 
 
-def test_publication_runbooks_and_dependency_contract_are_191_coherent():
+def test_publication_runbooks_and_dependency_contract_are_192_coherent():
     for name in (
         "DEPLOYMENT.md",
         "ROLLBACK.md",
@@ -163,8 +167,8 @@ def test_publication_runbooks_and_dependency_contract_are_191_coherent():
         "VERIFY-SERVER.ps1",
     ):
         text = (ROOT / name).read_text(encoding="utf-8")
-        assert "1.9.1" in text
-        assert "20260819_v191_acceptance_corrections" in text
+        assert "1.9.2" in text
+        assert "20260824_mt1_graph" in text
 
     requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
     assert "psycopg2-binary==2.9.11" in requirements
@@ -195,7 +199,5 @@ def test_release_upgrade_chain_is_contiguous_and_remediation_is_mandatory():
         )
     )
     assert revisions == builder.UPGRADE_REVISIONS
-    # The v1.9.1 builder stays pinned to its immutable release revision while
-    # later feature migrations advance the repository's sole current head.
     assert script.get_revision(builder.DATABASE_REVISION) is not None
     assert script.get_heads() == ["20260824_mt1_graph"]
