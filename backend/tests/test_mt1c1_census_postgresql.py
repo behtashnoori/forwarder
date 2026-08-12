@@ -107,15 +107,22 @@ def test_mt1c1_postgresql_pinned_reader_side_effect_and_core_fence(monkeypatch):
             is_active=True,
         )
         organization = OperationalOrganization(name="MT1C1 PG")
-        customer = Customer(company_name="MT1C1 PG", first_name="MT1C1", last_name="PG")
+        db.session.add_all([user, organization])
+        db.session.flush()
+        customer = Customer(
+            company_name="MT1C1 PG", first_name="MT1C1", last_name="PG",
+            ownership_scope="TENANT", operational_organization_id=organization.id,
+        )
         request_row = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=organization.id,
             tracking_code="MT1C1-PG",
             contact_phone="before",
             shipping_type="domestic",
             status="new",
             status_request_status="new",
         )
-        db.session.add_all([user, organization, customer, request_row])
+        db.session.add_all([customer, request_row])
         db.session.flush()
         project = Project(
             organization_id=organization.id,

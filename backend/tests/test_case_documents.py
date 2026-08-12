@@ -9,7 +9,8 @@ import pytest
 from backend import create_app
 from backend.auth import auth_manager
 from backend.extensions import db
-from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentAuditEvent, DocumentDefinition, ExpertUser, ShipmentRequest
+from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentAuditEvent, ExpertUser, ShipmentRequest
+from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services.case_document_service import detect_format
 from backend.services.document_storage_service import validate_storage_root
 
@@ -25,10 +26,17 @@ def document_app(tmp_path):
         admin = ExpertUser(username="doc-admin", password_hash="x", full_name="Admin", role="admin", is_active=True)
         expert = ExpertUser(username="doc-expert", password_hash="x", full_name="Expert", role="expert", is_active=True)
         outsider = ExpertUser(username="doc-other", password_hash="x", full_name="Other", role="expert", is_active=True)
-        db.session.add_all([admin, expert, outsider]); db.session.flush()
-        case = ShipmentRequest(contact_phone="1", shipping_type="domestic", status="new", status_request_status="new", assigned_to=expert.id)
-        other_case = ShipmentRequest(contact_phone="2", shipping_type="domestic", status="new", status_request_status="new", assigned_to=outsider.id)
-        db.session.add_all([case, other_case]); db.session.commit()
+        organization = OperationalOrganization(name="Case Documents Organization")
+        db.session.add_all([admin, expert, outsider, organization])
+        db.session.flush()
+        db.session.add_all([
+            OperationalMembership(organization_id=organization.id, user_id=user.id, permissions=[])
+            for user in (admin, expert, outsider)
+        ])
+        case = ShipmentRequest(contact_phone="1", shipping_type="domestic", status="new", status_request_status="new", assigned_to=expert.id, ownership_scope="TENANT", operational_organization_id=organization.id)
+        other_case = ShipmentRequest(contact_phone="2", shipping_type="domestic", status="new", status_request_status="new", assigned_to=outsider.id, ownership_scope="TENANT", operational_organization_id=organization.id)
+        db.session.add_all([case, other_case])
+        db.session.commit()
         values = {
             "admin": auth_manager.generate_tokens(admin.id)["access_token"],
             "expert": auth_manager.generate_tokens(expert.id)["access_token"],

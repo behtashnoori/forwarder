@@ -191,10 +191,20 @@ def test_01_real_detail_list_search_report_aggregate_export_pagination_and_track
         )
         bootstrap.add(admin)
         bootstrap.flush()
+        organization = OperationalOrganization(name="MT1C2 certification tenant")
+        bootstrap.add(organization)
+        bootstrap.flush()
+        bootstrap.add(OperationalMembership(
+            organization_id=organization.id,
+            user_id=admin.id,
+            permissions=["operational_shipment.create_direct", "work_item.read", "work_item.manage"],
+        ))
         rows = []
         for marker in markers:
             rows.append(
                 ShipmentRequest(
+                    ownership_scope="TENANT",
+                    operational_organization_id=organization.id,
                     tracking_code=f"MT1C2-{marker}",
                     contact_phone=f"surface-{marker}",
                     customer_first_name=marker,
@@ -209,6 +219,7 @@ def test_01_real_detail_list_search_report_aggregate_export_pagination_and_track
         bootstrap.add_all(rows)
         bootstrap.flush()
         admin_id = admin.id
+        organization_id = organization.id
         ids = {marker: row.id for marker, row in zip(markers, rows)}
 
     decisions = [_decision(scalar_identity("ShipmentRequest", ids["CLEAR"]))]
@@ -228,6 +239,8 @@ def test_01_real_detail_list_search_report_aggregate_export_pagination_and_track
     # N and must fail closed for every reader pinned to N.
     with Session(engine) as bootstrap, bootstrap.begin():
         missing = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=organization_id,
             tracking_code="MT1C2-MISSING_METADATA",
             contact_phone="surface-MISSING_METADATA",
             customer_first_name="MISSING_METADATA",
@@ -321,13 +334,16 @@ def test_02_composite_select_update_delete_insert_and_pinned_n_plus_one(certifie
         admin = bootstrap.execute(
             select(ExpertUser).where(ExpertUser.username == "mt1c2-admin")
         ).scalar_one()
-        organization = OperationalOrganization(name="MT1C2 composite")
-        bootstrap.add(organization)
-        bootstrap.flush()
+        organization = bootstrap.execute(
+            select(OperationalOrganization).where(
+                OperationalOrganization.name == "MT1C2 certification tenant"
+            )
+        ).scalar_one()
         from backend.models import Customer
 
         customer = Customer(
-            company_name="MT1C2 composite", first_name="Composite", last_name="Customer"
+            company_name="MT1C2 composite", first_name="Composite", last_name="Customer",
+            ownership_scope="TENANT", operational_organization_id=organization.id,
         )
         bootstrap.add(customer)
         bootstrap.flush()
@@ -455,20 +471,17 @@ def test_03_real_customer_and_joined_project_selectors_six_state(certified_app):
         admin = bootstrap.execute(
             select(ExpertUser).where(ExpertUser.username == "mt1c2-admin")
         ).scalar_one()
-        organization = OperationalOrganization(name="MT1C2 selector")
-        bootstrap.add(organization)
-        bootstrap.flush()
-        bootstrap.add(
-            OperationalMembership(
-                organization_id=organization.id,
-                user_id=admin.id,
-                permissions=["operational_shipment.create_direct"],
+        organization = bootstrap.execute(
+            select(OperationalOrganization).where(
+                OperationalOrganization.name == "MT1C2 certification tenant"
             )
-        )
+        ).scalar_one()
         customers = []
         project_ids = {}
         for marker in markers:
             customer = Customer(
+                ownership_scope="TENANT",
+                operational_organization_id=organization.id,
                 company_name=f"MT1C2-SELECTOR-{marker}",
                 first_name=marker,
                 last_name="Selector",
@@ -517,6 +530,8 @@ def test_03_real_customer_and_joined_project_selectors_six_state(certified_app):
     # Post-publication rows intentionally lack certification metadata.
     with Session(engine) as bootstrap, bootstrap.begin():
         missing_customer = Customer(
+            ownership_scope="TENANT",
+            operational_organization_id=organization_id,
             company_name="MT1C2-SELECTOR-MISSING_METADATA",
             first_name="Missing",
             last_name="Selector",
@@ -568,22 +583,21 @@ def test_04_real_reconciliation_job_outbox_and_publisher_fence(
         admin = bootstrap.scalar(
             select(ExpertUser).where(ExpertUser.username == "mt1c2-admin")
         )
-        org = OperationalOrganization(name="MT1C2 job")
+        org = bootstrap.execute(
+            select(OperationalOrganization).where(
+                OperationalOrganization.name == "MT1C2 certification tenant"
+            )
+        ).scalar_one()
         customer = Customer(
+            ownership_scope="TENANT",
+            operational_organization_id=org.id,
             company_name="MT1C2 job customer",
             first_name="Job",
             last_name="Customer",
             status="active",
         )
-        bootstrap.add_all([org, customer])
+        bootstrap.add(customer)
         bootstrap.flush()
-        bootstrap.add(
-            OperationalMembership(
-                organization_id=org.id,
-                user_id=admin.id,
-                permissions=["work_item.read", "work_item.manage"],
-            )
-        )
         locations = [
             CanonicalLocation(
                 source_type="province",
@@ -773,9 +787,19 @@ def test_05_real_assignment_and_notification_six_state_atomicity(certified_app):
         )
         bootstrap.add(expert)
         bootstrap.flush()
+        organization = bootstrap.execute(
+            select(OperationalOrganization).where(
+                OperationalOrganization.name == "MT1C2 certification tenant"
+            )
+        ).scalar_one()
+        bootstrap.add(OperationalMembership(
+            organization_id=organization.id, user_id=expert.id, permissions=[]
+        ))
         requests = []
         for marker in markers:
             row = ShipmentRequest(
+                ownership_scope="TENANT",
+                operational_organization_id=organization.id,
                 tracking_code=f"MT1C2-ASSIGN-{marker}",
                 contact_phone=f"assign-{marker}",
                 shipping_type="domestic",
@@ -788,6 +812,7 @@ def test_05_real_assignment_and_notification_six_state_atomicity(certified_app):
             requests.append(row)
         request_ids = {m: r.id for m, r in zip(markers, requests)}
         expert_id = expert.id
+        organization_id = organization.id
     with Session(engine) as reader:
         decisions = _active_decisions(reader)
     for marker in ["CLEAR", *UNSAFE]:
@@ -807,6 +832,8 @@ def test_05_real_assignment_and_notification_six_state_atomicity(certified_app):
         )
     with Session(engine) as bootstrap, bootstrap.begin():
         missing = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=organization_id,
             tracking_code="MT1C2-ASSIGN-MISSING_METADATA",
             contact_phone="assign-MISSING_METADATA",
             shipping_type="domestic",
@@ -919,9 +946,16 @@ def test_06_real_document_metadata_download_and_descendant_transition(certified_
         )
         bootstrap.add(definition)
         bootstrap.flush()
+        organization = bootstrap.execute(
+            select(OperationalOrganization).where(
+                OperationalOrganization.name == "MT1C2 certification tenant"
+            )
+        ).scalar_one()
         records = {}
         for marker in markers:
             case = ShipmentRequest(
+                ownership_scope="TENANT",
+                operational_organization_id=organization.id,
                 tracking_code=f"MT1C2-DOC-{marker}",
                 contact_phone=f"doc-{marker}",
                 shipping_type="domestic",
@@ -972,6 +1006,7 @@ def test_06_real_document_metadata_download_and_descendant_transition(certified_
             ).scalar_one()
             records[marker] = (case.id, requirement_id, file_id, key)
         admin_id, definition_id = admin.id, definition.id
+        organization_id = organization.id
     for marker, (_, _, _, key) in records.items():
         path = storage_root / key
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -1019,6 +1054,8 @@ def test_06_real_document_metadata_download_and_descendant_transition(certified_
         )
     with Session(engine) as bootstrap, bootstrap.begin():
         case = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=organization_id,
             tracking_code="MT1C2-DOC-MISSING_METADATA",
             contact_phone="doc-MISSING_METADATA",
             shipping_type="domestic",

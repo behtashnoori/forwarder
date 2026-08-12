@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from backend.models import ExpertUser,ShipmentRequest,TrackingLocationReference,ShipmentTransportUnitUpdate
+from backend.operational_models import OperationalMembership,OperationalOrganization
 from backend.services.auth_session_service import create_session_tokens
 from backend.services.multi_unit_tracking_service import TrackingValidationError,add_unit,add_update,build_internal_unit_tracking,build_public_unit_tracking,enable_tracking
 from backend.services.tracking_location_bootstrap_service import ROWS,bootstrap
@@ -43,8 +44,15 @@ def test_known_and_free_text_snapshots_survive_rename_and_deactivation():
  app=_app()
  with app.app_context():
   db.create_all();bootstrap(apply=True)
-  actor=ExpertUser(username="e",password_hash="x",full_name="E",role="expert",is_active=True);req=ShipmentRequest(contact_phone="1",status="won",status_request_status="new",tracking_code="T")
-  db.session.add_all([actor,req]);db.session.commit();unit=add_unit(enable_tracking(req,actor.id),actor.id,unit_code="U",unit_type="truck")
+  actor=ExpertUser(username="e",password_hash="x",full_name="E",role="expert",is_active=True)
+  organization=OperationalOrganization(name="Tracking Location Organization")
+  db.session.add_all([actor,organization])
+  db.session.flush()
+  db.session.add(OperationalMembership(organization_id=organization.id,user_id=actor.id,permissions=[]))
+  req=ShipmentRequest(contact_phone="1",status="won",status_request_status="new",tracking_code="T",ownership_scope="TENANT",operational_organization_id=organization.id)
+  db.session.add(req)
+  db.session.commit()
+  unit=add_unit(enable_tracking(req,actor.id),actor.id,unit_code="U",unit_type="truck")
   yiwu=TrackingLocationReference.query.filter_by(internal_key="cn-yiwu").one();known=add_update(unit,actor.id,status="in_transit",occurred_at=datetime.utcnow()-timedelta(minutes=2),location_reference_id=yiwu.id)
   free=add_update(unit,actor.id,status="at_checkpoint",occurred_at=datetime.utcnow()-timedelta(minutes=1),location_text="Ash")
   db.session.commit();yiwu.name_fa="نام جدید";yiwu.is_active=False;db.session.commit()
@@ -86,8 +94,13 @@ def test_location_validation_latest_snapshot_and_no_hard_delete_when_referenced(
  with app.app_context():
   db.create_all();bootstrap(apply=True)
   actor=ExpertUser(username="rules",password_hash="x",full_name="Rules",role="expert",is_active=True)
-  req=ShipmentRequest(contact_phone="2",status="won",status_request_status="new",tracking_code="RULES")
-  db.session.add_all([actor,req]);db.session.commit()
+  organization=OperationalOrganization(name="Tracking Rules Organization")
+  db.session.add_all([actor,organization])
+  db.session.flush()
+  db.session.add(OperationalMembership(organization_id=organization.id,user_id=actor.id,permissions=[]))
+  req=ShipmentRequest(contact_phone="2",status="won",status_request_status="new",tracking_code="RULES",ownership_scope="TENANT",operational_organization_id=organization.id)
+  db.session.add(req)
+  db.session.commit()
   unit=add_unit(enable_tracking(req,actor.id),actor.id,unit_code="RULES-U",unit_type="truck")
   osh=TrackingLocationReference.query.filter_by(internal_key="KG-OSH").one()
   known=add_update(unit,actor.id,status="in_transit",occurred_at=datetime.utcnow()-timedelta(minutes=3),location_reference_id=osh.id)

@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest, TrackingLocationReference
+from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services.multi_unit_tracking_service import (
     add_unit,
     add_update,
@@ -82,6 +83,12 @@ def test_tracking_locations_on_disposable_postgresql():
                 role="expert",
                 is_active=True,
             )
+            organization = OperationalOrganization(name="PostgreSQL Tracking Location")
+            db.session.add_all([actor, organization])
+            db.session.flush()
+            db.session.add(OperationalMembership(
+                organization_id=organization.id, user_id=actor.id, permissions=[]
+            ))
             request = ShipmentRequest(
                 id=request_id,
                 contact_phone="09000000003",
@@ -89,8 +96,10 @@ def test_tracking_locations_on_disposable_postgresql():
                 status_request_status="new",
                 tracking_code="POSTGRES-TRACKING-LOCATION",
                 assigned_to=user_id,
+                ownership_scope="TENANT",
+                operational_organization_id=organization.id,
             )
-            db.session.add_all([actor, request])
+            db.session.add(request)
             db.session.commit()
             unit = add_unit(
                 enable_tracking(request, actor.id),

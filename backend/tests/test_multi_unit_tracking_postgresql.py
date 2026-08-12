@@ -9,6 +9,7 @@ from sqlalchemy import inspect
 from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
+from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
     add_unit,
@@ -40,10 +41,14 @@ def test_disposable_postgresql_tracking_contract():
 
         admin = ExpertUser(id=910001, username="synthetic-admin", password_hash="unused", full_name="Synthetic Admin", role="admin", is_active=True)
         expert = ExpertUser(id=910002, username="synthetic-expert", password_hash="unused", full_name="Synthetic Expert", role="expert", is_active=True)
-        first = ShipmentRequest(id=920001, contact_phone="09000000001", status="won", status_request_status="new", tracking_code="SYNTHETIC-TRACK-001", assigned_to=expert.id)
-        second = ShipmentRequest(id=920002, contact_phone="09000000002", status="in_progress", status_request_status="new", tracking_code="SYNTHETIC-TRACK-002", assigned_to=expert.id)
+        organization = OperationalOrganization(name="Synthetic Tracking Organization")
+        db.session.add_all([admin, expert, organization])
+        db.session.flush()
+        db.session.add(OperationalMembership(organization_id=organization.id, user_id=expert.id, permissions=[]))
+        first = ShipmentRequest(id=920001, contact_phone="09000000001", status="won", status_request_status="new", tracking_code="SYNTHETIC-TRACK-001", assigned_to=expert.id, ownership_scope="TENANT", operational_organization_id=organization.id)
+        second = ShipmentRequest(id=920002, contact_phone="09000000002", status="in_progress", status_request_status="new", tracking_code="SYNTHETIC-TRACK-002", assigned_to=expert.id, ownership_scope="TENANT", operational_organization_id=organization.id)
         try:
-            db.session.add_all([admin, expert, first, second])
+            db.session.add_all([first, second])
             db.session.commit()
             with pytest.raises(TrackingValidationError, match="accepted"):
                 enable_tracking(second, expert.id, now=now)

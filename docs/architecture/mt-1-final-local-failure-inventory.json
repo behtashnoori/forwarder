@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "initial_result": {
+    "passed": 672,
+    "skipped": 79,
+    "xfailed": 1,
+    "failed": 17,
+    "errors": 20
+  },
+  "unexpected_classification": [
+    {
+      "classification": "STALE_ALEMBIC_EXPECTATION",
+      "failed": 12,
+      "errors": 0
+    },
+    {
+      "classification": "OWNERSHIP_SCOPE_FIXTURE",
+      "surface": "case_documents",
+      "failed": 3,
+      "errors": 20,
+      "root_causes": [
+        "MISSING_ORGANIZATION_FIXTURE",
+        "MISSING_MEMBERSHIP_FIXTURE",
+        "OWNERSHIP_SCOPE_FIXTURE"
+      ]
+    },
+    {
+      "classification": "OWNERSHIP_SCOPE_FIXTURE",
+      "surface": "tracking_locations",
+      "failed": 2,
+      "errors": 0,
+      "root_causes": [
+        "MISSING_ORGANIZATION_FIXTURE",
+        "MISSING_MEMBERSHIP_FIXTURE",
+        "OWNERSHIP_SCOPE_FIXTURE"
+      ]
+    }
+  ],
+  "real_product_defects": 0,
+  "pre_existing_unrelated": 0,
+  "final_result": {
+    "passed": 709,
+    "skipped": 79,
+    "xfailed": 1,
+    "failed": 0,
+    "errors": 0
+  },
+  "focused_postgresql_result": {
+    "passed": 21,
+    "skipped": 0,
+    "xfailed": 0,
+    "failed": 0,
+    "errors": 0
+  }
+}

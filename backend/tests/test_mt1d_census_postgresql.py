@@ -427,7 +427,7 @@ def test_mt1d_postgresql_migration_preserves_mt1c_and_enforces_history(monkeypat
             )).scalar_one() == "legacy-preserved"
             assert connection.execute(text(
                 "SELECT version_num FROM alembic_version"
-            )).scalar_one() == "20260822_mt1c1_census_fence"
+            )).scalar_one() == "20260824_mt1_graph"
             assert connection.execute(text(
                 "SELECT has_table_privilege('public', 'ownership_census', 'INSERT')"
             )).scalar_one() is False

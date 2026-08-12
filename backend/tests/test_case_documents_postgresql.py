@@ -21,6 +21,7 @@ from backend.models import (
     ExpertUser,
     ShipmentRequest,
 )
+from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services import case_document_service as document_service
 
 
@@ -52,7 +53,7 @@ def postgres_app():
         revision = db.session.execute(text("select version_num from alembic_version")).scalar_one()
         assert version.startswith("18.")
         assert database.startswith("dms1a_")
-        assert revision == "20260804_case_documents"
+        assert revision == "20260824_mt1_graph"
         db.session.rollback()
     yield app, root
     with app.app_context():
@@ -67,9 +68,16 @@ def _seed(app, *, maximum=1, with_initial=False):
             username=f"dms-{token}", password_hash="x", full_name="DMS concurrent",
             role="expert", is_active=True,
         )
+        organization = OperationalOrganization(name=f"DMS {token}")
+        db.session.add_all([expert, organization])
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=organization.id, user_id=expert.id, permissions=[]
+        ))
         case = ShipmentRequest(
             contact_phone=token[:20], shipping_type="domestic", status="new",
-            status_request_status="new",
+            status_request_status="new", ownership_scope="TENANT",
+            operational_organization_id=organization.id,
         )
         definition_code = f"dms_{token}"
         definition = DocumentDefinition(
@@ -77,7 +85,7 @@ def _seed(app, *, maximum=1, with_initial=False):
             allowed_formats='["pdf"]', max_file_size_bytes=1024 * 1024,
             max_active_file_count=maximum, sort_order=1, applicability_scope="all",
         )
-        db.session.add_all([expert, case, definition])
+        db.session.add_all([case, definition])
         db.session.flush()
         case.assigned_to = expert.id
         db.session.commit()
@@ -124,16 +132,23 @@ def test_postgresql_concurrent_requirement_initialization_is_idempotent(postgres
             username=f"init-{token}", password_hash="x", full_name="Initializer",
             role="expert", is_active=True,
         )
+        organization = OperationalOrganization(name=f"DMS init {token}")
+        db.session.add_all([expert, organization])
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=organization.id, user_id=expert.id, permissions=[]
+        ))
         case = ShipmentRequest(
             contact_phone=token[:20], shipping_type="domestic", status="new",
-            status_request_status="new",
+            status_request_status="new", ownership_scope="TENANT",
+            operational_organization_id=organization.id,
         )
         definition = DocumentDefinition(
             code=f"init_{token}", title="Initialize race", is_required=True,
             allowed_formats='["pdf"]', max_file_size_bytes=1024,
             max_active_file_count=1, sort_order=1, applicability_scope="all",
         )
-        db.session.add_all([expert, case, definition])
+        db.session.add_all([case, definition])
         db.session.flush()
         case.assigned_to = expert.id
         db.session.commit()
