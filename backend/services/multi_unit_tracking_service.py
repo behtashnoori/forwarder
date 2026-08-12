@@ -97,10 +97,15 @@ def enable_tracking(req: ShipmentRequest, actor_id: int, *, now: datetime | None
         raise TrackingValidationError("shipment must be accepted before tracking is enabled")
     if not req.tracking_code:
         raise TrackingValidationError("shipment must have a tracking code")
+    if req.ownership_scope != "TENANT" or req.operational_organization_id is None:
+        raise TrackingValidationError("tracking requires an explicit tenant-owned shipment")
     now = _utc_naive(now or datetime.utcnow())
     tracking = req.shipment_tracking
     if tracking is None:
-        tracking = ShipmentTracking(shipment_request=req)
+        tracking = ShipmentTracking(
+            shipment_request=req,
+            operational_organization_id=req.operational_organization_id,
+        )
         db.session.add(tracking)
     if not tracking.is_enabled:
         tracking.is_enabled = True
@@ -132,6 +137,8 @@ def add_unit(
 ):
     if not tracking.is_enabled:
         raise TrackingValidationError("tracking must be enabled before units are added")
+    if tracking.operational_organization_id is None:
+        raise TrackingValidationError("tracking has ambiguous tenant ownership")
     code = _clean_required(unit_code, "unit_code", 64)
     kind = _clean_required(unit_type, "unit_type", 32).lower()
     if kind not in UNIT_TYPES:
@@ -142,6 +149,8 @@ def add_unit(
     reference = _clean_optional(vehicle_reference, "vehicle_reference", 100)
     unit = ShipmentTransportUnit(
         tracking=tracking,
+        ownership_scope="TENANT",
+        operational_organization_id=tracking.operational_organization_id,
         unit_code=code,
         unit_type=kind,
         display_name=name,
@@ -187,6 +196,10 @@ def add_update(
         raise TrackingValidationError("tracking is not enabled")
     if not unit.is_active:
         raise TrackingValidationError("unit is inactive")
+    if unit.ownership_scope != "TENANT" or unit.operational_organization_id is None:
+        raise TrackingValidationError("transport unit has ambiguous tenant ownership")
+    if unit.tracking.operational_organization_id != unit.operational_organization_id:
+        raise TrackingValidationError("transport unit belongs to a different Organization")
     normalized_status = _clean_required(status, "status", 32).lower()
     if normalized_status not in UNIT_STATUSES:
         raise TrackingValidationError("unsupported status")
@@ -214,6 +227,8 @@ def add_update(
         raise TrackingValidationError("is_customer_visible must be boolean")
     update = ShipmentTransportUnitUpdate(
         unit=unit,
+        ownership_scope="TENANT",
+        operational_organization_id=unit.operational_organization_id,
         status=normalized_status,
         location=resolved_location,
         location_reference=reference,

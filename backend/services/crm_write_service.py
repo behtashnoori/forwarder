@@ -2,7 +2,7 @@
 from datetime import datetime
 
 from backend.extensions import db
-from backend.models import Activity, Customer, Opportunity
+from backend.models import Activity, Customer, Opportunity, ShipmentRequest
 from backend.services.ownership_service import tenant_organization_for_user
 
 CUSTOMER_WRITE_FIELDS = [
@@ -57,9 +57,14 @@ def create_customer(data: dict, user: dict) -> Customer:
     return customer
 
 
-def update_customer(customer_id: int, data: dict) -> Customer | None:
+def update_customer(customer_id: int, data: dict, user: dict) -> Customer | None:
     """Update and commit a CRM customer, or return None when absent."""
-    customer = db.session.get(Customer, customer_id)
+    organization_id = tenant_organization_for_user(user)
+    customer = db.session.query(Customer).filter(
+        Customer.id == customer_id,
+        Customer.ownership_scope == "TENANT",
+        Customer.operational_organization_id == organization_id,
+    ).one_or_none()
     if not customer:
         return None
 
@@ -100,9 +105,27 @@ def create_opportunity(data: dict, user: dict) -> Opportunity:
     return opportunity
 
 
-def create_activity(data: dict) -> Activity:
+def create_activity(data: dict, user: dict) -> Activity:
     """Create and commit a CRM activity using the existing route defaults."""
+    organization_id = tenant_organization_for_user(user)
+    parents = (
+        (Customer, data.get("customer_id")),
+        (Opportunity, data.get("opportunity_id")),
+        (ShipmentRequest, data.get("shipment_request_id")),
+    )
+    if not any(parent_id is not None for _, parent_id in parents):
+        raise ValueError("Activity requires at least one tenant business parent")
+    for model, parent_id in parents:
+        if parent_id is None:
+            continue
+        parent = db.session.get(model, parent_id)
+        if parent is None or parent.operational_organization_id != organization_id:
+            raise ValueError("Activity parents must belong to the same Organization")
+        if hasattr(parent, "ownership_scope") and parent.ownership_scope != "TENANT":
+            raise ValueError("Activity parent must be explicit tenant-owned data")
     activity = Activity(
+        ownership_scope="TENANT",
+        operational_organization_id=organization_id,
         customer_id=data.get("customer_id"),
         opportunity_id=data.get("opportunity_id"),
         shipment_request_id=data.get("shipment_request_id"),

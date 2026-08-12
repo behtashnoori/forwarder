@@ -3,6 +3,7 @@ from sqlalchemy import or_, desc
 
 from backend.extensions import db
 from backend.models import Customer, CustomerContact, Opportunity, Activity, ExpertUser, ShipmentRequest
+from backend.services.ownership_service import tenant_organization_for_user
 
 
 def pagination_payload(pagination, page: int, per_page: int) -> dict:
@@ -35,11 +36,15 @@ def build_customer_list_item(customer: Customer) -> dict:
     }
 
 
-def list_customers(filters: dict) -> dict:
+def list_customers(filters: dict, user: dict) -> dict:
     """Return filtered and paginated CRM customers."""
     page = filters["page"]
     per_page = filters["per_page"]
-    query = db.session.query(Customer)
+    organization_id = tenant_organization_for_user(user)
+    query = db.session.query(Customer).filter(
+        Customer.ownership_scope == "TENANT",
+        Customer.operational_organization_id == organization_id,
+    )
 
     search = filters.get("search")
     if search:
@@ -84,9 +89,14 @@ def list_customers(filters: dict) -> dict:
     }
 
 
-def get_customer_detail(customer_id: int):
+def get_customer_detail(customer_id: int, user: dict):
     """Return detailed information about a customer, or None when absent."""
-    customer = db.session.get(Customer, customer_id)
+    organization_id = tenant_organization_for_user(user)
+    customer = db.session.query(Customer).filter(
+        Customer.id == customer_id,
+        Customer.ownership_scope == "TENANT",
+        Customer.operational_organization_id == organization_id,
+    ).one_or_none()
     if not customer:
         return None
 
@@ -168,11 +178,14 @@ def build_customer_detail_payload(customer: Customer, contacts, opportunities, a
     }
 
 
-def list_opportunities(filters: dict) -> dict:
+def list_opportunities(filters: dict, user: dict) -> dict:
     """Return filtered and paginated CRM opportunities."""
     page = filters["page"]
     per_page = filters["per_page"]
-    query = db.session.query(Opportunity)
+    organization_id = tenant_organization_for_user(user)
+    query = db.session.query(Opportunity).filter(
+        Opportunity.operational_organization_id == organization_id
+    )
 
     stage = filters.get("stage")
     assigned_to = filters.get("assigned_to")
@@ -224,11 +237,15 @@ def build_opportunity_payload(opp: Opportunity) -> dict:
     }
 
 
-def list_activities(filters: dict) -> dict:
+def list_activities(filters: dict, user: dict) -> dict:
     """Return filtered and paginated CRM activities."""
     page = filters["page"]
     per_page = filters["per_page"]
-    query = db.session.query(Activity)
+    organization_id = tenant_organization_for_user(user)
+    query = db.session.query(Activity).filter(
+        Activity.ownership_scope == "TENANT",
+        Activity.operational_organization_id == organization_id,
+    )
 
     activity_type = filters.get("activity_type")
     expert_id = filters.get("expert_id")

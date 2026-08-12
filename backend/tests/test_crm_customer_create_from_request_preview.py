@@ -19,6 +19,7 @@ from backend.models import (
 )
 from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture
@@ -47,7 +48,15 @@ def crm_customer_create_preview_app():
             role="expert",
             is_active=True,
         )
+        organization = OperationalOrganization(name="CRM Preview Organization")
+        db.session.add_all([business_expert, basic_expert, organization])
+        db.session.flush()
+        db.session.add_all([
+            OperationalMembership(organization_id=organization.id, user_id=business_expert.id, permissions=[]),
+            OperationalMembership(organization_id=organization.id, user_id=basic_expert.id, permissions=[]),
+        ])
         phone_match_customer = Customer(
+            ownership_scope="TENANT", operational_organization_id=organization.id,
             first_name="Existing",
             last_name="Phone",
             company_name="Existing Phone Co",
@@ -58,6 +67,7 @@ def crm_customer_create_preview_app():
             status="active",
         )
         name_match_customer = Customer(
+            ownership_scope="TENANT", operational_organization_id=organization.id,
             first_name="Raw",
             last_name="Requester",
             company_name="Name Match Co",
@@ -76,14 +86,13 @@ def crm_customer_create_preview_app():
             loyalty_points=20,
         )
         db.session.add_all([
-            business_expert,
-            basic_expert,
             phone_match_customer,
             name_match_customer,
             gamification_customer,
         ])
         db.session.flush()
         shipment_request = ShipmentRequest(
+            ownership_scope="TENANT", operational_organization_id=organization.id,
             shipping_type="international",
             origin_country="Turkey",
             origin_city_international="Istanbul",
@@ -104,6 +113,7 @@ def crm_customer_create_preview_app():
             gamification_customer_id=gamification_customer.id,
         )
         incomplete_request = ShipmentRequest(
+            ownership_scope="TENANT", operational_organization_id=organization.id,
             shipping_type="domestic",
             contact_phone="09129999999",
             customer_first_name=None,
@@ -114,6 +124,7 @@ def crm_customer_create_preview_app():
         db.session.add_all([shipment_request, incomplete_request])
         db.session.flush()
         quote = ExpertQuote(
+            operational_organization_id=organization.id,
             shipment_request_id=shipment_request.id,
             amount=1200000,
             currency="IRR",
@@ -121,6 +132,7 @@ def crm_customer_create_preview_app():
             created_by_expert_id=business_expert.id,
         )
         opportunity = Opportunity(
+            operational_organization_id=organization.id,
             customer_id=phone_match_customer.id,
             title="Existing Opportunity",
             stage="lead",

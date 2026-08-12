@@ -24,6 +24,7 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.services.auth_session_service import create_session_tokens
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture
@@ -64,14 +65,20 @@ def expert_contract_app():
             role="business_expert",
             is_active=True,
         )
-        db.session.add_all([admin, expert, other_expert])
+        organization = OperationalOrganization(name="Expert Contract Organization")
+        db.session.add_all([admin, expert, other_expert, organization])
         db.session.flush()
+        db.session.add_all([
+            OperationalMembership(organization_id=organization.id, user_id=user.id, permissions=[])
+            for user in (admin, expert, other_expert)
+        ])
 
         province = Province(code="phase4h", name_fa="Phase 4H Province")
         db.session.add(province)
         db.session.flush()
 
         request_row = ShipmentRequest(
+            ownership_scope="TENANT", operational_organization_id=organization.id,
             tracking_code="SR-P4H001",
             shipping_type="domestic",
             contact_phone="09123456789",
@@ -133,6 +140,7 @@ def expert_contract_app():
 
         return {
             "app": app,
+            "organization_id": organization.id,
             "admin_id": admin.id,
             "expert_id": expert.id,
             "other_expert_id": other_expert.id,
@@ -360,6 +368,7 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
         original_request.created_at = base_time
 
         other_request = ShipmentRequest(
+            ownership_scope="TENANT", operational_organization_id=expert_contract_app["organization_id"],
             tracking_code="SR-P4O002",
             shipping_type="domestic",
             contact_phone="09120000002",
@@ -382,6 +391,7 @@ def test_expert_request_list_filters_visibility_and_order_contract(expert_contra
             sla_due_at=base_time + timedelta(hours=4),
         )
         unassigned_request = ShipmentRequest(
+            ownership_scope="TENANT", operational_organization_id=expert_contract_app["organization_id"],
             tracking_code="SR-P4O003",
             shipping_type="domestic",
             contact_phone="09120000003",
@@ -505,6 +515,7 @@ def test_expert_request_filters_and_kpis_use_canonical_status_only(expert_contra
 
     with expert_contract_app["app"].app_context():
         stale_legacy_request = ShipmentRequest(
+            ownership_scope="TENANT", operational_organization_id=expert_contract_app["organization_id"],
             tracking_code="SR-CANON001",
             shipping_type="domestic",
             contact_phone="09129999999",

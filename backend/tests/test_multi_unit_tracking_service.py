@@ -5,6 +5,7 @@ import pytest
 from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
+from backend.operational_models import OperationalOrganization
 from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
     add_unit,
@@ -33,6 +34,7 @@ def app():
 
 
 def _seed_request(status="won", tracking_code="trk-production-safe"):
+    organization = OperationalOrganization(name="Tracking Test Organization")
     actor = ExpertUser(
         username="tracker",
         password_hash="not-used",
@@ -40,12 +42,16 @@ def _seed_request(status="won", tracking_code="trk-production-safe"):
         role="expert",
     )
     req = ShipmentRequest(
+        ownership_scope="TENANT",
         contact_phone="09120000000",
         status=status,
         status_request_status="new",
         tracking_code=tracking_code,
     )
-    db.session.add_all([actor, req])
+    db.session.add_all([actor, organization])
+    db.session.flush()
+    req.operational_organization_id = organization.id
+    db.session.add(req)
     db.session.commit()
     return actor, req
 

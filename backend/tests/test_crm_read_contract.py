@@ -8,6 +8,7 @@ from backend.extensions import db
 from backend.models import Activity, Customer, ExpertUser, Opportunity
 from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture
@@ -28,7 +29,15 @@ def crm_app():
             role="business_expert",
             is_active=True,
         )
+        organization = OperationalOrganization(name="CRM Read Organization")
+        db.session.add_all([expert, organization])
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=organization.id, user_id=expert.id, permissions=[]
+        ))
         customer = Customer(
+            ownership_scope="TENANT",
+            operational_organization_id=organization.id,
             first_name="Ali",
             last_name="Rahimi",
             company_name="Rahimi Co",
@@ -39,9 +48,10 @@ def crm_app():
             industry="Logistics",
             created_at=datetime.now(UTC).replace(tzinfo=None),
         )
-        db.session.add_all([expert, customer])
+        db.session.add(customer)
         db.session.flush()
         opportunity = Opportunity(
+            operational_organization_id=organization.id,
             customer_id=customer.id,
             title="Test Opportunity",
             description="Current contract opportunity",
@@ -53,6 +63,8 @@ def crm_app():
             created_at=datetime(2026, 5, 18, 11, 0, 0),
         )
         activity = Activity(
+            ownership_scope="TENANT",
+            operational_organization_id=organization.id,
             customer_id=customer.id,
             expert_user_id=expert.id,
             activity_type="call",

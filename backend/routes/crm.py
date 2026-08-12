@@ -29,7 +29,7 @@ def get_customers():
             "sort_by": request.args.get("sort_by", "created_at"),
             "sort_order": request.args.get("sort_order", "desc"),
         }
-        return jsonify(crm_service.list_customers(filters))
+        return jsonify(crm_service.list_customers(filters, get_current_user()))
 
     except Exception as e:
         current_app.logger.error(f"Error getting customers: {e}")
@@ -61,7 +61,7 @@ def create_customer():
 def get_customer_detail(customer_id: int):
     """Get detailed information about a customer."""
     try:
-        customer_payload = crm_service.get_customer_detail(customer_id)
+        customer_payload = crm_service.get_customer_detail(customer_id, get_current_user())
         if not customer_payload:
             return jsonify({"error": "مشتری یافت نشد"}), 404
         return jsonify(customer_payload)
@@ -77,7 +77,7 @@ def update_customer(customer_id: int):
     """Update customer information."""
     try:
         data = request.get_json()
-        customer = crm_write_service.update_customer(customer_id, data)
+        customer = crm_write_service.update_customer(customer_id, data, get_current_user())
         
         if not customer:
             return jsonify({"error": "مشتری یافت نشد"}), 404
@@ -217,7 +217,7 @@ def get_opportunities():
             "assigned_to": request.args.get("assigned_to"),
             "search": request.args.get("search"),
         }
-        return jsonify(crm_service.list_opportunities(filters))
+        return jsonify(crm_service.list_opportunities(filters, get_current_user()))
 
     except Exception as e:
         current_app.logger.error(f"Error getting opportunities: {e}")
@@ -258,7 +258,7 @@ def get_activities():
             "customer_id": request.args.get("customer_id"),
             "status": request.args.get("status"),
         }
-        return jsonify(crm_service.list_activities(filters))
+        return jsonify(crm_service.list_activities(filters, get_current_user()))
 
     except Exception as e:
         current_app.logger.error(f"Error getting activities: {e}")
@@ -272,7 +272,7 @@ def create_activity():
     try:
         data = request.get_json()
         
-        activity = crm_write_service.create_activity(data)
+        activity = crm_write_service.create_activity(data, get_current_user())
         
         return jsonify({
             "message": "فعالیت با موفقیت ایجاد شد",

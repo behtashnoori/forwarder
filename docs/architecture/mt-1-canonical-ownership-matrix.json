@@ -3,12 +3,13 @@
   "canonical_organization_table": "operational_organization",
   "canonical_legacy_domain_key": "operational_organization_id",
   "expand_revision": "20260823_mt1_ownership_expand",
+  "slice2_revision": "20260824_mt1_graph",
   "classifications": {
     "TENANT_ROOT": ["shipment_request", "customer", "project", "operational_shipment"],
     "TENANT_DESCENDANT": [
       "shipment_request_log", "shipment_tracking", "shipment_transport_unit",
       "shipment_transport_unit_update", "expert_quote", "case_document_requirement",
-      "case_document_file", "customer_contact", "opportunity"
+      "case_document_file", "customer_contact", "opportunity", "activity", "task"
     ],
     "PARENT_TENANT_DERIVED": [
       "expert_console_log", "expert_console_message", "expert_console_notification",
@@ -28,12 +29,19 @@
     "gamification_establishes_ownership": false,
     "referral_auto_assign_state": "PLATFORM_OR_SINGLETON",
     "document_audit_event": "TENANT or PLATFORM execution scope",
-    "transport_unit_ownership": "derived transitively through shipment_tracking"
+    "activity_ownership": "direct operational_organization_id; every present Customer, Opportunity, and ShipmentRequest parent must agree; actor is non-authoritative",
+    "task_ownership": "direct operational_organization_id; every present Customer, Opportunity, and ShipmentRequest parent must agree; assignee and creator are non-authoritative",
+    "transport_unit_ownership": "direct operational_organization_id plus same-tenant composite FK to shipment_tracking",
+    "transport_update_ownership": "direct operational_organization_id plus same-tenant composite FK to shipment_transport_unit",
+    "tenant_read_surfaces": "CRM customer/opportunity/activity and expert shipment list/detail/tracking are filtered by authenticated Organization membership; NULL/quarantined rows are excluded",
+    "intake_acceptance": "authenticated explicit POST transition; target Organization comes only from one active server-side membership; same-Organization replay is idempotent; audit is atomic"
   },
   "validate_requirements": [
     "every non-quarantined TENANT root has an Organization",
     "every direct owned descendant agrees with its parent",
     "every document audit scope envelope is valid",
+    "every Activity and Task tenant-bearing parent agrees with the work item's Organization",
+    "every transport unit and update agrees with its parent Organization",
     "all remaining NULL root owners equal the certified quarantined synthetic cohort",
     "the expert_quote NOT VALID foreign key validates"
   ],

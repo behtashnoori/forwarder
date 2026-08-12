@@ -8,6 +8,7 @@ from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture()
@@ -36,9 +37,16 @@ def tracking_api_app():
             role="expert",
             is_active=True,
         )
-        db.session.add_all([assignee, outsider])
+        organization = OperationalOrganization(name="Tracking API Organization")
+        db.session.add_all([assignee, outsider, organization])
         db.session.flush()
+        db.session.add_all([
+            OperationalMembership(organization_id=organization.id, user_id=assignee.id, permissions=[]),
+            OperationalMembership(organization_id=organization.id, user_id=outsider.id, permissions=[]),
+        ])
         request_row = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=organization.id,
             contact_phone="09120000000",
             status="won",
             status_request_status="new",

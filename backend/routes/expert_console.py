@@ -12,6 +12,8 @@ from backend.models import (
     ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification, ExpertQuote
 )
 from backend.auth import auth_manager, login_required, get_current_user
+from backend.services import ownership_service
+from backend.services.ownership_service import tenant_organization_for_user
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
 from backend.services import (
@@ -25,6 +27,28 @@ from backend.services import (
 )
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
+
+
+@expert_console_bp.post("/requests/<int:request_id>/accept-intake")
+@require_auth
+def accept_intake(request_id: int):
+    """Materialize a public intake into the authenticated actor's Organization."""
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({"error": "authentication required"}), 401
+    if current_user.get("role") not in {"admin", "crm_manager", "business_expert"}:
+        return jsonify({"error": "intake acceptance is not authorized"}), 403
+    try:
+        row = ownership_service.accept_intake_for_tenant(request_id, current_user)
+        db.session.commit()
+        return jsonify({
+            "request_id": row.id,
+            "ownership_scope": row.ownership_scope,
+            "operational_organization_id": row.operational_organization_id,
+        })
+    except ownership_service.OwnershipContractError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 409
 
 
 def _parse_tracking_datetime(value: Any, field: str) -> datetime:
@@ -62,6 +86,12 @@ def _tracking_management_payload(req: ShipmentRequest) -> Dict[str, Any]:
 def _can_access_request(req: ShipmentRequest, current_user: Optional[Dict]) -> bool:
     """Admin can access any request; non-admin only if they are the assignee."""
     if not current_user:
+        return False
+    try:
+        organization_id = tenant_organization_for_user(current_user)
+    except ValueError:
+        return False
+    if req.ownership_scope != "TENANT" or req.operational_organization_id != organization_id:
         return False
     if current_user.get("role") == "admin":
         return True

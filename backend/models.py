@@ -494,6 +494,7 @@ class ShipmentTracking(db.Model):
     __tablename__ = "shipment_tracking"
     __table_args__ = (
         db.UniqueConstraint("shipment_request_id", name="uq_shipment_tracking_request"),
+        db.UniqueConstraint("id", "operational_organization_id", name="uq_shipment_tracking_id_operational_org"),
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
@@ -523,6 +524,7 @@ class ShipmentTracking(db.Model):
     units = db.relationship(
         "ShipmentTransportUnit",
         back_populates="tracking",
+        foreign_keys="ShipmentTransportUnit.tracking_id",
         cascade="all, delete-orphan",
         order_by="ShipmentTransportUnit.sort_order, ShipmentTransportUnit.id",
     )
@@ -534,10 +536,30 @@ class ShipmentTransportUnit(db.Model):
     __tablename__ = "shipment_transport_unit"
     __table_args__ = (
         db.UniqueConstraint("tracking_id", "unit_code", name="uq_tracking_unit_code"),
+        db.UniqueConstraint("id", "operational_organization_id", name="uq_transport_unit_id_operational_org"),
+        db.ForeignKeyConstraint(
+            ["tracking_id", "operational_organization_id"],
+            ["shipment_tracking.id", "shipment_tracking.operational_organization_id"],
+            name="fk_transport_unit_tracking_same_org",
+            ondelete="CASCADE",
+        ),
+        db.CheckConstraint(
+            "ownership_scope IS NULL OR "
+            "(ownership_scope = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
+            "(ownership_scope = 'LEGACY_QUARANTINED' AND operational_organization_id IS NULL)",
+            name="ck_transport_unit_ownership_envelope",
+        ),
         db.CheckConstraint("sort_order >= 0", name="ck_tracking_unit_sort_order_nonnegative"),
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    ownership_scope = db.Column(db.String(24), nullable=True)
     tracking_id = db.Column(
         SQLITE_COMPAT_BIGINT,
         db.ForeignKey("shipment_tracking.id", ondelete="CASCADE"),
@@ -557,11 +579,12 @@ class ShipmentTransportUnit(db.Model):
         db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
-    tracking = db.relationship("ShipmentTracking", back_populates="units")
+    tracking = db.relationship("ShipmentTracking", back_populates="units", foreign_keys=[tracking_id])
     created_by_user = db.relationship("ExpertUser", foreign_keys=[created_by_user_id])
     updates = db.relationship(
         "ShipmentTransportUnitUpdate",
         back_populates="unit",
+        foreign_keys="ShipmentTransportUnitUpdate.unit_id",
         cascade="all, delete-orphan",
         order_by="ShipmentTransportUnitUpdate.occurred_at, ShipmentTransportUnitUpdate.id",
     )
@@ -615,9 +638,28 @@ class ShipmentTransportUnitUpdate(db.Model):
     __tablename__ = "shipment_transport_unit_update"
     __table_args__ = (
         db.Index("idx_tracking_update_unit_occurred", "unit_id", "occurred_at"),
+        db.ForeignKeyConstraint(
+            ["unit_id", "operational_organization_id"],
+            ["shipment_transport_unit.id", "shipment_transport_unit.operational_organization_id"],
+            name="fk_transport_unit_update_unit_same_org",
+            ondelete="CASCADE",
+        ),
+        db.CheckConstraint(
+            "ownership_scope IS NULL OR "
+            "(ownership_scope = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
+            "(ownership_scope = 'LEGACY_QUARANTINED' AND operational_organization_id IS NULL)",
+            name="ck_transport_unit_update_ownership_envelope",
+        ),
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    ownership_scope = db.Column(db.String(24), nullable=True)
     unit_id = db.Column(
         SQLITE_COMPAT_BIGINT,
         db.ForeignKey("shipment_transport_unit.id", ondelete="CASCADE"),
@@ -642,7 +684,7 @@ class ShipmentTransportUnitUpdate(db.Model):
     )
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
-    unit = db.relationship("ShipmentTransportUnit", back_populates="updates")
+    unit = db.relationship("ShipmentTransportUnit", back_populates="updates", foreign_keys=[unit_id])
     created_by_user = db.relationship("ExpertUser", foreign_keys=[created_by_user_id])
     location_reference = db.relationship("TrackingLocationReference", back_populates="tracking_updates")
 
@@ -876,7 +918,7 @@ class Customer(db.Model):
     # Relationships
     contacts = db.relationship("CustomerContact", backref="customer", lazy=True)
     opportunities = db.relationship("Opportunity", backref="customer", lazy=True)
-    activities = db.relationship("Activity", backref="customer", lazy=True)
+    activities = db.relationship("Activity", backref="customer", lazy=True, foreign_keys="Activity.customer_id")
     requests = db.relationship("ShipmentRequest", back_populates="customer", lazy=True)
     
     def __repr__(self) -> str:
@@ -912,6 +954,9 @@ class Opportunity(db.Model):
     """Represents sales opportunities in the CRM."""
     
     __tablename__ = "opportunity"
+    __table_args__ = (
+        db.UniqueConstraint("id", "operational_organization_id", name="uq_opportunity_id_operational_org"),
+    )
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
@@ -932,7 +977,7 @@ class Opportunity(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    activities = db.relationship("Activity", backref="opportunity", lazy=True)
+    activities = db.relationship("Activity", backref="opportunity", lazy=True, foreign_keys="Activity.opportunity_id")
     assigned_expert = db.relationship("ExpertUser", backref="assigned_opportunities")
     
     def __repr__(self) -> str:
@@ -944,8 +989,35 @@ class Activity(db.Model):
     """Represents activities and interactions with customers."""
     
     __tablename__ = "activity"
-    
+    __table_args__ = (
+        db.CheckConstraint(
+            "ownership_scope IS NULL OR "
+            "(ownership_scope = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
+            "(ownership_scope = 'LEGACY_QUARANTINED' AND operational_organization_id IS NULL)",
+            name="ck_activity_ownership_envelope",
+        ),
+        db.ForeignKeyConstraint(
+            ["customer_id", "operational_organization_id"],
+            ["customer.id", "customer.operational_organization_id"],
+            name="fk_activity_customer_same_org",
+        ),
+        db.ForeignKeyConstraint(
+            ["opportunity_id", "operational_organization_id"],
+            ["opportunity.id", "opportunity.operational_organization_id"],
+            name="fk_activity_opportunity_same_org",
+        ),
+        db.ForeignKeyConstraint(
+            ["shipment_request_id", "operational_organization_id"],
+            ["shipment_request.id", "shipment_request.operational_organization_id"],
+            name="fk_activity_shipment_request_same_org",
+        ),
+    )
+
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    ownership_scope = db.Column(db.String(24), nullable=True)
     customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id"), nullable=True)
     opportunity_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("opportunity.id"), nullable=True)
     shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=True)
@@ -975,8 +1047,35 @@ class Task(db.Model):
     """Represents tasks and to-dos for experts."""
     
     __tablename__ = "task"
-    
+    __table_args__ = (
+        db.CheckConstraint(
+            "ownership_scope IS NULL OR "
+            "(ownership_scope = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
+            "(ownership_scope = 'LEGACY_QUARANTINED' AND operational_organization_id IS NULL)",
+            name="ck_task_ownership_envelope",
+        ),
+        db.ForeignKeyConstraint(
+            ["customer_id", "operational_organization_id"],
+            ["customer.id", "customer.operational_organization_id"],
+            name="fk_task_customer_same_org",
+        ),
+        db.ForeignKeyConstraint(
+            ["opportunity_id", "operational_organization_id"],
+            ["opportunity.id", "opportunity.operational_organization_id"],
+            name="fk_task_opportunity_same_org",
+        ),
+        db.ForeignKeyConstraint(
+            ["shipment_request_id", "operational_organization_id"],
+            ["shipment_request.id", "shipment_request.operational_organization_id"],
+            name="fk_task_shipment_request_same_org",
+        ),
+    )
+
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
+    ownership_scope = db.Column(db.String(24), nullable=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
     assigned_to = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False)
@@ -997,6 +1096,93 @@ class Task(db.Model):
     
     def __repr__(self) -> str:
         return f"<Task id={self.id} title={self.title}>"
+
+
+def _tenant_parent_organizations(connection, target) -> set[int | None]:
+    """Resolve business-parent ownership; actors/assignees are deliberately excluded."""
+    parent_specs = (
+        ("customer_id", Customer),
+        ("opportunity_id", Opportunity),
+        ("shipment_request_id", ShipmentRequest),
+    )
+    organizations: set[int | None] = set()
+    for attribute, model in parent_specs:
+        parent_id = getattr(target, attribute, None)
+        if parent_id is not None:
+            organizations.add(
+                connection.execute(
+                    select(model.operational_organization_id).where(model.id == parent_id)
+                ).scalar_one_or_none()
+            )
+    return organizations
+
+
+@event.listens_for(Activity, "before_insert")
+@event.listens_for(Activity, "before_update")
+@event.listens_for(Task, "before_insert")
+@event.listens_for(Task, "before_update")
+def _validate_crm_multi_parent_tenant(_mapper, connection, target) -> None:
+    if target.ownership_scope != "TENANT" or target.operational_organization_id is None:
+        if target.ownership_scope is not None:
+            raise ValueError("CRM work item must use an explicit valid ownership scope")
+        return
+    organizations = _tenant_parent_organizations(connection, target)
+    if not organizations or organizations != {target.operational_organization_id}:
+        raise ValueError("CRM work item parents must belong to its Organization")
+
+
+@event.listens_for(ShipmentTransportUnit, "before_insert")
+@event.listens_for(ShipmentTransportUnit, "before_update")
+def _validate_transport_unit_tenant(_mapper, connection, target) -> None:
+    if target.ownership_scope is None:
+        return
+    tracking_org = (
+        target.tracking.operational_organization_id
+        if target.tracking is not None
+        else connection.execute(
+            select(ShipmentTracking.operational_organization_id).where(ShipmentTracking.id == target.tracking_id)
+        ).scalar_one_or_none()
+    )
+    if (
+        target.ownership_scope != "TENANT"
+        or target.operational_organization_id is None
+        or tracking_org != target.operational_organization_id
+    ):
+        raise ValueError("transport unit must belong to its tracking Organization")
+
+
+@event.listens_for(ShipmentTransportUnitUpdate, "before_insert")
+@event.listens_for(ShipmentTransportUnitUpdate, "before_update")
+def _validate_transport_update_tenant(_mapper, connection, target) -> None:
+    if target.ownership_scope is None:
+        return
+    unit_org = (
+        target.unit.operational_organization_id
+        if target.unit is not None
+        else connection.execute(
+            select(ShipmentTransportUnit.operational_organization_id).where(ShipmentTransportUnit.id == target.unit_id)
+        ).scalar_one_or_none()
+    )
+    if (
+        target.ownership_scope != "TENANT"
+        or target.operational_organization_id is None
+        or unit_org != target.operational_organization_id
+    ):
+        raise ValueError("transport update must belong to its unit Organization")
+
+
+@event.listens_for(ShipmentRequest, "before_update")
+@event.listens_for(Customer, "before_update")
+def _prevent_tenant_root_reownership(_mapper, _connection, target) -> None:
+    state = inspect(target)
+    scope_history = state.attrs.ownership_scope.history
+    organization_history = state.attrs.operational_organization_id.history
+    old_scope = scope_history.deleted[0] if scope_history.deleted else target.ownership_scope
+    old_org = organization_history.deleted[0] if organization_history.deleted else target.operational_organization_id
+    if old_scope == "TENANT" and (
+        target.ownership_scope != "TENANT" or target.operational_organization_id != old_org
+    ):
+        raise ValueError("tenant-owned roots cannot be re-owned or reverted to intake")
 
 
 # CRM Models - Reporting and Analytics

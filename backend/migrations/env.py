@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from backend.extensions import db
 from backend import models  # noqa: F401 - register all model metadata
 from backend.config import get_database_uri
+from backend.migrations.version_table import ensure_version_table_capacity
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -77,6 +78,8 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
+        ensure_version_table_capacity(connection)
+        connection.commit()
         context.configure(
             connection=connection, target_metadata=target_metadata
         )

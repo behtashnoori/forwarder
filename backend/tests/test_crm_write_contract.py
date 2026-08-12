@@ -10,6 +10,7 @@ from backend.extensions import db
 from backend.models import Activity, Customer, ExpertUser, Opportunity
 from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture
@@ -30,7 +31,15 @@ def crm_write_app():
             role="business_expert",
             is_active=True,
         )
+        organization = OperationalOrganization(name="CRM Write Organization")
+        db.session.add_all([business_expert, organization])
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=organization.id, user_id=business_expert.id, permissions=[]
+        ))
         existing_customer = Customer(
+            ownership_scope="TENANT",
+            operational_organization_id=organization.id,
             first_name="Sara",
             last_name="Ahmadi",
             company_name="Ahmadi Co",
@@ -40,9 +49,10 @@ def crm_write_app():
             status="active",
             industry="Import",
         )
-        db.session.add_all([business_expert, existing_customer])
+        db.session.add(existing_customer)
         db.session.flush()
         existing_opportunity = Opportunity(
+            operational_organization_id=organization.id,
             customer_id=existing_customer.id,
             title="Existing Opportunity",
             description="Existing opportunity description",
@@ -53,6 +63,8 @@ def crm_write_app():
             status="open",
         )
         existing_activity = Activity(
+            ownership_scope="TENANT",
+            operational_organization_id=organization.id,
             customer_id=existing_customer.id,
             opportunity_id=existing_opportunity.id,
             expert_user_id=business_expert.id,
