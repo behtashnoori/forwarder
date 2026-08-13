@@ -108,6 +108,39 @@ interface AssignmentStatistics {
   }[];
 }
 
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
+
+const normalizeUser = (value: unknown): User => {
+  const user = (value && typeof value === "object" ? value : {}) as Partial<User>;
+  return {
+    id: typeof user.id === "number" ? user.id : 0,
+    username: typeof user.username === "string" ? user.username : "",
+    full_name: typeof user.full_name === "string" ? user.full_name : "",
+    email: typeof user.email === "string" ? user.email : undefined,
+    phone: typeof user.phone === "string" ? user.phone : undefined,
+    role: typeof user.role === "string" ? user.role : "",
+    department: typeof user.department === "string" ? user.department : undefined,
+    is_active: user.is_active === true,
+    can_handle_domestic: user.can_handle_domestic === true,
+    can_handle_international: user.can_handle_international === true,
+    sla_response_work_minutes: typeof user.sla_response_work_minutes === "number" ? user.sla_response_work_minutes : 120,
+    created_at: typeof user.created_at === "string" ? user.created_at : "",
+    last_login_at: typeof user.last_login_at === "string" ? user.last_login_at : undefined,
+    manager: user.manager && typeof user.manager === "object" ? user.manager : undefined,
+    subordinates_count: typeof user.subordinates_count === "number" ? user.subordinates_count : 0,
+    specializations: asArray<User["specializations"][number]>(user.specializations),
+    workload: typeof user.workload === "number" ? user.workload : 0,
+  };
+};
+
+const responseError = async (response: Response, resource: string) => {
+  const payload = await response.json().catch(() => null) as { error?: unknown; message?: unknown } | null;
+  const detail = typeof payload?.error === "string"
+    ? payload.error
+    : typeof payload?.message === "string" ? payload.message : response.statusText;
+  return `${resource}: ${detail || `HTTP ${response.status}`} (${response.status})`;
+};
+
 const UserManagement = () => {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
@@ -115,6 +148,7 @@ const UserManagement = () => {
   const [assignmentRules, setAssignmentRules] = useState<AssignmentRule[]>([]);
   const [statistics, setStatistics] = useState<AssignmentStatistics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("users");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState("all");
@@ -164,6 +198,7 @@ const UserManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const token = localStorage.getItem('expert_token');
       const [usersRes, transportRes, rulesRes, statsRes] = await Promise.all([
         fetch(`${env.API_URL}/api/user-management/users`, {
@@ -188,26 +223,36 @@ const UserManagement = () => {
         })
       ]);
 
+      const errors: string[] = [];
       if (usersRes.ok) {
         const usersData = await usersRes.json();
-        setUsers(usersData.users);
-      }
+        setUsers(asArray<unknown>(usersData?.users).map(normalizeUser));
+      } else errors.push(await responseError(usersRes, "Users"));
 
       if (transportRes.ok) {
         const transportData = await transportRes.json();
-        setTransportMethods(transportData.transport_methods);
-      }
+        setTransportMethods(asArray<TransportMethod>(transportData?.transport_methods));
+      } else errors.push(await responseError(transportRes, "Transport methods"));
 
       if (rulesRes.ok) {
         const rulesData = await rulesRes.json();
-        setAssignmentRules(rulesData.assignment_rules);
-      }
+        setAssignmentRules(asArray<AssignmentRule>(rulesData?.assignment_rules));
+      } else errors.push(await responseError(rulesRes, "Assignment rules"));
 
       if (statsRes.ok) {
         const statsData = await statsRes.json();
-        setStatistics(statsData);
-      }
+        setStatistics({
+          total_assignments: typeof statsData?.total_assignments === "number" ? statsData.total_assignments : 0,
+          automatic_assignments: typeof statsData?.automatic_assignments === "number" ? statsData.automatic_assignments : 0,
+          manual_assignments: typeof statsData?.manual_assignments === "number" ? statsData.manual_assignments : 0,
+          expert_workloads: asArray<AssignmentStatistics["expert_workloads"][number]>(statsData?.expert_workloads),
+        });
+      } else errors.push(await responseError(statsRes, "Assignment statistics"));
+
+      if (errors.length > 0) setLoadError(errors.join(" | "));
     } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      setLoadError(`Unable to load user management data: ${detail}`);
       toast({
         title: "خطا",
         description: "خطا در بارگذاری داده‌ها",
@@ -577,6 +622,11 @@ const UserManagement = () => {
         )}
 
         {/* Main Content Tabs */}
+        {loadError && (
+          <div role="alert" className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800">
+            خطا در بارگذاری اطلاعات مدیریت کاربران: {loadError}
+          </div>
+        )}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="users">
