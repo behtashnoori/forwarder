@@ -19,17 +19,15 @@ def _builder():
     return module
 
 
-def test_integrated_193_builder_identity_and_migration_boundary():
+def test_integrated_1931_builder_identity_without_migration():
     builder = _builder()
 
-    assert builder.VERSION == "1.9.3"
-    assert builder.PREVIOUS_VERSION == "1.9.2"
-    assert builder.TAG == "v1.9.3"
-    assert builder.PRODUCTION_BASELINE_REVISION == "20260824_mt1_graph"
+    assert builder.VERSION == "1.9.3.1"
+    assert builder.PREVIOUS_VERSION == "1.9.3"
+    assert builder.TAG == "v1.9.3.1"
+    assert builder.PRODUCTION_BASELINE_REVISION == "20260825_admin_multitenant"
     assert builder.DATABASE_REVISION == "20260825_admin_multitenant"
-    assert builder.UPGRADE_REVISIONS == [
-        "20260825_admin_multitenant",
-    ]
+    assert builder.UPGRADE_REVISIONS == []
     assert all(builder.migration_path(revision).is_file() for revision in builder.UPGRADE_REVISIONS)
 
 
@@ -153,7 +151,7 @@ def test_vite_does_not_watch_immutable_release_staging_directories():
     assert 'ignored: ["**/.release-v*-staging-*"]' in config
 
 
-def test_publication_runbooks_and_dependency_contract_are_193_coherent():
+def test_publication_runbooks_and_dependency_contract_are_1931_coherent():
     for name in (
         "DEPLOYMENT.md",
         "ROLLBACK.md",
@@ -163,7 +161,7 @@ def test_publication_runbooks_and_dependency_contract_are_193_coherent():
         "VERIFY-SERVER.ps1",
     ):
         text = (ROOT / name).read_text(encoding="utf-8")
-        assert "1.9.3" in text
+        assert "1.9.3.1" in text
         assert "20260825_admin_multitenant" in text
 
     requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()

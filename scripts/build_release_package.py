@@ -1,4 +1,4 @@
-"""Build the immutable Forwarder 1.9.3 package from its exact annotated tag."""
+"""Build the immutable Forwarder 1.9.3.1 package from its exact annotated tag."""
 
 from __future__ import annotations
 
@@ -17,17 +17,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.9.3"
-PREVIOUS_VERSION = "1.9.2"
-TAG = "v1.9.3"
-RELEASE_DATE = "20260812"
+VERSION = "1.9.3.1"
+PREVIOUS_VERSION = "1.9.3"
+TAG = "v1.9.3.1"
+RELEASE_DATE = "20260813"
 RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
 NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
-PRODUCTION_BASELINE_REVISION = "20260824_mt1_graph"
+PRODUCTION_BASELINE_REVISION = "20260825_admin_multitenant"
 DATABASE_REVISION = "20260825_admin_multitenant"
-UPGRADE_MIGRATIONS = [
-    ("20260825_admin_multitenant", "backend/migrations/versions/20260825_admin_multitenant.py"),
-]
+UPGRADE_MIGRATIONS = []
 UPGRADE_REVISIONS = [revision for revision, _ in UPGRADE_MIGRATIONS]
 HISTORICAL_SECURITY_REMEDIATION = {
     "policy": "exact-credential-migration-remediated-in-ancestry-v1",
@@ -183,7 +181,7 @@ def build() -> None:
         manifest = {
         "application_version": VERSION,
         "previous_version": PREVIOUS_VERSION,
-        "release_name": "Admin multi-tenant isolation",
+        "release_name": "User Management frontend patch",
         "change_type": "PATCH",
         "git_commit": commit,
         "git_tree": tree,
@@ -206,14 +204,14 @@ def build() -> None:
         "upgrade_revisions": UPGRADE_REVISIONS,
         "migration_files": migration_files,
         "historical_security_remediation": HISTORICAL_SECURITY_REMEDIATION,
-        "database_migration_included": True,
-        "deployment_type": "backend-frontend-migration",
+        "database_migration_included": False,
+        "deployment_type": "backend-frontend",
         "api_base": "same-origin",
         "environment_fingerprint": "sha256:" + hashlib.sha256(env_canonical).hexdigest(),
         "environment_fingerprint_definition": "SHA-256 of canonical secret-free JSON containing Python, Node, npm, package-lock SHA-256, and requirements SHA-256",
-        "rollback_release": "release-v1.9.2-20260812",
-        "rollback_strategy": "prefer forward recovery; restore coordinated pre-migration database and document-storage backups if the admin multi-tenant migration or application acceptance gate fails",
-        "rollback_restore_required_from_revision": "20260825_admin_multitenant",
+        "rollback_release": "release-v1.9.3-20260812",
+        "rollback_strategy": "reactivate immutable v1.9.3 application files; no database restore or migration is required for this patch",
+        "rollback_restore_required_from_revision": None,
         "milestone_type_catalog_filename": "backend/reference_data/milestone-types-v1.0.0.json",
         "milestone_type_catalog_version": "1.0.0",
         "milestone_type_catalog_sha256": sha256(ROOT / "backend/reference_data/milestone-types-v1.0.0.json"),
@@ -249,7 +247,7 @@ def build() -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check-source", action="store_true", help="validate 1.9.3 source metadata without creating a package")
+    parser.add_argument("--check-source", action="store_true", help="validate 1.9.3.1 source metadata without creating a package")
     args = parser.parse_args()
     if args.check_source:
         status = validate_source()

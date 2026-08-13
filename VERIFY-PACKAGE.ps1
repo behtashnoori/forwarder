@@ -2,12 +2,12 @@ $ErrorActionPreference = "Stop"
 $manifestPath = Join-Path $PSScriptRoot "release-manifest.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing release-manifest.json" }
 $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-if ($manifest.application_version -ne "1.9.3" -or $manifest.previous_version -ne "1.9.2") { throw "Version mismatch" }
-if ($manifest.git_tag -ne "v1.9.3" -or $manifest.git_commit -ne $manifest.backend_revision -or -not $manifest.git_tree -or -not $manifest.git_tag_object) { throw "Git identity mismatch" }
-$expectedRevisions = @("20260825_admin_multitenant")
-if ($manifest.database_revision -ne "20260825_admin_multitenant" -or $manifest.production_baseline_revision -ne "20260824_mt1_graph" -or $manifest.previous_database_revision -ne "20260824_mt1_graph" -or -not $manifest.database_migration_included) { throw "Database metadata mismatch" }
+if ($manifest.application_version -ne "1.9.3.1" -or $manifest.previous_version -ne "1.9.3") { throw "Version mismatch" }
+if ($manifest.git_tag -ne "v1.9.3.1" -or $manifest.git_commit -ne $manifest.backend_revision -or -not $manifest.git_tree -or -not $manifest.git_tag_object) { throw "Git identity mismatch" }
+$expectedRevisions = @()
+if ($manifest.database_revision -ne "20260825_admin_multitenant" -or $manifest.production_baseline_revision -ne "20260825_admin_multitenant" -or $manifest.previous_database_revision -ne "20260825_admin_multitenant" -or $manifest.database_migration_included) { throw "Database metadata mismatch" }
 if ((@($manifest.upgrade_revisions) -join "|") -ne ($expectedRevisions -join "|")) { throw "Migration path mismatch" }
-if ($manifest.rollback_release -ne "release-v1.9.2-20260812" -or $manifest.rollback_restore_required_from_revision -ne "20260825_admin_multitenant") { throw "Rollback metadata mismatch" }
+if ($manifest.rollback_release -ne "release-v1.9.3-20260812" -or $null -ne $manifest.rollback_restore_required_from_revision) { throw "Rollback metadata mismatch" }
 if ($manifest.production_seed_executed -ne $false) { throw "Seed metadata mismatch" }
 if ($manifest.milestone_type_catalog_apply_status -ne "not applied") { throw "Catalog apply metadata mismatch" }
 $python = (Get-Command python -ErrorAction Stop).Source
@@ -16,6 +16,9 @@ if ($actualHash -ne $manifest.package_hash) { throw "Package hash mismatch: actu
 $required = @("index.html", $manifest.frontend_entry_js, $manifest.frontend_entry_css, "web.config", "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml", "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md", "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1", "verify_package_secrets.py", $manifest.milestone_type_catalog_filename)
 foreach ($migration in @($manifest.migration_files)) { $required += $migration.path }
 foreach ($item in $required) { if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot $item))) { throw "Missing required file: $item" } }
+$index = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "index.html")
+if ($index -match '/src/main\.tsx' -or $index -notmatch '/assets/.+\.js') { throw "Frontend index is not a production build" }
+if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "assets") -PathType Container)) { throw "Missing production assets directory" }
 $requirementsHash = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $PSScriptRoot "requirements.txt")).Hash.ToLowerInvariant()
 if ($requirementsHash -ne $manifest.requirements_sha256) { throw "Requirements checksum mismatch" }
 $requirements = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot "requirements.txt") | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith("#") })
