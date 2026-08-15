@@ -96,12 +96,10 @@ def serialize_definition(row: DocumentDefinition) -> dict[str, Any]:
 
 
 def initialize_requirements(case: ShipmentRequest, actor_id: int | None) -> int:
-    definitions = DocumentDefinition.query.filter(
-        DocumentDefinition.is_active.is_(True),
-        DocumentDefinition.applicability_scope.in_(["all", case.shipping_type]),
-    ).order_by(DocumentDefinition.sort_order, DocumentDefinition.id).all()
+    from backend.services.organization_document_policy_service import effective_definitions
+    definitions = effective_definitions(case.operational_organization_id, case.shipping_type, getattr(case, "project_id", None))
     created = 0
-    for definition in definitions:
+    for definition, requirement_level in definitions:
         # Once a definition has been snapshotted for a case, later definition
         # revisions are intentionally not applied by this idempotent initializer.
         exists = CaseDocumentRequirement.query.filter_by(
@@ -113,7 +111,7 @@ def initialize_requirements(case: ShipmentRequest, actor_id: int | None) -> int:
             shipment_request_id=case.id, source_definition_id=definition.id,
             operational_organization_id=case.operational_organization_id,
             source_definition_code=definition.code, source_definition_revision=definition.revision,
-            title=definition.title, description=definition.description, is_required=definition.is_required,
+            title=definition.title, description=definition.description, is_required=requirement_level == "REQUIRED",
             allowed_formats=definition.allowed_formats, max_file_size_bytes=definition.max_file_size_bytes,
             max_active_file_count=definition.max_active_file_count, sort_order=definition.sort_order,
             applied_by=actor_id,

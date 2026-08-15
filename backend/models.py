@@ -1742,6 +1742,48 @@ class DocumentDefinition(db.Model):
     updated_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
 
 
+class OrganizationDocumentRequirement(db.Model):
+    """Tenant-owned applicability policy over the platform document vocabulary."""
+
+    __tablename__ = "organization_document_requirement"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "organization_id", "document_definition_id",
+            name="uq_organization_document_requirement_logical",
+        ),
+        db.CheckConstraint(
+            "requirement_level IN ('REQUIRED','OPTIONAL','CONDITIONAL','DISABLED')",
+            name="ck_organization_document_requirement_level",
+        ),
+        db.Index(
+            "ix_organization_document_requirement_active",
+            "organization_id", "is_active",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    operational_organization_id = db.synonym("organization_id")
+    document_definition_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("document_definition.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    requirement_level = db.Column(db.String(16), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    updated_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    document_definition = db.relationship("DocumentDefinition")
+
+
 class CaseDocumentRequirement(db.Model):
     """Immutable policy snapshot attached to the canonical shipment request."""
 
@@ -1925,6 +1967,7 @@ __all__ = [
     "PORT_CUSTOMS_RELATIONSHIP_TYPES",
     "SiteSetting",
     "DocumentDefinition",
+    "OrganizationDocumentRequirement",
     "CaseDocumentRequirement",
     "CaseDocumentFile",
     "DocumentAuditEvent",

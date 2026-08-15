@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from flask import Blueprint, jsonify, request, send_file
+from flask import Blueprint, g, jsonify, request, send_file
 from sqlalchemy.exc import IntegrityError
 
 from backend.auth import get_current_user
@@ -15,6 +15,7 @@ from backend.services.document_storage_service import DocumentStorageError, Priv
 from backend.services.expert_request_detail_service import can_access_request_detail
 from backend.quarantine import QuarantinedResource, is_quarantined
 from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
+from backend.services import organization_document_policy_service as organization_policy
 
 document_bp = Blueprint("case_documents", __name__)
 
@@ -103,6 +104,25 @@ def definitions_activation(definition_id: int):
     service.audit("document_definition_activated" if active else "document_definition_deactivated", actor["id"], definition_id=row.id)
     db.session.commit()
     return jsonify(service.serialize_definition(row))
+
+
+@document_bp.get("/api/admin/organization-document-policy")
+@require_organization_admin_context(allow_platform=False)
+def organization_document_policy_list():
+    return jsonify(organization_policy.list_policy(g.organization_context.organization_id))
+
+
+@document_bp.put("/api/admin/organization-document-policy/<definition_public_id>")
+@require_organization_admin_context(allow_platform=False)
+def organization_document_policy_upsert(definition_public_id: str):
+    actor = _current()
+    try:
+        item = organization_policy.upsert(g.organization_context.organization_id,
+            definition_public_id, request.get_json(silent=True) or {}, actor["id"])
+        return jsonify(item)
+    except organization_policy.PolicyError as exc:
+        db.session.rollback()
+        return jsonify({"error": exc.message}), exc.status
 
 
 @document_bp.get("/api/expert/requests/<int:case_id>/documents")

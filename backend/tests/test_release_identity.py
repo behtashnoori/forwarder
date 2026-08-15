@@ -45,7 +45,7 @@ def test_release_identity_support_projection_is_explicitly_allowlisted(identity_
     response = identity_app.test_client().get("/api/system/release-identity", headers={"Authorization": f"Bearer {identity_app.config['identity_tokens'][1]}"})
     assert response.status_code == 200 and response.json["projection"] == "support"
     assert response.json["data"] == {
-        "application_version": "1.9.3", "frontend_version": "1.9.3", "backend_version": "1.9.3",
+        "application_version": "1.9.3", "frontend_version": "1.9.3", "backend_version": "1.9.4",
         "release_tag": "v1.9.3", "short_commit": "1234567890ab",
         "database_revision": "20260825_admin_multitenant",
     }

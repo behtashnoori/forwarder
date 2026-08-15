@@ -80,42 +80,36 @@ def materialization_preview(shipment_id, user):
             OperationalDocumentRequirement.operational_shipment_id == shipment.id
         )
     ).all()
-    configured = (
-        []
-        if shipment.project_id is None
-        else db.session.scalars(
-            select(ProjectDocumentRequirement)
-            .where(ProjectDocumentRequirement.project_id == shipment.project_id)
-            .order_by(
-                ProjectDocumentRequirement.display_order, ProjectDocumentRequirement.id
-            )
-        ).all()
-    )
+    from backend.models import OrganizationDocumentRequirement, ShipmentRequest
+    from backend.services.organization_document_policy_service import effective_definitions
+    request_row = db.session.get(ShipmentRequest, shipment.shipment_request_id) if shipment.shipment_request_id else None
+    configured = effective_definitions(shipment.organization_id,
+        request_row.shipping_type if request_row else "all", shipment.project_id)
+    project_rows = [] if shipment.project_id is None else db.session.scalars(
+        select(ProjectDocumentRequirement).where(ProjectDocumentRequirement.project_id == shipment.project_id,
+            ProjectDocumentRequirement.is_active.is_(True))).all()
+    project_by_definition = {row.document_definition_id: row for row in project_rows}
+    policy_rows = db.session.scalars(select(OrganizationDocumentRequirement).where(
+        OrganizationDocumentRequirement.operational_organization_id == shipment.organization_id)).all()
+    policy_by_definition = {row.document_definition_id: row for row in policy_rows}
     rows, findings = [], []
-    if shipment.project_id is None:
-        findings.append(
-            {
-                "code": "PROJECT_REQUIRED",
-                "message": "Shipment is not assigned to a Project.",
-            }
-        )
-    for source in configured:
-        target = source.target_milestone_type
+    for definition, level in configured:
+        source = project_by_definition.get(definition.id)
+        policy = policy_by_definition.get(definition.id)
+        target = source.target_milestone_type if source else None
         warnings = []
-        if not source.is_active:
-            warnings.append("INACTIVE_REQUIREMENT")
-        if not target or not source.target_status:
-            warnings.append("TRANSITION_BINDING_REQUIRED")
         rows.append(
             {
-                "source_requirement_public_id": source.public_id,
-                "source_version": source.version,
-                "document_definition_public_id": source.document_definition.public_id,
-                "title": source.document_definition.title,
-                "requirement_level": source.requirement_level,
-                "required_assessment_level": source.required_assessment_level,
+                "source_requirement_public_id": source.public_id if source else None,
+                "source_organization_policy_id": policy.id if policy and not source else None,
+                "source_version": source.version if source else (policy.version if policy else None),
+                "document_definition_public_id": definition.public_id,
+                "document_definition_id": definition.id,
+                "title": definition.title,
+                "requirement_level": level,
+                "required_assessment_level": source.required_assessment_level if source else "APPROVED",
                 "target_milestone_type": target.immutable_code if target else None,
-                "target_status": source.target_status,
+                "target_status": source.target_status if source else None,
                 "warnings": warnings,
             }
         )
@@ -151,30 +145,26 @@ def materialize(shipment_id, payload, user):
             "Project document configuration is incomplete or inactive.",
             422,
         )
-    sources = db.session.scalars(
-        select(ProjectDocumentRequirement)
-        .where(
-            ProjectDocumentRequirement.project_id == shipment.project_id,
-            ProjectDocumentRequirement.is_active.is_(True),
-        )
-        .with_for_update()
-    ).all()
+    sources = preview["requirements"]
     created = []
     for source in sources:
         row = OperationalDocumentRequirement(
             organization_id=shipment.organization_id,
             operational_shipment_id=shipment.id,
-            document_definition_id=source.document_definition_id,
-            source_project_requirement_id=source.id,
-            source_project_requirement_public_id=source.public_id,
-            source_project_requirement_version=source.version,
-            requirement_level=source.requirement_level,
+            document_definition_id=source["document_definition_id"],
+            source_project_requirement_id=(db.session.scalar(select(ProjectDocumentRequirement.id).where(
+                ProjectDocumentRequirement.public_id == source["source_requirement_public_id"]))
+                if source["source_requirement_public_id"] else None),
+            source_project_requirement_public_id=source["source_requirement_public_id"],
+            source_project_requirement_version=source["source_version"] if source["source_requirement_public_id"] else None,
+            source_organization_policy_id=source["source_organization_policy_id"],
+            requirement_level=source["requirement_level"],
             applicability_state="UNRESOLVED"
-            if source.requirement_level == "CONDITIONAL"
+            if source["requirement_level"] == "CONDITIONAL"
             else "APPLICABLE",
-            required_assessment_level=source.required_assessment_level,
-            target_milestone_type=source.target_milestone_type.immutable_code,
-            target_status=source.target_status,
+            required_assessment_level=source["required_assessment_level"],
+            target_milestone_type=source["target_milestone_type"],
+            target_status=source["target_status"],
             created_by_user_id=user["id"],
         )
         db.session.add(row)
@@ -186,8 +176,8 @@ def materialize(shipment_id, payload, user):
             "RequirementMaterialized",
             row,
             evidence={
-                "source_public_id": source.public_id,
-                "source_version": source.version,
+                "source_public_id": source["source_requirement_public_id"],
+                "source_version": source["source_version"],
             },
         )
     shipment.version += 1

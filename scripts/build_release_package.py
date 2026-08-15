@@ -1,4 +1,4 @@
-"""Build the immutable Forwarder 1.9.3.1 package from its exact annotated tag."""
+"""Build the immutable Forwarder 1.9.4 package from its exact annotated tag."""
 
 from __future__ import annotations
 
@@ -17,15 +17,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.9.3.1"
-PREVIOUS_VERSION = "1.9.3"
-TAG = "v1.9.3.1"
-RELEASE_DATE = "20260813"
+VERSION = "1.9.4"
+PREVIOUS_VERSION = "1.9.3.1"
+TAG = "v1.9.4"
+RELEASE_DATE = "20260815"
 RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
 NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
 PRODUCTION_BASELINE_REVISION = "20260825_admin_multitenant"
-DATABASE_REVISION = "20260825_admin_multitenant"
-UPGRADE_MIGRATIONS = []
+DATABASE_REVISION = "20260826_org_document_policy"
+UPGRADE_MIGRATIONS = [
+    ("20260826_org_document_policy", "backend/migrations/versions/20260826_organization_document_policy.py"),
+]
 UPGRADE_REVISIONS = [revision for revision, _ in UPGRADE_MIGRATIONS]
 HISTORICAL_SECURITY_REMEDIATION = {
     "policy": "exact-credential-migration-remediated-in-ancestry-v1",
@@ -126,6 +128,9 @@ def build() -> None:
         raise SystemExit(f"Refusing to overwrite {RELEASE_DIR}")
 
     commit = run("git", "rev-parse", "HEAD")
+    archive = ROOT / f"Forwarder-v{VERSION}-{commit[:7]}.zip"
+    if archive.exists():
+        raise SystemExit(f"Refusing to overwrite {archive}")
     tree = run("git", "rev-parse", "HEAD^{tree}")
     tag_object = run("git", "rev-parse", f"{TAG}^{{tag}}")
     build_frontend()
@@ -143,6 +148,8 @@ def build() -> None:
             "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml",
             "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md",
             "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1", "verify_package_secrets.py",
+            "docs/operational/release-1.9.4-notes.md",
+            "docs/operational/Forwarder-v1.9.4-handoff.md",
         ]
         for name in root_files:
             copy_file(ROOT / name, Path(name), package_root)
@@ -181,7 +188,7 @@ def build() -> None:
         manifest = {
         "application_version": VERSION,
         "previous_version": PREVIOUS_VERSION,
-        "release_name": "User Management frontend patch",
+        "release_name": "Organization Document Policy",
         "change_type": "PATCH",
         "git_commit": commit,
         "git_tree": tree,
@@ -204,13 +211,13 @@ def build() -> None:
         "upgrade_revisions": UPGRADE_REVISIONS,
         "migration_files": migration_files,
         "historical_security_remediation": HISTORICAL_SECURITY_REMEDIATION,
-        "database_migration_included": False,
+        "database_migration_included": True,
         "deployment_type": "backend-frontend",
         "api_base": "same-origin",
         "environment_fingerprint": "sha256:" + hashlib.sha256(env_canonical).hexdigest(),
         "environment_fingerprint_definition": "SHA-256 of canonical secret-free JSON containing Python, Node, npm, package-lock SHA-256, and requirements SHA-256",
-        "rollback_release": "release-v1.9.3-20260812",
-        "rollback_strategy": "reactivate immutable v1.9.3 application files; no database restore or migration is required for this patch",
+        "rollback_release": "v1.9.3.1",
+        "rollback_strategy": "stop v1.9.4, downgrade only if the migration's tenant-data safety precheck permits it, then reactivate immutable v1.9.3.1 application files",
         "rollback_restore_required_from_revision": None,
         "milestone_type_catalog_filename": "backend/reference_data/milestone-types-v1.0.0.json",
         "milestone_type_catalog_version": "1.0.0",
@@ -242,12 +249,13 @@ def build() -> None:
             json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
         )
         promote_release_directory(package_root, RELEASE_DIR)
-    print(RELEASE_DIR)
+    shutil.make_archive(str(archive.with_suffix("")), "zip", root_dir=RELEASE_DIR)
+    print(archive)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--check-source", action="store_true", help="validate 1.9.3.1 source metadata without creating a package")
+    parser.add_argument("--check-source", action="store_true", help="validate 1.9.4 source metadata without creating a package")
     args = parser.parse_args()
     if args.check_source:
         status = validate_source()

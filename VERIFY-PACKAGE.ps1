@@ -2,12 +2,12 @@ $ErrorActionPreference = "Stop"
 $manifestPath = Join-Path $PSScriptRoot "release-manifest.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "Missing release-manifest.json" }
 $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-if ($manifest.application_version -ne "1.9.3.1" -or $manifest.previous_version -ne "1.9.3") { throw "Version mismatch" }
-if ($manifest.git_tag -ne "v1.9.3.1" -or $manifest.git_commit -ne $manifest.backend_revision -or -not $manifest.git_tree -or -not $manifest.git_tag_object) { throw "Git identity mismatch" }
-$expectedRevisions = @()
-if ($manifest.database_revision -ne "20260825_admin_multitenant" -or $manifest.production_baseline_revision -ne "20260825_admin_multitenant" -or $manifest.previous_database_revision -ne "20260825_admin_multitenant" -or $manifest.database_migration_included) { throw "Database metadata mismatch" }
+if ($manifest.application_version -ne "1.9.4" -or $manifest.previous_version -ne "1.9.3.1") { throw "Version mismatch" }
+if ($manifest.git_tag -ne "v1.9.4" -or $manifest.git_commit -ne $manifest.backend_revision -or -not $manifest.git_tree -or -not $manifest.git_tag_object) { throw "Git identity mismatch" }
+$expectedRevisions = @("20260826_org_document_policy")
+if ($manifest.database_revision -ne "20260826_org_document_policy" -or $manifest.production_baseline_revision -ne "20260825_admin_multitenant" -or $manifest.previous_database_revision -ne "20260825_admin_multitenant" -or -not $manifest.database_migration_included) { throw "Database metadata mismatch" }
 if ((@($manifest.upgrade_revisions) -join "|") -ne ($expectedRevisions -join "|")) { throw "Migration path mismatch" }
-if ($manifest.rollback_release -ne "release-v1.9.3-20260812" -or $null -ne $manifest.rollback_restore_required_from_revision) { throw "Rollback metadata mismatch" }
+if ($manifest.rollback_release -ne "v1.9.3.1" -or $null -ne $manifest.rollback_restore_required_from_revision) { throw "Rollback metadata mismatch" }
 if ($manifest.production_seed_executed -ne $false) { throw "Seed metadata mismatch" }
 if ($manifest.milestone_type_catalog_apply_status -ne "not applied") { throw "Catalog apply metadata mismatch" }
 $python = (Get-Command python -ErrorAction Stop).Source

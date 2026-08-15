@@ -31,6 +31,7 @@ import SiteSettingsTab from "@/components/SiteSettingsTab";
 import TrackingLocationsAdminTab from "@/components/TrackingLocationsAdminTab";
 import LocationsAdminTab from "@/components/LocationsAdminTab";
 import DocumentDefinitionsTab from "@/components/DocumentDefinitionsTab";
+import OrganizationDocumentPolicyTab from "@/components/OrganizationDocumentPolicyTab";
 import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
 import LogisticsNetworkAdminTab from "@/components/LogisticsNetworkAdminTab";
@@ -105,6 +106,13 @@ const AdminPanel = () => {
   const isPlatformAdmin = useMemo(() => {
     try {
       return JSON.parse(localStorage.getItem("expert_user") || "{}").authority === "PLATFORM_ADMIN";
+    } catch {
+      return false;
+    }
+  }, []);
+  const isOrganizationAdmin = useMemo(() => {
+    try {
+      return JSON.parse(localStorage.getItem("expert_user") || "{}").authority === "ORGANIZATION_ADMIN";
     } catch {
       return false;
     }
@@ -296,6 +304,7 @@ const AdminPanel = () => {
             </TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>مدیریت مستندات</TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>الزامات مستندات سازمان</TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>}
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
             <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی</TabsTrigger>
@@ -486,6 +495,7 @@ const AdminPanel = () => {
           {isPlatformAdmin && <TabsContent value="locations" className="space-y-4"><LocationsAdminTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>}
+          {isOrganizationAdmin && <TabsContent value="organization-documents" className="space-y-4"><OrganizationDocumentPolicyTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>}
           <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>
           <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab isPlatformAdmin={isPlatformAdmin} /></TabsContent>

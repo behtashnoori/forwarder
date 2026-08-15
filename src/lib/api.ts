@@ -1422,6 +1422,33 @@ export const setDocumentDefinitionActive = (id: number, is_active: boolean) =>
     `/api/admin/document-definitions/${id}/activation`,
     { method: "POST", body: JSON.stringify({ is_active }) },
   );
+export type OrganizationDocumentRequirementLevel = "REQUIRED" | "OPTIONAL" | "CONDITIONAL" | "DISABLED";
+export interface OrganizationDocumentPolicyItem {
+  document_definition_public_id: string;
+  code: string;
+  title: string;
+  description?: string | null;
+  global_is_active: boolean;
+  global_default_required: boolean;
+  applicability_scope: "all" | "domestic" | "international";
+  policy_public_id?: string | null;
+  requirement_level?: OrganizationDocumentRequirementLevel | null;
+  is_active?: boolean | null;
+  version?: number | null;
+}
+export interface OrganizationDocumentPolicyPayload {
+  mode: "EXPLICIT" | "COMPATIBILITY_FALLBACK";
+  items: OrganizationDocumentPolicyItem[];
+}
+export const fetchOrganizationDocumentPolicy = () =>
+  request<OrganizationDocumentPolicyPayload>("/api/admin/organization-document-policy");
+export const updateOrganizationDocumentPolicy = (
+  definitionPublicId: string,
+  payload: { requirement_level: OrganizationDocumentRequirementLevel; is_active: boolean; version?: number },
+) => request<OrganizationDocumentPolicyItem>(
+  `/api/admin/organization-document-policy/${encodeURIComponent(definitionPublicId)}`,
+  { method: "PUT", body: JSON.stringify(payload) },
+);
 export const fetchCaseDocuments = (caseId: number) =>
   request<CaseDocumentsPayload>(`/api/expert/requests/${caseId}/documents`);
 export const uploadCaseDocument = (
@@ -3443,8 +3470,8 @@ export type DocumentReadinessRequirement = {
   requirement_level: "REQUIRED" | "OPTIONAL" | "CONDITIONAL";
   applicability_state: "APPLICABLE" | "NOT_APPLICABLE" | "UNRESOLVED";
   required_assessment_level: "APPROVED" | "VERIFIED";
-  target_milestone_type: string;
-  target_status: string;
+  target_milestone_type: string | null;
+  target_status: string | null;
   version: number;
   artifact: null | {
     artifact_public_id: string;
