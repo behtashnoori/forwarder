@@ -22,10 +22,52 @@ from backend.extensions import db
 from backend.census_context import CensusTransitioned, CensusUnavailable
 from backend.quarantine import QuarantinedResource, assert_not_quarantined
 from backend.services.expert_scope_service import can_handle_request, eligible_experts
-from backend.operational_models import OperationalMembership
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 logger = logging.getLogger(__name__)
 SECURITY_FENCE_ERRORS = (QuarantinedResource, CensusTransitioned, CensusUnavailable)
+
+
+class ReferralAssignmentRejected(ValueError):
+    """Controlled failure raised when the final assignment fence cannot prove tenancy."""
+
+
+def _runtime_eligible_expert(
+    session: Session, request: ShipmentRequest, expert_id: int | None
+) -> Optional[ExpertUser]:
+    """Prove current tenant membership, organization state, role, and capability."""
+    if (
+        request.ownership_scope != "TENANT"
+        or request.operational_organization_id is None
+        or expert_id is None
+    ):
+        return None
+
+    expert = session.get(ExpertUser, expert_id)
+    if not expert or not can_handle_request(expert, request):
+        return None
+
+    active_memberships = (
+        session.query(OperationalMembership)
+        .filter(
+            OperationalMembership.user_id == expert.id,
+            OperationalMembership.is_active.is_(True),
+        )
+        .all()
+    )
+    if (
+        len(active_memberships) != 1
+        or active_memberships[0].organization_id
+        != request.operational_organization_id
+    ):
+        return None
+
+    organization = session.get(
+        OperationalOrganization, request.operational_organization_id
+    )
+    if not organization or not organization.is_active:
+        return None
+    return expert
 
 
 def _get_assignable_experts(
@@ -52,7 +94,13 @@ def _get_assignable_experts(
             active_membership_count == 1,
         )
     experts = query.order_by(ExpertUser.id.asc()).all()
-    return eligible_experts(experts, request) if request is not None else experts
+    if request is None:
+        return experts
+    return [
+        expert
+        for expert in eligible_experts(experts, request)
+        if _runtime_eligible_expert(session, request, expert.id)
+    ]
 
 
 def _select_expert_by_last_assignment(
@@ -176,10 +224,14 @@ def _assignable_pool(
         .all()
     )
     by_id = {expert.id: expert for expert in experts}
-    ordered = eligible_experts(
-        [by_id[expert_id] for expert_id in expert_ids if expert_id in by_id],
-        request,
-    )
+    ordered = [
+        expert
+        for expert in eligible_experts(
+            [by_id[expert_id] for expert_id in expert_ids if expert_id in by_id],
+            request,
+        )
+        if _runtime_eligible_expert(session, request, expert.id)
+    ]
 
     if max_active in (None, ""):
         return ordered
@@ -244,7 +296,13 @@ class ReferralEngine:
 
             rule_assignment = self._select_matching_rule_assignment(request)
             if rule_assignment:
-                self._advance_rule_state(rule_assignment)
+                if rule_assignment.get("rejected"):
+                    logger.warning(
+                        "Referral rule %s rejected all runtime-eligible experts for request %s",
+                        rule_assignment.get("rule_id"),
+                        request.id,
+                    )
+                    return None
                 self._assign_and_log(
                     request=request,
                     expert_id=rule_assignment["expert_id"],
@@ -253,6 +311,7 @@ class ReferralEngine:
                     rule_id=rule_assignment["rule_id"],
                     strategy_used=rule_assignment["strategy_used"],
                 )
+                self._advance_rule_state(rule_assignment)
                 return rule_assignment["expert_id"]
 
             # Ensure lock row exists, then take row lock for concurrency
@@ -313,6 +372,11 @@ class ReferralEngine:
                 return result
             rule_assignment = self._select_matching_rule_assignment(request, dry_run=True)
             if rule_assignment:
+                if rule_assignment.get("rejected"):
+                    result["matched_rule"] = rule_assignment["matched_rule"]
+                    result["error"] = "assignment_rejected"
+                    result["debug_trace"] = rule_assignment["debug"]
+                    return result
                 expert = self.db.get(ExpertUser, rule_assignment["expert_id"])
                 result["matched_rule"] = rule_assignment["matched_rule"]
                 result["candidates"] = rule_assignment["candidate_expert_ids"]
@@ -351,10 +415,14 @@ class ReferralEngine:
             action = _json_object(rule.action)
             action_type = action.get("type")
             if action_type == "direct_assign":
-                expert = self.db.get(ExpertUser, action.get("expert_id"))
-                if not expert or not can_handle_request(expert, request):
+                expert = _runtime_eligible_expert(
+                    self.db, request, action.get("expert_id")
+                )
+                if not expert:
                     if getattr(rule, "stop_on_match", True):
-                        return None
+                        return self._rejected_rule_assignment(
+                            rule, action_type, dry_run
+                        )
                     continue
                 return {
                     "rule_id": rule.id,
@@ -380,7 +448,9 @@ class ReferralEngine:
                 )
                 if not candidates:
                     if getattr(rule, "stop_on_match", True):
-                        return None
+                        return self._rejected_rule_assignment(
+                            rule, action_type, dry_run
+                        )
                     continue
 
                 strategy = action.get("strategy") or "round_robin"
@@ -411,6 +481,26 @@ class ReferralEngine:
 
         return None
 
+    @staticmethod
+    def _rejected_rule_assignment(
+        rule: ReferralRule, action_type: str, dry_run: bool
+    ) -> Dict[str, Any]:
+        return {
+            "rejected": True,
+            "rule_id": rule.id,
+            "matched_rule": {
+                "id": rule.id,
+                "name": rule.name,
+                "priority": rule.priority,
+            },
+            "debug": {
+                "matched_rule": rule.name,
+                "action_type": action_type,
+                "rejection_reason": "no_runtime_tenant_eligible_expert",
+                "dry_run": dry_run,
+            },
+        }
+
     def _advance_rule_state(self, assignment: Dict[str, Any]) -> None:
         if assignment.get("strategy_used") != "round_robin" or not assignment.get("rule_id"):
             return
@@ -434,9 +524,11 @@ class ReferralEngine:
         strategy_used: str = "round_robin",
     ) -> None:
         """Stage request, logs, notification, and gamification atomically."""
-        expert = self.db.get(ExpertUser, expert_id)
-        if not expert or not can_handle_request(expert, request):
-            raise ValueError(f"Expert {expert_id} is not active or does not exist")
+        expert = _runtime_eligible_expert(self.db, request, expert_id)
+        if not expert:
+            raise ReferralAssignmentRejected(
+                f"Expert {expert_id} failed runtime tenant assignment fencing"
+            )
         request.assigned_to = expert_id
         request.status = "assigned"
         request.has_unread_for_assignee = True

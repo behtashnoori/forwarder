@@ -5,7 +5,9 @@ from sqlalchemy.exc import IntegrityError
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import ExpertUser, Province, ReferralAssignmentLog, ShipmentRequest
+import json
+
+from backend.models import ExpertUser, Province, ReferralAssignmentLog, ReferralRule, ShipmentRequest
 from backend.operational_models import OrganizationHostname, OperationalMembership, OperationalOrganization
 from backend.services.auth_session_service import create_session_tokens
 from backend.services.organization_hostname_service import normalize_hostname, resolve_organization_for_host
@@ -178,3 +180,32 @@ def test_assign_to_me_ignores_arbitrary_expert_identity(routing_app):
     )
     assert response.status_code == 200
     assert response.get_json()["assigned_to"]["id"] == routing_app["company_expert"]
+
+
+def test_tenant_hostname_submission_cannot_cross_assign_through_referral_rule(routing_app):
+    with routing_app["app"].app_context():
+        db.session.add(ReferralRule(
+            name="Cross-tenant stale hostname rule",
+            operational_organization_id=routing_app["samand"],
+            is_active=True,
+            priority=1,
+            conditions=json.dumps({"shipping_type": "domestic"}),
+            action=json.dumps({
+                "type": "direct_assign",
+                "expert_id": routing_app["company_expert"],
+            }),
+            stop_on_match=True,
+            created_by=routing_app["samand_expert"],
+        ))
+        db.session.commit()
+
+    response = routing_app["app"].test_client().post(
+        "/api/shipment-request",
+        base_url="https://samand.logisticmarket.ir",
+        json=payload(routing_app["province"]),
+    )
+    assert response.status_code == 201
+    with routing_app["app"].app_context():
+        row = db.session.get(ShipmentRequest, response.get_json()["id"])
+        assert row.operational_organization_id == routing_app["samand"]
+        assert row.assigned_to is None
