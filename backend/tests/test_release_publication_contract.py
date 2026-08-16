@@ -19,15 +19,15 @@ def _builder():
     return module
 
 
-def test_integrated_194_builder_identity_with_migration():
+def test_integrated_195_builder_identity_with_migration():
     builder = _builder()
 
-    assert builder.VERSION == "1.9.4"
-    assert builder.PREVIOUS_VERSION == "1.9.3.1"
-    assert builder.TAG == "v1.9.4"
-    assert builder.PRODUCTION_BASELINE_REVISION == "20260825_admin_multitenant"
-    assert builder.DATABASE_REVISION == "20260826_org_document_policy"
-    assert builder.UPGRADE_REVISIONS == ["20260826_org_document_policy"]
+    assert builder.VERSION == "1.9.5"
+    assert builder.PREVIOUS_VERSION == "1.9.4"
+    assert builder.TAG == "v1.9.5"
+    assert builder.PRODUCTION_BASELINE_REVISION == "20260826_org_document_policy"
+    assert builder.DATABASE_REVISION == "20260827_org_hostname"
+    assert builder.UPGRADE_REVISIONS == ["20260827_org_hostname"]
     assert all(builder.migration_path(revision).is_file() for revision in builder.UPGRADE_REVISIONS)
 
 
@@ -151,7 +151,7 @@ def test_vite_does_not_watch_immutable_release_staging_directories():
     assert 'ignored: ["**/.release-v*-staging-*"]' in config
 
 
-def test_publication_runbooks_and_dependency_contract_are_194_coherent():
+def test_publication_runbooks_and_dependency_contract_are_195_coherent():
     for name in (
         "DEPLOYMENT.md",
         "ROLLBACK.md",
@@ -161,8 +161,8 @@ def test_publication_runbooks_and_dependency_contract_are_194_coherent():
         "VERIFY-SERVER.ps1",
     ):
         text = (ROOT / name).read_text(encoding="utf-8")
-        assert "1.9.4" in text
-        assert "20260826_org_document_policy" in text
+        assert "1.9.5" in text
+        assert "20260827_org_hostname" in text
 
     requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
     assert "psycopg2-binary==2.9.11" in requirements
