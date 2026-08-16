@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.models import (
@@ -264,6 +265,51 @@ class ReferralEngine:
     def __init__(self, db_session: Optional[Session] = None):
         self.db = db_session or db.session
 
+    def _get_or_create_auto_assign_state(
+        self, operational_organization_id: int
+    ) -> ReferralAutoAssignState:
+        state = (
+            self.db.query(ReferralAutoAssignState)
+            .filter(
+                ReferralAutoAssignState.operational_organization_id
+                == operational_organization_id
+            )
+            .with_for_update()
+            .first()
+        )
+        if state:
+            return state
+
+        try:
+            with self.db.begin_nested():
+                self.db.add(
+                    ReferralAutoAssignState(
+                        operational_organization_id=operational_organization_id,
+                        last_index=0,
+                        updated_at=datetime.now(timezone.utc),
+                    )
+                )
+                self.db.flush()
+        except IntegrityError:
+            # A concurrent first-use insert for this Organization won. The
+            # savepoint preserves the caller's transaction; lock and reuse it.
+            pass
+
+        state = (
+            self.db.query(ReferralAutoAssignState)
+            .filter(
+                ReferralAutoAssignState.operational_organization_id
+                == operational_organization_id
+            )
+            .with_for_update()
+            .first()
+        )
+        if not state:
+            raise RuntimeError(
+                "Unable to create Organization referral auto-assignment state"
+            )
+        return state
+
     def auto_assign_request(self, request_id: int) -> Optional[int]:
         """
         Assign a shipment request to the expert with oldest last-assignment time.
@@ -314,17 +360,10 @@ class ReferralEngine:
                 self._advance_rule_state(rule_assignment)
                 return rule_assignment["expert_id"]
 
-            # Ensure lock row exists, then take row lock for concurrency
-            state = self.db.query(ReferralAutoAssignState).filter(ReferralAutoAssignState.operational_organization_id == request.operational_organization_id).first()
-            if not state:
-                state = ReferralAutoAssignState(operational_organization_id=request.operational_organization_id, last_index=0, updated_at=datetime.now(timezone.utc))
-                self.db.add(state)
-                self.db.flush()
-            state = (
-                self.db.query(ReferralAutoAssignState)
-                .filter(ReferralAutoAssignState.operational_organization_id == request.operational_organization_id)
-                .with_for_update()
-                .first()
+            # Create once under a savepoint, then lock the Organization row.
+            # Concurrent first use converges on the unique Organization key.
+            state = self._get_or_create_auto_assign_state(
+                request.operational_organization_id
             )
 
             selected = _select_expert_by_last_assignment(self.db, request)

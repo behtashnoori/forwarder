@@ -7,7 +7,7 @@ from backend import create_app
 from backend.extensions import db
 import json
 
-from backend.models import ExpertUser, Province, ReferralAssignmentLog, ReferralRule, ShipmentRequest
+from backend.models import ExpertUser, Province, ReferralAssignmentLog, ReferralAutoAssignState, ReferralRule, ShipmentRequest
 from backend.operational_models import OrganizationHostname, OperationalMembership, OperationalOrganization
 from backend.services.auth_session_service import create_session_tokens
 from backend.services.organization_hostname_service import normalize_hostname, resolve_organization_for_host
@@ -209,3 +209,26 @@ def test_tenant_hostname_submission_cannot_cross_assign_through_referral_rule(ro
         row = db.session.get(ShipmentRequest, response.get_json()["id"])
         assert row.operational_organization_id == routing_app["samand"]
         assert row.assigned_to is None
+
+
+def test_samand_hostname_submission_preserves_legacy_referral_state(routing_app):
+    with routing_app["app"].app_context():
+        db.session.add(ReferralAutoAssignState(id=1, last_index=2))
+        db.session.commit()
+
+    response = routing_app["app"].test_client().post(
+        "/api/shipment-request",
+        base_url="https://samand.logisticmarket.ir",
+        json=payload(routing_app["province"]),
+    )
+    assert response.status_code == 201
+    with routing_app["app"].app_context():
+        row = db.session.get(ShipmentRequest, response.get_json()["id"])
+        assert row.ownership_scope == "TENANT"
+        assert row.operational_organization_id == routing_app["samand"]
+        assert row.assigned_to == routing_app["samand_expert"]
+        legacy = db.session.get(ReferralAutoAssignState, 1)
+        assert legacy.operational_organization_id is None
+        assert ReferralAutoAssignState.query.filter_by(
+            operational_organization_id=routing_app["samand"]
+        ).count() == 1

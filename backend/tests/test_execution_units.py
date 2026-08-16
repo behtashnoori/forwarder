@@ -123,7 +123,7 @@ def test_summary_alerts_stale_policy_and_500_unit_10000_event_bounded_queries(eu
 
 def test_execution_unit_migration_is_single_head():
     root=Path(__file__).resolve().parents[1]; config=Config(str(root/"migrations"/"alembic.ini")); config.set_main_option("script_location",str(root/"migrations"))
-    assert ScriptDirectory.from_config(config).get_heads()==["20260827_org_hostname"]
+    assert ScriptDirectory.from_config(config).get_heads()==["20260828_referral_state_compat"]
 
 
 def test_execution_unit_migration_parent_round_trip_and_indexes(tmp_path):
