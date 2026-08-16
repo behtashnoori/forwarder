@@ -37,7 +37,9 @@ def create_shipment_request():
     )
 
     try:
-        shipment_request = shipment_service.create_shipment_request(data, request.remote_addr)
+        shipment_request = shipment_service.create_shipment_request(
+            data, request.remote_addr, request.host
+        )
     except shipment_service.ShipmentValidationError as e:
         body = {"message": e.message}
         if canonical_submission or e.code != "VALIDATION_FAILED":

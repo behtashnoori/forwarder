@@ -2024,6 +2024,46 @@ export function assignRequest(
   });
 }
 
+export function assignRequestToMe(requestId: number): Promise<{
+  message: string;
+  assigned_to: { id: number; name: string };
+}> {
+  return request(`/api/expert/requests/${requestId}/assign-to-me`, { method: "POST" });
+}
+
+export interface OrganizationHostnameRow {
+  id: number;
+  public_id: string;
+  organization_id: number;
+  organization_public_id: string;
+  organization_name: string;
+  hostname: string;
+  is_primary: boolean;
+  is_active: boolean;
+}
+
+export function fetchUnassignedRequests(): Promise<{ requests: ExpertRequest[]; total: number }> {
+  return request("/api/admin/unassigned-requests");
+}
+
+export function assignUnassignedRequest(requestId: number, expertId: number) {
+  return request(`/api/admin/shipment-requests/${requestId}/assign`, {
+    method: "POST",
+    body: JSON.stringify({ expert_id: expertId }),
+  });
+}
+
+export function autoAssignUnassignedRequest(requestId: number): Promise<{
+  assigned: boolean;
+  assigned_expert_id: number | null;
+}> {
+  return request(`/api/admin/shipment-requests/${requestId}/auto-assign`, { method: "POST" });
+}
+
+export function fetchOrganizationHostnames(): Promise<{ hostnames: OrganizationHostnameRow[] }> {
+  return request("/api/admin/organization-hostnames");
+}
+
 export function changeRequestStatus(
   requestId: number,
   status: string,

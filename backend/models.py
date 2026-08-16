@@ -1890,6 +1890,7 @@ from backend.operational_models import (  # noqa: E402
     OperationalIdempotency,
     OperationalMembership,
     OperationalOrganization,
+    OrganizationHostname,
     OperationalOutbox,
     OperationalShipment,
     OperationalWorkItem,

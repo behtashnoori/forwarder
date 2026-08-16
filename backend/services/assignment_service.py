@@ -6,6 +6,7 @@ from backend.extensions import db
 from backend.models import ExpertConsoleLog, ExpertConsoleNotification, ExpertUser, ShipmentRequest
 from backend.services.expert_scope_service import can_handle_request
 from backend.services.sla_service import set_initial_assignment_sla
+from backend.services.ownership_service import tenant_organization_for_user
 
 
 class AssignmentServiceError(Exception):
@@ -101,6 +102,39 @@ def manual_assign_request(
     )
 
 
+def assign_request_to_current_user(
+    request_id: int, actor: Optional[dict[str, Any]], remote_addr: Optional[str] = None
+) -> dict[str, Any]:
+    """Assign an unassigned tenant request using only the trusted session identity."""
+    if not actor or actor.get("id") is None:
+        raise AssignmentAccessError("احراز هویت نشده", 401)
+    req = get_assignment_target_request_or_none(request_id)
+    if not req:
+        raise AssignmentNotFoundError("درخواست یافت نشد", 404)
+    try:
+        organization_id = tenant_organization_for_user(actor)
+    except ValueError as exc:
+        raise AssignmentAccessError("عضویت سازمانی معتبر الزامی است", 403) from exc
+    if req.ownership_scope != "TENANT" or req.operational_organization_id != organization_id:
+        raise AssignmentNotFoundError("درخواست یافت نشد", 404)
+    if req.assigned_to not in (None, int(actor["id"])):
+        raise AssignmentAccessError("درخواست قبلاً تخصیص یافته است", 409)
+    expert = db.session.get(ExpertUser, int(actor["id"]))
+    if not expert or not can_handle_request(expert, req):
+        raise AssignmentValidationError("کاربر فعلی کارشناس واجد شرایط این درخواست نیست")
+    if req.assigned_to == expert.id:
+        return build_assignment_response_payload(expert)
+    old_status = req.status
+    req.assigned_to = expert.id
+    req.status = "assigned"
+    req.has_unread_for_assignee = True
+    set_initial_assignment_sla(req, expert)
+    create_assignment_log(req.id, expert.id, old_status, expert.full_name, remote_addr)
+    create_assignment_notification_if_needed(req.id, expert.id)
+    db.session.commit()
+    return build_assignment_response_payload(expert)
+
+
 def normalize_manual_assignment_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize the manual assignment payload."""
     request_id = payload.get("request_id")
@@ -136,7 +170,7 @@ def can_assign_request(req: ShipmentRequest, actor: dict[str, Any] | None) -> bo
     """Preserve current assignment access behavior: admin or assigned expert only."""
     if not actor:
         return False
-    if actor.get("role") == "admin" or actor.get("authority") == "PLATFORM_ADMIN":
+    if actor.get("role") == "admin" or actor.get("authority") in {"PLATFORM_ADMIN", "ORGANIZATION_ADMIN"}:
         return True
     return req.assigned_to == actor.get("id")
 

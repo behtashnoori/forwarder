@@ -61,3 +61,27 @@ def accept_intake_for_tenant(request_id: int, user: dict) -> ShipmentRequest:
     ))
     db.session.flush()
     return row
+
+
+def route_intake_to_organization(request_id: int, organization_id: int, user: dict) -> ShipmentRequest:
+    """Platform-controlled explicit INTAKE -> selected TENANT transition."""
+    from backend.operational_models import OperationalOrganization
+
+    organization = db.session.get(OperationalOrganization, organization_id)
+    if not organization or not organization.is_active:
+        raise OwnershipContractError("An active target Organization is required")
+    row = db.session.get(ShipmentRequest, request_id)
+    if not row or row.ownership_scope != "INTAKE" or row.operational_organization_id is not None:
+        raise OwnershipContractError("Only an unowned INTAKE request can be routed")
+    row.ownership_scope = "TENANT"
+    row.operational_organization_id = organization.id
+    for relationship in ("logs", "expert_logs", "expert_messages", "expert_notifications", "referral_assignment_logs"):
+        for child in getattr(row, relationship, ()):
+            child.operational_organization_id = organization.id
+    db.session.add(DocumentAuditEvent(
+        scope_type="TENANT", operational_organization_id=organization.id,
+        event_type="shipment_intake_routed", actor_id=int(user["id"]),
+        shipment_request_id=row.id, details="Platform administrator routed INTAKE to Organization",
+    ))
+    db.session.flush()
+    return row

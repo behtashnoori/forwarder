@@ -36,6 +36,7 @@ import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
 import LogisticsNetworkAdminTab from "@/components/LogisticsNetworkAdminTab";
 import OperationalReasonsAdminTab from "@/components/OperationalReasonsAdminTab";
+import UnassignedRequestsTab from "@/components/UnassignedRequestsTab";
 import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
@@ -267,6 +268,9 @@ const AdminPanel = () => {
               <BarChart3 className="h-4 w-4" />
               {t("admin.dashboard")}
             </TabsTrigger>
+            {isOrganizationAdmin && <TabsTrigger value="unassigned" className="gap-2 rounded-2xl py-3">
+              <AlertCircle className="h-4 w-4" />درخواست‌های تخصیص‌نیافته
+            </TabsTrigger>}
             <TabsTrigger
               value="reports"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
@@ -480,6 +484,8 @@ const AdminPanel = () => {
           <TabsContent value="reports" className="space-y-4">
             <AdminReportsTab />
           </TabsContent>
+
+          {isOrganizationAdmin && <TabsContent value="unassigned" className="space-y-4"><UnassignedRequestsTab /></TabsContent>}
 
           <TabsContent value="users" className="space-y-4">
             <UserManagement />

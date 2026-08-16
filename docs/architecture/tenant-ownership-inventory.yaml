@@ -5,6 +5,7 @@
   "classifications": ["TENANT_OWNED_DIRECT", "TENANT_OWNED_INDIRECT", "PLATFORM_SCOPED", "PUBLIC_CAPABILITY_SCOPED", "LEGACY_AMBIGUOUS"],
   "entities": {
     "OperationalOrganization": {"kind":"persisted_model","table":"operational_organization","scope":"PLATFORM_SCOPED","rationale":"Authoritative platform control-plane record that establishes, but is not owned by, a tenant boundary."},
+    "OrganizationHostname": {"kind":"persisted_model","table":"organization_hostname","scope":"PLATFORM_SCOPED","rationale":"Platform-managed exact-host routing alias; organization_id identifies the target tenant but hostname lifecycle remains a platform security and infrastructure concern."},
     "ExpertUser": {"kind":"persisted_model","table":"expert_user","scope":"PLATFORM_SCOPED","rationale":"Global identity; tenant staff authority exists only through OperationalMembership."},
     "AuthSession": {"kind":"persisted_model","table":"auth_session","scope":"PLATFORM_SCOPED","rationale":"Authentication state follows the global user identity."},
     "RevokedToken": {"kind":"persisted_model","table":"revoked_token","scope":"PLATFORM_SCOPED","rationale":"Authentication revocation state follows the global user identity."},

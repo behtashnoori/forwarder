@@ -25,6 +25,55 @@ class OperationalOrganization(db.Model):
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
+    hostnames = db.relationship(
+        "OrganizationHostname", back_populates="organization", lazy="selectin"
+    )
+
+
+class OrganizationHostname(db.Model):
+    """Exact public hostname routing to an Organization identity."""
+
+    __tablename__ = "organization_hostname"
+    __table_args__ = (
+        db.Index(
+            "uq_organization_hostname_active_hostname",
+            "hostname",
+            unique=True,
+            postgresql_where=db.text("is_active = true"),
+            sqlite_where=db.text("is_active = 1"),
+        ),
+        db.Index(
+            "uq_organization_hostname_primary",
+            "organization_id",
+            unique=True,
+            postgresql_where=db.text("is_active = true AND is_primary = true"),
+            sqlite_where=db.text("is_active = 1 AND is_primary = 1"),
+        ),
+        db.CheckConstraint(
+            "hostname = lower(hostname)", name="ck_organization_hostname_lowercase"
+        ),
+    )
+
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    hostname = db.Column(db.String(253), nullable=False)
+    is_primary = db.Column(db.Boolean, nullable=False, default=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+    organization = db.relationship("OperationalOrganization", back_populates="hostnames")
+
 
 project_party_relationship = db.Table(
     "project_party_relationship",
@@ -1141,6 +1190,7 @@ class OperationalIdempotency(db.Model):
 
 ALL_OPERATIONAL_MODELS = [
     OperationalOrganization,
+    OrganizationHostname,
     Project,
     OperationalMembership,
     CanonicalLocation,

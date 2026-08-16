@@ -34,7 +34,7 @@ import PageNav from "@/components/PageNav";
 import OperationsNav from "@/components/OperationsNav";
 import { useToast } from "@/hooks/use-toast";
 import {
-  assignRequest,
+  assignRequestToMe,
   changeRequestStatus,
   fetchExpertRequests,
   fetchExperts,
@@ -52,8 +52,6 @@ type ShipmentRequest = ExpertRequest & {
   transport_method_preference?: string;
 };
 type KPI = KPIs;
-
-const expertId = 1;
 
 const ExpertConsole = () => {
   const navigate = useNavigate();
@@ -106,7 +104,7 @@ const ExpertConsole = () => {
 
   const loadKPIs = useCallback(async () => {
     try {
-      const data = await fetchKPIs(expertId);
+      const data = await fetchKPIs();
       setKpis(data);
     } catch (error) {
       console.error("Error loading KPIs:", error);
@@ -124,8 +122,7 @@ const ExpertConsole = () => {
 
       const expertsResponse = await fetchExperts();
       const experts = Array.isArray(expertsResponse) ? expertsResponse : expertsResponse.experts;
-      const expert = experts.find((item) => item.id === expertId) || experts[0];
-      setCurrentExpert(expert);
+      setCurrentExpert(experts[0]);
     } catch (error) {
       console.error("Error loading current expert:", error);
     }
@@ -150,7 +147,7 @@ const ExpertConsole = () => {
 
   const handleAssignToMe = async (requestId: number) => {
     try {
-      await assignRequest(requestId, expertId);
+      await assignRequestToMe(requestId);
 
       toast({
         title: t("common.success"),

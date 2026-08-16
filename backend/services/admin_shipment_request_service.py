@@ -76,6 +76,30 @@ def list_admin_shipment_requests(args, context=None) -> dict[str, Any]:
     return build_admin_request_list_response_payload(items, filters, total_count)
 
 
+def list_unassigned_tenant_requests(context) -> dict[str, Any]:
+    """Return the current Organization's visible tenant-owned unassigned queue."""
+    from backend.services.expert_request_list_service import build_request_list_item_payload
+
+    rows = (
+        ShipmentRequest.query.filter(
+            ShipmentRequest.ownership_scope == "TENANT",
+            ShipmentRequest.operational_organization_id == context.organization_id,
+            ShipmentRequest.assigned_to.is_(None),
+        )
+        .order_by(ShipmentRequest.created_at.asc())
+        .all()
+    )
+    items = []
+    for row in rows:
+        item = build_request_list_item_payload(row)
+        item.update({
+            "assignment_state": "unassigned",
+            "assignment_reason": "awaiting_manual_or_automatic_assignment",
+        })
+        items.append(item)
+    return {"requests": items, "total": len(items)}
+
+
 def normalize_admin_request_filters(args) -> AdminRequestFilters:
     """Normalize query parameters while preserving current parsing behavior."""
     return AdminRequestFilters(

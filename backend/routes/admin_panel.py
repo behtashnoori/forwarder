@@ -2,7 +2,9 @@
 from io import BytesIO
 
 from flask import Blueprint, jsonify, request, current_app, send_file, g
+from sqlalchemy.exc import IntegrityError
 from backend.extensions import db
+from backend.models import ShipmentRequest
 from backend.security import require_role
 from backend.auth import get_current_user
 from backend.services import (
@@ -13,7 +15,16 @@ from backend.services import (
     admin_shipment_request_service,
     referral_service,
 )
-from backend.services.admin_authorization_service import require_organization_admin_context
+from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
+from backend.services import assignment_service
+from backend.services.organization_hostname_service import (
+    HostnameValidationError,
+    create_hostname,
+    list_hostnames,
+    serialize_hostname,
+    update_hostname,
+)
+from backend.referral_engine import referral_engine
 
 admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api/admin")
 
@@ -53,6 +64,96 @@ def list_shipment_requests():
     except Exception as e:
         current_app.logger.error(f"Error listing shipment requests: {e}")
         return jsonify({"error": "خطا در دریافت درخواست‌ها"}), 500
+
+
+@admin_bp.get("/unassigned-requests")
+@require_organization_admin_context(allow_platform=False)
+def list_unassigned_requests():
+    return jsonify(admin_shipment_request_service.list_unassigned_tenant_requests(g.organization_context))
+
+
+@admin_bp.post("/shipment-requests/<int:request_id>/assign")
+@require_organization_admin_context(allow_platform=False)
+def assign_unassigned_request(request_id: int):
+    try:
+        return jsonify(assignment_service.assign_request_to_expert(
+            request_id,
+            payload=request.get_json(silent=True) or {},
+            actor=get_current_user(),
+            remote_addr=request.remote_addr,
+            organization_context=g.organization_context,
+        ))
+    except assignment_service.AssignmentServiceError as exc:
+        return jsonify({"error": exc.message}), exc.status_code
+
+
+@admin_bp.post("/shipment-requests/<int:request_id>/auto-assign")
+@require_organization_admin_context(allow_platform=False)
+def auto_assign_unassigned_request(request_id: int):
+    row = db.session.get(ShipmentRequest, request_id)
+    if not row or row.ownership_scope != "TENANT" or row.operational_organization_id != g.organization_context.organization_id:
+        return jsonify({"error": "Request not found"}), 404
+    expert_id = referral_engine.auto_assign_request(request_id)
+    db.session.commit()
+    return jsonify({"assigned_expert_id": expert_id, "assigned": expert_id is not None})
+
+
+@admin_bp.get("/organization-hostnames")
+@require_organization_admin_context()
+def get_organization_hostnames():
+    organization_id = g.organization_context.organization_id if g.organization_context else None
+    return jsonify({"hostnames": list_hostnames(organization_id)})
+
+
+@admin_bp.post("/organization-hostnames")
+@require_platform_admin()
+def add_organization_hostname():
+    try:
+        return jsonify(serialize_hostname(create_hostname(request.get_json(silent=True) or {}))), 201
+    except (HostnameValidationError, IntegrityError) as exc:
+        db.session.rollback()
+        message = str(exc) if isinstance(exc, HostnameValidationError) else "Hostname routing conflicts with an existing active mapping."
+        return jsonify({"error": message}), 409 if isinstance(exc, IntegrityError) else 400
+
+
+@admin_bp.patch("/organization-hostnames/<public_id>")
+@require_platform_admin()
+def change_organization_hostname(public_id: str):
+    try:
+        return jsonify(serialize_hostname(update_hostname(public_id, request.get_json(silent=True) or {})))
+    except (HostnameValidationError, IntegrityError) as exc:
+        db.session.rollback()
+        message = str(exc) if isinstance(exc, HostnameValidationError) else "Hostname routing conflicts with an existing active mapping."
+        return jsonify({"error": message}), 409 if isinstance(exc, IntegrityError) else 400
+
+
+@admin_bp.get("/platform-intake")
+@require_platform_admin()
+def list_platform_intake():
+    from backend.services.expert_request_list_service import build_request_list_item_payload
+    rows = ShipmentRequest.query.filter(
+        ShipmentRequest.ownership_scope == "INTAKE",
+        ShipmentRequest.operational_organization_id.is_(None),
+    ).order_by(ShipmentRequest.created_at.asc()).all()
+    return jsonify({"requests": [build_request_list_item_payload(row) for row in rows], "total": len(rows)})
+
+
+@admin_bp.post("/platform-intake/<int:request_id>/route")
+@require_platform_admin()
+def route_platform_intake(request_id: int):
+    from backend.services.ownership_service import OwnershipContractError, route_intake_to_organization
+    try:
+        organization_id = int((request.get_json(silent=True) or {}).get("organization_id"))
+        row = route_intake_to_organization(request_id, organization_id, get_current_user())
+        expert_id = referral_engine.auto_assign_request(row.id)
+        db.session.commit()
+        return jsonify({
+            "request_id": row.id, "operational_organization_id": row.operational_organization_id,
+            "assigned_expert_id": expert_id,
+        })
+    except (TypeError, ValueError, OwnershipContractError) as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 409
 
 
 @admin_bp.get("/dashboard")

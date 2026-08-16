@@ -28,8 +28,8 @@ def ownership_app():
         db.create_all()
         org_a = OperationalOrganization(name="Organization A")
         org_b = OperationalOrganization(name="Organization B")
-        user_a = ExpertUser(username="tenant-a", password_hash="x", full_name="Tenant A", role="business_expert", is_active=True)
-        user_b = ExpertUser(username="tenant-b", password_hash="x", full_name="Tenant B", role="business_expert", is_active=True)
+        user_a = ExpertUser(username="tenant-a", password_hash="x", full_name="Tenant A", role="business_expert", authority="ORGANIZATION_ADMIN", is_active=True)
+        user_b = ExpertUser(username="tenant-b", password_hash="x", full_name="Tenant B", role="business_expert", authority="ORGANIZATION_ADMIN", is_active=True)
         db.session.add_all([org_a, org_b, user_a, user_b])
         db.session.flush()
         db.session.add_all([

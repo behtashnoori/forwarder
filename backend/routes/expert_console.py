@@ -14,6 +14,8 @@ from backend.models import (
 from backend.auth import auth_manager, login_required, get_current_user
 from backend.services import ownership_service
 from backend.services.ownership_service import tenant_organization_for_user
+from backend.services.admin_authorization_service import effective_authority
+from backend.operational_models import OperationalMembership
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.cache import cache_manager, performance_monitor
 from backend.services import (
@@ -36,7 +38,8 @@ def accept_intake(request_id: int):
     current_user = get_current_user()
     if not current_user:
         return jsonify({"error": "authentication required"}), 401
-    if current_user.get("role") not in {"admin", "crm_manager", "business_expert"}:
+    authority = effective_authority(db.session.get(ExpertUser, int(current_user["id"])))
+    if authority != "ORGANIZATION_ADMIN":
         return jsonify({"error": "intake acceptance is not authorized"}), 403
     try:
         row = ownership_service.accept_intake_for_tenant(request_id, current_user)
@@ -49,6 +52,18 @@ def accept_intake(request_id: int):
     except ownership_service.OwnershipContractError as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 409
+
+
+@expert_console_bp.post("/requests/<int:request_id>/assign-to-me")
+@require_auth
+def assign_request_to_me(request_id: int):
+    """Assign using the authenticated identity, never a client-selected expert id."""
+    try:
+        return jsonify(assignment_service.assign_request_to_current_user(
+            request_id, get_current_user(), request.remote_addr
+        ))
+    except assignment_service.AssignmentServiceError as exc:
+        return jsonify({"error": exc.message}), exc.status_code
 
 
 def _parse_tracking_datetime(value: Any, field: str) -> datetime:
@@ -691,9 +706,18 @@ def mark_request_read(request_id: int):
 def get_experts():
     """Get list of active experts."""
     try:
-        experts = db.session.query(ExpertUser).filter(
-            ExpertUser.is_active == True
-        ).all()
+        current_user = get_current_user()
+        organization_id = tenant_organization_for_user(current_user)
+        experts = (
+            db.session.query(ExpertUser)
+            .join(OperationalMembership, OperationalMembership.user_id == ExpertUser.id)
+            .filter(
+                ExpertUser.is_active.is_(True),
+                OperationalMembership.organization_id == organization_id,
+                OperationalMembership.is_active.is_(True),
+            )
+            .all()
+        )
         
         experts_data = []
         for expert in experts:

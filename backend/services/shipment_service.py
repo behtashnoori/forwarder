@@ -84,13 +84,20 @@ def get_transport_methods_payload() -> dict:
     }
 
 
-def create_shipment_request(payload: dict[str, Any], remote_addr: str | None = None) -> ShipmentRequest:
+def create_shipment_request(
+    payload: dict[str, Any],
+    remote_addr: str | None = None,
+    request_host: str | None = None,
+) -> ShipmentRequest:
     """Create and optionally auto-assign one request in one census-bound UoW."""
     from backend.census_context import census_unit_of_work
 
     try:
         with census_unit_of_work(db.session):
-            shipment_request = _stage_shipment_request(payload, remote_addr)
+            from backend.services.organization_hostname_service import resolve_organization_for_host
+
+            organization = resolve_organization_for_host(request_host)
+            shipment_request = _stage_shipment_request(payload, remote_addr, organization)
             assign_request_with_referral(shipment_request)
             db.session.commit()
             return shipment_request
@@ -99,13 +106,17 @@ def create_shipment_request(payload: dict[str, Any], remote_addr: str | None = N
         raise
 
 
-def _stage_shipment_request(payload: dict[str, Any], remote_addr: str | None = None) -> ShipmentRequest:
+def _stage_shipment_request(
+    payload: dict[str, Any], remote_addr: str | None = None, organization=None
+) -> ShipmentRequest:
     """Stage request creation without finalizing the caller's transaction."""
     normalized = normalize_shipment_payload(payload)
     timestamp = datetime.utcnow()
 
+    organization_id = organization.id if organization is not None else None
     shipment_request = ShipmentRequest(
-        ownership_scope="INTAKE", operational_organization_id=None,
+        ownership_scope="TENANT" if organization_id is not None else "INTAKE",
+        operational_organization_id=organization_id,
         **build_shipment_request_data(normalized, timestamp),
     )
     db.session.add(shipment_request)
@@ -115,7 +126,7 @@ def _stage_shipment_request(payload: dict[str, Any], remote_addr: str | None = N
 
     log_entry = ShipmentRequestLog(
         shipment_request_id=shipment_request.id,
-        operational_organization_id=None,
+        operational_organization_id=organization_id,
         created_at=timestamp,
         note="ثبت اولیه درخواست",
         ip_address=remote_addr,

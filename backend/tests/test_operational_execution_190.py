@@ -336,7 +336,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260826_org_document_policy"
+            "20260827_org_hostname"
     ]
 
 
