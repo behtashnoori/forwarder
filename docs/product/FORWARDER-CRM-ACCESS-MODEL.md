@@ -1,6 +1,6 @@
 # Forwarder CRM Current State and Access Model
 
-Status: repository-proven current-state audit; proposed future access is governed by ADR-037.
+Status: repository-proven current-state audit; accepted future expert access is governed by ADR-037.
 
 ## Executive answer
 
@@ -88,12 +88,12 @@ The repository has separate authority/membership concepts, but CRM route authori
 For an expert processing an authorized request:
 
 - **Operationally required:** requester/customer display name, company name when relevant, operational telephone/email, and the request’s own pickup/delivery/contact information.
-- **Useful context:** one explicitly relevant account contact or operational address when the workflow proves it is needed.
+- **Useful context:** an operational address when the workflow proves it is needed. No `CustomerContact` row is safe for V1 because the current model has no request-to-contact association; account-primary and decision-maker flags do not prove request relevance.
 - **Commercial sensitive:** CRM notes, opportunity stage/probability/value, pipeline totals, sales activities, outcomes, next actions, and unrelated request history.
 - **Administrative:** customer status/source, segmentation, website, industry, company size, contact decision-maker flags, and link governance actions.
 - **Not relevant:** unrelated customers, unrelated contacts, organization-wide CRM history, tasks/opportunities unrelated to the request, and customer-portal gamification data.
 
-The recommended model is a read-only request-context projection, not full CRM access. Until ADR-037 is accepted and implemented, the basic expert remains denied CRM-derived data and continues to use request-native contact fields.
+The accepted model is a read-only request-context projection, not full CRM access. Until ADR-037 is implemented, the basic expert remains denied CRM-derived data and continues to use request-native contact fields.
 
 ## Known security and completeness gaps
 
@@ -116,4 +116,4 @@ These are current-state findings, not claims that the affected features are safe
 
 ## Future expansion boundary
 
-ADR-037 must be accepted before expert projection or existing-role authority changes. A later implementation goal should first remediate tenant scope on all admitted CRM paths, add capability-based authorization, and prove the adversarial matrix. External CRM integration, customer identity redesign, automatic customer creation, opportunity/request equivalence, and Customer/CustomerGamification convergence remain out of scope and require separate authority.
+ADR-037 authorizes only its bounded expert projection implementation. A later implementation goal must first tenant-certify the request-parent access path, settle opaque request identity, use the closed field allowlist with no `CustomerContact` rows, and prove the adversarial matrix. Existing-role capability migration remains separate. External CRM integration, customer identity redesign, automatic customer creation, opportunity/request equivalence, and Customer/CustomerGamification convergence remain out of scope and require separate authority.

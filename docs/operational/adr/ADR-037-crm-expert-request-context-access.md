@@ -1,90 +1,177 @@
 # ADR-037: CRM Expert Request-Context Access
 
-- Status: PROPOSED
+- Status: ACCEPTED
 - Date: 2026-08-20
 - Owners: Product, Operations, Security, CRM domain owner
 - Affected domain: CRM, ShipmentRequest customer context, authorization
 
-## Context
+## Context and repository facts
 
-Forwarder already contains an internal, database-backed CRM with `Customer`, `CustomerContact`, `Opportunity`, `Activity`, `Task`, and `CRMCustomerLinkAudit`. It is organization-scoped by the accepted architecture baseline and is distinct from `ShipmentRequest`, `OperationalShipment`, referral, the customer portal, and external CRM integrations.
+Forwarder contains an internal CRM with organization-owned `Customer`, `CustomerContact`, `Opportunity`, `Activity`, `Task`, and `CRMCustomerLinkAudit` records. `ShipmentRequest.customer_id` is an optional many-requests-to-one-customer link. Link, relink, unlink, and create-and-link append link audit and expert-console records. Request-native contact text is descriptive input, not canonical CRM identity. ADR-034 separately governs execution customer identity; later request relinking does not rewrite an `OperationalShipment`.
 
-The current API uses `@require_role("business_expert")`. Because roles are hierarchical, `business_expert`, `supervisor`, `crm_manager`, and `admin` receive the same CRM route-level access, while `expert` is rejected. The admitted surface includes organization-wide customer listing/detail and customer writes, opportunities, activities, dashboard KPIs, and request/customer create/link/relink/unlink workflows. The standalone `/crm` frontend route is an “in development” placeholder, but the backend and the request-detail CRM workflow are active.
+Current CRM routes use hierarchical `@require_role("business_expert")`. Basic `expert` is denied, while `business_expert`, `supervisor`, `crm_manager`, and `admin` are admitted. Newer services contain tenant-scoped paths, but legacy link search/read/link/unlink, create preview/duplicate search, and dashboard paths include global queries or raw numeric lookups. The standalone `/crm` page is a placeholder although request-detail CRM workflows and APIs are active.
 
-The implementation is not consistently tenant-fenced. Newer customer, opportunity, and activity services derive tenant identity from the authenticated user, but customer-link search/read/link/unlink, customer-create preview/duplicate search, and dashboard KPIs contain unscoped queries or numeric-ID lookups. UI hiding is therefore not a security boundary.
+The concrete expert request policy at acceptance time requires an active actor, one resolvable active tenant membership, a non-quarantined `TENANT` request in that organization, and—unless the actor has separately authorized tenant-admin request authority—`ShipmentRequest.assigned_to == actor.id`. This ADR requires the projection to call the same canonical request-view decision as request detail, never a weaker copy. A later Accepted decision may replace that policy.
 
-## Problem
+## Decision
 
-The product needs an explicit decision about what an operational `expert` may learn about a customer while working on a request, and whether the broad legacy authority of `business_expert` and higher roles should remain. Adding expert visibility, narrowing existing roles, or defining a new projection changes sensitive CRM authorization semantics and requires accepted architecture authority.
+Adopt a read-only, request-parented customer-context projection for basic operational `expert`:
 
-This ADR does not redesign CRM entities, customer identity, request/customer linkage, CRM ownership, or operational shipment semantics.
+```text
+active actor and membership
+  -> authorized current ShipmentRequest
+    -> current same-tenant linked Customer
+      -> explicit bounded projection
+```
 
-## Proposed decision
+`expert -> organization -> customers` is prohibited. Same-organization membership alone never grants access.
 
-Adopt **Model B: read-only request-context customer projection** for the operational `expert` role.
+### Parent authorization and tenant rule
 
-1. An active expert with an active membership may read the projection only for a tenant-owned `ShipmentRequest` that the existing request authorization policy allows that expert to view. Assignment/request authority is evaluated before customer lookup.
-2. The projection is parent-scoped. It has no customer-list endpoint, accepts no customer ID, and cannot be used to enumerate or directly fetch a CRM customer.
-3. The allowlist is limited to operationally necessary fields already present in the request or its linked customer: display/customer name, company name, one relevant contact name when explicitly associated, operational phone, operational email, and operational address only when required by the request workflow.
-4. The projection excludes CRM notes, contact notes, unrelated contacts, opportunities, pipeline values/probabilities, sales activities, tasks, customer history unrelated to the request, source/segmentation metadata, website/industry/company size unless separately justified, and all other customers.
-5. The operational `expert` receives no CRM create, edit, link, relink, unlink, opportunity, activity, task, dashboard, or organization-wide search authority.
-6. `crm_manager` and organization-admin CRM authority must be expressed by explicit capabilities rather than inherited accidentally from a numeric role hierarchy. The exact mutation matrix requires Product/Security acceptance before implementation.
-7. Existing `business_expert` authority is compatibility behavior, not automatic approval for permanent organization-wide read/write access. Acceptance must explicitly retain, narrow, or migrate it.
-8. Platform authority does not imply tenant CRM access. A platform administrator needs an explicit tenant context and separately accepted support policy; otherwise tenant CRM data fails closed.
-9. All CRM queries derive organization identity from active authenticated membership or an already-authorized parent. Body/query organization identifiers never establish or broaden authority.
-10. Existing optional `ShipmentRequest.customer_id`, immutable request contact text, audited link history, `Project.primary_customer_id`, and `OperationalShipment.customer_id` semantics remain unchanged.
+Authorization runs in this order before customer lookup or disclosure:
 
-## Alternatives
+1. Authenticate an active user and resolve one authoritative active `OperationalMembership` and active organization. Zero or ambiguous tenant contexts fail closed; client-supplied organization selection cannot resolve ambiguity.
+2. Resolve the request by opaque identity inside that tenant; exclude intake, legacy-quarantined, foreign, or uncertified ownership.
+3. Invoke canonical current request-view authorization. For a basic expert under current policy, the actor must be the current assignee. Role rank, same organization, former assignment, audit history, or identifier possession is insufficient.
+4. Only then read `ShipmentRequest.customer_id`. Resolve the customer by ID plus the authorized request organization, require `ownership_scope == TENANT`, and reject mismatch or quarantine.
+5. Serialize with an explicit projection allowlist. Never use a generic `Customer` or relationship serializer.
 
-- **Model A — no expert access:** rejected as the preferred end state because an assigned expert needs customer/contact context to execute a request, though it remains the safe behavior until this ADR is accepted and implemented.
-- **Model C — read-only organization CRM:** rejected for operational experts because it exposes unrelated customers, contacts, history, pipeline, and commercial context.
-- **Model D — limited CRM read/write:** rejected for operational experts because customer identity and linkage mutations are commercial/governance actions, not necessary for ordinary execution.
-- **Model E — current behavior:** rejected because basic experts receive no projection, business experts receive broad authority, and some admitted paths are not consistently tenant-scoped.
+Every read re-evaluates current state. No standalone customer authority or access token may outlive parent access. Any cache must bind actor, tenant, request, and authorization-relevant state and be invalidated or bypassed on membership, assignment, ownership, link, and lifecycle changes.
 
-## Consequences
+### API and identifier contract
 
-Experts receive the minimum customer context needed for assigned work without gaining a CRM browser. The projection adds a dedicated authorization and serialization contract. Existing business-expert workflows may need role/capability migration after the compatibility decision. CRM managers and organization administrators retain a separately governed management surface.
+The new API is request-parented under the expert surface, conceptually `GET /api/expert/requests/{request_public_id}/customer-context`; implementation selects exact repository-conventional spelling.
 
-## Compatibility
+- It accepts only an immutable opaque request identity. Existing `tracking_code` may be reused only if Security proves it suitable for authenticated internal authorization without weakening public-tracking semantics; otherwise opaque request identity needs a separate additive implementation/migration review.
+- Sequential request, customer, and contact IDs are neither accepted nor emitted.
+- No customer identity usable for direct lookup is returned. A non-actionable opaque correlation identity requires a proven UI need and grants no customer endpoint authority.
+- Organization/customer input in path, query, body, header, or client state never selects or broadens scope.
+- Missing, malformed, foreign, quarantined, unauthorized, and stale request identities use one non-enumerating not-found response. After successful parent authorization, no usable customer yields a stable empty-context shape.
 
-Until acceptance and an authorized implementation, current routes and role behavior remain unchanged. Rollout must be additive: introduce the request-context projection, test it independently, then change any existing role access only through an explicit compatibility plan. Existing CRM response contracts, links, and audit rows are not silently rewritten.
+Legacy numeric CRM routes may remain compatibility routes for existing roles after tenant certification. They cannot be reused for expert projection access.
 
-## Migration impact
+### Closed-by-default field contract
 
-No schema or data migration is expected. If implementation discovers that a request cannot identify the relevant contact without new ownership or association data, implementation stops and returns for a separate decision rather than guessing.
+New model fields are denied until an explicitly authorized amendment adds them.
 
-## Security/tenant impact
+| Field / value | Class | V1 rule |
+| --- | --- | --- |
+| derived display name from `Customer.first_name` + `last_name` | ALLOW | One display value, not generic serialization. |
+| `Customer.company_name` | ALLOW | When present. |
+| `Customer.phone` | ALLOW | One operational telephone. |
+| `Customer.mobile` | CONDITIONAL | Fallback when phone is absent, or one explicitly distinguished operational mobile; not both by default. |
+| `Customer.email` | ALLOW | Operational email when present. |
+| `address`, `city`, `province`, `postal_code`, `country` | CONDITIONAL | One formatted address only when physical customer/contact handling is required; otherwise omit. |
+| `Customer.status` | CONDITIONAL | Never expose raw status. Inactive/blocked yields unavailable context. |
+| `id`, `operational_organization_id`, `ownership_scope` | DENY | Internal identity and tenant metadata. |
+| `website`, `industry`, `company_size`, `customer_type`, `source` | DENY | Administrative/segmentation/commercial metadata. |
+| `notes`, `last_contact_at`, `created_at`, `updated_at` | DENY | Private notes and CRM history/metadata. |
+| requests, opportunities, activities, tasks and all counts/values/stages/probabilities/outcomes | DENY | No history, pipeline, activity, or task data. |
+| request-native name, phone, route/contact fields | ALLOW under request policy | Already-authorized request data; never fuzzy-merged into CRM identity. |
 
-- Authenticate the user and validate active membership before any parent or customer lookup.
-- Resolve the request inside the authoritative organization and existing request-view policy.
-- Resolve the linked customer through that authorized request and require matching tenant ownership.
-- Return non-enumerating failures for foreign, inactive, quarantined, missing, or unauthorized resources.
-- Never accept organization or customer authority from URL/body/query input.
-- Apply a strict response allowlist and test absence of commercial/private fields.
-- Preserve append-only link audit behavior; the read-only projection creates no CRM audit mutation.
-- Remediate existing unscoped CRM paths before treating the CRM surface as tenant-certified.
+Only named scalar keys, source (`request` or `linked_customer`), and stable availability may be returned. No generic/nested customer, contact, or request objects; relationship counts; CRM URLs; or sales metadata.
 
-## Operational impact
+### Contact scope
 
-The projection should be bounded to one request and one linked customer, observable through safe authorization metrics, and unavailable when membership or assignment authority is removed. No external CRM, background synchronization, or production data operation is introduced.
+V1 exposes **no `CustomerContact` row**. No request-to-contact association exists. `is_primary` describes an account contact, not request relevance. Returning all, first, primary, or decision-maker contacts would invent relevance and expose unrelated personal data.
 
-## Rollback
+V1 may expose only the linked Customer account's allowlisted values plus request-native contact fields already visible under request authorization. A future contact projection needs an explicit tenant-consistent request-contact association and ADR amendment. At most the associated contact's derived name and one operational phone/email could then be considered; `position`, `department`, `is_primary`, `is_decision_maker`, `notes`, timestamps, IDs, and other contacts remain denied.
 
-Disable the projection and return to no expert CRM-derived context. Keep request-native contact information and all existing CRM/link data unchanged. Capability migration for existing roles must have an independent rollback to its prior explicitly documented matrix.
+### Read-only authority
 
-## Validation
+Basic `expert` gains exactly one capability: read this current projection for a currently authorized request. It gains no customer/contact create/update, link/relink/unlink, standalone detail, list/search, duplicate search, preview, dashboard, opportunity, activity, task, pipeline, history, export, or bulk authority. Backend capability and method checks enforce this. No standalone expert CRM workspace is authorized.
 
-- Expert Org A cannot obtain Org B request/customer context.
-- Foreign request and customer identifiers return non-enumerating failures.
-- Inactive membership, removed assignment/access, and deactivated expert fail closed.
-- No organization-wide customer enumeration is available to `expert`.
-- The endpoint accepts a request identity only and cannot perform unrelated customer lookup.
-- Body/query organization identity cannot broaden access.
-- Sensitive CRM, sales, financial, note, opportunity, activity, task, and unrelated-contact fields are absent.
-- Organization-admin, CRM-manager, business-expert compatibility, and platform-authority behavior match the accepted matrix.
-- Hidden frontend routes cannot bypass backend authorization.
-- Existing link mutation audit remains unchanged.
-- Focused authorization, tenant-negative, API contract, frontend, full regression, architecture-governance, sole-head, and secret-scan gates pass.
+### Lifecycle behavior
+
+| Event/state | Result |
+| --- | --- |
+| Relink | Next read resolves only the new same-tenant customer; former customer access ends immediately. |
+| Unlink | Next authorized read returns empty context; audit history is never authority. |
+| Reassignment/removal | Former expert immediately fails parent access; newly authorized expert may read current context. |
+| Organization transfer | Fail closed until transfer and request/customer tenant invariants are valid and current parent authority exists. |
+| Closed request | Closure neither grants nor preserves access. V1 follows canonical request-view policy; if that policy still permits the assigned expert to view the closed request, projection remains readable. |
+| Reopened request | Access exists only if canonical current request policy authorizes it; prior view/assignment has no effect. |
+| Inactive/blocked customer | Empty/unavailable context without disclosing raw CRM status; no fallback to contacts/history. |
+| No customer | Stable empty-context response after parent authorization; request-native data remains in the request contract. |
+
+Changing request closure authorization is a separate request-policy decision, not part of this ADR.
+
+### Role and authority boundaries
+
+- **expert:** only the request-context read above.
+- **business_expert:** current CRM compatibility behavior remains unchanged, but is not certified or endorsed as the final model. Narrowing/migration needs a separate accepted compatibility decision.
+- **supervisor / crm_manager:** current hierarchical compatibility remains unchanged. Future management uses explicit capabilities, not accidental numeric inheritance.
+- **Organization Admin:** CRM authority requires active membership, trusted tenant context, and explicit tenant capabilities. Role name alone never bypasses fencing.
+- **Platform Admin:** platform authority alone grants no tenant CRM access. Without trusted tenant context plus a separately accepted support/impersonation policy and audit, fail closed. Client-selected tenant is not trusted context.
+
+### Required remediation and certification
+
+Before projection or expert UI enablement, tenant-certify the canonical request-view policy and every dependency. The projection should depend on none of these legacy APIs, but existing admitted CRM debt remains tracked:
+
+| Legacy path | Current issue | Required certification |
+| --- | --- | --- |
+| customer list/detail/write | newer tenant derivation; numeric customer identity | Active membership/org, ownership/quarantine, explicit capability, tenant-scoped contacts, non-enumerating negatives. |
+| link search | global query and numeric results | Tenant filter before search/pagination, lifecycle policy, capability, cross-tenant negatives; never expert-visible. |
+| link read | raw numeric request lookup | Authorize tenant parent first, then same-tenant customer. |
+| link/relink/unlink | numeric raw lookups | Membership, parent, mutation capability, same-tenant active customer, concurrency/idempotency as applicable, append audit. |
+| create preview | raw request and global duplicates | Parent authorization first; tenant-scope candidates and omit forbidden data. |
+| create-and-link | partial tenant check; global duplicates | Put all reads behind tenant scope; validate capability/link invariants atomically; retain audit. |
+| dashboard | global aggregates/recent activities | Tenant-filter every aggregate/join/lookup; never expert-visible. |
+
+Certification records tenant source, active membership, capability, ownership/quarantine filter, identifier, cross-tenant response, and negative tests. No expert UI may use an uncertified legacy API.
+
+### Adversarial fail-closed matrix
+
+| Threat | Required result |
+| --- | --- |
+| Guess foreign/missing/malformed/other expert's request | Same not-found; no customer lookup before parent authorization. |
+| Guess customer | Projection accepts none; direct CRM endpoints deny expert. |
+| Same-tenant unassigned request | Denied; membership is insufficient. |
+| Access after reassignment/transfer/unlink/deactivation | Current-state check denies or returns empty on next read; no stale authorization cache. |
+| CRM list/search/dashboard/mutation attempt | Backend denial without data/existence disclosure. |
+| Organization manipulation | Reject or ignore; never authority. |
+| Unrelated contacts | No contacts in V1; no generic relationship serialization. |
+| Two-organization user | Require trusted unambiguous tenant context; ambiguity/client-only selection fails closed. |
+| Invalid cross-tenant customer link | Do not follow; unavailable/non-enumerating result and safe security telemetry. |
+| Closed/reopened request | Re-evaluate canonical request policy as above. |
+| business_expert regression | Compatibility regression tests pin behavior until separately migrated. |
+| Platform Admin without tenant context | Denied. |
+
+### Privacy, audit, and errors
+
+Existing link mutation audit remains unchanged. V1 does not require a durable domain audit row for every ordinary authorized read: no compliance requirement presently justifies the sensitive access history and load. Emit privacy-safe structured authorization/security telemetry for denied cross-tenant attempts and invalid link invariants without customer/contact values, raw identifiers, or existence distinctions. Durable read audit later requires a separate retention/access/minimization policy.
+
+Responses and logs never distinguish foreign from missing and never echo tenant/customer IDs or sensitive values. Metrics may count outcome classes without identifying subjects.
+
+## Compatibility and rollback
+
+This is additive authority for one new read projection. Existing request-native fields, CRM APIs/contracts, role behavior, links, audit rows, and ADR-034 execution identity remain unchanged. No schema expansion is authorized here; opaque request identity or contact association work triggers its own bounded review and migration authority.
+
+Rollback disables the endpoint and expert UI, returning experts to request-native data only. It never deletes or rewrites customers, contacts, requests, links, audits, or shipments. Legacy remediation and later capability migration use independent gates and rollback.
+
+## Authorized implementation boundary and order
+
+This acceptance authorizes a later controlled implementation goal, not runtime work in this review:
+
+1. tenant-certify canonical expert request-view policy and projection dependencies;
+2. settle opaque internal request identity without numeric IDs or weakened public tracking;
+3. add one backend request-parented GET projection with the exact allowlist and no `CustomerContact` rows;
+4. enforce active membership, tenant, current request policy, link, customer tenant/state, and non-enumerating errors;
+5. add cross-tenant, same-tenant-unassigned, multi-membership, lifecycle, negative-field/method, role-regression, Organization Admin, and Platform Admin tests;
+6. only then add a request-detail component titled as request-related customer/contact information;
+7. add no expert CRM workspace/search/list/detail, writes, contact association, schema migration, or existing-role semantic changes.
+
+Runtime implementation, migration execution, production access, production database access, deployment, release, and push are not authorized by this documentation decision.
+
+## Validation required before implementation completion
+
+- Explicit serializer keys and absence tests cover allowed, conditional, denied, relationship, and newly added fields.
+- Parent authorization precedes customer lookup and shares canonical request-detail policy.
+- All tenant, assignment, lifecycle, link, customer-state, and multi-membership negative cases match this ADR.
+- No numeric request/customer/contact identity or tenant metadata is accepted or emitted.
+- Expert cannot use CRM list/search/detail/dashboard/preview/link/write routes.
+- Existing business-expert behavior is regression-pinned without being mistaken for tenant certification.
+- Focused tests, full applicable regression, architecture governance, ADR index validation, `git diff --check`, and changed-scope secret scan pass.
 
 ## Supersedes / superseded by
 
@@ -93,4 +180,5 @@ Disable the projection and return to no expert CRM-derived context. Keep request
 
 ## Status history
 
-- 2026-08-20: PROPOSED — repository census proved active CRM capability, inconsistent expert authority, and tenant-scope gaps requiring an explicit access decision.
+- 2026-08-20: PROPOSED — repository census proved active CRM capability, inconsistent expert authority, and tenant-scope gaps.
+- 2026-08-20: ACCEPTED — adversarial review settled parent authorization, contact minimization, identifiers, lifecycle, tenant remediation, roles, audit, errors, compatibility, rollback, and ordering. Implementation remains pending.
