@@ -325,7 +325,7 @@ def test_logistics_migration_is_the_single_head():
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260830_logistics_point_tracking_convergence"]
+    assert script.get_heads() == ["20260831_document_catalog_metadata"]
     assert (
         script.get_revision("20260810_logistics_network").down_revision
         == "20260809_cargo_catalog_items"

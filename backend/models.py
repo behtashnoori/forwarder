@@ -1,5 +1,5 @@
 """Database models for the shipment request service."""
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 from sqlalchemy import event, inspect, select
 from sqlalchemy.orm import declared_attr
@@ -1728,6 +1728,9 @@ class DocumentDefinition(db.Model):
     __table_args__ = (
         db.CheckConstraint("max_file_size_bytes > 0", name="ck_document_definition_max_size"),
         db.CheckConstraint("max_active_file_count > 0", name="ck_document_definition_max_count"),
+        db.CheckConstraint("family_code IS NULL OR family_code IN ('COMMERCIAL','TRANSPORT','FORWARDING','CUSTOMS','WAREHOUSE','RELEASE','CERTIFICATE','PERMIT_AUTHORIZATION','INSURANCE','FINANCE','SAFETY','OPERATIONAL_NOTICE')", name="ck_document_definition_family"),
+        db.CheckConstraint("catalog_lifecycle_status IN ('DRAFT','REVIEWED','SOURCE_CONFIRMED','ACTIVE','DEPRECATED')", name="ck_document_definition_catalog_lifecycle"),
+        db.CheckConstraint("source_review_status IN ('VERIFIED','SOURCE_CONFIRMED','SOURCE_CONFIRMATION_REQUIRED','DOMAIN_CONFIRMATION_REQUIRED','SUPERSEDED')", name="ck_document_definition_source_review"),
         db.CheckConstraint(
             "applicability_scope IN ('all', 'domestic', 'international')",
             name="ck_document_definition_scope",
@@ -1739,6 +1742,17 @@ class DocumentDefinition(db.Model):
     code = db.Column(db.String(64), nullable=False, unique=True, index=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=True)
+    name_fa = db.Column(db.String(200), nullable=True)
+    name_en = db.Column(db.String(200), nullable=True)
+    description_fa = db.Column(db.Text, nullable=True)
+    description_en = db.Column(db.Text, nullable=True)
+    family_code = db.Column(db.String(32), nullable=True, index=True)
+    reference_number_label_fa = db.Column(db.String(160), nullable=True)
+    reference_number_label_en = db.Column(db.String(160), nullable=True)
+    expiry_applicable = db.Column(db.Boolean, nullable=True)
+    organization_overridable = db.Column(db.Boolean, nullable=False, default=True)
+    catalog_lifecycle_status = db.Column(db.String(24), nullable=False, default="DRAFT", index=True)
+    source_review_status = db.Column(db.String(40), nullable=False, default="SOURCE_CONFIRMATION_REQUIRED", index=True)
     is_required = db.Column(db.Boolean, nullable=False, default=False)
     allowed_formats = db.Column(db.Text, nullable=False)
     max_file_size_bytes = db.Column(SQLITE_COMPAT_BIGINT, nullable=False)
@@ -1751,6 +1765,112 @@ class DocumentDefinition(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
     updated_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+
+
+DOCUMENT_FAMILIES = frozenset({"COMMERCIAL", "TRANSPORT", "FORWARDING", "CUSTOMS", "WAREHOUSE", "RELEASE", "CERTIFICATE", "PERMIT_AUTHORIZATION", "INSURANCE", "FINANCE", "SAFETY", "OPERATIONAL_NOTICE"})
+DOCUMENT_CATALOG_LIFECYCLES = frozenset({"DRAFT", "REVIEWED", "SOURCE_CONFIRMED", "ACTIVE", "DEPRECATED"})
+DOCUMENT_SOURCE_REVIEW_STATUSES = frozenset({"VERIFIED", "SOURCE_CONFIRMED", "SOURCE_CONFIRMATION_REQUIRED", "DOMAIN_CONFIRMATION_REQUIRED", "SUPERSEDED"})
+DOCUMENT_ALIAS_KINDS = frozenset({"ABBREVIATION", "TRANSLITERATION", "COMMON_NAME", "FORMER_NAME"})
+DOCUMENT_MODE_CODES = frozenset({"ROAD", "SEA", "AIR", "RAIL", "MULTIMODAL", "MODE_INDEPENDENT"})
+DOCUMENT_STAGE_CODES = frozenset({"PRE_SHIPMENT", "BOOKING", "ORIGIN", "IN_TRANSIT", "ARRIVAL", "WAREHOUSE", "CUSTOMS_DECLARATION", "CUSTOMS_CLEARANCE", "RELEASE", "DELIVERY", "POST_DELIVERY", "PAYMENT_FINANCE"})
+DOCUMENT_BUSINESS_SCOPE_CODES = frozenset({"REQUEST", "PROJECT", "OPERATIONAL_SHIPMENT", "CARGO", "MULTIPLE"})
+
+
+class DocumentDefinitionAlias(db.Model):
+    __tablename__ = "document_definition_alias"
+    __table_args__ = (db.UniqueConstraint("normalized_value", name="uq_document_definition_alias_normalized"), db.CheckConstraint("alias_kind IN ('ABBREVIATION','TRANSLITERATION','COMMON_NAME','FORMER_NAME')", name="ck_document_definition_alias_kind"))
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    document_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
+    locale = db.Column(db.String(16), nullable=True)
+    display_value = db.Column(db.String(200), nullable=False)
+    normalized_value = db.Column(db.String(200), nullable=False)
+    alias_kind = db.Column(db.String(24), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    updated_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+
+
+class DocumentDefinitionJurisdiction(db.Model):
+    __tablename__ = "document_definition_jurisdiction"
+    __table_args__ = (db.UniqueConstraint("document_definition_id", "applicability_key", name="uq_document_definition_jurisdiction_key"), db.CheckConstraint("applicability_kind IN ('GLOBAL','INTERNATIONAL','COUNTRY')", name="ck_document_definition_jurisdiction_kind"), db.CheckConstraint("(applicability_kind = 'COUNTRY' AND country_id IS NOT NULL) OR (applicability_kind <> 'COUNTRY' AND country_id IS NULL)", name="ck_document_definition_jurisdiction_country"))
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    document_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
+    applicability_kind = db.Column(db.String(16), nullable=False)
+    applicability_key = db.Column(db.String(32), nullable=False)
+    country_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id", ondelete="RESTRICT"), nullable=True)
+
+
+class DocumentDefinitionMode(db.Model):
+    __tablename__ = "document_definition_mode"
+    __table_args__ = (db.UniqueConstraint("document_definition_id", "mode_code", name="uq_document_definition_mode"), db.CheckConstraint("mode_code IN ('ROAD','SEA','AIR','RAIL','MULTIMODAL','MODE_INDEPENDENT')", name="ck_document_definition_mode_code"))
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    document_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
+    mode_code = db.Column(db.String(24), nullable=False)
+
+
+class DocumentDefinitionStage(db.Model):
+    __tablename__ = "document_definition_stage"
+    __table_args__ = (db.UniqueConstraint("document_definition_id", "stage_code", name="uq_document_definition_stage"), db.CheckConstraint("stage_code IN ('PRE_SHIPMENT','BOOKING','ORIGIN','IN_TRANSIT','ARRIVAL','WAREHOUSE','CUSTOMS_DECLARATION','CUSTOMS_CLEARANCE','RELEASE','DELIVERY','POST_DELIVERY','PAYMENT_FINANCE')", name="ck_document_definition_stage_code"))
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    document_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
+    stage_code = db.Column(db.String(32), nullable=False)
+
+
+class DocumentDefinitionBusinessScope(db.Model):
+    __tablename__ = "document_definition_business_scope"
+    __table_args__ = (db.UniqueConstraint("document_definition_id", "scope_code", name="uq_document_definition_business_scope"), db.CheckConstraint("scope_code IN ('REQUEST','PROJECT','OPERATIONAL_SHIPMENT','CARGO','MULTIPLE')", name="ck_document_definition_business_scope_code"))
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    document_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
+    scope_code = db.Column(db.String(32), nullable=False)
+
+
+class DocumentDefinitionProvenance(db.Model):
+    __tablename__ = "document_definition_provenance"
+    __table_args__ = (db.CheckConstraint("review_status IN ('VERIFIED','SOURCE_CONFIRMED','SOURCE_CONFIRMATION_REQUIRED','DOMAIN_CONFIRMATION_REQUIRED','SUPERSEDED')", name="ck_document_definition_provenance_review"),)
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    document_definition_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("document_definition.id", ondelete="RESTRICT"), nullable=False, index=True)
+    source_authority_code = db.Column(db.String(64), nullable=False)
+    source_authority_name = db.Column(db.String(200), nullable=False)
+    source_title = db.Column(db.String(300), nullable=False)
+    source_reference = db.Column(db.String(500), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    source_date = db.Column(db.Date, nullable=True)
+    jurisdiction_key = db.Column(db.String(32), nullable=True)
+    review_status = db.Column(db.String(40), nullable=False)
+    reviewed_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+
+class DocumentCatalogAuditEvent(db.Model):
+    __tablename__ = "document_catalog_audit_event"
+    __table_args__ = (db.UniqueConstraint("idempotency_key", name="uq_document_catalog_audit_idempotency"),)
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    definition_public_id = db.Column(db.String(36), nullable=False, index=True)
+    definition_code = db.Column(db.String(64), nullable=False)
+    actor_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True)
+    action = db.Column(db.String(64), nullable=False, index=True)
+    previous_revision = db.Column(db.Integer, nullable=True)
+    resulting_revision = db.Column(db.Integer, nullable=True)
+    previous_lifecycle = db.Column(db.String(24), nullable=True)
+    resulting_lifecycle = db.Column(db.String(24), nullable=True)
+    approval_reference = db.Column(db.String(200), nullable=True)
+    idempotency_key = db.Column(db.String(128), nullable=True)
+    request_hash = db.Column(db.String(64), nullable=True)
+    result = db.Column(db.String(16), nullable=False)
+    details = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
 
 class OrganizationDocumentRequirement(db.Model):
@@ -1889,7 +2009,7 @@ class DocumentAuditEvent(db.Model):
 
 # Import the bounded operational module after legacy models are declared so its
 # foreign-key targets are registered in the same SQLAlchemy metadata.
-from backend.operational_models import (  # noqa: E402
+from backend.operational_models import (  # noqa: E402,F401
     CanonicalLocation,
     Milestone,
     MilestoneEvent,
@@ -1910,7 +2030,7 @@ from backend.operational_models import (  # noqa: E402
     RoutePlan,
 )
 from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem  # noqa: E402
-from backend.mdpm_models import (  # noqa: E402
+from backend.mdpm_models import (  # noqa: E402,F401
     ArtifactAssociation,
     DocumentAssessment,
     DocumentReadinessAudit,
@@ -1979,6 +2099,13 @@ __all__ = [
     "PORT_CUSTOMS_RELATIONSHIP_TYPES",
     "SiteSetting",
     "DocumentDefinition",
+    "DocumentDefinitionAlias",
+    "DocumentDefinitionJurisdiction",
+    "DocumentDefinitionMode",
+    "DocumentDefinitionStage",
+    "DocumentDefinitionBusinessScope",
+    "DocumentDefinitionProvenance",
+    "DocumentCatalogAuditEvent",
     "OrganizationDocumentRequirement",
     "CaseDocumentRequirement",
     "CaseDocumentFile",

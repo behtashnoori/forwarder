@@ -16,6 +16,7 @@ from werkzeug.utils import secure_filename
 
 from backend.extensions import db
 from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentAuditEvent, DocumentDefinition, ShipmentRequest
+from backend.models import DOCUMENT_FAMILIES, DOCUMENT_SOURCE_REVIEW_STATUSES
 from backend.quarantine import assert_instance_current
 from backend.services.document_storage_service import DocumentStorageError, PrivateDocumentStorage
 
@@ -74,13 +75,33 @@ def validate_definition(payload: dict[str, Any], existing: DocumentDefinition | 
     scope = payload.get("applicability_scope", existing.applicability_scope if existing else "all")
     if scope not in SCOPES:
         raise DocumentError("دامنه کاربرد نامعتبر است")
-    return {
+    family = payload.get("family_code", existing.family_code if existing else None)
+    if family is not None:
+        family = str(family).strip().upper() or None
+    if family is not None and family not in DOCUMENT_FAMILIES:
+        raise DocumentError("خانواده سند نامعتبر است")
+    review = str(payload.get("source_review_status", existing.source_review_status if existing else "SOURCE_CONFIRMATION_REQUIRED")).upper()
+    if review not in DOCUMENT_SOURCE_REVIEW_STATUSES:
+        raise DocumentError("وضعیت بررسی منبع نامعتبر است")
+    values = {
         "code": code, "title": title, "description": str(payload.get("description", existing.description if existing else "")).strip() or None,
         "is_required": bool(payload.get("is_required", existing.is_required if existing else False)),
         "allowed_formats": _json(sorted(set(formats))), "max_file_size_bytes": size,
         "max_active_file_count": count, "sort_order": int(payload.get("sort_order", existing.sort_order if existing else 0)),
         "applicability_scope": scope,
+        "family_code": family,
+        "source_review_status": review,
     }
+    for field in ("name_fa", "name_en", "description_fa", "description_en", "reference_number_label_fa", "reference_number_label_en"):
+        if field in payload or existing is None:
+            value = payload.get(field, getattr(existing, field, None) if existing else None)
+            values[field] = str(value).strip() or None if value is not None else None
+    for field in ("expiry_applicable", "organization_overridable"):
+        if field in payload:
+            if not isinstance(payload[field], bool):
+                raise DocumentError(f"{field} must be boolean")
+            values[field] = payload[field]
+    return values
 
 
 def serialize_definition(row: DocumentDefinition) -> dict[str, Any]:
@@ -90,6 +111,15 @@ def serialize_definition(row: DocumentDefinition) -> dict[str, Any]:
         "max_file_size_bytes": row.max_file_size_bytes, "max_active_file_count": row.max_active_file_count,
         "sort_order": row.sort_order, "is_active": row.is_active,
         "applicability_scope": row.applicability_scope, "revision": row.revision,
+        "name_fa": row.name_fa, "name_en": row.name_en,
+        "description_fa": row.description_fa, "description_en": row.description_en,
+        "family_code": row.family_code,
+        "reference_number_label_fa": row.reference_number_label_fa,
+        "reference_number_label_en": row.reference_number_label_en,
+        "expiry_applicable": row.expiry_applicable,
+        "organization_overridable": row.organization_overridable,
+        "catalog_lifecycle_status": row.catalog_lifecycle_status,
+        "source_review_status": row.source_review_status,
         "usage_count": CaseDocumentRequirement.query.filter_by(source_definition_id=row.id).count(),
         "created_at": row.created_at.isoformat(), "updated_at": row.updated_at.isoformat(),
     }

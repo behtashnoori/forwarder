@@ -9,13 +9,14 @@ from sqlalchemy.exc import IntegrityError
 from backend.auth import get_current_user
 from backend.extensions import db
 from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentDefinition, ShipmentRequest
-from backend.security import require_auth, require_role
+from backend.security import require_auth
 from backend.services import case_document_service as service
 from backend.services.document_storage_service import DocumentStorageError, PrivateDocumentStorage
 from backend.services.expert_request_detail_service import can_access_request_detail
 from backend.quarantine import QuarantinedResource, is_quarantined
 from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 from backend.services import organization_document_policy_service as organization_policy
+from backend.services import document_catalog_service as catalog_service
 
 document_bp = Blueprint("case_documents", __name__)
 
@@ -99,11 +100,67 @@ def definitions_activation(definition_id: int):
         return jsonify({"error": "تعریف یافت نشد"}), 404
     actor = _current()
     active = bool((request.get_json(silent=True) or {}).get("is_active"))
+    if active and row.catalog_lifecycle_status != "ACTIVE":
+        return jsonify({"error": "Use the governed catalog lifecycle API to activate this definition"}), 409
     row.is_active = active
     row.updated_by = actor["id"]
     service.audit("document_definition_activated" if active else "document_definition_deactivated", actor["id"], definition_id=row.id)
     db.session.commit()
     return jsonify(service.serialize_definition(row))
+
+
+@document_bp.get("/api/platform/document-catalog")
+@require_platform_admin()
+def document_catalog_list():
+    filters = {key: value for key, value in request.args.items() if key in {
+        "q", "family_code", "catalog_lifecycle_status", "source_review_status",
+        "jurisdiction", "mode", "stage", "business_scope", "is_active",
+    }}
+    return jsonify({"items": catalog_service.list_catalog(filters)})
+
+
+@document_bp.get("/api/platform/document-catalog/<definition_public_id>")
+@require_platform_admin()
+def document_catalog_detail(definition_public_id: str):
+    row = DocumentDefinition.query.filter_by(public_id=definition_public_id).one_or_none()
+    return (jsonify(catalog_service.serialize(row)), 200) if row else (jsonify({"error": "Definition not found"}), 404)
+
+
+@document_bp.patch("/api/platform/document-catalog/<definition_public_id>")
+@require_platform_admin()
+def document_catalog_update(definition_public_id: str):
+    row = DocumentDefinition.query.filter_by(public_id=definition_public_id).with_for_update().one_or_none()
+    if not row:
+        return jsonify({"error": "Definition not found"}), 404
+    try:
+        result = catalog_service.update_metadata(
+            row, request.get_json(silent=True) or {}, _current()["id"],
+            request.headers.get("Idempotency-Key", "").strip(),
+        )
+        return jsonify(result)
+    except catalog_service.CatalogError as exc:
+        db.session.rollback()
+        return jsonify({"error": exc.message}), exc.status
+    except IntegrityError:
+        db.session.rollback()
+        return jsonify({"error": "Catalog metadata conflict"}), 409
+
+
+@document_bp.post("/api/platform/document-catalog/<definition_public_id>/lifecycle")
+@require_platform_admin()
+def document_catalog_lifecycle(definition_public_id: str):
+    row = DocumentDefinition.query.filter_by(public_id=definition_public_id).with_for_update().one_or_none()
+    if not row:
+        return jsonify({"error": "Definition not found"}), 404
+    try:
+        result = catalog_service.transition(
+            row, request.get_json(silent=True) or {}, _current()["id"],
+            request.headers.get("Idempotency-Key", "").strip(),
+        )
+        return jsonify(result)
+    except catalog_service.CatalogError as exc:
+        db.session.rollback()
+        return jsonify({"error": exc.message}), exc.status
 
 
 @document_bp.get("/api/admin/organization-document-policy")
