@@ -50,6 +50,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [032](../operational/adr/ADR-032-oip-projection-health-lifecycle.md) | OIP projection health | ACCEPTED | OIP | none / none | OIP projection state/history | Yes |
 | [033](../operational/adr/ADR-033-shipment-economics-core.md) | Shipment Economics Core | ACCEPTED | Economics | none / none | economics models/service | Yes; release promotion is separate |
 | [034](../operational/adr/ADR-034-optional-commercial-lineage-single-operational-shipment.md) | Optional commercial lineage, one shipment aggregate | ACCEPTED | Shipment/customer | refines ADR-002/017 creation shapes / none | `OperationalShipment.source_type/customer_id` | Yes |
+| [035](../operational/adr/ADR-035-logistics-point-expert-tracking-convergence.md) | LogisticsPoint convergence for expert tracking locations | ACCEPTED | Logistics/tracking | none / none | future tenant selector and legacy tracking bridge | Yes |
 
 ## Usage rules
 
