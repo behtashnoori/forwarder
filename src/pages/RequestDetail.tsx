@@ -1336,7 +1336,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
       </Card>
       {data.enabled && <>
         <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardHeader><CardTitle>{t("multiTracking.addUnit")}</CardTitle></CardHeader>
+          <CardHeader><CardTitle>{t("multiTracking.addUnit")}</CardTitle><p className="text-sm text-muted-foreground">{t("multiTracking.unitHelp")}</p></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-5">
             <Input value={unit.unit_code} onChange={(e) => setUnit({ ...unit, unit_code: e.target.value })} placeholder={t("multiTracking.unitCode")} />
             <Select value={unit.unit_type} onValueChange={(value) => setUnit({ ...unit, unit_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["truck","container","wagon","other"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.type.${v}`)}</SelectItem>)}</SelectContent></Select>
@@ -1376,7 +1376,8 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
             <Button disabled={busy || !updateUnitId || !update.occurred_at} onClick={submitUpdate}>{t("multiTracking.addUpdate")}</Button>
           </CardContent>
         </Card>
-        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: {u.vehicle_reference}</p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
+        {!data.unit_tracking?.units.length && <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">{t("multiTracking.emptyUnits")}</p>}
+        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: <span dir="ltr">{u.vehicle_reference}</span></p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
       </>}
     </div>
   );
