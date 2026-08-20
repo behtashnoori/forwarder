@@ -20,9 +20,172 @@ from backend.operational_models import (
 from backend.security import require_auth
 from backend.services import operational_service as service
 from backend.services import route_orchestration_service as routes
+from backend.services import external_reference_service as external_references
 
 
 operations_bp = Blueprint("operations", __name__)
+
+
+def _reference_owner(kind: str, public_id: str, *, manage: bool = False):
+    if kind == "shipment":
+        owner = external_references.scoped_shipment(public_id, _user(), manage=manage)
+        return owner, owner.organization_id
+    return external_references.scoped_unit(public_id, _user(), manage=manage)
+
+
+@operations_bp.get(
+    "/api/internal/operational-shipments/<shipment_public_id>/external-references"
+)
+@require_auth
+def shipment_external_references(shipment_public_id: str):
+    try:
+        owner, _ = _reference_owner("shipment", shipment_public_id)
+        return jsonify(
+            {
+                "data": external_references.list_for_owner(
+                    "shipment",
+                    owner.id,
+                    active_only=request.args.get("active_only") == "true",
+                )
+            }
+        )
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/internal/operational-shipments/<shipment_public_id>/external-references"
+)
+@require_auth
+def create_shipment_external_reference(shipment_public_id: str):
+    try:
+        owner, org = _reference_owner("shipment", shipment_public_id, manage=True)
+        row, created = external_references.create(
+            "shipment",
+            owner,
+            org,
+            request.get_json(silent=True) or {},
+            _user(),
+            request.headers.get("Idempotency-Key", ""),
+        )
+        return jsonify(
+            {"data": external_references.serialize(row), "meta": {"created": created}}
+        ), 201 if created else 200
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/internal/operational-shipments/<shipment_public_id>/external-references/<reference_public_id>/<action>"
+)
+@require_auth
+def transition_shipment_external_reference(
+    shipment_public_id: str, reference_public_id: str, action: str
+):
+    try:
+        if action not in {"supersede", "cancel"}:
+            raise service.OperationalError(
+                "RESOURCE_NOT_FOUND", "Resource not found.", 404
+            )
+        owner, org = _reference_owner("shipment", shipment_public_id, manage=True)
+        row = external_references.transition(
+            "shipment",
+            owner.id,
+            org,
+            reference_public_id,
+            request.get_json(silent=True) or {},
+            _user(),
+            action,
+            request.headers.get("Idempotency-Key", ""),
+        )
+        return jsonify({"data": external_references.serialize(row)})
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.get("/api/internal/execution-units/<unit_public_id>/external-references")
+@require_auth
+def execution_unit_external_references(unit_public_id: str):
+    try:
+        owner, _ = _reference_owner("unit", unit_public_id)
+        return jsonify(
+            {
+                "data": external_references.list_for_owner(
+                    "unit",
+                    owner.id,
+                    active_only=request.args.get("active_only") == "true",
+                )
+            }
+        )
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/internal/execution-units/<unit_public_id>/external-references"
+)
+@require_auth
+def create_execution_unit_external_reference(unit_public_id: str):
+    try:
+        owner, org = _reference_owner("unit", unit_public_id, manage=True)
+        row, created = external_references.create(
+            "unit",
+            owner,
+            org,
+            request.get_json(silent=True) or {},
+            _user(),
+            request.headers.get("Idempotency-Key", ""),
+        )
+        return jsonify(
+            {"data": external_references.serialize(row), "meta": {"created": created}}
+        ), 201 if created else 200
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/internal/execution-units/<unit_public_id>/external-references/<reference_public_id>/<action>"
+)
+@require_auth
+def transition_execution_unit_external_reference(
+    unit_public_id: str, reference_public_id: str, action: str
+):
+    try:
+        if action not in {"supersede", "cancel"}:
+            raise service.OperationalError(
+                "RESOURCE_NOT_FOUND", "Resource not found.", 404
+            )
+        owner, org = _reference_owner("unit", unit_public_id, manage=True)
+        row = external_references.transition(
+            "unit",
+            owner.id,
+            org,
+            reference_public_id,
+            request.get_json(silent=True) or {},
+            _user(),
+            action,
+            request.headers.get("Idempotency-Key", ""),
+        )
+        return jsonify({"data": external_references.serialize(row)})
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.get("/api/internal/external-references/search")
+@require_auth
+def search_external_references():
+    try:
+        return jsonify(external_references.search(request.args, _user()))
+    except (service.OperationalError, ValueError) as exc:
+        if isinstance(exc, service.OperationalError):
+            return _error(exc)
+        return _error(
+            service.OperationalError("VALIDATION_FAILED", "Invalid search parameters.")
+        )
 
 
 def _error(exc: service.OperationalError):
