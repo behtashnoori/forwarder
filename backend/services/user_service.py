@@ -25,7 +25,7 @@ class UserNotFoundError(Exception):
 
 def build_user_specialization_payload(specialization: ExpertSpecialization) -> dict[str, Any]:
     """Build the current specialization payload nested under a user."""
-    return {
+    payload = {
         "id": specialization.id,
         "transport_method": {
             "id": specialization.transport_method.id,
@@ -34,9 +34,10 @@ def build_user_specialization_payload(specialization: ExpertSpecialization) -> d
         "proficiency_level": specialization.proficiency_level,
         "is_primary": specialization.is_primary,
     }
+    return payload
 
 
-def build_user_payload(user: ExpertUser) -> dict[str, Any]:
+def build_user_payload(user: ExpertUser, *, workload: dict[str, Any] | None = None) -> dict[str, Any]:
     """Build the current user-management user response item shape."""
     manager_info = None
     if user.manager:
@@ -47,7 +48,7 @@ def build_user_payload(user: ExpertUser) -> dict[str, Any]:
 
     subordinates_count = len(user.subordinates) if user.subordinates else 0
 
-    return {
+    payload = {
         "id": user.id,
         "username": user.username,
         "full_name": user.full_name,
@@ -67,8 +68,11 @@ def build_user_payload(user: ExpertUser) -> dict[str, Any]:
             build_user_specialization_payload(specialization)
             for specialization in user.specializations
         ],
-        "workload": user.get_workload(),
+        "workload": workload["active_count"] if workload is not None else user.get_workload(),
     }
+    if workload is not None:
+        payload["workload_detail"] = workload
+    return payload
 
 
 def list_users_payload(context=None) -> list[dict[str, Any]]:
@@ -77,7 +81,17 @@ def list_users_payload(context=None) -> list[dict[str, Any]]:
     if context is not None:
         query = query.join(OperationalMembership, OperationalMembership.user_id == ExpertUser.id).filter(OperationalMembership.organization_id == context.organization_id, OperationalMembership.is_active.is_(True))
     users = query.order_by(ExpertUser.full_name).all()
-    return [build_user_payload(user) for user in users]
+    if context is None:
+        return [build_user_payload(user) for user in users]
+    from backend.services.expert_workload_service import organization_workloads, workload_payload
+    counts = organization_workloads(context.organization_id, [user.id for user in users])
+    return [
+        build_user_payload(
+            user,
+            workload=workload_payload(context.organization_id, user, counts.get(user.id, 0)),
+        )
+        for user in users
+    ]
 
 
 def normalize_optional_create_string(value: Any, *, lowercase: bool = False) -> str | None:
@@ -189,9 +203,12 @@ def update_user(user_id: int, payload: dict[str, Any], context=None) -> ExpertUs
     user = get_user_or_raise(user_id, context)
     data = payload
     if context is not None:
-        if getattr(user, "authority", "EXPERT") == "PLATFORM_ADMIN": raise UserNotFoundError()
-        if "authority" in data or data.get("role") == "admin": raise UserValidationError("Administrative authority cannot be changed here.")
-        if data.get("manager_id") and not user_in_organization(data["manager_id"], context.organization_id): raise UserValidationError("Manager must belong to the same organization.")
+        if getattr(user, "authority", "EXPERT") == "PLATFORM_ADMIN":
+            raise UserNotFoundError()
+        if "authority" in data or data.get("role") == "admin":
+            raise UserValidationError("Administrative authority cannot be changed here.")
+        if data.get("manager_id") and not user_in_organization(data["manager_id"], context.organization_id):
+            raise UserValidationError("Manager must belong to the same organization.")
     password_changed = False
     deactivated = False
     role_changed = False

@@ -79,6 +79,12 @@ interface User {
     is_primary: boolean;
   }[];
   workload: number;
+  workload_detail?: {
+    active_count: number;
+    included_statuses: string[];
+    unit: "REQUEST";
+    calculated_at: string;
+  } | null;
 }
 
 interface AssignmentRule {
@@ -98,14 +104,16 @@ interface AssignmentRule {
 }
 
 interface AssignmentStatistics {
-  total_assignments: number;
-  automatic_assignments: number;
-  manual_assignments: number;
+  total_assignments?: number;
+  automatic_assignments?: number;
+  manual_assignments?: number;
   expert_workloads: {
     expert_id: number;
     expert_name: string;
     workload: number;
   }[];
+  displayed_workload_statuses?: string[];
+  assignment_strategy_note?: string;
 }
 
 const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value : [];
@@ -130,6 +138,7 @@ const normalizeUser = (value: unknown): User => {
     subordinates_count: typeof user.subordinates_count === "number" ? user.subordinates_count : 0,
     specializations: asArray<User["specializations"][number]>(user.specializations),
     workload: typeof user.workload === "number" ? user.workload : 0,
+    workload_detail: user.workload_detail && typeof user.workload_detail === "object" ? user.workload_detail : undefined,
   };
 };
 
@@ -644,6 +653,9 @@ const UserManagement = () => {
           </TabsList>
 
           <TabsContent value="users" className="space-y-4">
+            <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+              «بار کاری فعلی» تعداد پرونده‌های تخصیص‌یافته یا در حال پیگیری است. این عدد اطلاعات عملیاتی است؛ تخصیص پیش‌فرض بر اساس نوبت‌گردشی انجام می‌شود، نه کمترین بار کاری.
+            </p>
             {/* Users Filters */}
             <Card>
               <CardContent className="p-4">
@@ -736,7 +748,9 @@ const UserManagement = () => {
                           )}
 
                           <div className="flex items-center gap-4 text-sm text-gray-500">
-                            <span>بار کاری: {user.workload}</span>
+                            <span title="تعداد پرونده‌های فعال با وضعیت تخصیص‌یافته یا در حال پیگیری">
+                              بار کاری فعلی: {user.workload} پرونده فعال
+                            </span>
                             <span>•</span>
                             <span>تخصص‌ها: {user.specializations.length}</span>
                             {isExpertRole(user.role) && (
@@ -850,9 +864,13 @@ const UserManagement = () => {
                 {/* Expert Workloads */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>بار کاری کارشناسان</CardTitle>
+                    <CardTitle>بار کاری فعلی کارشناسان</CardTitle>
                   </CardHeader>
                   <CardContent>
+                    <div className="mb-4 space-y-1 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
+                      <p>تعداد پرونده‌های فعالی که در حال حاضر به هر کارشناس اختصاص دارد؛ هر پرونده یک واحد محاسبه می‌شود.</p>
+                      <p>این عدد اطلاعات عملیاتی است. تخصیص پیش‌فرض بر اساس نوبت‌گردشی انجام می‌شود و فقط قانون «کمترین بار کاری» از شمارش گسترده‌تر موتور ارجاع استفاده می‌کند.</p>
+                    </div>
                     <div className="space-y-3">
                       {statistics.expert_workloads.map((expert) => (
                         <div key={expert.expert_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -862,7 +880,7 @@ const UserManagement = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant={expert.workload > 5 ? "destructive" : expert.workload > 3 ? "default" : "secondary"}>
-                              {expert.workload} درخواست
+                              {expert.workload} پرونده فعال
                             </Badge>
                           </div>
                         </div>

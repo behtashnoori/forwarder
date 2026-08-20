@@ -17,11 +17,31 @@ def build_assignment_statistics_response_payload(raw_stats: dict[str, Any]) -> d
 def get_assignment_statistics_payload(context=None) -> dict[str, Any]:
     """Fetch assignment statistics from the current assignment engine."""
     if context is not None:
-        from sqlalchemy import func
         from backend.extensions import db
-        from backend.models import ShipmentRequest
-        query = db.session.query(ShipmentRequest.status, func.count(ShipmentRequest.id)).filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT").group_by(ShipmentRequest.status)
-        return {"total_requests": sum(row[1] for row in query.all()), "by_status": {row[0]: row[1] for row in query.all()}}
+        from backend.models import ExpertUser
+        from backend.operational_models import OperationalMembership
+        from backend.services.expert_workload_service import organization_workloads
+        experts = (
+            db.session.query(ExpertUser)
+            .join(OperationalMembership, OperationalMembership.user_id == ExpertUser.id)
+            .filter(
+                OperationalMembership.organization_id == context.organization_id,
+                OperationalMembership.is_active.is_(True),
+                ExpertUser.is_active.is_(True),
+                ExpertUser.role.in_(["expert", "business_expert"]),
+            )
+            .order_by(ExpertUser.full_name)
+            .all()
+        )
+        counts = organization_workloads(context.organization_id, [item.id for item in experts])
+        return {
+            "expert_workloads": [
+                {"expert_id": item.id, "expert_name": item.full_name, "workload": counts.get(item.id, 0)}
+                for item in experts
+            ],
+            "displayed_workload_statuses": ["assigned", "in_progress"],
+            "assignment_strategy_note": "Workload is informational unless a least_workload referral strategy is selected.",
+        }
     from backend.assignment_engine import assignment_engine
 
     raw_stats = assignment_engine.get_assignment_statistics()

@@ -110,7 +110,14 @@ def create_user():
 def get_user(user_id: int):
     try:
         user = user_service.get_user_or_raise(user_id, getattr(g, "organization_context", None))
-        return jsonify({"user": user_service.build_user_payload(user)})
+        context = getattr(g, "organization_context", None)
+        if context is not None:
+            from backend.services.expert_workload_service import organization_workloads, workload_payload
+            counts = organization_workloads(context.organization_id, [user.id])
+            workload = workload_payload(context.organization_id, user, counts.get(user.id, 0))
+        else:
+            workload = None
+        return jsonify({"user": user_service.build_user_payload(user, workload=workload)})
     except user_service.UserNotFoundError:
         return jsonify({"error": "User not found"}), 404
 

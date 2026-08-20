@@ -31,7 +31,6 @@ from backend.models import (
     Task,
     TransportMethod,
 )
-from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
 from backend.services import assignment_service, user_delete_service
 from backend.operational_models import OperationalMembership, OperationalOrganization
@@ -223,6 +222,40 @@ def test_admin_auth_role_requirements_and_read_shapes(user_management_app):
         }
     ]
     assert expert_payload["workload"] == 1
+
+
+def test_displayed_workload_status_and_tenant_semantics(user_management_app):
+    """Displayed workload is tenant-scoped, unweighted, current, and terminal-safe."""
+    from backend.services.expert_workload_service import organization_workloads
+    client = user_management_app["app"].test_client()
+    admin_headers = _auth_headers(user_management_app["admin_token"])
+
+    with user_management_app["app"].app_context():
+        expert_id = user_management_app["expert_id"]
+        membership = OperationalMembership.query.filter_by(user_id=expert_id).one()
+        org_a_id = membership.organization_id
+        org_b = OperationalOrganization(public_id="um-org-b", name="Organization B", is_active=True)
+        db.session.add(org_b)
+        db.session.flush()
+        for index, status in enumerate(["in_progress", "quoted", "waiting_for_customer", "closed", "lost"]):
+            db.session.add(ShipmentRequest(
+                tracking_code=f"UM-WORK-{index}", shipping_type="domestic",
+                contact_phone="09120000000", status_request_status="new", status=status,
+                assigned_to=expert_id, operational_organization_id=org_a_id, ownership_scope="TENANT",
+            ))
+        db.session.add(ShipmentRequest(
+            tracking_code="UM-CROSS-ORG", shipping_type="domestic", contact_phone="09120000001",
+            status_request_status="new", status="assigned", assigned_to=expert_id,
+            operational_organization_id=org_b.id, ownership_scope="TENANT",
+        ))
+        db.session.commit()
+        assert organization_workloads(org_a_id, [expert_id])[expert_id] == 2
+        assert expert_id not in organization_workloads(org_b.id, [expert_id])
+
+        closed = ShipmentRequest.query.filter_by(tracking_code="UM-WORK-3").one()
+        closed.status = "in_progress"
+        db.session.commit()
+        assert organization_workloads(org_a_id, [expert_id])[expert_id] == 3
 
     transport_response = client.get("/api/user-management/transport-methods", headers=admin_headers)
     assert transport_response.status_code == 200
