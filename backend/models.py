@@ -333,6 +333,7 @@ class ShipmentRequest(db.Model):
 
     __tablename__ = "shipment_request"
     __table_args__ = (
+        db.UniqueConstraint("public_id", name="uq_shipment_request_public_id"),
         db.UniqueConstraint("id", "operational_organization_id", name="uq_shipment_request_id_operational_org"),
         db.CheckConstraint(
             "ownership_scope IS NULL OR "
@@ -343,6 +344,10 @@ class ShipmentRequest(db.Model):
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    # Authenticated/internal opaque identity. This is deliberately distinct
+    # from the customer-facing tracking_code. Phase 1 remains nullable for
+    # N/N-1 compatibility; ADR-038 requires a later NOT NULL contract gate.
+    public_id = db.Column(db.String(36), nullable=True, default=lambda: str(uuid4()))
     operational_organization_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True
     )
@@ -1187,6 +1192,8 @@ def _validate_transport_update_tenant(_mapper, connection, target) -> None:
 @event.listens_for(Customer, "before_update")
 def _prevent_tenant_root_reownership(_mapper, _connection, target) -> None:
     state = inspect(target)
+    if isinstance(target, ShipmentRequest) and state.attrs.public_id.history.has_changes():
+        raise ValueError("shipment request public_id is immutable")
     scope_history = state.attrs.ownership_scope.history
     organization_history = state.attrs.operational_organization_id.history
     old_scope = scope_history.deleted[0] if scope_history.deleted else target.ownership_scope

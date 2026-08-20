@@ -1,6 +1,8 @@
 """Characterization tests for public shipment request endpoints."""
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 
 from backend import create_app
@@ -102,6 +104,7 @@ def test_create_domestic_shipment_request_preserves_response_defaults_and_commit
     assert response.status_code == 201
     data = response.get_json()
     assert set(data.keys()) == {"message", "id", "tracking_code"}
+    assert "public_id" not in data
     assert data["message"] == "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت."
     assert data["tracking_code"].startswith("SR")
 
@@ -132,9 +135,26 @@ def test_create_domestic_shipment_request_preserves_response_defaults_and_commit
         assert shipment_request.has_unread_for_assignee is True
         assert shipment_request.priority == "normal"
         assert shipment_request.tracking_code == data["tracking_code"]
+        assert UUID(shipment_request.public_id).version == 4
+        assert shipment_request.public_id == str(UUID(shipment_request.public_id))
 
         log_entry = ShipmentRequestLog.query.filter_by(shipment_request_id=data["id"]).one()
         assert log_entry.note == "ثبت اولیه درخواست"
+
+
+def test_public_create_cannot_choose_shipment_request_public_id(shipment_app, client):
+    supplied = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    response = client.post(
+        "/api/shipment-request",
+        json=_domestic_payload(public_id=supplied),
+    )
+    assert response.status_code == 201
+    data = response.get_json()
+    assert "public_id" not in data
+    with shipment_app.app_context():
+        row = db.session.get(ShipmentRequest, data["id"])
+        assert row.public_id != supplied
+        assert UUID(row.public_id).version == 4
 
 
 def test_create_domestic_shipment_request_accepts_province_only_locations(shipment_app, client):

@@ -336,7 +336,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20260901_document_catalog_runs"
+        "20260902_shipment_request_public_id"
     ]
 
 
