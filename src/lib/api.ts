@@ -1379,6 +1379,27 @@ export interface DocumentDefinition {
   revision: number;
   usage_count: number;
 }
+export type DocumentCatalogLifecycle = "DRAFT" | "REVIEWED" | "SOURCE_CONFIRMED" | "ACTIVE" | "DEPRECATED";
+export type DocumentSourceReviewStatus = "VERIFIED" | "SOURCE_CONFIRMED" | "SOURCE_CONFIRMATION_REQUIRED" | "DOMAIN_CONFIRMATION_REQUIRED" | "SUPERSEDED";
+export interface DocumentCatalogAlias { public_id?: string; locale?: string | null; display_value: string; normalized_value?: string; alias_kind: string; is_active: boolean }
+export interface DocumentCatalogJurisdiction { public_id?: string; kind: "GLOBAL" | "INTERNATIONAL" | "COUNTRY"; key?: string; country_code?: string | null }
+export interface DocumentCatalogProvenance { public_id?: string; source_authority_code: string; source_authority_name: string; source_title: string; source_reference?: string | null; source_version?: string | null; source_date?: string | null; jurisdiction_key?: string | null; review_status: DocumentSourceReviewStatus; reviewed_at?: string | null; notes?: string | null }
+export interface DocumentCatalogDefinition {
+  public_id: string; code: string; title: string; name_fa?: string | null; name_en?: string | null;
+  description?: string | null; description_fa?: string | null; description_en?: string | null;
+  family_code?: string | null; reference_number_label_fa?: string | null; reference_number_label_en?: string | null;
+  expiry_applicable?: boolean | null; organization_overridable: boolean; catalog_lifecycle_status: DocumentCatalogLifecycle;
+  source_review_status: DocumentSourceReviewStatus; is_active: boolean; is_required: boolean;
+  applicability_scope: "all" | "domestic" | "international"; revision: number;
+  aliases: DocumentCatalogAlias[]; jurisdictions: DocumentCatalogJurisdiction[]; modes: string[]; stages: string[];
+  business_scopes: string[]; provenance: DocumentCatalogProvenance[];
+}
+export interface DocumentCatalogFilters { q?: string; family_code?: string; catalog_lifecycle_status?: string; source_review_status?: string; jurisdiction?: string; mode?: string; stage?: string; business_scope?: string; is_active?: string }
+export type DocumentCatalogMetadataUpdate = Partial<Pick<DocumentCatalogDefinition, "name_fa" | "name_en" | "description_fa" | "description_en" | "family_code" | "reference_number_label_fa" | "reference_number_label_en" | "expiry_applicable" | "organization_overridable" | "source_review_status" | "aliases" | "jurisdictions" | "modes" | "stages" | "business_scopes" | "provenance">> & { expected_revision: number };
+export const fetchDocumentCatalog = (filters?: DocumentCatalogFilters) => request<{items: DocumentCatalogDefinition[]}>(withQuery("/api/platform/document-catalog", filters ? {...filters} : undefined));
+export const fetchDocumentCatalogDefinition = (publicId: string) => request<DocumentCatalogDefinition>(`/api/platform/document-catalog/${publicId}`);
+export const updateDocumentCatalogDefinition = (publicId: string, payload: DocumentCatalogMetadataUpdate, idempotencyKey: string) => request<DocumentCatalogDefinition>(`/api/platform/document-catalog/${publicId}`, {method:"PATCH", headers:{"Idempotency-Key":idempotencyKey}, body:JSON.stringify(payload)});
+export const transitionDocumentCatalogDefinition = (publicId: string, payload: {expected_revision:number; target_status:DocumentCatalogLifecycle; approval_reference?:string}, idempotencyKey: string) => request<DocumentCatalogDefinition>(`/api/platform/document-catalog/${publicId}/lifecycle`, {method:"POST", headers:{"Idempotency-Key":idempotencyKey}, body:JSON.stringify(payload)});
 export interface CaseDocumentFile {
   id: number;
   requirement_id?: number | null;

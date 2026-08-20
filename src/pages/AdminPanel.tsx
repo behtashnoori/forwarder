@@ -307,7 +307,7 @@ const AdminPanel = () => {
               مبدا و مقصد
             </TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>}
-            {isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>مدیریت مستندات</TabsTrigger>}
+            {isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>کاتالوگ اسناد</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>الزامات مستندات سازمان</TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>}
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
