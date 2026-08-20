@@ -22,6 +22,7 @@ export default function LogisticsNetworkAdminTab({isPlatformAdmin=false}:{isPlat
  const saveTypeEdit=async()=>{if(!editingType)return;try{await updateLogisticsPointType(editingType.item.public_id,{version:editingType.item.version,fa_name:editingType.fa_name,en_name:editingType.en_name});setEditingType(null);await load()}catch(e){setError(e instanceof Error?e.message:"Unable to update type")}};
  const savePointEdit=async()=>{if(!editingPoint)return;try{await updateLogisticsPoint(editingPoint.item.public_id,{version:editingPoint.item.version,fa_name:editingPoint.fa_name,en_name:editingPoint.en_name,short_address:editingPoint.short_address});setEditingPoint(null);await load()}catch(e){setError(e instanceof Error?e.message:"Unable to update point")}};
  return <div className="space-y-4" dir="auto">
+  <p className="text-sm text-muted-foreground">مکان‌های پرتکرار لجستیکی سازمان را یک‌بار تعریف کنید تا کارشناسان در برنامه‌ریزی و ثبت وضعیت محموله‌ها از مکان‌های استاندارد استفاده کنند.</p>
   {error&&<p role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-red-800">{error}</p>}
   <Tabs defaultValue="points"><TabsList><TabsTrigger value="points">Logistics points</TabsTrigger>{isPlatformAdmin&&<TabsTrigger value="types">Point types</TabsTrigger>}</TabsList>
    {isPlatformAdmin&&<TabsContent value="types" className="space-y-4"><Card><CardHeader><CardTitle>Create point type</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">

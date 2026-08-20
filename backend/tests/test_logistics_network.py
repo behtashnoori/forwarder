@@ -105,7 +105,7 @@ def network_app():
         db.drop_all()
 
 
-def _point(client, ctx, code, name, *, confirm=False):
+def _point(client, ctx, code, name, *, confirm=False, en_name=None):
     return client.post(
         "/api/admin/logistics-points",
         headers=ctx["auth"],
@@ -113,6 +113,7 @@ def _point(client, ctx, code, name, *, confirm=False):
             "immutable_code": code,
             "point_type_public_id": ctx["type"],
             "fa_name": name,
+            "en_name": en_name,
             "country_code": "IR",
             "short_address": "Tehran",
             "confirm_probable_duplicate": confirm,
@@ -163,6 +164,35 @@ def test_exact_duplicate_org_boundary_and_no_public_surface(network_app):
             == 404
         )
         assert client.get("/api/public/v2/logistics-points").status_code == 404
+
+
+def test_tracking_selector_is_active_tenant_scoped_and_bounded(network_app):
+    app, ctx = network_app
+    with app.test_client() as client:
+        same = _point(client, ctx, "TEH-WH-1", "انبار تهران", en_name="Tehran Warehouse").get_json()["item"]
+        other = client.post(
+            "/api/admin/logistics-points", headers=ctx["other_auth"],
+            json={
+                "immutable_code": "OTHER-WH-1", "point_type_public_id": ctx["type"],
+                "fa_name": "انبار سازمان دیگر", "en_name": "Other Tenant Warehouse",
+                "country_code": "IR",
+            },
+        )
+        assert other.status_code == 201
+        endpoint = "/api/internal/logistics-points/tracking-selector"
+        result = client.get(endpoint, headers=ctx["auth"])
+        assert result.status_code == 200
+        assert [row["public_id"] for row in result.get_json()["items"]] == [same["public_id"]]
+        assert client.get(endpoint + "?q=تهران", headers=ctx["auth"]).get_json()["items"]
+        assert client.get(endpoint + "?q=Warehouse", headers=ctx["auth"]).get_json()["items"]
+        assert client.get(endpoint + "?q=TEH-WH", headers=ctx["auth"]).get_json()["items"]
+        assert client.get(endpoint + "?country_code=IR&type_code=WAREHOUSE&limit=1&offset=0", headers=ctx["auth"]).get_json()["items"]
+        assert client.get(endpoint + "?organization_id=1", headers=ctx["auth"]).status_code == 403
+        client.post(
+            f"/api/admin/logistics-points/{same['public_id']}/deactivate",
+            headers=ctx["auth"], json={"version": same["version"]},
+        )
+        assert client.get(endpoint, headers=ctx["auth"]).get_json()["items"] == []
 
 
 def test_project_association_role_uniqueness_reorder_and_deactivation(network_app):
@@ -295,7 +325,7 @@ def test_logistics_migration_is_the_single_head():
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260829_cargo_traceability_index"]
+    assert script.get_heads() == ["20260830_logistics_point_tracking_convergence"]
     assert (
         script.get_revision("20260810_logistics_network").down_revision
         == "20260809_cargo_catalog_items"

@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from backend.extensions import db
+from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
 from backend.models import (
     ShipmentRequest,
     ShipmentTracking,
@@ -185,6 +186,7 @@ def add_update(
     status: str,
     occurred_at: datetime,
     location: str | None = None,
+    logistics_point_public_id: str | None = None,
     location_reference_id: int | None = None,
     location_text: str | None = None,
     customer_message: str | None = None,
@@ -212,16 +214,39 @@ def add_update(
         raise TrackingValidationError("occurred_at cannot be in the future")
     clean_location = _clean_optional(location, "location", 255)
     clean_location_text = _clean_optional(location_text, "location_text", 255)
+    point_public_id = _clean_optional(
+        logistics_point_public_id, "logistics_point_public_id", 36
+    )
     reference = None
+    point = None
     if location_reference_id is not None:
         if not isinstance(location_reference_id, int) or isinstance(location_reference_id, bool):
             raise TrackingValidationError("location_reference_id must be an integer")
         reference = db.session.get(TrackingLocationReference, location_reference_id)
         if reference is None or not reference.is_active:
             raise TrackingValidationError("active tracking location reference not found")
-    if reference and clean_location_text:
-        raise TrackingValidationError("select a reference or enter free text, not both")
-    resolved_location = reference.name_fa if reference else (clean_location_text or clean_location)
+    if point_public_id:
+        point = db.session.scalar(
+            db.select(LogisticsPoint)
+            .join(LogisticsPointType)
+            .where(
+                LogisticsPoint.public_id == point_public_id,
+                LogisticsPoint.organization_id == unit.operational_organization_id,
+                LogisticsPoint.is_active.is_(True),
+                LogisticsPointType.is_active.is_(True),
+            )
+            .with_for_update()
+        )
+        if point is None:
+            raise TrackingValidationError("active logistics point not found")
+    authorities = sum(bool(value) for value in (point, reference, clean_location_text))
+    if authorities > 1:
+        raise TrackingValidationError("supply exactly one location authority")
+    if clean_location and authorities:
+        raise TrackingValidationError("location cannot accompany another location authority")
+    resolved_location = (
+        point.fa_name if point else reference.name_fa if reference else (clean_location_text or clean_location)
+    )
     clean_message = (customer_message or "").strip() or None
     clean_internal_note = (internal_note or "").strip() or None
     if not isinstance(is_customer_visible, bool):
@@ -232,9 +257,13 @@ def add_update(
         operational_organization_id=unit.operational_organization_id,
         status=normalized_status,
         location=resolved_location,
+        logistics_point_id=point.id if point else None,
         location_reference=reference,
-        location_name_snapshot=reference.name_fa if reference else None,
-        country_code_snapshot=reference.country_code if reference else None,
+        location_name_snapshot=point.fa_name if point else reference.name_fa if reference else None,
+        country_code_snapshot=point.country.code if point else reference.country_code if reference else None,
+        location_name_en_snapshot=point.en_name if point else None,
+        location_type_code_snapshot=point.point_type.immutable_code if point else None,
+        location_city_name_snapshot=point.city.name_fa if point and point.city else None,
         location_text=clean_location_text or (clean_location if not reference else None),
         customer_message=clean_message,
         internal_note=clean_internal_note,
@@ -255,13 +284,27 @@ def _iso(value):
 
 def _location_payload(row):
     name = row.location_name_snapshot or row.location_text or row.location
+    source = (
+        "logistics_point" if row.logistics_point_id else
+        "legacy_reference" if row.location_reference_id else
+        "manual" if (row.location_text or row.location) else
+        "unavailable"
+    )
     return {
-        "location_reference_id": row.location_reference_id,
         "location_name": name,
+        "location_name_en": row.location_name_en_snapshot,
         "location_text": row.location_text,
         "country_code": row.country_code_snapshot,
-        "location_source": "reference" if row.location_reference_id else ("manual" if name else None),
+        "location_type_code": row.location_type_code_snapshot,
+        "location_city_name": row.location_city_name_snapshot,
+        "location_source": source,
     }
+
+
+def _public_location_payload(row):
+    payload = _location_payload(row)
+    payload.pop("location_type_code", None)
+    return payload
 
 
 def _latest_location_row(history):
@@ -380,17 +423,17 @@ def build_public_unit_tracking(req: ShipmentRequest):
                 "vehicle_reference": unit.vehicle_reference,
                 "latest_status": latest_status,
                 "latest_location": (
-                    _location_payload(latest_location_row)["location_name"]
+                    _public_location_payload(latest_location_row)["location_name"]
                     if latest_location_row
                     else None
                 ),
-                "latest_location_detail": _location_payload(latest_location_row) if latest_location_row else None,
+                "latest_location_detail": _public_location_payload(latest_location_row) if latest_location_row else None,
                 "latest_event_at": _iso(latest.occurred_at) if latest else None,
                 "timeline": [
                     {
                         "status": row.status,
                         "location": row.location,
-                        **_location_payload(row),
+                        **_public_location_payload(row),
                         "customer_note": row.customer_message,
                         "event_at": _iso(row.occurred_at),
                     }

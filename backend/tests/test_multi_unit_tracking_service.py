@@ -4,7 +4,8 @@ import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import ExpertUser, ShipmentRequest
+from backend.models import Country, ExpertUser, ShipmentRequest, TrackingLocationReference
+from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
 from backend.operational_models import OperationalOrganization
 from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
@@ -62,12 +63,70 @@ def test_enablement_requires_accepted_request_and_tracking_code(app):
         actor, req = _seed_request(status="in_progress")
         with pytest.raises(TrackingValidationError, match="accepted"):
             enable_tracking(req, actor.id)
-
         req.status = "won"
         req.tracking_code = None
         with pytest.raises(TrackingValidationError, match="tracking code"):
             enable_tracking(req, actor.id)
 
+
+def test_canonical_logistics_point_snapshots_are_tenant_safe_and_immutable(app):
+    with app.app_context():
+        actor, req = _seed_request()
+        country = Country(code="IR", name_en="Iran", name_fa="ایران")
+        point_type = LogisticsPointType(
+            immutable_code="WAREHOUSE", fa_name="انبار", en_name="Warehouse",
+            created_by=actor.id, updated_by=actor.id,
+        )
+        db.session.add_all([country, point_type])
+        db.session.flush()
+        point = LogisticsPoint(
+            organization_id=req.operational_organization_id,
+            immutable_code="TEH-WH-1", logistics_point_type_id=point_type.id,
+            fa_name="انبار تهران", en_name="Tehran Warehouse",
+            normalized_name="انبار تهران", country_id=country.id,
+            geography_key="IR|-|-", created_by=actor.id, updated_by=actor.id,
+        )
+        legacy = TrackingLocationReference(
+            internal_key="compat", name_fa="قدیمی", country_code="IR",
+            location_type="other", reference_status="internal_reference",
+        )
+        db.session.add_all([point, legacy])
+        db.session.commit()
+        unit = add_unit(enable_tracking(req, actor.id), actor.id, unit_code="U-1", unit_type="truck")
+        row = add_update(
+            unit, actor.id, status="in_transit",
+            occurred_at=datetime.utcnow() - timedelta(minutes=1),
+            logistics_point_public_id=point.public_id,
+        )
+        db.session.commit()
+        assert row.logistics_point_id == point.id
+        assert row.location_name_snapshot == "انبار تهران"
+        assert row.location_name_en_snapshot == "Tehran Warehouse"
+        assert row.location_type_code_snapshot == "WAREHOUSE"
+        assert build_public_unit_tracking(req)["units"][0]["timeline"][0]["location_source"] == "logistics_point"
+        point.fa_name = "نام جدید"
+        point.is_active = False
+        db.session.commit()
+        assert build_public_unit_tracking(req)["units"][0]["timeline"][0]["location_name"] == "انبار تهران"
+        with pytest.raises(TrackingValidationError, match="active logistics point"):
+            add_update(
+                unit, actor.id, status="in_transit",
+                occurred_at=datetime.utcnow() - timedelta(seconds=1),
+                logistics_point_public_id=point.public_id,
+            )
+        point.is_active = True
+        with pytest.raises(TrackingValidationError, match="exactly one"):
+            add_update(
+                unit, actor.id, status="in_transit",
+                occurred_at=datetime.utcnow() - timedelta(seconds=1),
+                logistics_point_public_id=point.public_id, location_text="manual",
+            )
+        with pytest.raises(TrackingValidationError, match="exactly one"):
+            add_update(
+                unit, actor.id, status="in_transit",
+                occurred_at=datetime.utcnow() - timedelta(seconds=1),
+                logistics_point_public_id=point.public_id, location_reference_id=legacy.id,
+            )
 
 def test_public_projection_aggregates_partial_delivery_and_hides_private_data(app):
     with app.app_context():

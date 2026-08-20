@@ -645,6 +645,12 @@ class ShipmentTransportUnitUpdate(db.Model):
             name="fk_transport_unit_update_unit_same_org",
             ondelete="CASCADE",
         ),
+        db.ForeignKeyConstraint(
+            ["logistics_point_id", "operational_organization_id"],
+            ["logistics_point.id", "logistics_point.organization_id"],
+            name="fk_tracking_update_logistics_point_org",
+            ondelete="RESTRICT",
+        ),
         db.CheckConstraint(
             "ownership_scope IS NULL OR "
             "(ownership_scope = 'TENANT' AND operational_organization_id IS NOT NULL) OR "
@@ -673,8 +679,12 @@ class ShipmentTransportUnitUpdate(db.Model):
         db.ForeignKey("tracking_location_reference.id", ondelete="RESTRICT"),
         nullable=True,
     )
+    logistics_point_id = db.Column(SQLITE_COMPAT_BIGINT, nullable=True, index=True)
     location_name_snapshot = db.Column(db.String(160), nullable=True)
     country_code_snapshot = db.Column(db.String(2), nullable=True)
+    location_name_en_snapshot = db.Column(db.String(160), nullable=True)
+    location_type_code_snapshot = db.Column(db.String(64), nullable=True)
+    location_city_name_snapshot = db.Column(db.String(160), nullable=True)
     location_text = db.Column(db.String(255), nullable=True)
     customer_message = db.Column(db.Text, nullable=True)
     internal_note = db.Column(db.Text, nullable=True)
@@ -688,6 +698,7 @@ class ShipmentTransportUnitUpdate(db.Model):
     unit = db.relationship("ShipmentTransportUnit", back_populates="updates", foreign_keys=[unit_id])
     created_by_user = db.relationship("ExpertUser", foreign_keys=[created_by_user_id])
     location_reference = db.relationship("TrackingLocationReference", back_populates="tracking_updates")
+    logistics_point = db.relationship("LogisticsPoint", viewonly=True)
 
 
 @event.listens_for(TrackingLocationReference, "before_delete")

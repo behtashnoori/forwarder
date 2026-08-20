@@ -173,6 +173,19 @@ def internal_points():
         return _error(exc)
 
 
+@logistics_network_bp.get("/api/internal/logistics-points/tracking-selector")
+@require_auth
+def tracking_point_selector():
+    try:
+        if "organization_id" in request.args:
+            raise OperationalError(
+                "TENANT_SCOPE_VIOLATION", "Organization override is not allowed.", 403
+            )
+        return jsonify(svc.tracking_selector(request.args, _user()))
+    except OperationalError as exc:
+        return _error(exc)
+
+
 @logistics_network_bp.get("/api/v2/projects/<project_id>/logistics-points")
 @require_auth
 def project_list(project_id):

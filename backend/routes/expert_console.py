@@ -243,6 +243,8 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
     if error:
         return error
     data = request.get_json(silent=True) or {}
+    if any(key in data for key in ("organization_id", "operational_organization_id")):
+        return jsonify({"error": "organization override is not allowed"}), 403
     unit = db.session.get(multi_unit_tracking_service.ShipmentTransportUnit, unit_id)
     if not unit or not req.shipment_tracking or unit.tracking_id != req.shipment_tracking.id:
         return jsonify({"error": "tracking unit not found"}), 404
@@ -252,6 +254,7 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
             current_user["id"],
             status=data.get("status"),
             location=data.get("location"),
+            logistics_point_public_id=data.get("logistics_point_public_id"),
             location_reference_id=data.get("location_reference_id"),
             location_text=data.get("location_text"),
             customer_message=data.get("customer_message"),

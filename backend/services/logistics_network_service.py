@@ -7,6 +7,7 @@ import unicodedata
 
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from backend.extensions import db
 from backend.logistics_network_models import (
@@ -367,6 +368,77 @@ def list_points(args, user, *, admin=False):
         "per_page": per,
         "total": total,
         "pages": ((total + per - 1) // per),
+    }
+
+
+def tracking_selector(args, user):
+    """Bounded active LogisticsPoint selector for the authenticated tenant."""
+    require_permission(user, "logistics_point.read")
+    org = organization_for_user(user["id"])
+    q = (
+        select(LogisticsPoint)
+        .join(LogisticsPointType)
+        .options(
+            joinedload(LogisticsPoint.point_type),
+            joinedload(LogisticsPoint.country),
+            joinedload(LogisticsPoint.province),
+            joinedload(LogisticsPoint.city),
+        )
+        .where(
+            LogisticsPoint.organization_id == org,
+            LogisticsPoint.is_active.is_(True),
+            LogisticsPointType.is_active.is_(True),
+        )
+    )
+    term = str(args.get("q", args.get("search", ""))).strip()
+    if len(term) > 160:
+        raise OperationalError("VALIDATION_FAILED", "q is too long.", 400)
+    if term:
+        q = q.where(or_(
+            LogisticsPoint.fa_name.ilike(f"%{term}%"),
+            LogisticsPoint.en_name.ilike(f"%{term}%"),
+            LogisticsPoint.immutable_code.ilike(f"%{term}%"),
+        ))
+    country_code = str(args.get("country_code", "")).strip().upper()
+    if country_code:
+        if len(country_code) != 2:
+            raise OperationalError("VALIDATION_FAILED", "country_code is invalid.", 400)
+        q = q.join(Country).where(Country.code == country_code)
+    type_code = str(args.get("type_code", "")).strip().upper()
+    if type_code:
+        if len(type_code) > 64:
+            raise OperationalError("VALIDATION_FAILED", "type_code is too long.", 400)
+        q = q.where(LogisticsPointType.immutable_code == type_code)
+    try:
+        limit = min(100, max(1, int(args.get("limit", 20))))
+        offset = max(0, int(args.get("offset", 0)))
+    except (TypeError, ValueError) as exc:
+        raise OperationalError("VALIDATION_FAILED", "pagination is invalid.", 400) from exc
+    rows = db.session.scalars(
+        q.order_by(LogisticsPoint.fa_name, LogisticsPoint.id).offset(offset).limit(limit)
+    ).all()
+    return {
+        "items": [
+            {
+                "public_id": row.public_id,
+                "fa_name": row.fa_name,
+                "en_name": row.en_name,
+                "immutable_code": row.immutable_code,
+                "type": {
+                    "code": row.point_type.immutable_code,
+                    "label": row.point_type.fa_name,
+                },
+                "country": {
+                    "code": row.country.code,
+                    "label": row.country.name_fa,
+                },
+                "province": row.province.name_fa if row.province else None,
+                "city": row.city.name_fa if row.city else None,
+            }
+            for row in rows
+        ],
+        "limit": limit,
+        "offset": offset,
     }
 
 

@@ -396,7 +396,7 @@ export interface TransportUnitUpdate {
   location_name?: string | null;
   location_text?: string | null;
   country_code?: string | null;
-  location_source?: "reference" | "manual" | null;
+  location_source?: "logistics_point" | "legacy_reference" | "manual" | "unavailable";
 }
 
 export type TrackingUnitStatus =
@@ -428,6 +428,22 @@ export const fetchTrackingLocations = (
   q = "",
 ): Promise<{ items: TrackingLocationReference[] }> =>
   request(`/api/tracking-locations${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+
+export interface TrackingLogisticsPoint {
+  public_id: string;
+  fa_name: string;
+  en_name: string | null;
+  immutable_code: string;
+  type: { code: string; label: string };
+  country: { code: string; label: string };
+  province: string | null;
+  city: string | null;
+}
+
+export const fetchTrackingLogisticsPoints = (
+  q = "",
+): Promise<{ items: TrackingLogisticsPoint[]; limit: number; offset: number }> =>
+  request(`/api/internal/logistics-points/tracking-selector${q ? `?q=${encodeURIComponent(q)}` : ""}`);
 export const fetchAdminTrackingLocations = (
   q = "",
 ): Promise<{ items: TrackingLocationReference[] }> =>
@@ -1322,6 +1338,7 @@ export const addTrackingUnitUpdate = (
   payload: {
     status: string;
     location?: string;
+    logistics_point_public_id?: string;
     location_reference_id?: number;
     location_text?: string;
     customer_message?: string;
