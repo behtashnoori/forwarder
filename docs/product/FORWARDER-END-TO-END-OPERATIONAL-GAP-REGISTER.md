@@ -110,9 +110,11 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 
 ### E2E-006 — Opaque ShipmentRequest identity is not integrated into expert navigation
 
+- **STATUS:** RESOLVED — authenticated expert, tracking, document, operational-shipment request filtering, and frontend navigation now prefer `ShipmentRequest.public_id`; authorized numeric aliases remain controlled compatibility paths.
+
 - **AREA:** Identity / Request UX
 - **USER SCENARIO:** Navigate to a request without exposing or substituting sequential IDs.
-- **CURRENT BEHAVIOR:** UUIDv4 storage/resolution exists, but expert detail, tracking, document and CRM routes and frontend URLs remain `<int:request_id>`; request detail payload omits `public_id`.
+- **CURRENT BEHAVIOR:** UUIDv4 storage/resolution is integrated into expert detail, tracking, document, request-filtered shipment and frontend navigation. Legacy numeric expert/document aliases and existing-role CRM/admin routes remain documented compatibility debt.
 - **EXPECTED OPERATIONAL BEHAVIOR:** Opaque identities are the authenticated public resource identity with a controlled compatibility period.
 - **EVIDENCE:** ADR-038; `backend/routes/expert_console.py`; `backend/services/expert_request_detail_service.py`; `src/App.tsx`.
 - **ROOT CAUSE:** Migration/model foundation was completed without route/client rollout.
@@ -120,7 +122,7 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 - **ARCHITECTURE IMPACT:** Existing Accepted ADR authorizes it, but the change spans many request-parented surfaces.
 - **SECURITY/TENANT IMPACT:** Numeric enumeration risk is mitigated by tenant/assignee checks but conflicts with the opaque boundary.
 - **PROPOSED ACTION:** Controlled additive opaque-route rollout across expert, document, tracking and bounded CRM request context, then retire numeric navigation after compatibility evidence.
-- **IMPLEMENT NOW?:** NO — DEFERRED, CONTROLLED FOLLOW-UP GOAL REQUIRED
+- **IMPLEMENT NOW?:** COMPLETE
 - **REQUIRES ADR?:** NO (ADR-038 already accepted)
 - **TEST STRATEGY:** malformed/foreign/numeric substitution, inactive membership, route parity and frontend navigation tests.
 

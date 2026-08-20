@@ -69,6 +69,7 @@ import { formatLocalDate } from "@/lib/localDate";
 
 interface RequestDetail {
   id: number;
+  public_id: string;
   tracking_number: string;
   status: string;
   priority: string;
@@ -244,7 +245,8 @@ const RequestDetail = () => {
   const loadRequestDetail = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchExpertRequestDetail(Number(id));
+      if (!id) return;
+      const data = await fetchExpertRequestDetail(id);
       setRequest(data);
     } catch (error) {
       toast({
@@ -258,10 +260,10 @@ const RequestDetail = () => {
   }, [id, t, toast]);
 
   const loadCrmLinkState = useCallback(async () => {
-    if (!id || !canUseCrmLink) return;
+    if (!request || !canUseCrmLink) return;
     try {
       setCrmLinkLoading(true);
-      const data = await fetchShipmentRequestCustomerLink(Number(id));
+      const data = await fetchShipmentRequestCustomerLink(request.id);
       setCrmLinkState(data);
     } catch (error) {
       toast({
@@ -272,16 +274,20 @@ const RequestDetail = () => {
     } finally {
       setCrmLinkLoading(false);
     }
-  }, [canUseCrmLink, id, toast]);
+  }, [canUseCrmLink, request, toast]);
 
   useEffect(() => {
     if (id) {
       loadRequestDetail();
-      listOperationalShipments(new URLSearchParams({ request_id: id, per_page: "100" }).toString())
-        .then((result) => setOperationalShipments(result.data))
-        .catch(() => setOperationalShipments([]));
     }
   }, [id, loadRequestDetail]);
+
+  useEffect(() => {
+    if (!request) return;
+    listOperationalShipments(new URLSearchParams({ request_public_id: request.public_id, per_page: "100" }).toString())
+      .then((result) => setOperationalShipments(result.data))
+      .catch(() => setOperationalShipments([]));
+  }, [request]);
 
   useEffect(() => {
     if (id && canUseCrmLink) {
@@ -311,10 +317,10 @@ const RequestDetail = () => {
   };
 
   const handleCrmLink = async () => {
-    if (!id || !selectedCrmCustomerId) return;
+    if (!request || !selectedCrmCustomerId) return;
     try {
       setCrmSaving(true);
-      const data = await linkShipmentRequestCustomer(Number(id), selectedCrmCustomerId, crmLinkNote);
+      const data = await linkShipmentRequestCustomer(request.id, selectedCrmCustomerId, crmLinkNote);
       setCrmLinkState(data);
       setSelectedCrmCustomerId(null);
       setCrmLinkNote("");
@@ -337,7 +343,8 @@ const RequestDetail = () => {
     if (!id || !canUseCrmLink) return;
     try {
       setCrmCreateLoading(true);
-      const data = await fetchShipmentRequestCustomerCreatePreview(Number(id));
+      if (!request) return;
+      const data = await fetchShipmentRequestCustomerCreatePreview(request.id);
       setCrmCreatePreview(data);
       setCrmCreateFields({ ...emptyCreateCustomerFields, ...data.suggested_customer });
       setCrmCreateConfirm(false);
@@ -372,7 +379,8 @@ const RequestDetail = () => {
     }
     try {
       setCrmCreateSaving(true);
-      const result = await createCustomerFromShipmentRequest(Number(id), {
+      if (!request) return;
+      const result = await createCustomerFromShipmentRequest(request.id, {
         customer: crmCreateFields,
         link: crmCreateLink,
         duplicate_acknowledged: crmDuplicateAcknowledged,
@@ -411,7 +419,8 @@ const RequestDetail = () => {
     if (!id) return;
     try {
       setCrmSaving(true);
-      const data = await unlinkShipmentRequestCustomer(Number(id), crmLinkNote);
+      if (!request) return;
+      const data = await unlinkShipmentRequestCustomer(request.id, crmLinkNote);
       setCrmLinkState(data);
       setCrmLinkNote("");
       toast({
@@ -431,7 +440,8 @@ const RequestDetail = () => {
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      await changeRequestStatus(Number(id), newStatus, `تغییر وضعیت به ${newStatus}`);
+      if (!id) return;
+      await changeRequestStatus(id, newStatus, `تغییر وضعیت به ${newStatus}`);
 
       toast({
         title: t("common.success"),
@@ -467,7 +477,8 @@ const RequestDetail = () => {
 
     try {
       setSendingMessage(true);
-      await addMessage(Number(id), "internal_note", newMessage.content, newMessage.subject, expertId);
+      if (!id) return;
+      await addMessage(id, "internal_note", newMessage.content, newMessage.subject, expertId);
 
       toast({
         title: t("common.success"),
@@ -924,15 +935,15 @@ const RequestDetail = () => {
             </div>
           </TabsContent>
           <TabsContent value="tracking">
-            <TrackingManagementCard requestId={request.id} locale={locale} t={t} toast={toast} />
+            <TrackingManagementCard requestId={request.public_id} locale={locale} t={t} toast={toast} />
           </TabsContent>
-          <TabsContent value="documents"><CaseDocumentsTab caseId={request.id}/></TabsContent>
+          <TabsContent value="documents"><CaseDocumentsTab caseId={request.public_id}/></TabsContent>
         </Tabs>
 
         <QuoteModal
           open={quoteModalOpen}
           onOpenChange={setQuoteModalOpen}
-          requestId={request.id}
+          requestId={request.public_id}
           onSuccess={loadRequestDetail}
         />
       </div>
@@ -1280,7 +1291,7 @@ const CrmCustomerLinkCard = ({
 };
 
 const TrackingManagementCard = ({ requestId, locale, t, toast }: {
-  requestId: number;
+  requestId: string;
   locale: string;
   t: (key: string) => string;
   toast: ReturnType<typeof useToast>["toast"];

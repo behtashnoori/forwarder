@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from functools import wraps
 
 from flask import Blueprint, g, jsonify, request, send_file
 from sqlalchemy.exc import IntegrityError
@@ -13,12 +14,30 @@ from backend.security import require_auth
 from backend.services import case_document_service as service
 from backend.services.document_storage_service import DocumentStorageError, PrivateDocumentStorage
 from backend.services.expert_request_detail_service import can_access_request_detail
+from backend.services.ownership_service import tenant_organization_for_user
+from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
 from backend.quarantine import QuarantinedResource, is_quarantined
 from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 from backend.services import organization_document_policy_service as organization_policy
 from backend.services import document_catalog_service as catalog_service
 
 document_bp = Blueprint("case_documents", __name__)
+
+
+def _resolve_opaque_case_route(handler):
+    @wraps(handler)
+    def resolved(*args, **kwargs):
+        identity = kwargs.get("case_id")
+        if isinstance(identity, str):
+            try:
+                organization_id = tenant_organization_for_user(get_current_user())
+            except (TypeError, ValueError):
+                kwargs["case_id"] = 0
+            else:
+                row = resolve_tenant_request_by_public_id(organization_id, identity)
+                kwargs["case_id"] = row.id if row else 0
+        return handler(*args, **kwargs)
+    return resolved
 
 
 def _current():
@@ -183,7 +202,9 @@ def organization_document_policy_upsert(definition_public_id: str):
 
 
 @document_bp.get("/api/expert/requests/<int:case_id>/documents")
+@document_bp.get("/api/expert/requests/<case_id>/documents")
 @require_auth
+@_resolve_opaque_case_route
 def case_documents(case_id: int):
     case, error = _case_or_error(case_id)
     if error:
@@ -199,7 +220,9 @@ def case_documents(case_id: int):
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/documents/initialize")
+@document_bp.post("/api/expert/requests/<case_id>/documents/initialize")
 @require_auth
+@_resolve_opaque_case_route
 def case_documents_initialize(case_id: int):
     case, error = _case_or_error(case_id)
     if error:
@@ -214,7 +237,9 @@ def case_documents_initialize(case_id: int):
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/document-requirements/<int:requirement_id>/files")
+@document_bp.post("/api/expert/requests/<case_id>/document-requirements/<int:requirement_id>/files")
 @require_auth
+@_resolve_opaque_case_route
 def requirement_upload(case_id: int, requirement_id: int):
     case, error = _case_or_error(case_id)
     if error:
@@ -233,7 +258,9 @@ def requirement_upload(case_id: int, requirement_id: int):
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/document-requirements/<int:requirement_id>/replace")
+@document_bp.post("/api/expert/requests/<case_id>/document-requirements/<int:requirement_id>/replace")
 @require_auth
+@_resolve_opaque_case_route
 def requirement_replace(case_id: int, requirement_id: int):
     case, error = _case_or_error(case_id)
     if error:
@@ -257,7 +284,9 @@ def requirement_replace(case_id: int, requirement_id: int):
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/documents/miscellaneous")
+@document_bp.post("/api/expert/requests/<case_id>/documents/miscellaneous")
 @require_auth
+@_resolve_opaque_case_route
 def miscellaneous_upload(case_id: int):
     case, error = _case_or_error(case_id)
     if error:
@@ -273,7 +302,9 @@ def miscellaneous_upload(case_id: int):
 
 
 @document_bp.get("/api/expert/requests/<int:case_id>/documents/<int:file_id>/download")
+@document_bp.get("/api/expert/requests/<case_id>/documents/<int:file_id>/download")
 @require_auth
+@_resolve_opaque_case_route
 def file_download(case_id: int, file_id: int):
     case, error = _case_or_error(case_id)
     if error:
@@ -294,7 +325,9 @@ def file_download(case_id: int, file_id: int):
 
 
 @document_bp.delete("/api/expert/requests/<int:case_id>/documents/<int:file_id>")
+@document_bp.delete("/api/expert/requests/<case_id>/documents/<int:file_id>")
 @require_auth
+@_resolve_opaque_case_route
 def file_delete(case_id: int, file_id: int):
     case, error = _case_or_error(case_id)
     if error:

@@ -21,6 +21,7 @@ from backend.security import require_auth
 from backend.services import operational_service as service
 from backend.services import route_orchestration_service as routes
 from backend.services import external_reference_service as external_references
+from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
 
 
 operations_bp = Blueprint("operations", __name__)
@@ -316,6 +317,12 @@ def list_shipments():
                 OperationalShipment.shipment_request_id
                 == request.args.get("request_id", type=int)
             )
+        request_public_id = request.args.get("request_public_id", "").strip()
+        if request_public_id:
+            parent = resolve_tenant_request_by_public_id(org, request_public_id)
+            if not parent:
+                return jsonify({"data": [], "meta": {"page": page, "has_more": False}})
+            query = query.where(OperationalShipment.shipment_request_id == parent.id)
         if request.args.get("accepted_quote_id", type=int):
             query = query.where(
                 OperationalShipment.accepted_quote_id

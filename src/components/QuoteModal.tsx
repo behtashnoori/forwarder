@@ -16,7 +16,7 @@ import { submitQuote, type SubmitQuotePayload } from "@/lib/api";
 interface QuoteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  requestId: number;
+  requestId: string;
   onSuccess: () => void;
 }
 

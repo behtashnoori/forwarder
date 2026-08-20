@@ -3,7 +3,7 @@ import { AlertCircle, Download, Trash2, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge"; import { Button } from "@/components/ui/button"; import { Card,CardContent,CardHeader,CardTitle } from "@/components/ui/card"; import { Input } from "@/components/ui/input"; import { Textarea } from "@/components/ui/textarea";
 import { deleteCaseDocument, downloadCaseDocument, fetchCaseDocuments, uploadCaseDocument, type CaseDocumentFile, type CaseDocumentsPayload } from "@/lib/api";
 
-export default function CaseDocumentsTab({caseId}:{caseId:number}) {
+export default function CaseDocumentsTab({caseId}:{caseId:string}) {
  const [data,setData]=useState<CaseDocumentsPayload|null>(null); const [miscTitle,setMiscTitle]=useState(""); const [miscDescription,setMiscDescription]=useState(""); const [error,setError]=useState("");
  const load=useCallback(()=>fetchCaseDocuments(caseId).then(setData).catch(e=>setError(e.message)),[caseId]); useEffect(()=>{ void load(); },[load]);
  const send=async(requirementId:number|null,file:File,replace=false)=>{const f=new FormData();f.append("file",file);if(requirementId===null){f.append("title",miscTitle);f.append("description",miscDescription);} try{await uploadCaseDocument(caseId,requirementId,f,replace);setMiscTitle("");setMiscDescription("");setError("");load();}catch(e){setError(e instanceof Error?e.message:"خطا");}};

@@ -145,7 +145,7 @@ const ExpertConsole = () => {
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [loadKPIs, loadRequests]);
 
-  const handleAssignToMe = async (requestId: number) => {
+  const handleAssignToMe = async (requestId: string) => {
     try {
       await assignRequestToMe(requestId);
 
@@ -165,7 +165,7 @@ const ExpertConsole = () => {
     }
   };
 
-  const handleStatusChange = async (requestId: number, newStatus: string) => {
+  const handleStatusChange = async (requestId: string, newStatus: string) => {
     try {
       await changeRequestStatus(requestId, newStatus, `تغییر وضعیت به ${newStatus}`);
 
@@ -561,18 +561,18 @@ const ExpertConsole = () => {
                           </div>
 
                           <div className="flex flex-col gap-2 sm:flex-row xl:w-40 xl:flex-col xl:justify-center">
-                            <Button className="rounded-2xl bg-blue-600 hover:bg-blue-700" onClick={() => navigate(`/expert/requests/${request.id}`)}>
+                            <Button className="rounded-2xl bg-blue-600 hover:bg-blue-700" onClick={() => navigate(`/expert/requests/${request.public_id}`)}>
                               <Eye className="ml-2 h-4 w-4" />
                               {t("expert.viewDetails")}
                             </Button>
                             {request.status === "new" && (
-                              <Button variant="outline" className="rounded-2xl" onClick={() => handleAssignToMe(request.id)}>
+                              <Button variant="outline" className="rounded-2xl" onClick={() => handleAssignToMe(request.public_id)}>
                                 <User className="ml-2 h-4 w-4" />
                                 {t("expert.assignToMe")}
                               </Button>
                             )}
                             {request.status === "assigned" && (
-                              <Button variant="outline" className="rounded-2xl" onClick={() => handleStatusChange(request.id, "in_progress")}>
+                              <Button variant="outline" className="rounded-2xl" onClick={() => handleStatusChange(request.public_id, "in_progress")}>
                                 <Clock className="ml-2 h-4 w-4" />
                                 {t("expert.startFollowUp")}
                               </Button>

@@ -885,6 +885,13 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             "type": shipment.source_type,
             "accepted_quote_id": shipment.accepted_quote_id,
             "shipment_request_id": shipment.shipment_request_id,
+            "request_public_id": db.session.scalar(
+                select(ShipmentRequest.public_id).where(
+                    ShipmentRequest.id == shipment.shipment_request_id
+                )
+            )
+            if shipment.shipment_request_id
+            else None,
             "quote_amount": quote.amount if quote else None,
         },
         "route_plan": {

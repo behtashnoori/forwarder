@@ -253,6 +253,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     assert len(list_data["requests"]) == 1
     assert set(list_data["requests"][0].keys()) == {
         "id",
+        "public_id",
         "tracking_number",
         "status",
         "priority",
@@ -289,6 +290,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     detail_data = detail_response.get_json()
     assert set(detail_data.keys()) == {
         "id",
+        "public_id",
         "tracking_number",
         "status",
         "priority",
@@ -308,6 +310,14 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     }
     assert set(detail_data["assigned_to"].keys()) == {"id", "name", "username"}
     assert detail_data["assigned_to"]["id"] == expert_contract_app["expert_id"]
+    opaque_detail = client.get(
+        f"/api/expert/requests/{detail_data['public_id']}", headers=expert_headers
+    )
+    assert opaque_detail.status_code == 200
+    assert opaque_detail.get_json()["public_id"] == detail_data["public_id"]
+    assert client.get(
+        "/api/expert/requests/not-a-uuid", headers=expert_headers
+    ).status_code == 404
     assert set(detail_data["customer"].keys()) == {
         "first_name",
         "last_name",

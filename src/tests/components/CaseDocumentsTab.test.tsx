@@ -21,7 +21,7 @@ describe("CaseDocumentsTab", () => {
   });
 
   it("renders requirements, warning, direct upload and no bulk download", async () => {
-    render(<CaseDocumentsTab caseId={10}/>);
+    render(<CaseDocumentsTab caseId="00000000-0000-4000-8000-000000000010"/>);
     expect(await screen.findByText("فاکتور")).toBeInTheDocument();
     expect(screen.getByText(/این هشدار مانع ادامه/)).toBeInTheDocument();
     expect(screen.queryByText(/دانلود همه|دریافت همه|ZIP/i)).not.toBeInTheDocument();
@@ -29,7 +29,7 @@ describe("CaseDocumentsTab", () => {
   });
 
   it("requires a miscellaneous title before file selection", async () => {
-    render(<CaseDocumentsTab caseId={10}/>);
+    render(<CaseDocumentsTab caseId="00000000-0000-4000-8000-000000000010"/>);
     await screen.findAllByText("سایر مستندات");
     const miscFile = document.querySelector('input[type="file"]:disabled');
     expect(miscFile).toBeTruthy();

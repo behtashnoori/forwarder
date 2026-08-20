@@ -1138,6 +1138,7 @@ function getFilenameFromContentDisposition(
 // Expert Console Interfaces
 export interface ExpertRequest {
   id: number;
+  public_id: string;
   tracking_number: string;
   status: string;
   priority: string;
@@ -1252,7 +1253,7 @@ export function fetchExpertRequests(params?: {
   return request(path);
 }
 
-export function fetchExpertRequestDetail(requestId: number): Promise<
+export function fetchExpertRequestDetail(requestId: string): Promise<
   ExpertRequest & {
     customer: {
       first_name?: string;
@@ -1297,19 +1298,19 @@ export interface TrackingManagementData {
 }
 
 export const fetchTrackingManagement = (
-  requestId: number,
+  requestId: string,
 ): Promise<TrackingManagementData> =>
   request(`/api/expert/requests/${requestId}/tracking`);
 
 export const enableTrackingManagement = (
-  requestId: number,
+  requestId: string,
 ): Promise<TrackingManagementData> =>
   request(`/api/expert/requests/${requestId}/tracking/enable`, {
     method: "POST",
   });
 
 export const addTrackingUnit = (
-  requestId: number,
+  requestId: string,
   payload: {
     unit_code: string;
     unit_type: string;
@@ -1323,7 +1324,7 @@ export const addTrackingUnit = (
   });
 
 export const updateTrackingUnitMetadata = (
-  requestId: number,
+  requestId: string,
   unitId: number,
   payload: { display_name?: string; vehicle_reference?: string },
 ): Promise<TrackingManagementData> =>
@@ -1333,7 +1334,7 @@ export const updateTrackingUnitMetadata = (
   });
 
 export const addTrackingUnitUpdate = (
-  requestId: number,
+  requestId: string,
   unitId: number,
   payload: {
     status: string;
@@ -1488,10 +1489,10 @@ export const updateOrganizationDocumentPolicy = (
   `/api/admin/organization-document-policy/${encodeURIComponent(definitionPublicId)}`,
   { method: "PUT", body: JSON.stringify(payload) },
 );
-export const fetchCaseDocuments = (caseId: number) =>
+export const fetchCaseDocuments = (caseId: string) =>
   request<CaseDocumentsPayload>(`/api/expert/requests/${caseId}/documents`);
 export const uploadCaseDocument = (
-  caseId: number,
+  caseId: string,
   requirementId: number | null,
   form: FormData,
   replace = false,
@@ -1503,7 +1504,7 @@ export const uploadCaseDocument = (
     { method: "POST", body: form },
   );
 export const deleteCaseDocument = (
-  caseId: number,
+  caseId: string,
   fileId: number,
   reason: string,
 ) =>
@@ -1512,7 +1513,7 @@ export const deleteCaseDocument = (
     { method: "DELETE", body: JSON.stringify({ reason }) },
   );
 export async function downloadCaseDocument(
-  caseId: number,
+  caseId: string,
   fileId: number,
   filename: string,
 ) {
@@ -1567,6 +1568,7 @@ export interface OperationalShipmentSummary {
     type: "direct" | "accepted_quote";
     accepted_quote_id: number | null;
     shipment_request_id: number | null;
+    request_public_id?: string | null;
     quote_amount?: number | null;
   };
   route_leg: {
@@ -2042,7 +2044,7 @@ export function resolveRouteException(
 }
 
 export function submitQuote(
-  requestId: number,
+  requestId: string,
   payload: SubmitQuotePayload,
 ): Promise<{
   ok: boolean;
@@ -2063,7 +2065,7 @@ export function submitQuote(
 }
 
 export function assignRequest(
-  requestId: number,
+  requestId: string,
   expertId: number,
 ): Promise<{
   message: string;
@@ -2075,7 +2077,7 @@ export function assignRequest(
   });
 }
 
-export function assignRequestToMe(requestId: number): Promise<{
+export function assignRequestToMe(requestId: string): Promise<{
   message: string;
   assigned_to: { id: number; name: string };
 }> {
@@ -2116,7 +2118,7 @@ export function fetchOrganizationHostnames(): Promise<{ hostnames: OrganizationH
 }
 
 export function changeRequestStatus(
-  requestId: number,
+  requestId: string,
   status: string,
   note?: string,
 ): Promise<{ message: string; status: string }> {
@@ -2127,7 +2129,7 @@ export function changeRequestStatus(
 }
 
 export function addMessage(
-  requestId: number,
+  requestId: string,
   messageType: "internal_note" | "customer_message",
   content: string,
   subject?: string,
@@ -2167,7 +2169,7 @@ export function fetchKPIs(expertId?: number): Promise<KPIs> {
 }
 
 export function markRequestAsRead(
-  requestId: number,
+  requestId: string,
   expertId: number,
 ): Promise<{
   message: string;

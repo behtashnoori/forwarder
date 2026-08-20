@@ -27,7 +27,7 @@ export default function DocumentReadinessSection({
   shipmentPublicId, shipmentVersion, shipmentReference, projectReference, sourceRequestId, readOnly = false,
 }: {
   shipmentPublicId: string; shipmentVersion: number; shipmentReference?: string;
-  projectReference?: string | null; sourceRequestId?: number | null; readOnly?: boolean;
+  projectReference?: string | null; sourceRequestId?: string | null; readOnly?: boolean;
 }) {
   const [rows, setRows] = useState<DocumentReadinessRequirement[]>([]);
   const [eligible, setEligible] = useState<Record<string, EligibleDocumentArtifact[]>>({});
@@ -107,7 +107,7 @@ export default function DocumentReadinessSection({
 function RequirementCard({ requirement, options, draft, patch, busy, readOnly, run, shipmentPublicId, sourceRequestId }: {
   requirement: DocumentReadinessRequirement; options: EligibleDocumentArtifact[]; draft: Draft;
   patch: (value: Partial<Draft>) => void; busy: boolean; readOnly: boolean;
-  run: (action: () => Promise<unknown>) => Promise<void>; shipmentPublicId: string; sourceRequestId?: number | null;
+  run: (action: () => Promise<unknown>) => Promise<void>; shipmentPublicId: string; sourceRequestId?: string | null;
 }) {
   return <article className="space-y-3 rounded border p-4">
     <div className="flex flex-wrap items-start justify-between gap-2"><div><strong>{requirement.title}</strong>

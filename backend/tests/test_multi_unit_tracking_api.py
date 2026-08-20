@@ -57,6 +57,7 @@ def tracking_api_app():
         yield {
             "app": app,
             "request_id": request_row.id,
+            "request_public_id": request_row.public_id,
             "tracking_code": request_row.tracking_code,
             "assignee_token": create_session_tokens(assignee.id)["access_token"],
             "outsider_token": create_session_tokens(outsider.id)["access_token"],
@@ -77,6 +78,23 @@ def test_tracking_management_is_authenticated_and_assignment_scoped(tracking_api
     response = client.get(path, headers=_headers(tracking_api_app["assignee_token"]))
     assert response.status_code == 200
     assert response.get_json()["eligible"] is True
+
+
+def test_tracking_management_opaque_parent_rejects_substitution(tracking_api_app):
+    client = tracking_api_app["app"].test_client()
+    headers = _headers(tracking_api_app["assignee_token"])
+    opaque_path = f"/api/expert/requests/{tracking_api_app['request_public_id']}/tracking"
+    assert client.get(opaque_path, headers=headers).status_code == 200
+    assert client.get(
+        opaque_path, headers=_headers(tracking_api_app["outsider_token"])
+    ).status_code == 403
+    assert client.get(
+        "/api/expert/requests/not-a-uuid/tracking", headers=headers
+    ).status_code == 404
+    assert client.get(
+        f"/api/expert/requests/{tracking_api_app['tracking_code']}/tracking",
+        headers=headers,
+    ).status_code == 404
 
 
 def test_manual_tracking_flow_and_public_privacy_contract(tracking_api_app):

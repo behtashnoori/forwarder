@@ -95,6 +95,7 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
 
     return {
         "id": req.id,
+        "public_id": req.public_id,
         "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
         "status": req.status,
         "priority": req.priority,

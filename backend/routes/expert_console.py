@@ -1,6 +1,7 @@
 """Expert console API routes."""
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from functools import wraps
+from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request, current_app, g
 from sqlalchemy import and_, func
@@ -8,16 +9,15 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import (
-    ShipmentRequest, ShipmentRequestLog, ExpertUser,
-    ExpertConsoleLog, ExpertConsoleMessage, ExpertConsoleNotification, ExpertQuote
+    ShipmentRequest, ExpertUser, ExpertConsoleLog, ExpertConsoleNotification
 )
-from backend.auth import auth_manager, login_required, get_current_user
+from backend.auth import auth_manager, get_current_user
 from backend.services import ownership_service
 from backend.services.ownership_service import tenant_organization_for_user
+from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
 from backend.services.admin_authorization_service import effective_authority
 from backend.operational_models import OperationalMembership
 from backend.security import require_auth, validate_input, sanitize_input
-from backend.cache import cache_manager, performance_monitor
 from backend.services import (
     assignment_service,
     expert_request_detail_service,
@@ -29,6 +29,23 @@ from backend.services import (
 )
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
+
+
+def _resolve_opaque_request_route(handler):
+    """Resolve opaque parents after authentication and before authorization."""
+    @wraps(handler)
+    def resolved(*args, **kwargs):
+        identity = kwargs.get("request_id")
+        if isinstance(identity, str):
+            try:
+                organization_id = tenant_organization_for_user(get_current_user())
+            except (TypeError, ValueError):
+                kwargs["request_id"] = 0
+            else:
+                row = resolve_tenant_request_by_public_id(organization_id, identity)
+                kwargs["request_id"] = row.id if row else 0
+        return handler(*args, **kwargs)
+    return resolved
 
 
 @expert_console_bp.post("/requests/<int:request_id>/accept-intake")
@@ -55,7 +72,9 @@ def accept_intake(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/assign-to-me")
+@expert_console_bp.post("/requests/<request_id>/assign-to-me")
 @require_auth
+@_resolve_opaque_request_route
 def assign_request_to_me(request_id: int):
     """Assign using the authenticated identity, never a client-selected expert id."""
     try:
@@ -132,7 +151,9 @@ def get_shipment_requests():
 
 
 @expert_console_bp.get("/requests/<int:request_id>")
+@expert_console_bp.get("/requests/<request_id>")
 @require_auth
+@_resolve_opaque_request_route
 def get_shipment_request_detail(request_id: int):
     """Get detailed information about a specific shipment request."""
     try:
@@ -147,7 +168,9 @@ def get_shipment_request_detail(request_id: int):
 
 
 @expert_console_bp.get("/requests/<int:request_id>/tracking")
+@expert_console_bp.get("/requests/<request_id>/tracking")
 @require_auth
+@_resolve_opaque_request_route
 def get_multi_unit_tracking(request_id: int):
     current_user = get_current_user()
     req, error = _tracking_target(request_id, current_user)
@@ -157,7 +180,9 @@ def get_multi_unit_tracking(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/tracking/enable")
+@expert_console_bp.post("/requests/<request_id>/tracking/enable")
 @require_auth
+@_resolve_opaque_request_route
 def enable_multi_unit_tracking(request_id: int):
     current_user = get_current_user()
     req, error = _tracking_target(request_id, current_user)
@@ -177,7 +202,9 @@ def enable_multi_unit_tracking(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/tracking/units")
+@expert_console_bp.post("/requests/<request_id>/tracking/units")
 @require_auth
+@_resolve_opaque_request_route
 def create_tracking_unit(request_id: int):
     current_user = get_current_user()
     req, error = _tracking_target(request_id, current_user)
@@ -208,7 +235,9 @@ def create_tracking_unit(request_id: int):
 
 
 @expert_console_bp.patch("/requests/<int:request_id>/tracking/units/<int:unit_id>")
+@expert_console_bp.patch("/requests/<request_id>/tracking/units/<int:unit_id>")
 @require_auth
+@_resolve_opaque_request_route
 def update_tracking_unit_metadata(request_id: int, unit_id: int):
     current_user = get_current_user()
     req, error = _tracking_target(request_id, current_user)
@@ -236,7 +265,9 @@ def update_tracking_unit_metadata(request_id: int, unit_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/tracking/units/<int:unit_id>/updates")
+@expert_console_bp.post("/requests/<request_id>/tracking/units/<int:unit_id>/updates")
 @require_auth
+@_resolve_opaque_request_route
 def create_tracking_unit_update(request_id: int, unit_id: int):
     current_user = get_current_user()
     req, error = _tracking_target(request_id, current_user)
@@ -274,7 +305,9 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/assign")
+@expert_console_bp.post("/requests/<request_id>/assign")
 @require_auth
+@_resolve_opaque_request_route
 def assign_request(request_id: int):
     """Assign a shipment request to an expert. Only admin can assign (or reassign)."""
     try:
@@ -298,7 +331,9 @@ def assign_request(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/status")
+@expert_console_bp.post("/requests/<request_id>/status")
 @require_auth
+@_resolve_opaque_request_route
 def update_request_status(request_id: int):
     """Update the status of a shipment request."""
     try:
@@ -376,7 +411,9 @@ def update_request_status(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/quote")
+@expert_console_bp.post("/requests/<request_id>/quote")
 @require_auth
+@_resolve_opaque_request_route
 def create_quote(request_id: int):
     """Create a quote for a request and set status to waiting_for_customer."""
     try:
@@ -404,7 +441,9 @@ def create_quote(request_id: int):
 
 
 @expert_console_bp.get("/requests/<int:request_id>/quote/latest")
+@expert_console_bp.get("/requests/<request_id>/quote/latest")
 @require_auth
+@_resolve_opaque_request_route
 def get_latest_quote(request_id: int):
     """Get the latest quote for a request, or null."""
     try:
@@ -421,7 +460,9 @@ def get_latest_quote(request_id: int):
 
 
 @expert_console_bp.post("/requests/<int:request_id>/messages")
+@expert_console_bp.post("/requests/<request_id>/messages")
 @require_auth
+@_resolve_opaque_request_route
 def add_message(request_id: int):
     """Add a message to a shipment request. Uses authenticated user as author."""
     try:
@@ -679,7 +720,9 @@ def get_dashboard_kpis():
 
 
 @expert_console_bp.post("/requests/<int:request_id>/mark-read")
+@expert_console_bp.post("/requests/<request_id>/mark-read")
 @require_auth
+@_resolve_opaque_request_route
 def mark_request_read(request_id: int):
     """Mark a request as read for the assigned expert."""
     try:

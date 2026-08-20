@@ -4,7 +4,7 @@ import {Card,CardContent,CardHeader,CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {createShipmentExternalReference,fetchCaseDocuments,listShipmentExternalReferences,transitionShipmentExternalReference,type ExternalOperationalReference,type ExternalReferenceTypeCode,type CaseDocumentFile} from "@/lib/api";
 const labels:Record<ExternalReferenceTypeCode,string>={BILL_OF_LADING_NUMBER:"شماره بارنامه دریایی / B/L",AIR_WAYBILL_NUMBER:"شماره بارنامه هوایی / AWB",CMR_NUMBER:"شماره CMR"};
-export default function ShipmentExternalReferences({shipmentPublicId,requestId}:{shipmentPublicId:string;requestId?:number|null}){
+export default function ShipmentExternalReferences({shipmentPublicId,requestId}:{shipmentPublicId:string;requestId?:string|null}){
  const [rows,setRows]=useState<ExternalOperationalReference[]>([]),[files,setFiles]=useState<CaseDocumentFile[]>([]),[error,setError]=useState(""),[busy,setBusy]=useState(false);
  const [form,setForm]=useState<{type:ExternalReferenceTypeCode;value:string;issuer_key:string;source_system:string;evidence:string}>({type:"BILL_OF_LADING_NUMBER",value:"",issuer_key:"",source_system:"",evidence:""});
  const [reason,setReason]=useState<Record<string,string>>({}),[replacement,setReplacement]=useState<Record<string,string>>({});

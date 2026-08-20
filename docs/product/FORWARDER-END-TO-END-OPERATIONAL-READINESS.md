@@ -45,8 +45,7 @@ None.
 
 ## 6. Remaining P1
 
-1. **E2E-006:** Expert request/detail/tracking/document/CRM-context routes still expose numeric request IDs. UUIDv4 identity exists, but ADR-038 needs a controlled additive route/client rollout across all request-parented surfaces.
-2. **E2E-007:** Legacy request-unit tracking and canonical execution events can both describe location/status. A single shipment-level source-precedence/provenance projection requires a new architecture decision; this review did not silently choose an authority.
+1. **E2E-007:** Legacy request-unit tracking and canonical execution events can both describe location/status. A single shipment-level source-precedence/provenance projection requires a new architecture decision; this review did not silently choose an authority.
 
 ## 7. Deferred P2/P3
 
@@ -71,9 +70,9 @@ One new decision is required: define current-location/status source precedence, 
 
 ## 12. Recommended next three controlled Goals
 
-1. Complete the ADR-038 opaque ShipmentRequest route/client rollout, including malformed/foreign/numeric-substitution and inactive-membership adversarial tests.
-2. Decide and certify the legacy/canonical tracking location/status projection, including explicit provenance and conflict behavior; do not migrate write authority in that goal.
-3. Perform a bounded expert terminology/RTL first-use pass after identities and source labels are stable.
+1. Decide and certify the legacy/canonical tracking location/status projection, including explicit provenance and conflict behavior; do not migrate write authority in that goal.
+2. Perform a bounded expert terminology/RTL first-use pass after identities and source labels are stable.
+3. Tenant-certify and separately plan remaining numeric admin/CRM compatibility routes before any contraction.
 
 ## Certification evidence
 
