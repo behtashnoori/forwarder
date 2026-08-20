@@ -128,19 +128,19 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 
 ### E2E-007 — No authoritative one-screen current location across tracking paths
 
-- **DECISION STATUS:** ADR-040 ACCEPTED — authority, fallback, conflict, provenance, write and retirement policy are resolved; runtime implementation remains pending.
+- **DECISION STATUS:** RESOLVED FOR ADR-040 PHASES 1–2 — deterministic canonical unit/shipment reads, provenance, cache health, and Cargo traceability adoption are implemented. Public and legacy transition remains governed later-phase work.
 
 - **AREA:** Current Status / Tracking
 - **USER SCENARIO:** On shipment detail, answer “where is this shipment now?”
-- **CURRENT BEHAVIOR:** Legacy request units show their latest LogisticsPoint/free text; canonical execution units/events expose checkpoints; cargo reverse usage chooses a canonical event/checkpoint projection; shipment detail has no single current-location field.
+- **CURRENT BEHAVIOR:** Internal Cargo reverse usage consumes the canonical event-derived shipment projection with `UNAVAILABLE/SINGLE/COMMON/MULTIPLE`; legacy expert/public request tracking remains compatibility behavior pending later ADR-040 cohorts.
 - **EXPECTED OPERATIONAL BEHAVIOR:** Clearly labeled latest known location and timestamp with named source/authority.
-- **EVIDENCE:** request tracking component, `execution_unit_service.py`, `cargo_service.py`, and shipment graph/detail.
-- **ROOT CAUSE:** Dual-path authority has not been reconciled; selecting one silently would change tracking authority.
+- **EVIDENCE:** ADR-040; `tracking_projection_service.py`; `cargo_service.py`; `test_tracking_projection.py`; `test_cargo_traceability.py`.
+- **ROOT CAUSE:** Closed for the authorized internal/Cargo read slice. Certified lineage/cohort gates intentionally remain before public or legacy transition.
 - **SEVERITY:** P1
 - **ARCHITECTURE IMPACT:** DECISION COMPLETE under ADR-040; bounded implementation required.
 - **SECURITY/TENANT IMPACT:** No breach found; risk is operational inconsistency.
-- **PROPOSED ACTION:** Decide a source-precedence/provenance projection and compatibility behavior before adding a consolidated field.
-- **IMPLEMENT NOW?:** NO — CONTROLLED IMPLEMENTATION GOAL REQUIRED
+- **PROPOSED ACTION:** Execute later ADR-040 phases only through controlled lineage, cohort, privacy, write-authority, and retirement gates.
+- **IMPLEMENT NOW?:** COMPLETE FOR PHASES 1–2; LATER PHASES DEFERRED
 - **REQUIRES ADR?:** SATISFIED — ADR-040 ACCEPTED
 - **TEST STRATEGY:** conflicting legacy/canonical timestamps/locations, no-data, tenant and timezone cases.
 

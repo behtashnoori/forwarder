@@ -72,7 +72,10 @@ def test_catalog_usage_preserves_lines_counts_filters_and_canonical_location(tra
         assert active[0]["current_location"] == "Border gate"
         assert active[0]["latest_event_at"] == "2026-08-20T09:25:00Z"
         terminal = next(row for row in result["items"] if row["status"] == "completed")
-        assert terminal["location_source"] == "execution_unit_checkpoint"
+        assert terminal["location_source"] == "unavailable"
+        assert terminal["current_location"] is None
+        assert terminal["location_state"] == "UNAVAILABLE"
+        assert terminal["reconciliation_health"] == "CACHE_CONFLICT"
         missing = next(row for row in result["items"] if row["operational_shipment_public_id"] == "shipment-no-location")
         assert missing["location_source"] == "unavailable" and missing["current_location"] is None
         assert cargo_service.catalog_shipment_usage({"id": traceability_app["user"].id}, "catalog-gearbox", {"active_only": "true"})["summary"]["shipment_count"] == 2

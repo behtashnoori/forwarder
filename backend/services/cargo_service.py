@@ -13,8 +13,9 @@ from sqlalchemy.orm import selectinload
 from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem
 from backend.extensions import db
 from backend.models import CargoType, ShipmentRequest, UnitOfMeasure
-from backend.operational_models import ExecutionUnit, OperationalEvent, OperationalShipment, Project
+from backend.operational_models import OperationalShipment, Project
 from backend.services import operational_service
+from backend.services.tracking_projection_service import project_operational_shipments
 
 
 class CargoError(ValueError):
@@ -231,56 +232,17 @@ def catalog_shipment_usage(user, public_id, args):
     ).all()
 
     shipment_ids = {shipment.id for _line, shipment, _project, _request in rows}
-    locations = {}
-    if shipment_ids:
-        ranked_events = (
-            select(
-                ExecutionUnit.operational_shipment_id.label("shipment_id"),
-                OperationalEvent.checkpoint_text.label("location"),
-                OperationalEvent.occurred_at.label("latest_event_at"),
-                func.row_number().over(
-                    partition_by=ExecutionUnit.operational_shipment_id,
-                    order_by=(OperationalEvent.occurred_at.desc(), OperationalEvent.id.desc()),
-                ).label("rank"),
-            )
-            .join(OperationalEvent, OperationalEvent.execution_unit_id == ExecutionUnit.id)
-            .where(
-                ExecutionUnit.operational_shipment_id.in_(shipment_ids),
-                OperationalEvent.checkpoint_text.is_not(None),
-            )
-            .subquery()
-        )
-        for item in db.session.execute(select(ranked_events).where(ranked_events.c.rank == 1)):
-            locations[item.shipment_id] = {
-                "current_location": item.location,
-                "location_source": "operational_event",
-                "latest_event_at": _iso(item.latest_event_at),
-            }
-        checkpoint_rows = db.session.execute(
-            select(
-                ExecutionUnit.operational_shipment_id,
-                ExecutionUnit.latest_checkpoint,
-                ExecutionUnit.last_event_at,
-            )
-            .where(
-                ExecutionUnit.operational_shipment_id.in_(shipment_ids),
-                ExecutionUnit.latest_checkpoint.is_not(None),
-            )
-            .order_by(ExecutionUnit.last_event_at.desc(), ExecutionUnit.id.desc())
-        ).all()
-        for shipment_id, checkpoint, event_at in checkpoint_rows:
-            locations.setdefault(shipment_id, {
-                "current_location": checkpoint,
-                "location_source": "execution_unit_checkpoint",
-                "latest_event_at": _iso(event_at),
-            })
+    projections = project_operational_shipments(catalog.organization_id, shipment_ids)
 
     items = []
     for line, shipment, project, request_row in rows:
-        location = locations.get(shipment.id, {
+        projection = projections.get(shipment.id, {
             "current_location": None,
-            "location_source": "unavailable",
+            "location_state": "UNAVAILABLE",
+            "source": "unavailable",
             "latest_event_at": None,
+            "is_fallback": False,
+            "reconciliation_health": "NOT_APPLICABLE",
         })
         items.append({
             "operational_shipment_public_id": shipment.public_id,
@@ -292,7 +254,12 @@ def catalog_shipment_usage(user, public_id, args):
             "status": shipment.lifecycle_status,
             "shipment_cargo_line_public_id": line.public_id,
             "display_name_snapshot": line.display_name_snapshot,
-            **location,
+            "current_location": projection["current_location"],
+            "location_state": projection["location_state"],
+            "location_source": projection["source"],
+            "latest_event_at": projection["latest_event_at"],
+            "is_fallback": projection["is_fallback"],
+            "reconciliation_health": projection["reconciliation_health"],
         })
     return {
         "cargo_item": catalog_dict(catalog),
