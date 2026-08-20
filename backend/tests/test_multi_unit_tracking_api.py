@@ -6,7 +6,6 @@ import pytest
 from backend import create_app
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
-from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
 from backend.operational_models import OperationalMembership, OperationalOrganization
 
@@ -94,7 +93,7 @@ def test_manual_tracking_flow_and_public_privacy_contract(tracking_api_app):
     )
     assert created.status_code == 201
     unit_id = created.get_json()["unit_tracking"]["units"][0]["id"]
-    occurred_at = (datetime.utcnow() - timedelta(minutes=1)).isoformat()
+    occurred_at = (datetime.utcnow() - timedelta(minutes=1)).isoformat() + "Z"
     updated = client.post(
         f"/api/expert/requests/{request_id}/tracking/units/{unit_id}/updates",
         headers=headers,
@@ -108,6 +107,10 @@ def test_manual_tracking_flow_and_public_privacy_contract(tracking_api_app):
         },
     )
     assert updated.status_code == 201
+    internal_tracking = updated.get_json()["unit_tracking"]
+    assert internal_tracking["enabled_at"].endswith("Z")
+    assert internal_tracking["last_updated_at"].endswith("Z")
+    assert internal_tracking["units"][0]["latest_event_at"].endswith("Z")
 
     public = client.get(f"/api/public/track/{tracking_api_app['tracking_code']}")
     assert public.status_code == 200
@@ -115,6 +118,10 @@ def test_manual_tracking_flow_and_public_privacy_contract(tracking_api_app):
     assert unit_tracking["summary"]["total_units"] == 1
     assert unit_tracking["units"][0]["latest_location"] == "Qom"
     assert unit_tracking["units"][0]["vehicle_reference"] == "PLATE-77"
+    assert unit_tracking["enabled_at"].endswith("Z")
+    assert unit_tracking["last_updated_at"].endswith("Z")
+    assert unit_tracking["units"][0]["latest_event_at"].endswith("Z")
+    assert unit_tracking["units"][0]["timeline"][0]["event_at"].endswith("Z")
     assert "id" not in unit_tracking["units"][0]
     assert "created_by_user_id" not in str(unit_tracking)
     assert "private dispatch note" not in str(unit_tracking)

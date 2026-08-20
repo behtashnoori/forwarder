@@ -11,6 +11,7 @@ from backend.models import (
     ShipmentTransportUnitUpdate,
     TrackingLocationReference,
 )
+from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 
 
 TRACKING_ELIGIBLE_REQUEST_STATUSES = frozenset({"won"})
@@ -247,7 +248,9 @@ def add_update(
 
 
 def _iso(value):
-    return value.isoformat() if value and hasattr(value, "isoformat") else None
+    # Values reaching this serializer are written by this service using the
+    # legacy schema's proven UTC-naive convention.
+    return serialize_legacy_utc_datetime(value)
 
 
 def _location_payload(row):

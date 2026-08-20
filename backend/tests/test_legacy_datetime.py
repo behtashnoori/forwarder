@@ -8,6 +8,11 @@ def test_serialize_verified_legacy_utc_naive_without_shift():
     assert serialize_legacy_utc_datetime(value) == "2026-07-25T19:01:58.519833Z"
 
 
+def test_serialize_tehran_round_trip_utc_instant():
+    value = datetime(2026, 8, 20, 9, 25, 0)
+    assert serialize_legacy_utc_datetime(value) == "2026-08-20T09:25:00Z"
+
+
 def test_serialize_utc_aware():
     value = datetime(2026, 7, 25, 19, 1, 58, 519833, tzinfo=timezone.utc)
     assert serialize_legacy_utc_datetime(value) == "2026-07-25T19:01:58.519833Z"

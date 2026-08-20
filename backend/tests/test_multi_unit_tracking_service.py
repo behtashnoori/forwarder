@@ -10,6 +10,7 @@ from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
     add_unit,
     add_update,
+    build_internal_unit_tracking,
     build_public_unit_tracking,
     disable_tracking,
     enable_tracking,
@@ -124,7 +125,10 @@ def test_public_projection_aggregates_partial_delivery_and_hides_private_data(ap
         assert payload["aggregate_status"] == "partially_delivered"
         assert payload["summary"]["total_units"] == 2
         assert payload["summary"]["delivered"] == 1
-        assert payload["last_updated_at"] == (now - timedelta(hours=1)).isoformat()
+        assert payload["enabled_at"] == "2026-07-15T09:00:00Z"
+        assert payload["last_updated_at"] == "2026-07-15T11:00:00Z"
+        assert payload["units"][0]["latest_event_at"] == "2026-07-15T11:00:00Z"
+        assert payload["units"][0]["timeline"][0]["event_at"] == "2026-07-15T11:00:00Z"
         assert payload["units"][1]["latest_status"] == "in_transit"
         assert payload["units"][0]["vehicle_reference"] == "IR 12 345"
         assert "id" not in payload["units"][0]
@@ -178,11 +182,34 @@ def test_aggregate_contract_precedence_counts_and_tie_breaking(app):
             "total_units": 4, "without_updates": 1, "not_started": 0, "loading": 0,
             "in_transit": 1, "delayed": 0, "arrived": 0, "delivered": 2, "cancelled": 0,
         }
-        assert payload["last_updated_at"] == same_time.isoformat()
+        assert payload["last_updated_at"] == "2026-07-15T11:50:00Z"
 
         add_update(units[3], actor.id, status="delivered", occurred_at=now - timedelta(minutes=5), now=now)
         add_update(units[1], actor.id, status="delivered", occurred_at=now - timedelta(minutes=4), now=now)
         assert build_public_unit_tracking(req)["aggregate_status"] == "completed"
+
+
+def test_internal_projection_serializes_legacy_tracking_instants_as_explicit_utc(app):
+    with app.app_context():
+        actor, req = _seed_request()
+        now = datetime(2026, 8, 20, 9, 26, 0)
+        tracking = enable_tracking(req, actor.id, now=datetime(2026, 8, 20, 9, 20, 0))
+        unit = add_unit(tracking, actor.id, unit_code="THR-01", unit_type="truck")
+        update = add_update(
+            unit,
+            actor.id,
+            status="in_transit",
+            occurred_at=datetime(2026, 8, 20, 9, 25, 0),
+            now=now,
+        )
+        db.session.flush()
+
+        payload = build_internal_unit_tracking(req)
+        assert update.occurred_at == datetime(2026, 8, 20, 9, 25, 0)
+        assert update.created_at == now
+        assert payload["enabled_at"] == "2026-08-20T09:20:00Z"
+        assert payload["last_updated_at"] == "2026-08-20T09:25:00Z"
+        assert payload["units"][0]["latest_event_at"] == "2026-08-20T09:25:00Z"
 
 
 def test_all_cancelled_and_inactive_units_are_derived_correctly(app):
