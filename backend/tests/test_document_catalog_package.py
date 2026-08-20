@@ -22,6 +22,9 @@ from backend.models import (
     DocumentDefinitionAlias,
     ReferenceDataSeedRun,
 )
+from scripts.document_catalog_v1_certification_contract import (
+    parse_successful_apply_output,
+)
 
 
 @pytest.fixture()
@@ -327,6 +330,42 @@ def test_cli_exit_codes_and_machine_readable_plan(package_app, tmp_path, capsys)
     assert output["checksum"].startswith("sha256:")
     assert cli_main(["apply", "--file", str(package_path)], app=package_app) == 2
     assert "REFUSED" in capsys.readouterr().err
+
+
+def test_certification_parser_consumes_actual_flat_cli_apply_output(
+    package_app, tmp_path, capsys
+):
+    package_path = tmp_path / "synthetic-cli-contract.json"
+    package_path.write_text(json.dumps(_payload()), encoding="utf-8")
+    package = load_package(package_path)
+    plan = plan_package(package, "test")
+    assert (
+        cli_main(
+            [
+                "apply",
+                "--file",
+                str(package_path),
+                "--confirm",
+                "--operator",
+                "contract-certification",
+                "--approval-reference",
+                "TEST-CONTRACT-CERT",
+                "--expected-checksum",
+                package.checksum,
+                "--expected-plan-fingerprint",
+                plan.database_fingerprint,
+                "--idempotency-key",
+                "contract-certification-1",
+            ],
+            app=package_app,
+        )
+        == 0
+    )
+    output = parse_successful_apply_output(capsys.readouterr().out)
+    assert output["run_id"]
+    assert output["status"] == "succeeded"
+    assert output["created_count"] == 1
+    assert "run" not in output
 
 
 def test_apply_rolls_back_catalog_writes_and_persists_sanitized_failure(
