@@ -151,7 +151,7 @@ export default function OperationalShipmentDetail() {
 
           <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>{t("operations.documentsMdpm")}</CardTitle></CardHeader><CardContent>{t("operations.requestDocumentsNa")}</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
+          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>{t("operations.documentsMdpm")}</CardTitle></CardHeader><CardContent>{t("operations.requestDocumentsNa")}</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} />}
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
 
           <Card>

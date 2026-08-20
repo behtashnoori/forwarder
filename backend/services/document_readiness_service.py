@@ -12,7 +12,7 @@ from backend.mdpm_models import (
     RequirementApplicabilityDecision,
     TransitionOverride,
 )
-from backend.models import CaseDocumentFile
+from backend.models import CaseDocumentFile, CaseDocumentRequirement
 from backend.operational_models import Milestone, OperationalShipment, utcnow
 from backend.project_configuration_models import ProjectDocumentRequirement
 from backend.services.operational_service import (
@@ -81,16 +81,37 @@ def materialization_preview(shipment_id, user):
         )
     ).all()
     from backend.models import OrganizationDocumentRequirement, ShipmentRequest
-    from backend.services.organization_document_policy_service import effective_definitions
-    request_row = db.session.get(ShipmentRequest, shipment.shipment_request_id) if shipment.shipment_request_id else None
-    configured = effective_definitions(shipment.organization_id,
-        request_row.shipping_type if request_row else "all", shipment.project_id)
-    project_rows = [] if shipment.project_id is None else db.session.scalars(
-        select(ProjectDocumentRequirement).where(ProjectDocumentRequirement.project_id == shipment.project_id,
-            ProjectDocumentRequirement.is_active.is_(True))).all()
+    from backend.services.organization_document_policy_service import (
+        effective_definitions,
+    )
+
+    request_row = (
+        db.session.get(ShipmentRequest, shipment.shipment_request_id)
+        if shipment.shipment_request_id
+        else None
+    )
+    configured = effective_definitions(
+        shipment.organization_id,
+        request_row.shipping_type if request_row else "all",
+        shipment.project_id,
+    )
+    project_rows = (
+        []
+        if shipment.project_id is None
+        else db.session.scalars(
+            select(ProjectDocumentRequirement).where(
+                ProjectDocumentRequirement.project_id == shipment.project_id,
+                ProjectDocumentRequirement.is_active.is_(True),
+            )
+        ).all()
+    )
     project_by_definition = {row.document_definition_id: row for row in project_rows}
-    policy_rows = db.session.scalars(select(OrganizationDocumentRequirement).where(
-        OrganizationDocumentRequirement.operational_organization_id == shipment.organization_id)).all()
+    policy_rows = db.session.scalars(
+        select(OrganizationDocumentRequirement).where(
+            OrganizationDocumentRequirement.operational_organization_id
+            == shipment.organization_id
+        )
+    ).all()
     policy_by_definition = {row.document_definition_id: row for row in policy_rows}
     rows, findings = [], []
     for definition, level in configured:
@@ -101,13 +122,19 @@ def materialization_preview(shipment_id, user):
         rows.append(
             {
                 "source_requirement_public_id": source.public_id if source else None,
-                "source_organization_policy_id": policy.id if policy and not source else None,
-                "source_version": source.version if source else (policy.version if policy else None),
+                "source_organization_policy_id": policy.id
+                if policy and not source
+                else None,
+                "source_version": source.version
+                if source
+                else (policy.version if policy else None),
                 "document_definition_public_id": definition.public_id,
                 "document_definition_id": definition.id,
                 "title": definition.title,
                 "requirement_level": level,
-                "required_assessment_level": source.required_assessment_level if source else "APPROVED",
+                "required_assessment_level": source.required_assessment_level
+                if source
+                else "APPROVED",
                 "target_milestone_type": target.immutable_code if target else None,
                 "target_status": source.target_status if source else None,
                 "warnings": warnings,
@@ -152,11 +179,20 @@ def materialize(shipment_id, payload, user):
             organization_id=shipment.organization_id,
             operational_shipment_id=shipment.id,
             document_definition_id=source["document_definition_id"],
-            source_project_requirement_id=(db.session.scalar(select(ProjectDocumentRequirement.id).where(
-                ProjectDocumentRequirement.public_id == source["source_requirement_public_id"]))
-                if source["source_requirement_public_id"] else None),
+            source_project_requirement_id=(
+                db.session.scalar(
+                    select(ProjectDocumentRequirement.id).where(
+                        ProjectDocumentRequirement.public_id
+                        == source["source_requirement_public_id"]
+                    )
+                )
+                if source["source_requirement_public_id"]
+                else None
+            ),
             source_project_requirement_public_id=source["source_requirement_public_id"],
-            source_project_requirement_version=source["source_version"] if source["source_requirement_public_id"] else None,
+            source_project_requirement_version=source["source_version"]
+            if source["source_requirement_public_id"]
+            else None,
             source_organization_policy_id=source["source_organization_policy_id"],
             requirement_level=source["requirement_level"],
             applicability_state="UNRESOLVED"
@@ -208,12 +244,47 @@ def _assessment(association):
     )
 
 
+def _readiness_status(req, association, assessment):
+    if req.applicability_state == "NOT_APPLICABLE":
+        return "NOT_APPLICABLE"
+    if req.applicability_state == "UNRESOLVED":
+        return "UNRESOLVED"
+    if (
+        not association
+        or association.artifact.status != "active"
+        or association.artifact.version_number != association.artifact_version
+    ):
+        return "MISSING"
+    if assessment and assessment.decision == "REJECTED":
+        return "REJECTED"
+    if req.required_assessment_level == "VERIFIED":
+        return (
+            "SATISFIED"
+            if assessment and assessment.decision == "VERIFIED"
+            else "PENDING_REVIEW"
+        )
+    return (
+        "SATISFIED"
+        if assessment and assessment.decision in {"APPROVED", "VERIFIED"}
+        else "PENDING_REVIEW"
+    )
+
+
 def _requirement_projection(req):
     assoc = _active_association(req)
     assessment = _assessment(assoc)
+    applicability = db.session.scalar(
+        select(RequirementApplicabilityDecision)
+        .where(RequirementApplicabilityDecision.requirement_id == req.id)
+        .order_by(
+            RequirementApplicabilityDecision.created_at.desc(),
+            RequirementApplicabilityDecision.id.desc(),
+        )
+    )
     return {
         "public_id": req.public_id,
         "title": req.definition.title,
+        "document_code": req.definition.code,
         "document_definition_public_id": req.definition.public_id,
         "requirement_level": req.requirement_level,
         "applicability_state": req.applicability_state,
@@ -221,6 +292,8 @@ def _requirement_projection(req):
         "target_milestone_type": req.target_milestone_type,
         "target_status": req.target_status,
         "version": req.version,
+        "readiness_status": _readiness_status(req, assoc, assessment),
+        "applicability_reason": applicability.reason if applicability else None,
         "artifact": (
             {
                 "association_public_id": assoc.public_id,
@@ -229,6 +302,8 @@ def _requirement_projection(req):
                 "version": assoc.artifact_version,
                 "status": assoc.artifact.status,
                 "assessment": assessment.decision if assessment else "ASSOCIATED",
+                "associated_at": assoc.associated_at.isoformat(),
+                "association_reason": assoc.reason,
             }
             if assoc
             else None
@@ -251,6 +326,39 @@ def list_requirements(shipment_id, user):
     ]
 
 
+def list_eligible_artifacts(shipment_id, requirement_id, user):
+    shipment = _shipment(shipment_id, user)
+    req = _requirement(shipment, requirement_id)
+    return [
+        {
+            "artifact_public_id": artifact.public_id,
+            "filename": artifact.original_filename,
+            "version": artifact.version_number,
+        }
+        for artifact in db.session.scalars(
+            select(CaseDocumentFile)
+            .join(
+                CaseDocumentRequirement,
+                CaseDocumentRequirement.id == CaseDocumentFile.case_requirement_id,
+            )
+            .where(
+                CaseDocumentFile.shipment_request_id == shipment.shipment_request_id,
+                CaseDocumentFile.operational_organization_id
+                == shipment.organization_id,
+                CaseDocumentFile.status == "active",
+                CaseDocumentFile.is_miscellaneous.is_(False),
+                CaseDocumentRequirement.shipment_request_id
+                == shipment.shipment_request_id,
+                CaseDocumentRequirement.operational_organization_id
+                == shipment.organization_id,
+                CaseDocumentRequirement.source_definition_id
+                == req.document_definition_id,
+            )
+            .order_by(CaseDocumentFile.uploaded_at.desc(), CaseDocumentFile.id.desc())
+        ).all()
+    ]
+
+
 def associate(shipment_id, requirement_id, payload, user):
     shipment = _shipment(shipment_id, user, "document_readiness.manage", True)
     req = _requirement(shipment, requirement_id, True)
@@ -265,7 +373,11 @@ def associate(shipment_id, requirement_id, payload, user):
         .where(CaseDocumentFile.public_id == payload.get("artifact_public_id"))
         .with_for_update()
     )
-    if not artifact or artifact.shipment_request_id != shipment.shipment_request_id:
+    if (
+        not artifact
+        or artifact.shipment_request_id != shipment.shipment_request_id
+        or artifact.operational_organization_id != shipment.organization_id
+    ):
         raise OperationalError(
             "ARTIFACT_NOT_ELIGIBLE", "Artifact is not visible for this shipment.", 404
         )
@@ -278,10 +390,13 @@ def associate(shipment_id, requirement_id, payload, user):
             "ARTIFACT_NOT_ELIGIBLE", "Artifact must be the active typed version.", 422
         )
     if artifact.case_requirement_id:
-        from backend.models import CaseDocumentRequirement
-
         case_req = db.session.get(CaseDocumentRequirement, artifact.case_requirement_id)
-        if not case_req or case_req.source_definition_id != req.document_definition_id:
+        if (
+            not case_req
+            or case_req.shipment_request_id != shipment.shipment_request_id
+            or case_req.operational_organization_id != shipment.organization_id
+            or case_req.source_definition_id != req.document_definition_id
+        ):
             raise OperationalError(
                 "ARTIFACT_TYPE_MISMATCH",
                 "Artifact type does not match the requirement.",
@@ -319,6 +434,34 @@ def associate(shipment_id, requirement_id, payload, user):
             "artifact_public_id": artifact.public_id,
             "artifact_version": artifact.version_number,
         },
+    )
+    db.session.commit()
+    return _requirement_projection(req)
+
+
+def remove_association(shipment_id, requirement_id, payload, user):
+    shipment = _shipment(shipment_id, user, "document_readiness.manage", True)
+    req = _requirement(shipment, requirement_id, True)
+    if req.version != payload.get("expected_requirement_version"):
+        raise OperationalError(
+            "STALE_REQUIREMENT_VERSION",
+            "Requirement was changed by another operation.",
+            409,
+        )
+    association = _active_association(req)
+    if not association:
+        raise OperationalError(
+            "DOC_ARTIFACT_MISSING", "No active artifact association exists.", 409
+        )
+    association.state = "SUPERSEDED"
+    association.superseded_at = utcnow()
+    req.version += 1
+    _audit(
+        shipment,
+        user,
+        "ArtifactAssociationRemoved",
+        req,
+        evidence={"association_public_id": association.public_id},
     )
     db.session.commit()
     return _requirement_projection(req)

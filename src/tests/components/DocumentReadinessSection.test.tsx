@@ -1,4 +1,61 @@
-import {render,screen} from "@testing-library/react";import {beforeEach,describe,expect,it,vi} from "vitest";import DocumentReadinessSection from "@/components/DocumentReadinessSection";
-const api=vi.hoisted(()=>({preview:vi.fn(),requirements:vi.fn(),next:vi.fn()}));
-vi.mock("@/lib/api",async()=>{const actual=await vi.importActual<typeof import("@/lib/api")>("@/lib/api");return {...actual,getDocumentMaterializationPreview:api.preview,listDocumentReadinessRequirements:api.requirements,getNextTransitionReadiness:api.next}});
-describe("MDPM document readiness",()=>{beforeEach(()=>{api.preview.mockResolvedValue({data:{initialized:true,requirements:[],findings:[],confirmation_allowed:false}});api.requirements.mockResolvedValue({data:[{public_id:"req-opaque",title:"Bill of lading",requirement_level:"REQUIRED",applicability_state:"APPLICABLE",required_assessment_level:"VERIFIED",target_milestone_type:"CUSTOMS",target_status:"READY",version:1,artifact:null}]});api.next.mockResolvedValue({data:{allowed:false,target_action:"READY",blocking_requirements:[{code:"DOC_ARTIFACT_MISSING",requirement_public_id:"req-opaque",title:"Bill of lading"}],warnings:[]}})});it("renders only server-owned next-action blockers",async()=>{render(<DocumentReadinessSection shipmentPublicId="shipment-opaque" shipmentVersion={3}/>);expect(await screen.findByText("Bill of lading")).toBeInTheDocument();expect(screen.getByText(/DOC_ARTIFACT_MISSING/)).toBeInTheDocument();expect(screen.getByText(/needs VERIFIED/)).toBeInTheDocument();expect(screen.queryByText(/workflow designer/i)).not.toBeInTheDocument()})});
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import DocumentReadinessSection from "@/components/DocumentReadinessSection";
+
+const api = vi.hoisted(() => ({
+  preview: vi.fn(), requirements: vi.fn(), next: vi.fn(), eligible: vi.fn(), associate: vi.fn(), remove: vi.fn(),
+}));
+vi.mock("@/lib/api", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
+  return {
+    ...actual,
+    getDocumentMaterializationPreview: api.preview,
+    listDocumentReadinessRequirements: api.requirements,
+    getNextTransitionReadiness: api.next,
+    listEligibleDocumentArtifacts: api.eligible,
+    associateDocumentArtifact: api.associate,
+    removeDocumentArtifactAssociation: api.remove,
+  };
+});
+
+const requirement = {
+  public_id: "req-opaque", title: "بارنامه", document_code: "BOL",
+  document_definition_public_id: "definition-opaque", requirement_level: "REQUIRED" as const,
+  applicability_state: "APPLICABLE" as const, applicability_reason: null,
+  required_assessment_level: "VERIFIED" as const, target_milestone_type: "CUSTOMS", target_status: "READY",
+  version: 1, readiness_status: "MISSING" as const, artifact: null,
+};
+
+describe("shipment document readiness", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.preview.mockResolvedValue({ data: { initialized: true, requirements: [], findings: [], confirmation_allowed: false } });
+    api.requirements.mockResolvedValue({ data: [requirement] });
+    api.eligible.mockResolvedValue({ data: [{ artifact_public_id: "file-opaque", filename: "bol.pdf", version: 2 }] });
+    api.next.mockResolvedValue({ data: { allowed: false, target_action: "READY", blocking_requirements: [{ code: "DOC_ARTIFACT_MISSING", requirement_public_id: "req-opaque", title: "بارنامه" }], warnings: [] } });
+    api.associate.mockResolvedValue({ data: {} });
+    api.remove.mockResolvedValue({ data: {} });
+  });
+
+  it("renders Persian concepts, authoritative status counts, and contextual ownership help", async () => {
+    render(<DocumentReadinessSection shipmentPublicId="shipment-opaque" shipmentVersion={3} />);
+    expect(await screen.findByText("بارنامه")).toBeInTheDocument();
+    expect(screen.getAllByText("کسری")).toHaveLength(2);
+    expect(screen.getByText(/مالک فایل همچنان پرونده درخواست است/)).toBeInTheDocument();
+    expect(screen.getByText(/DOC_ARTIFACT_MISSING/)).toBeInTheDocument();
+  });
+
+  it("selects an eligible exact file version instead of requiring an opaque ID", async () => {
+    render(<DocumentReadinessSection shipmentPublicId="shipment-opaque" shipmentVersion={3} />);
+    const selector = await screen.findByLabelText("فایل موجود در پرونده");
+    fireEvent.change(selector, { target: { value: "file-opaque" } });
+    fireEvent.click(screen.getByRole("button", { name: "ارتباط با این محموله" }));
+    await waitFor(() => expect(api.associate).toHaveBeenCalledWith("shipment-opaque", expect.objectContaining({ public_id: "req-opaque" }), "file-opaque"));
+  });
+
+  it("shows the empty requirement state", async () => {
+    api.requirements.mockResolvedValue({ data: [] });
+    render(<DocumentReadinessSection shipmentPublicId="shipment-opaque" shipmentVersion={3} />);
+    expect(await screen.findByText("برای این محموله الزام سندی اعمال نشده است.")).toBeInTheDocument();
+  });
+});

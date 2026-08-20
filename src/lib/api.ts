@@ -3530,19 +3530,28 @@ export const reopenExecutionMilestone = (
 export type DocumentReadinessRequirement = {
   public_id: string;
   title: string;
+  document_code: string;
+  document_definition_public_id: string;
   requirement_level: "REQUIRED" | "OPTIONAL" | "CONDITIONAL";
   applicability_state: "APPLICABLE" | "NOT_APPLICABLE" | "UNRESOLVED";
+  applicability_reason: string | null;
   required_assessment_level: "APPROVED" | "VERIFIED";
   target_milestone_type: string | null;
   target_status: string | null;
   version: number;
+  readiness_status: "SATISFIED" | "MISSING" | "PENDING_REVIEW" | "REJECTED" | "NOT_APPLICABLE" | "UNRESOLVED";
   artifact: null | {
+    association_public_id: string;
     artifact_public_id: string;
     filename: string;
     version: number;
     assessment: string;
+    status: string;
+    associated_at: string;
+    association_reason: string | null;
   };
 };
+export type EligibleDocumentArtifact = { artifact_public_id: string; filename: string; version: number };
 export type TransitionReadiness = {
   allowed: boolean;
   target_action: string;
@@ -3577,6 +3586,10 @@ export const listDocumentReadinessRequirements = (s: string) =>
   request<{ data: DocumentReadinessRequirement[] }>(
     `/api/v2/operational-shipments/${s}/document-readiness/requirements`,
   );
+export const listEligibleDocumentArtifacts = (s: string, requirementId: string) =>
+  request<{ data: EligibleDocumentArtifact[] }>(
+    `/api/v2/operational-shipments/${s}/document-readiness/requirements/${requirementId}/eligible-artifacts`,
+  );
 export const associateDocumentArtifact = (
   s: string,
   r: DocumentReadinessRequirement,
@@ -3591,6 +3604,11 @@ export const associateDocumentArtifact = (
         expected_requirement_version: r.version,
       }),
     },
+  );
+export const removeDocumentArtifactAssociation = (s: string, r: DocumentReadinessRequirement) =>
+  request(
+    `/api/v2/operational-shipments/${s}/document-readiness/requirements/${r.public_id}/artifacts`,
+    { method: "DELETE", body: JSON.stringify({ expected_requirement_version: r.version }) },
   );
 export const assessDocumentArtifact = (
   s: string,
