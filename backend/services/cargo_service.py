@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timezone
 from decimal import Decimal, InvalidOperation
 import re
 import unicodedata
@@ -11,8 +12,8 @@ from sqlalchemy.orm import selectinload
 
 from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem
 from backend.extensions import db
-from backend.models import CargoType, UnitOfMeasure
-from backend.operational_models import OperationalShipment
+from backend.models import CargoType, ShipmentRequest, UnitOfMeasure
+from backend.operational_models import ExecutionUnit, OperationalEvent, OperationalShipment, Project
 from backend.services import operational_service
 
 
@@ -20,6 +21,10 @@ class CargoError(ValueError):
     def __init__(self, message: str, status: int = 400):
         super().__init__(message)
         self.status = status
+
+
+SHIPMENT_STATUSES = frozenset({"planned", "in_progress", "completed", "cancelled"})
+ACTIVE_SHIPMENT_STATUSES = frozenset({"planned", "in_progress"})
 
 
 _SPACES = re.compile(r"[\s\u200c]+")
@@ -164,6 +169,138 @@ def scoped_catalog(user, public_id, active_only=False):
     if active_only and not row.is_active:
         raise CargoError("catalog item is inactive", 422)
     return row
+
+
+def _iso(value):
+    if not value:
+        return None
+    if value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def catalog_shipment_usage(user, public_id, args):
+    """Project tenant-safe catalog usage without changing cargo ownership."""
+    operational_service.require_permission(user, "operational_shipment.read")
+    catalog = scoped_catalog(user, public_id)
+    try:
+        limit = min(max(int(args.get("limit", 50)), 1), 100)
+        offset = max(int(args.get("offset", 0)), 0)
+    except (TypeError, ValueError) as exc:
+        raise CargoError("limit and offset must be integers", 422) from exc
+    status = str(args.get("status") or "").strip()
+    if status and status not in SHIPMENT_STATUSES:
+        raise CargoError("invalid shipment status", 422)
+    active_only = str(args.get("active_only") or "false").lower()
+    if active_only not in {"true", "false"}:
+        raise CargoError("active_only must be true or false", 422)
+
+    base = (
+        select(ShipmentCargoItem, OperationalShipment, Project, ShipmentRequest)
+        .join(OperationalShipment, ShipmentCargoItem.operational_shipment_id == OperationalShipment.id)
+        .outerjoin(Project, OperationalShipment.project_id == Project.id)
+        .outerjoin(ShipmentRequest, OperationalShipment.shipment_request_id == ShipmentRequest.id)
+        .where(
+            ShipmentCargoItem.catalog_item_id == catalog.id,
+            OperationalShipment.organization_id == catalog.organization_id,
+            or_(Project.id.is_(None), Project.organization_id == catalog.organization_id),
+            or_(
+                ShipmentRequest.id.is_(None),
+                ShipmentRequest.operational_organization_id == catalog.organization_id,
+            ),
+        )
+    )
+    if status:
+        base = base.where(OperationalShipment.lifecycle_status == status)
+    if active_only == "true":
+        base = base.where(OperationalShipment.lifecycle_status.in_(ACTIVE_SHIPMENT_STATUSES))
+
+    filtered = base.subquery()
+    shipment_count = db.session.scalar(
+        select(func.count(func.distinct(filtered.c.operational_shipment_id)))
+    ) or 0
+    active_count = db.session.scalar(
+        select(func.count(func.distinct(filtered.c.operational_shipment_id))).where(
+            filtered.c.lifecycle_status.in_(ACTIVE_SHIPMENT_STATUSES)
+        )
+    ) or 0
+    rows = db.session.execute(
+        base.order_by(OperationalShipment.updated_at.desc(), ShipmentCargoItem.line_number)
+        .offset(offset)
+        .limit(limit)
+    ).all()
+
+    shipment_ids = {shipment.id for _line, shipment, _project, _request in rows}
+    locations = {}
+    if shipment_ids:
+        ranked_events = (
+            select(
+                ExecutionUnit.operational_shipment_id.label("shipment_id"),
+                OperationalEvent.checkpoint_text.label("location"),
+                OperationalEvent.occurred_at.label("latest_event_at"),
+                func.row_number().over(
+                    partition_by=ExecutionUnit.operational_shipment_id,
+                    order_by=(OperationalEvent.occurred_at.desc(), OperationalEvent.id.desc()),
+                ).label("rank"),
+            )
+            .join(OperationalEvent, OperationalEvent.execution_unit_id == ExecutionUnit.id)
+            .where(
+                ExecutionUnit.operational_shipment_id.in_(shipment_ids),
+                OperationalEvent.checkpoint_text.is_not(None),
+            )
+            .subquery()
+        )
+        for item in db.session.execute(select(ranked_events).where(ranked_events.c.rank == 1)):
+            locations[item.shipment_id] = {
+                "current_location": item.location,
+                "location_source": "operational_event",
+                "latest_event_at": _iso(item.latest_event_at),
+            }
+        checkpoint_rows = db.session.execute(
+            select(
+                ExecutionUnit.operational_shipment_id,
+                ExecutionUnit.latest_checkpoint,
+                ExecutionUnit.last_event_at,
+            )
+            .where(
+                ExecutionUnit.operational_shipment_id.in_(shipment_ids),
+                ExecutionUnit.latest_checkpoint.is_not(None),
+            )
+            .order_by(ExecutionUnit.last_event_at.desc(), ExecutionUnit.id.desc())
+        ).all()
+        for shipment_id, checkpoint, event_at in checkpoint_rows:
+            locations.setdefault(shipment_id, {
+                "current_location": checkpoint,
+                "location_source": "execution_unit_checkpoint",
+                "latest_event_at": _iso(event_at),
+            })
+
+    items = []
+    for line, shipment, project, request_row in rows:
+        location = locations.get(shipment.id, {
+            "current_location": None,
+            "location_source": "unavailable",
+            "latest_event_at": None,
+        })
+        items.append({
+            "operational_shipment_public_id": shipment.public_id,
+            "project_public_id": project.public_id if project else None,
+            "project_code": project.project_code if project else None,
+            "shipment_request_reference": request_row.tracking_code if request_row else None,
+            "quantity": str(line.quantity),
+            "uom": line.uom_symbol_snapshot,
+            "status": shipment.lifecycle_status,
+            "shipment_cargo_line_public_id": line.public_id,
+            "display_name_snapshot": line.display_name_snapshot,
+            **location,
+        })
+    return {
+        "cargo_item": catalog_dict(catalog),
+        "summary": {"shipment_count": shipment_count, "active_shipment_count": active_count},
+        "items": items,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 def _references(data):

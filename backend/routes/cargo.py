@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from backend.auth import get_current_user
 from backend.cargo_models import ShipmentCargoItem
 from backend.extensions import db
-from backend.security import require_auth, require_role
+from backend.security import require_auth
 from backend.services import cargo_service as svc
 from backend.services.admin_authorization_service import require_organization_admin_context
 
@@ -60,6 +60,15 @@ def catalog_detail(public_id):
             {"item": svc.catalog_dict(svc.scoped_catalog(_user(), public_id), True)}
         )
     except svc.CargoError as exc:
+        return _error(exc)
+
+
+@cargo_bp.get("/cargo-catalog/<public_id>/shipments")
+@require_organization_admin_context()
+def catalog_shipments(public_id):
+    try:
+        return jsonify(svc.catalog_shipment_usage(_user(), public_id, request.args))
+    except (svc.CargoError, svc.operational_service.OperationalError) as exc:
         return _error(exc)
 
 

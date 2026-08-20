@@ -6,6 +6,7 @@ import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 const api = vi.hoisted(() => ({
   listCargoCatalog: vi.fn(), createCargoCatalogItem: vi.fn(), updateCargoCatalogItem: vi.fn(),
   setCargoCatalogActive: vi.fn(), createCargoAlias: vi.fn(), updateCargoAlias: vi.fn(),
+  getCargoCatalogShipmentUsage: vi.fn(),
   listShipmentCargoItems: vi.fn(), createShipmentCargoItem: vi.fn(), updateShipmentCargoItem: vi.fn(), request: vi.fn(),
 }));
 vi.mock("@/lib/api", () => api);
@@ -34,6 +35,29 @@ describe("Cargo foundation UI", () => {
     api.listShipmentCargoItems.mockResolvedValue({items:[shipmentItem]});
     api.request.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1"}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea"}]});
     api.updateShipmentCargoItem.mockResolvedValue({item:{...shipmentItem,quantity:"3",version:2}});
+    api.getCargoCatalogShipmentUsage.mockResolvedValue({cargo_item:catalog,summary:{shipment_count:1,active_shipment_count:1},items:[{operational_shipment_public_id:"shipment-1",project_public_id:"project-1",project_code:"PRJ-1",shipment_request_reference:null,quantity:"2.000000",uom:"ea",status:"in_progress",current_location:"Border",location_source:"operational_event",latest_event_at:"2026-08-20T09:25:00Z",shipment_cargo_line_public_id:"line-1",display_name_snapshot:"کالا"}],limit:50,offset:0});
+  });
+
+  it("opens shipment usage and renders quantity, status, and location", async () => {
+    render(<CargoCatalogAdminTab/>);
+    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌ها"}));
+    expect(await screen.findByText("PRJ-1")).toBeTruthy();
+    expect(screen.getByText(/2.000000 ea/)).toBeTruthy();
+    expect(screen.getByText("Border")).toBeTruthy();
+  });
+
+  it("renders shipment usage empty and error states", async () => {
+    api.getCargoCatalogShipmentUsage.mockResolvedValueOnce({cargo_item:catalog,summary:{shipment_count:0,active_shipment_count:0},items:[],limit:50,offset:0});
+    render(<CargoCatalogAdminTab/>);
+    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌ها"}));
+    expect(await screen.findByText("این کالا هنوز در هیچ محموله‌ای استفاده نشده است.")).toBeTruthy();
+  });
+
+  it("reports shipment usage API errors", async () => {
+    api.getCargoCatalogShipmentUsage.mockRejectedValueOnce(new Error("forbidden"));
+    render(<CargoCatalogAdminTab/>);
+    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌ها"}));
+    expect(await screen.findByRole("alert")).toHaveTextContent("بارگذاری محموله‌های کالا انجام نشد.");
   });
 
   it("keeps immutable catalog code read-only during edit and uses governed aliases", async () => {

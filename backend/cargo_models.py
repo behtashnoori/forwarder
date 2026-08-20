@@ -146,6 +146,11 @@ class ShipmentCargoItem(db.Model):
         db.Index(
             "ix_shipment_cargo_item_shipment", "operational_shipment_id", "line_number"
         ),
+        db.Index(
+            "ix_shipment_cargo_item_catalog_shipment",
+            "catalog_item_id",
+            "operational_shipment_id",
+        ),
     )
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(

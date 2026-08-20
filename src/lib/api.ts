@@ -2916,6 +2916,29 @@ export interface CargoCatalogItem {
   default_uom?: { public_id: string; code: string; symbol: string } | null;
   aliases?: CargoAlias[];
 }
+export interface CargoShipmentUsage {
+  cargo_item: CargoCatalogItem;
+  summary: { shipment_count: number; active_shipment_count: number };
+  items: Array<{
+    operational_shipment_public_id: string;
+    project_public_id: string | null;
+    project_code: string | null;
+    shipment_request_reference: string | null;
+    quantity: string;
+    uom: string;
+    status: string;
+    current_location: string | null;
+    location_source: "operational_event" | "execution_unit_checkpoint" | "unavailable";
+    latest_event_at: string | null;
+    shipment_cargo_line_public_id: string;
+    display_name_snapshot: string;
+  }>;
+}
+export const getCargoCatalogShipmentUsage = (id: string, activeOnly = false) =>
+  request<CargoShipmentUsage>(withQuery(
+    `/api/internal/cargo-catalog/${encodeURIComponent(id)}/shipments`,
+    { active_only: String(activeOnly) },
+  ));
 export const listCargoCatalog = (params: {
   q?: string;
   active?: string;
