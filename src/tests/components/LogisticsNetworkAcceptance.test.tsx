@@ -33,25 +33,25 @@ describe("Release 1.7.0 logistics network acceptance", () => {
   it("covers admin create, update, lifecycle, and probable duplicate confirmation", async () => {
     render(<LogisticsNetworkAdminTab />);
     await screen.findByText("LP-1");
-    fireEvent.change(screen.getByPlaceholderText("Immutable code"), { target: { value: "LP-3" } });
-    fireEvent.change(screen.getByPlaceholderText("Persian name"), { target: { value: "نقطه سوم" } });
-    fireEvent.change(screen.getByDisplayValue("Point type"), { target: { value: type.public_id } });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    fireEvent.change(screen.getByPlaceholderText("کد ثابت مکان"), { target: { value: "LP-3" } });
+    fireEvent.change(screen.getByPlaceholderText("نام فارسی"), { target: { value: "نقطه سوم" } });
+    fireEvent.change(screen.getByDisplayValue("انتخاب نوع مکان"), { target: { value: type.public_id } });
+    fireEvent.click(screen.getByRole("button", { name: "ایجاد مکان لجستیکی" }));
     await waitFor(() => expect(api.createLogisticsPoint).toHaveBeenCalledWith(expect.objectContaining({ immutable_code: "LP-3", point_type_public_id: type.public_id })));
 
-    fireEvent.click(screen.getAllByRole("button", { name: "Edit" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "ویرایش مکان" })[0]);
     fireEvent.change(screen.getByLabelText("Persian name"), { target: { value: "نام جدید" } });
     fireEvent.change(screen.getByLabelText("English name"), { target: { value: "Updated" } });
     fireEvent.change(screen.getByLabelText("Short address"), { target: { value: "Address" } });
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
     await waitFor(() => expect(api.updateLogisticsPoint).toHaveBeenCalledWith(point.public_id, expect.objectContaining({ version: 1, fa_name: "نام جدید" })));
-    fireEvent.click(screen.getAllByRole("button", { name: "Deactivate" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "غیرفعال‌سازی" })[0]);
     await waitFor(() => expect(api.setLogisticsPointActive).toHaveBeenCalledWith(point, false));
 
     api.createLogisticsPoint.mockRejectedValueOnce(new Error("Probable duplicate requires explicit confirmation"));
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByRole("button", { name: "Confirm distinct point" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm distinct point" }));
+    fireEvent.click(screen.getByRole("button", { name: "ایجاد مکان لجستیکی" }));
+    expect(await screen.findByRole("button", { name: "تأیید مکان مجزا" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "تأیید مکان مجزا" }));
     await waitFor(() => expect(api.createLogisticsPoint).toHaveBeenLastCalledWith(expect.objectContaining({ confirm_probable_duplicate: true })));
   });
 

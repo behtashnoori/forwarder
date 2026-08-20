@@ -129,7 +129,7 @@ describe("Phase 1A operational pages", () => {
       "href", "/operations/shipments/11111111-1111-4111-8111-111111111111",
     );
     expect(screen.queryByText(/Quote #2|Request #3|#1/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("status")).toBeInTheDocument();
+    expect(screen.getByLabelText("وضعیت محموله")).toBeInTheDocument();
   });
   it("renders detail milestones, work and audit sections", async () => {
     (api.getOperationalShipment as ReturnType<typeof vi.fn>).mockResolvedValue({

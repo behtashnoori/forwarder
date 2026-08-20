@@ -40,31 +40,31 @@ describe("Cargo foundation UI", () => {
 
   it("opens shipment usage and renders quantity, status, and location", async () => {
     render(<CargoCatalogAdminTab/>);
-    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌ها"}));
+    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌های دارای این کالا"}));
     expect(await screen.findByText("PRJ-1")).toBeTruthy();
     expect(screen.getByText(/2.000000 ea/)).toBeTruthy();
-    expect(screen.getByText("Border")).toBeTruthy();
+    expect(screen.getByText(/Border/)).toBeTruthy();
   });
 
   it("renders shipment usage empty and error states", async () => {
     api.getCargoCatalogShipmentUsage.mockResolvedValueOnce({cargo_item:catalog,summary:{shipment_count:0,active_shipment_count:0},items:[],limit:50,offset:0});
     render(<CargoCatalogAdminTab/>);
-    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌ها"}));
+    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌های دارای این کالا"}));
     expect(await screen.findByText("این کالا هنوز در هیچ محموله‌ای استفاده نشده است.")).toBeTruthy();
   });
 
   it("reports shipment usage API errors", async () => {
     api.getCargoCatalogShipmentUsage.mockRejectedValueOnce(new Error("forbidden"));
     render(<CargoCatalogAdminTab/>);
-    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌ها"}));
+    fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌های دارای این کالا"}));
     expect(await screen.findByRole("alert")).toHaveTextContent("بارگذاری محموله‌های کالا انجام نشد.");
   });
 
   it("keeps immutable catalog code read-only during edit and uses governed aliases", async () => {
     render(<CargoCatalogAdminTab/>);
     expect(await screen.findByText("ITEM-1")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button",{name:/Edit/}));
-    expect(screen.getByLabelText("immutable code").hasAttribute("readonly")).toBe(true);
+    fireEvent.click(screen.getByRole("button",{name:"ویرایش کالا"}));
+    expect(screen.getByLabelText("کد ثابت کالا").hasAttribute("readonly")).toBe(true);
     fireEvent.change(screen.getByLabelText("Alias for ITEM-1"),{target:{value:"Alias"}});
     fireEvent.click(screen.getByRole("button",{name:/Add alias/}));
     await waitFor(()=>expect(api.createCargoAlias).toHaveBeenCalledWith("catalog-1",expect.objectContaining({alias_type:"COMMON_NAME",language:"und"})));

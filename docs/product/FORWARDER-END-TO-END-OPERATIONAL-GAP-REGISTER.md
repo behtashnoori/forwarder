@@ -171,3 +171,17 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 | **Total** | **8** |
 
 No finding changes aggregate ownership, tenant authority, cargo/document ownership, assignment semantics, CRM authority, or canonical hierarchy. E2E-007 is explicitly stopped at the architecture gate. CRM remains **ON HOLD — NO EXPANSION**. Cotage, Warehouse Receipt, Registration Order, and Barfarabaran remain **DEFERRED / NOT IMPLEMENTED**.
+
+## Pre-publish polish update (2026-08-21)
+
+E2E-008 is resolved for the bounded release-polish scope. Shipment filters, core Cargo Catalog and Logistics Network controls, first-use explanations, ADR-040 location-state wording, identifier direction isolation, and external-reference guidance were localized or clarified. The evidence and reviewed-screen matrix are recorded in `FORWARDER-PRE-PUBLISH-UX-POLISH.md`.
+
+No E2E item was reopened. No P0/P1 was discovered. Deep route/economics terminology and remaining bilingual compatibility controls are non-blocking P3 items in the following post-publish backlog.
+
+## POST-PUBLISH BACKLOG
+
+- ADR-040 later phases under the accepted controlled transition gates.
+- CRM expansion/remediation; remains on hold.
+- Cotage, Warehouse Receipt, Registration Order, and Barfarabaran.
+- Numeric compatibility contraction after consumer/tenant evidence.
+- Full deep-screen localization, advanced analytics, and optional UI enhancements.

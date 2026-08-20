@@ -11,6 +11,6 @@ vi.mock("@/lib/api",()=>api);
 
 describe("expert terminology guidance",()=>{
  beforeEach(()=>{vi.clearAllMocks();api.listCargoCatalog.mockResolvedValue({items:[]});api.listLogisticsPoints.mockResolvedValue({items:[]});api.listLogisticsPointTypes.mockResolvedValue({items:[]});});
- it("explains reusable cargo master data and its first use",async()=>{render(<CargoCatalogAdminTab/>);expect(await screen.findByText(/اطلاعات آن‌ها یک‌بار تعریف می‌شود/)).toBeInTheDocument();expect(screen.getByText(/هنوز کالای استانداردی تعریف نشده/)).toBeInTheDocument();});
- it("explains reusable logistics locations without promising route creation",async()=>{render(<LogisticsNetworkAdminTab/>);expect(await screen.findByText(/در پیکربندی پروژه و ثبت موقعیت محموله قابل استفاده مجدد/)).toBeInTheDocument();});
+ it("explains reusable cargo master data without implying shipment creation or unsafe aggregation",async()=>{render(<CargoCatalogAdminTab/>);expect(await screen.findByText(/تعریف کالای استاندارد به‌تنهایی محموله ایجاد نمی‌کند/)).toBeInTheDocument();expect(screen.getByText(/واحدهای ناسازگار با هم جمع نمی‌شوند/)).toBeInTheDocument();expect(screen.getByText(/هنوز کالای استانداردی تعریف نشده/)).toBeInTheDocument();});
+ it("explains reusable logistics locations without promising route creation",async()=>{render(<LogisticsNetworkAdminTab/>);expect(await screen.findByText(/در پیکربندی پروژه و ثبت موقعیت محموله دوباره انتخاب شوند/)).toBeInTheDocument();expect(screen.getByText(/به‌تنهایی مسیر، پروژه یا محموله ایجاد نمی‌کند/)).toBeInTheDocument();});
 });
