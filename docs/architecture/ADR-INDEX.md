@@ -55,6 +55,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [037](../operational/adr/ADR-037-crm-expert-request-context-access.md) | CRM expert request-context access | ACCEPTED | CRM/customer authorization | none / none | request-parented expert projection pending; no runtime change in acceptance | Yes; bounded implementation only |
 | [038](../operational/adr/ADR-038-shipment-request-opaque-public-identity.md) | ShipmentRequest opaque public identity | ACCEPTED | Request identity/API security | none / none | additive UUID v4 identity and migrations pending | Yes; bounded implementation only |
 | [039](../operational/adr/ADR-039-external-operational-reference-architecture.md) | External Operational Reference Architecture | ACCEPTED | Operational references/search | none / none | governed type plus bounded shipment/unit value model pending | Yes; bounded implementation only |
+| [040](../operational/adr/ADR-040-tracking-current-location-status-authority.md) | Tracking Current Location and Status Authority | ACCEPTED | Tracking/location/status authority | none / none | deterministic canonical projection and compatibility transition pending | Yes; bounded implementation only |
 
 ## Usage rules
 

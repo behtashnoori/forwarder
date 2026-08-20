@@ -128,6 +128,8 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 
 ### E2E-007 — No authoritative one-screen current location across tracking paths
 
+- **DECISION STATUS:** ADR-040 ACCEPTED — authority, fallback, conflict, provenance, write and retirement policy are resolved; runtime implementation remains pending.
+
 - **AREA:** Current Status / Tracking
 - **USER SCENARIO:** On shipment detail, answer “where is this shipment now?”
 - **CURRENT BEHAVIOR:** Legacy request units show their latest LogisticsPoint/free text; canonical execution units/events expose checkpoints; cargo reverse usage chooses a canonical event/checkpoint projection; shipment detail has no single current-location field.
@@ -135,11 +137,11 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 - **EVIDENCE:** request tracking component, `execution_unit_service.py`, `cargo_service.py`, and shipment graph/detail.
 - **ROOT CAUSE:** Dual-path authority has not been reconciled; selecting one silently would change tracking authority.
 - **SEVERITY:** P1
-- **ARCHITECTURE IMPACT:** ARCHITECTURE DECISION REQUIRED.
+- **ARCHITECTURE IMPACT:** DECISION COMPLETE under ADR-040; bounded implementation required.
 - **SECURITY/TENANT IMPACT:** No breach found; risk is operational inconsistency.
 - **PROPOSED ACTION:** Decide a source-precedence/provenance projection and compatibility behavior before adding a consolidated field.
-- **IMPLEMENT NOW?:** NO — BLOCKED, ADR REQUIRED
-- **REQUIRES ADR?:** YES
+- **IMPLEMENT NOW?:** NO — CONTROLLED IMPLEMENTATION GOAL REQUIRED
+- **REQUIRES ADR?:** SATISFIED — ADR-040 ACCEPTED
 - **TEST STRATEGY:** conflicting legacy/canonical timestamps/locations, no-data, tenant and timezone cases.
 
 ### E2E-008 — First-use terminology remains mixed and exposes opaque/internal values

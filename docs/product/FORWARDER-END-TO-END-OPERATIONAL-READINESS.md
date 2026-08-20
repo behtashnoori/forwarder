@@ -45,7 +45,7 @@ None.
 
 ## 6. Remaining P1
 
-1. **E2E-007:** Legacy request-unit tracking and canonical execution events can both describe location/status. A single shipment-level source-precedence/provenance projection requires a new architecture decision; this review did not silently choose an authority.
+1. **E2E-007:** ADR-040 now defines canonical operational authority, bounded legacy fallback, provenance and transition policy. The deterministic read projection and compatibility rollout remain unimplemented.
 
 ## 7. Deferred P2/P3
 
@@ -66,11 +66,11 @@ Legacy multi-unit tracking remains active under request detail and can be writte
 
 ## 11. Architecture decisions required
 
-One new decision is required: define current-location/status source precedence, provenance, disagreement handling and timestamps across legacy tracking and canonical execution events. ADR-038 already authorizes opaque ShipmentRequest identity; its remaining work is implementation planning rather than a new ADR.
+No open architecture decision remains for E2E-007. ADR-040 is Accepted; runtime implementation must follow its bounded phased authority and fallback contract.
 
 ## 12. Recommended next three controlled Goals
 
-1. Decide and certify the legacy/canonical tracking location/status projection, including explicit provenance and conflict behavior; do not migrate write authority in that goal.
+1. Implement ADR-040 Phase 1–2 as a read-only deterministic canonical projection with per-unit shipment aggregation, provenance, cache mismatch health and cargo traceability adoption; do not change public tracking or write authority.
 2. Perform a bounded expert terminology/RTL first-use pass after identities and source labels are stable.
 3. Tenant-certify and separately plan remaining numeric admin/CRM compatibility routes before any contraction.
 
