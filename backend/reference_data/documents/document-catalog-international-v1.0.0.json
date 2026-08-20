@@ -1,0 +1,2316 @@
+{
+  "schema_version": "1",
+  "catalog_name": "forwarder-document-catalog-international",
+  "catalog_version": "1.0.0",
+  "jurisdiction_bundle": "international-base",
+  "source_bundle_version": "2026-08-20-review-1",
+  "checksum": "sha256:de5ffaa0f3535bdbd9c0401ff60bd892f04fd2746e96221ab4bc2b63ef1e5998",
+  "definitions": [
+    {
+      "code": "commercial_invoice",
+      "name_fa": "فاکتور تجاری",
+      "name_en": "Commercial Invoice",
+      "family": "COMMERCIAL",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Commercial Invoice",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 1
+      }
+    },
+    {
+      "code": "proforma_invoice",
+      "name_fa": "پیش‌فاکتور",
+      "name_en": "Proforma Invoice",
+      "family": "COMMERCIAL",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Proforma Invoice",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 2
+      }
+    },
+    {
+      "code": "packing_list",
+      "name_fa": "فهرست بسته‌بندی / صورت عدلبندی",
+      "name_en": "Packing List",
+      "family": "COMMERCIAL",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Packing List",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 3
+      }
+    },
+    {
+      "code": "purchase_order",
+      "name_fa": "سفارش خرید",
+      "name_en": "Purchase Order",
+      "family": "COMMERCIAL",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Purchase Order",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 4
+      }
+    },
+    {
+      "code": "certificate_of_origin",
+      "name_fa": "گواهی مبدأ",
+      "name_en": "Certificate of Origin",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Certificate of Origin",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 5
+      }
+    },
+    {
+      "code": "preferential_certificate_of_origin",
+      "name_fa": "گواهی مبدأ ترجیحی",
+      "name_en": "Preferential Certificate of Origin",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Preferential Certificate of Origin",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 6
+      }
+    },
+    {
+      "code": "bill_of_lading",
+      "name_fa": "بارنامه دریایی",
+      "name_en": "Bill of Lading",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "SEA"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Bill of Lading",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 7
+      }
+    },
+    {
+      "code": "sea_waybill",
+      "name_fa": "راهنامه دریایی",
+      "name_en": "Sea Waybill",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "SEA"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Sea Waybill",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 8
+      }
+    },
+    {
+      "code": "house_bill_of_lading",
+      "name_fa": "بارنامه فرعی دریایی",
+      "name_en": "House Bill of Lading",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "SEA"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "House Bill of Lading",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 9
+      }
+    },
+    {
+      "code": "master_bill_of_lading",
+      "name_fa": "بارنامه مادر دریایی",
+      "name_en": "Master Bill of Lading",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "SEA"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Master Bill of Lading",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 10
+      }
+    },
+    {
+      "code": "air_waybill",
+      "name_fa": "راهنامه هوایی",
+      "name_en": "Air Waybill",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "AIR"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Air Waybill",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 11
+      }
+    },
+    {
+      "code": "master_air_waybill",
+      "name_fa": "راهنامه هوایی مادر",
+      "name_en": "Master Air Waybill",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "AIR"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Master Air Waybill",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 13
+      }
+    },
+    {
+      "code": "cmr_consignment_note",
+      "name_fa": "راهنامه جاده‌ای CMR",
+      "name_en": "CMR Road Consignment Note",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "ROAD"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_CMR",
+          "source_authority_name": "United Nations Economic Commission for Europe",
+          "source_title": "Convention on the Contract for the International Carriage of Goods by Road (CMR)",
+          "source_reference": "CMR, Articles 4–6",
+          "source_url": "https://unece.org/fileadmin/DAM/trans/conventn/cmr_e.pdf",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "CMR Road Consignment Note",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 14
+      }
+    },
+    {
+      "code": "rail_consignment_note",
+      "name_fa": "راهنامه ریلی",
+      "name_en": "Rail Consignment Note",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "RAIL"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Rail Consignment Note",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 15
+      }
+    },
+    {
+      "code": "multimodal_transport_document",
+      "name_fa": "سند حمل چندوجهی",
+      "name_en": "Multimodal Transport Document",
+      "family": "TRANSPORT",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MULTIMODAL"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Multimodal Transport Document",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 19
+      }
+    },
+    {
+      "code": "delivery_order",
+      "name_fa": "دستور تحویل",
+      "name_en": "Delivery Order",
+      "family": "FORWARDING",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Delivery Order",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 26
+      }
+    },
+    {
+      "code": "arrival_notice",
+      "name_fa": "اعلامیه ورود",
+      "name_en": "Arrival Notice",
+      "family": "OPERATIONAL_NOTICE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Arrival Notice",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 27
+      }
+    },
+    {
+      "code": "booking_confirmation",
+      "name_fa": "تأییدیه رزرو حمل",
+      "name_en": "Booking Confirmation",
+      "family": "FORWARDING",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Booking Confirmation",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 28
+      }
+    },
+    {
+      "code": "shipping_instruction",
+      "name_fa": "دستور حمل",
+      "name_en": "Shipping Instruction",
+      "family": "FORWARDING",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Shipping Instruction",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 29
+      }
+    },
+    {
+      "code": "cargo_manifest",
+      "name_fa": "مانیفست بار",
+      "name_en": "Cargo Manifest",
+      "family": "FORWARDING",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Cargo Manifest",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 30
+      }
+    },
+    {
+      "code": "freight_manifest",
+      "name_fa": "مانیفست کرایه",
+      "name_en": "Freight Manifest",
+      "family": "FORWARDING",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Freight Manifest",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 31
+      }
+    },
+    {
+      "code": "container_manifest",
+      "name_fa": "مانیفست کانتینر",
+      "name_en": "Container Manifest",
+      "family": "FORWARDING",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "SEA"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Container Manifest",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 32
+      }
+    },
+    {
+      "code": "sea_cargo_declaration",
+      "name_fa": "اظهارنامه بار دریایی",
+      "name_en": "Sea Cargo Declaration",
+      "family": "COMMERCIAL",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "SEA"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "IMO_FAL",
+          "source_authority_name": "International Maritime Organization",
+          "source_title": "FAL declarations and certificates",
+          "source_reference": "FAL Form 2",
+          "source_url": "https://www.imo.org/en/ourwork/facilitation/pages/declarationscertificates-default.aspx",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Sea Cargo Declaration",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 34
+      }
+    },
+    {
+      "code": "dangerous_goods_declaration",
+      "name_fa": "اظهارنامه کالای خطرناک",
+      "name_en": "Dangerous Goods Declaration",
+      "family": "SAFETY",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Dangerous Goods Declaration",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 35
+      }
+    },
+    {
+      "code": "dangerous_goods_manifest",
+      "name_fa": "مانیفست کالای خطرناک",
+      "name_en": "Dangerous Goods Manifest",
+      "family": "SAFETY",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "IMO_FAL",
+          "source_authority_name": "International Maritime Organization",
+          "source_title": "FAL declarations and certificates",
+          "source_reference": "FAL Form 7",
+          "source_url": "https://www.imo.org/en/ourwork/facilitation/pages/declarationscertificates-default.aspx",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Dangerous Goods Manifest",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 36
+      }
+    },
+    {
+      "code": "customs_declaration",
+      "name_fa": "اظهارنامه گمرکی",
+      "name_en": "Customs Declaration",
+      "family": "CUSTOMS",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Customs Declaration",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 37
+      }
+    },
+    {
+      "code": "import_customs_declaration",
+      "name_fa": "اظهارنامه واردات",
+      "name_en": "Import Customs Declaration",
+      "family": "CUSTOMS",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Import Customs Declaration",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 38
+      }
+    },
+    {
+      "code": "export_customs_declaration",
+      "name_fa": "اظهارنامه صادرات",
+      "name_en": "Export Customs Declaration",
+      "family": "CUSTOMS",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Export Customs Declaration",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 39
+      }
+    },
+    {
+      "code": "transit_declaration",
+      "name_fa": "اظهارنامه ترانزیت",
+      "name_en": "Transit Declaration",
+      "family": "CUSTOMS",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Transit Declaration",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 40
+      }
+    },
+    {
+      "code": "tir_carnet",
+      "name_fa": "کارنه تیر",
+      "name_en": "TIR Carnet",
+      "family": "PERMIT_AUTHORIZATION",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "TIR Carnet",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 41
+      }
+    },
+    {
+      "code": "ata_carnet",
+      "name_fa": "کارنه آ.ت.آ",
+      "name_en": "ATA Carnet",
+      "family": "PERMIT_AUTHORIZATION",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "ATA Carnet",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 42
+      }
+    },
+    {
+      "code": "import_license",
+      "name_fa": "مجوز واردات",
+      "name_en": "Import Licence",
+      "family": "PERMIT_AUTHORIZATION",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Import Licence",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 43
+      }
+    },
+    {
+      "code": "export_license",
+      "name_fa": "مجوز صادرات",
+      "name_en": "Export Licence",
+      "family": "PERMIT_AUTHORIZATION",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Export Licence",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 44
+      }
+    },
+    {
+      "code": "insurance_certificate",
+      "name_fa": "گواهی بیمه",
+      "name_en": "Insurance Certificate",
+      "family": "INSURANCE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Insurance Certificate",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 50
+      }
+    },
+    {
+      "code": "insurance_policy",
+      "name_fa": "بیمه‌نامه باربری",
+      "name_en": "Cargo Insurance Policy",
+      "family": "INSURANCE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Cargo Insurance Policy",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 51
+      }
+    },
+    {
+      "code": "inspection_certificate",
+      "name_fa": "گواهی بازرسی",
+      "name_en": "Inspection Certificate",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Inspection Certificate",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 52
+      }
+    },
+    {
+      "code": "quality_certificate",
+      "name_fa": "گواهی کیفیت",
+      "name_en": "Certificate of Quality",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Certificate of Quality",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 53
+      }
+    },
+    {
+      "code": "certificate_of_conformity",
+      "name_fa": "گواهی انطباق",
+      "name_en": "Certificate of Conformity",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Certificate of Conformity",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 54
+      }
+    },
+    {
+      "code": "phytosanitary_certificate",
+      "name_fa": "گواهی بهداشت نباتی",
+      "name_en": "Phytosanitary Certificate",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Phytosanitary Certificate",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 55
+      }
+    },
+    {
+      "code": "veterinary_certificate",
+      "name_fa": "گواهی دامپزشکی",
+      "name_en": "Veterinary Certificate",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Veterinary Certificate",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 56
+      }
+    },
+    {
+      "code": "sanitary_certificate",
+      "name_fa": "گواهی بهداشتی",
+      "name_en": "Sanitary Certificate",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Sanitary Certificate",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 57
+      }
+    },
+    {
+      "code": "weight_certificate",
+      "name_fa": "گواهی وزن",
+      "name_en": "Weight Certificate",
+      "family": "CERTIFICATE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Weight Certificate",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 59
+      }
+    },
+    {
+      "code": "freight_invoice",
+      "name_fa": "صورتحساب کرایه حمل",
+      "name_en": "Freight Invoice",
+      "family": "FINANCE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Freight Invoice",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 60
+      }
+    },
+    {
+      "code": "letter_of_credit",
+      "name_fa": "اعتبار اسنادی",
+      "name_en": "Letter of Credit",
+      "family": "FINANCE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Letter of Credit",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 61
+      }
+    },
+    {
+      "code": "bill_of_exchange",
+      "name_fa": "برات",
+      "name_en": "Bill of Exchange",
+      "family": "FINANCE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Bill of Exchange",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 62
+      }
+    },
+    {
+      "code": "goods_delivery_notice",
+      "name_fa": "اعلامیه تحویل کالا",
+      "name_en": "Goods Delivery Notice",
+      "family": "OPERATIONAL_NOTICE",
+      "description_fa": null,
+      "description_en": null,
+      "reference_number_label_fa": null,
+      "reference_number_label_en": null,
+      "expiry_applicable": null,
+      "organization_overridable": true,
+      "lifecycle_target": "SOURCE_CONFIRMED",
+      "source_review_status": "SOURCE_CONFIRMED",
+      "aliases": [
+        {
+          "locale": "en",
+          "display_value": "Delivery Notice",
+          "alias_kind": "FORMER_NAME"
+        }
+      ],
+      "jurisdictions": [
+        {
+          "kind": "INTERNATIONAL"
+        }
+      ],
+      "transport_modes": [
+        "MODE_INDEPENDENT"
+      ],
+      "process_stages": [],
+      "business_scopes": [],
+      "provenance": [
+        {
+          "source_authority_code": "UNECE_UNCEFACT",
+          "source_authority_name": "United Nations Economic Commission for Europe / UN/CEFACT",
+          "source_title": "UN/EDIFACT Data Element 1001 — Document/message name, coded",
+          "source_reference": "UN/EDIFACT 1001",
+          "source_url": "https://unece.org/fileadmin/DAM/trade/edifact/code/1001cl.htm",
+          "source_version": null,
+          "source_date": null,
+          "jurisdiction_key": "INTERNATIONAL",
+          "review_status": "SOURCE_CONFIRMED",
+          "notes": "Authoritative source confirms this document type; catalog classifications remain descriptive and create no requirement semantics."
+        }
+      ],
+      "compatibility": {
+        "title": "Goods Delivery Notice",
+        "description": null,
+        "applicability_scope": "international",
+        "allowed_formats": [
+          "pdf"
+        ],
+        "max_file_size_bytes": 10485760,
+        "max_active_file_count": 1,
+        "sort_order": 68
+      }
+    }
+  ]
+}
