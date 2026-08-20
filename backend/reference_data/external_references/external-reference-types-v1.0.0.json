@@ -1,0 +1,66 @@
+{
+  "schema_version": "1",
+  "catalog_name": "external-reference-types",
+  "catalog_version": "1.0.0",
+  "source_bundle_version": "ADR-039-2026-08-20",
+  "checksum": "sha256:462a61225b8ecce9050aa5c7e257dc4e789e47cfafb9f2f6f5175b9024b9fc43",
+  "definitions": [
+    {
+      "code": "BILL_OF_LADING_NUMBER",
+      "name_fa": "شماره بارنامه دریایی",
+      "name_en": "Bill of Lading Number",
+      "lifecycle": "ACTIVE",
+      "normalization_policy": "TRIM_UPPERCASE_V1",
+      "search_policy": "PREFIX",
+      "uniqueness_scope": "OWNER",
+      "masking_policy": "INTERNAL_FULL",
+      "owner_applicability": ["OPERATIONAL_SHIPMENT"],
+      "provenance": {
+        "status": "VERIFIED",
+        "source_authority": "UN/CEFACT",
+        "source_title": "UN/EDIFACT Data Element 1153 Reference code qualifier",
+        "source_reference": "UN/EDIFACT 1153 BM",
+        "source_version": null,
+        "source_date": null
+      }
+    },
+    {
+      "code": "AIR_WAYBILL_NUMBER",
+      "name_fa": "شماره راهنامه هوایی",
+      "name_en": "Air Waybill Number",
+      "lifecycle": "ACTIVE",
+      "normalization_policy": "TRIM_UPPERCASE_V1",
+      "search_policy": "EXACT",
+      "uniqueness_scope": "TENANT",
+      "masking_policy": "INTERNAL_FULL",
+      "owner_applicability": ["OPERATIONAL_SHIPMENT"],
+      "provenance": {
+        "status": "VERIFIED",
+        "source_authority": "UN/CEFACT",
+        "source_title": "UN/EDIFACT Data Element 1153 Reference code qualifier",
+        "source_reference": "UN/EDIFACT 1153 AWB",
+        "source_version": null,
+        "source_date": null
+      }
+    },
+    {
+      "code": "CMR_NUMBER",
+      "name_fa": "شماره سی‌ام‌آر",
+      "name_en": "CMR Number",
+      "lifecycle": "ACTIVE",
+      "normalization_policy": "TRIM_UPPERCASE_V1",
+      "search_policy": "PREFIX",
+      "uniqueness_scope": "NONE",
+      "masking_policy": "INTERNAL_FULL",
+      "owner_applicability": ["OPERATIONAL_SHIPMENT", "EXECUTION_UNIT"],
+      "provenance": {
+        "status": "VERIFIED",
+        "source_authority": "UNECE",
+        "source_title": "Convention on the Contract for the International Carriage of Goods by Road (CMR)",
+        "source_reference": "CMR Convention and UN/EDIFACT 1153 CMR",
+        "source_version": null,
+        "source_date": "1956-05-19"
+      }
+    }
+  ]
+}

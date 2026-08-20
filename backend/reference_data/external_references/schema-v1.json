@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forwarder.local/schemas/external-reference-types-v1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "catalog_name", "catalog_version", "source_bundle_version", "checksum", "definitions"],
+  "properties": {
+    "schema_version": {"const": "1"},
+    "catalog_name": {"const": "external-reference-types"},
+    "catalog_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "source_bundle_version": {"type": "string", "minLength": 1, "maxLength": 100},
+    "checksum": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "definitions": {"type": "array", "minItems": 3, "maxItems": 3, "items": {"$ref": "#/$defs/definition"}}
+  },
+  "$defs": {
+    "definition": {
+      "type": "object", "additionalProperties": false,
+      "required": ["code", "name_fa", "name_en", "lifecycle", "normalization_policy", "search_policy", "uniqueness_scope", "masking_policy", "owner_applicability", "provenance"],
+      "properties": {
+        "code": {"enum": ["BILL_OF_LADING_NUMBER", "AIR_WAYBILL_NUMBER", "CMR_NUMBER"]},
+        "name_fa": {"type": "string", "minLength": 1, "maxLength": 160},
+        "name_en": {"type": "string", "minLength": 1, "maxLength": 160},
+        "lifecycle": {"enum": ["DRAFT", "ACTIVE", "DEPRECATED"]},
+        "normalization_policy": {"const": "TRIM_UPPERCASE_V1"},
+        "search_policy": {"enum": ["EXACT", "PREFIX", "DISPLAY_ONLY", "NONE"]},
+        "uniqueness_scope": {"enum": ["NONE", "OWNER", "TENANT", "ISSUER"]},
+        "masking_policy": {"enum": ["INTERNAL_FULL"]},
+        "owner_applicability": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["OPERATIONAL_SHIPMENT", "EXECUTION_UNIT"]}},
+        "provenance": {"$ref": "#/$defs/provenance"}
+      }
+    },
+    "provenance": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "source_authority", "source_title", "source_reference", "source_version", "source_date"],
+      "properties": {
+        "status": {"enum": ["VERIFIED", "SOURCE_CONFIRMED", "SOURCE_CONFIRMATION_REQUIRED", "DOMAIN_CONFIRMATION_REQUIRED"]},
+        "source_authority": {"type": "string", "minLength": 1, "maxLength": 255},
+        "source_title": {"type": "string", "minLength": 1, "maxLength": 300},
+        "source_reference": {"type": "string", "minLength": 1, "maxLength": 500},
+        "source_version": {"type": ["string", "null"], "maxLength": 100},
+        "source_date": {"type": ["string", "null"], "format": "date"}
+      }
+    }
+  }
+}
