@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Link } from "react-router";
 import {
   associateDocumentArtifact, assessDocumentArtifact, getDocumentMaterializationPreview,
   getNextTransitionReadiness, listDocumentReadinessRequirements, listEligibleDocumentArtifacts,
@@ -23,10 +24,10 @@ const formatDate = (value: string) => new Intl.DateTimeFormat("fa-IR", {
 }).format(new Date(value));
 
 export default function DocumentReadinessSection({
-  shipmentPublicId, shipmentVersion, shipmentReference, projectReference, readOnly = false,
+  shipmentPublicId, shipmentVersion, shipmentReference, projectReference, sourceRequestId, readOnly = false,
 }: {
   shipmentPublicId: string; shipmentVersion: number; shipmentReference?: string;
-  projectReference?: string | null; readOnly?: boolean;
+  projectReference?: string | null; sourceRequestId?: number | null; readOnly?: boolean;
 }) {
   const [rows, setRows] = useState<DocumentReadinessRequirement[]>([]);
   const [eligible, setEligible] = useState<Record<string, EligibleDocumentArtifact[]>>({});
@@ -94,7 +95,7 @@ export default function DocumentReadinessSection({
     {rows.map((requirement) => <RequirementCard key={requirement.public_id} requirement={requirement}
       options={eligible[requirement.public_id] || []} draft={drafts[requirement.public_id] || {}}
       patch={(value) => patch(requirement.public_id, value)} busy={busy} readOnly={readOnly}
-      run={run} shipmentPublicId={shipmentPublicId} />)}
+      run={run} shipmentPublicId={shipmentPublicId} sourceRequestId={sourceRequestId} />)}
     {next && <div className="rounded border p-3"><h4 className="font-medium">وضعیت اسناد برای اقدام بعدی</h4>
       <p>{next.allowed ? "آماده" : "مسدود"} برای {next.target_action}</p>
       {next.blocking_requirements.map((b) => <p className="text-red-700" key={b.requirement_public_id + b.code}>{b.code}: {b.title}</p>)}
@@ -103,10 +104,10 @@ export default function DocumentReadinessSection({
   </section>;
 }
 
-function RequirementCard({ requirement, options, draft, patch, busy, readOnly, run, shipmentPublicId }: {
+function RequirementCard({ requirement, options, draft, patch, busy, readOnly, run, shipmentPublicId, sourceRequestId }: {
   requirement: DocumentReadinessRequirement; options: EligibleDocumentArtifact[]; draft: Draft;
   patch: (value: Partial<Draft>) => void; busy: boolean; readOnly: boolean;
-  run: (action: () => Promise<unknown>) => Promise<void>; shipmentPublicId: string;
+  run: (action: () => Promise<unknown>) => Promise<void>; shipmentPublicId: string; sourceRequestId?: number | null;
 }) {
   return <article className="space-y-3 rounded border p-4">
     <div className="flex flex-wrap items-start justify-between gap-2"><div><strong>{requirement.title}</strong>
@@ -124,7 +125,7 @@ function RequirementCard({ requirement, options, draft, patch, busy, readOnly, r
         <option value="">انتخاب فایل و نسخه</option>{options.map((a) => <option key={a.artifact_public_id} value={a.artifact_public_id}>{a.filename} · نسخه {a.version}</option>)}</select>
         <Button variant="outline" disabled={busy || !draft.artifact} onClick={() => void run(() => associateDocumentArtifact(shipmentPublicId, requirement, draft.artifact!))}>{requirement.artifact ? "جایگزینی سند مرتبط" : "ارتباط با این محموله"}</Button>
         {requirement.artifact && <Button variant="destructive" disabled={busy} onClick={() => void run(() => removeDocumentArtifactAssociation(shipmentPublicId, requirement))}>حذف ارتباط</Button>}</div>
-      {!options.length && <p className="text-sm text-slate-600">فایل واجد شرایطی از همین پرونده و همین نوع سند وجود ندارد. فایل را در بخش اسناد پرونده درخواست بارگذاری کنید.</p>}
+      {!options.length && <p className="text-sm text-slate-600">فایل واجد شرایطی از همین پرونده و همین نوع سند وجود ندارد. {sourceRequestId ? <Link className="text-blue-700 underline" to={`/expert/requests/${sourceRequestId}`}>رفتن به اسناد پرونده درخواست</Link> : "فایل را در بخش اسناد پرونده درخواست بارگذاری کنید."}</p>}
     </div>}
     {!readOnly && <div className="space-y-2"><Input aria-label={`دلیل برای ${requirement.title}`} placeholder="دلیل (برای رد یا تعیین قابلیت اعمال الزامی است)" value={draft.reason || ""} onChange={(event) => patch({ reason: event.target.value })} />
       <div className="flex flex-wrap gap-2">{requirement.requirement_level === "CONDITIONAL" && requirement.applicability_state === "UNRESOLVED" && <>

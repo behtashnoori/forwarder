@@ -29,6 +29,7 @@ import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
 import DocumentReadinessSection from "@/components/DocumentReadinessSection";
 import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
+import ShipmentExternalReferences from "@/components/ShipmentExternalReferences";
 import OperationsNav from "@/components/OperationsNav";
 
 const key = () => crypto.randomUUID();
@@ -127,7 +128,7 @@ export default function OperationalShipmentDetail() {
           </header>
 
           <OperationsNav />
-          <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? t("operations.source.direct") : t("operations.source.quote")}</p><p>{t("operations.customerLabel")}: {typeof data.customer === "string" ? data.customer : data.customer?.display_name || t("operations.governedIncomplete")}</p><p>{t("operations.projectLabel")}: {data.project_public_id || "—"}</p><p>{t("operations.requestLabel")}: {data.source.shipment_request_id ?? t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ?? t("operations.notApplicable")}</p></CardContent></Card>
+          <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? t("operations.source.direct") : t("operations.source.quote")}</p><p>{t("operations.customerLabel")}: {typeof data.customer === "string" ? data.customer : data.customer?.display_name || t("operations.governedIncomplete")}</p><p>{t("operations.projectLabel")}: {data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id} · بخش‌های اجرایی حمل</Link> : "—"}</p><p>{t("operations.requestLabel")}: {data.source.shipment_request_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.shipment_request_id}`}>{data.source.shipment_request_id}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ?? t("operations.notApplicable")}</p></CardContent></Card>
 
           <Card>
             <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle></CardHeader>
@@ -151,7 +152,8 @@ export default function OperationalShipmentDetail() {
 
           <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>{t("operations.documentsMdpm")}</CardTitle></CardHeader><CardContent>{t("operations.requestDocumentsNa")}</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} />}
+          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>{t("operations.documentsMdpm")}</CardTitle></CardHeader><CardContent>{t("operations.requestDocumentsNa")}</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.shipment_request_id} />}
+          <ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.shipment_request_id}/>
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
 
           <Card>

@@ -1402,6 +1402,7 @@ export const updateDocumentCatalogDefinition = (publicId: string, payload: Docum
 export const transitionDocumentCatalogDefinition = (publicId: string, payload: {expected_revision:number; target_status:DocumentCatalogLifecycle; approval_reference?:string}, idempotencyKey: string) => request<DocumentCatalogDefinition>(`/api/platform/document-catalog/${publicId}/lifecycle`, {method:"POST", headers:{"Idempotency-Key":idempotencyKey}, body:JSON.stringify(payload)});
 export interface CaseDocumentFile {
   id: number;
+  public_id: string;
   requirement_id?: number | null;
   is_miscellaneous: boolean;
   custom_title?: string | null;
@@ -1646,6 +1647,18 @@ export function getOperationalShipment(
     `/api/operational-shipments/${encodeURIComponent(publicId)}`,
   );
 }
+
+export type ExternalReferenceTypeCode = "BILL_OF_LADING_NUMBER" | "AIR_WAYBILL_NUMBER" | "CMR_NUMBER";
+export interface ExternalOperationalReference {
+  public_id: string; type: ExternalReferenceTypeCode; display_value: string;
+  lifecycle_status: "ACTIVE" | "SUPERSEDED" | "CANCELLED";
+  issuer_key?: string | null; source_system?: string | null; issued_at?: string | null;
+  evidence?: { document_public_id: string; version: number } | null;
+  revision: number; created_at: string;
+}
+export const listShipmentExternalReferences = (shipmentId: string) => request<{ data: ExternalOperationalReference[] }>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references`);
+export const createShipmentExternalReference = (shipmentId: string, payload: {type:ExternalReferenceTypeCode;value:string;issuer_key?:string;source_system?:string;evidence_document_public_id?:string;evidence_version?:number}, key:string) => request<{data:ExternalOperationalReference}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references`, {method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify(payload)});
+export const transitionShipmentExternalReference = (shipmentId:string, reference:ExternalOperationalReference, action:"supersede"|"cancel", payload:{reason:string;value?:string}, key:string) => request<{data:ExternalOperationalReference}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references/${encodeURIComponent(reference.public_id)}/${action}`, {method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({...payload,expected_revision:reference.revision})});
 export function createOperationalShipment(
   payload: {
     accepted_quote_id: number;
