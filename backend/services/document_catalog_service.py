@@ -492,6 +492,45 @@ TRANSITIONS = {
 }
 
 
+def validate_activation(row: DocumentDefinition) -> None:
+    """Apply the ADR-036 activation gate without committing a transition."""
+    if row.source_review_status not in {"VERIFIED", "SOURCE_CONFIRMED"}:
+        raise CatalogError("Confirmed source review is required", 409)
+    sources = DocumentDefinitionProvenance.query.filter_by(
+        document_definition_id=row.id
+    ).all()
+    confirmed_sources = [
+        item
+        for item in sources
+        if item.review_status in {"VERIFIED", "SOURCE_CONFIRMED"}
+    ]
+    if not confirmed_sources:
+        raise CatalogError("Confirmed provenance is required", 409)
+    if not row.name_fa or not row.name_en or not row.family_code:
+        raise CatalogError("Bilingual names and family are required", 409)
+    jurisdictions = DocumentDefinitionJurisdiction.query.filter_by(
+        document_definition_id=row.id
+    ).all()
+    if not jurisdictions:
+        raise CatalogError("Jurisdiction classification is required", 409)
+    covered = {item.jurisdiction_key for item in confirmed_sources}
+    if not all(
+        item.applicability_key in covered or "GLOBAL" in covered
+        for item in jurisdictions
+    ):
+        raise CatalogError("Confirmed provenance is required for every jurisdiction", 409)
+    if (
+        row.organization_overridable is False
+        and OrganizationDocumentRequirement.query.filter_by(
+            document_definition_id=row.id
+        ).first()
+    ):
+        raise CatalogError(
+            "Existing organization policy conflicts must be resolved before activation",
+            409,
+        )
+
+
 def transition(
     row: DocumentDefinition,
     payload: dict[str, Any],
@@ -510,7 +549,7 @@ def transition(
         or target not in TRANSITIONS[row.catalog_lifecycle_status]
     ):
         raise CatalogError("Illegal catalog lifecycle transition", 409)
-    if target in {"SOURCE_CONFIRMED", "ACTIVE"}:
+    if target == "SOURCE_CONFIRMED":
         if row.source_review_status not in {"VERIFIED", "SOURCE_CONFIRMED"}:
             raise CatalogError("Confirmed source review is required", 409)
         sources = DocumentDefinitionProvenance.query.filter_by(
@@ -524,31 +563,7 @@ def transition(
         if not confirmed_sources:
             raise CatalogError("Confirmed provenance is required", 409)
     if target == "ACTIVE":
-        if not row.name_fa or not row.name_en or not row.family_code:
-            raise CatalogError("Bilingual names and family are required", 409)
-        jurisdictions = DocumentDefinitionJurisdiction.query.filter_by(
-            document_definition_id=row.id
-        ).all()
-        if not jurisdictions:
-            raise CatalogError("Jurisdiction classification is required", 409)
-        covered = {item.jurisdiction_key for item in confirmed_sources}
-        if not all(
-            item.applicability_key in covered or "GLOBAL" in covered
-            for item in jurisdictions
-        ):
-            raise CatalogError(
-                "Confirmed provenance is required for every jurisdiction", 409
-            )
-        if (
-            row.organization_overridable is False
-            and OrganizationDocumentRequirement.query.filter_by(
-                document_definition_id=row.id
-            ).first()
-        ):
-            raise CatalogError(
-                "Existing organization policy conflicts must be resolved before activation",
-                409,
-            )
+        validate_activation(row)
         row.is_active = True
     elif target == "DEPRECATED":
         row.is_active = False

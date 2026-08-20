@@ -1651,7 +1651,7 @@ class ReferenceDataSeedRun(db.Model):
             name="ck_reference_data_seed_run_status",
         ),
         db.CheckConstraint(
-            "planned_count >= 0 AND created_count >= 0 AND unchanged_count >= 0 AND conflict_count >= 0",
+            "planned_count >= 0 AND created_count >= 0 AND updated_count >= 0 AND unchanged_count >= 0 AND conflict_count >= 0",
             name="ck_reference_data_seed_run_counts_nonnegative",
         ),
         db.Index(
@@ -1669,16 +1669,23 @@ class ReferenceDataSeedRun(db.Model):
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
     catalog_version = db.Column(db.String(64), nullable=False)
+    catalog_family = db.Column(db.String(40), nullable=False, default="REFERENCE_DATA")
+    catalog_name = db.Column(db.String(100), nullable=True)
+    schema_version = db.Column(db.String(32), nullable=True)
+    source_bundle_version = db.Column(db.String(100), nullable=True)
     checksum = db.Column(db.String(71), nullable=False)
     environment = db.Column(db.String(32), nullable=False)
     mode = db.Column(db.String(16), nullable=False, default="apply")
     planned_count = db.Column(db.Integer, nullable=False, default=0)
     created_count = db.Column(db.Integer, nullable=False, default=0)
+    updated_count = db.Column(db.Integer, nullable=False, default=0)
     unchanged_count = db.Column(db.Integer, nullable=False, default=0)
     conflict_count = db.Column(db.Integer, nullable=False, default=0)
     status = db.Column(db.String(16), nullable=False, default="started")
     executed_by = db.Column(db.String(160), nullable=False)
     approval_reference = db.Column(db.String(200), nullable=False)
+    idempotency_key = db.Column(db.String(128), nullable=True, unique=True)
+    request_hash = db.Column(db.String(64), nullable=True)
     started_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     completed_at = db.Column(db.DateTime, nullable=True)
     error_summary = db.Column(db.String(500), nullable=True)

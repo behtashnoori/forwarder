@@ -119,7 +119,7 @@ def test_project_foundation_migration_is_the_single_head():
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260831_document_catalog_metadata"]
+    assert script.get_heads() == ["20260901_document_catalog_runs"]
     revision = script.get_revision("20260805_project_foundation")
     assert revision.down_revision == "20260804_case_documents"
 
