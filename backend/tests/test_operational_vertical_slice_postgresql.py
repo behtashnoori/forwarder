@@ -92,7 +92,8 @@ def test_phase1a_postgresql_constraints_concurrency_and_triggers(monkeypatch):
         )
         origin = Province(name_fa="PG Origin", code="P1APGO")
         dest = Province(name_fa="PG Destination", code="P1APGD")
-        customer = Customer(first_name="PG", last_name="Customer", status="active")
+        customer = Customer(first_name="PG", last_name="Customer", status="active",
+                            ownership_scope="TENANT", operational_organization_id=org.id)
         db.session.add_all([origin, dest, customer])
         db.session.flush()
         request = ShipmentRequest(
@@ -101,6 +102,8 @@ def test_phase1a_postgresql_constraints_concurrency_and_triggers(monkeypatch):
             status_request_status="new",
             assigned_to=reporter.id,
             customer_id=customer.id,
+            ownership_scope="TENANT",
+            operational_organization_id=org.id,
         )
         db.session.add(request)
         db.session.flush()

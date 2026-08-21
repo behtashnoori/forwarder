@@ -51,8 +51,10 @@ def pg_app():
         db.session.add_all([OperationalMembership(organization_id=org.id, user_id=user.id, permissions=PERMISSIONS),
             OperationalMembership(organization_id=other.id, user_id=outsider.id, permissions=PERMISSIONS)])
         service = ServiceType(immutable_code=f"FE2-{token}", fa_name="آزمون", en_name="FE2 race", is_active=True)
-        req = ShipmentRequest(shipping_type="domestic", contact_phone="09120000000", status="quoted")
-        other_req = ShipmentRequest(shipping_type="domestic", contact_phone="09121111111", status="quoted")
+        req = ShipmentRequest(shipping_type="domestic", contact_phone="09120000000", status="quoted",
+                              ownership_scope="TENANT", operational_organization_id=org.id)
+        other_req = ShipmentRequest(shipping_type="domestic", contact_phone="09121111111", status="quoted",
+                                    ownership_scope="TENANT", operational_organization_id=other.id)
         db.session.add_all([service, req, other_req]); db.session.flush()
         quote = ExpertQuote(shipment_request_id=req.id, amount=100, currency="USD", created_by_expert_id=user.id,
             customer_response="accepted", responded_at=datetime.now(timezone.utc))

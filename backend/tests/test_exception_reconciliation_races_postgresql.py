@@ -91,7 +91,8 @@ def _seed(app, label):
         destination = Province(
             name_fa=f"Race destination {suffix}", code=f"S{os.urandom(3).hex()}"
         )
-        customer = Customer(first_name="Race", last_name=suffix, status="active")
+        customer = Customer(first_name="Race", last_name=suffix, status="active",
+                            ownership_scope="TENANT", operational_organization_id=org.id)
         db.session.add_all([origin, destination, customer])
         db.session.flush()
         request = ShipmentRequest(
@@ -100,6 +101,8 @@ def _seed(app, label):
             status_request_status="new",
             assigned_to=actor.id,
             customer_id=customer.id,
+            ownership_scope="TENANT",
+            operational_organization_id=org.id,
         )
         db.session.add(request)
         db.session.flush()

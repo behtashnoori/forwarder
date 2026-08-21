@@ -22,6 +22,7 @@ from backend.auth import auth_manager
 from backend.extensions import db
 from backend.models import (DocumentAuditEvent, CaseDocumentFile,
                             DocumentDefinition, ExpertUser, ShipmentRequest)
+from backend.operational_models import OperationalMembership, OperationalOrganization
 
 
 PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF"
@@ -56,13 +57,21 @@ def test_integrated_head_dms_identity_version_integrity_audit_and_tenant_boundar
     with app.app_context():
         assert db.session.execute(text("select version_num from alembic_version")).scalar_one() == _head()
         owner, outsider = _user("dms-owner"), _user("dms-outsider")
+        owner_org = OperationalOrganization(name=f"DMS owner {uuid4().hex}")
+        outsider_org = OperationalOrganization(name=f"DMS outsider {uuid4().hex}")
+        db.session.add_all([owner, outsider, owner_org, outsider_org]); db.session.flush()
+        db.session.add_all([
+            OperationalMembership(organization_id=owner_org.id, user_id=owner.id, permissions=[]),
+            OperationalMembership(organization_id=outsider_org.id, user_id=outsider.id, permissions=[]),
+        ])
         case = ShipmentRequest(contact_phone=uuid4().hex[:20], shipping_type="domestic",
-                               status="new", status_request_status="new")
+                               status="new", status_request_status="new", assigned_to=owner.id,
+                               ownership_scope="TENANT",
+                               operational_organization_id=owner_org.id)
         definition = DocumentDefinition(code=f"integrated_{uuid4().hex}", title="Synthetic evidence",
             is_required=True, allowed_formats='["pdf"]', max_file_size_bytes=1024 * 1024,
             max_active_file_count=1, sort_order=1, applicability_scope="all")
-        db.session.add_all([owner, outsider, case, definition]); db.session.flush()
-        case.assigned_to = owner.id; db.session.commit()
+        db.session.add_all([case, definition]); db.session.commit()
         owner_token = auth_manager.generate_tokens(owner.id)["access_token"]
         outsider_token = auth_manager.generate_tokens(outsider.id)["access_token"]
         case_id, code = case.id, definition.code

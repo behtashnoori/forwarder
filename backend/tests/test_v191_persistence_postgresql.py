@@ -148,7 +148,7 @@ def test_v191_upgrade_constraints_backfill_and_guarded_downgrade_postgresql():
     with engine.begin() as connection:
         _seed_v190(connection)
 
-    command.upgrade(config, "head")
+    command.upgrade(config, HEAD)
     with engine.connect() as connection:
         assert (
             connection.execute(

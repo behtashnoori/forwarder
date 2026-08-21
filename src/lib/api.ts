@@ -2981,6 +2981,7 @@ export interface CargoShipmentUsage {
     uom: string;
     status: string;
     current_location: string | null;
+    location_state: "UNAVAILABLE" | "SINGLE" | "COMMON" | "MULTIPLE";
     location_source: "operational_event" | "execution_unit_checkpoint" | "unavailable";
     latest_event_at: string | null;
     shipment_cargo_line_public_id: string;

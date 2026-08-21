@@ -121,7 +121,9 @@ def seed_phase1b_uat(app, password: str) -> dict:
             request_row = _one_or_create(
                 ShipmentRequest,
                 defaults={"customer_first_name": "Synthetic", "customer_last_name": f"UAT {org_key}",
-                          "status": "waiting_for_customer", "status_request_status": "new", "assigned_to": creator.id},
+                          "status": "waiting_for_customer", "status_request_status": "new", "assigned_to": creator.id,
+                          "ownership_scope": "TENANT",
+                          "operational_organization_id": organization.id},
                 contact_phone=phone,
             )
             quote = ExpertQuote.query.filter_by(shipment_request_id=request_row.id, created_by_expert_id=creator.id).one_or_none()

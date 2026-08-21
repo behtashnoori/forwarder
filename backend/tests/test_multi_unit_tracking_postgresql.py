@@ -81,7 +81,7 @@ def test_disposable_postgresql_tracking_contract():
             assert payload["summary"]["total_units"] == 19
             assert len(payload["units"]) == 19
             assert payload["units"][10]["latest_status"] == "delivered"
-            assert payload["last_updated_at"] == (now - timedelta(minutes=30)).isoformat()
+            assert payload["last_updated_at"] == (now - timedelta(minutes=30)).isoformat() + "Z"
             rendered = repr(payload)
             assert "private synthetic note" not in rendered
             assert str(hidden.id) not in rendered

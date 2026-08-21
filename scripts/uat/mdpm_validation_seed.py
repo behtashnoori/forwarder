@@ -29,7 +29,9 @@ def main() -> int:
         shipment = OperationalShipment.query.filter_by(organization_id=org.id).order_by(OperationalShipment.id).first()
         customer = Customer.query.filter_by(first_name="MDPM", last_name="Validation").one_or_none()
         if customer is None:
-            customer = Customer(first_name="MDPM", last_name="Validation")
+            customer = Customer(first_name="MDPM", last_name="Validation",
+                                ownership_scope="TENANT",
+                                operational_organization_id=org.id)
             db.session.add(customer); db.session.flush()
         project = Project.query.filter_by(tracking_code="mdpm-validation-20260807-2215").one_or_none()
         if project is None:
@@ -72,6 +74,7 @@ def main() -> int:
             ).one_or_none()
             if case_req is None:
                 case_req = CaseDocumentRequirement(shipment_request_id=shipment.shipment_request_id,
+                    operational_organization_id=org.id,
                     source_definition_id=definition.id, source_definition_code=definition.code, source_definition_revision=1,
                     title=definition.title, is_required=True, allowed_formats='["pdf"]', max_file_size_bytes=1000000,
                     max_active_file_count=5, sort_order=0)
@@ -83,6 +86,7 @@ def main() -> int:
                 ).one_or_none()
                 if artifact is None:
                     artifact = CaseDocumentFile(shipment_request_id=shipment.shipment_request_id, case_requirement_id=case_req.id,
+                        operational_organization_id=org.id,
                         is_miscellaneous=False, original_filename=filename,
                         safe_download_filename=filename, storage_key=f"mdpm-validation/{definition.code}/{version}",
                         canonical_extension="pdf", detected_mime_type="application/pdf", file_size_bytes=100,

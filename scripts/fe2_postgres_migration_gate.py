@@ -22,7 +22,7 @@ admin=create_engine(base.set(database="postgres"),isolation_level="AUTOCOMMIT")
 with admin.connect() as connection:
     connection.execute(text(f'CREATE DATABASE "{name}"'))
 try:
-    url=gate.render_as_string(hide_password=False);cfg=alembic_config(url);prepare_version_table_for_upgrade(url,cfg);command.upgrade(cfg,"head")
+    url=gate.render_as_string(hide_password=False);cfg=alembic_config(url);prepare_version_table_for_upgrade(url,cfg);command.upgrade(cfg,"20260819_v191_acceptance_corrections")
     engine=create_engine(gate)
     with engine.connect() as connection:
         revision=connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
