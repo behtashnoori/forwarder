@@ -1,7 +1,7 @@
 # Forwarder End-to-End Operational Gap Register
 
-- Review baseline: `aefb7271d8d38affe90fbf1113a4558020608897`
-- Review date: 2026-08-20
+- Review baseline: `d4ae586d9875bad906f812ef33ffaacae8365bd0`
+- Review date: 2026-08-21
 - Scope: authenticated expert flow from transport request through shipment execution, cargo, tracking, documents, and certified external references
 - Production access / production database / deployment: **none**
 
@@ -30,6 +30,8 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 
 ### E2E-001 — Request lineage ends before existing operational shipments
 
+- **STATUS:** RESOLVED — request detail lists and links existing tenant-fenced shipments through the opaque request filter.
+
 - **AREA:** Request → Project → Shipment
 - **USER SCENARIO:** From the gearbox request, find all operational shipments already created from it.
 - **CURRENT BEHAVIOR:** Request detail can create a shipment from an accepted quote but does not list or link existing shipments or their project/status.
@@ -45,6 +47,8 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 - **TEST STRATEGY:** Frontend behavior test verifies filtered call and opaque shipment links.
 
 ### E2E-002 — Shipment external references have no expert UI
+
+- **STATUS:** RESOLVED — shipment detail supports the certified ADR-039 create/view/history/supersede/cancel/evidence workflow.
 
 - **AREA:** External Operational References
 - **USER SCENARIO:** View, add, supersede, cancel, and understand B/L, AWB, or CMR history on a shipment.
@@ -62,6 +66,8 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 
 ### E2E-003 — Cargo reverse traceability is not navigable
 
+- **STATUS:** RESOLVED — cargo usage results link to the opaque operational-shipment route.
+
 - **AREA:** Cargo
 - **USER SCENARIO:** From `گیربکس` catalog usage, open each matching shipment.
 - **CURRENT BEHAVIOR:** Shipment count, quantity/UOM, status, location and latest event are shown, but usage cards are not links.
@@ -78,6 +84,8 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 
 ### E2E-004 — Project execution units are disconnected from shipment detail
 
+- **STATUS:** RESOLVED — project-backed shipment detail links directly to the project ExecutionUnit workspace.
+
 - **AREA:** Execution / Tracking
 - **USER SCENARIO:** From an operational shipment, inspect its project execution units/events.
 - **CURRENT BEHAVIOR:** Shipment detail prints project opaque ID; project units live on a separate route with no link.
@@ -93,6 +101,8 @@ An automotive customer requests transport of `Gearbox / گیربکس` from Tehra
 - **TEST STRATEGY:** Shipment-detail behavior test.
 
 ### E2E-005 — Empty eligible-document state is a dead end
+
+- **STATUS:** RESOLVED — the empty state links to the authorized source-request document context while preserving request file ownership.
 
 - **AREA:** Shipment Documents
 - **USER SCENARIO:** A shipment requirement is missing and no eligible request file exists.
@@ -185,3 +195,15 @@ No E2E item was reopened. No P0/P1 was discovered. Deep route/economics terminol
 - Cotage, Warehouse Receipt, Registration Order, and Barfarabaran.
 - Numeric compatibility contraction after consumer/tenant evidence.
 - Full deep-screen localization, advanced analytics, and optional UI enhancements.
+
+## Final release-candidate UAT update (2026-08-21)
+
+Final operational and adversarial UAT at `d4ae586d9875bad906f812ef33ffaacae8365bd0` verified E2E-001 through E2E-006 closed and ADR-040 phases 1–2 operating within their Accepted boundary. No new P0, P1, or P2 finding was opened. Six existing polish/maintenance items remain P3 post-publish work; intentionally deferred capabilities were not reclassified as defects.
+
+Regression evidence: 75 focused backend tests, 799 full backend tests, 45 focused frontend tests, and 143 full frontend tests passed. TypeScript, ESLint (0 errors), Vite production build, Python compile, Alembic sole-head, architecture governance, diff, and changed-scope secret gates passed. PostgreSQL-only cases that require an explicitly configured external test database remained environment-gated; Production and Production database access were not used.
+
+The complete evidence and controlled backlog are recorded in `FORWARDER-FINAL-UAT-REPORT.md`.
+
+**FEATURE DEVELOPMENT FROZEN**
+
+**FORWARDER RELEASE CANDIDATE READY WITH NON-BLOCKING BACKLOG**
