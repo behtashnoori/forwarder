@@ -1,6 +1,6 @@
 # Forwarder Rollback Runbook
 
-Status: restore-based recovery certified against candidate `61b68c0a0a8f2310ee19b2934f8c985dfea4a7b2` on disposable PostgreSQL 18.
+Status: restore-based recovery certified against repair commit `61b68c0a0a8f2310ee19b2934f8c985dfea4a7b2` on disposable PostgreSQL 18; the procedure is incorporated unchanged into final certified Release Candidate `85fbd78b46a544367ab40144fdf8d51d422f8dcc`.
 
 ## Rollback triggers
 

@@ -1,12 +1,12 @@
 # Forwarder Deployment Runbook
 
-Status: certified in disposable PostgreSQL 18 against candidate `61b68c0a0a8f2310ee19b2934f8c985dfea4a7b2`.
+Status: certified in disposable PostgreSQL 18 against repair commit `61b68c0a0a8f2310ee19b2934f8c985dfea4a7b2`; incorporated without product/runtime changes into final certified Release Candidate `85fbd78b46a544367ab40144fdf8d51d422f8dcc`.
 
 This runbook requires separate deployment authorization. It does not authorize production access, deployment, tagging, or release.
 
 ## 1. Prerequisites
 
-- Authorized source commit: `61b68c0a0a8f2310ee19b2934f8c985dfea4a7b2`.
+- Authorized production-deployable source commit: `85fbd78b46a544367ab40144fdf8d51d422f8dcc`.
 - Python 3.13-compatible environment with `requirements.txt` installed.
 - Release tooling from `requirements-release.txt`.
 - Node.js 24-compatible environment and npm 11-compatible package manager.

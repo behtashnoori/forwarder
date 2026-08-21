@@ -1,6 +1,8 @@
 # Forwarder Publish Go/No-Go
 
-Candidate: `61b68c0a0a8f2310ee19b2934f8c985dfea4a7b2`
+Final certified Release Candidate: `85fbd78b46a544367ab40144fdf8d51d422f8dcc`
+
+Release lineage: repair commit `61b68c0a0a8f2310ee19b2934f8c985dfea4a7b2` is the direct parent; the final candidate adds publish-readiness certification only and is the production-deployable baseline.
 
 Classification: `FORWARDER PUBLISH READY WITH DEPLOYMENT-TIME CHECKS — DEPLOYMENT AUTHORIZATION REQUIRED`
 
