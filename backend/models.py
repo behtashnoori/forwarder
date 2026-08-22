@@ -2056,6 +2056,15 @@ from backend.economics_models import (  # noqa: E402
     EconomicAudit, EconomicEvidenceAssociation, EconomicFxRate, EconomicObservationFx,
     EconomicLine, EconomicObservation,
 )
+
+from backend.global_logistics_point_models import (  # noqa: E402,F401
+    GlobalLogisticsPoint,
+    GlobalLogisticsPointAlias,
+    GlobalLogisticsPointCorridorTag,
+    GlobalLogisticsPointExternalCode,
+    GlobalLogisticsPointMode,
+    GlobalLogisticsPointSource,
+)
 from backend.external_reference_models import (  # noqa: E402,F401
     ExecutionUnitExternalReference,
     ExternalReferenceType,
@@ -2152,4 +2161,10 @@ __all__ = [
     "EconomicFxRate",
     "EconomicObservationFx",
     "EconomicAudit",
+    "GlobalLogisticsPoint",
+    "GlobalLogisticsPointAlias",
+    "GlobalLogisticsPointCorridorTag",
+    "GlobalLogisticsPointExternalCode",
+    "GlobalLogisticsPointMode",
+    "GlobalLogisticsPointSource",
 ]

@@ -81,7 +81,7 @@ See `LEGACY-CANONICAL-MAP.md`.
 | Cargo master | Organization-owned `CargoCatalogItem` |
 | Shipment cargo truth | `ShipmentCargoItem` immutable descriptive snapshot plus mutable controlled quantity/version |
 | CRM | Organization-scoped internal `Customer`, contacts, opportunities, activities and link audit |
-| Logistics place master | Target: platform-owned `GlobalLogisticsPoint`, tenant-owned `OrganizationGlobalLogisticsPoint` adoption, organization-owned `LogisticsPoint`; platform-owned `LogisticsPointType` (ADR-041; global/adoption implementation pending) |
+| Logistics place master | Platform-owned `GlobalLogisticsPoint` Phase 1 empty catalog/read API; target tenant-owned `OrganizationGlobalLogisticsPoint` adoption; organization-owned `LogisticsPoint`; platform-owned `LogisticsPointType` (ADR-041; adoption/population pending) |
 | Route location identity/history | `CanonicalLocation` bridge plus immutable location snapshots |
 | Operational tracking/history | `OperationalEvent` and specialized event/audit models under their Accepted ADRs |
 
@@ -136,7 +136,7 @@ CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment
 
 `TrackingLocationReference` is a legacy platform tracking selector. It is not an alias of `LogisticsPoint`; new runtime dependence on it requires explicit authorization. Convergence needs an Accepted ADR covering tenant ownership, mapping, historical snapshots, free text, API compatibility, and rollback.
 
-ADR-041 accepts a new platform-owned `GlobalLogisticsPoint` target and tenant-owned adoption boundary without changing current runtime ownership. Organizations approve global points through `OrganizationGlobalLogisticsPoint`; current `LogisticsPoint` remains non-null tenant-owned and may optionally represent an adoption or remain an organization-only facility. Expert, project and tracking selection remains organization-approved. The 64 legacy tracking rows are not a seed and require reviewed many-capable mapping; all global/adoption implementation and population remain pending separate goals.
+ADR-041 accepts a platform-owned `GlobalLogisticsPoint` and tenant-owned adoption boundary without changing current tenant master ownership. Phase 1 implements only the empty platform schema, normalized support structures, and Platform-Admin-only list/detail API. Organizations will approve global points through future `OrganizationGlobalLogisticsPoint`; current `LogisticsPoint` remains non-null tenant-owned and may later represent an adoption or remain an organization-only facility. Expert, project and tracking selectors are unchanged. The 64 legacy tracking rows are not a seed and require reviewed many-capable mapping; adoption, population and reconciliation remain pending separate goals.
 
 ## 11. CRM architecture
 

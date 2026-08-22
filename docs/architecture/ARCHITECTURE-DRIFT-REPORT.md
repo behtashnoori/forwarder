@@ -23,7 +23,7 @@ This report records differences between the target architecture and the current 
 | Commercial intake | `ShipmentRequest` contains historical route, cargo, assignment and tracking fields | Explicit lineage into `OperationalShipment` | Preserve compatibility; add no new execution ownership to the request without an Accepted ADR. |
 | Tracking | `ShipmentTracking`, `ShipmentTransportUnit`, `ShipmentTransportUnitUpdate` | `OperationalShipment`, `ExecutionUnit`, `OperationalEvent` | Read/bridge only for new work unless an ADR explicitly authorizes a legacy change. |
 | Locations | Current expert tracking selection uses tenant `LogisticsPoint`; `TrackingLocationReference` remains a legacy compatibility selector/history | `LogisticsPoint` is organization master data; `CanonicalLocation` is the route bridge/snapshot identity; ADR-041 adds a pending global/adoption target | Preserve snapshots and legacy reads; reviewed legacy/global mapping remains pending and must not be inferred by name. |
-| Global logistics network | No platform-global governed point/adoption aggregate is implemented | ADR-041 accepts `GlobalLogisticsPoint` plus tenant adoption and optional organization representation | Implementation must remain additive; do not seed legacy rows or weaken `LogisticsPoint` tenant ownership. |
+| Global logistics network | Phase 1 implements an empty platform `GlobalLogisticsPoint` schema and Platform-Admin-only read API; no adoption or catalog population | ADR-041 accepts tenant adoption and optional organization representation as later phases | Do not seed legacy rows, expose unadopted points to Experts, or weaken `LogisticsPoint` tenant ownership. |
 | Time | Many legacy `DateTime()` columns store naive values | UTC Instant plus `timestamptz` and RFC 3339 offset | Preserve until each source contract is proven; never guess historical timezone. |
 | Documents | `CaseDocumentFile` is request-owned | `OperationalDocumentRequirement` and `ArtifactAssociation` bind exact files to a shipment | Keep binary ownership and contextual use separate. |
 
@@ -42,7 +42,7 @@ This report records differences between the target architecture and the current 
 - Cargo is shipment-scoped but has no accepted `ExecutionUnit` allocation implementation. Inferring unit quantities would invent operational truth.
 - No direct `ExecutionUnit` document ownership exists. Adding a nullable unit foreign key to files would contradict the proposed attachment architecture and MDPM boundaries.
 - The expert tracking selector now consumes tenant `LogisticsPoint` under ADR-035 while compatibility clients and historical updates may still use `TrackingLocationReference`; the catalogs remain distinct.
-- ADR-041 resolves the target global-network decision but not its implementation. Until separately implemented, Platform global point -> Organization adoption -> Expert consumption remains unavailable.
+- ADR-041 Phase 1 provides only the empty platform catalog/read boundary. Platform global point -> Organization adoption -> Expert consumption remains unavailable until later controlled phases.
 
 ## Items that must not be auto-fixed here
 

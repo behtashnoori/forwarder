@@ -480,3 +480,4 @@ The next controlled implementation may add only the empty `GlobalLogisticsPoint`
 ## Status history
 
 - 2026-08-22: ACCEPTED — platform global catalog, tenant adoption, optional organization representation and compatibility-preserving rollout approved; implementation and Production changes remain separately controlled.
+- 2026-08-22: PHASE 1 IMPLEMENTED LOCALLY — empty `GlobalLogisticsPoint` schema, normalized alias/mode/external-code/corridor/provenance support, and Platform-Admin-only read API implemented; no Production migration, seed, adoption, legacy mapping, selector change, deployment or push authorized.
