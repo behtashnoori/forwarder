@@ -106,6 +106,7 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | R18-A1 | DocumentDefinition Identity Amendment | Accepted / Implemented — Not Deployed | Project Configuration/Documents | 2026-08-03 | 1.8.0 | Opaque DocumentDefinition identity, technical backfill, migration amendment | [Identity Amendment](release-1.8.0-document-definition-identity-amendment.md) | — | Legacy numeric APIs temporarily tolerated; no new numeric disclosure |
 
 | ADR-028 | Administrator-Managed Reference Data | Accepted | Platform/Reference Data | 2026-08-04 | Permanent policy | Deployment-independent administrator ownership, empty catalogs, optional import/export/Seed | [ADR-028](adr/ADR-028-administrator-managed-reference-data.md) | Supersedes deployment-dependent interpretations of PDR-014/ADR-021 | No release depends on population |
+| ADR-041 | Platform Global Logistics Point Catalog and Organization Adoption | Accepted | Logistics/Location Governance | 2026-08-22 | Target architecture | Platform global point, tenant adoption, optional organization representation | [ADR-041](adr/ADR-041-platform-global-logistics-point-catalog-and-organization-adoption.md) | Complements ADR-005/025/026/028/035/040 | Implementation and catalog population not authorized |
 
 ## Slice contracts
 

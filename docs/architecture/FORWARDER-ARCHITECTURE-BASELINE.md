@@ -81,7 +81,7 @@ See `LEGACY-CANONICAL-MAP.md`.
 | Cargo master | Organization-owned `CargoCatalogItem` |
 | Shipment cargo truth | `ShipmentCargoItem` immutable descriptive snapshot plus mutable controlled quantity/version |
 | CRM | Organization-scoped internal `Customer`, contacts, opportunities, activities and link audit |
-| Logistics place master | Organization-owned `LogisticsPoint`; platform-owned `LogisticsPointType` |
+| Logistics place master | Target: platform-owned `GlobalLogisticsPoint`, tenant-owned `OrganizationGlobalLogisticsPoint` adoption, organization-owned `LogisticsPoint`; platform-owned `LogisticsPointType` (ADR-041; global/adoption implementation pending) |
 | Route location identity/history | `CanonicalLocation` bridge plus immutable location snapshots |
 | Operational tracking/history | `OperationalEvent` and specialized event/audit models under their Accepted ADRs |
 
@@ -135,6 +135,8 @@ CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment
 `LogisticsPoint` is the future governed organization location master and `ProjectLogisticsPoint` is project configuration. `CanonicalLocation` remains the accepted route-facing bridge/snapshot abstraction from ADR-005. These roles are complementary.
 
 `TrackingLocationReference` is a legacy platform tracking selector. It is not an alias of `LogisticsPoint`; new runtime dependence on it requires explicit authorization. Convergence needs an Accepted ADR covering tenant ownership, mapping, historical snapshots, free text, API compatibility, and rollback.
+
+ADR-041 accepts a new platform-owned `GlobalLogisticsPoint` target and tenant-owned adoption boundary without changing current runtime ownership. Organizations approve global points through `OrganizationGlobalLogisticsPoint`; current `LogisticsPoint` remains non-null tenant-owned and may optionally represent an adoption or remain an organization-only facility. Expert, project and tracking selection remains organization-approved. The 64 legacy tracking rows are not a seed and require reviewed many-capable mapping; all global/adoption implementation and population remain pending separate goals.
 
 ## 11. CRM architecture
 
