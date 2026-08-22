@@ -295,6 +295,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
           body.error.code || "API_ERROR",
           body.error.message,
           body.error.fields || [],
+          body.error.details,
         );
       } else if (body && typeof body.message === "string") {
         message = body.message;
@@ -1539,6 +1540,7 @@ export class ApiError extends Error {
     public readonly code: string,
     message: string,
     public readonly fields: unknown[] = [],
+    public readonly details?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
@@ -3895,3 +3897,40 @@ export const transitionOipSituation = (
       body: JSON.stringify({ ...payload, expected_version: row.version }),
     },
   );
+
+export type GlobalLogisticsPoint = {
+  public_id: string; immutable_code: string; fa_name: string; en_name: string;
+  facility_identity_key: string; lifecycle_status: "DRAFT" | "ACTIVE" | "DEPRECATED";
+  verification_status: "UNVERIFIED" | "REVIEWED" | "VERIFIED"; version: number;
+  point_type: { public_id: string; code: string; fa_name: string; en_name: string };
+  country: { code: string; fa_name: string; en_name: string };
+  geography: { province?: string | null; city?: string | null; short_address?: string | null;
+    latitude?: number | null; longitude?: number | null; timezone?: string | null;
+    un_locode?: string | null; border_pair_key?: string | null; border_side?: string | null };
+  aliases: Array<{ value: string; language_code?: string | null }>;
+  supported_modes: string[]; corridor_tags: string[];
+  external_codes: Array<{ scheme: string; value: string }>;
+  sources: Array<{ organization: string; reference: string; version: string; retrieved_at?: string | null }>;
+};
+
+export type GlobalPointFilters = { q?: string; country?: string; type?: string; status?: string;
+  verification?: string; mode?: string; corridor?: string; page?: number; per_page?: number };
+
+export const listGlobalLogisticsPoints = (filters: GlobalPointFilters = {}) => {
+  const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value !== "" && value != null)
+    .map(([key, value]) => [key, String(value)]));
+  return request<{ items: GlobalLogisticsPoint[]; page: number; pages: number; total: number }>(
+    `/api/platform/global-logistics-points?${query}`);
+};
+export const createGlobalLogisticsPoint = (payload: Record<string, unknown>) =>
+  request<{ item: GlobalLogisticsPoint }>("/api/platform/global-logistics-points", {
+    method: "POST", body: JSON.stringify(payload),
+  });
+export const updateGlobalLogisticsPoint = (row: GlobalLogisticsPoint, payload: Record<string, unknown>) =>
+  request<{ item: GlobalLogisticsPoint }>(`/api/platform/global-logistics-points/${row.public_id}`, {
+    method: "PATCH", body: JSON.stringify({ ...payload, expected_version: row.version }),
+  });
+export const transitionGlobalLogisticsPoint = (row: GlobalLogisticsPoint, action: "review" | "verify" | "activate" | "deprecate", extra: Record<string, unknown> = {}) =>
+  request<{ item: GlobalLogisticsPoint }>(`/api/platform/global-logistics-points/${row.public_id}/${action}`, {
+    method: "POST", body: JSON.stringify({ expected_version: row.version, ...extra }),
+  });

@@ -160,6 +160,7 @@ def global_catalog_app():
             "platform_id": platform.id,
             "country_id": china.id,
             "type_id": port_type.id,
+            "type_public_id": port_type.public_id,
             "ningbo": ningbo.public_id,
             "sarakhs": sarakhs.public_id,
             "deprecated": deprecated.public_id,
@@ -246,8 +247,8 @@ def test_platform_read_requires_platform_authority_not_membership(global_catalog
         assert client.get(endpoint, headers=ctx["organization_admin"]).status_code == 403
         assert client.get(endpoint, headers=ctx["expert"]).status_code == 403
         assert client.get(endpoint).status_code == 401
-        assert client.post(endpoint, headers=ctx["platform"], json={}).status_code == 405
-        assert client.patch(f"{endpoint}/{ctx['ningbo']}", headers=ctx["platform"], json={}).status_code == 405
+        assert client.post(endpoint, headers=ctx["platform"], json={}).status_code == 400
+        assert client.patch(f"{endpoint}/{ctx['ningbo']}", headers=ctx["platform"], json={}).status_code == 400
 
 
 def test_list_filters_pagination_order_and_safe_projection(global_catalog_app):
@@ -289,3 +290,122 @@ def test_detail_uses_only_opaque_identity_and_not_found_is_safe(global_catalog_a
         assert client.get(f"{endpoint}/{uuid4()}", headers=ctx["platform"]).status_code == 404
         assert client.get(f"{endpoint}/1", headers=ctx["platform"]).status_code == 404
         assert client.get(f"{endpoint}/not-a-uuid", headers=ctx["platform"]).status_code == 404
+
+
+def _draft_payload(ctx, code="CN-TEST-PORT", facility="test-port"):
+    return {
+        "immutable_code": code,
+        "point_type_public_id": ctx["type_public_id"],
+        "country_code": "CN",
+        "fa_name": "بندر آزمایشی",
+        "en_name": "Test Port",
+        "facility_identity_key": facility,
+        "city_name": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "border_side": "NOT_APPLICABLE",
+        "supported_modes": ["SEA"],
+        "aliases": [{"value": "Test Harbour", "language_code": "en"}],
+        "external_codes": [{"scheme": "TEST", "value": code}],
+        "corridor_tags": ["TEST_CORRIDOR"],
+        "sources": [{"organization": "Test Authority", "reference": f"evidence:{code}", "version": "1"}],
+    }
+
+
+def test_governed_create_security_and_duplicate_conflicts(global_catalog_app):
+    app, ctx = global_catalog_app
+    endpoint = "/api/platform/global-logistics-points"
+    with app.test_client() as client:
+        for headers, expected in ((None, 401), (ctx["expert"], 403), (ctx["organization_admin"], 403)):
+            assert client.post(endpoint, headers=headers, json=_draft_payload(ctx)).status_code == expected
+        response = client.post(endpoint, headers=ctx["platform"], json=_draft_payload(ctx))
+        assert response.status_code == 201
+        item = response.get_json()["item"]
+        assert item["lifecycle_status"] == "DRAFT" and item["verification_status"] == "UNVERIFIED"
+        assert item["version"] == 1 and "id" not in item
+        for injected in ("id", "organization_id", "created_by", "updated_by", "public_id", "version", "lifecycle_status", "verification_status"):
+            payload = _draft_payload(ctx, f"CN-{injected.upper().replace('_','-')[:30]}-X", f"facility-{injected}")
+            payload[injected] = 1
+            denied = client.post(endpoint, headers=ctx["platform"], json=payload)
+            assert denied.status_code == 400 and denied.get_json()["error"]["code"] == "UNKNOWN_FIELDS"
+        assert client.post(endpoint, headers=ctx["platform"], json=_draft_payload(ctx)).status_code == 409
+        assert client.post(endpoint, headers=ctx["platform"], json=_draft_payload(ctx, "CN-OTHER-PORT", "test-port")).status_code == 409
+        probable = _draft_payload(ctx, "CN-PROBABLE-PORT", "probable-port")
+        probable["city_name"] = "Ningbo"
+        warning = client.post(endpoint, headers=ctx["platform"], json=probable)
+        assert warning.status_code == 409 and warning.get_json()["error"]["code"] == "PROBABLE_DUPLICATE_REVIEW_REQUIRED"
+        probable.update(confirm_probable_duplicate=True, duplicate_review_reason="Reviewed as a distinct terminal")
+        assert client.post(endpoint, headers=ctx["platform"], json=probable).status_code == 201
+
+
+def test_all_write_actions_deny_non_platform_authorities(global_catalog_app):
+    app, ctx = global_catalog_app
+    base = f"/api/platform/global-logistics-points/{ctx['ningbo']}"
+    with app.test_client() as client:
+        for headers in (ctx["organization_admin"], ctx["expert"]):
+            assert client.patch(base, headers=headers, json={"expected_version": 1, "en_name": "Denied"}).status_code == 403
+            for action in ("review", "verify", "activate", "deprecate"):
+                assert client.post(f"{base}/{action}", headers=headers, json={"expected_version": 1}).status_code == 403
+
+
+def test_metadata_replacement_optimistic_lock_and_immutable_fields(global_catalog_app):
+    app, ctx = global_catalog_app
+    endpoint = "/api/platform/global-logistics-points"
+    with app.test_client() as client:
+        item = client.post(endpoint, headers=ctx["platform"], json=_draft_payload(ctx, "CN-EDIT-PORT", "edit-port")).get_json()["item"]
+        url = f"{endpoint}/{item['public_id']}"
+        updated = client.patch(url, headers=ctx["platform"], json={
+            "expected_version": 1, "en_name": "Edited Port", "aliases": [{"value": "Edited", "language_code": "en"}],
+            "supported_modes": ["SEA", "RAIL"], "corridor_tags": ["EDITED"],
+            "external_codes": [{"scheme": "EDIT", "value": "42"}],
+        })
+        assert updated.status_code == 200
+        body = updated.get_json()["item"]
+        assert body["version"] == 2 and body["supported_modes"] == ["RAIL", "SEA"]
+        assert body["aliases"] == [{"value": "Edited", "language_code": "en"}]
+        stale = client.patch(url, headers=ctx["platform"], json={"expected_version": 1, "en_name": "Lost update"})
+        assert stale.status_code == 409 and stale.get_json()["error"]["code"] == "VERSION_CONFLICT"
+        for field in ("immutable_code", "country_code", "facility_identity_key", "public_id", "lifecycle_status", "verification_status"):
+            denied = client.patch(url, headers=ctx["platform"], json={"expected_version": 2, field: "BYPASS"})
+            assert denied.status_code == 400
+        duplicate = client.patch(url, headers=ctx["platform"], json={"expected_version": 2, "supported_modes": ["SEA", "SEA"]})
+        assert duplicate.status_code == 409 and duplicate.get_json()["error"]["code"] == "DUPLICATE_CHILD"
+
+
+def test_verification_activation_and_deprecation_state_machine(global_catalog_app):
+    app, ctx = global_catalog_app
+    endpoint = "/api/platform/global-logistics-points"
+    with app.test_client() as client:
+        item = client.post(endpoint, headers=ctx["platform"], json=_draft_payload(ctx, "CN-STATE-PORT", "state-port")).get_json()["item"]
+        url = f"{endpoint}/{item['public_id']}"
+        premature = client.post(f"{url}/activate", headers=ctx["platform"], json={"expected_version": 1})
+        assert premature.status_code == 422
+        failures = premature.get_json()["error"]["details"]["failures"]
+        assert any(x["code"] == "VERIFICATION_REQUIRED" for x in failures)
+        assert client.post(f"{url}/verify", headers=ctx["platform"], json={"expected_version": 1, "evidence_reference": "review:1"}).status_code == 409
+        reviewed = client.post(f"{url}/review", headers=ctx["platform"], json={"expected_version": 1, "evidence_reference": "review:1"})
+        assert reviewed.status_code == 200 and reviewed.get_json()["item"]["verification_status"] == "REVIEWED"
+        assert client.post(f"{url}/review", headers=ctx["platform"], json={"expected_version": 2, "evidence_reference": "again"}).status_code == 409
+        verified = client.post(f"{url}/verify", headers=ctx["platform"], json={"expected_version": 2, "evidence_reference": "verify:1"})
+        assert verified.status_code == 200 and verified.get_json()["item"]["verification_status"] == "VERIFIED"
+        active = client.post(f"{url}/activate", headers=ctx["platform"], json={"expected_version": 3})
+        assert active.status_code == 200 and active.get_json()["item"]["lifecycle_status"] == "ACTIVE"
+        assert client.delete(url, headers=ctx["platform"]).status_code == 405
+        assert client.patch(url, headers=ctx["platform"], json={"expected_version": 4, "sources": []}).status_code == 409
+        deprecated = client.post(f"{url}/deprecate", headers=ctx["platform"], json={"expected_version": 4, "reason": "Superseded evidence"})
+        assert deprecated.status_code == 200 and deprecated.get_json()["item"]["lifecycle_status"] == "DEPRECATED"
+        assert client.post(f"{url}/activate", headers=ctx["platform"], json={"expected_version": 5}).status_code == 409
+
+
+def test_validation_coordinates_timezone_and_external_code_collision(global_catalog_app):
+    app, ctx = global_catalog_app
+    endpoint = "/api/platform/global-logistics-points"
+    with app.test_client() as client:
+        payload = _draft_payload(ctx, "CN-BAD-COORD", "bad-coord"); payload["latitude"] = 91; payload["longitude"] = 1
+        assert client.post(endpoint, headers=ctx["platform"], json=payload).status_code == 400
+        payload = _draft_payload(ctx, "CN-BAD-TIME", "bad-time"); payload["timezone"] = "Mars/Olympus"
+        assert client.post(endpoint, headers=ctx["platform"], json=payload).status_code == 400
+        payload = _draft_payload(ctx, "CN-CODE-CLASH", "code-clash")
+        payload["external_codes"] = [{"scheme": "TEST", "value": "CN-NINGBO-PORT"}]
+        blocked = client.post(endpoint, headers=ctx["platform"], json=payload)
+        assert blocked.status_code == 409
+        assert blocked.get_json()["error"]["code"] == "DUPLICATE_CONFLICT"
