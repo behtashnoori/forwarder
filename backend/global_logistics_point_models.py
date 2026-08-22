@@ -261,6 +261,38 @@ class GlobalLogisticsPointSource(db.Model):
     )
 
 
+class OrganizationGlobalLogisticsPointAdoption(db.Model):
+    """Tenant-owned approval of one platform global point; not an operational point."""
+
+    __tablename__ = "organization_global_logistics_point_adoption"
+    __table_args__ = (
+        db.UniqueConstraint("public_id", name="uq_org_global_point_adoption_public_id"),
+        db.UniqueConstraint("organization_id", "global_logistics_point_id",
+                            name="uq_org_global_point_adoption_logical"),
+        db.UniqueConstraint("id", "organization_id", name="uq_org_global_point_adoption_id_org"),
+        db.CheckConstraint("status IN ('ACTIVE','INACTIVE')", name="ck_org_global_point_adoption_status"),
+        db.CheckConstraint("version >= 1", name="ck_org_global_point_adoption_version"),
+        db.Index("ix_org_global_point_adoption_catalog", "organization_id", "status"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, default=lambda: str(uuid4()))
+    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    global_logistics_point_id = db.Column(BIGINT, db.ForeignKey("global_logistics_point.id", ondelete="RESTRICT"), nullable=False)
+    organization_reference_code = db.Column(db.String(64), nullable=True)
+    display_label = db.Column(db.String(160), nullable=True)
+    notes = db.Column(db.String(1000), nullable=True)
+    status = db.Column(db.String(16), nullable=False, default="ACTIVE")
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    created_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    updated_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+
+    global_point = db.relationship("GlobalLogisticsPoint", lazy="joined")
+    organization = db.relationship("OperationalOrganization")
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
+
+
 @event.listens_for(GlobalLogisticsPoint, "before_update")
 def _protect_global_point_identity(_mapper, _connection, target):
     state = inspect(target).attrs

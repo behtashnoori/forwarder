@@ -2064,6 +2064,7 @@ from backend.global_logistics_point_models import (  # noqa: E402,F401
     GlobalLogisticsPointExternalCode,
     GlobalLogisticsPointMode,
     GlobalLogisticsPointSource,
+    OrganizationGlobalLogisticsPointAdoption,
 )
 from backend.external_reference_models import (  # noqa: E402,F401
     ExecutionUnitExternalReference,
@@ -2167,4 +2168,5 @@ __all__ = [
     "GlobalLogisticsPointExternalCode",
     "GlobalLogisticsPointMode",
     "GlobalLogisticsPointSource",
+    "OrganizationGlobalLogisticsPointAdoption",
 ]

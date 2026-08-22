@@ -36,6 +36,7 @@ import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
 import LogisticsNetworkAdminTab from "@/components/LogisticsNetworkAdminTab";
 import GlobalLogisticsNetworkAdminTab from "@/components/GlobalLogisticsNetworkAdminTab";
+import OrganizationGlobalNetworkTab from "@/components/OrganizationGlobalNetworkTab";
 import OperationalReasonsAdminTab from "@/components/OperationalReasonsAdminTab";
 import UnassignedRequestsTab from "@/components/UnassignedRequestsTab";
 import UserManagement from "./UserManagement";
@@ -314,6 +315,7 @@ const AdminPanel = () => {
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
             <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی</TabsTrigger>
             {isPlatformAdmin && <TabsTrigger value="global-logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>Global Logistics Network</TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger value="organization-global-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>Global Network</TabsTrigger>}
             <TabsTrigger value="operational-reasons" className="gap-2 rounded-2xl py-3">دلایل عملیاتی</TabsTrigger>
           </TabsList>
 
@@ -508,6 +510,7 @@ const AdminPanel = () => {
           <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>
           <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab isPlatformAdmin={isPlatformAdmin} /></TabsContent>
           {isPlatformAdmin && <TabsContent value="global-logistics-network" className="space-y-4"><GlobalLogisticsNetworkAdminTab /></TabsContent>}
+          {isOrganizationAdmin && <TabsContent value="organization-global-network" className="space-y-4"><OrganizationGlobalNetworkTab /></TabsContent>}
           <TabsContent value="operational-reasons" className="space-y-4"><OperationalReasonsAdminTab /></TabsContent>
         </Tabs>
         <footer className="rounded-2xl border border-slate-200 bg-white p-4"><ReleaseIdentity details /></footer>

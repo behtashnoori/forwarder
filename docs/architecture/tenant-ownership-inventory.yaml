@@ -42,6 +42,7 @@
     "GlobalLogisticsPointExternalCode": {"kind":"persisted_model","table":"global_logistics_point_external_code","scope":"PLATFORM_SCOPED","rationale":"Platform external-code metadata owned through GlobalLogisticsPoint."},
     "GlobalLogisticsPointCorridorTag": {"kind":"persisted_model","table":"global_logistics_point_corridor_tag","scope":"PLATFORM_SCOPED","rationale":"Platform corridor metadata owned through GlobalLogisticsPoint."},
     "GlobalLogisticsPointSource": {"kind":"persisted_model","table":"global_logistics_point_source","scope":"PLATFORM_SCOPED","rationale":"Platform provenance metadata owned through GlobalLogisticsPoint."},
+    "OrganizationGlobalLogisticsPointAdoption": {"kind":"persisted_model","table":"organization_global_logistics_point_adoption","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"ADR-041 tenant-owned decision to approve one platform global point; it is not LogisticsPoint materialization or platform ownership."},
     "MilestoneType": {"kind":"persisted_model","table":"milestone_type","scope":"PLATFORM_SCOPED","rationale":"Shared governed milestone taxonomy."},
     "DocumentDefinition": {"kind":"persisted_model","table":"document_definition","scope":"PLATFORM_SCOPED","rationale":"Current shared governed document-definition catalog."},
     "ExternalReferenceType": {"kind":"persisted_model","table":"external_reference_type","scope":"PLATFORM_SCOPED","rationale":"Tenant-neutral governed vocabulary for the bounded ADR-039 operational reference types."},

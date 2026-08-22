@@ -3934,3 +3934,22 @@ export const transitionGlobalLogisticsPoint = (row: GlobalLogisticsPoint, action
   request<{ item: GlobalLogisticsPoint }>(`/api/platform/global-logistics-points/${row.public_id}/${action}`, {
     method: "POST", body: JSON.stringify({ expected_version: row.version, ...extra }),
   });
+
+export type OrganizationGlobalPointAdoption = { public_id:string; status:"ACTIVE"|"INACTIVE";
+  organization_reference_code?:string|null; display_label?:string|null; notes?:string|null; version:number;
+  global_point_public_id:string; platform_lifecycle_status:string };
+export type OrganizationGlobalPoint = { public_id:string; immutable_code:string; fa_name:string; en_name:string;
+  point_type:{code:string;fa_name:string;en_name:string}; country:{code:string;fa_name:string;en_name:string};
+  geography:{city?:string|null;region?:string|null;short_address?:string|null}; supported_modes:string[];
+  corridor_tags:string[]; organization_state:"AVAILABLE"|"ADOPTED"|"INACTIVE_FOR_ORGANIZATION"|"PLATFORM_DEPRECATED";
+  adoption:OrganizationGlobalPointAdoption|null };
+export const listOrganizationGlobalPoints = (filters:Record<string,string|number>={}) => {
+  const query=new URLSearchParams(Object.entries(filters).filter(([,v])=>v!=="").map(([k,v])=>[k,String(v)]));
+  return request<{items:OrganizationGlobalPoint[];page:number;pages:number;total:number}>(`/api/admin/global-logistics-points?${query}`);
+};
+export const adoptOrganizationGlobalPoint = (publicId:string,payload:Record<string,unknown>) =>
+  request<{item:OrganizationGlobalPointAdoption}>(`/api/admin/global-logistics-points/${publicId}/adopt`,{method:"POST",body:JSON.stringify(payload)});
+export const updateOrganizationGlobalPointAdoption = (row:OrganizationGlobalPointAdoption,payload:Record<string,unknown>) =>
+  request<{item:OrganizationGlobalPointAdoption}>(`/api/admin/global-logistics-point-adoptions/${row.public_id}`,{method:"PATCH",body:JSON.stringify({...payload,version:row.version})});
+export const transitionOrganizationGlobalPointAdoption = (row:OrganizationGlobalPointAdoption,action:"activate"|"deactivate") =>
+  request<{item:OrganizationGlobalPointAdoption}>(`/api/admin/global-logistics-point-adoptions/${row.public_id}/${action}`,{method:"POST",body:JSON.stringify({version:row.version})});
