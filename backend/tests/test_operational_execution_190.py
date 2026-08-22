@@ -336,7 +336,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260905_global_logistics_point_adoption"
+            "20260906_global_logistics_point_materialization"
     ]
 
 

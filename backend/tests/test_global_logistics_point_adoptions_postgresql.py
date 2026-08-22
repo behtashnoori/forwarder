@@ -5,7 +5,7 @@ from sqlalchemy import inspect
 from backend import create_app
 from backend.extensions import db
 from backend.global_logistics_point_models import GlobalLogisticsPoint,GlobalLogisticsPointMode,OrganizationGlobalLogisticsPointAdoption
-from backend.logistics_network_models import LogisticsPointType
+from backend.logistics_network_models import LogisticsPoint,LogisticsPointType
 from backend.models import Country,ExpertUser
 from backend.operational_models import OperationalMembership,OperationalOrganization
 from backend.services import global_logistics_point_adoption_service as svc
@@ -34,5 +34,11 @@ def test_postgresql_two_tenant_adoption_constraints_and_lifecycle():
   a=svc.transition(a.public_id,{"version":1},org_a.id,actor_a.id,"INACTIVE")
   a=svc.transition(a.public_id,{"version":2},org_a.id,actor_a.id,"ACTIVE")
   assert a.status=="ACTIVE" and a.version==3
+  materialized,created=svc.materialize(a.public_id,{"immutable_code":"PG-A-PORT"},org_a.id,actor_a.id)
+  assert created and materialized.organization_id==org_a.id
+  repeated,created=svc.materialize(a.public_id,{"immutable_code":"IGNORED"},org_a.id,actor_a.id)
+  assert not created and repeated.id==materialized.id
+  other,created=svc.materialize(b.public_id,{"immutable_code":"PG-B-PORT"},org_b.id,actor_b.id)
+  assert created and other.organization_id==org_b.id and db.session.query(LogisticsPoint).count()==2
   with pytest.raises(Exception) as hidden:svc.scoped_adoption(b.public_id,org_a.id)
   assert getattr(hidden.value,"status",None)==404

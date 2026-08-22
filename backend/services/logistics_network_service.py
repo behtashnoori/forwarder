@@ -108,6 +108,14 @@ def point_projection(row):
         "en_name": row.en_name,
         "short_address": row.short_address,
         "is_active": row.is_active,
+        "global_source": ({
+            "global_point_public_id": row.global_point.public_id,
+            "adoption_public_id": row.global_adoption.public_id,
+            "fa_name": row.global_point.fa_name,
+            "en_name": row.global_point.en_name,
+            "platform_lifecycle_status": row.global_point.lifecycle_status,
+            "adoption_status": row.global_adoption.status,
+        } if row.global_point is not None and row.global_adoption is not None else None),
         "version": row.version,
         "point_type": type_projection(row.point_type),
         "country": {
@@ -323,9 +331,11 @@ def scoped_point(
 ):
     require_permission(user, permission)
     org = organization_for_user(user["id"])
-    q = select(LogisticsPoint).where(
+    q = select(LogisticsPoint).options(
+        joinedload(LogisticsPoint.global_point), joinedload(LogisticsPoint.global_adoption)
+    ).where(
         LogisticsPoint.public_id == public_id, LogisticsPoint.organization_id == org
-    )
+    ).execution_options(populate_existing=True)
     if not include_inactive:
         q = q.where(LogisticsPoint.is_active.is_(True))
     row = db.session.scalar(q)
@@ -337,7 +347,9 @@ def scoped_point(
 def list_points(args, user, *, admin=False):
     require_permission(user, "logistics_point.read")
     org = organization_for_user(user["id"])
-    q = select(LogisticsPoint).where(LogisticsPoint.organization_id == org)
+    q = select(LogisticsPoint).options(
+        joinedload(LogisticsPoint.global_point), joinedload(LogisticsPoint.global_adoption)
+    ).where(LogisticsPoint.organization_id == org)
     active = str(args.get("active", "all" if admin else "true"))
     if active in {"true", "false"}:
         q = q.where(LogisticsPoint.is_active.is_(active == "true"))
@@ -361,6 +373,7 @@ def list_points(args, user, *, admin=False):
     total = db.session.scalar(select(func.count()).select_from(q.subquery())) or 0
     rows = db.session.scalars(
         q.order_by(LogisticsPoint.immutable_code).offset((page - 1) * per).limit(per)
+        .execution_options(populate_existing=True)
     ).all()
     return {
         "items": [point_projection(x) for x in rows],

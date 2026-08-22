@@ -11,6 +11,8 @@ from backend.global_logistics_point_models import (
     GlobalLogisticsPointMode, OrganizationGlobalLogisticsPointAdoption,
 )
 from backend.logistics_network_models import LogisticsPointType
+from backend.logistics_network_models import LogisticsPoint
+from backend.services.logistics_network_service import normalize_name
 from backend.models import Country
 from backend.operational_models import OperationalAudit
 from backend.services.operational_service import OperationalError
@@ -76,12 +78,69 @@ def _global(public_id):
 
 
 def adoption_projection(row):
+    materialized = db.session.scalar(select(LogisticsPoint).where(
+        LogisticsPoint.global_adoption_id == row.id,
+        LogisticsPoint.organization_id == row.organization_id))
     return {"public_id": row.public_id, "status": row.status,
         "organization_reference_code": row.organization_reference_code,
         "display_label": row.display_label, "notes": row.notes, "version": row.version,
         "created_at": row.created_at.isoformat(), "updated_at": row.updated_at.isoformat(),
         "global_point_public_id": row.global_point.public_id,
-        "platform_lifecycle_status": row.global_point.lifecycle_status}
+        "platform_lifecycle_status": row.global_point.lifecycle_status,
+        "materialization": ({"state":"MATERIALIZED","logistics_point_public_id":materialized.public_id,
+                             "version":materialized.version} if materialized else {"state":"NOT_MATERIALIZED",
+                                                                                  "logistics_point_public_id":None,
+                                                                                  "version":None})}
+
+
+def materialize(public_id, payload, org_id, actor_id):
+    _strict(payload, {"immutable_code"})
+    row = scoped_adoption(public_id, org_id)
+    existing = db.session.scalar(select(LogisticsPoint).where(
+        LogisticsPoint.global_adoption_id == row.id,
+        LogisticsPoint.organization_id == org_id))
+    if existing:
+        return existing, False
+    if row.status != "ACTIVE":
+        _fail("ADOPTION_INELIGIBLE", "Only an ACTIVE adoption may be materialized.", 409)
+    point = row.global_point
+    if point.lifecycle_status != "ACTIVE" or point.verification_status != "VERIFIED":
+        _fail("GLOBAL_POINT_INELIGIBLE", "Only ACTIVE verified global points may be materialized.", 409)
+    if not point.point_type.is_active or len(point.geography_key) > 200:
+        _fail("MATERIALIZATION_MAPPING_INVALID", "Global point type or geography is not valid for an operational LogisticsPoint.", 409)
+    code = _text(payload, "immutable_code", 64)
+    if not code:
+        _fail("VALIDATION_FAILED", "immutable_code is required.")
+    code = code.upper()
+    duplicate = db.session.scalar(select(LogisticsPoint).where(
+        LogisticsPoint.organization_id == org_id,
+        ((LogisticsPoint.immutable_code == code) |
+         ((LogisticsPoint.normalized_name == normalize_name(point.fa_name)) &
+          (LogisticsPoint.logistics_point_type_id == point.logistics_point_type_id) &
+          (LogisticsPoint.country_id == point.country_id) &
+          (LogisticsPoint.geography_key == point.geography_key)))))
+    if duplicate:
+        _fail("MATERIALIZATION_DUPLICATE", f"Matching tenant LogisticsPoint {duplicate.public_id} exists; automatic merge is not allowed.", 409)
+    materialized = LogisticsPoint(
+        organization_id=org_id, global_logistics_point_id=point.id, global_adoption_id=row.id,
+        immutable_code=code, logistics_point_type_id=point.logistics_point_type_id,
+        fa_name=row.display_label or point.fa_name, normalized_name=normalize_name(row.display_label or point.fa_name),
+        en_name=point.en_name, country_id=point.country_id, province_id=point.province_id,
+        city_id=point.city_id, geography_key=point.geography_key, short_address=point.short_address,
+        is_active=True, created_by=actor_id, updated_by=actor_id)
+    db.session.add(materialized)
+    try:
+        db.session.flush()
+        _audit(org_id, actor_id, "GLOBAL_POINT_MATERIALIZED", row)
+        db.session.commit()
+    except IntegrityError as exc:
+        db.session.rollback()
+        existing = db.session.scalar(select(LogisticsPoint).where(
+            LogisticsPoint.global_adoption_id == row.id, LogisticsPoint.organization_id == org_id))
+        if existing:
+            return existing, False
+        raise OperationalError("MATERIALIZATION_CONFLICT", "Operational point could not be materialized.", 409) from exc
+    return materialized, True
 
 
 def catalog_projection(point, adoption):

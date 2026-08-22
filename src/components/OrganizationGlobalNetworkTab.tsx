@@ -3,7 +3,7 @@ import {Button} from "@/components/ui/button";
 import {Card,CardContent,CardHeader,CardTitle} from "@/components/ui/card";
 import {Input} from "@/components/ui/input";
 import {Textarea} from "@/components/ui/textarea";
-import {adoptOrganizationGlobalPoint,listOrganizationGlobalPoints,transitionOrganizationGlobalPointAdoption,
+import {adoptOrganizationGlobalPoint,listOrganizationGlobalPoints,materializeOrganizationGlobalPointAdoption,transitionOrganizationGlobalPointAdoption,
   updateOrganizationGlobalPointAdoption,type OrganizationGlobalPoint} from "@/lib/api";
 
 const labels={AVAILABLE:"GLOBAL · AVAILABLE",ADOPTED:"GLOBAL · ADOPTED",
@@ -14,12 +14,14 @@ export default function OrganizationGlobalNetworkTab(){
  const [filters,setFilters]=useState({q:"",country:"",type:"",mode:"",corridor:"",adoption_state:""});
  const [selected,setSelected]=useState<OrganizationGlobalPoint|null>(null);
  const [form,setForm]=useState({organization_reference_code:"",display_label:"",notes:""});
+ const [materializationCode,setMaterializationCode]=useState("");
  const load=useCallback(async()=>{try{setError("");const x=await listOrganizationGlobalPoints(filters);setRows(x.items)}catch(e){setError(e instanceof Error?e.message:"Unable to load global network")}},[filters]);
  useEffect(()=>{void load()},[load]);
  const choose=(row:OrganizationGlobalPoint)=>{setSelected(row);setForm({organization_reference_code:row.adoption?.organization_reference_code||"",display_label:row.adoption?.display_label||"",notes:row.adoption?.notes||""})};
  const adopt=async()=>{if(!selected||!window.confirm("این نقطه جهانی برای سازمان پذیرفته شود؟"))return;try{await adoptOrganizationGlobalPoint(selected.public_id,form);await load()}catch(e){setError(e instanceof Error?e.message:"Adoption failed")}};
  const save=async()=>{if(!selected?.adoption)return;try{await updateOrganizationGlobalPointAdoption(selected.adoption,form);await load()}catch(e){setError(e instanceof Error?e.message:"Version conflict")}};
  const lifecycle=async(action:"activate"|"deactivate")=>{if(!selected?.adoption)return;try{await transitionOrganizationGlobalPointAdoption(selected.adoption,action);await load()}catch(e){setError(e instanceof Error?e.message:"Lifecycle change failed")}};
+ const materialize=async()=>{if(!selected?.adoption||!window.confirm("Create this tenant operational point?"))return;try{await materializeOrganizationGlobalPointAdoption(selected.adoption,materializationCode);await load()}catch(e){setError(e instanceof Error?e.message:"Materialization failed")}};
  return <div className="space-y-4" data-testid="organization-global-network"><Card><CardHeader><CardTitle>Global Network</CardTitle><p className="text-sm text-muted-foreground">پذیرش سازمانی نقاط جهانی؛ این کار مکان عملیاتی، پروژه یا رخداد ردیابی ایجاد نمی‌کند.</p></CardHeader><CardContent className="grid gap-2 md:grid-cols-3">
   <Input aria-label="Global search" placeholder="جستجو" value={filters.q} onChange={e=>setFilters({...filters,q:e.target.value})}/>
   <Input aria-label="Global country" placeholder="کشور" value={filters.country} onChange={e=>setFilters({...filters,country:e.target.value})}/>
@@ -36,7 +38,10 @@ export default function OrganizationGlobalNetworkTab(){
   {selected.organization_state==="AVAILABLE"&&<Button onClick={()=>void adopt()}>Adopt</Button>}
   {selected.adoption&&<Button variant="outline" onClick={()=>void save()}>Save organization metadata</Button>}
   {selected.organization_state==="ADOPTED"&&<Button variant="destructive" onClick={()=>void lifecycle("deactivate")}>Deactivate adoption</Button>}
+  {selected.adoption&&<p className="font-medium">ADOPTED · {selected.adoption.materialization.state.replace("_"," ")}</p>}
+  {selected.adoption?.status==="ACTIVE"&&selected.organization_state!=="PLATFORM_DEPRECATED"&&selected.adoption.materialization.state==="NOT_MATERIALIZED"&&<><Input aria-label="Operational immutable code" placeholder="کد ثابت عملیاتی سازمان" value={materializationCode} onChange={e=>setMaterializationCode(e.target.value)}/><Button disabled={!materializationCode.trim()} onClick={()=>void materialize()}>Create operational point</Button></>}
+  {selected.adoption?.materialization.state==="MATERIALIZED"&&<a className="text-blue-700 underline" href={`#logistics-point-${selected.adoption.materialization.logistics_point_public_id}`}>Open organization LogisticsPoint</a>}
   {selected.organization_state==="INACTIVE_FOR_ORGANIZATION"&&<Button onClick={()=>void lifecycle("activate")}>Reactivate adoption</Button>}
-  {selected.organization_state==="PLATFORM_DEPRECATED"&&<p className="text-red-700">Platform deprecated; history retained and reactivation unavailable.</p>}
+  {selected.organization_state==="PLATFORM_DEPRECATED"&&<p className="text-red-700">Platform deprecated; materialized operational history is retained and new materialization or reactivation is unavailable.</p>}
  </>}</CardContent></Card></div></div>
 }

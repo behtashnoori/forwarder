@@ -194,4 +194,4 @@ def test_release_upgrade_chain_is_contiguous_and_remediation_is_mandatory():
     )
     assert revisions == builder.UPGRADE_REVISIONS
     assert script.get_revision(builder.DATABASE_REVISION) is not None
-    assert script.get_heads() == ["20260905_global_logistics_point_adoption"]
+    assert script.get_heads() == ["20260906_global_logistics_point_materialization"]

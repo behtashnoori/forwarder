@@ -38,6 +38,19 @@ def detail(public_id):
     except OperationalError as exc: return _error(exc)
 
 
+@global_logistics_point_adoptions_bp.post("/api/admin/global-logistics-point-adoptions/<public_id>/materialize")
+@require_organization_admin_context(allow_platform=False)
+def materialize(public_id):
+    try:
+        org,actor=_context(); point,created=svc.materialize(public_id,request.get_json(silent=True),org,actor)
+        adoption=svc.scoped_adoption(public_id,org)
+        return jsonify({"item":{"adoption_public_id":adoption.public_id,
+                                "global_point_public_id":adoption.global_point.public_id,
+                                "logistics_point_public_id":point.public_id,
+                                "materialization_state":"MATERIALIZED","version":point.version}}),201 if created else 200
+    except OperationalError as exc: return _error(exc)
+
+
 @global_logistics_point_adoptions_bp.patch("/api/admin/global-logistics-point-adoptions/<public_id>")
 @require_organization_admin_context(allow_platform=False)
 def update(public_id):

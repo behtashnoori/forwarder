@@ -3204,6 +3204,8 @@ export interface LogisticsPointView {
   country: { code: string; fa_name: string; en_name: string };
   province?: { code?: string | null; name_fa: string } | null;
   city?: { code?: string | null; name_fa: string } | null;
+  global_source?: { global_point_public_id:string; adoption_public_id:string; fa_name:string; en_name:string;
+    platform_lifecycle_status:string; adoption_status:string } | null;
 }
 export interface ProjectLogisticsPointView {
   public_id: string;
@@ -3937,7 +3939,8 @@ export const transitionGlobalLogisticsPoint = (row: GlobalLogisticsPoint, action
 
 export type OrganizationGlobalPointAdoption = { public_id:string; status:"ACTIVE"|"INACTIVE";
   organization_reference_code?:string|null; display_label?:string|null; notes?:string|null; version:number;
-  global_point_public_id:string; platform_lifecycle_status:string };
+  global_point_public_id:string; platform_lifecycle_status:string;
+  materialization:{state:"NOT_MATERIALIZED"|"MATERIALIZED";logistics_point_public_id:string|null;version:number|null} };
 export type OrganizationGlobalPoint = { public_id:string; immutable_code:string; fa_name:string; en_name:string;
   point_type:{code:string;fa_name:string;en_name:string}; country:{code:string;fa_name:string;en_name:string};
   geography:{city?:string|null;region?:string|null;short_address?:string|null}; supported_modes:string[];
@@ -3953,3 +3956,7 @@ export const updateOrganizationGlobalPointAdoption = (row:OrganizationGlobalPoin
   request<{item:OrganizationGlobalPointAdoption}>(`/api/admin/global-logistics-point-adoptions/${row.public_id}`,{method:"PATCH",body:JSON.stringify({...payload,version:row.version})});
 export const transitionOrganizationGlobalPointAdoption = (row:OrganizationGlobalPointAdoption,action:"activate"|"deactivate") =>
   request<{item:OrganizationGlobalPointAdoption}>(`/api/admin/global-logistics-point-adoptions/${row.public_id}/${action}`,{method:"POST",body:JSON.stringify({version:row.version})});
+export const materializeOrganizationGlobalPointAdoption = (row:OrganizationGlobalPointAdoption,immutableCode:string) =>
+  request<{item:{adoption_public_id:string;global_point_public_id:string;logistics_point_public_id:string;
+    materialization_state:"MATERIALIZED";version:number}}>(`/api/admin/global-logistics-point-adoptions/${row.public_id}/materialize`,
+    {method:"POST",body:JSON.stringify({immutable_code:immutableCode})});

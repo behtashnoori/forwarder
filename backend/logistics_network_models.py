@@ -66,6 +66,15 @@ class LogisticsPoint(db.Model):
         ),
         db.UniqueConstraint("id", "organization_id", name="uq_logistics_point_id_org"),
         db.UniqueConstraint(
+            "global_adoption_id", name="uq_logistics_point_global_adoption"
+        ),
+        db.ForeignKeyConstraint(
+            ["global_adoption_id", "organization_id"],
+            ["organization_global_logistics_point_adoption.id", "organization_global_logistics_point_adoption.organization_id"],
+            name="fk_logistics_point_global_adoption_org",
+            ondelete="RESTRICT",
+        ),
+        db.UniqueConstraint(
             "organization_id",
             "normalized_name",
             "logistics_point_type_id",
@@ -95,6 +104,10 @@ class LogisticsPoint(db.Model):
         db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    global_logistics_point_id = db.Column(
+        BIGINT, db.ForeignKey("global_logistics_point.id", ondelete="RESTRICT"), nullable=True
+    )
+    global_adoption_id = db.Column(BIGINT, nullable=True)
     immutable_code = db.Column(db.String(64), nullable=False)
     logistics_point_type_id = db.Column(
         BIGINT,
@@ -131,6 +144,8 @@ class LogisticsPoint(db.Model):
     country = db.relationship("Country")
     province = db.relationship("Province")
     city = db.relationship("City")
+    global_point = db.relationship("GlobalLogisticsPoint")
+    global_adoption = db.relationship("OrganizationGlobalLogisticsPointAdoption")
     __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
 
 
