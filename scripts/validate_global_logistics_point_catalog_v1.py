@@ -28,8 +28,22 @@ ROWS = _literal_assignment("ROWS")
 NOTES = _literal_assignment("NOTES")
 
 PACKAGE = ROOT / "backend/reference_data/global-logistics-points-china-iran-v1.0.0.json"
+APPROVED_BASELINE = ROOT / "backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json"
 RECONCILIATION = ROOT / "docs/operational/data/global-logistics-points-china-iran-v1.0.0-legacy-reconciliation.json"
 REPORT = ROOT / "docs/operational/data/global-logistics-points-china-iran-v1.0.0-owner-review.md"
+OWNER_DECISION = ROOT / "docs/operational/data/global-logistics-points-china-iran-v1.0.0-baseline-owner-decision.md"
+
+APPROVED_CODES = (
+    "GLP-CN-ALASHANKOU",
+    "GLP-CN-NINGBO-ZHOUSHAN",
+    "GLP-IR-INCHEH-BORUN",
+    "GLP-IR-SARAKHS",
+    "GLP-KG-IRKESHTAM",
+    "GLP-KZ-ALTYNKOL",
+    "GLP-KZ-DOSTYK",
+    "GLP-TM-FARAP",
+    "GLP-TM-SERAKHS",
+)
 
 TYPE_CODES = {"FACTORY", "WAREHOUSE", "DISTRIBUTION_CENTER", "CUSTOMS", "PORT",
               "BORDER_CROSSING", "AIRPORT", "RAIL_TERMINAL", "ROAD_TERMINAL",
@@ -191,6 +205,61 @@ def checksum(payload: dict) -> str:
     raw = json.dumps(unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     return "sha256:" + hashlib.sha256(raw).hexdigest()
 
+def unsigned_approved_baseline(parent: dict) -> dict:
+    ready = {
+        item["runtime_candidate"]["immutable_code"]: item
+        for item in parent["global_logistics_points"]
+        if item["review"]["package_review_status"] == "READY_FOR_OWNER_APPROVAL"
+    }
+    return {
+        "schema_version": "1",
+        "catalog_version": "china-iran-global-logistics-points-1.0.0-approved-baseline",
+        "parent_catalog_version": parent["catalog_version"],
+        "parent_catalog_path": str(PACKAGE.relative_to(ROOT)).replace("\\", "/"),
+        "parent_catalog_checksum": parent["checksum"],
+        "owner_decision_reference": str(OWNER_DECISION.relative_to(ROOT)).replace("\\", "/"),
+        "approved_subset_count": len(APPROVED_CODES),
+        "production_seed_authorized": False,
+        "canonicalization": "UTF-8 JSON; sort_keys=true; separators=(',',':'); checksum field excluded",
+        "approved_global_logistics_points": [ready[code] for code in APPROVED_CODES],
+    }
+
+def validate_approved_baseline(parent: dict, baseline: dict) -> list[str]:
+    errors = []
+    rows = baseline.get("approved_global_logistics_points", [])
+    parent_ready = {
+        item["runtime_candidate"]["immutable_code"]: item
+        for item in parent.get("global_logistics_points", [])
+        if item.get("review", {}).get("package_review_status") == "READY_FOR_OWNER_APPROVAL"
+    }
+    if baseline.get("checksum") != checksum(baseline): errors.append("approved baseline checksum mismatch")
+    if baseline.get("approved_subset_count") != 9 or len(rows) != 9: errors.append("approved baseline is not exactly 9 rows")
+    if baseline.get("production_seed_authorized") is not False: errors.append("approved baseline must not authorize Production seed")
+    if baseline.get("parent_catalog_version") != parent.get("catalog_version"): errors.append("approved baseline parent version mismatch")
+    if baseline.get("parent_catalog_checksum") != parent.get("checksum"): errors.append("approved baseline parent checksum mismatch")
+    codes = [item.get("runtime_candidate", {}).get("immutable_code") for item in rows]
+    if tuple(codes) != APPROVED_CODES: errors.append("approved baseline codes/order differ from owner decision")
+    if set(codes) != set(parent_ready) or len(parent_ready) != 9: errors.append("approved baseline does not exactly equal current READY rows")
+    identities = []
+    for item in rows:
+        runtime = item.get("runtime_candidate", {})
+        review = item.get("review", {})
+        code = runtime.get("immutable_code")
+        identity = (runtime.get("country_code"), runtime.get("point_type_code"), runtime.get("facility_identity_key"))
+        identities.append(identity)
+        if parent_ready.get(code) != item: errors.append(f"approved row differs from parent {code}")
+        if runtime.get("point_type_code") not in TYPE_CODES: errors.append(f"invalid approved type {code}")
+        if not set(runtime.get("supported_modes", [])) <= MODES or not runtime.get("supported_modes"): errors.append(f"invalid approved modes {code}")
+        if not re.fullmatch(r"[A-Z]{2}", runtime.get("country_code", "")): errors.append(f"invalid approved country {code}")
+        if review.get("package_review_status") != "READY_FOR_OWNER_APPROVAL" or review.get("open_questions"): errors.append(f"unresolved row in approved baseline {code}")
+        source_types = {source.get("source_type") for source in review.get("sources", [])}
+        if not {"REPOSITORY-DERIVED", "EXTERNAL-VERIFIED"} <= source_types: errors.append(f"approved row lacks required provenance {code}")
+        is_border = runtime.get("point_type_code") == "BORDER_CROSSING"
+        if is_border and (not runtime.get("border_pair_key") or runtime.get("border_side") not in {"ENTRY", "EXIT", "BIDIRECTIONAL"}): errors.append(f"invalid approved border pair {code}")
+    if len(codes) != len(set(codes)): errors.append("duplicate approved immutable_code")
+    if len(identities) != len(set(identities)): errors.append("duplicate approved facility identity")
+    return errors
+
 def reconciliation_rows() -> list[dict]:
     result=[]
     for order,(key,fa,en,country,kind,aliases) in enumerate(ROWS):
@@ -242,6 +311,24 @@ def report_text(payload: dict, reconciliation: list[dict]) -> str:
            f"Package: `backend/reference_data/{PACKAGE.name}`", f"SHA-256: `{payload['checksum']}`",
            f"Candidates: {len(rows)} ({len(core)} CORE, {len(optional)} OPTIONAL, {len(unresolved)} unresolved)",
            "Canonicalization: UTF-8 JSON, recursively sorted object keys, compact separators, excluding the top-level `checksum` field.", "",
+           "## Initial owner-approved baseline", "",
+           "**INITIAL APPROVED BASELINE: 9**", "",
+           "**DEFERRED CANDIDATES: 30** — 20 `NEEDS_OWNER_DECISION`; 10 `NEEDS_EXTERNAL_VERIFICATION`.", "",
+           "The nine-point baseline is the official initial governed V1 baseline. It is deliberately minimal and does not approve the full 39-row package. The remaining candidates are `DEFERRED_FROM_INITIAL_BASELINE` at the decision layer only; they are not permanently rejected, and their package review states and proposed runtime states remain unchanged.", "",
+           f"- Approved artifact: `backend/reference_data/{APPROVED_BASELINE.name}`",
+           "- Approved checksum: `sha256:08a7ca1fb17ae79964930cd47c019261b6952aa9542b2fc48ee09c7564690c7c`",
+           f"- Owner decision: `docs/operational/data/{OWNER_DECISION.name}`", "",
+           "Production seed authorized: **NO**", "",
+           "| Immutable code | English name | Country | Type | Modes |", "|---|---|---|---|---|",
+           "| GLP-CN-ALASHANKOU | Alashankou | CN | BORDER_CROSSING | ROAD, RAIL |",
+           "| GLP-CN-NINGBO-ZHOUSHAN | Ningbo-Zhoushan | CN | PORT | SEA |",
+           "| GLP-KZ-ALTYNKOL | Altynkol | KZ | RAIL_TERMINAL | RAIL |",
+           "| GLP-KZ-DOSTYK | Dostyk | KZ | BORDER_CROSSING | ROAD, RAIL |",
+           "| GLP-KG-IRKESHTAM | Irkeshtam Border Crossing — Kyrgyzstan Side | KG | BORDER_CROSSING | ROAD |",
+           "| GLP-TM-FARAP | Farap | TM | BORDER_CROSSING | ROAD, RAIL |",
+           "| GLP-TM-SERAKHS | Serakhs | TM | BORDER_CROSSING | ROAD, RAIL |",
+           "| GLP-IR-SARAKHS | Sarakhs | IR | BORDER_CROSSING | ROAD, RAIL |",
+           "| GLP-IR-INCHEH-BORUN | Incheh Borun | IR | BORDER_CROSSING | ROAD, RAIL |", "",
            "## Identity and review rules", "",
            "Codes use `GLP-{ISO2}-{STABLE-SLUG}`. They are governed identifiers, never numeric IDs or blindly copied UN/LOCODEs. Country/type codes are future importer lookup keys; the importer must resolve active runtime rows to opaque public IDs. Public IDs are generated by the service during apply.", "",
            "All proposed runtime states are DRAFT/UNVERIFIED. `READY_FOR_OWNER_APPROVAL` means data-package approval readiness, not runtime verification or activation. Coordinates and timezones are intentionally absent because row-specific authoritative evidence was not established.", "",
@@ -281,5 +368,31 @@ def check() -> None:
     if errors: raise SystemExit("\n".join(errors))
     print(f"catalog-validator=PASS checksum={payload['checksum']} rows={len(payload['global_logistics_points'])} legacy={len(rec)}")
 
+def generate_approved_baseline() -> None:
+    parent = json.loads(PACKAGE.read_text(encoding="utf-8"))
+    baseline = unsigned_approved_baseline(parent)
+    baseline["checksum"] = checksum(baseline)
+    errors = validate_approved_baseline(parent, baseline)
+    if errors: raise SystemExit("\n".join(errors))
+    APPROVED_BASELINE.write_text(json.dumps(baseline, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"approved-baseline-validator=PASS checksum={baseline['checksum']} rows={len(baseline['approved_global_logistics_points'])}")
+
+def check_approved_baseline() -> None:
+    parent = json.loads(PACKAGE.read_text(encoding="utf-8"))
+    baseline = json.loads(APPROVED_BASELINE.read_text(encoding="utf-8"))
+    errors = validate_approved_baseline(parent, baseline)
+    expected = unsigned_approved_baseline(parent)
+    expected["checksum"] = checksum(expected)
+    if baseline != expected: errors.append("approved baseline differs from deterministic generator")
+    if errors: raise SystemExit("\n".join(errors))
+    print(f"approved-baseline-validator=PASS checksum={baseline['checksum']} rows={len(baseline['approved_global_logistics_points'])}")
+
 if __name__ == "__main__":
-    generate() if "--generate" in sys.argv else check()
+    if "--generate" in sys.argv:
+        generate()
+    elif "--generate-approved-baseline" in sys.argv:
+        generate_approved_baseline()
+    elif "--approved-baseline" in sys.argv:
+        check_approved_baseline()
+    else:
+        check()

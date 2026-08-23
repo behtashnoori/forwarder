@@ -1,0 +1,579 @@
+{
+  "approved_global_logistics_points": [
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "cn-alashankou"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "CAREC",
+            "source_reference": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_title": "CAREC border-crossing points",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": "CN-KZ-ALASHANKOU-DOSTYK",
+        "border_side": "BIDIRECTIONAL",
+        "city_name": null,
+        "corridor_tags": [
+          "CHINA_KAZAKHSTAN_IRAN"
+        ],
+        "country_code": "CN",
+        "en_name": "Alashankou",
+        "external_codes": [
+          {
+            "scheme": "UNLOCODE",
+            "source_reference": "https://unlocode.unece.org/publications/",
+            "value": "CNAKL"
+          }
+        ],
+        "fa_name": "آلاشانکو",
+        "facility_identity_key": "cn-alashankou",
+        "geography_key": "CN:cn-alashankou",
+        "immutable_code": "GLP-CN-ALASHANKOU",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "alashankou",
+        "point_type_code": "BORDER_CROSSING",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "ROAD",
+          "RAIL"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "cn-ningbo-zhoushan"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Ningbo-Zhoushan",
+            "source_reference": "https://www.nbport.com.cn/",
+            "source_title": "Ningbo-Zhoushan Port official site",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://www.nbport.com.cn/",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": null,
+        "border_side": "NOT_APPLICABLE",
+        "city_name": null,
+        "corridor_tags": [
+          "CHINA_SEA_IRAN"
+        ],
+        "country_code": "CN",
+        "en_name": "Ningbo-Zhoushan",
+        "external_codes": [],
+        "fa_name": "نینگبو-ژوشان",
+        "facility_identity_key": "cn-ningbo-zhoushan",
+        "geography_key": "CN:cn-ningbo-zhoushan",
+        "immutable_code": "GLP-CN-NINGBO-ZHOUSHAN",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "ningbo-zhoushan",
+        "point_type_code": "PORT",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "SEA"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "ir-incheh-borun"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Government",
+            "source_reference": "https://turkmenistan.gov.tm/en/post/11700/turkmenistan-implements-regional-and-transcontinental-transport-projects",
+            "source_title": "Government of Turkmenistan regional transport projects",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://turkmenistan.gov.tm/en/post/11700/turkmenistan-implements-regional-and-transcontinental-transport-projects",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": "TM-IR-AKYAYLA-INCHEH-BORUN",
+        "border_side": "BIDIRECTIONAL",
+        "city_name": null,
+        "corridor_tags": [
+          "CENTRAL_ASIA_IRAN"
+        ],
+        "country_code": "IR",
+        "en_name": "Incheh Borun",
+        "external_codes": [],
+        "fa_name": "اینچه‌برون",
+        "facility_identity_key": "ir-incheh-borun",
+        "geography_key": "IR:ir-incheh-borun",
+        "immutable_code": "GLP-IR-INCHEH-BORUN",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "incheh borun",
+        "point_type_code": "BORDER_CROSSING",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "ROAD",
+          "RAIL"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "ir-sarakhs"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "UNECE",
+            "source_reference": "https://unece.org/sites/default/files/2025-04/3%20ppt%20Farhad%20Sheidei%20%28Iran%29.pdf",
+            "source_title": "UNECE Railways of the Islamic Republic of Iran",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://unece.org/sites/default/files/2025-04/3%20ppt%20Farhad%20Sheidei%20%28Iran%29.pdf",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": "TM-IR-SERAKHS-SARAKHS",
+        "border_side": "BIDIRECTIONAL",
+        "city_name": null,
+        "corridor_tags": [
+          "CENTRAL_ASIA_IRAN",
+          "CHINA_IRAN_MAIN"
+        ],
+        "country_code": "IR",
+        "en_name": "Sarakhs",
+        "external_codes": [],
+        "fa_name": "سرخس",
+        "facility_identity_key": "ir-sarakhs",
+        "geography_key": "IR:ir-sarakhs",
+        "immutable_code": "GLP-IR-SARAKHS",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "sarakhs",
+        "point_type_code": "BORDER_CROSSING",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "ROAD",
+          "RAIL"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "CAREC",
+            "source_reference": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_title": "CAREC border-crossing points",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [
+          {
+            "language_code": null,
+            "value": "Irkeshtam"
+          }
+        ],
+        "border_pair_key": "CN-KG-IRKESHTAM",
+        "border_side": "BIDIRECTIONAL",
+        "city_name": null,
+        "corridor_tags": [
+          "CHINA_KYRGYZSTAN_UZBEKISTAN_IRAN"
+        ],
+        "country_code": "KG",
+        "en_name": "Irkeshtam Border Crossing — Kyrgyzstan Side",
+        "external_codes": [],
+        "fa_name": "گذرگاه ایرکشتام (سمت قرقیزستان)",
+        "facility_identity_key": "kg-irkeshtam",
+        "geography_key": "KG:kg-irkeshtam",
+        "immutable_code": "GLP-KG-IRKESHTAM",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "irkeshtam border crossing — kyrgyzstan side",
+        "point_type_code": "BORDER_CROSSING",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "ROAD"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "kz-altynkol"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "CAREC",
+            "source_reference": "https://www.carecprogram.org/uploads/Situation-of-Railways-in-CAREC_8th_2022-9-19_WEB.pdf",
+            "source_title": "CAREC railway assessment",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://www.carecprogram.org/uploads/Situation-of-Railways-in-CAREC_8th_2022-9-19_WEB.pdf",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": "CN-KZ-HORGOS-ALTYNKOL",
+        "border_side": "NOT_APPLICABLE",
+        "city_name": null,
+        "corridor_tags": [
+          "CHINA_KAZAKHSTAN_IRAN"
+        ],
+        "country_code": "KZ",
+        "en_name": "Altynkol",
+        "external_codes": [],
+        "fa_name": "آلتین‌کول",
+        "facility_identity_key": "kz-altynkol",
+        "geography_key": "KZ:kz-altynkol",
+        "immutable_code": "GLP-KZ-ALTYNKOL",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "altynkol",
+        "point_type_code": "RAIL_TERMINAL",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "RAIL"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "kz-dostyk"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "CAREC",
+            "source_reference": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_title": "CAREC border-crossing points",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": "CN-KZ-ALASHANKOU-DOSTYK",
+        "border_side": "BIDIRECTIONAL",
+        "city_name": null,
+        "corridor_tags": [
+          "CHINA_KAZAKHSTAN_IRAN"
+        ],
+        "country_code": "KZ",
+        "en_name": "Dostyk",
+        "external_codes": [],
+        "fa_name": "دوستیک",
+        "facility_identity_key": "kz-dostyk",
+        "geography_key": "KZ:kz-dostyk",
+        "immutable_code": "GLP-KZ-DOSTYK",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "dostyk",
+        "point_type_code": "BORDER_CROSSING",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "ROAD",
+          "RAIL"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "tm-farap"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "CAREC",
+            "source_reference": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_title": "CAREC border-crossing points",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://cpmm.carecprogram.org/2023-report/appendix-7-central-asia-regional-economic-cooperation-border-crossing-points/",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": "UZ-TM-ALAT-FARAP",
+        "border_side": "BIDIRECTIONAL",
+        "city_name": null,
+        "corridor_tags": [
+          "CHINA_CENTRAL_ASIA_IRAN"
+        ],
+        "country_code": "TM",
+        "en_name": "Farap",
+        "external_codes": [],
+        "fa_name": "فاراپ",
+        "facility_identity_key": "tm-farap",
+        "geography_key": "TM:tm-farap",
+        "immutable_code": "GLP-TM-FARAP",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "farap",
+        "point_type_code": "BORDER_CROSSING",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "ROAD",
+          "RAIL"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    },
+    {
+      "review": {
+        "classification": "CORE_V1",
+        "evidence_class": "EXTERNAL-VERIFIED",
+        "legacy_keys": [
+          "tm-serakhs"
+        ],
+        "open_questions": [],
+        "package_review_status": "READY_FOR_OWNER_APPROVAL",
+        "sources": [
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "Forwarder repository",
+            "source_reference": "backend/services/tracking_location_bootstrap_service.py@6331ed95",
+            "source_title": "Curated China-to-Iran tracking checkpoint bootstrap",
+            "source_type": "REPOSITORY-DERIVED",
+            "source_url": null,
+            "source_version": "6331ed95"
+          },
+          {
+            "checked_date": "2026-08-23",
+            "source_organization": "UNECE",
+            "source_reference": "https://unece.org/sites/default/files/2025-04/3%20ppt%20Farhad%20Sheidei%20%28Iran%29.pdf",
+            "source_title": "UNECE Railways of the Islamic Republic of Iran",
+            "source_type": "EXTERNAL-VERIFIED",
+            "source_url": "https://unece.org/sites/default/files/2025-04/3%20ppt%20Farhad%20Sheidei%20%28Iran%29.pdf",
+            "source_version": "retrieved-2026-08-23"
+          }
+        ],
+        "tier": "CORE_V1"
+      },
+      "runtime_candidate": {
+        "aliases": [],
+        "border_pair_key": "TM-IR-SERAKHS-SARAKHS",
+        "border_side": "BIDIRECTIONAL",
+        "city_name": null,
+        "corridor_tags": [
+          "CENTRAL_ASIA_IRAN"
+        ],
+        "country_code": "TM",
+        "en_name": "Serakhs",
+        "external_codes": [],
+        "fa_name": "سرخس ترکمنستان",
+        "facility_identity_key": "tm-serakhs",
+        "geography_key": "TM:tm-serakhs",
+        "immutable_code": "GLP-TM-SERAKHS",
+        "latitude": null,
+        "longitude": null,
+        "normalized_name": "serakhs",
+        "point_type_code": "BORDER_CROSSING",
+        "proposed_lifecycle_status": "DRAFT",
+        "proposed_verification_status": "UNVERIFIED",
+        "region_name": null,
+        "short_address": null,
+        "supported_modes": [
+          "ROAD",
+          "RAIL"
+        ],
+        "timezone": null,
+        "un_locode": null
+      }
+    }
+  ],
+  "approved_subset_count": 9,
+  "canonicalization": "UTF-8 JSON; sort_keys=true; separators=(',',':'); checksum field excluded",
+  "catalog_version": "china-iran-global-logistics-points-1.0.0-approved-baseline",
+  "checksum": "sha256:08a7ca1fb17ae79964930cd47c019261b6952aa9542b2fc48ee09c7564690c7c",
+  "owner_decision_reference": "docs/operational/data/global-logistics-points-china-iran-v1.0.0-baseline-owner-decision.md",
+  "parent_catalog_checksum": "sha256:8c256a87060a79487faf44d67d07386bb0e9046cec0441cbaf9be1197732b3b0",
+  "parent_catalog_path": "backend/reference_data/global-logistics-points-china-iran-v1.0.0.json",
+  "parent_catalog_version": "china-iran-global-logistics-points-1.0.0",
+  "production_seed_authorized": false,
+  "schema_version": "1"
+}
