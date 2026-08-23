@@ -1,6 +1,6 @@
 # Global Logistics Network Production rollout plan
 
-Status: **BLOCKED — release prerequisites required**
+Status: **TOOLING CERTIFIED — Production execution not authorized**
 
 Plan date: 2026-08-23 (Asia/Tehran)
 
@@ -12,13 +12,14 @@ Migration: `20260903_external_operational_references` → `20260906_global_logis
 
 This is a planning and certification record. It authorizes no Production access, deployment, migration, seed, activation, service restart, IIS change, or push. Commands under P2–P15 are templates for a separately authorized change window. Replace every `<...>` value from approved operator evidence; never infer it.
 
-## Release decision and mandatory prerequisites
+## Release decision and certified prerequisites
 
-Execution is blocked until a separate local-only implementation Goal delivers and certifies:
+The local tooling prerequisites are implemented and certified:
 
-1. A governed Global Logistics Point package importer with separate `plan` and `apply` commands, canonical checksum verification, exact-count enforcement, conflict detection, Platform Admin identity and approval-reference checks, persisted run evidence, convergence reporting, and tests on PostgreSQL 18.
-2. A release builder updated for this release. `scripts/build_release_package.py` is pinned to Forwarder 1.9.5.1, tag `v1.9.5.1`, commit-era migration `20260828_referral_state_compat`, and an obsolete migration list. It cannot build this release safely.
-3. Owner approval of the new importer and artifact contract, followed by a fresh certification record. The approved data package explicitly says `production_seed_authorized: false`; package approval is not execution approval.
+1. `backend/global_logistics_point_catalog.py` and `backend/global_logistics_point_catalog_cli.py` provide strict checksum-pinned, exact-nine-row PLAN/APPLY behavior, Platform Admin enforcement, atomic catalog writes, conflict refusal, convergence, and `ReferenceDataSeedRun` evidence.
+2. `scripts/build_release_package.py` builds from a clean detached worktree at an explicit full authorized commit and produces fresh `dist`; `scripts/verify_release_artifact.py` verifies the ZIP, sidecar artifact identity, internal content manifest, and required structure.
+
+Production remains blocked pending separate owner/operator approval and an authorized change window. The approved package explicitly says `production_seed_authorized: false`; package and tooling certification are not execution approval.
 
 The importer must create all package rows as `DRAFT / UNVERIFIED`. ADR-041 and the owner decision require Platform Admin transitions `REVIEW → VERIFY → ACTIVATE`; the package does not establish a pre-reviewed activation path. Only one owner-selected point is to be activated for smoke. No bulk activation is implied.
 
@@ -104,11 +105,18 @@ Required results: no test/type/lint/build/compile/governance/secret/diff failure
 
 A fresh loopback-only PostgreSQL 18.0 cluster was initialized for this plan. A database was migrated from base to `20260903`, verified pending, upgraded explicitly with `python -m backend.migration_cli upgrade 20260906_global_logistics_point_materialization --confirm`, and verified current with no pending revisions. PostgreSQL reported transactional DDL. Application construction passed with 342 routes. Before/after counts were `logistics_point=0` and `tracking_location_reference=64`; after upgrade the global and adoption counts were zero. A focused SQLite/runtime suite covering governance, adoption, materialization, logistics network and operational selectors passed 29 tests.
 
-The disposable PostgreSQL data was synthetic and does not certify Production contents. Full importer PLAN/APPLY/convergence certification is blocked by the missing importer. The disposable cluster is destroyed after evidence collection.
+The disposable PostgreSQL data was synthetic and does not certify Production contents. The governed importer is separately certified on PostgreSQL 18 for fresh PLAN, APPLY, converged re-PLAN, idempotent reapply, conflict refusal, normalized children and persisted evidence. The disposable cluster is destroyed after evidence collection.
 
-### Artifact contract (after prerequisites)
+### Artifact contract and certified commands
 
 Proposed immutable filename: `Forwarder-global-logistics-6eb46b1.zip`. Build from an isolated clean checkout of the full 40-character source commit. Include `backend/` excluding tests/caches, all migrations and Alembic configuration, `manage.py`, pinned requirements, current `dist/`, runtime configuration templates without values, migration CLI/tooling, the governed importer, the exact approved baseline JSON, and runtime-required documentation/scripts.
+
+```powershell
+python scripts/build_release_package.py --repository 'D:\1-webapp\15-forwarder' --authorized-commit '<40-character-approved-commit>' --output-directory '<new-output-directory>' --release-label 'global-logistics'
+python scripts/verify_release_artifact.py --artifact '<candidate.zip>' --manifest '<candidate.zip.manifest.json>'
+```
+
+The internal content manifest cannot contain the final ZIP hash without self-reference. Therefore `release-manifest.json` records the content hash and complete file inventory, while the immutable sidecar `.zip.manifest.json` records the final artifact filename, byte size and SHA-256. Transfer and verify both files.
 
 Exclude `.git`, `.env*`, secrets, credentials, logs, test/build caches, source maps unless explicitly required, local database directories, prior releases/ZIPs, evidence artifacts, and unrelated worktree files.
 
@@ -216,27 +224,34 @@ Require HTTP 200 locally and publicly for `/api/health` and `/api/health/ready`,
 
 Authorization gate: data owner and Platform owner authorize PLAN only. PLAN is read-only and must not automatically invoke APPLY.
 
-The exact command syntax is deliberately unavailable until the importer prerequisite exists. Its required contract is:
+The certified read-only command is:
 
-```text
-python -m backend.global_logistics_point_package_cli plan
-  --package backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json
-  --catalog-version china-iran-global-logistics-points-1.0.0-approved-baseline
-  --checksum sha256:08a7ca1fb17ae79964930cd47c019261b6952aa9542b2fc48ee09c7564690c7c
-  --expected-count 9
-  --actor-user-id 26
-  --operator platformadmin
-  --approval-reference docs/operational/data/global-logistics-points-china-iran-v1.0.0-baseline-owner-decision.md
-  --output <new-evidence-json>
+```powershell
+python -m backend.global_logistics_point_catalog_cli plan `
+  --package backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json `
+  --catalog-version china-iran-global-logistics-points-1.0.0-approved-baseline `
+  --expected-checksum sha256:08a7ca1fb17ae79964930cd47c019261b6952aa9542b2fc48ee09c7564690c7c
 ```
 
-This is a required future interface, **not an executable command today**. PLAN must emit version, canonical checksum, expected count, create/unchanged/conflict counts and all nine candidate codes. Fresh expected result: planned/create 9, unchanged 0, conflicts 0. STOP on any difference, including an existing identity matched only by name.
+PLAN emits version, canonical checksum, environment, planned/create/unchanged/conflict counts and all nine candidate codes. Fresh expected result: planned/create 9, unchanged 0, conflicts 0. STOP on any difference, including an existing identity matched only by name.
 
 ## P10 — Global baseline APPLY
 
 Authorization gate: a second, explicit data owner + Platform owner approval after reviewing P9 evidence.
 
-The future APPLY must repeat every immutable PLAN input, reference the exact PLAN evidence/hash, require an explicit confirmation flag, verify user 26 is active `PLATFORM_ADMIN` and username `platformadmin`, execute atomically, and persist a unique immutable run record with operator identity, approval reference, package/version/checksum/count, timestamps, result counts, candidate codes and failure/conflict details. It creates `DRAFT / UNVERIFIED` rows only.
+The certified APPLY command must be used only after a separate Production authorization:
+
+```powershell
+python -m backend.global_logistics_point_catalog_cli apply `
+  --package backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json `
+  --catalog-version china-iran-global-logistics-points-1.0.0-approved-baseline `
+  --expected-checksum sha256:08a7ca1fb17ae79964930cd47c019261b6952aa9542b2fc48ee09c7564690c7c `
+  --operator platformadmin --actor-user-id 26 `
+  --approval-reference '<approved-execution-reference>' `
+  --confirm --confirm-production
+```
+
+APPLY verifies user 26 is active `PLATFORM_ADMIN` and username `platformadmin`, executes catalog writes atomically, and persists a `ReferenceDataSeedRun` record with operator identity, approval reference, package/version/checksum/count, timestamps, result counts, and sanitized failure/refusal details. It creates `DRAFT / UNVERIFIED` rows only.
 
 Expected apply: created 9, unchanged 0, conflicts 0; database count 9. A new PLAN must then report created 0, unchanged 9, conflicts 0. STOP and do not hand-edit rows if apply or convergence differs.
 
@@ -286,7 +301,7 @@ Do not downgrade: the `20260905` and `20260906` guards refuse retained-data loss
 
 ### Universal STOP conditions
 
-STOP on artifact/manifest/checksum mismatch; wrong DB; recovery/replica DB; unexpected starting revision; backup/list/hash failure; migration failure; readiness or frontend failure; unexpected pre-populated global/adoption data; baseline conflict or nonconvergence; Platform authorization failure; tenant leakage; repeated HTTP 500; unexpected mutation/count drift; invalid downgrade assumptions; missing rollback assets; unresolved importer/artifact-builder prerequisites; or loss of an authorization gate.
+STOP on artifact/manifest/checksum mismatch; wrong DB; recovery/replica DB; unexpected starting revision; backup/list/hash failure; migration failure; readiness or frontend failure; unexpected pre-populated global/adoption data; baseline conflict or nonconvergence; Platform authorization failure; tenant leakage; repeated HTTP 500; unexpected mutation/count drift; invalid downgrade assumptions; missing rollback assets; failed tooling verification; or loss of an authorization gate.
 
 ## Final report
 
@@ -300,8 +315,8 @@ STOP on artifact/manifest/checksum mismatch; wrong DB; recovery/replica DB; unex
 - I. Migration delta: additive global/adoption schema plus nullable LogisticsPoint provenance; no automatic data rewrite
 - J. PostgreSQL certification: migration/startup/count checks PASS; importer certification BLOCKED
 - K/L/M. Package: approved baseline JSON; canonical checksum `08a7...c7c`; 9 rows
-- N/O. Importer exists: NO; governed importer implementation/certification required
-- P. Artifact: new immutable builder/artifact/manifest required
+- N/O. Importer exists: YES; certified module and explicit CLI included
+- P. Artifact: explicit-commit isolated builder plus strict ZIP/manifest verifier included
 - Q/R. Backup/maintenance: frozen verified custom dump with stopped writers and preserved app/task/IIS rollback assets
 - S/T. Migration/cutover: explicit CLI migration, immutable release directory, isolated venv, controlled task/IIS switches
 - U/V/W/X. Smoke: Platform governance; one authorized adoption; one authorized materialization; read-first operational selector smoke
@@ -314,6 +329,6 @@ STOP on artifact/manifest/checksum mismatch; wrong DB; recovery/replica DB; unex
 - AF. Production seeded? NO
 - AG. Deployment? NO
 - AH. Push? NO
-- AI. Next controlled Goal: implement and PostgreSQL-18-certify the governed baseline importer and current release artifact builder locally, then obtain owner approval and a separate Production execution authorization
+- AI. Next controlled step: obtain separate owner/operator authorization for Production execution
 
 GLOBAL LOGISTICS NETWORK PRODUCTION ROLLOUT BLOCKED — RELEASE PREREQUISITE REQUIRED

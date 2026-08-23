@@ -1,34 +1,27 @@
-"""Build the immutable Forwarder 1.9.5.1 hotfix from its exact annotated tag."""
+"""Build a governed Forwarder release from one explicit authorized commit."""
 
 from __future__ import annotations
-
 import argparse
-import gzip
 import hashlib
 import json
 import os
-import platform
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-VERSION = "1.9.5.1"
-PREVIOUS_VERSION = "1.9.5"
-TAG = "v1.9.5.1"
-RELEASE_DATE = "20260816"
-RELEASE_DIR = ROOT / f"release-v{VERSION}-{RELEASE_DATE}"
-NPM_EXECUTABLE = "npm.cmd" if os.name == "nt" else "npm"
-PRODUCTION_BASELINE_REVISION = "20260827_org_hostname"
-DATABASE_REVISION = "20260828_referral_state_compat"
-UPGRADE_MIGRATIONS = [
-    ("20260828_referral_state_compat", "backend/migrations/versions/20260828_referral_state_compatibility.py"),
-]
-UPGRADE_REVISIONS = [revision for revision, _ in UPGRADE_MIGRATIONS]
+EXPECTED_HEAD = "20260906_global_logistics_point_materialization"
+BASELINE = Path(
+    "backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json"
+)
+BASELINE_VERSION = "china-iran-global-logistics-points-1.0.0-approved-baseline"
+BASELINE_CHECKSUM = (
+    "sha256:08a7ca1fb17ae79964930cd47c019261b6952aa9542b2fc48ee09c7564690c7c"
+)
 HISTORICAL_SECURITY_REMEDIATION = {
     "policy": "exact-credential-migration-remediated-in-ancestry-v1",
     "legacy_revision": "20240926_add_password_to_expert_user",
@@ -36,236 +29,309 @@ HISTORICAL_SECURITY_REMEDIATION = {
     "remediation_revision": "security_credential_remediation",
     "remediation_sha256": "72e19843e625054dac4f338ee7f54772bc2ebef332dabdab7417e50fab6635ee",
 }
+ROOT_FILES = ("manage.py", "requirements.txt", "requirements-release.txt")
+OPTIONAL_FILES = (
+    "Dockerfile",
+    "docker-compose.production.yml",
+    "DEPLOYMENT.md",
+    "SMOKE-TEST.md",
+    "ROLLBACK.md",
+    "MIGRATION-PREFLIGHT.md",
+    "VERIFY-PACKAGE.ps1",
+    "VERIFY-SERVER.ps1",
+    "verify_package_secrets.py",
+)
 
 
-def run(*args: str) -> str:
-    return subprocess.check_output(args, cwd=ROOT, text=True).strip()
+class BuildError(RuntimeError):
+    pass
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+def run(args, cwd, *, env=None, output=True):
+    p = subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=output)
+    if p.returncode:
+        lines = (p.stderr or p.stdout or "").strip().splitlines()
+        raise BuildError(
+            f"command failed ({p.returncode}): {' '.join(map(str, args))}"
+            + (f"; {lines[-1]}" if lines else "")
+        )
+    return (p.stdout or "").strip()
 
 
-def migration_path(revision: str) -> Path:
-    relative = dict(UPGRADE_MIGRATIONS).get(revision)
-    if relative is None:
-        raise SystemExit(f"Unknown release migration {revision}")
-    path = ROOT / relative
-    if not path.is_file():
-        raise SystemExit(f"Missing migration file for {revision}: {relative}")
-    return path
+def file_hash(path):
+    h = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
 
 
-def tag_status() -> str:
-    probe = subprocess.run(
-        ("git", "cat-file", "-t", TAG), cwd=ROOT, text=True, capture_output=True
+def canonical(payload):
+    unsigned = {k: v for k, v in payload.items() if k != "checksum"}
+    return (
+        "sha256:"
+        + hashlib.sha256(
+            json.dumps(
+                unsigned, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+            ).encode()
+        ).hexdigest()
     )
-    if probe.returncode:
-        return "absent"
-    object_type = probe.stdout.strip()
-    if object_type != "tag":
-        return "not-annotated"
-    return "matches-head" if run("git", "rev-list", "-n", "1", TAG) == run("git", "rev-parse", "HEAD") else "wrong-commit"
 
 
-def validate_source() -> str:
-    version = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))["version"]
-    if version != VERSION:
-        raise SystemExit(f"package.json version mismatch: {version} != {VERSION}")
-    heads = run(sys.executable, "-m", "alembic", "-c", "backend/migrations/alembic.ini", "heads")
-    if heads.splitlines() != [f"{DATABASE_REVISION} (head)"]:
-        raise SystemExit(f"Alembic head mismatch: {heads!r}")
-    for revision in UPGRADE_REVISIONS:
-        migration_path(revision)
-    requirements = {
-        line.strip()
-        for line in (ROOT / "requirements.txt").read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.lstrip().startswith("#")
+def validate_source(source, commit):
+    if run(["git", "rev-parse", "HEAD"], source) != commit:
+        raise BuildError("source HEAD does not equal authorized commit")
+    if run(["git", "status", "--porcelain"], source):
+        raise BuildError("isolated source is dirty")
+    heads = run(
+        [
+            sys.executable,
+            "-m",
+            "alembic",
+            "-c",
+            "backend/migrations/alembic.ini",
+            "heads",
+        ],
+        source,
+    ).splitlines()
+    if heads != [EXPECTED_HEAD + " (head)"]:
+        raise BuildError(f"unexpected Alembic heads: {heads}")
+    try:
+        package = json.loads((source / BASELINE).read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise BuildError("baseline is not strict UTF-8 JSON") from exc
+    if (
+        package.get("catalog_version") != BASELINE_VERSION
+        or package.get("checksum") != BASELINE_CHECKSUM
+        or canonical(package) != BASELINE_CHECKSUM
+        or package.get("approved_subset_count") != 9
+        or len(package.get("approved_global_logistics_points", [])) != 9
+    ):
+        raise BuildError("baseline identity/checksum/count mismatch")
+    for name in ROOT_FILES:
+        if not (source / name).is_file():
+            raise BuildError(f"required source file missing: {name}")
+    return package
+
+
+def gates(source):
+    npm = "npm.cmd" if os.name == "nt" else "npm"
+    with tempfile.TemporaryDirectory(prefix="forwarder-release-venv-") as raw:
+        venv = Path(raw)
+        run([sys.executable, "-m", "venv", str(venv)], source)
+        python = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        run(
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                "requirements.txt",
+                "-r",
+                "requirements-release.txt",
+            ],
+            source,
+            output=False,
+        )
+        run([str(python), "scripts/scan_repository_secrets.py", "current"], source)
+        run([npm, "ci"], source, output=False)
+        run(
+            [
+                str(python),
+                "-m",
+                "ruff",
+                "check",
+                "backend/global_logistics_point_catalog.py",
+                "backend/global_logistics_point_catalog_cli.py",
+                "backend/tests/test_global_logistics_point_catalog_importer.py",
+                "scripts/build_release_package.py",
+                "scripts/verify_release_artifact.py",
+                "scripts/certify_global_logistics_point_importer_postgres.py",
+                "scripts/tests/test_release_package_builder.py",
+            ],
+            source,
+            output=False,
+        )
+        run([str(python), "-m", "pytest"], source, output=False)
+        run([npm, "run", "test:frontend"], source, output=False)
+        run([npm, "exec", "tsc", "--", "--noEmit"], source, output=False)
+        run([npm, "run", "lint"], source, output=False)
+        env = os.environ.copy()
+        env["VITE_API_URL"] = "__FORWARDER_SAME_ORIGIN__"
+        run([npm, "run", "build"], source, env=env, output=False)
+        run([str(python), "-m", "compileall", "-q", "backend"], source)
+        run([str(python), "scripts/check_architecture_governance.py"], source)
+        run(["git", "diff", "--check"], source)
+        return {
+            "python": run([str(python), "--version"], source),
+            "node": run(["node", "--version"], source),
+            "npm": run([npm, "--version"], source),
+        }
+
+
+def copy(source, relative, target):
+    out = target / relative
+    out.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, out)
+
+
+def assemble(source, target):
+    for name in ROOT_FILES + OPTIONAL_FILES:
+        if (source / name).is_file():
+            copy(source / name, Path(name), target)
+    for name in run(["git", "ls-files", "backend", "scripts"], source).splitlines():
+        relative = Path(name)
+        if "tests" in relative.parts or relative.suffix in {".pyc", ".map"}:
+            continue
+        copy(source / relative, relative, target)
+    dist = source / "dist"
+    if not (dist / "index.html").is_file():
+        raise BuildError("fresh dist/index.html is missing")
+    for path in sorted(dist.rglob("*")):
+        if path.is_file():
+            copy(path, Path("dist") / path.relative_to(dist), target)
+
+
+def verify_tree(target):
+    required = [
+        Path("backend"),
+        Path("backend/migrations"),
+        Path("backend/reference_data"),
+        Path("dist/index.html"),
+        *map(Path, ROOT_FILES),
+        BASELINE,
+        Path("backend/global_logistics_point_catalog.py"),
+        Path("backend/global_logistics_point_catalog_cli.py"),
+    ]
+    missing = [x.as_posix() for x in required if not (target / x).exists()]
+    if missing:
+        raise BuildError(f"artifact structure missing: {missing}")
+
+
+def build(repo, commit, output, label, *, skip_gates=False):
+    repo, output = repo.resolve(), output.resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}", label):
+        raise BuildError("unsafe release label")
+    if (
+        run(["git", "rev-parse", "--show-toplevel"], repo).replace("\\", "/").lower()
+        != repo.as_posix().lower()
+    ):
+        raise BuildError("repository must be exact Git root")
+    if (
+        not re.fullmatch(r"[0-9a-f]{40}", commit)
+        or run(["git", "cat-file", "-t", commit], repo) != "commit"
+    ):
+        raise BuildError("authorized commit is invalid or unavailable")
+    artifact = output / f"Forwarder-{label}-{commit[:7]}.zip"
+    sidecar = output / (artifact.name + ".manifest.json")
+    if artifact.exists() or sidecar.exists():
+        raise BuildError("refusing to overwrite output")
+    with tempfile.TemporaryDirectory(prefix="forwarder-authorized-source-") as raw:
+        source = Path(raw) / "source"
+        run(["git", "worktree", "add", "--detach", str(source), commit], repo)
+        try:
+            baseline = validate_source(source, commit)
+            tools = {"gates": "skipped-for-test"} if skip_gates else gates(source)
+            with tempfile.TemporaryDirectory(
+                prefix="forwarder-package-"
+            ) as package_raw:
+                package = Path(package_raw)
+                assemble(source, package)
+                verify_tree(package)
+                records = []
+                for path in sorted(package.rglob("*")):
+                    if path.is_file():
+                        records.append(
+                            {
+                                "path": path.relative_to(package).as_posix(),
+                                "bytes": path.stat().st_size,
+                                "sha256": file_hash(path),
+                            }
+                        )
+                content_hash = hashlib.sha256(
+                    "".join(f"{x['path']}\0{x['sha256']}\n" for x in records).encode()
+                ).hexdigest()
+                manifest = {
+                    "manifest_schema": "forwarder-release-content-v2",
+                    "release_label": label,
+                    "source_commit": commit,
+                    "build_utc": datetime.now(timezone.utc)
+                    .replace(microsecond=0)
+                    .isoformat(),
+                    "alembic_head": EXPECTED_HEAD,
+                    "baseline_catalog_version": baseline["catalog_version"],
+                    "baseline_checksum": baseline["checksum"],
+                    "baseline_count": 9,
+                    "artifact_filename": artifact.name,
+                    "content_hash": "sha256:" + content_hash,
+                    "content_hash_definition": "SHA-256 of sorted path\\0file-sha256\\n records excluding release-manifest.json",
+                    "toolchain": tools,
+                    "files": records,
+                }
+                (package / "release-manifest.json").write_text(
+                    json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                with zipfile.ZipFile(
+                    artifact, "x", zipfile.ZIP_DEFLATED, compresslevel=9
+                ) as archive:
+                    for path in sorted(package.rglob("*")):
+                        if path.is_file():
+                            archive.write(path, path.relative_to(package).as_posix())
+        finally:
+            run(["git", "worktree", "remove", "--force", str(source)], repo)
+    outer = {
+        "manifest_schema": "forwarder-release-artifact-v1",
+        "artifact_filename": artifact.name,
+        "artifact_size": artifact.stat().st_size,
+        "artifact_sha256": file_hash(artifact),
+        "source_commit": commit,
+        "alembic_head": EXPECTED_HEAD,
+        "baseline_catalog_version": BASELINE_VERSION,
+        "baseline_checksum": BASELINE_CHECKSUM,
+        "baseline_count": 9,
     }
-    if "psycopg2-binary==2.9.11" not in requirements:
-        raise SystemExit("Missing exact PostgreSQL runtime driver declaration")
-    return tag_status()
-
-
-def npm_version() -> str:
-    return run(NPM_EXECUTABLE, "--version")
-
-
-def build_frontend() -> None:
-    build_env = os.environ.copy()
-    # Packages are served behind the same-origin gateway. Pin this Vite input
-    # so ignored developer .env files cannot change immutable release bytes.
-    build_env["VITE_API_URL"] = "__FORWARDER_SAME_ORIGIN__"
-    subprocess.check_call(
-        (NPM_EXECUTABLE, "run", "build"), cwd=ROOT, env=build_env
+    sidecar.write_text(
+        json.dumps(outer, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
+    return artifact, sidecar
 
 
-def promote_release_directory(staging: Path, final: Path) -> None:
-    """Atomically publish a complete sibling directory without overwriting."""
-    if staging.parent != final.parent:
-        raise ValueError("Release staging and final directories must be siblings")
-    if not staging.is_dir():
-        raise FileNotFoundError(f"Release staging directory does not exist: {staging}")
-    if final.exists():
-        raise FileExistsError(f"Refusing to overwrite {final}")
-    os.rename(staging, final)
-
-
-def copy_file(source: Path, relative: Path, package_root: Path) -> None:
-    target = package_root / relative
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(source, target)
-
-
-def build() -> None:
-    status = validate_source()
-    if status != "matches-head":
-        raise SystemExit(f"{TAG} must be an annotated tag pointing at HEAD; status={status}")
-    if run("git", "status", "--porcelain", "--untracked-files=no"):
-        raise SystemExit("Tracked working tree must be clean")
-    if RELEASE_DIR.exists():
-        raise SystemExit(f"Refusing to overwrite {RELEASE_DIR}")
-
-    commit = run("git", "rev-parse", "HEAD")
-    archive = ROOT / f"Forwarder-v{VERSION}-{commit[:7]}.zip"
-    if archive.exists():
-        raise SystemExit(f"Refusing to overwrite {archive}")
-    tree = run("git", "rev-parse", "HEAD^{tree}")
-    tag_object = run("git", "rev-parse", f"{TAG}^{{tag}}")
-    build_frontend()
-    if not (ROOT / "dist" / "index.html").is_file():
-        raise SystemExit("Tagged-source production build did not create dist/index.html")
-    with tempfile.TemporaryDirectory(
-        prefix=f".{RELEASE_DIR.name}-staging-", dir=ROOT
-    ) as temporary:
-        package_root = Path(temporary)
-        for source in sorted((ROOT / "dist").rglob("*")):
-            if source.is_file():
-                copy_file(source, source.relative_to(ROOT / "dist"), package_root)
-
-        root_files = [
-            "manage.py", "requirements.txt", "Dockerfile", "docker-compose.production.yml",
-            "DEPLOYMENT.md", "SMOKE-TEST.md", "ROLLBACK.md", "MIGRATION-PREFLIGHT.md",
-            "VERIFY-PACKAGE.ps1", "VERIFY-SERVER.ps1", "verify_package_secrets.py",
-            "docs/operational/release-1.9.5.1-notes.md",
-            "docs/operational/Forwarder-v1.9.5.1-handoff.md",
-        ]
-        for name in root_files:
-            copy_file(ROOT / name, Path(name), package_root)
-
-        for name in run("git", "ls-files", "backend").splitlines():
-            relative = Path(name)
-            if "tests" in relative.parts or relative.suffix in {".pyc", ".map"}:
-                continue
-            copy_file(ROOT / relative, relative, package_root)
-
-        index = (package_root / "index.html").read_text(encoding="utf-8")
-        js = re.search(r'src="/([^\"]+\.js)"', index).group(1)
-        css = re.search(r'href="/([^\"]+\.css)"', index).group(1)
-        requirements_hash = sha256(ROOT / "requirements.txt")
-        env_data = {
-            "node": run("node", "--version"),
-            "npm": npm_version(),
-            "python": platform.python_version(),
-            "package_lock_sha256": sha256(ROOT / "package-lock.json"),
-            "requirements_sha256": requirements_hash,
-        }
-        env_canonical = json.dumps(env_data, sort_keys=True, separators=(",", ":")).encode()
-        records = "".join(
-            f"{path.relative_to(package_root).as_posix()}\0{sha256(path)}\n"
-            for path in sorted(package_root.rglob("*")) if path.is_file()
-        )
-        package_hash = hashlib.sha256(records.encode()).hexdigest()
-        migration_files = [
+def main(argv=None):
+    p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--repository", required=True, type=Path)
+    p.add_argument("--authorized-commit", required=True)
+    p.add_argument("--output-directory", required=True, type=Path)
+    p.add_argument("--release-label", required=True)
+    p.add_argument("--skip-gates", action="store_true", help=argparse.SUPPRESS)
+    a = p.parse_args(argv)
+    artifact, sidecar = build(
+        a.repository,
+        a.authorized_commit,
+        a.output_directory,
+        a.release_label,
+        skip_gates=a.skip_gates,
+    )
+    print(
+        json.dumps(
             {
-                "revision": revision,
-                "path": migration_path(revision).relative_to(ROOT).as_posix(),
-                "sha256": sha256(migration_path(revision)),
-            }
-            for revision in UPGRADE_REVISIONS
-        ]
-        manifest = {
-        "application_version": VERSION,
-        "previous_version": PREVIOUS_VERSION,
-        "release_name": "Referral Auto-Assignment State Compatibility Hotfix",
-        "change_type": "PATCH",
-        "git_commit": commit,
-        "git_tree": tree,
-        "git_tag": TAG,
-        "git_tag_object": tag_object,
-        "build_timestamp": datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-        "package_hash": package_hash,
-        "package_hash_definition": "SHA-256 of sorted '<relative-path>\\0<file-sha256>\\n' records for every package file except release-manifest.json",
-        "requirements_sha256": requirements_hash,
-        "frontend_entry_js": js,
-        "frontend_entry_css": css,
-        "frontend_entry_js_bytes": (package_root / js).stat().st_size,
-        "frontend_entry_js_gzip_bytes": len(gzip.compress((package_root / js).read_bytes())),
-        "frontend_entry_css_bytes": (package_root / css).stat().st_size,
-        "frontend_entry_css_gzip_bytes": len(gzip.compress((package_root / css).read_bytes())),
-        "backend_revision": commit,
-        "database_revision": DATABASE_REVISION,
-        "production_baseline_revision": PRODUCTION_BASELINE_REVISION,
-        "previous_database_revision": PRODUCTION_BASELINE_REVISION,
-        "upgrade_revisions": UPGRADE_REVISIONS,
-        "migration_files": migration_files,
-        "historical_security_remediation": HISTORICAL_SECURITY_REMEDIATION,
-        "database_migration_included": True,
-        "deployment_type": "backend-frontend",
-        "api_base": "same-origin",
-        "environment_fingerprint": "sha256:" + hashlib.sha256(env_canonical).hexdigest(),
-        "environment_fingerprint_definition": "SHA-256 of canonical secret-free JSON containing Python, Node, npm, package-lock SHA-256, and requirements SHA-256",
-        "rollback_release": "v1.9.5",
-        "rollback_strategy": "stop v1.9.5.1, downgrade to 20260827_org_hostname without reversing safe sequence advancement, then reactivate immutable v1.9.5 application files",
-        "rollback_restore_required_from_revision": None,
-        "milestone_type_catalog_filename": "backend/reference_data/milestone-types-v1.0.0.json",
-        "milestone_type_catalog_version": "1.0.0",
-        "milestone_type_catalog_sha256": sha256(ROOT / "backend/reference_data/milestone-types-v1.0.0.json"),
-        "milestone_type_catalog_apply_status": "not applied",
-        "production_seed_executed": False,
-        "service_worker_included": False,
-        "cache_policy": {
-            "application_shell": "no-cache, no-store, must-revalidate",
-            "pragma": "no-cache",
-            "expires": "0",
-            "hashed_assets": "public, max-age=31536000, immutable",
-            "root_metadata": "public, max-age=0, must-revalidate",
-            "api_headers_owned_by_backend": True,
-        },
-        "build_warnings": [
-            "Browserslist data age and frontend chunk-size advisories are accepted non-blocking build warnings when reproduced by the final tagged build."
-        ],
-        "ui_version_display_status": "visible in application and support identity views",
-        "known_limitations": [
-            "Existing shipments receive no automatic Operational Execution, MDPM, OIP, or Economics rows.",
-            "ACTUAL Shipment Economics remains incomplete when authoritative revenue or cost facts are unavailable.",
-            "Reference Data and OIP policies/thresholds require separately authorized administrator initialization; no Seed runs during deployment.",
-            "Synthetic legacy rows remain quarantined and are not assigned fabricated Organization ownership.",
-            "Organization onboarding remains a controlled operational procedure; no Organization-management UI is included.",
-        ],
-        }
-        (package_root / "release-manifest.json").write_text(
-            json.dumps(manifest, indent=2) + "\n", encoding="utf-8"
+                "artifact": str(artifact),
+                "manifest": str(sidecar),
+                "bytes": artifact.stat().st_size,
+                "sha256": file_hash(artifact),
+                "source_commit": a.authorized_commit,
+            },
+            sort_keys=True,
         )
-        promote_release_directory(package_root, RELEASE_DIR)
-    shutil.make_archive(str(archive.with_suffix("")), "zip", root_dir=RELEASE_DIR)
-    print(archive)
-
-
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--check-source", action="store_true", help="validate 1.9.5.1 source metadata without creating a package")
-    args = parser.parse_args()
-    if args.check_source:
-        status = validate_source()
-        print(
-            f"source=PASS version={VERSION} head={DATABASE_REVISION} "
-            f"tag={TAG} tag_status={status} commit={run('git', 'rev-parse', 'HEAD')}"
-        )
-        return
-    build()
+    )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        raise SystemExit(main())
+    except BuildError as exc:
+        print(f"release build failed: {exc}", file=sys.stderr)
+        raise SystemExit(1)

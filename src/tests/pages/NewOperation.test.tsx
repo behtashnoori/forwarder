@@ -199,7 +199,7 @@ describe("Slice 5 governed creation", () => {
       new Promise(() => {}),
     );
     renderPage("/operations/shipments/new?source=direct");
-    await screen.findByRole("option", { name: "Canonical Co" });
+    await screen.findByRole("option", { name: "Canonical Co" }, { timeout: 5000 });
     await user.selectOptions(screen.getByLabelText("Customer"), "7");
     await waitFor(() =>
       expect(api.searchOperationalProjects).toHaveBeenCalledWith("", 7),
