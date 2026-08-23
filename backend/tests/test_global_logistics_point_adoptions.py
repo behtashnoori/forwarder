@@ -1,4 +1,6 @@
 """ADR-041 Phase 3 tenant adoption API and domain contract."""
+import os
+
 import pytest
 
 from backend import create_app
@@ -12,7 +14,10 @@ from backend.operational_models import OperationalMembership, OperationalOrganiz
 
 @pytest.fixture()
 def adoption_app():
-    app=create_app({"TESTING":True,"SQLALCHEMY_DATABASE_URI":"sqlite:///:memory:","SECRET_KEY":"adoption-test"})
+    database_uri = os.environ.get("PHASE4B_DISPOSABLE_POSTGRES_URL", "sqlite:///:memory:")
+    if database_uri != "sqlite:///:memory:":
+        assert "127.0.0.1" in database_uri and "phase4b_consumption_" in database_uri
+    app=create_app({"TESTING":True,"SQLALCHEMY_DATABASE_URI":database_uri,"SECRET_KEY":"adoption-test"}, skip_startup=database_uri != "sqlite:///:memory:")
     with app.app_context():
         db.create_all()
         platform=ExpertUser(username="adopt-platform",password_hash="x",full_name="Platform",role="admin",authority="PLATFORM_ADMIN",is_active=True)
@@ -25,7 +30,10 @@ def adoption_app():
         point_type=LogisticsPointType(immutable_code="PORT",fa_name="بندر",en_name="Port",created_by=platform.id,updated_by=platform.id)
         db.session.add(point_type); db.session.flush()
         for user,org in ((admin_a,org_a),(admin_b,org_b),(expert,org_a)):
-            db.session.add(OperationalMembership(organization_id=org.id,user_id=user.id,permissions=["logistics_point.read","logistics_point.manage"]))
+            db.session.add(OperationalMembership(organization_id=org.id,user_id=user.id,permissions=[
+                "logistics_point.read", "logistics_point.manage",
+                "project_logistics_point.read", "project_logistics_point.manage",
+            ]))
         def point(code,status,verification="VERIFIED"):
             row=GlobalLogisticsPoint(immutable_code=code,logistics_point_type_id=point_type.id,fa_name=code,en_name=code,
                 normalized_name=code.lower(),country_id=country.id,city_name="Test City",geography_key="XZ:test",
@@ -37,7 +45,8 @@ def adoption_app():
         headers=lambda user:{"Authorization":f"Bearer {auth_manager.generate_tokens(user.id)['access_token']}"}
         yield app,{"platform":headers(platform),"a":headers(admin_a),"b":headers(admin_b),"expert":headers(expert),
             "active":active.public_id,"draft":draft.public_id,"deprecated":deprecated.public_id,
-            "org_a":org_a.id,"org_b":org_b.id}
+            "org_a":org_a.id,"org_b":org_b.id,"expert_id":expert.id,"admin_a_id":admin_a.id,
+            "point_type_id":point_type.id,"country_id":country.id}
         db.session.remove();db.drop_all()
 
 

@@ -195,6 +195,36 @@ def test_tracking_selector_is_active_tenant_scoped_and_bounded(network_app):
         assert client.get(endpoint, headers=ctx["auth"]).get_json()["items"] == []
 
 
+def test_operational_project_selection_requires_active_point_type(network_app):
+    app, ctx = network_app
+    with app.test_client() as client:
+        point = _point(client, ctx, "LP-INACTIVE-TYPE", "انبار نوع غیرفعال").get_json()["item"]
+        with app.app_context():
+            point_type = db.session.scalar(
+                db.select(LogisticsPointType).where(LogisticsPointType.public_id == ctx["type"])
+            )
+            point_type.is_active = False
+            db.session.commit()
+
+        listed = client.get(
+            "/api/internal/logistics-points?active=true", headers=ctx["auth"]
+        )
+        assert listed.status_code == 200
+        assert listed.get_json()["items"] == []
+
+        created = client.post(
+            f"/api/v2/projects/{ctx['project']}/logistics-points",
+            headers=ctx["auth"],
+            json={
+                "logistics_point_public_id": point["public_id"],
+                "project_role": "ORIGIN",
+                "sequence_number": 1,
+            },
+        )
+        assert created.status_code == 404
+        assert created.get_json()["error"]["code"] == "NOT_FOUND"
+
+
 def test_project_association_role_uniqueness_reorder_and_deactivation(network_app):
     app, ctx = network_app
     with app.test_client() as client:

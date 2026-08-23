@@ -12,7 +12,7 @@ const api = vi.hoisted(() => ({
 vi.mock("@/lib/api", () => api);
 
 const type = { public_id: "type-1", immutable_code: "WAREHOUSE", fa_name: "انبار", en_name: "Warehouse", display_order: 1, is_active: true, version: 1 };
-const point = { public_id: "point-1", immutable_code: "LP-1", fa_name: "انبار مرکزی", en_name: "Central", is_active: true, version: 1, point_type: type, country: { code: "IR", fa_name: "ایران", en_name: "Iran" } };
+const point = { public_id: "point-1", immutable_code: "LP-1", fa_name: "انبار مرکزی", en_name: "Central", is_active: true, version: 1, point_type: type, country: { code: "IR", fa_name: "ایران", en_name: "Iran" }, global_source: { global_point_public_id: "global-opaque", adoption_public_id: "adoption-opaque", fa_name: "منبع جهانی", en_name: "Global Source", platform_lifecycle_status: "DEPRECATED", adoption_status: "INACTIVE" } };
 const second = { ...point, public_id: "point-2", immutable_code: "LP-2", fa_name: "انبار دوم" };
 const rows = [point, second].map((logistics_point, index) => ({ public_id: `assoc-${index + 1}`, project_role: index ? "DESTINATION" : "ORIGIN", sequence_number: index + 1, is_active: true, version: 1, logistics_point }));
 
@@ -33,6 +33,7 @@ describe("Release 1.7.0 logistics network acceptance", () => {
   it("covers admin create, update, lifecycle, and probable duplicate confirmation", async () => {
     render(<LogisticsNetworkAdminTab />);
     await screen.findByText("LP-1");
+    expect(screen.getAllByText(/GLOBAL SOURCE · منبع جهانی · PLATFORM DEPRECATED/)).toHaveLength(2);
     fireEvent.change(screen.getByPlaceholderText("کد ثابت مکان"), { target: { value: "LP-3" } });
     fireEvent.change(screen.getByPlaceholderText("نام فارسی"), { target: { value: "نقطه سوم" } });
     fireEvent.change(screen.getByDisplayValue("انتخاب نوع مکان"), { target: { value: type.public_id } });

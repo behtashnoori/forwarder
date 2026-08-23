@@ -337,7 +337,10 @@ def scoped_point(
         LogisticsPoint.public_id == public_id, LogisticsPoint.organization_id == org
     ).execution_options(populate_existing=True)
     if not include_inactive:
-        q = q.where(LogisticsPoint.is_active.is_(True))
+        q = q.join(LogisticsPointType).where(
+            LogisticsPoint.is_active.is_(True),
+            LogisticsPointType.is_active.is_(True),
+        )
     row = db.session.scalar(q)
     if not row:
         raise OperationalError("NOT_FOUND", "Logistics point not found.", 404)
@@ -353,6 +356,8 @@ def list_points(args, user, *, admin=False):
     active = str(args.get("active", "all" if admin else "true"))
     if active in {"true", "false"}:
         q = q.where(LogisticsPoint.is_active.is_(active == "true"))
+    if not admin and active == "true":
+        q = q.join(LogisticsPointType).where(LogisticsPointType.is_active.is_(True))
     if args.get("type"):
         q = q.join(LogisticsPointType).where(
             LogisticsPointType.public_id == args["type"]
