@@ -1,0 +1,1184 @@
+{
+  "catalog_version": "china-iran-global-logistics-points-1.0.0",
+  "rows": [
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-shanghai",
+      "legacy_name": {
+        "en": "Shanghai",
+        "fa": "شانگهای"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-SHANGHAI"
+      ],
+      "proposed_v1_disposition": "NEEDS_SPLIT",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 0
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-ningbo-zhoushan",
+      "legacy_name": {
+        "en": "Ningbo-Zhoushan",
+        "fa": "نینگبو-ژوشان"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-NINGBO-ZHOUSHAN"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 1
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-shenzhen-yantian",
+      "legacy_name": {
+        "en": "Shenzhen / Yantian",
+        "fa": "شنژن / یانتیان"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-SHENZHEN-YANTIAN"
+      ],
+      "proposed_v1_disposition": "NEEDS_SPLIT",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 2
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-guangzhou-nansha",
+      "legacy_name": {
+        "en": "Guangzhou / Nansha",
+        "fa": "گوانگژو / نانشا"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-GUANGZHOU-NANSHA"
+      ],
+      "proposed_v1_disposition": "NEEDS_SPLIT",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 3
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-qingdao",
+      "legacy_name": {
+        "en": "Qingdao",
+        "fa": "چینگدائو"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-QINGDAO"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 4
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-tianjin-xingang",
+      "legacy_name": {
+        "en": "Tianjin / Xingang",
+        "fa": "تیانجین / شینگانگ"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-TIANJIN-XINGANG"
+      ],
+      "proposed_v1_disposition": "NEEDS_SPLIT",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 5
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-lianyungang",
+      "legacy_name": {
+        "en": "Lianyungang",
+        "fa": "لیانیونگانگ"
+      },
+      "legacy_type": "rail_terminal",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 6
+    },
+    {
+      "aliases": [
+        "Yiwu",
+        "ایوو",
+        "یی‌وو",
+        "یی وو"
+      ],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-yiwu",
+      "legacy_name": {
+        "en": "Yiwu",
+        "fa": "ایوو"
+      },
+      "legacy_type": "commercial_hub",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-YIWU"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 7
+    },
+    {
+      "aliases": [
+        "Xi'an",
+        "Xian",
+        "شی‌آن",
+        "شیان"
+      ],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-xian",
+      "legacy_name": {
+        "en": "Xi'an",
+        "fa": "شی‌آن"
+      },
+      "legacy_type": "rail_terminal",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-XIAN"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 8
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-zhengzhou",
+      "legacy_name": {
+        "en": "Zhengzhou",
+        "fa": "ژنگژو"
+      },
+      "legacy_type": "rail_terminal",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-ZHENGZHOU"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 9
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-chengdu",
+      "legacy_name": {
+        "en": "Chengdu",
+        "fa": "چنگدو"
+      },
+      "legacy_type": "rail_terminal",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-CHENGDU"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 10
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-chongqing",
+      "legacy_name": {
+        "en": "Chongqing",
+        "fa": "چونگ‌چینگ"
+      },
+      "legacy_type": "rail_terminal",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-CHONGQING"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 11
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-wuhan",
+      "legacy_name": {
+        "en": "Wuhan",
+        "fa": "ووهان"
+      },
+      "legacy_type": "rail_terminal",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-WUHAN"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 12
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-lanzhou",
+      "legacy_name": {
+        "en": "Lanzhou",
+        "fa": "لانژو"
+      },
+      "legacy_type": "rail_terminal",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-LANZHOU"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 13
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-urumqi",
+      "legacy_name": {
+        "en": "Urumqi",
+        "fa": "اورومچی"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-URUMQI"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 14
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-kashgar",
+      "legacy_name": {
+        "en": "Kashgar",
+        "fa": "کاشغر"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-KASHGAR"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 15
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-alashankou",
+      "legacy_name": {
+        "en": "Alashankou",
+        "fa": "آلاشانکو"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-ALASHANKOU"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 16
+    },
+    {
+      "aliases": [],
+      "country_code": "CN",
+      "legacy_internal_key": "cn-khorgos",
+      "legacy_name": {
+        "en": "Khorgos",
+        "fa": "خورگوس"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-CN-KHORGOS"
+      ],
+      "proposed_v1_disposition": "NEEDS_SPLIT",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 17
+    },
+    {
+      "aliases": [],
+      "country_code": "KZ",
+      "legacy_internal_key": "kz-dostyk",
+      "legacy_name": {
+        "en": "Dostyk",
+        "fa": "دوستیک"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-KZ-DOSTYK"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 18
+    },
+    {
+      "aliases": [],
+      "country_code": "KZ",
+      "legacy_internal_key": "kz-altynkol",
+      "legacy_name": {
+        "en": "Altynkol",
+        "fa": "آلتین‌کول"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-KZ-ALTYNKOL"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 19
+    },
+    {
+      "aliases": [],
+      "country_code": "KZ",
+      "legacy_internal_key": "kz-almaty",
+      "legacy_name": {
+        "en": "Almaty",
+        "fa": "آلماتی"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-KZ-ALMATY"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 20
+    },
+    {
+      "aliases": [],
+      "country_code": "KZ",
+      "legacy_internal_key": "kz-shymkent",
+      "legacy_name": {
+        "en": "Shymkent",
+        "fa": "شیمکنت"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-KZ-SHYMKENT"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 21
+    },
+    {
+      "aliases": [
+        "Osh",
+        "Ош",
+        "اوش"
+      ],
+      "country_code": "KG",
+      "legacy_internal_key": "KG-OSH",
+      "legacy_name": {
+        "en": "Osh",
+        "fa": "اوش"
+      },
+      "legacy_type": "commercial_hub",
+      "mapping_confidence": "MEDIUM",
+      "notes": "هاب ترانزیتی جاده‌ای و ریلی در جنوب قرقیزستان؛ قابل استفاده در گزارش‌های دستی ردیابی محموله‌های مسیر چین به ایران.",
+      "proposed_global_codes": [
+        "GLP-KG-OSH"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 22
+    },
+    {
+      "aliases": [],
+      "country_code": "UZ",
+      "legacy_internal_key": "uz-tashkent",
+      "legacy_name": {
+        "en": "Tashkent",
+        "fa": "تاشکند"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-UZ-TASHKENT"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 23
+    },
+    {
+      "aliases": [],
+      "country_code": "UZ",
+      "legacy_internal_key": "uz-samarkand",
+      "legacy_name": {
+        "en": "Samarkand",
+        "fa": "سمرقند"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 24
+    },
+    {
+      "aliases": [],
+      "country_code": "UZ",
+      "legacy_internal_key": "uz-navoi",
+      "legacy_name": {
+        "en": "Navoi",
+        "fa": "نوایی"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-UZ-NAVOI"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 25
+    },
+    {
+      "aliases": [],
+      "country_code": "UZ",
+      "legacy_internal_key": "uz-bukhara",
+      "legacy_name": {
+        "en": "Bukhara",
+        "fa": "بخارا"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-UZ-BUKHARA"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 26
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-alat",
+      "legacy_name": {
+        "en": "Alat",
+        "fa": "آلات"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 27
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-farap",
+      "legacy_name": {
+        "en": "Farap",
+        "fa": "فاراپ"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-TM-FARAP"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 28
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-turkmenabat",
+      "legacy_name": {
+        "en": "Turkmenabat",
+        "fa": "ترکمن‌آباد"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-TM-TURKMENABAT"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 29
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-mary",
+      "legacy_name": {
+        "en": "Mary",
+        "fa": "مرو"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-TM-MARY"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 30
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-tejen",
+      "legacy_name": {
+        "en": "Tejen",
+        "fa": "تجن"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-TM-TEJEN"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 31
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-serakhs",
+      "legacy_name": {
+        "en": "Serakhs",
+        "fa": "سرخس ترکمنستان"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-TM-SERAKHS"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 32
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-etrek",
+      "legacy_name": {
+        "en": "Etrek",
+        "fa": "اترک"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 33
+    },
+    {
+      "aliases": [],
+      "country_code": "KZ",
+      "legacy_internal_key": "kz-aktau",
+      "legacy_name": {
+        "en": "Aktau",
+        "fa": "آکتائو"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 34
+    },
+    {
+      "aliases": [],
+      "country_code": "TM",
+      "legacy_internal_key": "tm-turkmenbashi",
+      "legacy_name": {
+        "en": "Turkmenbashi",
+        "fa": "ترکمن‌باشی"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 35
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-sost",
+      "legacy_name": {
+        "en": "Sost",
+        "fa": "سوست"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 36
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-islamabad",
+      "legacy_name": {
+        "en": "Islamabad",
+        "fa": "اسلام‌آباد"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 37
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-quetta",
+      "legacy_name": {
+        "en": "Quetta",
+        "fa": "کویته"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 38
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-taftan",
+      "legacy_name": {
+        "en": "Taftan",
+        "fa": "تفتان"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 39
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-karachi",
+      "legacy_name": {
+        "en": "Karachi",
+        "fa": "کراچی"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 40
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-port-qasim",
+      "legacy_name": {
+        "en": "Port Qasim",
+        "fa": "بندر قاسم"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 41
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-gwadar",
+      "legacy_name": {
+        "en": "Gwadar",
+        "fa": "گوادر"
+      },
+      "legacy_type": "seaport",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 42
+    },
+    {
+      "aliases": [],
+      "country_code": "PK",
+      "legacy_internal_key": "pk-gabd",
+      "legacy_name": {
+        "en": "Gabd",
+        "fa": "گبد"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 43
+    },
+    {
+      "aliases": [],
+      "country_code": "AF",
+      "legacy_internal_key": "af-herat",
+      "legacy_name": {
+        "en": "Herat",
+        "fa": "هرات"
+      },
+      "legacy_type": "transit_city",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 44
+    },
+    {
+      "aliases": [],
+      "country_code": "AF",
+      "legacy_internal_key": "af-islam-qala",
+      "legacy_name": {
+        "en": "Islam Qala",
+        "fa": "اسلام‌قلعه"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 45
+    },
+    {
+      "aliases": [],
+      "country_code": "AF",
+      "legacy_internal_key": "af-zaranj",
+      "legacy_name": {
+        "en": "Zaranj",
+        "fa": "زرنج"
+      },
+      "legacy_type": "border_point",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "LEGACY_ONLY",
+      "reference_status": "internal_reference",
+      "review_notes": "Alternate Pakistan/Afghanistan corridor excluded from V1 scope pending owner business justification.",
+      "sort_order": 46
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-sarakhs",
+      "legacy_name": {
+        "en": "Sarakhs",
+        "fa": "سرخس"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-SARAKHS"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 47
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-incheh-borun",
+      "legacy_name": {
+        "en": "Incheh Borun",
+        "fa": "اینچه‌برون"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "HIGH",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-INCHEH-BORUN"
+      ],
+      "proposed_v1_disposition": "CORE_V1",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 48
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-mirjaveh",
+      "legacy_name": {
+        "en": "Mirjaveh",
+        "fa": "میرجاوه"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 49
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-dogharoun",
+      "legacy_name": {
+        "en": "Dogharoun",
+        "fa": "دوغارون"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 50
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-rimdan",
+      "legacy_name": {
+        "en": "Rimdan",
+        "fa": "ریمدان"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 51
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-mashhad",
+      "legacy_name": {
+        "en": "Mashhad",
+        "fa": "مشهد"
+      },
+      "legacy_type": "destination_city",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-MASHHAD"
+      ],
+      "proposed_v1_disposition": "NEEDS_OWNER_REVIEW",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 52
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-zahedan",
+      "legacy_name": {
+        "en": "Zahedan",
+        "fa": "زاهدان"
+      },
+      "legacy_type": "destination_city",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 53
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-tehran",
+      "legacy_name": {
+        "en": "Tehran",
+        "fa": "تهران"
+      },
+      "legacy_type": "destination_city",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 54
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-qom",
+      "legacy_name": {
+        "en": "Qom",
+        "fa": "قم"
+      },
+      "legacy_type": "destination_city",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 55
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-isfahan",
+      "legacy_name": {
+        "en": "Isfahan",
+        "fa": "اصفهان"
+      },
+      "legacy_type": "destination_city",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 56
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-yazd",
+      "legacy_name": {
+        "en": "Yazd",
+        "fa": "یزد"
+      },
+      "legacy_type": "destination_city",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 57
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-kerman",
+      "legacy_name": {
+        "en": "Kerman",
+        "fa": "کرمان"
+      },
+      "legacy_type": "destination_city",
+      "mapping_confidence": "LOW",
+      "notes": null,
+      "proposed_global_codes": [],
+      "proposed_v1_disposition": "FUTURE",
+      "reference_status": "internal_reference",
+      "review_notes": "Legacy tracking geography is not a bounded V1 global facility candidate.",
+      "sort_order": 58
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-shahid-rajaee",
+      "legacy_name": {
+        "en": "Shahid Rajaee Port",
+        "fa": "بندر شهید رجایی"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-SHAHID-RAJAEE"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 59
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-chabahar",
+      "legacy_name": {
+        "en": "Chabahar Port",
+        "fa": "بندر چابهار"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-CHABAHAR"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 60
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-imam-khomeini",
+      "legacy_name": {
+        "en": "Imam Khomeini Port",
+        "fa": "بندر امام خمینی"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-IMAM-KHOMEINI"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 61
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-amirabad",
+      "legacy_name": {
+        "en": "Amirabad Port",
+        "fa": "بندر امیرآباد"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-AMIRABAD"
+      ],
+      "proposed_v1_disposition": "NEEDS_EXTERNAL_VERIFICATION",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 62
+    },
+    {
+      "aliases": [],
+      "country_code": "IR",
+      "legacy_internal_key": "ir-anzali-caspian",
+      "legacy_name": {
+        "en": "Anzali / Caspian Port",
+        "fa": "بندر انزلی / کاسپین"
+      },
+      "legacy_type": "iran_gateway",
+      "mapping_confidence": "MEDIUM",
+      "notes": null,
+      "proposed_global_codes": [
+        "GLP-IR-ANZALI-CASPIAN"
+      ],
+      "proposed_v1_disposition": "NEEDS_SPLIT",
+      "reference_status": "internal_reference",
+      "review_notes": "Candidate only; no mapping row authorized.",
+      "sort_order": 63
+    }
+  ],
+  "schema_version": "1"
+}
