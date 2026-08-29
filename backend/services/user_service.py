@@ -9,6 +9,7 @@ from sqlalchemy import and_
 from backend.extensions import db
 from backend.models import ExpertSpecialization, ExpertUser
 from backend.operational_models import OperationalMembership
+from backend.services.expert_scope_service import default_operational_permissions_for_role
 
 
 class UserValidationError(Exception):
@@ -173,7 +174,14 @@ def create_user(payload: dict[str, Any], context=None) -> ExpertUser:
     if context is not None:
         if data.get("manager_id") and not user_in_organization(data["manager_id"], context.organization_id):
             raise UserValidationError("Manager must belong to the same organization.")
-        db.session.add(OperationalMembership(organization_id=context.organization_id, user_id=user.id, is_active=True, permissions=[]))
+        db.session.add(
+            OperationalMembership(
+                organization_id=context.organization_id,
+                user_id=user.id,
+                is_active=True,
+                permissions=default_operational_permissions_for_role(user.role),
+            )
+        )
     add_user_specializations(user.id, data.get("specializations", []))
     db.session.commit()
     return user

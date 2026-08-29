@@ -6,11 +6,19 @@ from typing import Iterable, TypeVar
 from backend.models import ExpertUser, ShipmentRequest
 
 EXPERT_ROLES = ("expert", "business_expert")
+EXPERT_BASELINE_OPERATIONAL_PERMISSIONS = ("logistics_point.read",)
 T = TypeVar("T", bound=ExpertUser)
 
 
 def is_expert_role(role: str | None) -> bool:
     return role in EXPERT_ROLES
+
+
+def default_operational_permissions_for_role(role: str | None) -> list[str]:
+    """Return the least-privilege operational permissions provisioned by role."""
+    if is_expert_role(role):
+        return list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
+    return []
 
 
 def can_handle_request(expert: ExpertUser, shipment_request: ShipmentRequest) -> bool:
