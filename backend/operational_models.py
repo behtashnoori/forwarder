@@ -409,6 +409,11 @@ class OperationalShipment(db.Model):
     created_by_user_id = db.Column(
         BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
     )
+    # ADR-043 direct-root evidence. Request-derived shipments keep their root
+    # on ShipmentRequest and leave this field null.
+    primary_responsible_expert_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(
         db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow

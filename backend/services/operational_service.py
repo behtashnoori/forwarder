@@ -461,6 +461,7 @@ def _initialize_aggregate(
     resource_id,
     key,
     request_hash,
+    primary_responsible_expert_id=None,
 ):
     origin, destination, mode, departure, arrival = route
     shipment = OperationalShipment(
@@ -472,6 +473,7 @@ def _initialize_aggregate(
         accepted_quote_id=quote_id,
         lifecycle_status="planned",
         created_by_user_id=user["id"],
+        primary_responsible_expert_id=primary_responsible_expert_id,
     )
     db.session.add(shipment)
     db.session.flush()
@@ -583,6 +585,15 @@ def create_direct(
             "CUSTOMER_NOT_ELIGIBLE",
             "Customer is not eligible for operational creation.",
         )
+    # A direct shipment created by an authorized Expert is explicitly rooted in
+    # that actor unless an in-tenant responsible Expert is supplied. This is a
+    # creation-time assignment, not creator-history authorization.
+    responsible_id = payload.get("primary_responsible_expert_id", user["id"])
+    if type(responsible_id) is not int:
+        raise OperationalError("DIRECT_RESPONSIBLE_EXPERT_REQUIRED", "A primary responsible Expert is required.")
+    responsible_membership = _membership_for_user(responsible_id)
+    if responsible_membership.organization_id != org:
+        raise OperationalError("DIRECT_RESPONSIBLE_EXPERT_TENANT_MISMATCH", "Responsible Expert must have the shipment tenant membership.", 403)
     project = _project(org, payload.get("project_public_id"), customer.id)
     route = _route_command(payload)
     canonical = {
@@ -636,6 +647,7 @@ def create_direct(
         resource_id=0,
         key=key,
         request_hash=request_hash,
+        primary_responsible_expert_id=responsible_id,
     )
     try:
         db.session.commit()
