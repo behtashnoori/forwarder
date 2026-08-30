@@ -16,6 +16,7 @@
 - `pytest backend/tests/test_assigned_work_authorization.py backend/tests/test_tenant_architecture_contract.py backend/tests/test_referral_tenant_fencing.py -q`: 20 passed, 1 expected xfail.
 - Operational/CRM/admin/selector regression set: 35 passed.
 - Python compilation and whitespace diff check passed.
+- Local PostgreSQL 18 isolated database `forwarder_auth_test`: fresh Alembic upgrade to `20260907_direct_shipment_responsibility` passed; the `primary_responsible_expert_id` column was present; empty-state downgrade to `20260906_global_logistics_point_materialization` and re-upgrade to head passed. No production connection was used.
 
 ## Deferred to later controlled implementation phases
 
