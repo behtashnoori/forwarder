@@ -34,7 +34,7 @@ Require written deployment/database/operations authorization, maintenance window
 | Target migration | `20260907_direct_shipment_responsibility` — explicit target only; never generic Alembic head |
 | Production database | `forwarder_prod_20260728_161711` |
 | Authorized scope | ADR-043 controlled production deployment only |
-| Fresh backup status | **PENDING — NOT PASS.** A new backup must be created and catalog/hash verified in this window before migration; historical backups do not satisfy this gate. |
+| Fresh backup status | **PASS — FRESH VERIFIED PRODUCTION BACKUP RECORDED.** This satisfies the fresh-backup prerequisite for the **current ADR-043 deployment window only**; it does not make migration, deployment, Direct Shipment post-migration, runtime transition, or CORS PASS. |
 | Migration status | **PENDING — NOT PASS.** |
 | Deployment status | **PENDING — NOT COMPLETE.** |
 | CORS status | **NOT_VERIFIED.** Runtime/browser evidence is required; this authorization does not make CORS PASS. |
@@ -45,7 +45,24 @@ Before proceeding, the immediately-before-change ownership and task gates must b
 
 STOP and reassess on any material baseline drift, ambiguous runtime ownership, unexpected listener, task-identity drift, migration discrepancy, failed writer-quiescence/zero-listener gate, Direct Shipment gate failure, authorization-smoke failure, health/readiness failure, Samand validation failure, or material CORS failure. A CORS failure authorizes no speculative configuration change. Application rollback remains separate from database downgrade: downgrade requires its own compatibility decision and every existing protection; it is never automatic.
 
-The next operational checkpoint is **FRESH VERIFIED PRODUCTION BACKUP ONLY**. No backup, migration, deployment, runtime, database, Scheduled Task, IIS, or CORS action is performed by this authorization record.
+The fresh verified production backup checkpoint is recorded as PASS below. The next operational checkpoint is **PHASE 1 — exact certified application materialization and staging**, using only `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e`; do not substitute a later tooling/evidence commit or proceed directly to migration. No migration, deployment, runtime, database, Scheduled Task, IIS, or CORS action is performed by this evidence record.
+
+### Fresh verified production backup evidence — current ADR-043 deployment window
+
+| Evidence item | Recorded value |
+| --- | --- |
+| Fresh backup status | **PASS** |
+| Database | `forwarder_prod_20260728_161711` |
+| Backup path | `C:\1-webapp\forwarder-backups\forwarder_prod_20260728_161711_20260830_231533_PRE_ADR043.dump` |
+| Backup bytes | `827999` |
+| Backup SHA256 | `f4b8b8696a94bdc43b07255fc0395f9a2e34ace07fde3f61588cac5a26be5fd6` |
+| Catalog path | `C:\1-webapp\forwarder-backups\forwarder_prod_20260728_161711_20260830_231533_PRE_ADR043.list.txt` |
+| Hash path | `C:\1-webapp\forwarder-backups\forwarder_prod_20260728_161711_20260830_231533_PRE_ADR043.dump.sha256.txt` |
+| Certified application SHA | `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` — application identity remains this exact SHA; no later tooling/evidence commit is substituted. |
+| Target migration | `20260907_direct_shipment_responsibility` |
+| Observed operation result | `MIGRATION_PERFORMED=NO`; `PRODUCTION_TASK_CHANGED=NO`; `BACKEND_RESTARTED=NO`; `IIS_CHANGED=NO`; `CORS_CHANGED=NO` |
+
+This backup satisfies the fresh-backup prerequisite for the **current ADR-043 deployment window only**. It does **not** mark migration PASS, deployment complete, the Direct Shipment post-migration gate PASS, runtime transition PASS, or CORS PASS. `APPLICATION_ROLLBACK != DATABASE_DOWNGRADE` remains controlling.
 
 ## PHASE 1 — Build and stage the exact application
 
