@@ -72,9 +72,13 @@ Get-Content "$NewRelease\release-manifest.json"
 
 Resolve the existing non-secret env-loader from exported task XML before mutation. STOP if it cannot be proved; do not copy or print `production.env`.
 
-## PHASE 5 — Scheduled Task/runtime preparation
+## PHASE 5 — Scheduled Task definition preparation (not backend quiescence)
 
-The current task targets `release-991d29a-20260829`, while backend/IIS are `release-fdfdd23-20260823`; never restart before correction. The established runtime contract requires **all three** of WorkingDirectory, `--repo`, and `PYTHONPATH` to point to one immutable release. The task executable remains `C:\Windows\System32\cmd.exe`; the runtime launcher is the server-managed `C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py`. Its arguments must be extracted from live XML; that launcher is not versioned locally, so its exact argument order must not be guessed.
+The observed task release bindings and the actual serving release are intentionally treated as separate facts. Current evidence is: task bindings consistently name `release-991d29a-20260829`; the sole observed `127.0.0.1:5101` listener was PID `51476`, with parent PID `51756`, and its Python executable/Waitress command name that same `release-991d29a-20260829`; a separate `release-fdfdd23-20260823` tree (`30760 -> 11028`) is non-listening. Do not infer a backend/IIS release from the non-listening tree.
+
+Changing a Scheduled Task definition is **not** stopping or quiescing the current backend. In particular, the task has been observed `Ready` while the Waitress listener remained alive. `Stop-ScheduledTask` is therefore not certified to terminate the listener and must not be used as the deployment stop procedure.
+
+The established binding contract requires **all three** of WorkingDirectory, `--repo`, and `PYTHONPATH` to point to one immutable release. The task executable remains `C:\Windows\System32\cmd.exe`; the server-managed launcher is `C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py`. Its exact command and argument order are extracted from live XML and must not be guessed. Its `serve` implementation applies the environment, changes directory, redirects logs, then uses `os.execv` to replace itself with Waitress; it is not a persistent supervisor that can later be stopped as a helper process.
 
 [READ-ONLY]
 
@@ -104,7 +108,38 @@ Export-ScheduledTask -TaskName $TaskName | Set-Content -Encoding utf8 "$env:TEMP
 Compare-Object (Get-Content $BeforeXml) (Get-Content "$env:TEMP\Forwarder-Backend-Production.after.xml")
 ```
 
-## PHASE 6 — Schema migration
+Registration changes the future task definition only. It does not authorize, stop, signal, kill, or otherwise alter the current listener. After registration, do not run the task until the separate lifecycle gate below has passed.
+
+## PHASE 6 — Backend/writer quiescence and zero-listener gate
+
+**CURRENT STATUS: NO-GO — a production-safe graceful stop/relaunch procedure has not been certified.** The repository's `scripts\backend-service.ps1` verifies one listener by port, executable, and `backend.wsgi:app`, but it is a local port-5001 launcher and its stop action is `Stop-Process -Force`. It is neither evidence of graceful termination nor authorization to control the 5101 Scheduled-Task deployment. Do not adapt it, issue `taskkill`, `Stop-Process`, or terminate a parent/child tree during this deployment.
+
+The following is the required read-only listener identity record, not a stop command. It must show exactly one listener before a lifecycle procedure may be considered, and must bind that listener to the observed release rather than a merely similarly named process:
+
+```powershell
+$Port=5101; $ExpectedOldRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
+$Listeners=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+if($Listeners.Count -ne 1){throw "expected exactly one pre-cutover listener on 127.0.0.1:$Port; found $($Listeners.Count)"}
+$Owner=Get-CimInstance Win32_Process -Filter "ProcessId=$($Listeners[0].OwningProcess)"
+$Parent=Get-CimInstance Win32_Process -Filter "ProcessId=$($Owner.ParentProcessId)"
+$Owner | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
+$Parent | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
+if($Owner.ExecutablePath -notlike "$ExpectedOldRelease\*"){throw 'listener executable is not the recorded current release'}
+if($Owner.CommandLine -notmatch '(?i)-m\s+waitress' -or $Owner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'listener is not the expected Waitress WSGI process'}
+```
+
+Before a future authorized production attempt, obtain and archive the smallest additional **read-only** evidence needed to establish a governed lifecycle method: (1) the complete exported task XML, including the `cmd.exe` command line; (2) complete `Win32_Process` command lines and parent relationships for the listener and all same-release parent/child processes; (3) the complete on-server runtime-helper source and its hash; and (4) vendor/operating-system or prior approved production evidence showing exactly how the task-owned process receives a graceful stop and how automatic relaunch is disabled/held during a maintenance window. The evidence must identify the control owner, signal/action, bounded wait, and expected exit/port-closure observation. If it does not, the deployment remains NO-GO.
+
+Only after that evidence has been reviewed and a separately authorized lifecycle procedure exists may an operator: prevent task relaunch by its proven mechanism; invoke its proven graceful stop against the verified listener; wait for it to exit; and prove writer quiescence. Writer quiescence requires all of: traffic containment by the approved topology owner; no listener on 5101; no task/restart mechanism able to launch a writer during migration; and an owner-approved read-only database/session observation showing no in-flight application write transaction. Do not use test-data writes, synthetic mutations, or stale-process cleanup as a substitute.
+
+The migration zero-listener gate is mandatory and must be recorded immediately before the migration command:
+
+```powershell
+$Listeners=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5101 -State Listen -ErrorAction SilentlyContinue)
+if($Listeners.Count -ne 0){throw "migration blocked: 127.0.0.1:5101 still has $($Listeners.Count) listener(s)"}
+```
+
+## PHASE 7 — Schema migration
 
 Migration `20260907_direct_shipment_responsibility` is additive: nullable `operational_shipment.primary_responsible_expert_id`, restrict FK to `expert_user`, index, no backfill. Its downgrade refuses when responsibility evidence exists. Use governed CLI, not generic Alembic.
 
@@ -119,7 +154,7 @@ Require current `20260906...`, sole head target, correct sanitized target. STOP 
 
 [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
 
-PRECONDITIONS: backup verified; writers stopped/traffic contained; new task configured but stopped. EXPECTED EFFECT: target migration only. STOP: any nonzero or pending postcheck. CONTAINMENT: no blind downgrade; keep stopped, use only compatibility-proven application rollback or database-owner backup restore.
+PRECONDITIONS: backup verified; Phase 6's certified graceful lifecycle procedure completed; writer-quiescence record and zero-listener gate passed; new task definition configured but not started. EXPECTED EFFECT: target migration only. STOP: any nonzero, listener reappearance, or pending postcheck. CONTAINMENT: no blind downgrade; retain the quiescent state, use only compatibility-proven application rollback or database-owner backup restore.
 
 ```powershell
 .\.venv\Scripts\python.exe -m backend.migration_cli upgrade 20260907_direct_shipment_responsibility --confirm
@@ -127,7 +162,7 @@ PRECONDITIONS: backup verified; writers stopped/traffic contained; new task conf
 .\.venv\Scripts\python.exe -m backend.migration_cli check
 ```
 
-## PHASE 7 — Post-migration data gate [READ-ONLY]
+## PHASE 8 — Post-migration data gate [READ-ONLY]
 
 ```powershell
 & "$PgBin\psql.exe" -X -h 127.0.0.1 -p 5432 -U postgres -d forwarder_prod_20260728_161711 -c "BEGIN TRANSACTION READ ONLY; SELECT count(*) FILTER (WHERE s.source_type='direct') total_direct_shipments,count(*) FILTER (WHERE s.source_type='direct' AND s.primary_responsible_expert_id IS NULL) missing_primary_responsible,count(*) FILTER (WHERE s.source_type='direct' AND (u.id IS NULL OR NOT u.is_active)) inactive_or_missing_responsible,count(*) FILTER (WHERE s.source_type='direct' AND s.primary_responsible_expert_id IS NOT NULL AND m.id IS NULL) cross_tenant_responsible FROM operational_shipment s LEFT JOIN expert_user u ON u.id=s.primary_responsible_expert_id LEFT JOIN operational_membership m ON m.user_id=s.primary_responsible_expert_id AND m.organization_id=s.organization_id AND m.is_active; COMMIT;"
@@ -135,18 +170,29 @@ PRECONDITIONS: backup verified; writers stopped/traffic contained; new task conf
 
 STOP APPLICATION ACTIVATION if any invalid count is nonzero. No bulk repair/backfill is authorized. Membership’s `(organization_id,user_id)` uniqueness means join ambiguity is not representable.
 
-## PHASE 8 — Backend activation
+## PHASE 9 — Backend activation and single-listener certification
 
 [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
 
-PRECONDITIONS: backup/migration/data gate pass, reviewed task points to `$NewRelease`. EXPECTED EFFECT: task-managed new backend. STOP: missing/multiple listener or process command/executable lacks new release. CONTAINMENT: stop new task; restore old XML; start old task only after old-app/new-schema compatibility is approved.
+PRECONDITIONS: backup/migration/data gate pass; reviewed task points to `$NewRelease`; Phase 6 has certified the specific task activation/relaunch behavior; port 5101 has zero listeners. EXPECTED EFFECT: one task-managed new Waitress backend. STOP: missing/multiple listener, a listener before activation, or process command/executable lacks `$NewRelease`. CONTAINMENT: use only the certified lifecycle procedure; restore old XML and activate the old task only after old-app/new-schema compatibility is approved. Do not use a generic process kill.
 
 ```powershell
-Stop-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName
-Get-NetTCPConnection -LocalPort 5101 -State Listen | Select-Object -First 1 | ForEach-Object {Get-CimInstance Win32_Process -Filter "ProcessId=$($_.OwningProcess)" | Select ProcessId,ExecutablePath,CommandLine}
+$Before=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5101 -State Listen -ErrorAction SilentlyContinue)
+if($Before.Count -ne 0){throw 'activation blocked: port 5101 is not quiescent'}
+# Invoke only the task-start action certified by the Phase 6 lifecycle evidence.
+Start-ScheduledTask -TaskName $TaskName
+$Deadline=(Get-Date).AddSeconds(60)
+do { $After=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5101 -State Listen -ErrorAction SilentlyContinue); if($After.Count -eq 1){break}; Start-Sleep -Seconds 1 } while((Get-Date) -lt $Deadline)
+if($After.Count -ne 1){throw "activation failed: expected exactly one 5101 listener; found $($After.Count)"}
+$NewOwner=Get-CimInstance Win32_Process -Filter "ProcessId=$($After[0].OwningProcess)"
+$NewOwner | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
+if($NewOwner.ExecutablePath -notlike "$NewRelease\*"){throw 'activation failed: listener executable is not the new immutable release'}
+if($NewOwner.CommandLine -notmatch '(?i)-m\s+waitress' -or $NewOwner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'activation failed: listener is not Waitress WSGI'}
 ```
 
-## PHASE 9 — Health/readiness gate [READ-ONLY]
+The `Start-ScheduledTask` line is not an independently certified replacement mechanism. It may be executed only after Phase 6 proves task behavior and task suppression/activation semantics for this server. A `Ready` task state alone is not service-state evidence.
+
+## PHASE 10 — Health/readiness gate [READ-ONLY]
 
 ```powershell
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5101/api/health
@@ -155,11 +201,11 @@ Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5101/api/health/ready
 
 Require 200 twice, target migration, expected one listener, no blocking logs.
 
-## PHASE 10 — IIS/frontend
+## PHASE 11 — IIS/frontend
 
 IIS change is **NOT_REQUIRED** for this certified authorization-only delta. Keep existing physical path; do not change IIS merely to make topology visually uniform. Later frontend deployment requires separately reviewed IIS commands and rollback evidence.
 
-## PHASES 11–14 — smoke, Samand, observation, capture
+## PHASES 12–15 — smoke, Samand, observation, capture
 
 Read-only existing-data smoke: Platform Admin tenant request/shipment denies; Organization Admin allows only existing explicit capability and denies platform diagnostics; Expert allows only own assigned request/child and denies same-tenant unassigned/foreign IDs; `role=admin` does not elevate; a capability does not allow foreign access. Reassignment A→B is `MANUAL_EXISTING_DATA_VALIDATION_REQUIRED` because it mutates state; do not create test data.
 
@@ -170,10 +216,12 @@ Use confirmed `https://samand.logisticmarket.ir` (not unproven `samand.forwarder
 | Event | Containment / recovery |
 |---|---|
 | Before migration | do nothing to current service |
-| Migration fails pre-commit | keep new task stopped; verify revision; escalate |
-| Migration succeeds, activation/health/smoke fails | contain traffic; app rollback only if old/new schema compatibility proved; otherwise DB-owner restore from backup |
+| Cannot prove graceful stop, task suppression, writer quiescence, or zero listener | NO-GO; make no migration or activation change; collect only the specified read-only lifecycle evidence |
+| Migration fails pre-commit | preserve the certified quiescent/task-suppressed state; verify revision; escalate |
+| Migration succeeds, activation/health/smoke fails | use the certified lifecycle procedure to contain traffic; app rollback only if old/new schema compatibility proved; otherwise DB-owner restore from backup |
 | Downgrade refuses due responsibility evidence | forward-fix or verified backup restore; never bypass guard |
-| Task targets wrong release | stop it; re-register before XML; do not restart |
+| Task targets wrong release | do not start it; re-register before XML; do not restart until lifecycle/compatibility gates pass |
+| Stale non-listening `release-fdfdd23-20260823` tree | record only; exclude from cutover and do not stop/kill it. Cleanup requires a separate owner-approved investigation and lifecycle procedure. |
 | Later frontend failure | restore previously captured IIS path only under separate approval |
 
 Never equate app rollback with schema rollback or issue blind `alembic downgrade`.
