@@ -289,7 +289,7 @@ def test_expert_a_cannot_download_case_b_superseded_version(cross_case_documents
     client = app.test_client()
     old_b = client.post(
         f"/api/expert/requests/{state['other_case_id']}/document-requirements/{state['requirement_b']}/replace",
-        headers=headers(state["admin"]),
+        headers=headers(state["org_admin"]),
         data={"file": (io.BytesIO(pdf_bytes() + b"\nnew"), "case-b-new.pdf")},
     )
     assert old_b.status_code == 201
