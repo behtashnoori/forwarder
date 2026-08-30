@@ -15,7 +15,11 @@ from backend.services import (
     admin_shipment_request_service,
     referral_service,
 )
-from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
+from backend.services.admin_authorization_service import (
+    require_organization_admin_context,
+    require_platform_admin,
+    require_reporting_export_oversight,
+)
 from backend.services import assignment_service
 from backend.services.organization_hostname_service import (
     HostnameValidationError,
@@ -157,7 +161,7 @@ def route_platform_intake(request_id: int):
 
 
 @admin_bp.get("/dashboard")
-@require_organization_admin_context()
+@require_reporting_export_oversight()
 def get_admin_dashboard():
     """
     Get admin dashboard statistics.
@@ -178,7 +182,7 @@ def get_admin_dashboard():
 
 
 @admin_bp.get("/reports/assignment-summary")
-@require_organization_admin_context()
+@require_reporting_export_oversight()
 def get_assignment_summary():
     """
     Get comprehensive assignment summary report.
@@ -198,7 +202,7 @@ def get_assignment_summary():
 
 
 @admin_bp.get("/reports/overview")
-@require_organization_admin_context()
+@require_reporting_export_oversight()
 def get_report_overview():
     """Return admin report overview JSON for a supported reporting period."""
     try:
@@ -211,7 +215,7 @@ def get_report_overview():
 
 
 @admin_bp.get("/reports/export.xlsx")
-@require_organization_admin_context()
+@require_reporting_export_oversight()
 def export_report_xlsx():
     """Return admin report overview as an XLSX workbook download."""
     try:

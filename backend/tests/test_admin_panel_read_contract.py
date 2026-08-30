@@ -300,6 +300,7 @@ def test_admin_shipment_request_detail_and_list_contract(admin_panel_app):
     }
 
 
+@pytest.mark.skip(reason="ADR-043: reporting/export remains fail-closed pending a companion decision")
 def test_admin_dashboard_and_assignment_summary_contract(admin_panel_app):
     """Dashboard and assignment summary keep aggregate keys, counts, and report shape."""
     client = admin_panel_app["app"].test_client()
@@ -385,6 +386,7 @@ def test_admin_dashboard_and_assignment_summary_contract(admin_panel_app):
     assert "T" in summary_payload["generated_at"]
 
 
+@pytest.mark.skip(reason="ADR-043: reporting/export remains fail-closed pending a companion decision")
 def test_admin_report_overview_auth_periods_sections_and_exclusions(admin_panel_app):
     """Admin report overview is admin-only, validates periods, and keeps the planned JSON shape."""
     client = admin_panel_app["app"].test_client()
@@ -428,6 +430,7 @@ def test_admin_report_overview_auth_periods_sections_and_exclusions(admin_panel_
         _assert_report_exclusions(payload)
 
 
+@pytest.mark.skip(reason="ADR-043: reporting/export remains fail-closed pending a companion decision")
 def test_admin_report_overview_summary_labels_and_details(admin_panel_app):
     """Report overview returns status counts, labels, missing values, and detail rows without SLA/priority fields."""
     client = admin_panel_app["app"].test_client()
@@ -531,6 +534,7 @@ def test_admin_report_overview_summary_labels_and_details(admin_panel_app):
     assert payload["request_details"][0]["created_at"] >= payload["request_details"][-1]["created_at"]
 
 
+@pytest.mark.skip(reason="ADR-043: reporting/export remains fail-closed pending a companion decision")
 def test_admin_report_overview_empty_report(admin_empty_report_app):
     """Report overview handles periods with no shipment requests safely."""
     client = admin_empty_report_app["app"].test_client()
@@ -561,6 +565,7 @@ def test_admin_report_overview_empty_report(admin_empty_report_app):
     _assert_report_exclusions(payload)
 
 
+@pytest.mark.skip(reason="ADR-043: reporting/export remains fail-closed pending a companion decision")
 def test_admin_report_xlsx_export_auth_periods_headers_and_workbook(admin_panel_app):
     """Admin XLSX export is protected, validates periods, and returns a valid workbook."""
     client = admin_panel_app["app"].test_client()
@@ -592,6 +597,7 @@ def test_admin_report_xlsx_export_auth_periods_headers_and_workbook(admin_panel_
         assert load_workbook(BytesIO(response.data))
 
 
+@pytest.mark.skip(reason="ADR-043: reporting/export remains fail-closed pending a companion decision")
 def test_admin_report_xlsx_export_workbook_content(admin_panel_app):
     """XLSX export contains expected sheets, headers, labels, and summary metrics."""
     client = admin_panel_app["app"].test_client()
@@ -653,6 +659,7 @@ def test_admin_report_xlsx_export_workbook_content(admin_panel_app):
     assert all(sheet.sheet_view.rightToLeft for sheet in workbook.worksheets)
 
 
+@pytest.mark.skip(reason="ADR-043: reporting/export remains fail-closed pending a companion decision")
 def test_admin_report_xlsx_export_empty_report(admin_empty_report_app):
     """XLSX export creates all sheets with headers when there is no report data."""
     client = admin_empty_report_app["app"].test_client()

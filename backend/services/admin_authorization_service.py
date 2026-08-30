@@ -72,3 +72,17 @@ def require_organization_admin_context(*, allow_platform=True):
             return fn(*args, **kwargs)
         return wrapped
     return decorator
+
+
+def require_reporting_export_oversight():
+    """Fail closed until the accepted reporting/export companion decision exists."""
+    def decorator(fn):
+        @wraps(fn)
+        @require_auth
+        def wrapped(*args, **kwargs):
+            # Authenticate first, but intentionally expose no tenant/report metadata.
+            return jsonify({
+                "error": "Reporting and export oversight is not enabled by an accepted companion decision."
+            }), 403
+        return wrapped
+    return decorator

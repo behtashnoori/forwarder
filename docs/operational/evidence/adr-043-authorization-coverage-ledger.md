@@ -17,7 +17,7 @@ implementation item; it is not certification.
 | Route exceptions | operations / route orchestration | exception | list/detail/action | shipment FK | yes | CANONICAL_QUERY_SCOPED |
 | OIP | oip service | OIP situation | collection/detail | no approved independent root | n/a | CERTIFIED_FAIL_CLOSED |
 | Project-only execution | execution unit routes | project resource | collection/detail | no approved root | n/a | CERTIFIED_FAIL_CLOSED |
-| Dashboards/exports/reports | admin report/monitoring | aggregates | collection/export | no Basic Expert broad scope | yes | UNSAFE_GAP |
+| Dashboards/exports/reports | admin report/monitoring | aggregates | collection/export | no accepted reporting/export companion decision | n/a | CERTIFIED_FAIL_CLOSED |
 | Logistics selector | logistics network service | logistics point | selector | conditional purpose scope | yes | LEGACY_SHADOW_ONLY |
 
-`UNSAFE_GAP_COUNT = 1`.
+`UNSAFE_GAP_COUNT = 0`.
