@@ -101,7 +101,13 @@ def test_tracking_management_requires_canonical_org_admin_capability(tracking_ap
     assert client.get(path, headers=_headers(tracking_api_app["org_admin_token"])).status_code == 200
 
 
-def test_tracking_shadow_telemetry_never_changes_canonical_decision(tracking_api_app, caplog):
+def test_tracking_shadow_telemetry_never_changes_canonical_decision(tracking_api_app, caplog, monkeypatch):
+    shadow_logger = logging.getLogger("authorization.shadow")
+    # Other suites may alter logger state.  Shadow is observational, so make
+    # this test's capture boundary explicit rather than depending on globals.
+    monkeypatch.setattr(shadow_logger, "disabled", False)
+    monkeypatch.setattr(shadow_logger, "propagate", True)
+    monkeypatch.setattr(shadow_logger, "level", logging.INFO)
     caplog.set_level(logging.INFO, logger="authorization.shadow")
     client = tracking_api_app["app"].test_client()
     path = f"/api/expert/requests/{tracking_api_app['request_id']}/tracking"
