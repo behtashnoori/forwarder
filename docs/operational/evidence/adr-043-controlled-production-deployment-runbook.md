@@ -1,12 +1,12 @@
 # ADR-043 controlled production deployment runbook
 
-Status: executable preparation only; it does not authorize deployment. Certified application source is `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` (835 passed, 0 failed, 92 skipped, 1 xfailed). ADR-037, ADR-042 and ADR-043 remain controlling: Platform Admin has no tenant-work access; role labels do not establish authority; capability never bypasses tenant fencing; and direct assignment creates no CRM right.
+Status: written production authorization recorded; execution remains pending mandatory live gates. Certified application source is `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` (835 passed, 0 failed, 92 skipped, 1 xfailed). ADR-037, ADR-042 and ADR-043 remain controlling: Platform Admin has no tenant-work access; role labels do not establish authority; capability never bypasses tenant fencing; and direct assignment creates no CRM right.
 
 ## Integrity, current topology, and historical boundary
 
 The release builder materializes a detached worktree from the requested 40-character object, rejects a dirty materialization, builds `dist` there, and records source/head/file hashes. Its guard is `20260907_direct_shipment_responsibility`. Never package this later tooling/runbook commit, substitute the dirty worktree, or run generic `alembic upgrade head`.
 
-Completed read-only preflight supersedes conflicting older lifecycle observations. The current listener is PID `11028` on `127.0.0.1:5101`, running `C:\1-webapp\forwarder-production\release-fdfdd23-20260823`; the existing `Forwarder Backend Production` task is `Ready` with working directory `C:\1-webapp\forwarder-production\release-991d29a-20260829`; IIS serves `C:\1-webapp\forwarder-production\release-fdfdd23-20260823\dist`; database is `forwarder_prod_20260728_161711` at `20260906_global_logistics_point_materialization`; target is `20260907_direct_shipment_responsibility`; health and readiness are 200. `RELEASE_IDENTITY_MATCH=NO` is a stop gate, not permission to restart.
+Completed read-only preflight supersedes conflicting older lifecycle observations: `PREFLIGHT_COLLECTION_COMPLETE=YES`, `COLLECTION_ERRORS=0`. The current listener is PID `51476` on `127.0.0.1:5101`, running `C:\1-webapp\forwarder-production\release-991d29a-20260829`; the existing `Forwarder Backend Production` task is `Ready` with working directory `C:\1-webapp\forwarder-production\release-991d29a-20260829`; IIS bindings for Samand/Forwarderet were present; database is `forwarder_prod_20260728_161711` at `20260906_global_logistics_point_materialization`; target is `20260907_direct_shipment_responsibility`; health and readiness are 200. Any material drift from this baseline is a stop gate, not permission to restart.
 
 Historical phase1b evidence is only a pattern: identify the listener, hold its scheduler, terminate only verified process scope, prove port closure, then bind and health-check. It does not establish current ports, releases, IIS, origins, DB cutover, or task XML. Do not run historical scripts, blindly use `Stop-Process`, `taskkill`, `Stop-ScheduledTask`, restart, task replacement, or `alembic downgrade`.
 
@@ -14,7 +14,7 @@ Historical phase1b evidence is only a pattern: identify the listener, hold its s
 
 ```powershell
 $ErrorActionPreference='Stop'; $TaskName='Forwarder Backend Production'; $Port=5101
-$KnownListenerPid=11028; $ExpectedOldRelease='C:\1-webapp\forwarder-production\release-fdfdd23-20260823'
+$KnownListenerPid=51476; $ExpectedOldRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
 $TaskRecordedRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
 $PgBin='C:\Program Files\PostgreSQL\18\bin'; $Database='forwarder_prod_20260728_161711'
 $TargetRevision='20260907_direct_shipment_responsibility'; $CertifiedCommit='adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e'
@@ -23,6 +23,29 @@ $EvidenceDirectory='C:\approved\adr043-evidence'; New-Item -ItemType Directory -
 ```
 
 Require written deployment/database/operations authorization, maintenance window, traffic-containment owner, rollback owner, and protected evidence storage. Re-run committed `ops\adr043-production-readonly-preflight.ps1`; stop unless collection is complete/error-free, all supplied authorization/lineage counters are zero, current schema is correct, health/readiness are 200, and the PID/release/task/IIS facts above still agree. Never print `production.env` or connection strings.
+
+## Recorded production authorization — current controlled window
+
+`PRODUCTION_DEPLOYMENT_AUTHORIZED=YES`. The owner authorizes **only** the ADR-043 controlled production deployment governed by this runbook, subject to every mandatory live gate, STOP condition, backup requirement, explicit migration gate, post-migration data gate, runtime-ownership gate, health gate, Samand validation gate, and rollback rule below. Recording this authorization performs **no production mutation**.
+
+| Control | Authorized value / status |
+| --- | --- |
+| Certified application SHA | `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` — exact SHA only; no current HEAD, later tooling/evidence commit, or branch tip substitution |
+| Target migration | `20260907_direct_shipment_responsibility` — explicit target only; never generic Alembic head |
+| Production database | `forwarder_prod_20260728_161711` |
+| Authorized scope | ADR-043 controlled production deployment only |
+| Fresh backup status | **PENDING — NOT PASS.** A new backup must be created and catalog/hash verified in this window before migration; historical backups do not satisfy this gate. |
+| Migration status | **PENDING — NOT PASS.** |
+| Deployment status | **PENDING — NOT COMPLETE.** |
+| CORS status | **NOT_VERIFIED.** Runtime/browser evidence is required; this authorization does not make CORS PASS. |
+
+This authorization does not authorize unrelated application changes; packaging a later tooling/evidence commit as the release; speculative IIS or CORS changes; modification of unrelated processes; cleanup or termination of stale non-listening process trees; unrelated database changes; production test-data mutation; blind migration to generic Alembic head; blind Scheduled Task restart; blind process termination; or automatic database downgrade as part of application rollback.
+
+Before proceeding, the immediately-before-change ownership and task gates must be re-run and agree with the supplied successful baseline: collection complete/error-free; one `127.0.0.1:5101` listener; verified listener/release/task identity; task state and bindings; current revision `20260906_global_logistics_point_materialization`; target revision above; health/readiness 200; supplied membership, ShipmentRequest-root, child-lineage, and legacy-authority audit counters all zero; and pending-schema Direct Shipment readiness classified only as `NOT_COMPUTABLE_BEFORE_TARGET_SCHEMA`. Writer quiescence and zero-listener gates remain mandatory where required. After migration, Direct Shipment readiness/data quality must pass before activation; after activation exactly one listener from the certified release, both health endpoints, and Samand production validation must pass.
+
+STOP and reassess on any material baseline drift, ambiguous runtime ownership, unexpected listener, task-identity drift, migration discrepancy, failed writer-quiescence/zero-listener gate, Direct Shipment gate failure, authorization-smoke failure, health/readiness failure, Samand validation failure, or material CORS failure. A CORS failure authorizes no speculative configuration change. Application rollback remains separate from database downgrade: downgrade requires its own compatibility decision and every existing protection; it is never automatic.
+
+The next operational checkpoint is **FRESH VERIFIED PRODUCTION BACKUP ONLY**. No backup, migration, deployment, runtime, database, Scheduled Task, IIS, or CORS action is performed by this authorization record.
 
 ## PHASE 1 — Build and stage the exact application
 
@@ -65,7 +88,7 @@ Confirm primary and protected writable destination. The dump has no DB writes. E
 
 ## PHASE 3 — Export, inspect, review, then hold the existing task
 
-Task definition and current listener are separate facts. Since the task names `991d29a` while the listener is `fdfdd23`, a blind restart could activate `991d29a` and is prohibited. Changing a definition is not backend quiescence.
+Task definition and current listener are separate facts. The immediately-before-change gate must prove the current `991d29a` task and listener bindings again; a blind restart remains prohibited. Changing a definition is not backend quiescence.
 
 [READ-ONLY]
 ```powershell
@@ -113,7 +136,7 @@ if($VerifiedPid -ne $KnownListenerPid){throw "listener PID changed: expected $Kn
 $Owner=Get-CimInstance Win32_Process -Filter "ProcessId=$VerifiedPid"
 if($null -eq $Owner -or [string]::IsNullOrWhiteSpace($Owner.ExecutablePath)){throw 'listener identity unavailable'}
 $Owner | Select ProcessId,ParentProcessId,ExecutablePath,CommandLine | Tee-Object "$EvidenceDirectory\listener-before-stop.txt"
-if($Owner.ExecutablePath -notlike "$ExpectedOldRelease\*"){throw 'listener executable is not fdfdd23'}
+if($Owner.ExecutablePath -notlike "$ExpectedOldRelease\*"){throw 'listener executable is not the verified current release'}
 if($Owner.CommandLine -notmatch '(?i)-m\s+waitress' -or $Owner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'listener is not Forwarder Waitress WSGI'}
 $Descendants=@(); $Pending=@($VerifiedPid)
 while($Pending.Count){$ParentId=$Pending[0]; $Pending=@($Pending|Select -Skip 1); $Children=@(Get-CimInstance Win32_Process -Filter "ParentProcessId=$ParentId"); $Descendants+=$Children; $Pending+=@($Children|ForEach-Object {[int]$_.ProcessId})}
@@ -173,7 +196,7 @@ if($NewOwner.ExecutablePath -notlike "$NewRelease\*" -or $NewOwner.CommandLine -
 (Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5101/api/health/ready).StatusCode
 ```
 
-Require 200 twice, target revision, one certified listener, and no blocking logs. IIS change is **NOT_REQUIRED**; retain its existing `fdfdd23\dist` physical path.
+Require 200 twice, target revision, one certified listener, and no blocking logs. IIS change is **NOT_REQUIRED**; no IIS configuration change is authorized by this runbook.
 
 ## PHASE 7 — Browser, authorization smoke, and evidence [READ-ONLY]
 
