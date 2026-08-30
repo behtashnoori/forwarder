@@ -66,6 +66,31 @@ This backup satisfies the fresh-backup prerequisite for the **current ADR-043 de
 
 ## PHASE 1 — Build and stage the exact application
 
+### Production-host artifact integrity and non-serving staging evidence — current ADR-043 deployment window
+
+The exact certified release artifact was independently built and verified locally, then manually copied to the production host. The following production-host checkpoint is **PASS** for artifact integrity and non-serving materialization only. It records neither a runtime transition nor a deployment completion.
+
+| Evidence item | Recorded value |
+| --- | --- |
+| Certified application SHA | `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` — this exact SHA remains the application identity. No later tooling/evidence commit, current HEAD, or branch tip is treated as the application identity. |
+| Release artifact | `D:\1-webapp\adr043-release-artifacts\Forwarder-adr043-assigned-work-adcc5da.zip` |
+| Release artifact SHA256 | `af53fd7cc29f229e51a72fb02a3ffd0b1a9c46260af2fd37b83e993a4bdcea19` |
+| Production artifact path | `C:\Users\Administrator\Desktop\Forwarder-adr043-assigned-work-adcc5da.zip` |
+| Expected SHA256 | `af53fd7cc29f229e51a72fb02a3ffd0b1a9c46260af2fd37b83e993a4bdcea19` |
+| Actual SHA256 | `af53fd7cc29f229e51a72fb02a3ffd0b1a9c46260af2fd37b83e993a4bdcea19` |
+| Artifact integrity | **PASS** |
+| Staging status | **PASS — NON-SERVING STAGED RELEASE ONLY** |
+| Staged release path | `C:\1-webapp\forwarder-production\release-adcc5da-adr043` |
+| Staged file count | `387` |
+| Target migration | `20260907_direct_shipment_responsibility` |
+| Target migration file | `C:\1-webapp\forwarder-production\release-adcc5da-adr043\backend\migrations\versions\20260907_direct_shipment_responsibility.py` |
+| Runtime/task disposition | The staged release is **NOT serving traffic**. The Scheduled Task still points to the existing production release `C:\1-webapp\forwarder-production\release-991d29a-20260829`; it has not been changed. |
+| No-runtime-mutation record | `PRODUCTION_TASK_CHANGED=NO`; `BACKEND_RESTARTED=NO`; `MIGRATION_PERFORMED=NO`; `IIS_CHANGED=NO`; `CORS_CHANGED=NO`. |
+
+This checkpoint completes only the artifact-integrity and non-serving release-directory materialization portion of PHASE 1. PHASE 1 is **NOT PASS**: before it may be marked PASS, the production-Python virtual-environment creation, exact packaged-requirements installation without upgrade, and proof of the existing non-secret environment loader from the Scheduled Task XML remain mandatory prerequisites. The staged release must remain non-serving until those prerequisites and every subsequent controlled gate pass.
+
+This evidence does **not** mark migration PASS, Direct Shipment post-migration PASS, runtime transition PASS, deployment complete, or CORS PASS. `APPLICATION_ROLLBACK != DATABASE_DOWNGRADE` remains controlling.
+
 [READ-ONLY]
 ```powershell
 git -C D:\1-webapp\15-forwarder cat-file -e "$( $CertifiedCommit )^{commit}"
