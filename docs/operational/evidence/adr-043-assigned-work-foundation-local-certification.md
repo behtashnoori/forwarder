@@ -21,3 +21,23 @@
 ## Deferred to later controlled implementation phases
 
 Endpoint-wide evaluator integration, SQL collection-scope predicates, all certified child-resource enforcement, Organization Admin category migration, observational shadow telemetry, direct-shipment reassignment endpoint/audit stream, PostgreSQL migration upgrade/downgrade evidence, and browser E2E remain required before `IMPLEMENTATION_READY` can be YES. No permissive dual-evaluator composition has been added.
+
+## Local data-quality certification — 2026-08-30
+
+Read-only checks ran against the isolated local test database only. No
+production environment file, production connection, data mutation, backfill,
+or credential was used or recorded.
+
+| Check | Count | Result |
+| --- | ---: | --- |
+| Tenant-owned request missing organization | 0 | PASS |
+| Accepted-quote shipment missing request parent | 0 | PASS |
+| Direct shipment missing primary responsibility | 0 | PASS |
+| Accepted-quote shipment/request tenant mismatch | 0 | PASS |
+| Active membership ambiguous or missing for a listed user | 0 | PASS |
+| WorkItem missing shipment parent | 0 | PASS |
+| Operational exception missing shipment parent | 0 | PASS |
+
+`DATA_QUALITY_CHECKS_CERTIFIED = YES` for this isolated, currently empty
+local test target. This does not certify production data or authorize a
+backfill, deployment, or production rollout.
