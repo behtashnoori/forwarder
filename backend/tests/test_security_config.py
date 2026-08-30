@@ -135,7 +135,7 @@ def test_testing_mode_uses_isolated_database_even_with_production_env(monkeypatc
 
 def test_crm_customers_requires_authentication():
     """CRM customer data is sensitive and must require a bearer token."""
-    app = create_app({"TESTING": True}, skip_startup=True)
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}, skip_startup=True)
     with app.app_context():
         db.create_all()
     client = app.test_client()
@@ -147,7 +147,7 @@ def test_crm_customers_requires_authentication():
 
 def test_crm_customers_rejects_expert_role():
     """Basic experts should not receive CRM customer listings."""
-    app = create_app({"TESTING": True}, skip_startup=True)
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}, skip_startup=True)
     with app.app_context():
         db.create_all()
         db.session.add(
@@ -173,7 +173,7 @@ def test_crm_customers_rejects_expert_role():
 
 def test_monitoring_metrics_rejects_expert_role():
     """Operational monitoring metrics require supervisor-level access or higher."""
-    app = create_app({"TESTING": True}, skip_startup=True)
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}, skip_startup=True)
     with app.app_context():
         db.create_all()
         db.session.add(

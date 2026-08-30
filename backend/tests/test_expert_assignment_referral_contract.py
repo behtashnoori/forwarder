@@ -1545,3 +1545,30 @@ def test_user_management_manual_assignment_fix_contract(expert_contract_app):
             ).count()
             == 1
         )
+
+
+def test_api_reassignment_revokes_old_expert_immediately(expert_contract_app):
+    """The reassignment command and protected reads use the same current root."""
+    client = expert_contract_app["app"].test_client()
+    request_id = expert_contract_app["request_id"]
+    a_headers = _auth_headers(expert_contract_app["expert_token"])
+    b_headers = _auth_headers(expert_contract_app["other_expert_token"])
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+
+    assert client.get(f"/api/expert/requests/{request_id}", headers=a_headers).status_code == 200
+    assert client.get("/api/expert/requests", headers=a_headers).get_json()["pagination"]["total"] == 1
+    reassigned = client.post(
+        f"/api/admin/shipment-requests/{request_id}/assign",
+        headers=admin_headers,
+        json={"expert_id": expert_contract_app["other_expert_id"]},
+    )
+    assert reassigned.status_code == 200
+
+    # No cached token, browser list, or remembered numeric ID preserves A's
+    # authorization.  The denial is non-disclosing at the operational route.
+    assert client.get(f"/api/expert/requests/{request_id}", headers=a_headers).status_code == 403
+    assert client.get(f"/api/expert/requests/{request_id}/tracking", headers=a_headers).status_code == 403
+    assert client.get("/api/expert/requests", headers=a_headers).get_json()["pagination"]["total"] == 0
+    assert client.get(f"/api/expert/requests/{request_id}", headers=b_headers).status_code == 200
+    assert client.get(f"/api/expert/requests/{request_id}/tracking", headers=b_headers).status_code == 200
+    assert client.get("/api/expert/requests", headers=b_headers).get_json()["pagination"]["total"] == 1

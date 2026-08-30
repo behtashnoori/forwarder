@@ -55,9 +55,15 @@ def _authority(user: ExpertUser) -> str:
 
 
 def _membership(user_id: int) -> OperationalMembership | None:
+    # Authorization state is revocable.  Do not let an identity-map object from
+    # an earlier request or racing command stand in for the persisted row.
     rows = db.session.scalars(select(OperationalMembership).join(
         OperationalOrganization, OperationalOrganization.id == OperationalMembership.organization_id
-    ).where(OperationalMembership.user_id == user_id, OperationalMembership.is_active.is_(True), OperationalOrganization.is_active.is_(True))).all()
+    ).where(
+        OperationalMembership.user_id == user_id,
+        OperationalMembership.is_active.is_(True),
+        OperationalOrganization.is_active.is_(True),
+    ).execution_options(populate_existing=True)).all()
     return rows[0] if len(rows) == 1 else None
 
 
@@ -70,7 +76,9 @@ def _has_capability(membership: OperationalMembership, action: str) -> bool:
 def _request_root(shipment: OperationalShipment) -> ShipmentRequest | None:
     if shipment.source_type != "accepted_quote" or shipment.shipment_request_id is None:
         return None
-    request = db.session.get(ShipmentRequest, shipment.shipment_request_id)
+    request = db.session.scalar(select(ShipmentRequest).where(
+        ShipmentRequest.id == shipment.shipment_request_id
+    ).execution_options(populate_existing=True))
     if request is None or request.operational_organization_id != shipment.organization_id:
         return None
     return request
@@ -96,11 +104,19 @@ def emit_shadow_decision(
 
 
 def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> AuthorizationDecision:
-    """Evaluate one current operation; callers must not cache an allow decision."""
+    """Evaluate one current operation; callers must not cache an allow decision.
+
+    The supplied object is only an identity hint.  The resource and its root
+    are re-read from persistence for every decision so a prior object, list,
+    browser response, or SQLAlchemy identity-map value cannot retain access
+    after a committed reassignment.
+    """
     user_id = _actor_id(actor)
     if user_id is None:
         return _deny("ACTIVE_IDENTITY_REQUIRED")
-    user = db.session.get(ExpertUser, user_id)
+    user = db.session.scalar(select(ExpertUser).where(
+        ExpertUser.id == user_id
+    ).execution_options(populate_existing=True))
     if user is None or not user.is_active:
         return _deny("ACTIVE_IDENTITY_REQUIRED")
     membership = _membership(user_id)
@@ -111,6 +127,11 @@ def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> 
         return _deny("PLATFORM_ADMIN_HAS_NO_TENANT_WORK_AUTHORITY")
 
     if isinstance(resource, ShipmentRequest):
+        resource = db.session.scalar(select(ShipmentRequest).where(
+            ShipmentRequest.id == resource.id
+        ).execution_options(populate_existing=True))
+        if resource is None:
+            return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
         if resource.operational_organization_id != membership.organization_id:
             return _deny("RESOURCE_TENANT_MISMATCH")
         if authority == ORGANIZATION_ADMIN:
@@ -122,6 +143,11 @@ def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> 
         return AuthorizationDecision(True, "INTRINSIC_ASSIGNED_REQUEST", membership.organization_id, "ShipmentRequest", resource.id)
 
     if isinstance(resource, OperationalShipment):
+        resource = db.session.scalar(select(OperationalShipment).where(
+            OperationalShipment.id == resource.id
+        ).execution_options(populate_existing=True))
+        if resource is None:
+            return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
         if resource.organization_id != membership.organization_id:
             return _deny("RESOURCE_TENANT_MISMATCH")
         if authority == ORGANIZATION_ADMIN:

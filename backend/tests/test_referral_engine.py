@@ -19,13 +19,12 @@ def run_tests():
     from backend.referral_engine import referral_engine
     from backend.operational_models import OperationalMembership, OperationalOrganization
 
-    overrides = {"TESTING": True}
-    if os.environ.get("TEST_DATABASE_URL"):
-        overrides["SQLALCHEMY_DATABASE_URI"] = os.environ["TEST_DATABASE_URL"]
-    app = create_app(overrides)
+    # This contract test owns no shared database state.  An in-memory target
+    # makes repeated full-regression runs deterministic even when a developer
+    # has a local PostgreSQL URL configured.
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"}, skip_startup=True)
     with app.app_context():
-        if os.environ.get("TEST_DATABASE_URL"):
-            db.create_all()
+        db.create_all()
         errors = []
 
         # Ensure at least one expert
