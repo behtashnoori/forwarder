@@ -419,6 +419,17 @@ directory or a `source_commit` field alone is insufficient: the staged tree
 must be verified against the known release artifact and its per-file manifest
 before it can be considered the certified `adcc5da` release.
 
+The release-manifest boundary is the builder's `files` inventory: `assemble()`
+copies the selected source, deployment, backend, script, and freshly built
+`dist` files, then records every file in that assembled package **before** it
+writes `release-manifest.json`.  The staging procedure subsequently creates
+the release-local `.venv` and its dependency files; Python imports may also
+materialize `__pycache__` directories and `.pyc` files.  Those three classes
+are consequently not release payload and are excluded only from the staged
+*extra-file* inventory.  They are not exclusions from manifest verification:
+every manifest record remains mandatory and is checked for existence, size,
+and SHA-256.  No other staged extra is accepted.
+
 Run the following manually on the production server only.  It is inspection
 only: it does not start/stop processes, modify Scheduled Tasks, load or print
 secrets from `production.env`, run a migration, or write to the database.  The
@@ -440,6 +451,8 @@ $ExpectedDatabase='forwarder_prod_20260728_161711'
 $OldReleases=@('C:\1-webapp\forwarder-production\release-fdfdd23-20260823','C:\1-webapp\forwarder-production\release-991d29a-20260829')
 function Require([bool]$Condition,[string]$Message){if(-not $Condition){throw "NO-GO: $Message"}}
 function HashText([string]$Text){$sha=[Security.Cryptography.SHA256]::Create();try{($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Text))|ForEach-Object ToString x2)-join ''}finally{$sha.Dispose()}}
+function IsRuntimeMaterializedPath([string]$Path){return $Path -match '(?i)^(?:\.venv(?:/|$)|.*(?:^|/)__pycache__(?:/|$)|.*\.pyc$)'}
+function GetCanonicalManifestPath($Record){$path=[string]$Record.path;Require (-not [string]::IsNullOrWhiteSpace($path)) 'manifest record has an empty path';Require ($path -notmatch '[\\\x00]') "manifest path is not slash-normalized: $path";Require ($path -match '^[^/]+(?:/[^/]+)*$' -and $path -notmatch '(^|/)\.{1,2}(/|$)') "manifest path is unsafe: $path";return $path}
 Require (Test-Path -LiteralPath $StagedRelease -PathType Container) 'staged release path is absent'
 Require (Test-Path -LiteralPath $Artifact -PathType Leaf) 'known release artifact is absent'
 Require ((Get-FileHash -LiteralPath $Artifact -Algorithm SHA256).Hash -eq $ArtifactSha256) 'known release artifact hash differs from accepted evidence'
@@ -449,11 +462,14 @@ Require ($Manifest.manifest_schema -eq 'forwarder-release-content-v2') 'unexpect
 Require ($Manifest.source_commit -eq $CertifiedCommit) 'staged manifest source commit is not certified SHA'
 Require ($Manifest.alembic_head -eq $TargetRevision) 'staged manifest target head is not approved target'
 $records=@($Manifest.files); Require ($records.Count -gt 0) 'staged manifest has no file inventory'
-$actual=@(Get-ChildItem -LiteralPath $StagedRelease -Recurse -File|Where-Object {$_.FullName -ne $ManifestPath}|ForEach-Object {$_.FullName.Substring($StagedRelease.Length).TrimStart('\').Replace('\','/')})
-Require ($actual.Count -eq $records.Count) 'staged file count differs from manifest inventory'
+$manifestPaths=[System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $canonical=[Text.StringBuilder]::new()
-foreach($record in $records){$path=Join-Path $StagedRelease $record.path.Replace('/','\');Require (Test-Path -LiteralPath $path -PathType Leaf) "manifest file missing: $($record.path)";$item=Get-Item -LiteralPath $path;Require ($item.Length -eq [int64]$record.bytes) "manifest size mismatch: $($record.path)";$hash=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant();Require ($hash -eq $record.sha256.ToLowerInvariant()) "manifest hash mismatch: $($record.path)";[void]$canonical.Append($record.path).Append([char]0).Append($hash).Append("`n")}
+for($index=0;$index -lt $records.Count;$index++){$record=$records[$index];$relative=GetCanonicalManifestPath $record;Require ($relative -ne 'release-manifest.json') 'manifest must not govern itself';Require (-not (IsRuntimeMaterializedPath $relative)) "manifest record crosses runtime-materialization boundary: $relative";Require ($manifestPaths.Add($relative)) "duplicate manifest path: $relative";if($index -gt 0){Require ([StringComparer]::Ordinal.Compare($records[$index-1].path,$relative) -lt 0) 'manifest records are not sorted by canonical path'};Require ($record.bytes -is [long] -and $record.bytes -ge 0) "manifest byte length is invalid: $relative";$declaredHash=[string]$record.sha256;Require ($declaredHash -match '^[0-9a-f]{64}$') "manifest SHA-256 is invalid: $relative";$path=Join-Path $StagedRelease $relative.Replace('/','\');Require (Test-Path -LiteralPath $path -PathType Leaf) "manifest file missing: $relative";$item=Get-Item -LiteralPath $path;Require ($item.Length -eq [int64]$record.bytes) "manifest size mismatch: $relative";$hash=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant();Require ($hash -eq $declaredHash) "manifest hash mismatch: $relative";[void]$canonical.Append($relative).Append([char]0).Append($declaredHash).Append("`n")}
 Require (('sha256:'+ (HashText $canonical.ToString())) -eq $Manifest.content_hash) 'staged content hash differs from manifest'
+$actualPayloadPaths=[System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal);$runtimeExcluded=[System.Collections.Generic.List[string]]::new()
+Get-ChildItem -LiteralPath $StagedRelease -Recurse -File|ForEach-Object {$relative=$_.FullName.Substring($StagedRelease.Length).TrimStart('\').Replace('\','/');if($relative -eq 'release-manifest.json'){return};if(IsRuntimeMaterializedPath $relative){$runtimeExcluded.Add($relative);return};Require ($actualPayloadPaths.Add($relative)) "duplicate staged payload path: $relative"}
+$unexpected=@($actualPayloadPaths|Where-Object {-not $manifestPaths.Contains($_)});Require ($unexpected.Count -eq 0) "non-payload staged file absent from manifest: $($unexpected -join ', ')"
+Write-Output 'MANIFEST_GOVERNED_PAYLOAD_BOUNDARY=release-manifest.json files inventory only';Write-Output 'RUNTIME_EXCLUSIONS=.venv/**,**/__pycache__/**,**/*.pyc';Write-Output "RUNTIME_EXCLUDED_FILE_COUNT=$($runtimeExcluded.Count)"
 $targetFile=Join-Path $StagedRelease "backend\migrations\versions\$TargetRevision.py"; Require (Test-Path -LiteralPath $targetFile -PathType Leaf) 'target migration is absent from staged release'
 $listeners=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue); Require ($listeners.Count -eq 0) '127.0.0.1:5101 is not free'
 $task=Get-ScheduledTask -TaskName $TaskName; Require ($task.State -eq 'Disabled') 'Scheduled Task is not Disabled'
