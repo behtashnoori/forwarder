@@ -258,3 +258,15 @@ release identity).
 `DEPLOYMENT_RECOMMENDATION = NO_GO`  
 `OWNER_DECISIONS_REQUIRED = NO`  
 `TRUE_BLOCK_REASON = production-server read-only access is unavailable from this laptop`
+
+## Server inspection package
+
+The operator-executable package is
+`ops\adr043-production-readonly-preflight.ps1`. It is syntax-validated locally
+and contains no mutating service, IIS, Scheduled Task, filesystem, Alembic, or
+database command; its SQL is `SELECT`/introspection wrapped in read-only
+transactions. It redacts secret values, emits only configuration presence and
+approved non-secret identity fields, and provides a bounded machine-readable
+summary. The direct-responsibility metric is schema-version sensitive and the
+script reports collection errors rather than inventing values when a production
+schema cannot support a query.
