@@ -1,6 +1,6 @@
 # ADR-043 controlled production deployment runbook
 
-Status: written production authorization recorded; execution remains pending mandatory live gates. Certified application source is `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` (835 passed, 0 failed, 92 skipped, 1 xfailed). ADR-037, ADR-042 and ADR-043 remain controlling: Platform Admin has no tenant-work access; role labels do not establish authority; capability never bypasses tenant fencing; and direct assignment creates no CRM right.
+Status: **CLOSED — successful governed Production deployment recorded.** Production actions were performed manually by the authorized operator; Codex did not connect to or mutate Production. Certified application source is `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` (835 passed, 0 failed, 92 skipped, 1 xfailed). ADR-037, ADR-042 and ADR-043 remain controlling: Platform Admin has no tenant-work access; role labels do not establish authority; capability never bypasses tenant fencing; and direct assignment creates no CRM right.
 
 ## Integrity, current topology, and historical boundary
 
@@ -576,3 +576,97 @@ Existing-data smoke must prove: Platform Admin tenant request/shipment denies; O
 | Frontend/IIS issue | No IIS rollback is included; it needs separately approved IIS evidence. |
 
 Never equate application rollback with schema downgrade or issue blind `alembic downgrade`.
+
+## Final Production deployment evidence and closure (operator-recorded)
+
+**Authoritative status:** `ADR043_PRODUCTION_DEPLOYMENT_STATUS=COMPLETE`.
+The governed Production deployment was executed manually on `SRV8756807400`
+under explicit gated authorization. This section records operator-provided final
+evidence only; it does not assert that Codex connected to, inspected, or
+changed Production.
+
+### Final release state
+
+| Item | Final authoritative state |
+| --- | --- |
+| ADR-043 deployment | **COMPLETE / CLOSED** |
+| Release commit | `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` |
+| Release directory | `C:\1-webapp\forwarder-production\release-adcc5da-adr043` |
+| Frontend | `C:\1-webapp\forwarder-production\release-adcc5da-adr043\dist` |
+| Database | `forwarder_prod_20260728_161711` |
+| Alembic revision | `20260907_direct_shipment_responsibility` |
+| Scheduled Task | `Forwarder Backend Production`: `Ready`, correctly bound to target release, last result `0` |
+| Backend | Active and healthy on `127.0.0.1:5101`; certified deployment PID `39692` |
+| IIS | `forwarder` site started and serving the target frontend; six bindings preserved |
+| Public endpoints | `https://server.logisticmarket.ir` and `https://samand.logisticmarket.ir`: health, readiness, and frontend all `HTTP 200` |
+| Rollback | Not required |
+| Overall Production state | **HEALTHY** |
+
+### Governed deployment sequence
+
+1. **Containment — PASS.** The task was disabled, port `5101` had no listener,
+   classified old runtime processes were absent, and the staged ADR-043 release
+   was present but non-serving. No IIS cutover, database write, migration, or
+   target activation occurred at this checkpoint.
+2. **Read-only pre-cutover certification — PASS.** Artifact and manifest
+   identity, every manifest file's existence, size, and hash, staged payload
+   inventory, target migration presence, containment, and database identity all
+   passed. The declared and calculated content hash both were
+   `sha256:697f71090af232111283c083bae418a39a3698c232b767934e90d48e2bc8118d`.
+   Runtime materialization exclusions were `.venv/**`, `**/__pycache__/**`, and
+   `**/*.pyc`.
+3. **Migration checkpoint — PASS.** The operator performed the explicitly
+   authorized migration from `20260906_global_logistics_point_materialization`
+   to `20260907_direct_shipment_responsibility` against
+   `forwarder_prod_20260728_161711`. Pre- and post-migration containment and
+   database gates passed. This was the sole authorized database write; the
+   migration **must not be repeated**.
+4. **Scheduled Task rebind — PASS.** The task was rebound from
+   `C:\1-webapp\forwarder-production\release-991d29a-20260829` to the target
+   ADR-043 release, under `SYSTEM` / `ServiceAccount` with highest run level.
+   Semantic verification found no old-release reference and a target-release
+   reference.
+5. **Target backend activation — PASS.** The enabled, correctly bound task
+   activated the target backend. Target process command-line evidence proved
+   `C:\1-webapp\forwarder-production\release-adcc5da-adr043\.venv\Scripts\python.exe`
+   with `-m waitress --listen=127.0.0.1:5101 backend.wsgi:app`; local health and
+   readiness were both `HTTP 200`.
+6. **IIS / traffic cutover — PASS.** Only the `forwarder` site's physical path
+   changed, from the prior `release-fdfdd23-20260823\dist` to the target
+   `release-adcc5da-adr043\dist`. The application pool, all six bindings, ARR,
+   CORS, backend, task, and database state were preserved. Public health,
+   readiness, and frontend checks passed.
+7. **Final post-cutover verification — PASS.** Host, task, backend process,
+   local health/readiness, database/revision, IIS state/path/bindings, both
+   public hosts, and stability gates passed. This final verification was
+   read-only and performed no database write, migration, task, backend, IIS, or
+   CORS change.
+
+### Verifier findings and lessons
+
+These are tooling/verifier false negatives, **not Production defects**:
+
+- **Manifest contract:** content hashing follows the exact manifest record
+  order. Requiring a sorted-path reconstruction is an overconstraint and must
+  not invalidate an otherwise matching release.
+- **Windows virtual-environment listener identity:** `Win32_Process.ExecutablePath`
+  may report the base interpreter (`C:\Users\Administrator\AppData\Local\Programs\Python\Python314\python.exe`) even when the target virtual-environment launcher started the process. Verify target identity using the complete command line and target release evidence; do not require `ExecutablePath` to equal the venv launcher.
+- **Task Scheduler rebind:** Windows may normalize task XML after
+  `Register-ScheduledTask`. A raw XML Settings comparison is not an exact
+  semantic-equivalence verifier. Use read-only semantic task-property and
+  release-reference verification instead.
+
+No actual deployment defect is recorded in the authoritative final evidence.
+The earlier pending/no-go instructions in this runbook are historical
+pre-deployment controls and are superseded for this completed release by this
+final closure record; they remain useful only as traceability for the governed
+sequence.
+
+### Closure declaration
+
+- `ADR043_POST_CUTOVER_PRODUCTION_VERIFICATION=PASS`
+- `ADR043_PRODUCTION_DEPLOYMENT_STATUS=COMPLETE`
+- `ADR043_PRODUCTION_STATUS=HEALTHY`
+- `ADR043_ROLLBACK_REQUIRED=NO`
+- `PRODUCTION_ACTIONS_BY_CODEX=NO`
+- `ADR043_FINAL_STATUS=CLOSED`
