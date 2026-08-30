@@ -8,7 +8,8 @@ from sqlalchemy.engine import URL
 
 from backend import create_app
 from backend.auth import auth_manager
-from backend.models import ExpertUser
+from backend.models import ExpertUser, ShipmentRequest
+from backend.extensions import db
 from backend.operational_cli import _phase1b_seed_guard, seed_phase1b_uat
 from backend.operational_models import (
     Milestone, MilestoneEvent, OperationalCheckpoint, OperationalMembership,
@@ -116,6 +117,10 @@ def test_reporter_detail_reads_and_report_are_allowed_but_privileged_actions_are
         shipment = OperationalShipment.query.join(OperationalOrganization).filter(
             OperationalOrganization.name == "[PHASE1B-UAT] Organization A"
         ).one()
+        # Capabilities are insufficient for an Expert: bind the reporter to the
+        # persisted request root so every child read/action proves current work.
+        db.session.get(ShipmentRequest, shipment.shipment_request_id).assigned_to = reporter.id
+        db.session.commit()
         plan = RoutePlan.query.filter_by(operational_shipment_id=shipment.id, is_active=True).one()
         checkpoint = OperationalCheckpoint.query.filter_by(route_plan_id=plan.id, sequence_number=3).one()
         milestone = Milestone.query.filter_by(checkpoint_id=checkpoint.id, milestone_type="checkpoint_arrival").one()
