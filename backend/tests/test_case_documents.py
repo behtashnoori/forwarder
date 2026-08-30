@@ -24,14 +24,19 @@ def document_app(tmp_path):
     })
     with app.app_context():
         admin = ExpertUser(username="doc-admin", password_hash="x", full_name="Admin", role="admin", authority="PLATFORM_ADMIN", is_active=True)
+        org_admin = ExpertUser(username="doc-org-admin", password_hash="x", full_name="Organization Admin", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
         expert = ExpertUser(username="doc-expert", password_hash="x", full_name="Expert", role="expert", is_active=True)
         outsider = ExpertUser(username="doc-other", password_hash="x", full_name="Other", role="expert", is_active=True)
         organization = OperationalOrganization(name="Case Documents Organization")
-        db.session.add_all([admin, expert, outsider, organization])
+        db.session.add_all([admin, org_admin, expert, outsider, organization])
         db.session.flush()
         db.session.add_all([
-            OperationalMembership(organization_id=organization.id, user_id=user.id, permissions=[])
-            for user in (admin, expert, outsider)
+            OperationalMembership(
+                organization_id=organization.id,
+                user_id=user.id,
+                permissions=["request.read"] if user is org_admin else [],
+            )
+            for user in (admin, org_admin, expert, outsider)
         ])
         case = ShipmentRequest(contact_phone="1", shipping_type="domestic", status="new", status_request_status="new", assigned_to=expert.id, ownership_scope="TENANT", operational_organization_id=organization.id)
         other_case = ShipmentRequest(contact_phone="2", shipping_type="domestic", status="new", status_request_status="new", assigned_to=outsider.id, ownership_scope="TENANT", operational_organization_id=organization.id)
@@ -39,6 +44,7 @@ def document_app(tmp_path):
         db.session.commit()
         values = {
             "admin": auth_manager.generate_tokens(admin.id)["access_token"],
+            "org_admin": auth_manager.generate_tokens(org_admin.id)["access_token"],
             "expert": auth_manager.generate_tokens(expert.id)["access_token"],
             "outsider": auth_manager.generate_tokens(outsider.id)["access_token"],
             "case_id": case.id,
@@ -196,7 +202,7 @@ def cross_case_documents(document_app):
     ).get_json()
     case_b = client.get(
         f"/api/expert/requests/{state['other_case_id']}/documents",
-        headers=headers(state["admin"]),
+        headers=headers(state["org_admin"]),
     ).get_json()
     requirement_a = case_a["requirements"][0]["id"]
     requirement_b = case_b["requirements"][0]["id"]
@@ -371,16 +377,16 @@ def test_guessing_document_id_alone_never_grants_access(cross_case_documents, fi
     assert _document_state(app, state["root"]) == before
 
 
-def test_admin_can_access_both_cases_under_existing_policy(cross_case_documents):
+def test_organization_admin_can_access_both_cases_under_existing_policy(cross_case_documents):
     app, state = cross_case_documents
     client = app.test_client()
     assert client.get(
         f"/api/expert/requests/{state['case_id']}/documents",
-        headers=headers(state["admin"]),
+        headers=headers(state["org_admin"]),
     ).status_code == 200
     assert client.get(
         f"/api/expert/requests/{state['other_case_id']}/documents/{state['active_b']}/download",
-        headers=headers(state["admin"]),
+        headers=headers(state["org_admin"]),
     ).status_code == 200
 
 
