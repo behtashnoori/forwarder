@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import false, select
+from sqlalchemy import false, or_, select
 
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
@@ -49,7 +49,8 @@ def _membership(user_id: int) -> OperationalMembership | None:
 
 def _has_capability(membership: OperationalMembership, action: str) -> bool:
     # Action names are semantic; governed actions retain an explicit membership grant.
-    return action in set(membership.permissions or [])
+    aliases = {"shipment.read": "operational_shipment.read", "request.read": "request.read"}
+    return aliases.get(action, action) in set(membership.permissions or [])
 
 
 def _request_root(shipment: OperationalShipment) -> ShipmentRequest | None:
@@ -120,3 +121,28 @@ def assigned_request_scope(actor: dict[str, Any], action: str = "request.read"):
     if authority == ORGANIZATION_ADMIN and _has_capability(membership, action):
         return base & tenant
     return false()
+
+
+def assigned_shipment_scope(actor: dict[str, Any], action: str = "operational_shipment.read"):
+    """Canonical OperationalShipment SQL scope, applied before pagination."""
+    user_id = actor.get("id")
+    if not isinstance(user_id, int):
+        return false()
+    user = db.session.get(ExpertUser, user_id)
+    membership = _membership(user_id)
+    if user is None or not user.is_active or membership is None:
+        return false()
+    tenant = OperationalShipment.organization_id == membership.organization_id
+    authority = _authority(user)
+    if authority == ORGANIZATION_ADMIN and _has_capability(membership, action):
+        return tenant
+    if authority != EXPERT:
+        return false()
+    request_assigned = OperationalShipment.source_type == "accepted_quote"
+    request_assigned &= OperationalShipment.shipment_request_id.in_(select(ShipmentRequest.id).where(
+        ShipmentRequest.operational_organization_id == membership.organization_id,
+        ShipmentRequest.ownership_scope == "TENANT",
+        ShipmentRequest.assigned_to == user_id,
+    ))
+    direct_assigned = (OperationalShipment.source_type == "direct") & (OperationalShipment.primary_responsible_expert_id == user_id)
+    return tenant & or_(request_assigned, direct_assigned)

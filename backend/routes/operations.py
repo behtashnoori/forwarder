@@ -284,11 +284,10 @@ def list_shipments():
         user = _user()
         service.require_permission(user, "operational_shipment.read")
         org = service.organization_for_user(user["id"])
+        from backend.services.assigned_work_authorization import assigned_shipment_scope
         page = max(1, request.args.get("page", 1, type=int))
         per_page = min(100, max(1, request.args.get("per_page", 20, type=int)))
-        query = select(OperationalShipment).where(
-            OperationalShipment.organization_id == org
-        )
+        query = select(OperationalShipment).where(assigned_shipment_scope(user))
         if request.args.get("status"):
             query = query.where(
                 OperationalShipment.lifecycle_status == request.args["status"]

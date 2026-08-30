@@ -785,6 +785,9 @@ def scoped_shipment(shipment_id: str, user: dict[str, Any]) -> OperationalShipme
         raise OperationalError(
             "RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404
         )
+    from backend.services.assigned_work_authorization import authorize_work_action
+    if not authorize_work_action(user, shipment, "shipment.read").allowed:
+        raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
     return shipment
 
 

@@ -59,6 +59,7 @@ def operational_app():
             password_hash="unused",
             full_name="Phase1A Verifier",
             role="manager",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         db.session.add_all([org, other_org, user, outsider, verifier])
@@ -118,6 +119,8 @@ def operational_app():
             status_request_status="new",
             assigned_to=user.id,
             customer_id=customer.id,
+            operational_organization_id=org.id,
+            ownership_scope="TENANT",
         )
         db.session.add(request)
         db.session.flush()
