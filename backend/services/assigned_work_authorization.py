@@ -18,7 +18,7 @@ PLATFORM_ADMIN = "PLATFORM_ADMIN"
 ORGANIZATION_ADMIN = "ORGANIZATION_ADMIN"
 EXPERT = "EXPERT"
 
-INTRINSIC_REQUEST_ACTIONS = frozenset({"request.read", "request.message", "request.quote", "request.status"})
+INTRINSIC_REQUEST_ACTIONS = frozenset({"request.read", "request.message", "request.quote", "request.status", "tracking.read"})
 INTRINSIC_SHIPMENT_ACTIONS = frozenset({"shipment.read", "route.read", "tracking.read", "document.read", "execution.read"})
 
 
@@ -33,6 +33,15 @@ class AuthorizationDecision:
 
 def _deny(reason: str) -> AuthorizationDecision:
     return AuthorizationDecision(False, reason)
+
+
+def _actor_id(actor: dict[str, Any]) -> int | None:
+    """Normalize the authenticated JWT/session identity, never request input."""
+    value = actor.get("id")
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _authority(user: ExpertUser) -> str:
@@ -64,8 +73,8 @@ def _request_root(shipment: OperationalShipment) -> ShipmentRequest | None:
 
 def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> AuthorizationDecision:
     """Evaluate one current operation; callers must not cache an allow decision."""
-    user_id = actor.get("id")
-    if not isinstance(user_id, int):
+    user_id = _actor_id(actor)
+    if user_id is None:
         return _deny("ACTIVE_IDENTITY_REQUIRED")
     user = db.session.get(ExpertUser, user_id)
     if user is None or not user.is_active:
@@ -106,8 +115,8 @@ def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> 
 
 def assigned_request_scope(actor: dict[str, Any], action: str = "request.read"):
     """Return a SQL predicate before pagination/count; never post-filter rows."""
-    user_id = actor.get("id")
-    if not isinstance(user_id, int):
+    user_id = _actor_id(actor)
+    if user_id is None:
         return false()
     user = db.session.get(ExpertUser, user_id)
     membership = _membership(user_id)
@@ -125,8 +134,8 @@ def assigned_request_scope(actor: dict[str, Any], action: str = "request.read"):
 
 def assigned_shipment_scope(actor: dict[str, Any], action: str = "operational_shipment.read"):
     """Canonical OperationalShipment SQL scope, applied before pagination."""
-    user_id = actor.get("id")
-    if not isinstance(user_id, int):
+    user_id = _actor_id(actor)
+    if user_id is None:
         return false()
     user = db.session.get(ExpertUser, user_id)
     membership = _membership(user_id)

@@ -16,6 +16,7 @@ from backend.services import ownership_service
 from backend.services.ownership_service import tenant_organization_for_user
 from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
 from backend.services.admin_authorization_service import effective_authority
+from backend.services.assigned_work_authorization import authorize_work_action
 from backend.operational_models import OperationalMembership
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.services import (
@@ -118,18 +119,11 @@ def _tracking_management_payload(req: ShipmentRequest) -> Dict[str, Any]:
 
 
 def _can_access_request(req: ShipmentRequest, current_user: Optional[Dict]) -> bool:
-    """Admin can access any request; non-admin only if they are the assignee."""
-    if not current_user:
-        return False
-    try:
-        organization_id = tenant_organization_for_user(current_user)
-    except ValueError:
-        return False
-    if req.ownership_scope != "TENANT" or req.operational_organization_id != organization_id:
-        return False
-    if current_user.get("role") == "admin":
-        return True
-    return req.assigned_to == current_user.get("id")
+    """Authorize tracking from the persisted request root at operation time."""
+    return bool(
+        current_user
+        and authorize_work_action(current_user, req, "tracking.read").allowed
+    )
 
 
 @expert_console_bp.get("/requests")

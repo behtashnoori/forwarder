@@ -36,12 +36,25 @@ def tracking_api_app():
             role="expert",
             is_active=True,
         )
+        org_admin = ExpertUser(
+            username="tracking-org-admin",
+            password_hash="not-used",
+            full_name="Tracking Organization Admin",
+            role="admin",
+            authority="ORGANIZATION_ADMIN",
+            is_active=True,
+        )
         organization = OperationalOrganization(name="Tracking API Organization")
-        db.session.add_all([assignee, outsider, organization])
+        db.session.add_all([assignee, outsider, org_admin, organization])
         db.session.flush()
         db.session.add_all([
             OperationalMembership(organization_id=organization.id, user_id=assignee.id, permissions=[]),
             OperationalMembership(organization_id=organization.id, user_id=outsider.id, permissions=[]),
+            OperationalMembership(
+                organization_id=organization.id,
+                user_id=org_admin.id,
+                permissions=["tracking.read"],
+            ),
         ])
         request_row = ShipmentRequest(
             ownership_scope="TENANT",
@@ -61,6 +74,7 @@ def tracking_api_app():
             "tracking_code": request_row.tracking_code,
             "assignee_token": create_session_tokens(assignee.id)["access_token"],
             "outsider_token": create_session_tokens(outsider.id)["access_token"],
+            "org_admin_token": create_session_tokens(org_admin.id)["access_token"],
         }
         db.session.remove()
         db.drop_all()
@@ -78,6 +92,12 @@ def test_tracking_management_is_authenticated_and_assignment_scoped(tracking_api
     response = client.get(path, headers=_headers(tracking_api_app["assignee_token"]))
     assert response.status_code == 200
     assert response.get_json()["eligible"] is True
+
+
+def test_tracking_management_requires_canonical_org_admin_capability(tracking_api_app):
+    client = tracking_api_app["app"].test_client()
+    path = f"/api/expert/requests/{tracking_api_app['request_id']}/tracking"
+    assert client.get(path, headers=_headers(tracking_api_app["org_admin_token"])).status_code == 200
 
 
 def test_tracking_management_opaque_parent_rejects_substitution(tracking_api_app):
