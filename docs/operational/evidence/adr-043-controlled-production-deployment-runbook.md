@@ -2,146 +2,141 @@
 
 Status: executable preparation only; it does not authorize deployment. Certified application source is `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` (835 passed, 0 failed, 92 skipped, 1 xfailed). ADR-037, ADR-042 and ADR-043 remain controlling: Platform Admin has no tenant-work access; role labels do not establish authority; capability never bypasses tenant fencing; and direct assignment creates no CRM right.
 
-## Release-integrity stop gate
+## Integrity, current topology, and historical boundary
 
-The stale release-builder head guard was corrected locally to `20260907_direct_shipment_responsibility`. The builder materializes a detached worktree from the exact requested 40-character Git object, rejects a dirty materialization, builds `dist` inside it, and embeds `source_commit`/head/file hashes in inner and sidecar manifests. It never copies this worktree. Do not substitute the dirty worktree, package a later evidence commit, or run generic `alembic upgrade head`.
+The release builder materializes a detached worktree from the requested 40-character object, rejects a dirty materialization, builds `dist` there, and records source/head/file hashes. Its guard is `20260907_direct_shipment_responsibility`. Never package this later tooling/runbook commit, substitute the dirty worktree, or run generic `alembic upgrade head`.
 
-## PHASE 0 — Operator safety / change freeze [READ-ONLY]
+Completed read-only preflight supersedes conflicting older lifecycle observations. The current listener is PID `11028` on `127.0.0.1:5101`, running `C:\1-webapp\forwarder-production\release-fdfdd23-20260823`; the existing `Forwarder Backend Production` task is `Ready` with working directory `C:\1-webapp\forwarder-production\release-991d29a-20260829`; IIS serves `C:\1-webapp\forwarder-production\release-fdfdd23-20260823\dist`; database is `forwarder_prod_20260728_161711` at `20260906_global_logistics_point_materialization`; target is `20260907_direct_shipment_responsibility`; health and readiness are 200. `RELEASE_IDENTITY_MATCH=NO` is a stop gate, not permission to restart.
+
+Historical phase1b evidence is only a pattern: identify the listener, hold its scheduler, terminate only verified process scope, prove port closure, then bind and health-check. It does not establish current ports, releases, IIS, origins, DB cutover, or task XML. Do not run historical scripts, blindly use `Stop-Process`, `taskkill`, `Stop-ScheduledTask`, restart, task replacement, or `alembic downgrade`.
+
+## PHASE 0 — Constants and authorization [READ-ONLY]
 
 ```powershell
-$ErrorActionPreference='Stop'; $TaskName='Forwarder Backend Production'; $PgBin='C:\Program Files\PostgreSQL\18\bin'; $TargetRevision='20260907_direct_shipment_responsibility'; $CertifiedCommit='adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e'
-Get-ScheduledTask -TaskName $TaskName | Format-List *
-Get-ScheduledTaskInfo -TaskName $TaskName
-Export-ScheduledTask -TaskName $TaskName | Set-Content -Encoding utf8 "$env:TEMP\Forwarder-Backend-Production.before.xml"
+$ErrorActionPreference='Stop'; $TaskName='Forwarder Backend Production'; $Port=5101
+$KnownListenerPid=11028; $ExpectedOldRelease='C:\1-webapp\forwarder-production\release-fdfdd23-20260823'
+$TaskRecordedRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
+$PgBin='C:\Program Files\PostgreSQL\18\bin'; $Database='forwarder_prod_20260728_161711'
+$TargetRevision='20260907_direct_shipment_responsibility'; $CertifiedCommit='adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e'
+$BeforeXml='C:\approved\Forwarder-Backend-Production.before.xml'; $AfterXml='C:\approved\Forwarder-Backend-Production.adr043.xml'
+$EvidenceDirectory='C:\approved\adr043-evidence'; New-Item -ItemType Directory -Force -Path $EvidenceDirectory | Out-Null
 ```
 
-Require written deployment/database/operations authorization, maintenance window, rollback owner, and protected evidence location. STOP if the exported task, backend/PID, IIS path, DB identity, or current schema differs from the final preflight.
+Require written deployment/database/operations authorization, maintenance window, traffic-containment owner, rollback owner, and protected evidence storage. Re-run committed `ops\adr043-production-readonly-preflight.ps1`; stop unless collection is complete/error-free, all supplied authorization/lineage counters are zero, current schema is correct, health/readiness are 200, and the PID/release/task/IIS facts above still agree. Never print `production.env` or connection strings.
 
-## PHASE 1 — Immutable release preparation
+## PHASE 1 — Build and stage the exact application
 
 [READ-ONLY]
 ```powershell
-git -C D:\1-webapp\15-forwarder cat-file -e "$CertifiedCommit^{commit}"
+git -C D:\1-webapp\15-forwarder cat-file -e "$( $CertifiedCommit )^{commit}"
 git -C D:\1-webapp\15-forwarder show -s --format='%H%n%s' $CertifiedCommit
 ```
 
 [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
-
-PRECONDITIONS: fresh output directory; exact Git object only. EXPECTED EFFECT: creates an immutable ZIP/sidecar only. STOP: nonzero gate, manifest SHA mismatch, or source commit mismatch. CONTAINMENT: discard only failed staging artifact.
-
 ```powershell
 python D:\1-webapp\15-forwarder\scripts\build_release_package.py --repository D:\1-webapp\15-forwarder --authorized-commit $CertifiedCommit --output-directory D:\1-webapp\adr043-release-artifacts --release-label adr043-assigned-work
+$NewRelease='C:\1-webapp\forwarder-production\release-adr043-adcc5da'
+if(Test-Path -LiteralPath $NewRelease){throw 'approved new release directory already exists'}
+Expand-Archive -LiteralPath 'C:\1-webapp\adr043-release-artifacts\Forwarder-adr043-assigned-work-adcc5da.zip' -DestinationPath $NewRelease
+$Manifest=Get-Content -Raw -LiteralPath "$NewRelease\release-manifest.json" | ConvertFrom-Json
+if($Manifest.source_commit -ne $CertifiedCommit){throw 'staged manifest is not the certified commit'}
 ```
 
-Require manifest `source_commit=$CertifiedCommit`, target head, SHA-256 sidecar, and fresh `dist/index.html`/hashed assets. Use the production Python 3.14 executable to create `$NewRelease\.venv`, then install exactly `requirements.txt` and `requirements-release.txt` without upgrade. The builder’s gate creates its own isolated venv and runs `npm ci`, tests, and `npm run build`; the package contains the resulting same-origin `dist`. The certified delta has no frontend/package/runtime config changes, so no frontend feature change independently requires IIS transition.
+Require matching sidecar/hash, target head, fresh `dist`, and package tests. Create the release venv using production Python and install exactly packaged requirements without upgrade. Resolve the existing non-secret environment loader from task XML; stop if it cannot be proved. Never overlay an old release.
 
-## PHASE 2 — Pre-deployment revalidation [READ-ONLY]
-
-Run committed `ops\adr043-production-readonly-preflight.ps1` on the server. Require `PREFLIGHT_COLLECTION_COMPLETE=YES`, `COLLECTION_ERRORS=0`, current schema `20260906_global_logistics_point_materialization`, health/readiness 200, request/authority/child lineage violation counts zero. Direct schema pending is expected. STOP on drift or any security counter.
-
-## PHASE 3 — Fresh backup
+## PHASE 2 — Fresh backup gate
 
 [READ-ONLY]
 ```powershell
 & "$PgBin\pg_dump.exe" --version
-& "$PgBin\psql.exe" -X -h 127.0.0.1 -p 5432 -U postgres -d forwarder_prod_20260728_161711 -c "SELECT pg_is_in_recovery(),version_num FROM alembic_version;"
+& "$PgBin\psql.exe" -X -h 127.0.0.1 -p 5432 -U postgres -d $Database -c "SELECT pg_is_in_recovery(),version_num FROM alembic_version;"
 ```
 
 [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
-
-PRECONDITIONS: primary confirmed, protected writable backup directory, new timestamped name. EXPECTED EFFECT: custom-format backup, no DB writes. STOP: dump/size/catalog/hash failure. CONTAINMENT: retain failed artifact; make no schema change. Enter password only at prompt; never `PGPASSWORD`, CLI password, or `.pgpass`.
-
 ```powershell
 $Dump="C:\1-webapp\forwarder-backups\forwarder-adr043-predeploy-$(Get-Date -Format 'yyyyMMdd-HHmmssZ').dump"
-& "$PgBin\pg_dump.exe" -Fc -h 127.0.0.1 -p 5432 -U postgres -d forwarder_prod_20260728_161711 -f $Dump
-if($LASTEXITCODE -ne 0 -or (Get-Item $Dump).Length -le 0){throw 'backup failed'}
-& "$PgBin\pg_restore.exe" --list $Dump; if($LASTEXITCODE -ne 0){throw 'catalog failed'}; Get-FileHash $Dump -Algorithm SHA256
+& "$PgBin\pg_dump.exe" -Fc -h 127.0.0.1 -p 5432 -U postgres -d $Database -f $Dump
+if($LASTEXITCODE -ne 0 -or (Get-Item -LiteralPath $Dump).Length -le 0){throw 'backup failed'}
+& "$PgBin\pg_restore.exe" --list $Dump; if($LASTEXITCODE -ne 0){throw 'backup catalog failed'}
+Get-FileHash -LiteralPath $Dump -Algorithm SHA256 | Tee-Object "$EvidenceDirectory\backup-sha256.txt"
 ```
 
-## PHASE 4 — Release staging
+Confirm primary and protected writable destination. The dump has no DB writes. Enter password only at prompt; never use `PGPASSWORD`, CLI password, or `.pgpass`.
 
-[MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
+## PHASE 3 — Export, inspect, review, then hold the existing task
 
-PRECONDITIONS: verified artifact/manifest, non-existent approved release directory. EXPECTED EFFECT: new immutable directory, never an overlay. STOP: manifest/source mismatch or unknown environment-loader. CONTAINMENT: remove only unactivated new directory.
-
-```powershell
-$NewRelease='C:\1-webapp\forwarder-production\release-adr043-adcc5da'
-Expand-Archive -LiteralPath 'C:\1-webapp\adr043-release-artifacts\Forwarder-adr043-assigned-work-adcc5da.zip' -DestinationPath $NewRelease
-Get-Content "$NewRelease\release-manifest.json"
-```
-
-Resolve the existing non-secret env-loader from exported task XML before mutation. STOP if it cannot be proved; do not copy or print `production.env`.
-
-## PHASE 5 — Scheduled Task definition preparation (not backend quiescence)
-
-The observed task release bindings and the actual serving release are intentionally treated as separate facts. Current evidence is: task bindings consistently name `release-991d29a-20260829`; the sole observed `127.0.0.1:5101` listener was PID `51476`, with parent PID `51756`, and its Python executable/Waitress command name that same `release-991d29a-20260829`; a separate `release-fdfdd23-20260823` tree (`30760 -> 11028`) is non-listening. Do not infer a backend/IIS release from the non-listening tree.
-
-Changing a Scheduled Task definition is **not** stopping or quiescing the current backend. In particular, the task has been observed `Ready` while the Waitress listener remained alive. `Stop-ScheduledTask` is therefore not certified to terminate the listener and must not be used as the deployment stop procedure.
-
-The established binding contract requires **all three** of WorkingDirectory, `--repo`, and `PYTHONPATH` to point to one immutable release. The task executable remains `C:\Windows\System32\cmd.exe`; the server-managed launcher is `C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py`. Its exact command and argument order are extracted from live XML and must not be guessed. Its `serve` implementation applies the environment, changes directory, redirects logs, then uses `os.execv` to replace itself with Waitress; it is not a persistent supervisor that can later be stopped as a helper process.
+Task definition and current listener are separate facts. Since the task names `991d29a` while the listener is `fdfdd23`, a blind restart could activate `991d29a` and is prohibited. Changing a definition is not backend quiescence.
 
 [READ-ONLY]
-
 ```powershell
-$TaskName='Forwarder Backend Production'
-$BeforeXml="$env:TEMP\Forwarder-Backend-Production.before.xml"
 Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $BeforeXml -Encoding utf8
 [xml]$TaskXml=Get-Content -Raw -LiteralPath $BeforeXml
 $TaskXml.Task.Principals.Principal | Format-List UserId,LogonType,RunLevel
 $TaskXml.Task.Triggers.ChildNodes | Format-List *
 $TaskXml.Task.Settings | Format-List MultipleInstancesPolicy,ExecutionTimeLimit,RestartOnFailure,StopIfGoingOnBatteries,DisallowStartIfOnBatteries
 $TaskXml.Task.Actions.Exec | Format-List Command,Arguments,WorkingDirectory
-Get-ScheduledTask -TaskName $TaskName | Select-Object TaskName,State,Principal,Settings
+Get-ScheduledTask -TaskName $TaskName | Select TaskName,State,Principal,Settings
 Get-ScheduledTaskInfo -TaskName $TaskName | Format-List *
-Get-FileHash $BeforeXml -Algorithm SHA256
+Get-FileHash -LiteralPath $BeforeXml -Algorithm SHA256 | Tee-Object "$EvidenceDirectory\task-before-sha256.txt"
 ```
 
-STOP if command is not `cmd.exe`, arguments do not name the server runtime launcher and `--repo`, or WorkingDirectory/`--repo`/`PYTHONPATH` do not consistently name the old release. The reviewed after XML must preserve principal, triggers, restart/failure, stop-if-running, multiple-instance, execution-time-limit, and all non-release arguments. Change only the three release bindings; retain `cmd.exe` and the same runtime launcher. Verify with `Compare-Object` before registration.
+Stop unless the export proves `cmd.exe`, the reviewed server runtime launcher, and consistent `991d29a` bindings in WorkingDirectory, `--repo`, and `PYTHONPATH`. Construct `$AfterXml` from that export; change **only** those three bindings to `$NewRelease`. Preserve executable, every other argument, principal, triggers, restart/failure settings, execution limit, and multiple-instance policy. Do not guess launcher argument order.
+
+```powershell
+[xml]$BeforeTask=Get-Content -Raw -LiteralPath $BeforeXml; [xml]$AfterTask=Get-Content -Raw -LiteralPath $AfterXml
+$BeforeTask.Task.Actions.Exec | Format-List Command,Arguments,WorkingDirectory
+$AfterTask.Task.Actions.Exec | Format-List Command,Arguments,WorkingDirectory
+if($BeforeTask.Task.Principals.OuterXml -ne $AfterTask.Task.Principals.OuterXml -or $BeforeTask.Task.Triggers.OuterXml -ne $AfterTask.Task.Triggers.OuterXml -or $BeforeTask.Task.Settings.OuterXml -ne $AfterTask.Task.Settings.OuterXml){throw 'replacement changes task controls'}
+if((Get-Content -Raw $AfterXml) -notmatch [regex]::Escape($NewRelease) -or (Get-Content -Raw $AfterXml) -match [regex]::Escape($TaskRecordedRelease)){throw 'replacement XML release bindings are unsafe'}
+```
 
 [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
-
-PRECONDITIONS: reviewed XML explicitly names `$NewRelease`; old XML preserved. EXPECTED EFFECT: replaces task definition only. STOP: unexpected XML diff/no release path. CONTAINMENT: re-register exact before XML.
-
 ```powershell
-Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw 'C:\approved\Forwarder-Backend-Production.adr043.xml') -Force
-Export-ScheduledTask -TaskName $TaskName | Set-Content -Encoding utf8 "$env:TEMP\Forwarder-Backend-Production.after.xml"
-Compare-Object (Get-Content $BeforeXml) (Get-Content "$env:TEMP\Forwarder-Backend-Production.after.xml")
+Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $AfterXml) -Force
+Disable-ScheduledTask -TaskName $TaskName
+if((Get-ScheduledTask -TaskName $TaskName).State -ne 'Disabled'){throw 'task hold was not established'}
+Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath "$EvidenceDirectory\Forwarder-Backend-Production.held.xml" -Encoding utf8
+if((Get-Content -Raw "$EvidenceDirectory\Forwarder-Backend-Production.held.xml") -notmatch [regex]::Escape($NewRelease)){throw 'held task does not target certified release'}
 ```
 
-Registration changes the future task definition only. It does not authorize, stop, signal, kill, or otherwise alter the current listener. After registration, do not run the task until the separate lifecycle gate below has passed.
+This changes future task behavior only and explicitly prevents automatic re-launch during migration; it does not stop the listener.
 
-## PHASE 6 — Backend/writer quiescence and zero-listener gate
+## PHASE 4 — Ownership gate and controlled current-runtime stop
 
-**CURRENT STATUS: NO-GO — a production-safe graceful stop/relaunch procedure has not been certified.** The repository's `scripts\backend-service.ps1` verifies one listener by port, executable, and `backend.wsgi:app`, but it is a local port-5001 launcher and its stop action is `Stop-Process -Force`. It is neither evidence of graceful termination nor authorization to control the 5101 Scheduled-Task deployment. Do not adapt it, issue `taskkill`, `Stop-Process`, or terminate a parent/child tree during this deployment.
-
-The following is the required read-only listener identity record, not a stop command. It must show exactly one listener before a lifecycle procedure may be considered, and must bind that listener to the observed release rather than a merely similarly named process:
+The only permitted termination is the exact verified listener PID and its enumerated descendants. It never kills a parent. Historical root-tree termination is deliberately not reused: no current parent/supervisor identity is supplied, and no parent is required to close the listener.
 
 ```powershell
-$Port=5101; $ExpectedOldRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
 $Listeners=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
-if($Listeners.Count -ne 1){throw "expected exactly one pre-cutover listener on 127.0.0.1:$Port; found $($Listeners.Count)"}
-$Owner=Get-CimInstance Win32_Process -Filter "ProcessId=$($Listeners[0].OwningProcess)"
-$Parent=Get-CimInstance Win32_Process -Filter "ProcessId=$($Owner.ParentProcessId)"
-$Owner | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
-$Parent | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
-if($Owner.ExecutablePath -notlike "$ExpectedOldRelease\*"){throw 'listener executable is not the recorded current release'}
-if($Owner.CommandLine -notmatch '(?i)-m\s+waitress' -or $Owner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'listener is not the expected Waitress WSGI process'}
+if($Listeners.Count -ne 1){throw "expected one listener on 127.0.0.1:$Port; found $($Listeners.Count)"}
+$VerifiedPid=[int]$Listeners[0].OwningProcess
+if($VerifiedPid -ne $KnownListenerPid){throw "listener PID changed: expected $KnownListenerPid, got $VerifiedPid"}
+$Owner=Get-CimInstance Win32_Process -Filter "ProcessId=$VerifiedPid"
+if($null -eq $Owner -or [string]::IsNullOrWhiteSpace($Owner.ExecutablePath)){throw 'listener identity unavailable'}
+$Owner | Select ProcessId,ParentProcessId,ExecutablePath,CommandLine | Tee-Object "$EvidenceDirectory\listener-before-stop.txt"
+if($Owner.ExecutablePath -notlike "$ExpectedOldRelease\*"){throw 'listener executable is not fdfdd23'}
+if($Owner.CommandLine -notmatch '(?i)-m\s+waitress' -or $Owner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'listener is not Forwarder Waitress WSGI'}
+$Descendants=@(); $Pending=@($VerifiedPid)
+while($Pending.Count){$ParentId=$Pending[0]; $Pending=@($Pending|Select -Skip 1); $Children=@(Get-CimInstance Win32_Process -Filter "ParentProcessId=$ParentId"); $Descendants+=$Children; $Pending+=@($Children|ForEach-Object {[int]$_.ProcessId})}
+$Descendants | Select ProcessId,ParentProcessId,ExecutablePath,CommandLine | Tee-Object "$EvidenceDirectory\listener-descendants-before-stop.txt"
+if(@($Descendants|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -notlike "$ExpectedOldRelease\*"}).Count -ne 0){throw 'listener tree has a non-release executable'}
+if((Get-ScheduledTask -TaskName $TaskName).State -ne 'Disabled'){throw 'task is not held; refusing runtime stop'}
 ```
 
-Before a future authorized production attempt, obtain and archive the smallest additional **read-only** evidence needed to establish a governed lifecycle method: (1) the complete exported task XML, including the `cmd.exe` command line; (2) complete `Win32_Process` command lines and parent relationships for the listener and all same-release parent/child processes; (3) the complete on-server runtime-helper source and its hash; and (4) vendor/operating-system or prior approved production evidence showing exactly how the task-owned process receives a graceful stop and how automatic relaunch is disabled/held during a maintenance window. The evidence must identify the control owner, signal/action, bounded wait, and expected exit/port-closure observation. If it does not, the deployment remains NO-GO.
-
-Only after that evidence has been reviewed and a separately authorized lifecycle procedure exists may an operator: prevent task relaunch by its proven mechanism; invoke its proven graceful stop against the verified listener; wait for it to exit; and prove writer quiescence. Writer quiescence requires all of: traffic containment by the approved topology owner; no listener on 5101; no task/restart mechanism able to launch a writer during migration; and an owner-approved read-only database/session observation showing no in-flight application write transaction. Do not use test-data writes, synthetic mutations, or stale-process cleanup as a substitute.
-
-The migration zero-listener gate is mandatory and must be recorded immediately before the migration command:
-
+[MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
 ```powershell
-$Listeners=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5101 -State Listen -ErrorAction SilentlyContinue)
-if($Listeners.Count -ne 0){throw "migration blocked: 127.0.0.1:5101 still has $($Listeners.Count) listener(s)"}
+& "$env:SystemRoot\System32\taskkill.exe" /PID $VerifiedPid /T /F
+if($LASTEXITCODE -ne 0){throw 'verified listener termination failed'}
+$Deadline=(Get-Date).AddSeconds(60)
+do {$Remaining=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue); if($Remaining.Count -eq 0){break}; Start-Sleep 1} while((Get-Date)-lt $Deadline)
+if($Remaining.Count -ne 0){throw 'listener did not close'}
+if((Get-ScheduledTask -TaskName $TaskName).State -ne 'Disabled'){throw 'task hold was lost after stop'}
 ```
 
-## PHASE 7 — Schema migration
+Require approved traffic containment and DB-owner read-only confirmation of no in-flight application write transaction before migration.
 
-Migration `20260907_direct_shipment_responsibility` is additive: nullable `operational_shipment.primary_responsible_expert_id`, restrict FK to `expert_user`, index, no backfill. Its downgrade refuses when responsibility evidence exists. Use governed CLI, not generic Alembic.
+## PHASE 5 — Target migration and Direct Shipment gate
+
+The migration is additive: nullable `operational_shipment.primary_responsible_expert_id`, restrict FK to `expert_user`, and index, with no backfill. Its downgrade refuses when responsibility evidence exists; application rollback is not database downgrade.
 
 [READ-ONLY]
 ```powershell
@@ -150,78 +145,53 @@ Set-Location $NewRelease
 .\.venv\Scripts\python.exe -m backend.migration_cli check
 ```
 
-Require current `20260906...`, sole head target, correct sanitized target. STOP otherwise.
-
-[MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
-
-PRECONDITIONS: backup verified; Phase 6's certified graceful lifecycle procedure completed; writer-quiescence record and zero-listener gate passed; new task definition configured but not started. EXPECTED EFFECT: target migration only. STOP: any nonzero, listener reappearance, or pending postcheck. CONTAINMENT: no blind downgrade; retain the quiescent state, use only compatibility-proven application rollback or database-owner backup restore.
+Require `20260906_global_logistics_point_materialization`, sole target head, fresh backup, zero listener, and disabled task. With separate authorization:
 
 ```powershell
 .\.venv\Scripts\python.exe -m backend.migration_cli upgrade 20260907_direct_shipment_responsibility --confirm
 .\.venv\Scripts\python.exe -m backend.migration_cli current
 .\.venv\Scripts\python.exe -m backend.migration_cli check
+if(@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -ne 0){throw 'migration gate failed: listener reappeared'}
+& "$PgBin\psql.exe" -X -h 127.0.0.1 -p 5432 -U postgres -d $Database -c "BEGIN TRANSACTION READ ONLY; SELECT count(*) FILTER (WHERE s.source_type='direct') total_direct_shipments,count(*) FILTER (WHERE s.source_type='direct' AND s.primary_responsible_expert_id IS NULL) missing_primary_responsible,count(*) FILTER (WHERE s.source_type='direct' AND (u.id IS NULL OR NOT u.is_active)) inactive_or_missing_responsible,count(*) FILTER (WHERE s.source_type='direct' AND s.primary_responsible_expert_id IS NOT NULL AND m.id IS NULL) cross_tenant_responsible FROM operational_shipment s LEFT JOIN expert_user u ON u.id=s.primary_responsible_expert_id LEFT JOIN operational_membership m ON m.user_id=s.primary_responsible_expert_id AND m.organization_id=s.organization_id AND m.is_active; COMMIT;"
 ```
 
-## PHASE 8 — Post-migration data gate [READ-ONLY]
+Stop activation if any invalid count is nonzero. No repair/backfill is authorized.
+
+## PHASE 6 — Exact certified start and health [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
 
 ```powershell
-& "$PgBin\psql.exe" -X -h 127.0.0.1 -p 5432 -U postgres -d forwarder_prod_20260728_161711 -c "BEGIN TRANSACTION READ ONLY; SELECT count(*) FILTER (WHERE s.source_type='direct') total_direct_shipments,count(*) FILTER (WHERE s.source_type='direct' AND s.primary_responsible_expert_id IS NULL) missing_primary_responsible,count(*) FILTER (WHERE s.source_type='direct' AND (u.id IS NULL OR NOT u.is_active)) inactive_or_missing_responsible,count(*) FILTER (WHERE s.source_type='direct' AND s.primary_responsible_expert_id IS NOT NULL AND m.id IS NULL) cross_tenant_responsible FROM operational_shipment s LEFT JOIN expert_user u ON u.id=s.primary_responsible_expert_id LEFT JOIN operational_membership m ON m.user_id=s.primary_responsible_expert_id AND m.organization_id=s.organization_id AND m.is_active; COMMIT;"
-```
-
-STOP APPLICATION ACTIVATION if any invalid count is nonzero. No bulk repair/backfill is authorized. Membership’s `(organization_id,user_id)` uniqueness means join ambiguity is not representable.
-
-## PHASE 9 — Backend activation and single-listener certification
-
-[MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
-
-PRECONDITIONS: backup/migration/data gate pass; reviewed task points to `$NewRelease`; Phase 6 has certified the specific task activation/relaunch behavior; port 5101 has zero listeners. EXPECTED EFFECT: one task-managed new Waitress backend. STOP: missing/multiple listener, a listener before activation, or process command/executable lacks `$NewRelease`. CONTAINMENT: use only the certified lifecycle procedure; restore old XML and activate the old task only after old-app/new-schema compatibility is approved. Do not use a generic process kill.
-
-```powershell
-$Before=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5101 -State Listen -ErrorAction SilentlyContinue)
-if($Before.Count -ne 0){throw 'activation blocked: port 5101 is not quiescent'}
-# Invoke only the task-start action certified by the Phase 6 lifecycle evidence.
-Start-ScheduledTask -TaskName $TaskName
+if(@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).Count -ne 0){throw 'activation blocked: port 5101 is not free'}
+if((Get-ScheduledTask -TaskName $TaskName).State -ne 'Disabled'){throw 'task was not held'}
+Enable-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName
 $Deadline=(Get-Date).AddSeconds(60)
-do { $After=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort 5101 -State Listen -ErrorAction SilentlyContinue); if($After.Count -eq 1){break}; Start-Sleep -Seconds 1 } while((Get-Date) -lt $Deadline)
-if($After.Count -ne 1){throw "activation failed: expected exactly one 5101 listener; found $($After.Count)"}
+do {$After=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue); if($After.Count -eq 1){break}; Start-Sleep 1} while((Get-Date)-lt $Deadline)
+if($After.Count -ne 1){throw "activation failed: expected one listener; found $($After.Count)"}
 $NewOwner=Get-CimInstance Win32_Process -Filter "ProcessId=$($After[0].OwningProcess)"
-$NewOwner | Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
-if($NewOwner.ExecutablePath -notlike "$NewRelease\*"){throw 'activation failed: listener executable is not the new immutable release'}
-if($NewOwner.CommandLine -notmatch '(?i)-m\s+waitress' -or $NewOwner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'activation failed: listener is not Waitress WSGI'}
+$NewOwner | Select ProcessId,ParentProcessId,ExecutablePath,CommandLine | Tee-Object "$EvidenceDirectory\listener-after-start.txt"
+if($NewOwner.ExecutablePath -notlike "$NewRelease\*" -or $NewOwner.CommandLine -notmatch '(?i)-m\s+waitress' -or $NewOwner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'listener is not certified Forwarder Waitress'}
+(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5101/api/health).StatusCode
+(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5101/api/health/ready).StatusCode
 ```
 
-The `Start-ScheduledTask` line is not an independently certified replacement mechanism. It may be executed only after Phase 6 proves task behavior and task suppression/activation semantics for this server. A `Ready` task state alone is not service-state evidence.
+Require 200 twice, target revision, one certified listener, and no blocking logs. IIS change is **NOT_REQUIRED**; retain its existing `fdfdd23\dist` physical path.
 
-## PHASE 10 — Health/readiness gate [READ-ONLY]
+## PHASE 7 — Browser, authorization smoke, and evidence [READ-ONLY]
 
-```powershell
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5101/api/health
-Invoke-WebRequest -UseBasicParsing http://127.0.0.1:5101/api/health/ready
-```
+Use confirmed `https://samand.logisticmarket.ir` (not unproven `samand.forwarderet.ir`) for page/auth/tenant identity/admin and expert flows plus browser `/api/*` calls. CORS remains `NOT_VERIFIED` until runtime/browser evidence proves it; stop on CORS/API failure and make no CORS change.
 
-Require 200 twice, target migration, expected one listener, no blocking logs.
-
-## PHASE 11 — IIS/frontend
-
-IIS change is **NOT_REQUIRED** for this certified authorization-only delta. Keep existing physical path; do not change IIS merely to make topology visually uniform. Later frontend deployment requires separately reviewed IIS commands and rollback evidence.
-
-## PHASES 12–15 — smoke, Samand, observation, capture
-
-Read-only existing-data smoke: Platform Admin tenant request/shipment denies; Organization Admin allows only existing explicit capability and denies platform diagnostics; Expert allows only own assigned request/child and denies same-tenant unassigned/foreign IDs; `role=admin` does not elevate; a capability does not allow foreign access. Reassignment A→B is `MANUAL_EXISTING_DATA_VALIDATION_REQUIRED` because it mutates state; do not create test data.
-
-Use confirmed `https://samand.logisticmarket.ir` (not unproven `samand.forwarderet.ir`) to validate page/auth/tenant identity/admin and expert flows/browser `/api/*` calls. CORS is `NOT_VERIFIED`; STOP on browser CORS/API failure and do not mutate CORS. Observe owner-approved logs/5xx/health/task restarts, then record hashes, task XML before/after, backup, migration output, aggregate data gate, health/browser evidence.
+Existing-data smoke must prove: Platform Admin tenant request/shipment denies; Organization Admin allows only existing explicit capability and denies platform diagnostics; Expert permits only own assigned request/child and denies unassigned/foreign IDs; `role=admin` does not elevate; capability cannot allow foreign access. Reassignment A→B is `MANUAL_EXISTING_DATA_VALIDATION_REQUIRED`, because it mutates state; do not create test data. Record XML before/after, release manifest, backup hash, migration output, Direct Shipment gate, listener identities, health, browser/Samand, and CORS status.
 
 ## Rollback decision tree
 
 | Event | Containment / recovery |
 |---|---|
-| Before migration | do nothing to current service |
-| Cannot prove graceful stop, task suppression, writer quiescence, or zero listener | NO-GO; make no migration or activation change; collect only the specified read-only lifecycle evidence |
-| Migration fails pre-commit | preserve the certified quiescent/task-suppressed state; verify revision; escalate |
-| Migration succeeds, activation/health/smoke fails | use the certified lifecycle procedure to contain traffic; app rollback only if old/new schema compatibility proved; otherwise DB-owner restore from backup |
-| Downgrade refuses due responsibility evidence | forward-fix or verified backup restore; never bypass guard |
-| Task targets wrong release | do not start it; re-register before XML; do not restart until lifecycle/compatibility gates pass |
-| Stale non-listening `release-fdfdd23-20260823` tree | record only; exclude from cutover and do not stop/kill it. Cleanup requires a separate owner-approved investigation and lifecycle procedure. |
-| Later frontend failure | restore previously captured IIS path only under separate approval |
+| Before task replacement | Do nothing to current service. |
+| XML/ownership/hold/zero-listener gate fails | NO-GO; re-register exact before XML if changed, and do not touch listener. |
+| Verified stop fails | Keep task disabled and evidence; escalate. Never kill a parent or generic restart. |
+| Migration fails before commit | Keep task disabled/quiescent; verify revision and escalate. |
+| Migration succeeds, activation/health/smoke fails | Disable task. Roll app back only if old-app/new-schema compatibility is approved; otherwise DB owner restores verified backup. |
+| Wrong release observed | Disable task, do not start it, re-register exported before XML, then re-evaluate compatibility. |
+| Downgrade refuses | Forward-fix or verified backup restore; never bypass guard. |
+| Frontend/IIS issue | No IIS rollback is included; it needs separately approved IIS evidence. |
 
-Never equate app rollback with schema rollback or issue blind `alembic downgrade`.
+Never equate application rollback with schema downgrade or issue blind `alembic downgrade`.
