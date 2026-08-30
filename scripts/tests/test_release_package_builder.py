@@ -21,7 +21,7 @@ verifier = module("release_verifier", ROOT / "scripts/verify_release_artifact.py
 
 
 def test_builder_pins_current_head_and_approved_baseline():
-    assert builder.EXPECTED_HEAD == "20260906_global_logistics_point_materialization"
+    assert builder.EXPECTED_HEAD == "20260907_direct_shipment_responsibility"
     payload = json.loads((ROOT / builder.BASELINE).read_text(encoding="utf-8"))
     assert builder.canonical(payload) == builder.BASELINE_CHECKSUM
     assert len(payload["approved_global_logistics_points"]) == 9

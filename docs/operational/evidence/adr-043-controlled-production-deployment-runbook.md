@@ -4,7 +4,7 @@ Status: executable preparation only; it does not authorize deployment. Certified
 
 ## Release-integrity stop gate
 
-`scripts/build_release_package.py` is the repository’s governed immutable Git-worktree package builder, but it hard-codes Alembic head `20260906_global_logistics_point_materialization`. The certified ADR-043 commit has sole head `20260907_direct_shipment_responsibility`; the current builder will reject it. No versioned Scheduled Task launcher/XML exists either. Therefore: `EXECUTABLE_RUNBOOK_STATUS=READY_WITH_BLOCKERS`; `PRODUCTION_DEPLOYMENT_ELIGIBILITY=NO_GO`. Do not substitute the dirty worktree, package a later evidence commit, or run generic `alembic upgrade head`.
+The stale release-builder head guard was corrected locally to `20260907_direct_shipment_responsibility`. The builder materializes a detached worktree from the exact requested 40-character Git object, rejects a dirty materialization, builds `dist` inside it, and embeds `source_commit`/head/file hashes in inner and sidecar manifests. It never copies this worktree. Do not substitute the dirty worktree, package a later evidence commit, or run generic `alembic upgrade head`.
 
 ## PHASE 0 — Operator safety / change freeze [READ-ONLY]
 
@@ -27,13 +27,13 @@ git -C D:\1-webapp\15-forwarder show -s --format='%H%n%s' $CertifiedCommit
 
 [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
 
-PRECONDITIONS: a reviewed builder update accepts precisely `20260907_direct_shipment_responsibility`; fresh output directory; exact Git object only. EXPECTED EFFECT: creates an immutable ZIP/sidecar only. STOP: nonzero gate, manifest SHA mismatch, or source commit mismatch. CONTAINMENT: discard only failed staging artifact.
+PRECONDITIONS: fresh output directory; exact Git object only. EXPECTED EFFECT: creates an immutable ZIP/sidecar only. STOP: nonzero gate, manifest SHA mismatch, or source commit mismatch. CONTAINMENT: discard only failed staging artifact.
 
 ```powershell
 python D:\1-webapp\15-forwarder\scripts\build_release_package.py --repository D:\1-webapp\15-forwarder --authorized-commit $CertifiedCommit --output-directory D:\1-webapp\adr043-release-artifacts --release-label adr043-assigned-work
 ```
 
-This is currently expected to stop at the documented builder-head mismatch. After repair, require manifest `source_commit=$CertifiedCommit`, target head, SHA-256 sidecar, and fresh `dist/index.html`/hashed assets. The certified delta has no frontend/package/runtime config changes, so no frontend feature change independently requires IIS transition.
+Require manifest `source_commit=$CertifiedCommit`, target head, SHA-256 sidecar, and fresh `dist/index.html`/hashed assets. Use the production Python 3.14 executable to create `$NewRelease\.venv`, then install exactly `requirements.txt` and `requirements-release.txt` without upgrade. The builder’s gate creates its own isolated venv and runs `npm ci`, tests, and `npm run build`; the package contains the resulting same-origin `dist`. The certified delta has no frontend/package/runtime config changes, so no frontend feature change independently requires IIS transition.
 
 ## PHASE 2 — Pre-deployment revalidation [READ-ONLY]
 
@@ -74,7 +74,25 @@ Resolve the existing non-secret env-loader from exported task XML before mutatio
 
 ## PHASE 5 — Scheduled Task/runtime preparation
 
-The current task targets `release-991d29a-20260829`, while backend/IIS are `release-fdfdd23-20260823`; never restart before correction. Create a reviewed copy of the exported XML that changes only verified release Python/working-directory/action references and preserves triggers/principal/settings.
+The current task targets `release-991d29a-20260829`, while backend/IIS are `release-fdfdd23-20260823`; never restart before correction. The established runtime contract requires **all three** of WorkingDirectory, `--repo`, and `PYTHONPATH` to point to one immutable release. The task executable remains `C:\Windows\System32\cmd.exe`; the runtime launcher is the server-managed `C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py`. Its arguments must be extracted from live XML; that launcher is not versioned locally, so its exact argument order must not be guessed.
+
+[READ-ONLY]
+
+```powershell
+$TaskName='Forwarder Backend Production'
+$BeforeXml="$env:TEMP\Forwarder-Backend-Production.before.xml"
+Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $BeforeXml -Encoding utf8
+[xml]$TaskXml=Get-Content -Raw -LiteralPath $BeforeXml
+$TaskXml.Task.Principals.Principal | Format-List UserId,LogonType,RunLevel
+$TaskXml.Task.Triggers.ChildNodes | Format-List *
+$TaskXml.Task.Settings | Format-List MultipleInstancesPolicy,ExecutionTimeLimit,RestartOnFailure,StopIfGoingOnBatteries,DisallowStartIfOnBatteries
+$TaskXml.Task.Actions.Exec | Format-List Command,Arguments,WorkingDirectory
+Get-ScheduledTask -TaskName $TaskName | Select-Object TaskName,State,Principal,Settings
+Get-ScheduledTaskInfo -TaskName $TaskName | Format-List *
+Get-FileHash $BeforeXml -Algorithm SHA256
+```
+
+STOP if command is not `cmd.exe`, arguments do not name the server runtime launcher and `--repo`, or WorkingDirectory/`--repo`/`PYTHONPATH` do not consistently name the old release. The reviewed after XML must preserve principal, triggers, restart/failure, stop-if-running, multiple-instance, execution-time-limit, and all non-release arguments. Change only the three release bindings; retain `cmd.exe` and the same runtime launcher. Verify with `Compare-Object` before registration.
 
 [MUTATING — REQUIRES SEPARATE OPERATOR AUTHORIZATION]
 
@@ -83,6 +101,7 @@ PRECONDITIONS: reviewed XML explicitly names `$NewRelease`; old XML preserved. E
 ```powershell
 Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw 'C:\approved\Forwarder-Backend-Production.adr043.xml') -Force
 Export-ScheduledTask -TaskName $TaskName | Set-Content -Encoding utf8 "$env:TEMP\Forwarder-Backend-Production.after.xml"
+Compare-Object (Get-Content $BeforeXml) (Get-Content "$env:TEMP\Forwarder-Backend-Production.after.xml")
 ```
 
 ## PHASE 6 — Schema migration

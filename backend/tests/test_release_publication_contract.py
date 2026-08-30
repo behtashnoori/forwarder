@@ -20,7 +20,7 @@ def builder():
 def test_builder_is_generalized_and_pins_current_release_inputs():
     module = builder()
     assert not hasattr(module, "VERSION") and not hasattr(module, "TAG")
-    assert module.EXPECTED_HEAD == "20260906_global_logistics_point_materialization"
+    assert module.EXPECTED_HEAD == "20260907_direct_shipment_responsibility"
     assert (
         module.BASELINE_VERSION
         == "china-iran-global-logistics-points-1.0.0-approved-baseline"

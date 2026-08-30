@@ -14,7 +14,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-EXPECTED_HEAD = "20260906_global_logistics_point_materialization"
+EXPECTED_HEAD = "20260907_direct_shipment_responsibility"
 BASELINE = Path(
     "backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json"
 )
