@@ -87,7 +87,26 @@ The exact certified release artifact was independently built and verified locall
 | Runtime/task disposition | The staged release is **NOT serving traffic**. The Scheduled Task still points to the existing production release `C:\1-webapp\forwarder-production\release-991d29a-20260829`; it has not been changed. |
 | No-runtime-mutation record | `PRODUCTION_TASK_CHANGED=NO`; `BACKEND_RESTARTED=NO`; `MIGRATION_PERFORMED=NO`; `IIS_CHANGED=NO`; `CORS_CHANGED=NO`. |
 
-This checkpoint completes only the artifact-integrity and non-serving release-directory materialization portion of PHASE 1. PHASE 1 is **NOT PASS**: before it may be marked PASS, the production-Python virtual-environment creation, exact packaged-requirements installation without upgrade, and proof of the existing non-secret environment loader from the Scheduled Task XML remain mandatory prerequisites. The staged release must remain non-serving until those prerequisites and every subsequent controlled gate pass.
+### Production-host release-local dependency preparation evidence — current ADR-043 deployment window
+
+The remaining PHASE 1 runtime prerequisites and isolated release-local dependency preparation are **PASS**. This was an import-only/dependency verification of the staged release; it did not load or modify `C:\1-webapp\forwarder-runtime\production.env`, invoke a migration CLI operation, start the backend, or cause the staged release to serve traffic.
+
+| Evidence item | Recorded value |
+| --- | --- |
+| Runtime prerequisite inspection | **PASS** — the production Python/runtime prerequisites and existing non-secret environment-loader proof were inspected successfully. |
+| Release Python | `C:\1-webapp\forwarder-production\release-adcc5da-adr043\.venv\Scripts\python.exe` |
+| Release Python version | `Python 3.14.3` (exit `0`) |
+| Dependency check | **PASS** — `pip check` returned `No broken requirements found.` |
+| PostgreSQL driver check | **PASS** — `psycopg2-binary` version `2.9.11` imported from the release-local environment. |
+| Migration CLI import | **PASS** — `backend.migration_cli` import-only verification succeeded; no `current`, `check`, or `upgrade` operation was run. |
+| Informational import output | `[startup] No .env file found in project root or backend/ - using process env only` — informational only; it does not fail this gate because the governed external `production.env` was deliberately neither loaded nor modified. |
+| Release venv preparation | **PASS** — isolated release-local environment only; the existing `release-991d29a-20260829.venv314` was not modified or reused as the new release environment. |
+| Serving/runtime disposition | `STAGED_RELEASE_SERVING=NO`; `CURRENT_LISTENER_PID=51476`; the existing release remains serving. |
+| No-runtime-mutation record | `MIGRATION_PERFORMED=NO`; `BACKEND_STARTED=NO`; `PRODUCTION_TASK_CHANGED=NO`; `IIS_CHANGED=NO`; `CORS_CHANGED=NO`. |
+
+All PHASE 1 gates required by this runbook are now satisfied: the exact artifact was verified, staged non-serving, checked against the production Python/runtime prerequisites, and prepared in its own release-local dependency environment. **PHASE 1 is PASS.** The staged release remains non-serving until all subsequent controlled phases pass.
+
+The fresh-backup gate for the current window is already recorded PASS. The next outstanding operational checkpoint is **PHASE 3 — Export, inspect, and review the existing Scheduled Task and live runtime bindings**: re-run the immediately-before-change ownership/task facts, export and inspect the task XML, and stop on any drift. This checkpoint is **READ-ONLY**; task replacement/hold is a later separately authorized mutating step, followed by the ownership, writer-containment, and zero-listener gates. Do not proceed directly to migration.
 
 This evidence does **not** mark migration PASS, Direct Shipment post-migration PASS, runtime transition PASS, deployment complete, or CORS PASS. `APPLICATION_ROLLBACK != DATABASE_DOWNGRADE` remains controlling.
 
