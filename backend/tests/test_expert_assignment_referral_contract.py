@@ -47,6 +47,7 @@ def expert_contract_app():
             full_name="Phase 4H Admin",
             email="phase4h-admin@example.test",
             role="admin",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         expert = ExpertUser(
@@ -69,7 +70,11 @@ def expert_contract_app():
         db.session.add_all([admin, expert, other_expert, organization])
         db.session.flush()
         db.session.add_all([
-            OperationalMembership(organization_id=organization.id, user_id=user.id, permissions=[])
+            OperationalMembership(
+                organization_id=organization.id,
+                user_id=user.id,
+                permissions=["request.read"] if user is admin else [],
+            )
             for user in (admin, expert, other_expert)
         ])
 
