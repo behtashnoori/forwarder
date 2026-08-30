@@ -19,7 +19,10 @@ ORGANIZATION_ADMIN = "ORGANIZATION_ADMIN"
 EXPERT = "EXPERT"
 
 INTRINSIC_REQUEST_ACTIONS = frozenset({"request.read", "request.message", "request.quote", "request.status", "tracking.read"})
-INTRINSIC_SHIPMENT_ACTIONS = frozenset({"shipment.read", "route.read", "tracking.read", "document.read", "execution.read"})
+INTRINSIC_SHIPMENT_ACTIONS = frozenset({
+    "shipment.read", "route.read", "tracking.read", "document.read",
+    "document_readiness.read", "execution.read",
+})
 
 
 @dataclass(frozen=True)

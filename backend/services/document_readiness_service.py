@@ -18,14 +18,13 @@ from backend.project_configuration_models import ProjectDocumentRequirement
 from backend.services.operational_service import (
     OperationalError,
     organization_for_user,
-    require_permission,
 )
+from backend.services.assigned_work_authorization import authorize_work_action
 
 ASSESSMENTS = {"REVIEW_STARTED", "APPROVED", "REJECTED", "VERIFIED"}
 
 
 def _shipment(public_id, user, permission="document_readiness.read", lock=False):
-    require_permission(user, permission)
     org = organization_for_user(user["id"])
     q = select(OperationalShipment).where(
         OperationalShipment.public_id == public_id,
@@ -33,6 +32,10 @@ def _shipment(public_id, user, permission="document_readiness.read", lock=False)
     )
     row = db.session.scalar(q.with_for_update() if lock else q)
     if not row:
+        raise OperationalError(
+            "RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404
+        )
+    if not authorize_work_action(user, row, permission).allowed:
         raise OperationalError(
             "RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404
         )

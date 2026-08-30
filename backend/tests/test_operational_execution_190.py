@@ -44,6 +44,7 @@ def execution_app():
             password_hash="x",
             full_name="Operator",
             role="admin",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         verifier = ExpertUser(
@@ -51,6 +52,7 @@ def execution_app():
             password_hash="x",
             full_name="Verifier",
             role="admin",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         outsider = ExpertUser(
@@ -58,6 +60,7 @@ def execution_app():
             password_hash="x",
             full_name="Outsider",
             role="admin",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         customer = Customer(first_name="Execution", last_name="Customer")
@@ -95,6 +98,8 @@ def execution_app():
             created_by_user_id=operator.id,
         )
         request = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=org.id,
             contact_phone="09000000001",
             status="waiting_for_customer",
             status_request_status="new",
@@ -336,7 +341,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260906_global_logistics_point_materialization"
+        "20260907_direct_shipment_responsibility"
     ]
 
 

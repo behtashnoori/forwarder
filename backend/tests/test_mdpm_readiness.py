@@ -1,6 +1,7 @@
 """Focused MDPM-1 readiness, replacement, conditional and override contracts."""
 
 from datetime import datetime, timezone
+import pytest
 
 from backend.tests.test_operational_execution_190 import actor
 from backend.extensions import db
@@ -9,6 +10,7 @@ from backend.models import (
     CaseDocumentRequirement,
     DocumentDefinition,
     ExpertQuote,
+    ExpertUser,
 )
 from backend.operational_models import (
     OperationalMembership,
@@ -137,6 +139,21 @@ def test_missing_and_unapproved_block_then_approval_allows(execution_app):
             actor(execution_app),
         )
         assert docs.transition_readiness(shipment, milestone, "READY")["allowed"]
+
+
+def test_assigned_expert_cannot_materialize_high_risk_readiness(execution_app):
+    with execution_app.app_context():
+        shipment = OperationalShipment.query.one()
+        operator = db.session.get(ExpertUser, execution_app.config["ctx"]["operator"])
+        operator.authority = "EXPERT"
+        db.session.commit()
+        with pytest.raises(docs.OperationalError) as denied:
+            docs.materialize(
+                shipment.public_id,
+                {"expected_shipment_version": shipment.version},
+                actor(execution_app),
+            )
+        assert denied.value.status == 404
 
 
 def test_verification_conditional_replacement_and_single_use_override(execution_app):
