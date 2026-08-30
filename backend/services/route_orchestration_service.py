@@ -1107,8 +1107,11 @@ def reconcile_route_exceptions(
 def list_route_exceptions(user: dict, status="open") -> list[dict]:
     base.require_permission(user, "route_exception.read")
     org = base.organization_for_user(user["id"])
+    from backend.services.assigned_work_authorization import assigned_shipment_scope
+    allowed_shipments = select(OperationalShipment.id).where(assigned_shipment_scope(user))
     query = select(OperationalWorkItem).where(
         OperationalWorkItem.organization_id == org,
+        OperationalWorkItem.operational_shipment_id.in_(allowed_shipments),
         OperationalWorkItem.work_type.in_(["CHECKPOINT_OVERDUE", "ROUTE_DEPENDENCY_BLOCKED", "REPLAN_REQUIRED"]),
     )
     if status: query=query.where(OperationalWorkItem.status == status)

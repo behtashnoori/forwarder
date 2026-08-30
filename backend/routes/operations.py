@@ -860,8 +860,11 @@ def work_queue():
         page = max(1, request.args.get("page", 1, type=int))
         per_page = min(100, max(1, request.args.get("per_page", 20, type=int)))
         status = request.args.get("status", "open")
+        from backend.services.assigned_work_authorization import assigned_shipment_scope
+        allowed_shipments = select(OperationalShipment.id).where(assigned_shipment_scope(user))
         query = select(OperationalWorkItem).where(
-            OperationalWorkItem.organization_id == org
+            OperationalWorkItem.organization_id == org,
+            OperationalWorkItem.operational_shipment_id.in_(allowed_shipments),
         )
         if status:
             query = query.where(OperationalWorkItem.status == status)
