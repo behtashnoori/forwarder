@@ -242,9 +242,18 @@ following bounded recovery checkpoint:
    `PYTHONPATH`; the task must be `Ready`, not already running or disabled.
 3. Prove the listener is the `fdfdd23` release's Waitress
    `backend.wsgi:app` process, prove the staged `adcc5da` release is not
-   serving, and enumerate every listener descendant.  Every process in that
-   scope must have an executable under `fdfdd23`; no parent or arbitrary
-   ancestor is in scope.
+   serving, and enumerate every listener descendant.  The listener identity is
+   its **anchored exact command-line invocation** of
+   `C:\1-webapp\forwarder-production\release-fdfdd23-20260823.venv314\Scripts\python.exe`,
+   followed by `-m waitress`, `--listen=127.0.0.1:5101`, and
+   `backend.wsgi:app` (with only later arguments permitted).  Do not use an
+   unanchored release-path substring.  Windows Python 3.14 may report the
+   listener `ExecutablePath` as its base/system Python executable even when
+   that command line invoked the release-local venv interpreter; therefore an
+   `ExecutablePath`-under-release requirement is invalid and is not a gate.
+   Each descendant must independently satisfy that same anchored approved
+   release-local Python command-line identity; otherwise containment scope is
+   unsafe.  No parent or arbitrary ancestor is in scope.
 4. Disable (hold) the existing task **without registering, replacing, or
    otherwise modifying its definition**.  Re-query the task and listener;
    fail closed unless the hold is `Disabled` and the listener PID, executable,
@@ -258,9 +267,10 @@ must never be used as live selection values.  In particular, do not infer that
 a missing historical parent must be stopped, and do not stop the non-listening
 expected-release tree.  A task-definition mismatch, a listener count other
 than one, ambiguous ownership, a release/Waitress/WSGI mismatch, a staged
-release listener, a changed post-hold topology, a non-release descendant, or a
-lost task hold is a no-go: stop immediately and escalate without terminating a
-process.
+release listener, a changed post-hold topology, an unproven descendant, or a
+lost task hold, or a descendant that cannot independently prove the exact
+release-local Python invocation is a no-go: stop immediately and escalate
+without terminating a process.
 
 This decision authorizes no migration, database connection or write, generic
 Alembic operation, staged-release start, task cutover or replacement, health or
