@@ -173,3 +173,88 @@ frontend semantics are unverified. Pre-deployment actions: 14; mandatory: 14.
 `OWNER_DECISIONS_REQUIRED = NO`  
 `TRUE_BLOCK_REASON = NONE` (the NO-GO conditions are executable evidence and
 readiness work, not a new architecture or owner-policy decision).
+
+## Production read-only preflight — 2026-08-30
+
+Read-only inspection was exhausted from this laptop. Historical local server
+paths (`C:\1-webapp\forwarder-production`, `C:\1-webapp\forwarder-runtime`
+and their D: equivalents), Scheduled Task `Forwarder Backend Production`, and
+a local listener on 5101 are absent. Thus no filesystem, process, environment,
+database, Scheduled Task, IIS-binding, backup-location, or authenticated data
+inspection is available from this host. No credential or production database
+connection was used.
+
+External unauthenticated observations are positive but insufficient for release
+identity: `https://samand.forwarderet.ir/` and the older hostname return IIS
+200; `/api/expert/ping` returns the expected running message; `/api/health`
+returns JSON 200. Neither response exposes a release commit or Alembic revision.
+The tested API currently returns `Access-Control-Allow-Origin:
+https://server.logisticmarket.ir` for a Samand-origin preflight; its OPTIONS
+response likewise permits only the older origin. Therefore
+`SAMAND_FORWARDERET_CORS_READY = NO` from actual production evidence.
+
+| Field | Result |
+| --- | --- |
+| CODE_CERTIFIED_HEAD | `adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e` |
+| EVIDENCE_HEAD | `13f0a0eb4b8f7687a1bb872cc03ecd5577c1758d` |
+| CURRENT_PRODUCTION_HEAD / backend release | NOT_VERIFIED |
+| PRODUCTION_ALEMBIC_CURRENT | NOT_VERIFIED |
+| TARGET_ALEMBIC_HEAD | `20260907_direct_shipment_responsibility` |
+| MIGRATION_PATH | NOT_VERIFIED (cannot derive without current revision) |
+| Production baseline / DB data / Samand audit | NOT_VERIFIED |
+| Data quality / Samand impact | NOT_VERIFIED |
+| Frontend compatibility | NOT_VERIFIED |
+| Backup topology readiness | NOT_VERIFIED |
+| CORS configuration | FAIL: active tenant origin not allowed |
+
+`SAMAND_USERS_AT_RISK_OF_ACCESS_LOSS = NOT_VERIFIED`  
+`SAMAND_RECORDS_AT_RISK_OF_FAIL_CLOSED = NOT_VERIFIED`  
+`SAMAND_USERS_AT_RISK_OF_UNINTENDED_ACCESS_GAIN = NOT_VERIFIED`
+
+### Operator-side read-only inspection package
+
+Run on the production server under the existing read-only database account or
+with a PostgreSQL session explicitly set `default_transaction_read_only=on`:
+
+1. Capture release path/commit, runtime Python, scheduled-task XML/state,
+   listening PID/command line, IIS bindings, and redacted configuration-presence
+   manifest. Never print secrets or full connection strings.
+2. Run `SELECT version(); SELECT version_num FROM alembic_version;` and record
+   the revision only. Use the local Alembic graph to calculate the path to
+   `20260907_direct_shipment_responsibility`; execute no migration.
+3. Execute the approved read-only inventory for users, active memberships,
+   role/authority mismatch, permission JSON, request current assignees, direct
+   shipment responsibility column presence/value/tenant validity, and all
+   declared child tenant/parent/root edges. Count null/orphan/cross-tenant/
+   inactive/multiple-membership rows only; do not export sensitive payloads.
+4. Filter the same counts for organization `1` / `samand-tarabar`; classify
+   potential access loss, fail-closed records, and unintended access gain.
+5. Capture CORS origins from redacted runtime configuration and IIS hostname
+   bindings; repeat the unauthenticated OPTIONS check from the tenant origin.
+6. Record backup/restore destination accessibility and task/IIS/config capture
+   method, without creating a backup in this phase.
+
+The required concrete output is the revision, aggregate counts, and redacted
+runtime identifiers—not data rows, credentials, or secrets. Re-evaluate this
+plan only after that package is returned.
+
+`PRODUCTION_BASELINE_VERIFIED = NO`  
+`PRODUCTION_ALEMBIC_VERIFIED = NO`  
+`MIGRATION_PATH_VERIFIED = NO`  
+`DATA_QUALITY_PASS = NO`  
+`SAMAND_IMPACT_ACCEPTABLE = NO`  
+`CONFIG_READY = NO`  
+`FRONTEND_COMPATIBLE = NOT_VERIFIED`  
+`BACKUP_PLAN_READY = NO`  
+`ROLLBACK_PLAN_READY = YES`  
+`SMOKE_PLAN_READY = YES`
+
+Pre-deployment actions: 7; mandatory: 7. Critical findings: 1 (Samand CORS
+denial). High findings: 5 (release/revision/data/tenant/frontend-backup
+verification unavailable). Material medium findings: 1 (external health lacks
+release identity).
+
+`PRODUCTION_READINESS = NOT_READY`  
+`DEPLOYMENT_RECOMMENDATION = NO_GO`  
+`OWNER_DECISIONS_REQUIRED = NO`  
+`TRUE_BLOCK_REASON = production-server read-only access is unavailable from this laptop`
