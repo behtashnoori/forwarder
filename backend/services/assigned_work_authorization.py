@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import false, select
 
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
@@ -101,3 +101,22 @@ def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> 
             return AuthorizationDecision(True, "DIRECT_SHIPMENT_ROOT_ASSIGNMENT", membership.organization_id, "OperationalShipment", resource.id)
         return _deny("CERTIFIED_ROOT_ASSIGNMENT_REQUIRED")
     return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
+
+
+def assigned_request_scope(actor: dict[str, Any], action: str = "request.read"):
+    """Return a SQL predicate before pagination/count; never post-filter rows."""
+    user_id = actor.get("id")
+    if not isinstance(user_id, int):
+        return false()
+    user = db.session.get(ExpertUser, user_id)
+    membership = _membership(user_id)
+    if user is None or not user.is_active or membership is None:
+        return false()
+    authority = _authority(user)
+    base = ShipmentRequest.ownership_scope == "TENANT"
+    tenant = ShipmentRequest.operational_organization_id == membership.organization_id
+    if authority == EXPERT:
+        return base & tenant & (ShipmentRequest.assigned_to == user_id)
+    if authority == ORGANIZATION_ADMIN and _has_capability(membership, action):
+        return base & tenant
+    return false()

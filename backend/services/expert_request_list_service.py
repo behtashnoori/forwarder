@@ -10,7 +10,7 @@ from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
-from backend.services.ownership_service import tenant_organization_for_user
+from backend.services.assigned_work_authorization import assigned_request_scope
 
 
 def normalize_request_list_filters(args: Mapping[str, Any]) -> dict[str, Any]:
@@ -28,16 +28,10 @@ def normalize_request_list_filters(args: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def apply_request_list_visibility(query, user: dict[str, Any], filters: dict[str, Any]):
-    """Apply the current admin/expert visibility rules to the list query."""
-    organization_id = tenant_organization_for_user(user)
-    query = query.filter(
-        ShipmentRequest.ownership_scope == "TENANT",
-        ShipmentRequest.operational_organization_id == organization_id,
-    )
-    if user.get("role") != "admin":
-        return query.filter(ShipmentRequest.assigned_to == user["id"])
+    """Apply canonical SQL scope before filters, counts, and pagination."""
+    query = query.filter(assigned_request_scope(user))
     if filters.get("assigned_to"):
-        return query.filter(ShipmentRequest.assigned_to == filters["assigned_to"])
+        query = query.filter(ShipmentRequest.assigned_to == filters["assigned_to"])
     return query
 
 

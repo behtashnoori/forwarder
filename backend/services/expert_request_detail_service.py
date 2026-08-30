@@ -13,7 +13,7 @@ from backend.models import (
 from backend.services import message_service, quote_service
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
-from backend.services.ownership_service import tenant_organization_for_user
+from backend.services.assigned_work_authorization import authorize_work_action
 
 
 class ExpertRequestDetailServiceError(Exception):
@@ -55,18 +55,8 @@ def get_request_detail_target_or_none(request_id: int) -> ShipmentRequest | None
 
 
 def can_access_request_detail(req: ShipmentRequest, user: Optional[dict[str, Any]]) -> bool:
-    """Preserve current request-detail access behavior: admin or assigned expert only."""
-    if not user:
-        return False
-    try:
-        organization_id = tenant_organization_for_user(user)
-    except ValueError:
-        return False
-    if req.ownership_scope != "TENANT" or req.operational_organization_id != organization_id:
-        return False
-    if user.get("role") == "admin":
-        return True
-    return req.assigned_to == user.get("id")
+    """Canonical operation-time detail authorization; role labels never bypass it."""
+    return bool(user and authorize_work_action(user, req, "request.read").allowed)
 
 
 def build_request_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
