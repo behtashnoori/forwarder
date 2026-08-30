@@ -10,6 +10,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $collectionErrors = 0
+$collectionErrorCodes = [System.Collections.Generic.List[string]]::new()
 $summary = [ordered]@{}
 
 # psql on Windows otherwise inherits a legacy console code page and can fail while
@@ -23,29 +24,35 @@ try {
 } catch {
     $summary.UTF8_HANDLING = 'NOT_CERTIFIED'
     $collectionErrors++
-    Write-Warning "UTF-8 setup: $($_.Exception.Message)"
+    $collectionErrorCodes.Add('UTF8_SETUP_FAILED')
+    Write-Warning 'UTF-8 setup: collection failed (UTF8_SETUP_FAILED)'
 }
 
 function Section([string]$Name) { Write-Host "`n=== $Name ===" }
-function Safe([string]$Name, [scriptblock]$Action) {
-    try { & $Action } catch { $script:collectionErrors++; Write-Warning "${Name}: $($_.Exception.Message)" }
+function Add-CollectionError([string]$Code) {
+    $script:collectionErrors++
+    if (-not $script:collectionErrorCodes.Contains($Code)) { $script:collectionErrorCodes.Add($Code) }
+}
+function Safe([string]$Name, [string]$ErrorCode, [scriptblock]$Action) {
+    try { & $Action } catch { Add-CollectionError $ErrorCode; Write-Warning "${Name}: collection failed ($ErrorCode)" }
 }
 function EnvValue([hashtable]$Map, [string]$Name) { if ($Map.ContainsKey($Name)) { return $Map[$Name] }; return $null }
 function Present([hashtable]$Map, [string]$Name) { if ($Map.ContainsKey($Name) -and $Map[$Name]) { 'PRESENT' } else { 'MISSING' } }
 function ReleasePathFromText([string]$Text) {
     if ([string]::IsNullOrWhiteSpace($Text)) { return 'NOT_FOUND' }
-    $match = [regex]::Match($Text, '(?i)[A-Z]:\\[^\r\n"'']*?\\release-[^\\\s"'']+')
-    if ($match.Success) { return $match.Value }
+    $match = [regex]::Match($Text, '(?i)[A-Z]:\\(?:[^\\\s"''&|]+\\)*release-[^\\\s"''&|]+')
+    if ($match.Success) { return $match.Value.TrimEnd('\\', ';', '&', '|') }
     return 'NOT_INFERRED'
 }
 function Write-ReleaseGitEvidence([string]$Label, [string]$Path) {
     if ($Path -notin @('NOT_FOUND', 'NOT_INFERRED') -and (Test-Path (Join-Path $Path '.git'))) {
-        Safe "$Label git identity" { Write-Output "${Label}_GIT_HEAD=$(& git -C $Path rev-parse HEAD)" }
+        Safe "$Label git identity" "${Label}_GIT_IDENTITY_QUERY_FAILED" { Write-Output "${Label}_GIT_HEAD=$(& git -C $Path rev-parse HEAD)" }
     } else { Write-Output "${Label}_GIT_HEAD=NOT_VERIFIED" }
 }
 
 Section 'RUNTIME / RELEASE TOPOLOGY'
 $backendRelease = 'NOT_FOUND'; $scheduledRelease = 'NOT_FOUND'; $frontendRelease = 'NOT_FOUND'
+$runtimePythonPath = $null
 $listener = Get-NetTCPConnection -LocalPort $BackendPort -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($listener) {
     $proc = Get-CimInstance Win32_Process -Filter "ProcessId=$($listener.OwningProcess)"
@@ -53,10 +60,11 @@ if ($listener) {
     $summary.BACKEND_LISTENING_PORT = $BackendPort
     Write-Output "BACKEND_PID=$($listener.OwningProcess)"
     Write-Output "BACKEND_EXECUTABLE=$($proc.ExecutablePath)"
+    if ($proc.ExecutablePath -match '(?i)\\python(?:w)?\.exe$' -and (Test-Path $proc.ExecutablePath)) { $runtimePythonPath = $proc.ExecutablePath }
     $backendRelease = ReleasePathFromText "$($proc.ExecutablePath) $($proc.CommandLine)"
 } else { $summary.BACKEND_PID = 'NOT_FOUND'; $summary.BACKEND_LISTENING_PORT = 'NOT_LISTENING' }
 Write-Output "RUNNING_BACKEND_RELEASE=$backendRelease"; Write-ReleaseGitEvidence 'RUNNING_BACKEND_RELEASE' $backendRelease
-Safe 'Scheduled Task' {
+Safe 'Scheduled Task' 'SCHEDULED_TASK_INSPECTION_FAILED' {
     $task = Get-ScheduledTask -TaskName $TaskName
     $info = Get-ScheduledTaskInfo -TaskName $TaskName
     Write-Output "SCHEDULED_TASK_STATE=$($task.State)"
@@ -69,22 +77,45 @@ Safe 'Scheduled Task' {
     Write-Output "SCHEDULED_TASK_LAST_RESULT=$($info.LastTaskResult)"
 }
 Write-Output "SCHEDULED_TASK_RELEASE=$scheduledRelease"; Write-ReleaseGitEvidence 'SCHEDULED_TASK_RELEASE' $scheduledRelease
-Safe 'Python version' { & python --version }
-foreach ($uri in @("http://127.0.0.1:$BackendPort/api/health", "http://127.0.0.1:$BackendPort/readiness")) {
-    Safe "HTTP $uri" { $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $uri; Write-Output "HTTP_STATUS $uri=$($r.StatusCode)" }
+if ($runtimePythonPath) {
+    try {
+        $pythonVersion = (& $runtimePythonPath --version 2>&1 | Select-Object -First 1).ToString().Trim()
+        if ($LASTEXITCODE -eq 0 -and $pythonVersion) { Write-Output "PYTHON_VERSION=$pythonVersion" }
+        else { Write-Output 'PYTHON_VERSION=NOT_VERIFIED' }
+    } catch { Write-Output 'PYTHON_VERSION=NOT_VERIFIED' }
+} else { Write-Output 'PYTHON_VERSION=NOT_VERIFIED' }
+function Probe-Http([string]$Name, [string]$Uri, [switch]$Optional) {
+    try { $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 10 -Uri $Uri; Write-Output "HTTP_STATUS $Uri=$($r.StatusCode)" }
+    catch {
+        $statusCode = $null
+        if ($_.Exception.Response) { $statusCode = [int]$_.Exception.Response.StatusCode }
+        if ($statusCode) {
+            Write-Output "HTTP_STATUS $Uri=$statusCode"
+            if ($Optional -and $statusCode -eq 404) { Write-Output 'READINESS_ENDPOINT_STATUS=NOT_AVAILABLE_IN_RUNNING_RELEASE' }
+            return
+        }
+        Write-Output "HTTP_STATUS $Uri=NOT_REACHABLE"
+        Add-CollectionError "${Name}_PROBE_NOT_REACHABLE"
+    }
 }
+Probe-Http 'HEALTH' "http://127.0.0.1:$BackendPort/api/health"
+Write-Output 'READINESS_ENDPOINT=/api/health/ready'
+Probe-Http 'READINESS' "http://127.0.0.1:$BackendPort/api/health/ready" -Optional
 
 Section 'IIS / HOSTNAME / FRONTEND TOPOLOGY'
 $iisReverseProxy = $false
-Safe 'IIS inspection' {
+Safe 'IIS inspection' 'IIS_INSPECTION_FAILED' {
     Import-Module WebAdministration
     $site = Get-Website -Name 'forwarder'
     $script:frontendRelease = ReleasePathFromText $site.PhysicalPath
     Write-Output "IIS_SITE_STATE=$($site.State)"
     Write-Output "IIS_FRONTEND_PHYSICAL_PATH=$($site.PhysicalPath)"
     Get-WebBinding -Name 'forwarder' | ForEach-Object { Write-Output "IIS_BINDING=$($_.bindingInformation)|$($_.protocol)" }
-    $hosts = @(Get-WebBinding -Name 'forwarder' | ForEach-Object { ($_.bindingInformation -split ':')[-1] } | Where-Object { $_ })
-    $summary.SAMAND_HOSTNAME_BINDING_PRESENT = [string]($hosts -contains 'samand.forwarderet.ir')
+    $hosts = @(Get-WebBinding -Name 'forwarder' | ForEach-Object { ($_.bindingInformation -split ':')[-1].Trim().ToLowerInvariant() } | Where-Object { $_ } | Select-Object -Unique)
+    $summary.SAMAND_LOGISTICMARKET_BINDING_PRESENT = [string]($hosts -contains 'samand.logisticmarket.ir')
+    $summary.SAMAND_FORWARDERET_BINDING_PRESENT = [string]($hosts -contains 'samand.forwarderet.ir')
+    $summary.FORWARDERET_WILDCARD_BINDING_PRESENT = [string]($hosts -contains '*.forwarderet.ir')
+    $summary.SAMAND_HOSTNAME_BINDING_PRESENT = $summary.SAMAND_LOGISTICMARKET_BINDING_PRESENT
     $summary.OLD_HOSTNAME_BINDING_PRESENT = [string]($hosts -contains 'server.logisticmarket.ir')
     $summary.BOUND_HOSTNAMES = if ($hosts.Count) { $hosts -join ',' } else { 'NONE' }
     $webConfig = Join-Path $site.PhysicalPath 'web.config'
@@ -115,11 +146,26 @@ if (Test-Path $envFile) {
     foreach ($key in @('DATABASE_URL','SECRET_KEY','JWT_SECRET_KEY')) { Write-Output "$key=$(Present $envMap $key)" }
     foreach ($key in @('APP_ENV','FLASK_ENV','PORT','BACKEND_PORT','CORS_ORIGINS','CORS_ORIGIN')) { if ($envMap.ContainsKey($key)) { Write-Output "$key=$($envMap[$key])" } }
     Write-Output "DB_HOST=$dbHost"; Write-Output "DB_PORT=$dbPort"; Write-Output "DB_NAME=$dbName"; Write-Output "DB_USER=$dbUser"
-} else { Write-Warning 'production.env not found'; $collectionErrors++ }
+} else { Add-CollectionError 'PRODUCTION_ENV_NOT_FOUND'; Write-Warning 'production.env not found' }
 
 Section 'DATABASE READ-ONLY INSPECTION'
 $psql = 'C:\Program Files\PostgreSQL\18\bin\psql.exe'
 if (-not (Test-Path $psql)) { $psql = 'psql.exe' }
+$psqlPasswordSet = $false
+if (-not [string]::IsNullOrWhiteSpace($dbHost) -and -not [string]::IsNullOrWhiteSpace($dbName) -and -not [string]::IsNullOrWhiteSpace($dbUser)) {
+    $passwordBstr = [IntPtr]::Zero
+    try {
+        $securePassword = Read-Host 'PostgreSQL password (used in memory for this read-only run only)' -AsSecureString
+        $passwordBstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
+        $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordBstr)
+        $psqlPasswordSet = $true
+        $summary.PASSWORD_PROMPT_BEHAVIOR = 'ONE_PROMPT_IN_MEMORY_NO_PERSISTENCE'
+    } catch {
+        $summary.PASSWORD_PROMPT_BEHAVIOR = 'INTERACTIVE_PROMPTS_SECURITY_PRESERVED'
+    } finally {
+        if ($passwordBstr -ne [IntPtr]::Zero) { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordBstr) }
+    }
+} else { $summary.PASSWORD_PROMPT_BEHAVIOR = 'NOT_APPLICABLE_DATABASE_IDENTITY_UNAVAILABLE' }
 function Invoke-ReadonlySql([string]$Query, [switch]$Scalar) {
     if ([string]::IsNullOrWhiteSpace($dbHost) -or [string]::IsNullOrWhiteSpace($dbName) -or [string]::IsNullOrWhiteSpace($dbUser)) { throw 'Database identity is unavailable; no database query was attempted.' }
     $wrapped = "BEGIN TRANSACTION READ ONLY; SET LOCAL client_encoding TO 'UTF8'; $Query COMMIT;"
@@ -130,10 +176,13 @@ function Invoke-ReadonlySql([string]$Query, [switch]$Scalar) {
     if ($LASTEXITCODE -ne 0) { throw "psql exited with code $LASTEXITCODE" }
     return @($result)
 }
-function Sql([string]$Name, [string]$Query) { Safe $Name { Invoke-ReadonlySql $Query | Write-Output } }
+function Sql([string]$Name, [string]$Query) {
+    $code = (($Name.ToUpperInvariant() -replace '[^A-Z0-9]+', '_').Trim('_') + '_QUERY_FAILED')
+    Safe $Name $code { Invoke-ReadonlySql $Query | Write-Output }
+}
 function DbScalar([string]$Name, [string]$Query) {
     try { return ((Invoke-ReadonlySql $Query -Scalar | Where-Object { $_ -match '\S' } | Select-Object -Last 1).Trim()) }
-    catch { $script:collectionErrors++; Write-Warning "${Name}: $($_.Exception.Message)"; return $null }
+    catch { Add-CollectionError ((($Name.ToUpperInvariant() -replace '[^A-Z0-9]+', '_').Trim('_')) + '_QUERY_FAILED'); Write-Warning "${Name}: collection failed"; return $null }
 }
 function DbRelationState([string]$Table) {
     $value = DbScalar "Relation check $Table" "SELECT to_regclass('public.$Table') IS NOT NULL;"
@@ -202,4 +251,6 @@ foreach ($path in @('C:\1-webapp\forwarder-backups',(Join-Path $RuntimePath 'ser
 Section 'ADR043_PRODUCTION_READONLY_PREFLIGHT'
 $summary.PREFLIGHT_COLLECTION_COMPLETE = if($collectionErrors -eq 0){'YES'}else{'NO'}
 $summary.COLLECTION_ERRORS=$collectionErrors
+$summary.COLLECTION_ERROR_CODES = if ($collectionErrorCodes.Count) { $collectionErrorCodes -join ',' } else { 'NONE' }
 $summary.GetEnumerator() | ForEach-Object { Write-Output "$($_.Key)=$($_.Value)" }
+if ($psqlPasswordSet) { Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue }
