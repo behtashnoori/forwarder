@@ -11,8 +11,16 @@ from typing import Any
 from sqlalchemy import and_, func, or_, select
 
 from backend.extensions import db
-from backend.operational_models import ExecutionUnit, OperationalEvent, OperationalShipment, Project, utcnow
-from backend.services.operational_service import OperationalError, organization_for_user, require_permission
+from backend.models import ExpertUser
+from backend.operational_models import (
+    ExecutionUnit,
+    OperationalEvent,
+    OperationalMembership,
+    OperationalShipment,
+    Project,
+    utcnow,
+)
+from backend.services.operational_service import OperationalError, organization_for_user
 
 LIFECYCLE = {"not_started", "ready", "in_progress", "arrived", "delivered", "cancelled"}
 POLICY_VERSION = os.getenv("EXECUTION_UNIT_THRESHOLD_POLICY_VERSION", "stale-v1")
@@ -47,11 +55,33 @@ def _hash(payload: dict) -> str:
     return hashlib.sha256(json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
+def _organization_admin_oversight(user: dict, organization_id: int, permission: str) -> bool:
+    """Project-only execution has no Expert root; admit governed tenant oversight only."""
+    try:
+        user_id = int(user["id"])
+    except (KeyError, TypeError, ValueError):
+        return False
+    actor = db.session.get(ExpertUser, user_id)
+    membership = db.session.scalar(
+        select(OperationalMembership).where(
+            OperationalMembership.organization_id == organization_id,
+            OperationalMembership.user_id == user_id,
+            OperationalMembership.is_active.is_(True),
+        )
+    )
+    return bool(
+        actor
+        and actor.is_active
+        and (actor.authority or "EXPERT").upper() == "ORGANIZATION_ADMIN"
+        and membership
+        and permission in set(membership.permissions or [])
+    )
+
+
 def scoped_project(public_id: str, user: dict, permission: str = "execution_unit.read") -> Project:
-    require_permission(user, permission)
     org = organization_for_user(int(user["id"]))
     project = db.session.scalar(select(Project).where(Project.public_id == public_id, Project.organization_id == org))
-    if project is None:
+    if project is None or not _organization_admin_oversight(user, org, permission):
         raise OperationalError("NOT_FOUND", "Project not found.", 404)
     return project
 

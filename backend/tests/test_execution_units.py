@@ -24,8 +24,8 @@ def eu_app():
     with app.app_context():
         db.create_all()
         org=OperationalOrganization(name="Org"); other=OperationalOrganization(name="Other")
-        user=ExpertUser(username="eu-user",password_hash="x",full_name="EU",role="manager",is_active=True)
-        outsider=ExpertUser(username="eu-other",password_hash="x",full_name="Other",role="manager",is_active=True)
+        user=ExpertUser(username="eu-user",password_hash="x",full_name="EU",role="manager",authority="ORGANIZATION_ADMIN",is_active=True)
+        outsider=ExpertUser(username="eu-other",password_hash="x",full_name="Other",role="manager",authority="ORGANIZATION_ADMIN",is_active=True)
         customer=Customer(first_name="C",last_name="One")
         db.session.add_all([org,other,user,outsider,customer]); db.session.flush()
         perms=["execution_unit.read","execution_unit.create","execution_unit.update"]
@@ -80,6 +80,19 @@ def test_internal_event_never_leaks_and_cross_org_is_404_safe(eu_app):
         assert client.get(f"/api/public/v2/projects/{ctx['tracking']}/execution-units/{unit['public_id']}/timeline").get_json()["meta"]["total"]==0
         assert client.get(f"/api/v2/projects/{ctx['project']}/execution-units",headers=ctx["other_auth"]).status_code==404
         assert client.get(f"/api/public/v2/projects/123/execution-units").status_code==404
+
+
+def test_project_only_execution_fails_closed_for_basic_expert(eu_app):
+    app, ctx = eu_app
+    with app.app_context():
+        operator = ExpertUser.query.filter_by(username="eu-user").one()
+        operator.authority = "EXPERT"
+        db.session.commit()
+    with app.test_client() as client:
+        response = client.get(
+            f"/api/v2/projects/{ctx['project']}/execution-units", headers=ctx["auth"]
+        )
+        assert response.status_code == 404
 
 
 def test_summary_alerts_stale_policy_and_500_unit_10000_event_bounded_queries(eu_app):
