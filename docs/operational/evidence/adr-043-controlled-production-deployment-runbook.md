@@ -218,6 +218,57 @@ if((Get-ScheduledTask -TaskName $TaskName).State -ne 'Disabled'){throw 'task hol
 
 Require approved traffic containment and DB-owner read-only confirmation of no in-flight application write transaction before migration.
 
+### Recorded owner decision — ADR-043 runtime-drift containment checkpoint (2026-08-31)
+
+The preceding PHASE 3/4 baseline is superseded **only for this containment
+checkpoint** by the owner's written runtime-drift reconciliation decision.  The
+decision records a material mismatch: the `Forwarder Backend Production` task
+continues to bind `C:\1-webapp\forwarder-production\release-991d29a-20260829`,
+while the one observed `127.0.0.1:5101` listener was served from
+`C:\1-webapp\forwarder-production\release-fdfdd23-20260823`.  The staged
+certified release remains non-serving at
+`C:\1-webapp\forwarder-production\release-adcc5da-adr043`.
+
+`DRIFT_CLASSIFICATION=HARD NO-GO — material lifecycle/runtime-ownership drift`
+remains the governing classification for migration, activation, task
+replacement, application cutover, IIS, CORS, and configuration work.  The
+owner has supplied the separate decision required to authorize **only** the
+following bounded recovery checkpoint:
+
+1. Re-query and prove exactly one live listener and its ownership immediately
+   before mutation.
+2. Revalidate the known task definition: `cmd.exe`, a `991d29a` working
+   directory, and consistent `991d29a` values in both `--repo` and
+   `PYTHONPATH`; the task must be `Ready`, not already running or disabled.
+3. Prove the listener is the `fdfdd23` release's Waitress
+   `backend.wsgi:app` process, prove the staged `adcc5da` release is not
+   serving, and enumerate every listener descendant.  Every process in that
+   scope must have an executable under `fdfdd23`; no parent or arbitrary
+   ancestor is in scope.
+4. Disable (hold) the existing task **without registering, replacing, or
+   otherwise modifying its definition**.  Re-query the task and listener;
+   fail closed unless the hold is `Disabled` and the listener PID, executable,
+   release, command line, and descendant scope are unchanged.
+5. Invoke the existing runbook-governed `taskkill /PID <fresh listener PID> /T
+   /F` method for that freshly approved listener only, prove zero listeners on
+   `127.0.0.1:5101`, prove the task remains disabled, and stop.
+
+Historical PIDs (`11028`, `30760`, `51476`, and `51756`) are evidence only and
+must never be used as live selection values.  In particular, do not infer that
+a missing historical parent must be stopped, and do not stop the non-listening
+expected-release tree.  A task-definition mismatch, a listener count other
+than one, ambiguous ownership, a release/Waitress/WSGI mismatch, a staged
+release listener, a changed post-hold topology, a non-release descendant, or a
+lost task hold is a no-go: stop immediately and escalate without terminating a
+process.
+
+This decision authorizes no migration, database connection or write, generic
+Alembic operation, staged-release start, task cutover or replacement, health or
+readiness validation of the staged release, IIS change, CORS change,
+`production.env` change, or rollback.  `APPLICATION_ROLLBACK !=
+DATABASE_DOWNGRADE` remains controlling.  After the zero-listener proof, stop
+and reassess; the next checkpoint has not been authorized by this decision.
+
 ## PHASE 5 — Target migration and Direct Shipment gate
 
 The migration is additive: nullable `operational_shipment.primary_responsible_expert_id`, restrict FK to `expert_user`, and index, with no backfill. Its downgrade refuses when responsibility evidence exists; application rollback is not database downgrade.
