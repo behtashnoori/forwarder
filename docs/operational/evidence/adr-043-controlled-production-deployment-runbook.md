@@ -6,7 +6,7 @@ Status: written production authorization recorded; execution remains pending man
 
 The release builder materializes a detached worktree from the requested 40-character object, rejects a dirty materialization, builds `dist` there, and records source/head/file hashes. Its guard is `20260907_direct_shipment_responsibility`. Never package this later tooling/runbook commit, substitute the dirty worktree, or run generic `alembic upgrade head`.
 
-Completed read-only preflight supersedes conflicting older lifecycle observations: `PREFLIGHT_COLLECTION_COMPLETE=YES`, `COLLECTION_ERRORS=0`. The current listener is PID `51476` on `127.0.0.1:5101`, running `C:\1-webapp\forwarder-production\release-991d29a-20260829`; the existing `Forwarder Backend Production` task is `Ready` with working directory `C:\1-webapp\forwarder-production\release-991d29a-20260829`; IIS bindings for Samand/Forwarderet were present; database is `forwarder_prod_20260728_161711` at `20260906_global_logistics_point_materialization`; target is `20260907_direct_shipment_responsibility`; health and readiness are 200. Any material drift from this baseline is a stop gate, not permission to restart.
+Completed read-only preflight supersedes conflicting older lifecycle observations: `PREFLIGHT_COLLECTION_COMPLETE=YES`, `COLLECTION_ERRORS=0`. The latest recorded pre-cutover baseline has one listener on `127.0.0.1:5101`, with the listener command line invoking `C:\1-webapp\forwarder-production\release-991d29a-20260829\.venv314\Scripts\python.exe`; the existing `Forwarder Backend Production` task is `Ready` with working directory `C:\1-webapp\forwarder-production\release-991d29a-20260829`; IIS bindings for Samand/Forwarderet were present; database is `forwarder_prod_20260728_161711` at `20260906_global_logistics_point_materialization`; target is `20260907_direct_shipment_responsibility`; health and readiness are 200. Recorded PIDs are evidence only, never future runtime selection values. Any material drift from this baseline is a stop gate, not permission to restart.
 
 Historical phase1b evidence is only a pattern: identify the listener, hold its scheduler, terminate only verified process scope, prove port closure, then bind and health-check. It does not establish current ports, releases, IIS, origins, DB cutover, or task XML. Do not run historical scripts, blindly use `Stop-Process`, `taskkill`, `Stop-ScheduledTask`, restart, task replacement, or `alembic downgrade`.
 
@@ -14,7 +14,7 @@ Historical phase1b evidence is only a pattern: identify the listener, hold its s
 
 ```powershell
 $ErrorActionPreference='Stop'; $TaskName='Forwarder Backend Production'; $Port=5101
-$KnownListenerPid=51476; $ExpectedOldRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
+$ExpectedOldRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
 $TaskRecordedRelease='C:\1-webapp\forwarder-production\release-991d29a-20260829'
 $PgBin='C:\Program Files\PostgreSQL\18\bin'; $Database='forwarder_prod_20260728_161711'
 $TargetRevision='20260907_direct_shipment_responsibility'; $CertifiedCommit='adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e'
@@ -193,16 +193,16 @@ The only permitted termination is the exact verified listener PID and its enumer
 $Listeners=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
 if($Listeners.Count -ne 1){throw "expected one listener on 127.0.0.1:$Port; found $($Listeners.Count)"}
 $VerifiedPid=[int]$Listeners[0].OwningProcess
-if($VerifiedPid -ne $KnownListenerPid){throw "listener PID changed: expected $KnownListenerPid, got $VerifiedPid"}
 $Owner=Get-CimInstance Win32_Process -Filter "ProcessId=$VerifiedPid"
-if($null -eq $Owner -or [string]::IsNullOrWhiteSpace($Owner.ExecutablePath)){throw 'listener identity unavailable'}
+if($null -eq $Owner -or [string]::IsNullOrWhiteSpace($Owner.CommandLine)){throw 'listener identity unavailable'}
 $Owner | Select ProcessId,ParentProcessId,ExecutablePath,CommandLine | Tee-Object "$EvidenceDirectory\listener-before-stop.txt"
-if($Owner.ExecutablePath -notlike "$ExpectedOldRelease\*"){throw 'listener executable is not the verified current release'}
-if($Owner.CommandLine -notmatch '(?i)-m\s+waitress' -or $Owner.CommandLine -notmatch '(?i)backend\.wsgi:app'){throw 'listener is not Forwarder Waitress WSGI'}
+$ApprovedPython="$ExpectedOldRelease\.venv314\Scripts\python.exe"
+$ApprovedPattern='(?i)^\s*"?'+[regex]::Escape($ApprovedPython)+'"?\s+-m\s+waitress\s+--listen=127\.0\.0\.1:5101\s+backend\.wsgi:app(?:\s|$)'
+if($Owner.CommandLine -notmatch $ApprovedPattern){throw 'listener is not the exact approved release-local Waitress invocation'}
 $Descendants=@(); $Pending=@($VerifiedPid)
 while($Pending.Count){$ParentId=$Pending[0]; $Pending=@($Pending|Select -Skip 1); $Children=@(Get-CimInstance Win32_Process -Filter "ParentProcessId=$ParentId"); $Descendants+=$Children; $Pending+=@($Children|ForEach-Object {[int]$_.ProcessId})}
 $Descendants | Select ProcessId,ParentProcessId,ExecutablePath,CommandLine | Tee-Object "$EvidenceDirectory\listener-descendants-before-stop.txt"
-if(@($Descendants|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -notlike "$ExpectedOldRelease\*"}).Count -ne 0){throw 'listener tree has a non-release executable'}
+if(@($Descendants|Where-Object {$_.CommandLine -notmatch $ApprovedPattern}).Count -ne 0){throw 'listener tree has an unproven descendant'}
 if((Get-ScheduledTask -TaskName $TaskName).State -ne 'Disabled'){throw 'task is not held; refusing runtime stop'}
 ```
 
@@ -278,6 +278,37 @@ readiness validation of the staged release, IIS change, CORS change,
 `production.env` change, or rollback.  `APPLICATION_ROLLBACK !=
 DATABASE_DOWNGRADE` remains controlling.  After the zero-listener proof, stop
 and reassess; the next checkpoint has not been authorized by this decision.
+
+### Latest read-only runtime reconciliation — restored pre-cutover baseline
+
+The latest human-operator read-only snapshot recorded `LISTENER_COUNT=1` and a
+fresh listener PID of `51476`. Its command line invoked
+`C:\1-webapp\forwarder-production\release-991d29a-20260829\.venv314\Scripts\python.exe`
+with `-m waitress`, `--listen=127.0.0.1:5101`, and `backend.wsgi:app`. Windows
+reported the base Python executable path, which is not a release-identity gate.
+The task release and listener release both resolved to
+`C:\1-webapp\forwarder-production\release-991d29a-20260829`; the certified
+staged `release-adcc5da-adr043` release was not serving. No operator mutation
+caused this change.
+
+Accordingly, the historical `fdfdd23` task/listener mismatch is **not present
+in this snapshot**. The earlier `HARD NO-GO` remains historical evidence of
+that mismatch and remains controlling if its material conditions recur; it does
+not block the restored baseline solely because it once existed. The narrow
+`fdfdd23` containment authorization is **historical and not currently
+applicable**. It is conditionally available only if `fdfdd23` again becomes the
+freshly verified sole listener and every condition in that owner decision is
+met; it is not transferable to `991d29a`, another release, or a different
+topology.
+
+No new owner decision is required merely to perform the next checkpoint:
+**PHASE 3 fresh read-only baseline revalidation**. That checkpoint must freshly
+prove the task definition and runtime ownership as separate facts, including
+the exact task bindings, one approved listener, no staged listener, no
+`fdfdd23` Waitress runtime, no additional `991d29a` Waitress runtime, and no
+mixed-runtime ambiguity. It performs no persistent evidence write and grants
+no authority for any later mutating phase. Any failure is a NO-GO and requires
+owner reassessment before proceeding.
 
 ## PHASE 5 — Target migration and Direct Shipment gate
 
