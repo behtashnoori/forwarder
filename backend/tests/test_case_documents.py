@@ -218,7 +218,7 @@ def cross_case_documents(document_app):
     ).get_json()
     active_b = client.post(
         f"/api/expert/requests/{state['other_case_id']}/document-requirements/{requirement_b}/files",
-        headers=headers(state["admin"]),
+        headers=headers(state["org_admin"]),
         data={"file": (io.BytesIO(pdf_bytes()), "case-b.pdf")},
     ).get_json()
     misc_a = client.post(
