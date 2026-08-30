@@ -63,7 +63,7 @@ def require_organization_admin_context(*, allow_platform=True):
             authority = effective_authority(user) if user and user.is_active else EXPERT
             if allow_platform and authority == PLATFORM_ADMIN:
                 g.organization_context = None
-            elif authority == ORGANIZATION_ADMIN or (authority == EXPERT and user and user.role == "admin"):
+            elif authority == ORGANIZATION_ADMIN:
                 try: g.organization_context = organization_context_for_authenticated_user(user.id)
                 except AdminAuthorizationError as exc: return jsonify({"error": exc.message}), exc.status_code
             else:

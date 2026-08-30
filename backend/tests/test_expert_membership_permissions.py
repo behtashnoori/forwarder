@@ -132,3 +132,32 @@ def test_organization_crm_manager_does_not_receive_expert_permissions(permission
         membership = OperationalMembership.query.filter_by(user_id=response.get_json()["user_id"]).one()
         assert isinstance(membership.permissions, list)
         assert membership.permissions == []
+
+
+def test_legacy_admin_role_does_not_establish_organization_admin_authority(permission_app):
+    app, context = permission_app
+    with app.app_context():
+        legacy_admin = ExpertUser(
+            username="legacy-admin-expert",
+            password_hash="x",
+            full_name="Legacy Admin",
+            role="admin",
+            authority="EXPERT",
+            is_active=True,
+        )
+        db.session.add(legacy_admin)
+        db.session.flush()
+        db.session.add(
+            OperationalMembership(
+                organization_id=context["organization_id"], user_id=legacy_admin.id, permissions=[]
+            )
+        )
+        db.session.commit()
+        token = create_session_tokens(legacy_admin.id)["access_token"]
+
+    response = app.test_client().post(
+        "/api/user-management/users",
+        headers=_headers(token),
+        json={"username": "should-not-exist", "password": "test123", "full_name": "Denied"},
+    )
+    assert response.status_code == 403
