@@ -376,6 +376,129 @@ task, and a non-serving staged release, then STOP for reassessment. Historical
 PIDs remain evidence only. This record is not that owner decision and grants no
 mutation.
 
+### Accepted competing-runtime containment outcome — stop point (2026-08-31)
+
+The human-operated containment authorization
+`ADR-043-COMPETING-TREES-CONTAINMENT-20260831` is accepted as evidence of the
+bounded lifecycle-containment operation only.  The operator reported a fresh
+topology-gate PASS, disabled/held `Forwarder Backend Production` task PASS,
+final live-topology-gate PASS, termination of both freshly classified
+`fdfdd23` and `991d29a` Forwarder runtime trees, and three consecutive
+zero-listener/zero-classified-process checks PASS.  The reported final result
+is `CONTAINMENT_PROOF=PASS`.
+
+This resolves the immediate competing-runtime **containment** condition.  It
+does not identify or resolve the handoff mechanism, supervisor, scheduler, or
+other root cause.  Therefore `ROOT_CAUSE_STATUS=UNPROVEN`; no conclusion about
+why either historical tree could become listener is authorized from this
+evidence.
+
+Expected production state after that accepted result is:
+
+| Gate | Required state for the next checkpoint |
+| --- | --- |
+| Scheduled Task | `Forwarder Backend Production` is `Disabled`. |
+| Listener | No listener on `127.0.0.1:5101`. |
+| Classified old runtimes | Zero processes matching either exact Forwarder release-local Waitress/`backend.wsgi:app` classification for `fdfdd23` or `991d29a`. |
+| Certified staged release | `C:\1-webapp\forwarder-production\release-adcc5da-adr043` remains present and non-serving. |
+| Database | `forwarder_prod_20260728_161711` remains at `20260906_global_logistics_point_materialization` until separately authorized migration. |
+
+No migration was run, no production database write was performed, the staged
+release was not started, and IIS, CORS, environment, runtime configuration,
+and Scheduled Task definition were not changed by this containment result.
+`APPLICATION_ROLLBACK != DATABASE_DOWNGRADE` remains controlling; automatic
+Alembic downgrade remains prohibited.
+
+The shortest safe next governed checkpoint is a fresh, error-free,
+**read-only pre-cutover integrity and containment gate**.  It is deliberately
+not a continuation of the containment authorization and it grants no mutation.
+It must stop on any mismatch, missing evidence, listener, classified old
+runtime, enabled task, changed staged content, database-identity mismatch,
+revision mismatch, or missing target migration.  In particular, a staged
+directory or a `source_commit` field alone is insufficient: the staged tree
+must be verified against the known release artifact and its per-file manifest
+before it can be considered the certified `adcc5da` release.
+
+Run the following manually on the production server only.  It is inspection
+only: it does not start/stop processes, modify Scheduled Tasks, load or print
+secrets from `production.env`, run a migration, or write to the database.  The
+database queries explicitly use a read-only transaction.  It emits no
+production evidence file; the operator must preserve the console output in the
+approved evidence location outside this command.
+
+```powershell
+$ErrorActionPreference='Stop'; Set-StrictMode -Version Latest
+$TaskName='Forwarder Backend Production'; $Port=5101
+$StagedRelease='C:\1-webapp\forwarder-production\release-adcc5da-adr043'
+$Artifact='C:\Users\Administrator\Desktop\Forwarder-adr043-assigned-work-adcc5da.zip'
+$ArtifactSha256='af53fd7cc29f229e51a72fb02a3ffd0b1a9c46260af2fd37b83e993a4bdcea19'
+$CertifiedCommit='adcc5da2c6f6d696dbad15b9b2cd7900bd96bc9e'
+$CurrentRevision='20260906_global_logistics_point_materialization'
+$TargetRevision='20260907_direct_shipment_responsibility'
+$ProductionEnv='C:\1-webapp\forwarder-runtime\production.env'
+$ExpectedDatabase='forwarder_prod_20260728_161711'
+$OldReleases=@('C:\1-webapp\forwarder-production\release-fdfdd23-20260823','C:\1-webapp\forwarder-production\release-991d29a-20260829')
+function Require([bool]$Condition,[string]$Message){if(-not $Condition){throw "NO-GO: $Message"}}
+function HashText([string]$Text){$sha=[Security.Cryptography.SHA256]::Create();try{($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($Text))|ForEach-Object ToString x2)-join ''}finally{$sha.Dispose()}}
+Require (Test-Path -LiteralPath $StagedRelease -PathType Container) 'staged release path is absent'
+Require (Test-Path -LiteralPath $Artifact -PathType Leaf) 'known release artifact is absent'
+Require ((Get-FileHash -LiteralPath $Artifact -Algorithm SHA256).Hash -eq $ArtifactSha256) 'known release artifact hash differs from accepted evidence'
+$ManifestPath=Join-Path $StagedRelease 'release-manifest.json'; Require (Test-Path -LiteralPath $ManifestPath -PathType Leaf) 'staged release manifest is absent'
+$Manifest=Get-Content -Raw -LiteralPath $ManifestPath|ConvertFrom-Json
+Require ($Manifest.manifest_schema -eq 'forwarder-release-content-v2') 'unexpected staged manifest schema'
+Require ($Manifest.source_commit -eq $CertifiedCommit) 'staged manifest source commit is not certified SHA'
+Require ($Manifest.alembic_head -eq $TargetRevision) 'staged manifest target head is not approved target'
+$records=@($Manifest.files); Require ($records.Count -gt 0) 'staged manifest has no file inventory'
+$actual=@(Get-ChildItem -LiteralPath $StagedRelease -Recurse -File|Where-Object {$_.FullName -ne $ManifestPath}|ForEach-Object {$_.FullName.Substring($StagedRelease.Length).TrimStart('\').Replace('\','/')})
+Require ($actual.Count -eq $records.Count) 'staged file count differs from manifest inventory'
+$canonical=[Text.StringBuilder]::new()
+foreach($record in $records){$path=Join-Path $StagedRelease $record.path.Replace('/','\');Require (Test-Path -LiteralPath $path -PathType Leaf) "manifest file missing: $($record.path)";$item=Get-Item -LiteralPath $path;Require ($item.Length -eq [int64]$record.bytes) "manifest size mismatch: $($record.path)";$hash=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant();Require ($hash -eq $record.sha256.ToLowerInvariant()) "manifest hash mismatch: $($record.path)";[void]$canonical.Append($record.path).Append([char]0).Append($hash).Append("`n")}
+Require (('sha256:'+ (HashText $canonical.ToString())) -eq $Manifest.content_hash) 'staged content hash differs from manifest'
+$targetFile=Join-Path $StagedRelease "backend\migrations\versions\$TargetRevision.py"; Require (Test-Path -LiteralPath $targetFile -PathType Leaf) 'target migration is absent from staged release'
+$listeners=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue); Require ($listeners.Count -eq 0) '127.0.0.1:5101 is not free'
+$task=Get-ScheduledTask -TaskName $TaskName; Require ($task.State -eq 'Disabled') 'Scheduled Task is not Disabled'
+$procs=@(Get-CimInstance Win32_Process|Where-Object {$_.CommandLine -match '(?i)-m\s+waitress' -and $_.CommandLine -match '(?i)backend\.wsgi:app'})
+foreach($old in $OldReleases){$matches=@($procs|Where-Object {$_.CommandLine -like "$old*"});Require ($matches.Count -eq 0) "classified old runtime reappeared: $old"}
+$stagedMatches=@($procs|Where-Object {$_.CommandLine -like "$StagedRelease*"});Require ($stagedMatches.Count -eq 0) 'staged release is serving'
+Require (Test-Path -LiteralPath $ProductionEnv -PathType Leaf) 'production.env is absent'
+$dbLine=Get-Content -LiteralPath $ProductionEnv|Where-Object {$_ -match '^\s*DATABASE_URL\s*='}|Select-Object -First 1;Require ($null -ne $dbLine) 'DATABASE_URL is absent from production.env'
+$dbUri=[uri](($dbLine -replace '^\s*DATABASE_URL\s*=\s*','').Trim(' ',"'",'"'));Require ($dbUri.AbsolutePath.Trim('/') -eq $ExpectedDatabase) 'production database identity differs from expected database'
+$psql='C:\Program Files\PostgreSQL\18\bin\psql.exe';Require (Test-Path -LiteralPath $psql -PathType Leaf) 'expected psql executable is absent'
+& $psql -X -v ON_ERROR_STOP=1 -h $dbUri.Host -p $dbUri.Port -U $dbUri.UserInfo.Split(':')[0] -d $ExpectedDatabase -c "BEGIN TRANSACTION READ ONLY; SELECT current_database() AS database_name, version_num AS alembic_revision FROM alembic_version; COMMIT;";Require ($LASTEXITCODE -eq 0) 'read-only database identity/revision query failed'
+Write-Output 'ADR043_PRE_CUTOVER_READONLY_GATE=PASS'
+```
+
+The displayed database result must name
+`forwarder_prod_20260728_161711` and exactly
+`20260906_global_logistics_point_materialization`; otherwise the gate is
+`NO-GO`.  A PASS supports an owner decision; it does not itself authorize the
+migration, an application start, task enablement, health/readiness probing of a
+new runtime, IIS work, CORS work, or configuration change.
+
+If and only if the fresh gate passes, obtain a new written owner decision with
+the following exact scope; this text is **proposed, not granted**:
+
+> `ADR-043-CERTIFIED-ADCC5DA-CUTOVER-20260831` authorizes only the following
+> sequential operations after accepted fresh read-only pre-cutover evidence:
+> (1) execute the explicit migration command targeting
+> `20260907_direct_shipment_responsibility` against
+> `forwarder_prod_20260728_161711`, then verify current/check and the required
+> Direct Shipment data gate; (2) if and only if every migration/data/zero-port
+> gate passes, activate the exact integrity-verified staged release
+> `C:\1-webapp\forwarder-production\release-adcc5da-adr043` by the reviewed
+> task procedure; and (3) if and only if exactly one certified listener is
+> proven, perform health and readiness verification.  No generic `alembic
+> upgrade head`, runtime helper `migrate`, database downgrade, IIS change,
+> CORS change, environment/configuration change, unrelated process action, or
+> additional release substitution is authorized.  `APPLICATION_ROLLBACK !=
+> DATABASE_DOWNGRADE` remains controlling; an Alembic downgrade is never
+> automatic.  Stop and escalate on any gate failure.
+
+The identifier above deliberately scopes three separately gated approvals:
+explicit target migration, certified-release activation, and health/readiness
+verification.  It does not combine or retroactively extend
+`ADR-043-COMPETING-TREES-CONTAINMENT-20260831`.
+
 ## PHASE 5 — Target migration and Direct Shipment gate
 
 The migration is additive: nullable `operational_shipment.primary_responsible_expert_id`, restrict FK to `expert_user`, and index, with no backfill. Its downgrade refuses when responsibility evidence exists; application rollback is not database downgrade.
