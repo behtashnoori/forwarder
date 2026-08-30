@@ -1,5 +1,6 @@
 """Authorization, privacy, and response contracts for manual unit tracking."""
 from datetime import datetime, timedelta
+import logging
 
 import pytest
 
@@ -98,6 +99,17 @@ def test_tracking_management_requires_canonical_org_admin_capability(tracking_ap
     client = tracking_api_app["app"].test_client()
     path = f"/api/expert/requests/{tracking_api_app['request_id']}/tracking"
     assert client.get(path, headers=_headers(tracking_api_app["org_admin_token"])).status_code == 200
+
+
+def test_tracking_shadow_telemetry_never_changes_canonical_decision(tracking_api_app, caplog):
+    caplog.set_level(logging.INFO, logger="authorization.shadow")
+    client = tracking_api_app["app"].test_client()
+    path = f"/api/expert/requests/{tracking_api_app['request_id']}/tracking"
+    assert client.get(path, headers=_headers(tracking_api_app["assignee_token"])).status_code == 200
+    record = next(record for record in caplog.records if record.name == "authorization.shadow")
+    assert "surface=expert_console.tracking" in record.message
+    assert "canonical_allowed=True" in record.message
+    assert "mismatch=False" in record.message
 
 
 def test_tracking_management_opaque_parent_rejects_substitution(tracking_api_app):

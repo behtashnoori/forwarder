@@ -16,7 +16,10 @@ from backend.services import ownership_service
 from backend.services.ownership_service import tenant_organization_for_user
 from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
 from backend.services.admin_authorization_service import effective_authority
-from backend.services.assigned_work_authorization import authorize_work_action
+from backend.services.assigned_work_authorization import (
+    authorize_work_action,
+    emit_shadow_decision,
+)
 from backend.operational_models import OperationalMembership
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.services import (
@@ -120,10 +123,28 @@ def _tracking_management_payload(req: ShipmentRequest) -> Dict[str, Any]:
 
 def _can_access_request(req: ShipmentRequest, current_user: Optional[Dict]) -> bool:
     """Authorize tracking from the persisted request root at operation time."""
-    return bool(
+    canonical = authorize_work_action(current_user or {}, req, "tracking.read")
+    try:
+        legacy_tenant = tenant_organization_for_user(current_user) if current_user else None
+    except (TypeError, ValueError):
+        legacy_tenant = None
+    legacy_allowed = bool(
         current_user
-        and authorize_work_action(current_user, req, "tracking.read").allowed
+        and req.ownership_scope == "TENANT"
+        and req.operational_organization_id == legacy_tenant
+        and (
+            current_user.get("role") == "admin"
+            or req.assigned_to == int(current_user["id"])
+        )
     )
+    emit_shadow_decision(
+        surface="expert_console.tracking",
+        actor=current_user,
+        resource=req,
+        legacy_allowed=legacy_allowed,
+        canonical=canonical,
+    )
+    return canonical.allowed
 
 
 @expert_console_bp.get("/requests")

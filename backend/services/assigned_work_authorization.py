@@ -6,6 +6,7 @@ root are derived from persisted rows, never from client supplied identifiers.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from typing import Any
 
 from sqlalchemy import false, or_, select
@@ -17,6 +18,7 @@ from backend.operational_models import OperationalMembership, OperationalOrganiz
 PLATFORM_ADMIN = "PLATFORM_ADMIN"
 ORGANIZATION_ADMIN = "ORGANIZATION_ADMIN"
 EXPERT = "EXPERT"
+_shadow_logger = logging.getLogger("authorization.shadow")
 
 INTRINSIC_REQUEST_ACTIONS = frozenset({"request.read", "request.message", "request.quote", "request.status", "tracking.read"})
 INTRINSIC_SHIPMENT_ACTIONS = frozenset({
@@ -72,6 +74,25 @@ def _request_root(shipment: OperationalShipment) -> ShipmentRequest | None:
     if request is None or request.operational_organization_id != shipment.organization_id:
         return None
     return request
+
+
+def emit_shadow_decision(
+    *, surface: str, actor: dict[str, Any] | None, resource: Any,
+    legacy_allowed: bool, canonical: AuthorizationDecision,
+) -> None:
+    """Emit comparison telemetry only; callers must enforce ``canonical`` alone."""
+    _shadow_logger.info(
+        "authorization_shadow surface=%s actor_id=%s resource_type=%s "
+        "resource_id=%s legacy_allowed=%s canonical_allowed=%s reason=%s mismatch=%s",
+        surface,
+        _actor_id(actor or {}),
+        type(resource).__name__,
+        getattr(resource, "id", None),
+        bool(legacy_allowed),
+        canonical.allowed,
+        canonical.reason,
+        bool(legacy_allowed) != canonical.allowed,
+    )
 
 
 def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> AuthorizationDecision:
