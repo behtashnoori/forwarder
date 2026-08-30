@@ -348,6 +348,34 @@ operation, including an approved method, order, exact live scope, race
 prevention, and zero-listener proof. That decision is not recorded or granted
 by this evidence.
 
+### Accepted multi-snapshot ownership evidence — owner decision required (2026-08-31)
+
+The completed human-operated, read-only observation is accepted. Across three
+snapshots over approximately 34 seconds, both exact Forwarder Waitress trees
+remained alive: `fdfdd23` (`30760 -> 11028`) and `991d29a` (`51756 -> 51476`).
+The sole listener changed from the `fdfdd23` tree to the `991d29a` tree without
+operator mutation. The task stayed `Ready`, its release bindings remained
+`991d29a`, and its `LastRunTime` did not change. The Operational event query
+provided no matching event; this is not evidence that no Task Scheduler event
+occurred.
+
+Accordingly, `COMPETING_FORWARDER_TREES_PROVEN=YES`,
+`LISTENER_OWNERSHIP_OSCILLATION_PROVEN=YES`, and
+`TASK_RUN_CORRELATED_WITH_OBSERVED_HANDOFF=NO`. Root cause remains unproven.
+The prior restored-`991d29a` conclusion is invalid. The production state
+remains a HARD NO-GO for deployment, migration, activation, task cutover, IIS,
+CORS, environment, or configuration mutation.
+
+The required owner decision must govern both freshly classified Forwarder trees
+as one containment operation. It must hold the task before termination, prove
+the two exact two-process release-local command-line trees and no classified
+descendants, then terminate the freshly identified top-level classified root of
+each tree with its descendants as one coordinated operation. It must prove zero
+listeners, zero classified processes for both releases, an unchanged disabled
+task, and a non-serving staged release, then STOP for reassessment. Historical
+PIDs remain evidence only. This record is not that owner decision and grants no
+mutation.
+
 ## PHASE 5 — Target migration and Direct Shipment gate
 
 The migration is additive: nullable `operational_shipment.primary_responsible_expert_id`, restrict FK to `expert_user`, and index, with no backfill. Its downgrade refuses when responsibility evidence exists; application rollback is not database downgrade.
