@@ -47,6 +47,7 @@ def network_app():
             password_hash="x",
             full_name="Other",
             role="admin",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         customer = Customer(first_name="Project", last_name="Customer")
