@@ -310,6 +310,44 @@ mixed-runtime ambiguity. It performs no persistent evidence write and grants
 no authority for any later mutating phase. Any failure is a NO-GO and requires
 owner reassessment before proceeding.
 
+### Latest proven lifecycle condition — ownership oscillation (2026-08-31)
+
+The subsequent no-operator-mutation A -> B -> C observations supersede the
+preceding “restored pre-cutover baseline” conclusion. Snapshot A proved the
+sole `127.0.0.1:5101` listener in the `fdfdd23` Waitress tree; snapshot B
+proved the sole listener in the `991d29a` Waitress tree; and latest snapshot C
+again proved the sole listener in the `fdfdd23` tree while the Scheduled Task
+remained bound to `991d29a`. This proves **runtime ownership oscillation
+between two already-existing Forwarder Waitress process trees** and therefore
+proves competing Forwarder runtime trees. It does not prove the handoff
+mechanism, initiating component, a Scheduled Task run, or root cause.
+
+`DRIFT_CLASSIFICATION=HARD NO-GO — competing Forwarder runtime trees with
+listener-ownership oscillation` is now controlling. A current sole listener is
+not evidence that the other Forwarder tree is absent, non-runnable, or outside
+lifecycle scope. The prior narrow `fdfdd23` containment authorization is not
+sufficient for this topology: it was limited to one freshly verified listener
+and expressly excluded the non-listening expected-release tree. It does not
+authorize termination of either historical PID, any parent, or either tree
+merely because it is currently/non-currently listening.
+
+The next governed checkpoint is a fresh **read-only multi-snapshot ownership
+reconciliation**. It must enumerate both release-specific Forwarder Waitress
+sets, their ancestry/descendancy, creation times where available, the sole
+listener, and the unchanged task definition/state; it must also collect
+available Task Scheduler operational events. All Waitress processes on other
+ports or without an exact Forwarder release-local Python/Waitress/WSGI command
+line are unrelated and excluded. Two or more snapshots can prove a further
+observed transition without a corresponding recorded task run, but cannot by
+themselves prove that either tree *can* become listener in every future state.
+
+No containment mutation is authorized at this point. After a complete,
+error-free read-only checkpoint, an owner must make a new decision explicitly
+governing both competing Forwarder trees as one lifecycle-containment
+operation, including an approved method, order, exact live scope, race
+prevention, and zero-listener proof. That decision is not recorded or granted
+by this evidence.
+
 ## PHASE 5 — Target migration and Direct Shipment gate
 
 The migration is additive: nullable `operational_shipment.primary_responsible_expert_id`, restrict FK to `expert_user`, and index, with no backfill. Its downgrade refuses when responsibility evidence exists; application rollback is not database downgrade.
