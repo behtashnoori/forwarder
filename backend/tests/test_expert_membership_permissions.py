@@ -89,7 +89,7 @@ def _headers(token: str) -> dict[str, str]:
 
 
 @pytest.mark.parametrize("role", ["expert", "business_expert"])
-def test_organization_expert_provisioning_grants_only_selector_read_permission(permission_app, role):
+def test_organization_expert_provisioning_has_no_automatic_selector_read_permission(permission_app, role):
     app, context = permission_app
     client = app.test_client()
     response = client.post(
@@ -104,14 +104,13 @@ def test_organization_expert_provisioning_grants_only_selector_read_permission(p
         membership = OperationalMembership.query.filter_by(user_id=user_id).one()
         assert membership.organization_id == context["organization_id"]
         assert isinstance(membership.permissions, list)
-        assert membership.permissions == ["logistics_point.read"]
+        assert membership.permissions == []
         expert_token = create_session_tokens(user_id)["access_token"]
 
     selector = client.get(
         "/api/internal/logistics-points/tracking-selector", headers=_headers(expert_token)
     )
-    assert selector.status_code == 200
-    assert [row["en_name"] for row in selector.get_json()["items"]] == ["Anzali"]
+    assert selector.status_code == 403
 
     management = client.post(
         "/api/admin/logistics-point-types",

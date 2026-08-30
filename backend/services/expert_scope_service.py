@@ -6,7 +6,9 @@ from typing import Iterable, TypeVar
 from backend.models import ExpertUser, ShipmentRequest
 
 EXPERT_ROLES = ("expert", "business_expert")
-EXPERT_BASELINE_OPERATIONAL_PERMISSIONS = ("logistics_point.read",)
+# ADR-043: Basic Expert baseline is intentionally empty.  A selector grant is
+# explicit and purpose-bounded; role provisioning never grants tenant browsing.
+EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = ()
 T = TypeVar("T", bound=ExpertUser)
 
 
