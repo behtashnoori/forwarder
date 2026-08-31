@@ -325,3 +325,75 @@ All run-owned disposable services were stopped; Production was not accessed or
 changed.
 
 Final classification: `RELEASE SOURCE CHANGE REQUIRED — HUMAN RETAG AUTHORIZATION NEEDED`.
+
+## Final build-environment retag and publication
+
+Human authorization covered the local-only retag, immutable package rebuild,
+package/runtime/Chromium validation, and conditional publication. Preflight
+confirmed branch `codex/pr-4a-dms-gate-repair` at
+`05414d7d5b17153c3f1efcb5beff0adf7a600af6`, a clean tracked tree, version
+`1.9.1`, sole Alembic head `20260819_v191_acceptance_corrections`, and absent
+remote release branch/tag. The release-source delta is limited to the release
+builder, same-origin frontend API normalization, release contract tests, and
+this sanitized evidence; permission predicates, backend authorization,
+migrations, business logic, and architecture are unchanged.
+
+The build-environment root cause was reconfirmed: an ignored developer
+`.env.production` had supplied an external `VITE_API_URL` to production package
+builds. Builder runs with no local production environment, an external local
+production environment, and an external shell `VITE_API_URL` all produced the
+same `assets/index-DDHITCwo.js` with SHA-256
+`b2b77b7032f6b59e3b4793709f690b03bd236c1fb397a3529064f47f34200df6`.
+Every case retained `operational_shipment.create_direct`, selected the packaged
+same-origin API contract, and excluded developer/test external origins.
+
+The final annotated tag object is
+`900193c325b8386b4c34ad36e626b559a999e6d5`, message
+`Forwarder v1.9.1`, targeting exactly the authorized release commit. Existing
+archives `Forwarder-v1.9.1-17108c7.zip`,
+`Forwarder-v1.9.1-aebd4d6.zip`, and `Forwarder-v1.9.1-8ebd855.zip` remain
+superseded or blocked and must not be published.
+
+The new immutable archive is `Forwarder-v1.9.1-05414d7.zip`, 889,999 bytes,
+SHA-256 `c806d944c5caa00cac191357f904daa74013d6dcfc2e1e86d9b5787666da2166`.
+Its manifest content hash is
+`d613f449205285144ae8f826473c455c98c0f808a4dc1bb3913b3002b4aaf5e2`
+and build timestamp is `2026-08-11T16:22:12Z`. Static bundle audit confirmed
+version `1.9.1`, the Direct implementation and permission literal, same-origin
+API behavior, and absence of the developer-only external origin.
+
+`VERIFY-PACKAGE.ps1` passed from a fresh extraction: 242 files, 3,073,263
+bytes, manifest/content hash match, historical remediation and canonical
+security fingerprint policy, ancestry, secret/forbidden-content policy,
+Alembic identity, and frontend/backend artifact checks all passed.
+
+The extracted package ran with disposable PostgreSQL and synthetic data only.
+Initialization, explicit migration, exact Alembic head, seed, packaged backend,
+readiness, packaged frontend, same-origin gateway, login, and release identity
+`MATCH` passed. Chromium observed the exact Direct permission through the
+same-origin API, visibly rendered and selected Direct, exercised mandatory
+selectors and route dates, and created Direct shipment
+`3667f8d7-68bb-4f56-9530-4a7dc0965239`. It also rendered accepted-quote source
+and created accepted-quote shipment
+`081f7688-a795-43f6-8d27-46024b296e0e`. Persian and English UI smokes passed;
+the final stable browser tab had zero console errors and made no request to the
+developer-only external origin.
+
+`PACKAGED_DIRECT_SOURCE_RENDERING=PASS`
+
+`PACKAGED_API_ORIGIN=SAME_ORIGIN`
+
+Independent read-only result: `FINAL PUBLICATION REVIEW — PASS`.
+
+Only branch `codex/pr-4a-dms-gate-repair` and annotated tag `v1.9.1` were
+pushed. Remote branch HEAD is
+`05414d7d5b17153c3f1efcb5beff0adf7a600af6`; remote tag object is
+`900193c325b8386b4c34ad36e626b559a999e6d5` and its peeled target is the same
+release commit. Remote `main` remained
+`bcd8e689915a5aff12849dbfd95ec41593eaf5c4`; deploy ref
+`deploy/cloud-integration-20260722_081958` remained
+`0731b8b4c9e5b57a30a77cfbb2ed19eff1ffb80e`. No unintended ref was pushed.
+Production was not accessed or changed.
+
+Final classification:
+`SLICE 8 CLOSED — v1.9.1 RELEASE PUBLISHED — READY FOR PRODUCTION CUTOVER AUTHORIZATION`.

@@ -664,6 +664,11 @@ def projection(
         require_permission(user, "economics.cost.view")
     except OperationalError:
         can_cost = False
+    can_margin = True
+    try:
+        require_permission(user, "economics.margin.view")
+    except OperationalError:
+        can_margin = False
     lines = db.session.scalars(
         select(EconomicLine).where(
             EconomicLine.organization_id == org,
@@ -674,6 +679,36 @@ def projection(
     target = (reporting_currency or "").upper() or None
     result = {}
     for stage in ("ESTIMATE", "COMMITMENT", "ACTUAL"):
+        visible_observations = [
+            observation
+            for line in lines
+            if line.side != "COST" or can_cost
+            for observation in line.observations
+            if observation.stage == stage and observation.status == "AUTHORIZED"
+        ]
+        stage_target = target
+        if stage_target is None and visible_observations:
+            compatible_targets = None
+            for observation in visible_observations:
+                choices = {observation.currency}
+                if (
+                    observation.fx_binding
+                    and observation.fx_binding.from_currency == observation.currency
+                ):
+                    choices.add(observation.fx_binding.to_currency)
+                compatible_targets = (
+                    choices
+                    if compatible_targets is None
+                    else compatible_targets & choices
+                )
+            if compatible_targets:
+                bound_targets = {
+                    observation.fx_binding.to_currency
+                    for observation in visible_observations
+                    if observation.fx_binding
+                    and observation.fx_binding.to_currency in compatible_targets
+                }
+                stage_target = sorted(bound_targets or compatible_targets)[0]
         sums = {"REVENUE": Decimal(0), "COST": Decimal(0)}
         seen = {"REVENUE": False, "COST": False}
         sources = []
@@ -689,7 +724,7 @@ def projection(
             ]
             for obs in current:
                 value = obs.amount
-                basis = target or obs.currency
+                basis = stage_target or obs.currency
                 if obs.currency != basis:
                     binding = obs.fx_binding
                     if (
@@ -710,7 +745,9 @@ def projection(
             missing.append("REVENUE_MISSING")
         if can_cost and not seen["COST"]:
             missing.append("COST_MISSING")
-        currency = target or (
+        if not can_margin:
+            missing.append("MARGIN_VISIBILITY_RESTRICTED")
+        currency = stage_target or (
             next(
                 (
                     o.currency
@@ -722,20 +759,11 @@ def projection(
             )
         )
         mixed = (
-            not target
-            and len(
-                {
-                    o.currency
-                    for line in lines
-                    for o in line.observations
-                    if o.stage == stage and o.status == "AUTHORIZED"
-                }
-            )
-            > 1
+            stage_target is None and len({o.currency for o in visible_observations}) > 1
         )
         if mixed:
             missing.append("FX_MISSING")
-        complete = not missing and can_cost
+        complete = not missing and can_cost and can_margin
         margin = sums["REVENUE"] - sums["COST"] if complete else None
         result[stage] = {
             "revenue": money_json(sums["REVENUE"], currency)

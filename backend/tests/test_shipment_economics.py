@@ -63,6 +63,34 @@ def test_idempotency_changed_replay_and_tenant_scope(app):
         with pytest.raises(OperationalError) as hidden:economics.list_lines(ctx["other_shipment"],ctx["user"])
         assert hidden.value.status==404
 
+def test_cost_and_margin_visibility_are_independently_enforced(app):
+    with app.app_context():
+        ctx=app.config["econ"]
+        economics.create_line(ctx["shipment"],command(app,"REVENUE","ESTIMATE","100","USD","visibility-revenue"),ctx["user"])
+        economics.create_line(ctx["shipment"],command(app,"COST","ESTIMATE","70","USD","visibility-cost"),ctx["user"])
+        membership=OperationalMembership.query.filter_by(user_id=ctx["user"]["id"]).one()
+
+        full=economics.projection(ctx["shipment"],ctx["user"])["stages"]["ESTIMATE"]
+        assert full["margin"]["amount"]=="30.000000"
+
+        membership.permissions=[p for p in membership.permissions if p!="economics.margin.view"]
+        db.session.commit()
+        margin_hidden=economics.projection(ctx["shipment"],ctx["user"])["stages"]["ESTIMATE"]
+        assert margin_hidden["revenue"]["amount"]=="100.000000"
+        assert margin_hidden["cost"]["amount"]=="70.000000"
+        assert margin_hidden["margin"] is None
+        assert margin_hidden["margin_percentage"] is None
+        assert "MARGIN_VISIBILITY_RESTRICTED" in margin_hidden["missing_inputs"]
+
+        membership.permissions=[p for p in membership.permissions if p!="economics.cost.view"]
+        db.session.commit()
+        cost_and_margin_hidden=economics.projection(ctx["shipment"],ctx["user"])["stages"]["ESTIMATE"]
+        assert cost_and_margin_hidden["revenue"]["amount"]=="100.000000"
+        assert cost_and_margin_hidden["cost"] is None
+        assert cost_and_margin_hidden["margin"] is None
+        assert cost_and_margin_hidden["margin_percentage"] is None
+        assert {"COST_VISIBILITY_RESTRICTED","MARGIN_VISIBILITY_RESTRICTED"}.issubset(cost_and_margin_hidden["missing_inputs"])
+
 def test_fx_is_explicit_and_missing_fx_abstains(app):
     with app.app_context():
         ctx=app.config["econ"]; economics.create_line(ctx["shipment"],command(app,"REVENUE","ESTIMATE","100","USD","fx-rev"),ctx["user"])
@@ -80,6 +108,11 @@ def test_fx_is_explicit_and_missing_fx_abstains(app):
         economics.append_observation(ctx["shipment"],economics.list_lines(ctx["shipment"],ctx["user"])[0]["public_id"],revenue_actual,ctx["user"])
         complete=economics.projection(ctx["shipment"],ctx["user"],"USD")["stages"]["ACTUAL"]
         assert complete["margin"]["amount"]=="0.000000" and complete["applied_fx_rate_ids"]==[rate["public_id"]]
+        inferred=economics.projection(ctx["shipment"],ctx["user"])["stages"]["ACTUAL"]
+        assert inferred["completeness"]=="COMPLETE"
+        assert inferred["currency"]=="USD"
+        assert inferred["margin"]["amount"]=="0.000000"
+        assert inferred["applied_fx_rate_ids"]==[rate["public_id"]]
         before=dict(complete)
         economics.create_fx({"from_currency":"EUR","to_currency":"USD","rate":"3","rate_type":"MANUAL_APPROVED","source":"new worksheet","authority":"treasury delegate","effective_at":datetime.now(timezone.utc).isoformat()},ctx["user"])
         after=economics.projection(ctx["shipment"],ctx["user"],"USD")["stages"]["ACTUAL"]
