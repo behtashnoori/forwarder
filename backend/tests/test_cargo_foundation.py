@@ -30,6 +30,18 @@ def test_alias_normalization_uses_nfc_without_false_merging():
     assert svc.normalize_text("\u06a9\u0627\u0644\u0627") != svc.normalize_text("\u06a9\u0627\u0644\u0647")
 
 
+def test_catalog_reference_validation_returns_precise_active_reference_errors(monkeypatch):
+    monkeypatch.setattr(svc.db.session, "scalar", lambda _query: None)
+    with pytest.raises(svc.CargoError, match="active cargo_type is required") as missing_type:
+        svc.create_catalog({"id": 7}, {"immutable_code": "ITEM", "fa_name": "catalog"})
+    assert missing_type.value.status == 422
+
+    inactive = CargoType(public_id="inactive-type", immutable_code="INACTIVE", fa_name="type", en_name="Type", is_active=False)
+    monkeypatch.setattr(svc.db.session, "scalar", lambda _query: inactive)
+    with pytest.raises(svc.CargoError, match="active cargo_type is required"):
+        svc.create_catalog({"id": 7}, {"immutable_code": "ITEM", "fa_name": "catalog", "cargo_type_public_id": "inactive-type"})
+
+
 def _master_data():
     cargo_type = CargoType(
         public_id="ct-public", immutable_code="CARGO_TEST", fa_name="نوع", en_name="Type",

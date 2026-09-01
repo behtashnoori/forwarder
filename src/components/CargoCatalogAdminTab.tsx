@@ -15,7 +15,7 @@ export default function CargoCatalogAdminTab() {
   const [usage,setUsage]=useState<CargoShipmentUsage|null>(null),[usageLoading,setUsageLoading]=useState(false);
   const load=useCallback(async()=>{try{setItems((await listCargoCatalog({q,active,cargo_type:cargoType||undefined})).items);setError("");}catch{setError("بارگذاری کاتالوگ انجام نشد / Cargo catalog could not be loaded.");}},[q,active,cargoType]);
   useEffect(()=>{void load();},[load]);
-  const save=async()=>{try{if(editing){const {immutable_code:_code,...changes}=form;await updateCargoCatalogItem(editing.public_id,{...changes,version:editing.version});}else{await createCargoCatalogItem(form);}setEditing(null);setForm(emptyForm);await load();}catch{setError("اطلاعات نامعتبر یا نسخه قدیمی است / Invalid data or version conflict.");}};
+  const save=async()=>{try{if(editing){const {immutable_code:_code,...changes}=form;await updateCargoCatalogItem(editing.public_id,{...changes,version:editing.version});}else{await createCargoCatalogItem(form);}setEditing(null);setForm(emptyForm);await load();}catch(error){setError(error instanceof Error?error.message:"اطلاعات نامعتبر یا نسخه قدیمی است / Invalid data or version conflict.");}};
   const beginEdit=(item:CargoCatalogItem)=>{setEditing(item);setForm({immutable_code:item.immutable_code,fa_name:item.fa_name,en_name:item.en_name||"",cargo_type_public_id:item.cargo_type.public_id,default_uom_public_id:item.default_uom?.public_id||"",part_number:item.part_number||"",customer_item_code:item.customer_item_code||"",hs_code:item.hs_code||"",brand:item.brand||"",model:item.model||"",description:item.description||""});};
   return <div className="space-y-4" dir="rtl">
     {error&&<p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
