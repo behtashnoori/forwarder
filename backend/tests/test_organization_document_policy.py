@@ -98,6 +98,34 @@ def test_explicit_mode_fallback_and_immutable_snapshots(policy_app):
         assert [(r.source_definition_code, r.is_required) for r in CaseDocumentRequirement.query.filter_by(shipment_request_id=new_b.id)] == [("d2", True)]
 
 
+def test_admin_disable_excludes_fresh_snapshot_but_preserves_existing_snapshot(policy_app):
+    """Cross-role policy contract: current admin policy never rewrites case evidence."""
+    app, state = policy_app
+    client = app.test_client()
+    d1, _d2, _d3 = state["definitions"]
+
+    assert put(client, state, "a", d1, "REQUIRED").status_code == 200
+    with app.app_context():
+        historical = ShipmentRequest(contact_phone="history", shipping_type="domestic", status="new",
+            status_request_status="new", operational_organization_id=state["org_a"], ownership_scope="TENANT")
+        db.session.add(historical); db.session.flush()
+        initialize_requirements(historical, state["admin_a"]); db.session.commit()
+        historical_id = historical.id
+        assert [(row.source_definition_code, row.is_required) for row in CaseDocumentRequirement.query.filter_by(
+            shipment_request_id=historical_id)] == [("d1", True)]
+
+    assert put(client, state, "a", d1, "DISABLED").status_code == 200
+    with app.app_context():
+        assert effective_definitions(state["org_a"], "domestic") == []
+        fresh = ShipmentRequest(contact_phone="fresh", shipping_type="domestic", status="new",
+            status_request_status="new", operational_organization_id=state["org_a"], ownership_scope="TENANT")
+        db.session.add(fresh); db.session.flush()
+        initialize_requirements(fresh, state["admin_a"]); db.session.commit()
+        assert CaseDocumentRequirement.query.filter_by(shipment_request_id=fresh.id).count() == 0
+        assert [(row.source_definition_code, row.is_required) for row in CaseDocumentRequirement.query.filter_by(
+            shipment_request_id=historical_id)] == [("d1", True)]
+
+
 def test_database_uniqueness_is_tenant_safe(policy_app):
     app, state = policy_app
     with app.app_context():
