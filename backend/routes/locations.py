@@ -130,8 +130,22 @@ def list_cities():
 
 @location_bp.get("/countries")
 def list_countries():
-    """Return a list of all active countries for international shipping."""
-    countries = Country.query.filter_by(is_active=True).order_by(Country.name_fa).all()
+    """Return countries with an active public-form international location.
+
+    The public international request form continues from a country selector to
+    an ``InternationalCity`` selector.  Do not expose an active country here
+    when that continuation would be an empty, non-operational dead end.
+    Global and organization logistics points are deliberately not counted:
+    they are not selectable by this public request workflow.
+    """
+    countries = (
+        Country.query.filter(
+            Country.is_active.is_(True),
+            Country.cities.any(InternationalCity.is_active.is_(True)),
+        )
+        .order_by(Country.name_fa)
+        .all()
+    )
     return jsonify(
         [
             {

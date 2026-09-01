@@ -106,6 +106,28 @@ def test_international_cities_uses_canonical_rows_for_iran_and_china(app, client
     assert [row["name_en"] for row in china_response.get_json()] == ["Shanghai"]
 
 
+def test_public_country_selector_only_exposes_countries_with_active_international_city(app, client):
+    """An active country with no usable public-form continuation is not selectable."""
+    with app.app_context():
+        ready = Country(code="RDY", name_en="Ready", name_fa="آماده")
+        no_city = Country(code="NCT", name_en="No City", name_fa="بی شهر")
+        inactive_child = Country(code="ICH", name_en="Inactive Child", name_fa="فرزند غیرفعال")
+        inactive_country = Country(code="INC", name_en="Inactive Country", name_fa="کشور غیرفعال", is_active=False)
+        db.session.add_all([ready, no_city, inactive_child, inactive_country])
+        db.session.flush()
+        db.session.add_all([
+            InternationalCity(country_id=ready.id, name_fa="مکان آماده", name_en="Ready Place"),
+            InternationalCity(country_id=inactive_child.id, name_fa="مکان غیرفعال", name_en="Inactive Place", is_active=False),
+            InternationalCity(country_id=inactive_country.id, name_fa="مکان کشور غیرفعال", name_en="Inactive Country Place"),
+        ])
+        db.session.commit()
+
+    response = client.get("/api/countries")
+
+    assert response.status_code == 200
+    assert {row["code"] for row in response.get_json()} == {"RDY"}
+
+
 def test_city_destination_persists_structured_fields(app, client):
     with app.app_context():
         province, county, city, _port, _customs = _geography()
