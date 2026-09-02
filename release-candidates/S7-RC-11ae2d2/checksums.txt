@@ -1,0 +1,2 @@
+e6f81ada5ec7ba6664a5c849b52cce1b30dc992295c89e328eda9d08452184d8  Forwarder-S7-RC-11ae2d2.zip
+2a150eeb9c24cc6d0cee07b625e406d6181b064cdc88830c6b1cfeefe0c31394  release-manifest.json

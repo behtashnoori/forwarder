@@ -1,0 +1,3 @@
+# Rollback / roll-forward contract
+
+Before deployment capture active release identity, exact release-directory/artifact identity, redacted config backup, runtime/task identity, and any DB backup required by the authorized window. Roll back on identity mismatch, startup/API/auth/tenant/customer-to-expert/reporting failure, or severe runtime errors by restoring exact `release-adcc5da-adr043` bytes—not rebuilding them. No DB downgrade is expected. If rollback succeeds after candidate failure, classify the result **FAILED / RECOVERED**, not PASS. Roll forward only when diagnosis proves a forward repair is safer than restoring the prior application bytes.

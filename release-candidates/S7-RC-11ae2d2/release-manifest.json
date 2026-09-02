@@ -1,0 +1,23 @@
+{
+  "candidate_id": "S7-RC-11ae2d2",
+  "source_commit": "11ae2d2d4f115d5fab2314e79b242fc0879dbec6",
+  "release_evidence_commit": "the Git commit containing this evidence pack",
+  "branch": "release-gate/s7-forwarder-candidate",
+  "artifact_filename": "Forwarder-S7-RC-11ae2d2.zip",
+  "artifact_path": "D:/Projects/webapp/15-forwarder/release-candidates/S7-RC-11ae2d2/Forwarder-S7-RC-11ae2d2.zip",
+  "artifact_size": 1305636,
+  "artifact_sha256": "e6f81ada5ec7ba6664a5c849b52cce1b30dc992295c89e328eda9d08452184d8",
+  "migration_head": "20260907_direct_shipment_responsibility",
+  "migration_requirement": "NO_MIGRATION_REQUIRED",
+  "backend_regression": "846 passed, 92 skipped, 1 xfailed, exit 0",
+  "frontend_regression": "33 files / 156 tests passed, exit 0",
+  "frontend_build": "PASS",
+  "backend_sanity": "import, 342 routes, Alembic metadata and test config PASS",
+  "stabilization": {"S1":"COMPLETE","S2":"COMPLETE","S3":"PASS","S4":"PASS","S5":"PASS","S6":"PASS","S7_R1":"PASS"},
+  "security_status": "PASS",
+  "configuration_summary": "No new candidate configuration contract; live CORS/canonical-host confirmation is pre-deployment verification.",
+  "accepted_risks": ["Browser E2E unavailable", "Fail-safe geography catalog incompleteness", "Legacy ingress/CORS live-state verification required"],
+  "blockers": [],
+  "rollback_strategy": "release-candidates/S7-RC-11ae2d2/ROLLBACK-ROLLFORWARD.md",
+  "production_verification_plan": "release-candidates/S7-RC-11ae2d2/PRODUCTION-VERIFICATION-PLAN.md"
+}
