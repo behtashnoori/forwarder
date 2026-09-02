@@ -1,11 +1,11 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([string]$SimulationRoot)
+param([string]$SimulationRoot,[string]$ExpectedPackageId='D2-VALIDATION-S7-RC-f11f2ab')
 
 $ErrorActionPreference='Stop'
 $Root=Split-Path -Parent $MyInvocation.MyCommand.Path
 $ManifestPath=Join-Path $Root 'D2-package-manifest.json'
-$PackageId='D2-VALIDATION-S7-RC-f11f2ab'
+$PackageId=$ExpectedPackageId
 function Hash([string]$Path){$stream=[IO.File]::OpenRead($Path);$sha=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$stream.Dispose();$sha.Dispose()}}
 function NoGo([string]$Message){Write-Output "VALIDATION_RESULT=NO_GO";Write-Output "PRODUCTION_MUTATION=NO";Write-Output "DEPLOYMENT_PERFORMED=NO";throw "D2 validation package: $Message"}
 try {

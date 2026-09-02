@@ -18,7 +18,7 @@ def pwsh():
     return shutil.which("pwsh") or shutil.which("powershell")
 
 
-def fixture(root: Path):
+def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.1:5432/forwarder_prod_20260728_161711"):
     production = root / "production"
     previous = production / "release-adcc5da-adr043"
     (previous / "dist").mkdir(parents=True)
@@ -26,7 +26,7 @@ def fixture(root: Path):
     runtime = root / "runtime"
     runtime.mkdir()
     original = (
-        "DATABASE_URL=postgresql://redacted\n"
+        f"DATABASE_URL={database_url}\n"
         "JWT_SECRET_KEY=redacted\n"
         "CORS_ALLOW_ALL_ORIGINS=false\n"
         "CORS_ORIGINS=https://server.logisticmarket.ir\n"
@@ -113,6 +113,29 @@ def test_migration_identity_mismatch_aborts_before_mutation(tmp_path):
     assert result.returncode != 0
     assert "ABORTED_BEFORE_MUTATION" in result.stdout
     assert (tmp_path / "runtime" / "production.env").read_text(encoding="utf-8") == original
+
+
+@pytest.mark.skipif(not pwsh() or not ARTIFACT.exists(), reason="PowerShell or governed local artifact unavailable")
+@pytest.mark.parametrize("database_url", [
+    "postgresql://user:secret@127.0.0.1:5432/forwarder_prod_20260728_161711",
+    "postgresql+psycopg2://user:p%40ss%3Aword@127.0.0.1:5432/forwarder_prod_20260728_161711",
+])
+def test_supported_sqlalchemy_postgresql_urls_are_safe_and_accepted(tmp_path, database_url):
+    fixture(tmp_path, database_url)
+    result = run(tmp_path, "-ValidateOnly")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "DATABASE_ENGINE=POSTGRESQL" in result.stdout
+    assert "secret" not in result.stdout + result.stderr and "p%40ss%3Aword" not in result.stdout + result.stderr
+
+
+@pytest.mark.skipif(not pwsh() or not ARTIFACT.exists(), reason="PowerShell or governed local artifact unavailable")
+@pytest.mark.parametrize("database_url", ["mysql://u:secret@host/db", "sqlite:///tmp.db", "mssql://u:secret@host/db", "postgresql+unknown://u:secret@host/db", "not-a-url", ""])
+def test_unsupported_or_malformed_database_urls_fail_closed_without_secret(tmp_path, database_url):
+    fixture(tmp_path, database_url)
+    result = run(tmp_path, "-ValidateOnly")
+    assert result.returncode != 0 and "ABORTED_BEFORE_MUTATION" in result.stdout
+    if database_url:
+        assert database_url not in result.stdout + result.stderr
 
 
 @pytest.mark.skipif(not pwsh() or not ARTIFACT.exists(), reason="PowerShell or governed local artifact unavailable")

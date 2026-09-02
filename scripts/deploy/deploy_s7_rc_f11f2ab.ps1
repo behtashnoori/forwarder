@@ -68,15 +68,27 @@ function Require-Artifact([string]$Artifact,[string]$Sidecar) {
     Require ($outer.alembic_head -eq $TargetHead) 'manifest Alembic head mismatch'
     Require ($outer.artifact_sha256 -eq $ArtifactHash -and [int64]$outer.artifact_size -eq (Get-Item -LiteralPath $Artifact).Length) 'sidecar artifact identity mismatch'
 }
+function Get-GovernedPostgreSqlUrl([string]$RawUrl) {
+    Require (-not [string]::IsNullOrWhiteSpace($RawUrl)) 'DATABASE_URL is absent'
+    $match=[regex]::Match($RawUrl,'^(?<engine>postgresql)(?:\+(?<driver>psycopg2))?://',[Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    Require $match.Success 'DATABASE_URL is not a supported PostgreSQL URL'
+    $normalized=[regex]::Replace($RawUrl,'^postgresql\+psycopg2://','postgresql://',[Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    try { $uri=[uri]$normalized } catch { Fail 'DATABASE_URL is malformed' }
+    Require (-not [string]::IsNullOrWhiteSpace($uri.Host)) 'DATABASE_URL is malformed'
+    Require (-not [string]::IsNullOrWhiteSpace($uri.AbsolutePath.Trim('/'))) 'DATABASE_URL is malformed'
+    [pscustomobject]@{ Uri=$uri; Driver=if($match.Groups['driver'].Success){'psycopg2'}else{'default'} }
+}
 function Assert-DatabaseIdentity {
+    $map=Env-Map $script:ProductionEnv; Require $map.Contains('DATABASE_URL') 'DATABASE_URL is absent'
+    $connection=Get-GovernedPostgreSqlUrl $map['DATABASE_URL']
+    Write-Output 'DATABASE_URL_PRESENT=YES'; Write-Output 'DATABASE_ENGINE=POSTGRESQL'; Write-Output ("DATABASE_DRIVER="+$connection.Driver)
     if($SimulationRoot){
         $parts=(Get-Content -Raw -LiteralPath (Get-Sim 'database.txt')).Trim().Split('|',2)
         Require ($parts.Count -eq 2 -and $parts[0] -eq $ExpectedDatabase) 'simulated database identity mismatch'
         Require ($parts[1] -eq $TargetHead) 'simulated Alembic identity mismatch'
         return
     }
-    $map=Env-Map $script:ProductionEnv; Require $map.Contains('DATABASE_URL') 'DATABASE_URL is absent'
-    $uri=[uri]$map['DATABASE_URL']; Require ($uri.Scheme -match '^postgres') 'DATABASE_URL is not PostgreSQL'
+    $uri=$connection.Uri
     $userInfo=$uri.UserInfo.Split(':',2); Require ($userInfo[0]) 'database user is absent'
     $oldPassword=$env:PGPASSWORD
     try {

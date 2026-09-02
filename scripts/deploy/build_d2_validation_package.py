@@ -18,13 +18,15 @@ def sha(path: Path) -> str:
         for b in iter(lambda:f.read(1024*1024),b""): h.update(b)
     return h.hexdigest()
 
-def main(output: Path) -> int:
+def main(output: Path, package_id: str = PACKAGE_ID) -> int:
     if output.exists(): raise RuntimeError("refusing to overwrite D2 package output")
     artifact=RC/"Forwarder-S7-RC-f11f2ab.zip"; sidecar=RC/(artifact.name+".manifest.json")
     if sha(artifact)!=ARTIFACT_HASH or sha(sidecar)!=SIDECAR_HASH: raise RuntimeError("frozen RC identity mismatch")
     output.mkdir(parents=True)
     for source,name in ((artifact,artifact.name),(sidecar,sidecar.name),(ROOT/"scripts/deploy/deploy_s7_rc_f11f2ab.ps1","deploy_s7_rc_f11f2ab.ps1"),(ROOT/"scripts/deploy/validate_forwarder_s7_rc_f11f2ab.ps1","validate_forwarder_s7_rc_f11f2ab.ps1")):
         shutil.copy2(source,output/name)
+    wrapper=output/"validate_forwarder_s7_rc_f11f2ab.ps1"
+    wrapper.write_text(wrapper.read_text(encoding="utf-8").replace("D2-VALIDATION-S7-RC-f11f2ab'",package_id+"'"),encoding="utf-8")
     (output/"expected-production-baseline.json").write_text(json.dumps({"host":"SRV8756807400","current_release":"C:\\1-webapp\\forwarder-production\\release-adcc5da-adr043","runtime_root":"C:\\1-webapp\\forwarder-runtime","runtime_wrapper":"phase1b_production_cutover_runtime.py","task":"Forwarder Backend Production","listener":"127.0.0.1:5101","iis_site":"forwarder","iis_path":"C:\\1-webapp\\forwarder-production\\release-adcc5da-adr043\\dist","canonical_host":"samand.forwarderet.ir","canonical_origin":"https://samand.forwarderet.ir","legacy_origin":"https://server.logisticmarket.ir","database":"forwarder_prod_20260728_161711","alembic_head":"20260907_direct_shipment_responsibility","current_cors":"LEGACY_TRANSITION_EXPECTED"},indent=2)+"\n",encoding="utf-8")
     (output/"README-OPERATOR.txt").write_text("STEP 1: Copy this complete folder to the approved staging directory.\nSTEP 2: Open PowerShell as Administrator.\nSTEP 3: Run: PowerShell.exe -ExecutionPolicy Bypass -File .\\validate_forwarder_s7_rc_f11f2ab.ps1\nSTEP 4: Copy back the generated D2-validation-report JSON.\nSTEP 5: STOP. DO NOT DEPLOY. DO NOT EDIT ANY PRODUCTION FILE. If VALIDATION_RESULT=NO_GO, return the report to Development; do not repair Production.\n",encoding="utf-8")
     files=[]
@@ -33,7 +35,7 @@ def main(output: Path) -> int:
     (output/"SHA256SUMS.txt").write_text("\n".join(f"{x['sha256']}  {x['name']}" for x in files)+"\n",encoding="utf-8")
     checksum=output/"SHA256SUMS.txt"
     files.append({"name":checksum.name,"bytes":checksum.stat().st_size,"sha256":sha(checksum)})
-    manifest={"schema":"forwarder-d2-validation-package-v1","package_id":PACKAGE_ID,"created_utc":datetime.now(timezone.utc).replace(microsecond=0).isoformat(),"d1_tooling_commit":sys.argv[2] if len(sys.argv)>2 else "unknown","application_candidate":"S7-RC-f11f2ab","application_source_commit":SOURCE_COMMIT,"files":files}
+    manifest={"schema":"forwarder-d2-validation-package-v1","package_id":package_id,"created_utc":datetime.now(timezone.utc).replace(microsecond=0).isoformat(),"d1_tooling_commit":sys.argv[2] if len(sys.argv)>2 else "unknown","application_candidate":"S7-RC-f11f2ab","application_source_commit":SOURCE_COMMIT,"files":files}
     (output/"D2-package-manifest.json").write_text(json.dumps(manifest,indent=2,sort_keys=True)+"\n",encoding="utf-8")
     outer=output.with_suffix(".zip")
     with zipfile.ZipFile(outer,"x",zipfile.ZIP_DEFLATED,compresslevel=9) as z:
@@ -41,5 +43,5 @@ def main(output: Path) -> int:
     print(json.dumps({"package":str(output),"outer_artifact":str(outer),"outer_size":outer.stat().st_size,"outer_sha256":sha(outer)},sort_keys=True))
     return 0
 if __name__=="__main__":
-    try: raise SystemExit(main(Path(sys.argv[1])))
+    try: raise SystemExit(main(Path(sys.argv[1]),sys.argv[3] if len(sys.argv)>3 else PACKAGE_ID))
     except (IndexError,RuntimeError) as e: print(str(e),file=sys.stderr); raise SystemExit(1)
