@@ -34,6 +34,8 @@ _PLACEHOLDER_SECRET_VALUES = {
     _TEST_JWT_SECRET_KEY,
     "your-super-secret-key-change-this-in-production",
 }
+CANONICAL_PRODUCTION_CORS_ORIGIN = "https://samand.forwarderet.ir"
+LEGACY_PRODUCTION_CORS_ORIGIN = "https://server.logisticmarket.ir"
 _PLACEHOLDER_ORIGIN_FRAGMENTS = ("yourdomain.com", "example.com", "localhost", "127.0.0.1")
 _LOADED_ENV_FILES: tuple[str, ...] = ()
 _HOSTNAME_PATTERN = re.compile(
@@ -325,8 +327,12 @@ def get_secret_config(*, testing: bool = False) -> tuple[str, str]:
 
 
 def get_configured_cors_origins() -> list[str]:
-    """Return explicit CORS origins from current environment variables."""
-    return _split_csv(os.getenv("CORS_ORIGINS") or os.getenv("CORS_ORIGIN"))
+    """Return explicit CORS origins with an unambiguous compatibility alias."""
+    plural = _split_csv(os.getenv("CORS_ORIGINS"))
+    singular = _split_csv(os.getenv("CORS_ORIGIN"))
+    if plural and singular and set(plural) != set(singular):
+        raise RuntimeError("CORS_ORIGINS and CORS_ORIGIN must not disagree.")
+    return plural or singular
 
 
 def validate_runtime_config(*, testing: bool, database_uri: str, secret_key: str, jwt_secret_key: str) -> None:
@@ -364,6 +370,10 @@ def _validate_production_cors() -> None:
     invalid = [origin for origin in origins if _origin_is_placeholder(origin)]
     if invalid:
         raise RuntimeError("Production CORS origins must be real deployment origins, not placeholders or local hosts.")
+    if CANONICAL_PRODUCTION_CORS_ORIGIN not in origins:
+        raise RuntimeError("The canonical Production CORS origin is required.")
+    if LEGACY_PRODUCTION_CORS_ORIGIN in origins:
+        raise RuntimeError("The legacy Production CORS origin is not allowed.")
 
 
 def _origin_is_placeholder(origin: str) -> bool:

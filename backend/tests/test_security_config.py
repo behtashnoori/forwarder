@@ -23,6 +23,9 @@ PRODUCTION_ENV_KEYS = (
     "CORS_ALLOW_ALL_ORIGINS",
 )
 
+CANONICAL_ORIGIN = "https://samand.forwarderet.ir"
+LEGACY_ORIGIN = "https://server.logisticmarket.ir"
+
 
 def _clear_runtime_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in PRODUCTION_ENV_KEYS:
@@ -117,6 +120,58 @@ def test_production_rejects_open_cors(monkeypatch: pytest.MonkeyPatch, tmp_path)
 
     with pytest.raises(RuntimeError, match="Wildcard CORS origins"):
         create_app(skip_startup=True)
+
+
+def _production_cors_environment(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
+    _clear_runtime_env(monkeypatch)
+    monkeypatch.setenv("FLASK_ENV", "production")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
+    monkeypatch.setenv("SECRET_KEY", "deployment-specific-secret")
+    monkeypatch.setenv("JWT_SECRET_KEY", "deployment-specific-jwt-secret")
+    monkeypatch.setenv("DOCUMENT_STORAGE_ROOT", str(tmp_path / "durable-documents"))
+    monkeypatch.setenv("CORS_ALLOW_ALL_ORIGINS", "0")
+
+
+def test_production_requires_and_allows_the_canonical_cors_origin(monkeypatch, tmp_path):
+    _production_cors_environment(monkeypatch, tmp_path)
+    monkeypatch.setenv("CORS_ORIGINS", CANONICAL_ORIGIN)
+
+    app = create_app(skip_startup=True)
+    client = app.test_client()
+    response = client.open("/api/health", method="OPTIONS", headers={
+        "Origin": CANONICAL_ORIGIN, "Access-Control-Request-Method": "GET",
+    })
+    assert response.headers["Access-Control-Allow-Origin"] == CANONICAL_ORIGIN
+    assert response.headers["Access-Control-Allow-Credentials"] == "true"
+
+    rejected = client.open("/api/health", method="OPTIONS", headers={
+        "Origin": "https://unknown.forwarderet.ir", "Access-Control-Request-Method": "GET",
+    })
+    assert "Access-Control-Allow-Origin" not in rejected.headers
+
+
+def test_production_rejects_legacy_or_missing_canonical_cors_origin(monkeypatch, tmp_path):
+    _production_cors_environment(monkeypatch, tmp_path)
+    monkeypatch.setenv("CORS_ORIGINS", LEGACY_ORIGIN)
+
+    with pytest.raises(RuntimeError, match="canonical Production CORS origin"):
+        create_app(skip_startup=True)
+
+
+def test_cors_origin_alias_and_plural_value_must_not_disagree(monkeypatch):
+    _clear_runtime_env(monkeypatch)
+    monkeypatch.setenv("CORS_ORIGINS", CANONICAL_ORIGIN)
+    monkeypatch.setenv("CORS_ORIGIN", LEGACY_ORIGIN)
+
+    with pytest.raises(RuntimeError, match="must not disagree"):
+        runtime_config.get_configured_cors_origins()
+
+
+def test_cors_origin_alias_parses_when_plural_value_is_absent(monkeypatch):
+    _clear_runtime_env(monkeypatch)
+    monkeypatch.setenv("CORS_ORIGIN", CANONICAL_ORIGIN)
+
+    assert runtime_config.get_configured_cors_origins() == [CANONICAL_ORIGIN]
 
 
 def test_testing_mode_uses_isolated_database_even_with_production_env(monkeypatch: pytest.MonkeyPatch):

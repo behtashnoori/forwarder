@@ -9,6 +9,7 @@ import re
 from typing import List, Set
 
 from backend.config import (
+    CANONICAL_PRODUCTION_CORS_ORIGIN,
     get_configured_cors_origins,
     get_runtime_environment,
     is_development_environment,
@@ -116,6 +117,8 @@ def log_cors_info(*, testing: bool = False) -> None:
     print("CORS Configuration:")
     print(f"   Environment: {environment}")
     print(f"   Total Origins: {len(origins)}")
+    print(f"   Canonical Origin Present: {CANONICAL_PRODUCTION_CORS_ORIGIN in origins}")
+    print(f"   Allow All Enabled: {_bool_env('CORS_ALLOW_ALL_ORIGINS', False)}")
     print(f"   Supports Credentials: {config['supports_credentials']}")
     print(f"   Max Age: {config['resources'][r'/*']['max_age']} seconds")
 
