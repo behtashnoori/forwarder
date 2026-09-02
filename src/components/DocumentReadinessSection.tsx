@@ -113,6 +113,7 @@ function RequirementCard({ requirement, options, draft, patch, busy, readOnly, r
     <div className="flex flex-wrap items-start justify-between gap-2"><div><strong>{requirement.title}</strong>
       <p className="text-sm text-slate-600">نوع سند: {requirement.document_code} · الزام سند: {levelLabel[requirement.requirement_level]}</p></div>
       <span className="rounded-full bg-slate-100 px-3 py-1 text-sm">{statusLabel[requirement.readiness_status]}</span></div>
+    <p className="rounded bg-blue-50 p-3 text-sm text-blue-900">این الزام برای همین محموله ثبت شده است. تغییرات بعدی در سیاست فعلی اسناد، الزامات این محموله را تغییر نمی‌دهد.</p>
     <p className="text-sm">سطح بررسی لازم: {requirement.required_assessment_level === "VERIFIED" ? "راستی‌آزمایی" : "تأیید"}</p>
     {requirement.applicability_reason && <p className="text-sm">دلیل تعیین قابلیت اعمال: {requirement.applicability_reason}</p>}
     {requirement.artifact ? <div className="rounded bg-emerald-50 p-3 text-sm"><strong>سند مرتبط:</strong> {requirement.artifact.filename} · نسخه {requirement.artifact.version}

@@ -42,6 +42,8 @@ describe("shipment document readiness", () => {
     expect(await screen.findByText("بارنامه")).toBeInTheDocument();
     expect(screen.getAllByText("کسری")).toHaveLength(2);
     expect(screen.getByText(/مالک فایل همچنان پرونده درخواست است/)).toBeInTheDocument();
+    expect(screen.getByText(/برای همین محموله ثبت شده است/)).toBeInTheDocument();
+    expect(screen.getByText(/تغییرات بعدی در سیاست فعلی اسناد/)).toBeInTheDocument();
     expect(screen.getByText(/DOC_ARTIFACT_MISSING/)).toBeInTheDocument();
   });
 
@@ -57,5 +59,6 @@ describe("shipment document readiness", () => {
     api.requirements.mockResolvedValue({ data: [] });
     render(<DocumentReadinessSection shipmentPublicId="shipment-opaque" shipmentVersion={3} />);
     expect(await screen.findByText("برای این محموله الزام سندی اعمال نشده است.")).toBeInTheDocument();
+    expect(screen.queryByText(/برای همین محموله ثبت شده است/)).toBeNull();
   });
 });

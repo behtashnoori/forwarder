@@ -334,9 +334,9 @@ const AdminPanel = () => {
             {isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>الزامات مستندات سازمان</TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>}
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
-            <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی</TabsTrigger>
-            {isPlatformAdmin && <TabsTrigger value="global-logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>Global Logistics Network</TabsTrigger>}
-            {isOrganizationAdmin && <TabsTrigger value="organization-global-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>Global Network</TabsTrigger>}
+            <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه عملیاتی سازمان</TabsTrigger>
+            {isPlatformAdmin && <TabsTrigger value="global-logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه مرجع لجستیکی</TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger value="organization-global-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه مرجع لجستیکی</TabsTrigger>}
             <TabsTrigger value="operational-reasons" className="gap-2 rounded-2xl py-3">دلایل عملیاتی</TabsTrigger>
           </TabsList>
 

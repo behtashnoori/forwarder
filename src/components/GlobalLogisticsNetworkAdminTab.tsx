@@ -99,7 +99,7 @@ export default function GlobalLogisticsNetworkAdminTab() {
   };
 
   return <div className="space-y-4" data-testid="global-logistics-network">
-    <Card><CardHeader className="flex-row items-center justify-between"><div><CardTitle>Global Logistics Network</CardTitle>
+    <Card><CardHeader className="flex-row items-center justify-between"><div><CardTitle>شبکه مرجع لجستیکی پلتفرم</CardTitle><p className="mt-1 text-sm text-muted-foreground">فهرست مرجعِ بررسی‌شدهٔ پلتفرم است؛ وجود یک نقطه در اینجا به‌معنای استفادهٔ عملیاتی سازمان‌ها نیست.</p>
       <p className="mt-1 text-sm text-slate-500">کاتالوگ حاکمیتی نقاط لجستیکی پلتفرم</p></div>
       <Button variant="outline" onClick={() => void load()} disabled={busy}><RefreshCw className="ml-2 h-4 w-4"/>بازخوانی</Button></CardHeader>
       <CardContent className="grid gap-2 md:grid-cols-4">
