@@ -1,0 +1,31 @@
+{
+  "candidate_id": "S7-RC-f11f2ab",
+  "source_commit": "f11f2abfbff396f66f261f11c7f4bdb80b2d2007",
+  "source_subject": "fix(config): establish canonical production cors contract",
+  "artifact": {
+    "name": "Forwarder-S7-RC-f11f2ab.zip",
+    "path": "D:\\Projects\\webapp\\15-forwarder\\release-candidates\\S7-RC-f11f2ab\\Forwarder-S7-RC-f11f2ab.zip",
+    "size_bytes": 1305889,
+    "sha256": "a7bfac4e250e54e4aca2338783eb4667680781499ad1da2262b949ae9379544d"
+  },
+  "artifact_sidecar_manifest": {
+    "name": "Forwarder-S7-RC-f11f2ab.zip.manifest.json",
+    "sha256": "4bff7378c3fbd0ef36dee33ea0bc40bd3e9661c618092c12a5fc1e6d0e12665f"
+  },
+  "migration_head": "20260907_direct_shipment_responsibility",
+  "cors_contract": {
+    "canonical_origin": "https://samand.forwarderet.ir",
+    "legacy_origin_rejected": "https://server.logisticmarket.ir",
+    "allow_all_origins": false
+  },
+  "verification": {
+    "focused_cors_tests": "16 passed",
+    "full_backend": "850 passed, 92 skipped, 1 xfailed, 0 failed, 0 errors",
+    "frontend_tests": "33 files passed, 156 tests passed",
+    "frontend_build": "passed",
+    "secret_scan": "0 findings"
+  },
+  "production_accessed": false,
+  "production_changed": false,
+  "deployment_performed": false
+}

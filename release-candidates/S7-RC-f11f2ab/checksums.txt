@@ -1,0 +1,2 @@
+a7bfac4e250e54e4aca2338783eb4667680781499ad1da2262b949ae9379544d  Forwarder-S7-RC-f11f2ab.zip
+4bff7378c3fbd0ef36dee33ea0bc40bd3e9661c618092c12a5fc1e6d0e12665f  Forwarder-S7-RC-f11f2ab.zip.manifest.json
