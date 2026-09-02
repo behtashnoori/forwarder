@@ -1,10 +1,10 @@
-"""ADR-043: aggregate, report, and export surfaces have no accepted delegation."""
+"""ADR-043 reporting authority is explicit; ordinary Experts remain denied."""
 from backend.tests.test_admin_panel_read_contract import admin_panel_app, _auth_headers
 
 
-def test_reporting_and_export_surfaces_fail_closed_pending_companion_adr(admin_panel_app):
+def test_reporting_and_export_surfaces_deny_experts_under_companion_decision(admin_panel_app):
     client = admin_panel_app["app"].test_client()
-    headers = _auth_headers(admin_panel_app["admin_token"])
+    headers = _auth_headers(admin_panel_app["expert_token"])
     for path in (
         "/api/admin/dashboard",
         "/api/admin/reports/assignment-summary",
@@ -13,4 +13,4 @@ def test_reporting_and_export_surfaces_fail_closed_pending_companion_adr(admin_p
     ):
         response = client.get(path, headers=headers)
         assert response.status_code == 403
-        assert "Reporting and export oversight" in response.get_json()["error"]
+        assert response.get_json() == {"error": "Management reporting access is not authorized."}

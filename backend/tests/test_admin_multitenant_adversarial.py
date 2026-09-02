@@ -43,14 +43,17 @@ def test_user_idor_and_role_escalation(mt_admin_app):
     assert c.put(f"/api/user-management/users/{ids['expert_a']}",headers=headers,json={"manager_id":ids["admin_b"]}).status_code==400
     assert c.post("/api/user-management/users",headers=headers,json={"username":"escalate","password":"test123","full_name":"Escalate","role":"expert","authority":"PLATFORM_ADMIN"}).status_code==400
 
-def test_operational_reads_are_tenant_scoped_and_reports_fail_closed(mt_admin_app):
+def test_operational_reads_and_dashboard_are_tenant_scoped(mt_admin_app):
     app,ids,tokens=mt_admin_app;c=app.test_client();headers=h(tokens,"admin_a")
     rows=c.get("/api/admin/shipment-requests",headers=headers).get_json()["requests"]
     assert [row["id"] for row in rows]==[ids["req_a"]]
     assert c.get(f"/api/admin/shipment-requests/{ids['req_b']}",headers=headers).status_code==404
-    assert c.get("/api/admin/dashboard",headers=headers).status_code==403
+    dashboard=c.get("/api/admin/dashboard",headers=headers)
+    assert dashboard.status_code==200
+    assert dashboard.get_json()["total_requests"]==1
     export=c.get("/api/admin/reports/export.xlsx?period=yearly",headers=headers)
-    assert export.status_code==403
+    assert export.status_code==200
+    assert export.mimetype=="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 def test_manual_assignment_cannot_cross_tenant_or_change_owner(mt_admin_app):
     app,ids,tokens=mt_admin_app;c=app.test_client();headers=h(tokens,"admin_a")

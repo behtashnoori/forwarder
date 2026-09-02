@@ -59,6 +59,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [041](../operational/adr/ADR-041-platform-global-logistics-point-catalog-and-organization-adoption.md) | Platform Global Logistics Point Catalog and Organization Adoption | ACCEPTED | Logistics/location governance | none / none | Phases 1–3 and Phase 4A explicit tenant LogisticsPoint materialization implemented locally; operational consumption remains separately controlled | Yes; bounded implementation only |
 | [042](../operational/adr/ADR-042-three-persona-authorization-and-governed-capabilities.md) | Three-persona authorization and governed tenant capabilities | ACCEPTED | Authorization/tenant governance | none / none | Governing parent decision accepted; companion decisions and implementation prerequisites remain open | No implementation authority |
 | [043](../operational/adr/ADR-043-assigned-work-authorization-and-operational-lineage.md) | Assigned-Work Authorization and Operational Lineage | ACCEPTED | Authorization/assigned work | none / none | Accepted companion decision; implementation prerequisites remain open | No implementation authority |
+| [044](../operational/adr/ADR-044-reporting-oversight.md) | Reporting oversight companion | ACCEPTED | Reporting authorization | complements ADR-042/043 / none | tenant-fenced Organization Admin and approved Platform Admin reporting | Yes; bounded S4 implementation only |
 
 ## Usage rules
 

@@ -91,6 +91,21 @@ const EmptyDashboardState = ({ title, description }: { title: string; descriptio
   </Card>
 );
 
+const DashboardErrorState = ({ onRetry }: { onRetry: () => void }) => (
+  <Card className="rounded-3xl border-red-200 bg-white shadow-sm">
+    <CardContent className="flex min-h-[260px] flex-col items-center justify-center gap-4 p-8 text-center">
+      <div className="rounded-2xl bg-red-50 p-4">
+        <AlertCircle className="h-8 w-8 text-red-600" />
+      </div>
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-slate-900">خطا در دریافت آمار داشبورد</h2>
+        <p className="text-sm leading-6 text-slate-500">آمار نمایش داده نشده است. لطفاً دوباره تلاش کنید.</p>
+      </div>
+      <Button onClick={onRetry} variant="outline" className="rounded-full">تلاش مجدد</Button>
+    </CardContent>
+  </Card>
+);
+
 const distributionTones: DistributionTone[] = [
   { dot: "bg-blue-500", row: "bg-blue-50 border-blue-100", icon: "bg-blue-100 text-blue-700" },
   { dot: "bg-emerald-500", row: "bg-emerald-50 border-emerald-100", icon: "bg-emerald-100 text-emerald-700" },
@@ -104,6 +119,7 @@ const AdminPanel = () => {
   const navigate = useNavigate();
   const { locale, statusLabel, t, tf, transportLabel } = useI18n();
   const [dashboardStats, setDashboardStats] = useState<AdminDashboardStats | null>(null);
+  const [dashboardError, setDashboardError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const isPlatformAdmin = useMemo(() => {
@@ -156,6 +172,7 @@ const AdminPanel = () => {
 
     try {
       setLoading(true);
+      setDashboardError(false);
       const data = await fetchAdminDashboard(token);
       setDashboardStats(data);
     } catch (error) {
@@ -169,12 +186,16 @@ const AdminPanel = () => {
         localStorage.removeItem("expert_token");
         navigate("/", { replace: true });
       } else if (error instanceof AdminDashboardHttpError) {
+        setDashboardStats(null);
+        setDashboardError(true);
         toast({
           title: t("common.error"),
           description: t("admin.dashboardFetchError"),
           variant: "destructive",
         });
       } else {
+        setDashboardStats(null);
+        setDashboardError(true);
         toast({
           title: t("common.error"),
           description: t("admin.serverError"),
@@ -334,6 +355,8 @@ const AdminPanel = () => {
                   </div>
                 </CardContent>
               </Card>
+            ) : dashboardError ? (
+              <DashboardErrorState onRetry={loadDashboard} />
             ) : dashboardStats ? (
               <>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">

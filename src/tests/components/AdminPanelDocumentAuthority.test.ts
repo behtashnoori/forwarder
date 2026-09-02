@@ -11,4 +11,11 @@ describe("Admin Panel document authority contract",()=>{
   expect(source).toContain('<OrganizationDocumentPolicyTab />');
   expect(source).not.toMatch(/isOrganizationAdmin[^\n]+<DocumentDefinitionsTab/);
  });
+ it("keeps a reporting failure distinct from the valid empty dashboard state",()=>{
+  expect(source).toContain('const [dashboardError, setDashboardError] = useState(false);');
+  expect(source).toContain('<DashboardErrorState onRetry={loadDashboard} />');
+  expect(source).toContain(') : dashboardError ? (');
+  expect(source).toContain('setDashboardStats(null);');
+  expect(source).toContain('تلاش مجدد');
+ });
 });
