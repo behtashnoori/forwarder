@@ -18,7 +18,7 @@ def pwsh():
     return shutil.which("pwsh") or shutil.which("powershell")
 
 
-def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.1:5432/forwarder_prod_20260728_161711"):
+def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.1:5432/forwarder_prod_20260728_161711", *, quoted=False, crlf=False):
     production = root / "production"
     previous = production / "release-adcc5da-adr043"
     (previous / "dist").mkdir(parents=True)
@@ -32,7 +32,9 @@ def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.
         "CORS_ORIGINS=https://server.logisticmarket.ir\n"
         "CORS_ORIGIN=https://server.logisticmarket.ir\n"
     )
-    (runtime / "production.env").write_text(original, encoding="utf-8")
+    if quoted:
+        original=original.replace(f"DATABASE_URL={database_url}",f'DATABASE_URL="  {database_url}  "')
+    (runtime / "production.env").write_text(original, encoding="utf-8", newline="\r\n" if crlf else None)
     (runtime / "phase1b_production_cutover_runtime.py").write_text("# fixture", encoding="utf-8")
     (root / "task.txt").write_text(str(previous), encoding="utf-8")
     (root / "iis.txt").write_text(str(previous / "dist"), encoding="utf-8")
@@ -121,7 +123,7 @@ def test_migration_identity_mismatch_aborts_before_mutation(tmp_path):
     "postgresql+psycopg2://user:p%40ss%3Aword@127.0.0.1:5432/forwarder_prod_20260728_161711",
 ])
 def test_supported_sqlalchemy_postgresql_urls_are_safe_and_accepted(tmp_path, database_url):
-    fixture(tmp_path, database_url)
+    fixture(tmp_path, database_url, quoted=True, crlf=True)
     result = run(tmp_path, "-ValidateOnly")
     assert result.returncode == 0, result.stdout + result.stderr
     assert "DATABASE_ENGINE=POSTGRESQL" in result.stdout

@@ -12,7 +12,7 @@ def pwsh(): return shutil.which("powershell") or shutil.which("pwsh")
 
 def simulation(root):
     previous=root/"production/release-adcc5da-adr043"; (previous/"dist").mkdir(parents=True); (previous/"dist/index.html").write_text("old")
-    runtime=root/"runtime"; runtime.mkdir(); (runtime/"production.env").write_text("DATABASE_URL=postgresql+psycopg2://user:secret@127.0.0.1:5432/forwarder_prod_20260728_161711\nJWT_SECRET_KEY=redacted\nCORS_ALLOW_ALL_ORIGINS=false\nCORS_ORIGINS=https://server.logisticmarket.ir\nCORS_ORIGIN=https://server.logisticmarket.ir\n"); (runtime/"phase1b_production_cutover_runtime.py").write_text("# fixture")
+    runtime=root/"runtime"; runtime.mkdir(); (runtime/"production.env").write_text('DATABASE_URL="  postgresql+psycopg2://user:p%40ss%3Aword@127.0.0.1:5432/forwarder_prod_20260728_161711  "\nJWT_SECRET_KEY=redacted\nCORS_ALLOW_ALL_ORIGINS=false\nCORS_ORIGINS=https://server.logisticmarket.ir\nCORS_ORIGIN=https://server.logisticmarket.ir\n',newline="\r\n"); (runtime/"phase1b_production_cutover_runtime.py").write_text("# fixture")
     (root/"task.txt").write_text(str(previous)); (root/"iis.txt").write_text(str(previous/"dist")); (root/"host.txt").write_text("SRV8756807400"); (root/"admin.txt").write_text("yes"); (root/"database.txt").write_text("forwarder_prod_20260728_161711|20260907_direct_shipment_responsibility")
     staging=root/"staging"; staging.mkdir(); rc=ROOT.parent/"release-candidates/S7-RC-f11f2ab"; shutil.copy2(rc/"Forwarder-S7-RC-f11f2ab.zip",staging); shutil.copy2(rc/"Forwarder-S7-RC-f11f2ab.zip.manifest.json",staging)
 
@@ -31,7 +31,7 @@ def test_packaged_validate_only_workflow_and_integrity(tmp_path):
     assert result.returncode==0,result.stdout+result.stderr
     assert "VALIDATION_RESULT=GO" in result.stdout and "DEPLOYMENT_PERFORMED=NO" in result.stdout
     assert not (sim/"production/release-f11f2ab-s7").exists()
-    assert "redacted" not in result.stdout+result.stderr
+    assert "redacted" not in result.stdout+result.stderr and "p%40ss%3Aword" not in result.stdout+result.stderr
 
 @pytest.mark.skipif(not pwsh(),reason="PowerShell unavailable")
 def test_packaged_wrapper_fails_closed_on_tampered_artifact(tmp_path):

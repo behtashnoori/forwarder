@@ -38,7 +38,17 @@ function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
 function Require([bool]$Condition,[string]$Message) { if(-not $Condition){ Fail $Message } }
 function Hash([string]$Path) { $stream=[IO.File]::OpenRead($Path);$sha=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$stream.Dispose();$sha.Dispose()} }
 function Atomic-Copy([string]$Source,[string]$Destination) { $tmp="$Destination.$([guid]::NewGuid().ToString('N')).tmp"; Copy-Item -LiteralPath $Source -Destination $tmp -Force; Move-Item -LiteralPath $tmp -Destination $Destination -Force }
-function Env-Map([string]$Path) { $map=[ordered]@{}; foreach($line in [IO.File]::ReadAllLines($Path)){ if($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$'){ $map[$Matches[1]]=$Matches[2] } }; return $map }
+function Env-Map([string]$Path) {
+    $map=[ordered]@{}
+    foreach($line in [IO.File]::ReadAllLines($Path)){
+        if($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$'){
+            $key=$Matches[1].Trim([char]0xFEFF); $value=$Matches[2].Trim()
+            if($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))){$value=$value.Substring(1,$value.Length-2).Trim()}
+            $map[$key]=$value
+        }
+    }
+    return $map
+}
 function Validate-Env([string]$Path) {
     $envMap=Env-Map $Path
     foreach($key in 'DATABASE_URL','JWT_SECRET_KEY'){ Require ($envMap.Contains($key) -and -not [string]::IsNullOrWhiteSpace($envMap[$key])) "required configuration is absent: $key" }
