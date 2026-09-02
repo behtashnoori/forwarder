@@ -305,7 +305,17 @@ def write_reports(output_dir: Path, run_id: str, mode: str,
     }
     json_path = output_dir / f"{run_id}.json"
     md_path = output_dir / f"{run_id}.md"
-    json_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if json_path.exists() or md_path.exists():
+        raise HarnessError(f"report identity already exists: {run_id}")
+
+    def write_new(path: Path, content: str) -> None:
+        try:
+            with path.open("x", encoding="utf-8") as report:
+                report.write(content)
+        except FileExistsError as exc:
+            raise HarnessError(f"report identity already exists: {run_id}") from exc
+
+    write_new(json_path, json.dumps(payload, indent=2, sort_keys=True) + "\n")
     lines = [
         f"# Phase 1B full UAT harness — {run_id}", "",
         f"- Mode: `{mode}`", "- Persistent applied: `NO`",
@@ -314,7 +324,7 @@ def write_reports(output_dir: Path, run_id: str, mode: str,
     lines.extend(f"| {r.name} | {r.status} | {sanitize(r.detail).replace('|', '/')} |" for r in results)
     lines += ["", "## Command plan", "", "Every command uses an argument vector and `shell=False`.", "", "```json",
               json.dumps(payload["commands"], indent=2, sort_keys=True), "```", ""]
-    md_path.write_text("\n".join(lines), encoding="utf-8")
+    write_new(md_path, "\n".join(lines))
     return json_path, md_path
 
 
@@ -430,7 +440,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         print("REFUSED: --confirm is valid only with --run.", file=sys.stderr)
         return 2
     token = dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d%H%M%S%f")
-    run_id = f"P1B-UAT-{token}"
+    # Wall-clock resolution is not a uniqueness boundary; preserve the readable
+    # timestamp while adding a per-execution collision-resistant identity.
+    run_id = f"P1B-UAT-{token}-{secrets.token_hex(8)}"
     password = secrets.token_urlsafe(24)
     runtime = Path(tempfile.gettempdir()) / run_id
     plan = build_plan(root, args, runtime, token.lower(), password)

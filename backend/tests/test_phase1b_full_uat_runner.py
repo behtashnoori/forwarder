@@ -4,6 +4,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -105,6 +106,43 @@ def test_validate_only_and_dry_run_never_execute(monkeypatch, tmp_path):
                 for path in tmp_path.glob("*.json")]
     assert {payload["mode"] for payload in payloads} == {"validate-only", "dry-run"}
     assert all(payload["persistent_applied"] is False for payload in payloads)
+
+
+def test_safe_mode_reports_are_collision_safe_with_a_fixed_clock(monkeypatch, tmp_path):
+    class FixedDateTime:
+        @classmethod
+        def now(cls, _timezone):
+            return datetime(2026, 9, 2, 16, 1, 25, 982955, tzinfo=timezone.utc)
+
+    monkeypatch.setattr(
+        runner,
+        "dt",
+        SimpleNamespace(datetime=FixedDateTime, timezone=timezone),
+    )
+    monkeypatch.setattr(runner, "validate", lambda *_: [])
+    monkeypatch.setattr(runner, "execute",
+                        lambda *_: pytest.fail("safe mode must not execute"))
+
+    assert runner.main(["--validate-only", "--output-dir", str(tmp_path)]) == 0
+    assert runner.main(["--dry-run", "--output-dir", str(tmp_path)]) == 0
+
+    payloads = [json.loads(path.read_text(encoding="utf-8"))
+                for path in tmp_path.glob("*.json")]
+    assert len(payloads) == 2
+    assert len({payload["run_id"] for payload in payloads}) == 2
+    assert {payload["mode"] for payload in payloads} == {"validate-only", "dry-run"}
+    assert all(payload["persistent_applied"] is False for payload in payloads)
+
+
+def test_write_reports_refuses_to_overwrite_existing_evidence(tmp_path):
+    run_id = "P1B-UAT-existing"
+    runner.write_reports(tmp_path, run_id, "validate-only", [], [])
+
+    with pytest.raises(runner.HarnessError, match="report identity already exists"):
+        runner.write_reports(tmp_path, run_id, "dry-run", [], [])
+
+    payload = json.loads((tmp_path / f"{run_id}.json").read_text(encoding="utf-8"))
+    assert payload["mode"] == "validate-only"
 
 
 def test_start_process_always_passes_shell_false(monkeypatch, tmp_path):
