@@ -36,7 +36,7 @@ $script:Evidence = [ordered]@{ candidate_id=$CandidateId; source_commit=$SourceC
 function Set-State([string]$Value) { $script:State=$Value; $script:Evidence.states += $Value; Write-Output "STATE=$Value" }
 function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
 function Require([bool]$Condition,[string]$Message) { if(-not $Condition){ Fail $Message } }
-function Hash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Hash([string]$Path) { $stream=[IO.File]::OpenRead($Path);$sha=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$stream.Dispose();$sha.Dispose()} }
 function Atomic-Copy([string]$Source,[string]$Destination) { $tmp="$Destination.$([guid]::NewGuid().ToString('N')).tmp"; Copy-Item -LiteralPath $Source -Destination $tmp -Force; Move-Item -LiteralPath $tmp -Destination $Destination -Force }
 function Env-Map([string]$Path) { $map=[ordered]@{}; foreach($line in [IO.File]::ReadAllLines($Path)){ if($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$'){ $map[$Matches[1]]=$Matches[2] } }; return $map }
 function Validate-Env([string]$Path) {
