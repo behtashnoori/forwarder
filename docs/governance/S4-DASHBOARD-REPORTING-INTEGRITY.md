@@ -43,3 +43,12 @@ No migration, data mutation, package change, or Production access is involved.
 The dashboard uses several aggregate queries but has no per-row materialization
 or N+1 loop. Future requirements for calendar-local reporting or a province
 "unknown" bucket require a separate product decision.
+
+## Post-commit regression closure
+
+The established CI command, `python -m pytest -q` (with `pytest.ini` limiting
+collection to `backend/tests`), completed locally against S4 commit `e7cd8da`
+with exit code 0: **844 passed, 92 skipped, 1 xfailed** in **339.77 seconds**.
+Warnings were existing deprecation and SQLAlchemy legacy-API warnings; there
+were no failures, errors, or xpasses. This closes the prior regression-capture
+gap without changing application, test, migration, package, or runtime code.
