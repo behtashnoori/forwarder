@@ -37,6 +37,7 @@ def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.
         original=original.replace(f"DATABASE_URL={database_url}",f'DATABASE_URL="  {database_url}  "')
     (runtime / "production.env").write_text(original, encoding="utf-8", newline="\r\n" if crlf else None)
     (runtime / "phase1b_production_cutover_runtime.py").write_text("# fixture", encoding="utf-8")
+    (runtime / "backend-production.log").write_text("HISTORICAL_FAILURE_MUST_NOT_BE_CAPTURED\n", encoding="utf-8")
     (root / "task.txt").write_text(str(previous), encoding="utf-8")
     (root / "iis.txt").write_text(str(previous / "dist"), encoding="utf-8")
     (root / "health.txt").write_text("200", encoding="utf-8")
@@ -219,3 +220,28 @@ def test_staging_failure_rolls_back_without_changing_active_identities(tmp_path)
     assert result.returncode != 0 and "FAILED_AND_RECOVERED" in result.stdout
     assert (tmp_path / "runtime" / "production.env").read_text(encoding="utf-8") == original
     assert (tmp_path / "task.txt").read_text(encoding="utf-8").endswith("release-adcc5da-adr043")
+
+
+@pytest.mark.skipif(not pwsh() or not ARTIFACT.exists(), reason="PowerShell or governed local artifact unavailable")
+def test_start_failure_captures_attempt_scoped_evidence_before_rollback(tmp_path):
+    original = fixture(tmp_path)
+    result = run(tmp_path, "-Execute", "-ConfirmDeployment", "-SimulateStartupFailure")
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert "STARTUP_FAILURE_EVIDENCE=" in result.stdout
+    reports = list(tmp_path.glob("startup-attempt-*.json"))
+    assert len(reports) == 1
+    try:
+        evidence = json.loads(reports[0].read_text(encoding="utf-8-sig"))
+        assert evidence["candidate_id"] == "S7-RC-f11f2ab"
+        assert evidence["target_release"].endswith("release-f11f2ab-s7")
+        assert evidence["task_start_result"] == "PASS"
+        assert evidence["listener_observations"]
+        assert evidence["candidate_process_observations"] == ["SIMULATION_NO_CANDIDATE_PROCESS"]
+        assert "CURRENT_ATTEMPT_IMPORT_ERROR" in evidence["candidate_new_log"]
+        assert "HISTORICAL_FAILURE" not in evidence["candidate_new_log"]
+        assert evidence["failure_reason"].endswith("new backend listener did not start")
+        assert "FAILED_AND_RECOVERED" in result.stdout
+        assert (tmp_path / "runtime" / "production.env").read_text(encoding="utf-8") == original
+    finally:
+        for report in reports:
+            report.unlink()

@@ -1,6 +1,6 @@
 param(
     [string]$ReleasePath = $PSScriptRoot,
-    [string]$BaseUrl = "https://server.logisticmarket.ir",
+    [string]$BaseUrl = "https://samand.forwarderet.ir",
     [string]$SiteName,
     [string]$TaskName,
     [int]$BackendPort = 5101,

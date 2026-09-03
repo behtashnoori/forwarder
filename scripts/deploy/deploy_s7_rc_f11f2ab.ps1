@@ -16,7 +16,8 @@ param(
     [string]$BaselinePath,
     [string]$PsqlPath = 'C:\Program Files\PostgreSQL\18\bin\psql.exe',
     [switch]$SimulateVerificationFailure,
-    [switch]$SimulateStagingFailure
+    [switch]$SimulateStagingFailure,
+    [switch]$SimulateStartupFailure
 )
 
 $ErrorActionPreference = 'Stop'
@@ -43,6 +44,7 @@ $script:PassedPrecheckCount = 0
 $script:IisInspectionReady = $false
 $script:BackendStopped = $false
 $script:TargetReleaseOwned = $false
+$script:StartupAttempt = $null
 
 function Set-State([string]$Value) { $script:State=$Value; $script:Evidence.states += $Value; Write-Output "STATE=$Value" }
 function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
@@ -59,6 +61,57 @@ function Require([object]$Condition,[string]$Message) {
     Write-Host "$label=PASS"
 }
 function Hash([string]$Path) { $stream=[IO.File]::OpenRead($Path);$sha=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$stream.Dispose();$sha.Dispose()} }
+function Protect-DiagnosticText([string]$Value) {
+    if([string]::IsNullOrEmpty($Value)){return $Value}
+    $safe=[regex]::Replace($Value,'(?i)(postgres(?:ql)?(?:\+[^:\s/]+)?://[^:\s/@]+:)[^@\s]+@','$1<redacted>@')
+    return [regex]::Replace($safe,'(?im)^\s*(SECRET_KEY|JWT_SECRET_KEY|DATABASE_URL)\s*=.*$','$1=<redacted>')
+}
+function Read-NewLogText([string]$Path,[int64]$Offset) {
+    if(-not (Test-Path -LiteralPath $Path -PathType Leaf)){return ''}
+    $stream=[IO.File]::Open($Path,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::ReadWrite)
+    try {
+        if($stream.Length -lt $Offset){return '[log truncated or replaced after startup boundary]'}
+        $null=$stream.Seek($Offset,[IO.SeekOrigin]::Begin)
+        $remaining=[Math]::Min([int64]65536,$stream.Length-$Offset)
+        $buffer=New-Object byte[] ([int]$remaining); $read=$stream.Read($buffer,0,$buffer.Length)
+        return (Protect-DiagnosticText ([Text.Encoding]::UTF8.GetString($buffer,0,$read)))
+    } finally {$stream.Dispose()}
+}
+function Begin-StartupAttempt([string]$ExpectedRelease) {
+    $logPath=Join-Path $script:RuntimeRoot 'backend-production.log'
+    $offset=if(Test-Path -LiteralPath $logPath -PathType Leaf){[int64](Get-Item -LiteralPath $logPath).Length}else{[int64]0}
+    $attemptId=[guid]::NewGuid().ToString('N')
+    $script:StartupAttempt=[ordered]@{
+        schema='forwarder-startup-attempt-v1'; attempt_id=$attemptId; candidate_id=$CandidateId
+        target_release=$ExpectedRelease; start_time_utc=[DateTime]::UtcNow.ToString('o')
+        task_start_result='NOT_ATTEMPTED'; listener_observations=@(); candidate_process_observations=@()
+        log_path=$logPath; log_start_byte=$offset; candidate_new_log=''; failure_reason=$null
+    }
+    $evidenceRoot=if($SimulationRoot -or $QualificationRoot){if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}}else{Split-Path -Parent $MyInvocation.ScriptName}
+    $script:StartupEvidencePath=Join-Path $evidenceRoot ("startup-attempt-$attemptId.json")
+}
+function Observe-Startup([string]$ExpectedRelease) {
+    if($null -eq $script:StartupAttempt){return}
+    $count=Get-GovernedListenerCount
+    $script:StartupAttempt.listener_observations += [ordered]@{time_utc=[DateTime]::UtcNow.ToString('o');count=$count}
+    if($SimulationRoot -or $QualificationRoot){
+        $processFile=Get-Sim 'candidate-process.txt'
+        $script:StartupAttempt.candidate_process_observations=@($(if(Test-Path -LiteralPath $processFile){(Get-Content -LiteralPath $processFile|ForEach-Object {Protect-DiagnosticText ([string]$_)})}else{'SIMULATION_NO_CANDIDATE_PROCESS'}))
+    } else {
+        $escaped=[regex]::Escape($ExpectedRelease)
+        $script:StartupAttempt.candidate_process_observations=@(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {[string]$_.CommandLine -match $escaped} | ForEach-Object {[ordered]@{process_id=[int]$_.ProcessId; executable=(Split-Path -Leaf ([string]$_.ExecutablePath)); command_line=(Protect-DiagnosticText ([string]$_.CommandLine))}})
+    }
+}
+function Save-StartupFailureEvidence([string]$Reason,[string]$ExpectedRelease) {
+    if($null -eq $script:StartupAttempt){return}
+    Observe-Startup $ExpectedRelease
+    $script:StartupAttempt.failure_time_utc=[DateTime]::UtcNow.ToString('o')
+    $script:StartupAttempt.failure_reason=$Reason
+    $script:StartupAttempt.candidate_new_log=Read-NewLogText $script:StartupAttempt.log_path ([int64]$script:StartupAttempt.log_start_byte)
+    $script:StartupAttempt | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $script:StartupEvidencePath -Encoding UTF8
+    $script:Evidence.startup_failure_evidence=$script:StartupEvidencePath
+    Write-Output "STARTUP_FAILURE_EVIDENCE=$($script:StartupEvidencePath)"
+}
 function Atomic-Copy([string]$Source,[string]$Destination) { $tmp="$Destination.$([guid]::NewGuid().ToString('N')).tmp"; Copy-Item -LiteralPath $Source -Destination $tmp -Force; Move-Item -LiteralPath $tmp -Destination $Destination -Force }
 function Env-Map([string]$Path) {
     $map=[ordered]@{}
@@ -281,6 +334,7 @@ function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbse
 }
 function Wait-GovernedListenerCount([int]$Expected,[string]$Message) {
     for($attempt=0;$attempt -lt 60;$attempt++){
+        if($null -ne $script:StartupAttempt){Observe-Startup $script:TargetRelease}
         if((Get-GovernedListenerCount) -eq $Expected){ return }
         Start-Sleep -Milliseconds 500
     }
@@ -301,9 +355,17 @@ function Stop-GovernedBackend([string]$ExpectedRelease) {
     Write-Output 'PREVIOUS_BACKEND_STOPPED=YES'
 }
 function Start-GovernedBackend([string]$ExpectedRelease) {
-    if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value '127.0.0.1:5101' -NoNewline }
+    Begin-StartupAttempt $ExpectedRelease
+    if($SimulationRoot -or $QualificationRoot){
+        $script:StartupAttempt.task_start_result='PASS'
+        if($SimulateStartupFailure -and [string]::Equals($ExpectedRelease,$script:TargetRelease,[StringComparison]::OrdinalIgnoreCase)){
+            Add-Content -LiteralPath $script:StartupAttempt.log_path -Value 'CURRENT_ATTEMPT_IMPORT_ERROR: simulated candidate startup exit'
+            Observe-Startup $ExpectedRelease
+            Fail 'new backend listener did not start'
+        } else { Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value '127.0.0.1:5101' -NoNewline }
+    }
     else {
-        try { Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null; Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop } catch { Fail 'governed backend start failed' }
+        try { Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null; Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop; $script:StartupAttempt.task_start_result='PASS' } catch { $script:StartupAttempt.task_start_result="FAIL: $($_.Exception.Message)"; Fail 'governed backend start failed' }
     }
     Wait-GovernedListenerCount 1 'new backend listener did not start'
     Get-GovernedBackendListener $ExpectedRelease | Out-Null
@@ -435,6 +497,7 @@ try {
             'STARTING' { Set-State 'START_FAILED' }
             default { Set-State 'VERIFY_FAILED' }
         }
+        if($script:State -eq 'START_FAILED' -or $script:State -eq 'VERIFY_FAILED'){ Save-StartupFailureEvidence $message $script:TargetRelease }
         try { Rollback } catch {}
     } else { Set-State 'PRECHECK_FAILED'; Set-State 'ABORTED_BEFORE_MUTATION'; $script:Evidence.outcome='ABORTED_BEFORE_MUTATION' }
     $script:Evidence.error=$message; $script:Evidence|ConvertTo-Json -Depth 4; exit 1
