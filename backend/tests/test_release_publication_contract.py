@@ -68,6 +68,8 @@ def test_builder_packages_importer_migrations_baseline_dist_and_secret_verifier(
         "verify_package_secrets.py",
     ):
         assert required in source
+    assert '".test." in relative.name' in source
+    assert '"historical_security_remediation"' in source
 
 
 def test_repository_has_one_expected_alembic_head():

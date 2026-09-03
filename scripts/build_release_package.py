@@ -200,6 +200,7 @@ def assemble(source, target):
         relative = Path(name)
         if (
             "tests" in relative.parts
+            or ".test." in relative.name
             or relative.suffix in {".pyc", ".map"}
             # The release builder is release-engineering tooling, not runtime
             # content. Keeping its historical copy out of the ZIP prevents a
@@ -287,6 +288,11 @@ def build(repo, commit, output, label, *, skip_gates=False):
                     "baseline_catalog_version": baseline["catalog_version"],
                     "baseline_checksum": baseline["checksum"],
                     "baseline_count": 9,
+                    # The packaged verifier recognizes the immutable legacy
+                    # credential migration only when its exact remediation
+                    # lineage is bound to the package manifest.
+                    "database_revision": EXPECTED_HEAD,
+                    "historical_security_remediation": HISTORICAL_SECURITY_REMEDIATION,
                     "artifact_filename": artifact.name,
                     "content_hash": "sha256:" + content_hash,
                     "content_hash_definition": "SHA-256 of sorted path\\0file-sha256\\n records excluding release-manifest.json",
