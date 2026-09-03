@@ -14,7 +14,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-EXPECTED_HEAD = "20260907_direct_shipment_responsibility"
+EXPECTED_HEAD = "20260908_governed_international_geography"
 BASELINE = Path(
     "backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json"
 )
@@ -182,7 +182,14 @@ def assemble(source, target):
             copy(source / name, Path(name), target)
     for name in run(["git", "ls-files", "backend", "scripts"], source).splitlines():
         relative = Path(name)
-        if "tests" in relative.parts or relative.suffix in {".pyc", ".map"}:
+        if (
+            "tests" in relative.parts
+            or relative.suffix in {".pyc", ".map"}
+            # The release builder is release-engineering tooling, not runtime
+            # content. Keeping its historical copy out of the ZIP prevents a
+            # stale builder from being mistaken for a deployable package input.
+            or relative == Path("scripts/build_release_package.py")
+        ):
             continue
         copy(source / relative, relative, target)
     dist = source / "dist"
