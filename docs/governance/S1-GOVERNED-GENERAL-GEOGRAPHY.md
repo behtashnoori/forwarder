@@ -37,3 +37,4 @@ is reported; it is not repaired or automatically treated as a missing record.
 | RG-05 | Reconciliation is not idempotent | repeated-run test | M6 | implemented |
 | RG-06 | Country/location identity drifts or duplicates | alpha-2 snapshot validation and `(country_id, un_locode)` constraint | M5/M6 | implemented |
 | RG-07 | TM exists only in another domain | checked-in TM country + UNECE location test | M6/M7 | implemented |
+| VB-R01 | A governed migration advances the sole repository head while current-state head assertions retain the previous head | Update exact-current-head verification in the governed change or its immediate verification slice; retain the exact-one-head assertion | M5/M6 | implemented |
