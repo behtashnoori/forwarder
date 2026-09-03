@@ -82,13 +82,30 @@ provider access. REQ-3 tagged database/Alembic scalars, exit-code checking,
 cardinality checks, and ordinal identity comparisons remain unchanged. The
 fixed precheck registry remains independent of runtime execution.
 
-Source and exact-package evidence is recorded after the immutable R9 build.
 Qualification includes exact, case-varied, trailing-separator, slash-varied,
 and environment-expanded equivalent paths; null, empty, arrays, multiple
 records, provider objects, whitespace, relative paths, wrong release/dist,
 malformed values, and read failure; the complete earlier dependency matrix; ten
 fresh PS5.1 processes; zero-mutation ValidateOnly; and simulated deployment,
 verification, and exact rollback.
+
+Final evidence:
+
+- source qualification: 68/68 PASS;
+- exact frozen-package qualification: 51/51 PASS;
+- governed failure injection: 48/48, with zero unhandled tooling exceptions;
+- fresh PS5.1 process and IIS-reference contract runs: 10/10;
+- final gate reached: 10/10;
+- expected/executed/passed prechecks: 60/60/60;
+- ValidateOnly active/env/IIS/task/database mutations: 0;
+- simulated deployment/post-verification/rollback: PASS/PASS/PASS;
+- package ID: `D2-VALIDATION-S7-RC-f11f2ab-r9-final`;
+- package size: 1,283,379 bytes;
+- package SHA-256: `f8744db803d360abcacc0c422cd44da286fd433cc1a2efe46fc5eb345d050064`;
+- package-manifest SHA-256: `6f16f28dd743aca52b33953a976cad3178fb059cc7013cb27654d7204989e171`;
+- tooling provenance: `4aa08141e482f4287fba18248cf7397a1baf33cc`;
+- Windows PowerShell: `5.1.26100.9278`;
+- package built once and not rebuilt after qualification.
 
 ## Residual integration requirement
 
