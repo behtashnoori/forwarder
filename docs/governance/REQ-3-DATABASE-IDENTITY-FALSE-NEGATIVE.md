@@ -24,7 +24,7 @@ and `COMMIT`; it returned false. Thus the correct values never reached the
 comparison. R5 also did not test `$LASTEXITCODE`.
 
 For the reproduced correct values, both expected and actual values are
-`System.String`: database length 31 and Alembic length 41. There was no value
+`System.String`: database length 30 and Alembic length 39. There was no value
 difference; the database comparison operand was the wrong output record and the
 Alembic value was never independently compared.
 
