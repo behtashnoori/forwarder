@@ -12,6 +12,9 @@ param(
     [string]$ArtifactPath,
     [string]$ManifestPath,
     [string]$SimulationRoot,
+    [string]$QualificationRoot,
+    [string]$BaselinePath,
+    [string]$PsqlPath = 'C:\Program Files\PostgreSQL\18\bin\psql.exe',
     [switch]$SimulateVerificationFailure,
     [switch]$SimulateStagingFailure
 )
@@ -33,6 +36,8 @@ $script:State = 'PRECHECK'
 $script:Mutated = $false
 $script:PrecheckCount = 0
 $script:Evidence = [ordered]@{ candidate_id=$CandidateId; source_commit=$SourceCommit; states=@(); outcome=$null }
+$script:ExpectedDatabase = $ExpectedDatabase
+$script:ExpectedAlembic = $TargetHead
 
 function Set-State([string]$Value) { $script:State=$Value; $script:Evidence.states += $Value; Write-Output "STATE=$Value" }
 function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
@@ -101,6 +106,13 @@ function Get-GovernedPostgreSqlUrl([string]$RawUrl) {
     Require (-not [string]::IsNullOrWhiteSpace($uri.AbsolutePath.Trim('/'))) 'DATABASE_URL is malformed'
     [pscustomobject]@{ Uri=$uri; Driver=if($match.Groups['driver'].Success){'psycopg2'}else{'default'} }
 }
+function Get-IdentityScalar([object[]]$Lines,[string]$Tag) {
+    $taggedLines=@($Lines | ForEach-Object { [string]$_ } | Where-Object { $_.StartsWith("$Tag=") })
+    Require ($taggedLines.Count -eq 1) "$Tag query must return exactly one tagged scalar"
+    $value=$taggedLines[0].Substring($Tag.Length+1).Trim()
+    Require (-not [string]::IsNullOrWhiteSpace($value)) "$Tag query returned an empty scalar"
+    return [string]$value
+}
 function Assert-DatabaseIdentity {
     $map=Env-Map $script:ProductionEnv; Require ($map.Contains('DATABASE_URL')) 'DATABASE_URL is absent'
     $connection=Get-GovernedPostgreSqlUrl $map['DATABASE_URL']
@@ -116,17 +128,26 @@ function Assert-DatabaseIdentity {
     $oldPassword=$env:PGPASSWORD
     try {
         if($userInfo.Count -gt 1){ $env:PGPASSWORD=[uri]::UnescapeDataString($userInfo[1]) }
-        $result=& 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -X -v ON_ERROR_STOP=1 -h $uri.Host -p $uri.Port -U $userInfo[0] -d $ExpectedDatabase -Atc "BEGIN TRANSACTION READ ONLY; SELECT current_database() || '|' || version_num FROM alembic_version; COMMIT;"
-        Require (($result | Select-Object -First 1).Trim() -eq "$ExpectedDatabase|$TargetHead") 'database or Alembic identity mismatch'
+        $result=@(& $PsqlPath -X -q -v ON_ERROR_STOP=1 -h $uri.Host -p $uri.Port -U $userInfo[0] -d $script:ExpectedDatabase -Atc "BEGIN TRANSACTION READ ONLY; SELECT 'DATABASE=' || current_database(); SELECT 'ALEMBIC=' || version_num FROM alembic_version; COMMIT;")
+        $psqlExit=$LASTEXITCODE
+        Require ($psqlExit -eq 0) 'psql identity query failed'
+        $actualDatabase=Get-IdentityScalar $result 'DATABASE'
+        $actualAlembic=Get-IdentityScalar $result 'ALEMBIC'
+        Write-Output "EXPECTED_DATABASE_VALUE=$($script:ExpectedDatabase)"; Write-Output "EXPECTED_DATABASE_TYPE=$($script:ExpectedDatabase.GetType().FullName)"; Write-Output "EXPECTED_DATABASE_LENGTH=$($script:ExpectedDatabase.Length)"
+        Write-Output "ACTUAL_DATABASE_VALUE=$actualDatabase"; Write-Output "ACTUAL_DATABASE_TYPE=$($actualDatabase.GetType().FullName)"; Write-Output "ACTUAL_DATABASE_LENGTH=$($actualDatabase.Length)"
+        $databaseEqual=[string]::Equals($actualDatabase,$script:ExpectedDatabase,[StringComparison]::Ordinal); Write-Output "DATABASE_EQUALS_RESULT=$databaseEqual"; Require $databaseEqual 'database identity mismatch'; Write-Output 'DATABASE_IDENTITY=PASS'
+        Write-Output "EXPECTED_ALEMBIC_VALUE=$($script:ExpectedAlembic)"; Write-Output "EXPECTED_ALEMBIC_TYPE=$($script:ExpectedAlembic.GetType().FullName)"; Write-Output "EXPECTED_ALEMBIC_LENGTH=$($script:ExpectedAlembic.Length)"
+        Write-Output "ACTUAL_ALEMBIC_VALUE=$actualAlembic"; Write-Output "ACTUAL_ALEMBIC_TYPE=$($actualAlembic.GetType().FullName)"; Write-Output "ACTUAL_ALEMBIC_LENGTH=$($actualAlembic.Length)"
+        $alembicEqual=[string]::Equals($actualAlembic,$script:ExpectedAlembic,[StringComparison]::Ordinal); Write-Output "ALEMBIC_EQUALS_RESULT=$alembicEqual"; Require $alembicEqual 'Alembic identity mismatch'; Write-Output 'ALEMBIC_IDENTITY=PASS'
     } finally { $env:PGPASSWORD=$oldPassword }
 }
-function Get-Sim([string]$Name) { Join-Path $SimulationRoot $Name }
-function Get-TaskReference { if($SimulationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'task.txt')).Trim() }; return ((Export-ScheduledTask -TaskName $TaskName) -replace '\r|\n',' ') }
-function Capture-TaskState { if($SimulationRoot){ Atomic-Copy (Get-Sim 'task.txt') $script:TaskBackup; return }; Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $script:TaskBackup -Encoding UTF8 }
-function Restore-TaskState { if($SimulationRoot){ Atomic-Copy $script:TaskBackup (Get-Sim 'task.txt'); return }; Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $script:TaskBackup) -Force | Out-Null }
-function Set-TaskReference([string]$Reference) { if($SimulationRoot){ Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $Reference -NoNewline; return }; $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($script:PreviousRelease)) 'Scheduled Task does not contain governed previous release'; Register-ScheduledTask -TaskName $TaskName -Xml $xml.Replace($script:PreviousRelease,$Reference) -Force | Out-Null }
-function Get-IisReference { if($SimulationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'iis.txt')).Trim() }; return (Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath).physicalPath }
-function Set-IisReference([string]$Reference) { if($SimulationRoot){ Set-Content -LiteralPath (Get-Sim 'iis.txt') -Value $Reference -NoNewline; return }; Set-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -Value $Reference }
+function Get-Sim([string]$Name) { Join-Path $(if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}) $Name }
+function Get-TaskReference { if($SimulationRoot -or $QualificationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'task.txt')).Trim() }; return ((Export-ScheduledTask -TaskName $TaskName) -replace '\r|\n',' ') }
+function Capture-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy (Get-Sim 'task.txt') $script:TaskBackup; return }; Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $script:TaskBackup -Encoding UTF8 }
+function Restore-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy $script:TaskBackup (Get-Sim 'task.txt'); return }; Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $script:TaskBackup) -Force | Out-Null }
+function Set-TaskReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $Reference -NoNewline; return }; $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($script:PreviousRelease)) 'Scheduled Task does not contain governed previous release'; Register-ScheduledTask -TaskName $TaskName -Xml $xml.Replace($script:PreviousRelease,$Reference) -Force | Out-Null }
+function Get-IisReference { if($SimulationRoot -or $QualificationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'iis.txt')).Trim() }; return (Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath).physicalPath }
+function Set-IisReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'iis.txt') -Value $Reference -NoNewline; return }; Set-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -Value $Reference }
 function Verify-Release([string]$Release,[switch]$Runtime) {
     Require (Test-Path -LiteralPath (Join-Path $Release 'dist\index.html') -PathType Leaf) 'release frontend structure missing'
     Require (Test-Path -LiteralPath (Join-Path $Release 'backend\migrations\versions\20260907_direct_shipment_responsibility.py') -PathType Leaf) 'release migration identity missing'
@@ -135,7 +156,7 @@ function Verify-Release([string]$Release,[switch]$Runtime) {
     Require ($inner.source_commit -eq $SourceCommit) 'extracted release source identity mismatch'
     Require ($inner.alembic_head -eq $TargetHead) 'extracted release Alembic identity mismatch'
     if(-not $Runtime){ return }
-    if($SimulationRoot){
+    if($SimulationRoot -or $QualificationRoot){
         Require ((Get-Content -Raw -LiteralPath (Get-Sim 'health.txt')).Trim() -eq '200') 'simulated health failed'
         Require ((Get-Content -Raw -LiteralPath (Get-Sim 'cors.txt')).Trim() -eq $CanonicalOrigin) 'simulated canonical CORS failed'
         Require (-not (Test-Path -LiteralPath (Get-Sim 'legacy-cors-allowed.txt'))) 'simulated legacy CORS remains allowed'
@@ -169,10 +190,16 @@ try {
     Require (-not ($ValidateOnly -and $Execute)) 'choose only one execution mode'
     if(-not $ValidateOnly -and -not $Execute){ $ValidateOnly=$true }
     if($Execute){ Require ($ConfirmDeployment.IsPresent -eq $true) '-Execute requires -ConfirmDeployment' }
-    if($SimulationRoot){ Require (Test-Path -LiteralPath $SimulationRoot -PathType Container) 'simulation root is absent'; $script:ProductionRoot=Get-Sim 'production'; $script:RuntimeRoot=Get-Sim 'runtime'; $script:StagingRoot=Get-Sim 'staging'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env'; $ArtifactPath=Join-Path $script:StagingRoot $ArtifactName; $ManifestPath="$ArtifactPath.manifest.json" }
+    if($SimulationRoot -or $QualificationRoot){ $fixtureRoot=if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}; Require (Test-Path -LiteralPath $fixtureRoot -PathType Container) 'fixture root is absent'; $script:ProductionRoot=Join-Path $fixtureRoot 'production'; $script:RuntimeRoot=Join-Path $fixtureRoot 'runtime'; $script:StagingRoot=Join-Path $fixtureRoot 'staging'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env'; $ArtifactPath=Join-Path $script:StagingRoot $ArtifactName; $ManifestPath="$ArtifactPath.manifest.json" }
     else { Require ([Environment]::MachineName -eq $ExpectedHost) 'wrong host'; Require (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) 'Administrator is required'; $script:ProductionRoot='C:\1-webapp\forwarder-production'; $script:RuntimeRoot='C:\1-webapp\forwarder-runtime'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env' }
+    if(-not $BaselinePath){$BaselinePath=Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'expected-production-baseline.json'}
+    if(-not (Test-Path -LiteralPath $BaselinePath -PathType Leaf)){Fail 'expected Production baseline is absent'}
+    $baseline=Get-Content -Raw -LiteralPath $BaselinePath|ConvertFrom-Json
+    if(-not ($baseline.database -is [string]) -or [string]::IsNullOrWhiteSpace($baseline.database)){Fail 'baseline database must be one scalar string'}
+    if(-not ($baseline.alembic_head -is [string]) -or [string]::IsNullOrWhiteSpace($baseline.alembic_head)){Fail 'baseline Alembic must be one scalar string'}
+    $script:ExpectedDatabase=$baseline.database; $script:ExpectedAlembic=$baseline.alembic_head
     Require-Artifact $ArtifactPath $ManifestPath
-    if($SimulationRoot){ Require ((Get-Content -Raw -LiteralPath (Get-Sim 'host.txt')).Trim() -eq $ExpectedHost) 'wrong host'; Require ((Get-Content -Raw -LiteralPath (Get-Sim 'admin.txt')).Trim() -eq 'yes') 'Administrator is required' }
+    if($SimulationRoot -or $QualificationRoot){ Require ((Get-Content -Raw -LiteralPath (Get-Sim 'host.txt')).Trim() -eq $ExpectedHost) 'wrong host'; Require ((Get-Content -Raw -LiteralPath (Get-Sim 'admin.txt')).Trim() -eq 'yes') 'Administrator is required' }
     Require (Test-Path -LiteralPath $script:PreviousRelease -PathType Container) 'current release is absent'
     Require (Test-Path -LiteralPath $script:ProductionEnv -PathType Leaf) 'production.env is absent'
     Require (Test-Path -LiteralPath (Join-Path $script:RuntimeRoot 'phase1b_production_cutover_runtime.py') -PathType Leaf) 'runtime wrapper is absent'
@@ -181,7 +208,7 @@ try {
     Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'Scheduled Task does not reference governed previous release'
     Require ((Get-IisReference) -eq (Join-Path $script:PreviousRelease 'dist')) 'IIS does not reference governed previous release dist'
     Require (-not (Test-Path -LiteralPath $script:TargetRelease)) 'target release already exists; refusing reuse'
-    if($SimulationRoot){
+    if($SimulationRoot -or $QualificationRoot){
         Require ((Get-Content -Raw -LiteralPath (Get-Sim 'task-metadata.txt')).Trim() -eq $TaskName) 'Scheduled Task metadata mismatch'
         Require ((Get-Content -Raw -LiteralPath (Get-Sim 'iis-state.txt')).Trim() -eq 'Started') 'IIS site is not Started'
         Require ((Get-Content -Raw -LiteralPath (Get-Sim 'iis-bindings.txt')).Trim() -eq 'http,https') 'canonical IIS bindings mismatch'
@@ -210,7 +237,7 @@ try {
     Verify-Release $script:TargetRelease
     Set-State 'CONFIG_PREPARED'; Write-Governed-Env $script:ProductionEnv; Validate-Env $script:ProductionEnv
     Set-State 'SWITCHING'; Set-TaskReference $script:TargetRelease; Set-IisReference (Join-Path $script:TargetRelease 'dist')
-    Set-State 'STARTING'; if(-not $SimulationRoot){ Enable-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName }
+    Set-State 'STARTING'; if(-not $SimulationRoot -and -not $QualificationRoot){ Enable-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName }
     Set-State 'VERIFYING'; Verify-Release $script:TargetRelease -Runtime
     Require ((Get-TaskReference) -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target verification failed'; Require ((Get-IisReference) -eq (Join-Path $script:TargetRelease 'dist')) 'IIS target verification failed'
     Set-State 'DEPLOYED_AND_VERIFIED'; $script:Evidence.outcome='DEPLOYED_AND_VERIFIED'; $script:Evidence|ConvertTo-Json -Depth 4
