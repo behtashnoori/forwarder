@@ -153,7 +153,23 @@ def gates(source):
             source,
             output=False,
         )
-        run([str(python), "-m", "pytest"], source, output=False)
+        # Release qualification must identify active work and fail with a Python
+        # traceback if a test blocks abnormally; a silent dot stream is not
+        # adequate evidence for a bounded release gate.
+        run(
+            [
+                str(python),
+                "-u",
+                "-m",
+                "pytest",
+                "-vv",
+                "--durations=25",
+                "-o",
+                "faulthandler_timeout=120",
+            ],
+            source,
+            output=False,
+        )
         run([npm, "run", "test:frontend"], source, output=False)
         run([npm, "exec", "tsc", "--", "--noEmit"], source, output=False)
         run([npm, "run", "lint"], source, output=False)

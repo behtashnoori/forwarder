@@ -50,6 +50,13 @@ def test_builder_uses_platform_native_npm_and_fresh_build_contract():
     assert "npm.cmd" if os.name == "nt" else "npm"
 
 
+def test_builder_backend_qualification_has_progress_and_bounded_stall_diagnostics():
+    source = (ROOT / "scripts/build_release_package.py").read_text(encoding="utf-8")
+    assert '"-vv"' in source
+    assert '"--durations=25"' in source
+    assert '"faulthandler_timeout=120"' in source
+
+
 def test_builder_packages_importer_migrations_baseline_dist_and_secret_verifier():
     source = (ROOT / "scripts/build_release_package.py").read_text(encoding="utf-8")
     for required in (
