@@ -13,7 +13,7 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-RUNTIME_PYTHON = ROOT.parent / ".venv" / "Scripts" / "python.exe"
+RUNTIME_PYTHON = ROOT.parent / "qualification/req12-layout-proof/release-a/runtime/python.exe"
 CANONICAL = "https://samand.forwarderet.ir"
 LEGACY = "https://server.logisticmarket.ir"
 UNKNOWN = "https://example.invalid"
@@ -185,12 +185,13 @@ def test_scheduled_task_release_replacement_covers_every_runtime_identity() -> N
         f"{previous}\\.venv\\Scripts\\python.exe wrapper.py serve --repo {previous}"
     )
     working_directory = previous
-    updated_action = action.replace(previous, target)
+    updated_action = action.replace(f"{previous}\\.venv\\Scripts\\python.exe", f"{target}\\runtime\\python.exe").replace(previous, target)
     updated_working_directory = working_directory.replace(previous, target)
     assert previous not in updated_action + updated_working_directory
     assert updated_action.count(target) == 4
     assert updated_working_directory == target
     assert f"PYTHONPATH={target}" in updated_action
     assert f"cd /d {target}" in updated_action
-    assert f"{target}\\.venv\\Scripts\\python.exe" in updated_action
+    assert f"{target}\\runtime\\python.exe" in updated_action
+    assert ".venv\\Scripts\\python.exe" not in updated_action
     assert f"--repo {target}" in updated_action

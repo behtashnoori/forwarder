@@ -66,3 +66,20 @@ deployment script before rollback begins. ValidateOnly creates no attempt file.
 
 The repair establishes evidence for the next failure; it does not retroactively
 prove an R12 root cause.
+
+## REQ-12 governed runtime closure
+
+The Development-qualified relocatable CPython 3.12.6 AMD64 runtime is frozen as
+`Forwarder-Windows-Runtime-REQ12.zip`. Its manifest inventories every file and
+binds the archive size and SHA-256. Deployment verifies both identities before
+the mutation boundary, expands the runtime into `<target>\runtime`, executes an
+application dependency probe before stopping the existing service, and rewrites
+the Scheduled Task interpreter from `<previous>\.venv\Scripts\python.exe` to
+`<target>\runtime\python.exe`. Listener ownership uses that same immutable
+interpreter identity.
+
+Development qualification includes the 26 fail-closed cases, cumulative release
+tooling tests, real packaged-runtime Waitress GET/OPTIONS/CORS checks, a real
+ephemeral Windows Scheduled Task lifecycle, ten consecutive full deployment
+rehearsals, and ten consecutive rollback rehearsals. Production was neither
+accessed nor modified.

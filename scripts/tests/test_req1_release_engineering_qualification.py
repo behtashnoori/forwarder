@@ -34,7 +34,7 @@ def fixture(root: Path, database_url: str = "postgresql+psycopg2://user:p%40ss%3
     (runtime / "production.env").write_text(env, encoding="utf-8", newline="")
     (runtime / "phase1b_production_cutover_runtime.py").write_text("# fixture", encoding="utf-8")
     values = {
-        "task.txt": str(previous), "iis.txt": str(previous / "dist"), "host.txt": "SRV8756807400",
+        "task.txt": f'{previous}\\.venv\\Scripts\\python.exe wrapper.py serve --repo {previous}', "iis.txt": str(previous / "dist"), "host.txt": "SRV8756807400",
         "admin.txt": "yes", "database.txt": "forwarder_prod_20260728_161711|20260907_direct_shipment_responsibility",
         "task-metadata.txt": "Forwarder Backend Production", "iis-state.txt": "Started", "iis-bindings.txt": "http,https",
         "listener.txt": "127.0.0.1:5101", "current-health.txt": "200", "disk-gb.txt": "10",
@@ -57,6 +57,9 @@ def fixture(root: Path, database_url: str = "postgresql+psycopg2://user:p%40ss%3
     rc = ROOT.parent / "release-candidates/S7-RC-f11f2ab"
     for name in ("Forwarder-S7-RC-f11f2ab.zip", "Forwarder-S7-RC-f11f2ab.zip.manifest.json"):
         shutil.copy2(rc / name, staging / name)
+    runtime_rc = ROOT.parent / "release-candidates"
+    for name in ("Forwarder-Windows-Runtime-REQ12.zip", "Forwarder-Windows-Runtime-REQ12.zip.manifest.json"):
+        shutil.copy2(runtime_rc / name, staging / name)
 
 
 def build(path: Path) -> Path:

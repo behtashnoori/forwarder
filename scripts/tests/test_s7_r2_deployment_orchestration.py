@@ -13,6 +13,7 @@ SCRIPT = ROOT / "scripts" / "deploy" / "deploy_s7_rc_f11f2ab.ps1"
 ARTIFACT_ROOT = ROOT.parent / "release-candidates" / "S7-RC-f11f2ab"
 ARTIFACT = ARTIFACT_ROOT / "Forwarder-S7-RC-f11f2ab.zip"
 SIDECAR = ARTIFACT_ROOT / "Forwarder-S7-RC-f11f2ab.zip.manifest.json"
+RUNTIME_ROOT = ROOT.parent / "release-candidates"
 
 
 def pwsh():
@@ -38,7 +39,7 @@ def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.
     (runtime / "production.env").write_text(original, encoding="utf-8", newline="\r\n" if crlf else None)
     (runtime / "phase1b_production_cutover_runtime.py").write_text("# fixture", encoding="utf-8")
     (runtime / "backend-production.log").write_text("HISTORICAL_FAILURE_MUST_NOT_BE_CAPTURED\n", encoding="utf-8")
-    (root / "task.txt").write_text(str(previous), encoding="utf-8")
+    (root / "task.txt").write_text(f'{previous}\\.venv\\Scripts\\python.exe wrapper.py serve --repo {previous}', encoding="utf-8")
     (root / "iis.txt").write_text(str(previous / "dist"), encoding="utf-8")
     (root / "health.txt").write_text("200", encoding="utf-8")
     (root / "cors.txt").write_text("https://samand.forwarderet.ir", encoding="utf-8")
@@ -66,6 +67,8 @@ def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.
     staging.mkdir()
     shutil.copy2(ARTIFACT, staging / ARTIFACT.name)
     shutil.copy2(SIDECAR, staging / SIDECAR.name)
+    for name in ("Forwarder-Windows-Runtime-REQ12.zip", "Forwarder-Windows-Runtime-REQ12.zip.manifest.json"):
+        shutil.copy2(RUNTIME_ROOT / name, staging / name)
     return original
 
 
@@ -198,7 +201,9 @@ def test_simulated_transaction_stages_switches_and_verifies(tmp_path):
     updated = (tmp_path / "runtime" / "production.env").read_text(encoding="utf-8")
     assert "CORS_ORIGINS=https://samand.forwarderet.ir" in updated
     assert "CORS_ALLOW_ALL_ORIGINS=0" in updated
-    assert (tmp_path / "task.txt").read_text(encoding="utf-8") == str(target)
+    task = (tmp_path / "task.txt").read_text(encoding="utf-8")
+    assert f"{target}\\runtime\\python.exe" in task
+    assert ".venv\\Scripts\\python.exe" not in task
     assert (tmp_path / "iis.txt").read_text(encoding="utf-8") == str(target / "dist")
 
 

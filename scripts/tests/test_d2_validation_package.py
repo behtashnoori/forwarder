@@ -13,9 +13,10 @@ def pwsh(): return shutil.which("powershell")
 def simulation(root):
     previous=root/"production/release-adcc5da-adr043"; (previous/"dist").mkdir(parents=True); (previous/"dist/index.html").write_text("old")
     runtime=root/"runtime"; runtime.mkdir(); (runtime/"production.env").write_text('DATABASE_URL="  postgresql+psycopg2://user:p%40ss%3Aword@127.0.0.1:5432/forwarder_prod_20260728_161711  "\nJWT_SECRET_KEY=redacted\nCORS_ALLOW_ALL_ORIGINS=false\nCORS_ORIGINS=https://server.logisticmarket.ir\nCORS_ORIGIN=https://server.logisticmarket.ir\n',newline="\r\n"); (runtime/"phase1b_production_cutover_runtime.py").write_text("# fixture")
-    (root/"task.txt").write_text(str(previous)); (root/"iis.txt").write_text(str(previous/"dist")); (root/"host.txt").write_text("SRV8756807400"); (root/"admin.txt").write_text("yes"); (root/"database.txt").write_text("forwarder_prod_20260728_161711|20260907_direct_shipment_responsibility")
+    (root/"task.txt").write_text(f'{previous}\\.venv\\Scripts\\python.exe wrapper.py serve --repo {previous}'); (root/"iis.txt").write_text(str(previous/"dist")); (root/"host.txt").write_text("SRV8756807400"); (root/"admin.txt").write_text("yes"); (root/"database.txt").write_text("forwarder_prod_20260728_161711|20260907_direct_shipment_responsibility")
     (root/"task-metadata.txt").write_text("Forwarder Backend Production"); (root/"iis-state.txt").write_text("Started"); (root/"iis-bindings.txt").write_text("http,https"); (root/"listener.txt").write_text("127.0.0.1:5101"); (root/"current-health.txt").write_text("200"); (root/"disk-gb.txt").write_text("10"); (root/"current-cors.txt").write_text("LEGACY_TRANSITION_EXPECTED"); (root/"target-cors.txt").write_text("https://samand.forwarderet.ir"); (root/"unknown-origin.txt").write_text("REJECTED")
     staging=root/"staging"; staging.mkdir(); rc=ROOT.parent/"release-candidates/S7-RC-f11f2ab"; shutil.copy2(rc/"Forwarder-S7-RC-f11f2ab.zip",staging); shutil.copy2(rc/"Forwarder-S7-RC-f11f2ab.zip.manifest.json",staging)
+    runtime_rc=ROOT.parent/"release-candidates"; shutil.copy2(runtime_rc/"Forwarder-Windows-Runtime-REQ12.zip",staging); shutil.copy2(runtime_rc/"Forwarder-Windows-Runtime-REQ12.zip.manifest.json",staging)
 
 @pytest.mark.skipif(not pwsh(),reason="PowerShell unavailable")
 def test_packaged_validate_only_workflow_and_integrity(tmp_path):

@@ -13,7 +13,7 @@ import pytest
 
 
 ROOT = Path(__file__).resolve().parents[2]
-RUNTIME_PYTHON = ROOT.parent / ".venv" / "Scripts" / "python.exe"
+RUNTIME_PYTHON = ROOT.parent / "qualification/req12-layout-proof/release-a/runtime/python.exe"
 WRAPPER = ROOT / "scripts/tests/fixtures/req8_execv_waitress_wrapper.py"
 CANONICAL = "https://samand.forwarderet.ir"
 
@@ -106,7 +106,7 @@ def launch(tmp_path: Path, port: int) -> subprocess.Popen[str]:
 
 
 @pytest.mark.skipif(os.name != "nt" or not RUNTIME_PYTHON.is_file(), reason="Windows candidate runtime required")
-def test_cmd_venv_execv_waitress_escape_and_safe_listener_stop(tmp_path: Path) -> None:
+def test_cmd_packaged_runtime_waitress_identity_and_safe_listener_stop(tmp_path: Path) -> None:
     port = free_port()
     controller = launch(tmp_path, port)
     try:
@@ -117,14 +117,14 @@ def test_cmd_venv_execv_waitress_escape_and_safe_listener_stop(tmp_path: Path) -
         identity_signal = listener.exe()
         listener = governed_listener(port, identity_signal)
         command = " ".join(listener.cmdline())
-        assert str(RUNTIME_PYTHON).lower() not in command.lower()
-        assert listener.exe().lower() != str(RUNTIME_PYTHON).lower()
+        assert str(RUNTIME_PYTHON).lower() in command.lower()
+        assert listener.exe().lower() == str(RUNTIME_PYTHON).lower()
         assert request(port)[0] == 200
         assert request(port, origin=CANONICAL)[1]["access-control-allow-origin"] == CANONICAL
         assert request(port, method="OPTIONS", origin=CANONICAL)[1]["access-control-allow-origin"] == CANONICAL
 
-        # Windows venv launcher + os.execv returns control through cmd.exe; the
-        # task-like controller exits while the base-Python Waitress child lives.
+        # The task-like controller may exit after the wrapper replaces itself;
+        # the listener must retain the immutable packaged interpreter identity.
         controller.wait(timeout=10)
         assert listener.is_running()
         assert len(listeners(port)) == 1

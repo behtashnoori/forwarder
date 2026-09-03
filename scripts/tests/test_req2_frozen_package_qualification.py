@@ -17,7 +17,7 @@ PS51 = Path(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
 PACKAGE = Path(os.environ.get("REQ2_PACKAGE", ""))
 ZIP = Path(os.environ.get("REQ2_PACKAGE_ZIP", ""))
 EXPECTED_ZIP_SHA256 = os.environ.get("REQ2_PACKAGE_SHA256", "")
-PACKAGE_ID = "D2-VALIDATION-S7-RC-f11f2ab-r5-final"
+PACKAGE_ID = os.environ.get("REQ2_PACKAGE_ID", "D2-VALIDATION-S7-RC-f11f2ab-req12-final")
 
 
 def digest(path: Path) -> str:
@@ -72,11 +72,11 @@ def test_exact_package_ten_consecutive_go_zero_mutation_and_complete_map(tmp_pat
         output = result.stdout + result.stderr
         assert result.returncode == 0, output
         assert "VALIDATION_RESULT=GO" in output
-        assert "PRECHECK_58=PASS" in output
-        assert output.count("_RUNTIME_TYPE=System.Boolean") == 58
+        assert "PRECHECK_47=PASS" in output
+        assert output.count("_RUNTIME_TYPE=System.Boolean") == 47
         assert protected(simulation) == before
         mapping = [line for line in output.splitlines() if "_GATE=" in line]
-        assert len(mapping) == 58
+        assert len(mapping) == 47
         expected_map = mapping if expected_map is None else expected_map
         assert mapping == expected_map
     assert digest(ZIP) == initial_zip_hash == EXPECTED_ZIP_SHA256

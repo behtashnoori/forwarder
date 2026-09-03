@@ -11,6 +11,8 @@ param(
     [switch]$ConfirmDeployment,
     [string]$ArtifactPath,
     [string]$ManifestPath,
+    [string]$RuntimeArtifactPath,
+    [string]$RuntimeManifestPath,
     [string]$SimulationRoot,
     [string]$QualificationRoot,
     [string]$BaselinePath,
@@ -26,6 +28,9 @@ $SourceCommit = 'f11f2abfbff396f66f261f11c7f4bdb80b2d2007'
 $ArtifactName = 'Forwarder-S7-RC-f11f2ab.zip'
 $ArtifactHash = 'a7bfac4e250e54e4aca2338783eb4667680781499ad1da2262b949ae9379544d'
 $ManifestHash = '4bff7378c3fbd0ef36dee33ea0bc40bd3e9661c618092c12a5fc1e6d0e12665f'
+$RuntimeArtifactName = 'Forwarder-Windows-Runtime-REQ12.zip'
+$RuntimeArtifactHash = 'f4a8f108aa89a78d7986f01fb8f6aa8af5e2d35e00617a8453eb1f15df945070'
+$RuntimeManifestHash = '5acef98541a1c9f1f0f984be9e673ab192351a30ee585d0ffcd1fc8786e82b34'
 $TargetHead = '20260907_direct_shipment_responsibility'
 $ExpectedHost = 'SRV8756807400'
 $ExpectedDatabase = 'forwarder_prod_20260728_161711'
@@ -154,6 +159,25 @@ function Require-Artifact([string]$Artifact,[string]$Sidecar) {
     Require ($outer.source_commit -eq $SourceCommit) 'manifest source commit mismatch'
     Require ($outer.alembic_head -eq $TargetHead) 'manifest Alembic head mismatch'
     Require ($outer.artifact_sha256 -eq $ArtifactHash -and [int64]$outer.artifact_size -eq (Get-Item -LiteralPath $Artifact).Length) 'sidecar artifact identity mismatch'
+}
+function Require-RuntimeArtifact([string]$Artifact,[string]$Sidecar) {
+    Require (Test-Path -LiteralPath $Artifact -PathType Leaf) 'runtime artifact is absent'
+    Require ((Split-Path -Leaf $Artifact) -eq $RuntimeArtifactName) 'runtime artifact filename mismatch'
+    Require ((Hash $Artifact) -eq $RuntimeArtifactHash) 'runtime artifact SHA-256 mismatch'
+    Require (Test-Path -LiteralPath $Sidecar -PathType Leaf) 'runtime manifest is absent'
+    Require ((Hash $Sidecar) -eq $RuntimeManifestHash) 'runtime manifest SHA-256 mismatch'
+    $runtimeManifest=Get-Content -Raw -LiteralPath $Sidecar|ConvertFrom-Json
+    Require ($runtimeManifest.schema -eq 'forwarder-governed-windows-runtime-v1') 'runtime manifest schema mismatch'
+    Require ($runtimeManifest.artifact_sha256 -eq $RuntimeArtifactHash -and [int64]$runtimeManifest.artifact_bytes -eq (Get-Item -LiteralPath $Artifact).Length) 'runtime manifest artifact identity mismatch'
+}
+function Assert-PackagedRuntime([string]$Release) {
+    $python=Join-Path $Release 'runtime\python.exe'
+    Require (Test-Path -LiteralPath $python -PathType Leaf) 'packaged runtime interpreter is absent'
+    if(-not $SimulationRoot -and -not $QualificationRoot){
+        $probe=& $python -c "import flask,sqlalchemy,waitress,psycopg2;print('RUNTIME_APPLICATION_IDENTITY=PASS')" 2>&1
+        Require ($LASTEXITCODE -eq 0 -and (($probe -join "`n") -match 'RUNTIME_APPLICATION_IDENTITY=PASS')) 'packaged runtime/application identity probe failed'
+    }
+    Write-Output 'PACKAGED_RUNTIME_IDENTITY=PASS'
 }
 function Get-GovernedPostgreSqlUrl([string]$RawUrl) {
     Require (-not [string]::IsNullOrWhiteSpace($RawUrl)) 'DATABASE_URL is absent'
@@ -303,7 +327,11 @@ function Initialize-ScheduledTaskInspection {
 function Get-TaskReference { if($SimulationRoot -or $QualificationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'task.txt')).Trim() }; return ((Export-ScheduledTask -TaskName $TaskName) -replace '\r|\n',' ') }
 function Capture-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy (Get-Sim 'task.txt') $script:TaskBackup; return }; Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $script:TaskBackup -Encoding UTF8 }
 function Restore-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy $script:TaskBackup (Get-Sim 'task.txt'); return }; Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $script:TaskBackup) -Force | Out-Null }
-function Set-TaskReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $Reference -NoNewline; return }; $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($script:PreviousRelease)) 'Scheduled Task does not contain governed previous release'; Register-ScheduledTask -TaskName $TaskName -Xml $xml.Replace($script:PreviousRelease,$Reference) -Force | Out-Null }
+function Set-TaskReference([string]$Reference) {
+    $oldPython=Join-Path $script:PreviousRelease '.venv\Scripts\python.exe'; $newPython=Join-Path $Reference 'runtime\python.exe'
+    if($SimulationRoot -or $QualificationRoot){$taskText=Get-Content -Raw -LiteralPath (Get-Sim 'task.txt');$taskText=$taskText.Replace($oldPython,$newPython).Replace($script:PreviousRelease,$Reference);Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $taskText -NoNewline;return}
+    $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($oldPython)) 'Scheduled Task does not contain governed previous interpreter'; $xml=$xml.Replace($oldPython,$newPython).Replace($script:PreviousRelease,$Reference); Register-ScheduledTask -TaskName $TaskName -Xml $xml -Force|Out-Null
+}
 function Get-GovernedListenerCount {
     if($SimulationRoot -or $QualificationRoot){ return $(if((Get-Content -Raw -LiteralPath (Get-Sim 'listener.txt')).Trim() -eq '127.0.0.1:5101'){1}else{0}) }
     return @((Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)).Count
@@ -311,7 +339,7 @@ function Get-GovernedListenerCount {
 function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbsent) {
     if($SimulationRoot -or $QualificationRoot){
         if((Get-GovernedListenerCount) -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
-        return [pscustomobject]@{ProcessId=5101;ExecutablePath=(Join-Path $ExpectedRelease '.venv\Scripts\python.exe');CommandLine="$(Join-Path $ExpectedRelease '.venv\Scripts\python.exe') -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
+        return [pscustomobject]@{ProcessId=5101;ExecutablePath=(Join-Path $ExpectedRelease 'runtime\python.exe');CommandLine="$(Join-Path $ExpectedRelease 'runtime\python.exe') -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
     }
     $connections=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
     if($connections.Count -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
@@ -321,7 +349,7 @@ function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbse
     if($processes.Count -ne 1){Fail 'backend listener process identity is unavailable'}
     $process=$processes[0]
     $commandLine=[string]$process.CommandLine
-    $expectedPython=Join-Path $ExpectedRelease '.venv\Scripts\python.exe'
+    $expectedPython=Join-Path $ExpectedRelease 'runtime\python.exe'
     if([string]::IsNullOrWhiteSpace($commandLine)){Fail 'backend listener command line is unavailable'}
     if(-not [string]::Equals((Split-Path -Leaf ([string]$process.ExecutablePath)),'python.exe',[StringComparison]::OrdinalIgnoreCase)){Fail 'backend listener executable is not Python'}
     if($commandLine.IndexOf($expectedPython,[StringComparison]::OrdinalIgnoreCase) -lt 0){Fail 'backend listener does not belong to expected release Python'}
@@ -419,7 +447,7 @@ try {
     Require (-not ($ValidateOnly -and $Execute)) 'choose only one execution mode'
     if(-not $ValidateOnly -and -not $Execute){ $ValidateOnly=$true }
     if($Execute){ Require ($ConfirmDeployment.IsPresent -eq $true) '-Execute requires -ConfirmDeployment' }
-    if($SimulationRoot -or $QualificationRoot){ $fixtureRoot=if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}; Require (Test-Path -LiteralPath $fixtureRoot -PathType Container) 'fixture root is absent'; $script:ProductionRoot=Join-Path $fixtureRoot 'production'; $script:RuntimeRoot=Join-Path $fixtureRoot 'runtime'; $script:StagingRoot=Join-Path $fixtureRoot 'staging'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env'; $ArtifactPath=Join-Path $script:StagingRoot $ArtifactName; $ManifestPath="$ArtifactPath.manifest.json" }
+    if($SimulationRoot -or $QualificationRoot){ $fixtureRoot=if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}; Require (Test-Path -LiteralPath $fixtureRoot -PathType Container) 'fixture root is absent'; $script:ProductionRoot=Join-Path $fixtureRoot 'production'; $script:RuntimeRoot=Join-Path $fixtureRoot 'runtime'; $script:StagingRoot=Join-Path $fixtureRoot 'staging'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env'; $ArtifactPath=Join-Path $script:StagingRoot $ArtifactName; $ManifestPath="$ArtifactPath.manifest.json"; if(-not $RuntimeArtifactPath){$RuntimeArtifactPath=Join-Path $script:StagingRoot $RuntimeArtifactName}; if(-not $RuntimeManifestPath){$RuntimeManifestPath="$RuntimeArtifactPath.manifest.json"} }
     else { Require ([Environment]::MachineName -eq $ExpectedHost) 'wrong host'; Require (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) 'Administrator is required'; $script:ProductionRoot='C:\1-webapp\forwarder-production'; $script:RuntimeRoot='C:\1-webapp\forwarder-runtime'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env' }
     if(-not $BaselinePath){$BaselinePath=Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'expected-production-baseline.json'}
     if(-not (Test-Path -LiteralPath $BaselinePath -PathType Leaf)){Fail 'expected Production baseline is absent'}
@@ -428,6 +456,8 @@ try {
     if(-not ($baseline.alembic_head -is [string]) -or [string]::IsNullOrWhiteSpace($baseline.alembic_head)){Fail 'baseline Alembic must be one scalar string'}
     $script:ExpectedDatabase=$baseline.database; $script:ExpectedAlembic=$baseline.alembic_head
     Require-Artifact $ArtifactPath $ManifestPath
+    if(-not $RuntimeArtifactPath){$RuntimeArtifactPath=Join-Path (Split-Path -Parent $ArtifactPath) $RuntimeArtifactName}; if(-not $RuntimeManifestPath){$RuntimeManifestPath="$RuntimeArtifactPath.manifest.json"}
+    Require-RuntimeArtifact $RuntimeArtifactPath $RuntimeManifestPath
     if($SimulationRoot -or $QualificationRoot){ Require ((Get-Content -Raw -LiteralPath (Get-Sim 'host.txt')).Trim() -eq $ExpectedHost) 'wrong host'; Require ((Get-Content -Raw -LiteralPath (Get-Sim 'admin.txt')).Trim() -eq 'yes') 'Administrator is required' }
     Require (Test-Path -LiteralPath $script:PreviousRelease -PathType Container) 'current release is absent'
     Require (Test-Path -LiteralPath $script:ProductionEnv -PathType Leaf) 'production.env is absent'
@@ -466,7 +496,7 @@ try {
     $script:PreviousEnvHash=Hash $script:ProductionEnv; $script:EnvBackup=Join-Path $script:RuntimeRoot ("production.env.$CandidateId.rollback"); $script:TaskBackup=Join-Path $script:RuntimeRoot ("$TaskName.$CandidateId.rollback.xml")
     Set-State 'STAGED_VERIFIED'
     if($ValidateOnly){
-        $expectedBase=if($QualificationRoot){59}elseif($SimulationRoot){39}else{50}
+        $expectedBase=if($QualificationRoot){66}elseif($SimulationRoot){46}else{57}
         $expectedPrecheckCount=$expectedBase+$(if($hasSingularCors){1}else{0})
         Write-Output "PRECHECK_CONDITIONAL_CORS_ORIGIN=$(if($hasSingularCors){'EXECUTED'}else{'NOT_APPLICABLE'})"
         Write-Output "EXPECTED_PRECHECK_COUNT=$expectedPrecheckCount"
@@ -478,12 +508,16 @@ try {
     Write-Output 'MUTATION_BOUNDARY_REACHED'
     $script:Mutated=$true; Set-State 'ROLLBACK_STATE_CAPTURED'; Atomic-Copy $script:ProductionEnv $script:EnvBackup; Capture-TaskState
     Set-State 'STAGED'; if($SimulateStagingFailure){ Fail 'forced simulated staging failure' }; $script:TargetReleaseOwned=$true; Expand-Archive -LiteralPath $ArtifactPath -DestinationPath $script:TargetRelease -ErrorAction Stop
+    Expand-Archive -LiteralPath $RuntimeArtifactPath -DestinationPath (Join-Path $script:TargetRelease 'runtime') -ErrorAction Stop
     Verify-Release $script:TargetRelease
+    Assert-PackagedRuntime $script:TargetRelease
     Set-State 'CONFIG_PREPARED'; Write-Governed-Env $script:ProductionEnv; Validate-Env $script:ProductionEnv
     Set-State 'SWITCHING'; Stop-GovernedBackend $script:PreviousRelease; Set-TaskReference $script:TargetRelease; Set-IisReference (Join-Path $script:TargetRelease 'dist')
     $updatedTaskReference=Get-TaskReference
     Require ($updatedTaskReference -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target reference was not installed'
     Require (-not ($updatedTaskReference -match [regex]::Escape($script:PreviousRelease))) 'Scheduled Task retains previous release reference'
+    Require ($updatedTaskReference -match [regex]::Escape((Join-Path $script:TargetRelease 'runtime\python.exe'))) 'Scheduled Task does not reference packaged runtime'
+    Require ($updatedTaskReference -notmatch '(?i)\\.venv\\Scripts\\python\.exe') 'Scheduled Task retains release-local venv reference'
     Set-State 'STARTING'; Start-GovernedBackend $script:TargetRelease
     Set-State 'VERIFYING'; Verify-Release $script:TargetRelease -Runtime
     Require ((Get-TaskReference) -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target verification failed'; Assert-IisReference (Join-Path $script:TargetRelease 'dist') 'IIS target verification failed'

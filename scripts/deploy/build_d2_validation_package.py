@@ -5,10 +5,12 @@ import hashlib, json, shutil, sys, zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-PACKAGE_ID="D2-VALIDATION-S7-RC-f11f2ab-release-closure-final"
+PACKAGE_ID="D2-VALIDATION-S7-RC-f11f2ab-req12-final"
 SOURCE_COMMIT="f11f2abfbff396f66f261f11c7f4bdb80b2d2007"
 ARTIFACT_HASH="a7bfac4e250e54e4aca2338783eb4667680781499ad1da2262b949ae9379544d"
 SIDECAR_HASH="4bff7378c3fbd0ef36dee33ea0bc40bd3e9661c618092c12a5fc1e6d0e12665f"
+RUNTIME_HASH="f4a8f108aa89a78d7986f01fb8f6aa8af5e2d35e00617a8453eb1f15df945070"
+RUNTIME_MANIFEST_HASH="5acef98541a1c9f1f0f984be9e673ab192351a30ee585d0ffcd1fc8786e82b34"
 ROOT=Path(__file__).resolve().parents[2]
 RC=ROOT.parent/"release-candidates"/"S7-RC-f11f2ab"
 
@@ -22,8 +24,10 @@ def main(output: Path, package_id: str = PACKAGE_ID) -> int:
     if output.exists(): raise RuntimeError("refusing to overwrite D2 package output")
     artifact=RC/"Forwarder-S7-RC-f11f2ab.zip"; sidecar=RC/(artifact.name+".manifest.json")
     if sha(artifact)!=ARTIFACT_HASH or sha(sidecar)!=SIDECAR_HASH: raise RuntimeError("frozen RC identity mismatch")
+    runtime=ROOT.parent/"release-candidates"/"Forwarder-Windows-Runtime-REQ12.zip"; runtime_sidecar=runtime.with_suffix(runtime.suffix+".manifest.json")
+    if sha(runtime)!=RUNTIME_HASH or sha(runtime_sidecar)!=RUNTIME_MANIFEST_HASH: raise RuntimeError("frozen runtime identity mismatch")
     output.mkdir(parents=True)
-    for source,name in ((artifact,artifact.name),(sidecar,sidecar.name),(ROOT/"scripts/deploy/deploy_s7_rc_f11f2ab.ps1","deploy_s7_rc_f11f2ab.ps1"),(ROOT/"scripts/deploy/validate_forwarder_s7_rc_f11f2ab.ps1","validate_forwarder_s7_rc_f11f2ab.ps1")):
+    for source,name in ((artifact,artifact.name),(sidecar,sidecar.name),(runtime,runtime.name),(runtime_sidecar,runtime_sidecar.name),(ROOT/"scripts/deploy/deploy_s7_rc_f11f2ab.ps1","deploy_s7_rc_f11f2ab.ps1"),(ROOT/"scripts/deploy/validate_forwarder_s7_rc_f11f2ab.ps1","validate_forwarder_s7_rc_f11f2ab.ps1")):
         shutil.copy2(source,output/name)
     wrapper=output/"validate_forwarder_s7_rc_f11f2ab.ps1"
     if package_id != PACKAGE_ID:
