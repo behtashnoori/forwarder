@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([string]$SimulationRoot,[string]$QualificationRoot,[string]$PsqlPath,[string]$ExpectedPackageId='D2-VALIDATION-S7-RC-f11f2ab-r6-final')
+param([string]$SimulationRoot,[string]$PsqlPath,[string]$ExpectedPackageId='D2-VALIDATION-S7-RC-f11f2ab-r7-final')
 
 $ErrorActionPreference='Stop'
 $Root=Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -28,7 +28,6 @@ try {
     if($resolvedEntry -ne [IO.Path]::GetFullPath((Join-Path $Root 'deploy_s7_rc_f11f2ab.ps1'))){NoGo 'deployment script resolved outside the package'}
     $childArguments=@('-NoProfile','-ExecutionPolicy','Bypass','-File',$resolvedEntry,'-ValidateOnly','-ArtifactPath',$artifact,'-ManifestPath',$sidecar)
     if($SimulationRoot){$childArguments+=@('-SimulationRoot',$SimulationRoot)}
-    if($QualificationRoot){$childArguments+=@('-QualificationRoot',$QualificationRoot)}
     if($PsqlPath){$childArguments+=@('-PsqlPath',$PsqlPath)}
     $childArguments+=@('-BaselinePath',(Join-Path $Root 'expected-production-baseline.json'))
     $savedErrorActionPreference=$ErrorActionPreference

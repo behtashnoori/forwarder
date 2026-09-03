@@ -49,7 +49,7 @@ def run(package: Path, root: Path, lines: list[str], *, exit_code: int = 0,
         # Tests that mutate package content invoke the deploy entrypoint directly.
     env = dict(**__import__("os").environ)
     env.update(FORWARDER_PSQL_STDOUT=str(stdout), FORWARDER_PSQL_STDERR=str(stderr_path),
-               FORWARDER_PSQL_EXIT=str(exit_code))
+               FORWARDER_PSQL_EXIT=str(exit_code), FORWARDER_REQ4A_HARNESS="REQ-4A-CONTROLLED-HARNESS")
     command = [str(PS51), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
                str(package / "deploy_s7_rc_f11f2ab.ps1"), "-ValidateOnly",
                "-QualificationRoot", str(root), "-PsqlPath", str(psql),

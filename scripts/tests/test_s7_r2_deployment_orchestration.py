@@ -2,6 +2,7 @@
 
 import shutil
 import subprocess
+import json
 from pathlib import Path
 
 import pytest
@@ -56,6 +57,10 @@ def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.
         "forwarder_prod_20260728_161711|20260907_direct_shipment_responsibility",
         encoding="utf-8",
     )
+    (root / "expected-production-baseline.json").write_text(json.dumps({
+        "database": "forwarder_prod_20260728_161711",
+        "alembic_head": "20260907_direct_shipment_responsibility",
+    }), encoding="utf-8")
     staging = root / "staging"
     staging.mkdir()
     shutil.copy2(ARTIFACT, staging / ARTIFACT.name)
@@ -65,7 +70,8 @@ def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.
 
 def run(root: Path, *args: str):
     return subprocess.run(
-        [pwsh(), "-NoProfile", "-File", str(SCRIPT), "-SimulationRoot", str(root), *args],
+        [pwsh(), "-NoProfile", "-File", str(SCRIPT), "-SimulationRoot", str(root),
+         "-BaselinePath", str(root / "expected-production-baseline.json"), *args],
         text=True,
         capture_output=True,
         check=False,

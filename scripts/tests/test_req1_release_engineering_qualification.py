@@ -44,6 +44,13 @@ def fixture(root: Path, database_url: str = "postgresql+psycopg2://user:p%40ss%3
     }
     for name, value in values.items():
         (root / name).write_text(value, encoding="utf-8")
+    (root / "iis-contract.json").write_text(json.dumps({
+        "schema": "forwarder-req4a-iis-contract-v1", "module_available": "YES",
+        "import_result": "PASS", "provider_available": "YES", "drive_available": "YES",
+        "site_available": "YES", "physical_path_read": "PASS", "binding_read": "PASS",
+        "result_shape": "VALID", "scheduled_tasks_available": "YES",
+        "scheduled_task_available": "YES",
+    }), encoding="utf-8")
     staging = root / "staging"
     staging.mkdir()
     rc = ROOT.parent / "release-candidates/S7-RC-f11f2ab"

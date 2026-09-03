@@ -5,7 +5,7 @@ import hashlib, json, shutil, sys, zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-PACKAGE_ID="D2-VALIDATION-S7-RC-f11f2ab-r6-final"
+PACKAGE_ID="D2-VALIDATION-S7-RC-f11f2ab-r7-final"
 SOURCE_COMMIT="f11f2abfbff396f66f261f11c7f4bdb80b2d2007"
 ARTIFACT_HASH="a7bfac4e250e54e4aca2338783eb4667680781499ad1da2262b949ae9379544d"
 SIDECAR_HASH="4bff7378c3fbd0ef36dee33ea0bc40bd3e9661c618092c12a5fc1e6d0e12665f"
@@ -44,5 +44,7 @@ def main(output: Path, package_id: str = PACKAGE_ID) -> int:
     print(json.dumps({"package":str(output),"outer_artifact":str(outer),"outer_size":outer.stat().st_size,"outer_sha256":sha(outer)},sort_keys=True))
     return 0
 if __name__=="__main__":
-    try: raise SystemExit(main(Path(sys.argv[1]),sys.argv[3] if len(sys.argv)>3 else PACKAGE_ID))
+    try:
+        output=Path(sys.argv[1])
+        raise SystemExit(main(output,sys.argv[3] if len(sys.argv)>3 else output.name))
     except (IndexError,RuntimeError) as e: print(str(e),file=sys.stderr); raise SystemExit(1)

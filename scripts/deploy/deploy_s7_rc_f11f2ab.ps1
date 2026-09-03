@@ -38,6 +38,8 @@ $script:PrecheckCount = 0
 $script:Evidence = [ordered]@{ candidate_id=$CandidateId; source_commit=$SourceCommit; states=@(); outcome=$null }
 $script:ExpectedDatabase = $ExpectedDatabase
 $script:ExpectedAlembic = $TargetHead
+$script:PassedPrecheckCount = 0
+$script:IisInspectionReady = $false
 
 function Set-State([string]$Value) { $script:State=$Value; $script:Evidence.states += $Value; Write-Output "STATE=$Value" }
 function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
@@ -50,6 +52,7 @@ function Require([object]$Condition,[string]$Message) {
     Write-Host "$label`_RUNTIME_TYPE=$runtimeType"
     if($runtimeType -ne 'System.Boolean'){ Fail "TOOLING_DEFECT: Boolean gate '$Message' produced $runtimeType" }
     if(-not $Condition){ Write-Host "$label=FAIL"; Write-Host "GATE=$Message"; Write-Host 'RESULT=FAIL'; Fail $Message }
+    $script:PassedPrecheckCount++
     Write-Host "$label=PASS"
 }
 function Hash([string]$Path) { $stream=[IO.File]::OpenRead($Path);$sha=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$stream.Dispose();$sha.Dispose()} }
@@ -61,7 +64,7 @@ function Env-Map([string]$Path) {
         if($normalizedLine -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$'){
             $key=$Matches[1]; $value=$Matches[2].Trim()
             if($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))){$value=$value.Substring(1,$value.Length-2).Trim()}
-            Require (-not $map.Contains($key)) "duplicate configuration key: $key"
+            if($map.Contains($key)){ Fail "duplicate configuration key: $key" }
             $map[$key]=$value
         }
     }
@@ -125,6 +128,7 @@ function Assert-DatabaseIdentity {
     }
     $uri=$connection.Uri
     $userInfo=$uri.UserInfo.Split(':',2); Require (-not [string]::IsNullOrWhiteSpace($userInfo[0])) 'database user is absent'
+    Require (Test-Path -LiteralPath $PsqlPath -PathType Leaf) 'psql executable unavailable'
     $oldPassword=$env:PGPASSWORD
     try {
         if($userInfo.Count -gt 1){ $env:PGPASSWORD=[uri]::UnescapeDataString($userInfo[1]) }
@@ -142,11 +146,66 @@ function Assert-DatabaseIdentity {
     } finally { $env:PGPASSWORD=$oldPassword }
 }
 function Get-Sim([string]$Name) { Join-Path $(if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}) $Name }
+function Initialize-IisInspection {
+    if($SimulationRoot){ Write-Output 'IIS_INSPECTION_MODE=SIMULATED'; return }
+    if($QualificationRoot){
+        Require ($env:FORWARDER_REQ4A_HARNESS -eq 'REQ-4A-CONTROLLED-HARNESS') 'controlled harness authorization is absent'
+        $contractPath=Join-Path $QualificationRoot 'iis-contract.json'
+        Require (Test-Path -LiteralPath $contractPath -PathType Leaf) 'controlled IIS contract is absent'
+        $contract=Get-Content -Raw -LiteralPath $contractPath|ConvertFrom-Json
+        Require ($contract.schema -eq 'forwarder-req4a-iis-contract-v1') 'controlled IIS contract schema mismatch'
+        Write-Output "WEBADMINISTRATION_MODULE_AVAILABLE=$($contract.module_available)"
+        Require ($contract.module_available -eq 'YES') 'required IIS PowerShell module unavailable'
+        Write-Output "WEBADMINISTRATION_IMPORT_RESULT=$($contract.import_result)"
+        Require ($contract.import_result -eq 'PASS') 'IIS PowerShell module import failed'
+        Write-Output "IIS_PROVIDER_AVAILABLE=$($contract.provider_available)"
+        Require ($contract.provider_available -eq 'YES') 'IIS PowerShell provider unavailable'
+        Write-Output "IIS_DRIVE_AVAILABLE=$($contract.drive_available)"
+        Require ($contract.drive_available -eq 'YES') 'IIS PowerShell drive unavailable'
+        Write-Output "IIS_TARGET_SITE_AVAILABLE=$($contract.site_available)"
+        Require ($contract.site_available -eq 'YES') 'governed IIS site unavailable'
+        Require ($contract.physical_path_read -eq 'PASS') 'IIS physical path unreadable'
+        Require ($contract.binding_read -eq 'PASS') 'IIS bindings unreadable'
+        Require ($contract.result_shape -eq 'VALID') 'malformed IIS inspection result'
+        $script:IisInspectionReady=$true
+        Write-Output 'HARNESS_IIS_CONTRACT_PATH=PASS'
+        return
+    }
+    $available=@(Get-Module -ListAvailable -Name WebAdministration)
+    Write-Output "WEBADMINISTRATION_MODULE_AVAILABLE=$(if($available.Count -gt 0){'YES'}else{'NO'})"
+    Require ($available.Count -gt 0) 'required IIS PowerShell module unavailable'
+    try { Import-Module WebAdministration -ErrorAction Stop } catch { Fail 'IIS PowerShell module import failed' }
+    Write-Output 'WEBADMINISTRATION_IMPORT_RESULT=PASS'
+    $provider=@(Get-PSProvider -PSProvider WebAdministration -ErrorAction SilentlyContinue)
+    Write-Output "IIS_PROVIDER_AVAILABLE=$(if($provider.Count -gt 0){'YES'}else{'NO'})"
+    Require ($provider.Count -gt 0) 'IIS PowerShell provider unavailable'
+    $drive=@(Get-PSDrive -Name IIS -PSProvider WebAdministration -ErrorAction SilentlyContinue)
+    Write-Output "IIS_DRIVE_AVAILABLE=$(if($drive.Count -gt 0){'YES'}else{'NO'})"
+    Require ($drive.Count -gt 0) 'IIS PowerShell drive unavailable'
+    Require (Test-Path -LiteralPath 'IIS:\Sites\forwarder' -PathType Container) 'governed IIS site unavailable'
+    $script:IisInspectionReady=$true
+}
+function Initialize-ScheduledTaskInspection {
+    if($SimulationRoot){ Write-Output 'SCHEDULED_TASK_INSPECTION_MODE=SIMULATED'; return }
+    if($QualificationRoot){
+        $contract=Get-Content -Raw -LiteralPath (Join-Path $QualificationRoot 'iis-contract.json')|ConvertFrom-Json
+        Require ($contract.scheduled_tasks_available -eq 'YES') 'ScheduledTasks module unavailable'
+        Require ($contract.scheduled_task_available -eq 'YES') 'governed Scheduled Task unavailable'
+        Write-Output 'SCHEDULED_TASK_CONTRACT=PASS'
+        return
+    }
+    $available=@(Get-Module -ListAvailable -Name ScheduledTasks)
+    Require ($available.Count -gt 0) 'ScheduledTasks module unavailable'
+    try { Import-Module ScheduledTasks -ErrorAction Stop } catch { Fail 'ScheduledTasks module import failed' }
+    try { $task=Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop } catch { Fail 'governed Scheduled Task unavailable' }
+    Require ($null -ne $task) 'governed Scheduled Task unavailable'
+    Write-Output 'SCHEDULED_TASK_CONTRACT=PASS'
+}
 function Get-TaskReference { if($SimulationRoot -or $QualificationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'task.txt')).Trim() }; return ((Export-ScheduledTask -TaskName $TaskName) -replace '\r|\n',' ') }
 function Capture-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy (Get-Sim 'task.txt') $script:TaskBackup; return }; Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $script:TaskBackup -Encoding UTF8 }
 function Restore-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy $script:TaskBackup (Get-Sim 'task.txt'); return }; Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $script:TaskBackup) -Force | Out-Null }
 function Set-TaskReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $Reference -NoNewline; return }; $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($script:PreviousRelease)) 'Scheduled Task does not contain governed previous release'; Register-ScheduledTask -TaskName $TaskName -Xml $xml.Replace($script:PreviousRelease,$Reference) -Force | Out-Null }
-function Get-IisReference { if($SimulationRoot -or $QualificationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'iis.txt')).Trim() }; return (Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath).physicalPath }
+function Get-IisReference { if($SimulationRoot -or $QualificationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'iis.txt')).Trim() }; Require $script:IisInspectionReady 'IIS inspection prerequisites were not initialized'; try { return (Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -ErrorAction Stop).physicalPath } catch { Fail 'IIS physical path unreadable' } }
 function Set-IisReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'iis.txt') -Value $Reference -NoNewline; return }; Set-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -Value $Reference }
 function Verify-Release([string]$Release,[switch]$Runtime) {
     Require (Test-Path -LiteralPath (Join-Path $Release 'dist\index.html') -PathType Leaf) 'release frontend structure missing'
@@ -205,6 +264,8 @@ try {
     Require (Test-Path -LiteralPath (Join-Path $script:RuntimeRoot 'phase1b_production_cutover_runtime.py') -PathType Leaf) 'runtime wrapper is absent'
     Assert-DatabaseIdentity
     Assert-TargetConfigCanBePrepared
+    Initialize-ScheduledTaskInspection
+    Initialize-IisInspection
     Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'Scheduled Task does not reference governed previous release'
     Require ((Get-IisReference) -eq (Join-Path $script:PreviousRelease 'dist')) 'IIS does not reference governed previous release dist'
     Require (-not (Test-Path -LiteralPath $script:TargetRelease)) 'target release already exists; refusing reuse'
@@ -223,14 +284,14 @@ try {
         Write-Output 'TARGET_CONFIGURATION_VALID=YES'
     } else {
         $task=Get-ScheduledTask -TaskName $TaskName; Require ($null -ne $task) 'Scheduled Task is absent'
-        $site=Get-Website -Name 'forwarder'; Require ($site.State -eq 'Started') 'IIS site is not Started'
-        $bindings=Get-WebBinding -Name 'forwarder'; Require (@($bindings|Where-Object {$_.bindingInformation -eq '*:80:samand.forwarderet.ir'}).Count -eq 1) 'canonical HTTP binding is absent'; Require (@($bindings|Where-Object {$_.bindingInformation -eq '*:443:samand.forwarderet.ir'}).Count -eq 1) 'canonical HTTPS binding is absent'
+        try { $site=Get-Website -Name 'forwarder' -ErrorAction Stop } catch { Fail 'IIS site inspection failed' }; Require ($site.State -eq 'Started') 'IIS site is not Started'
+        try { $bindings=Get-WebBinding -Name 'forwarder' -ErrorAction Stop } catch { Fail 'IIS binding inspection failed' }; Require (@($bindings|Where-Object {$_.bindingInformation -eq '*:80:samand.forwarderet.ir'}).Count -eq 1) 'canonical HTTP binding is absent'; Require (@($bindings|Where-Object {$_.bindingInformation -eq '*:443:samand.forwarderet.ir'}).Count -eq 1) 'canonical HTTPS binding is absent'
         Require ((Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:5101/api/health').StatusCode -eq 200) 'current backend health failed'
         Require (((Get-PSDrive -Name C).Free/1GB) -ge 5) 'insufficient disk capacity'
     }
     $script:PreviousEnvHash=Hash $script:ProductionEnv; $script:EnvBackup=Join-Path $script:RuntimeRoot ("production.env.$CandidateId.rollback"); $script:TaskBackup=Join-Path $script:RuntimeRoot ("$TaskName.$CandidateId.rollback.xml")
     Set-State 'STAGED_VERIFIED'
-    if($ValidateOnly){ Set-State 'ABORTED_BEFORE_MUTATION'; $script:Evidence.outcome='ABORTED_BEFORE_MUTATION'; $script:Evidence|ConvertTo-Json -Depth 4; exit 0 }
+    if($ValidateOnly){ if($script:PrecheckCount -ne $script:PassedPrecheckCount){Fail 'precheck manifest incomplete'}; Write-Output "EXPECTED_PRECHECK_COUNT=$($script:PrecheckCount)"; Write-Output "EXECUTED_PRECHECK_COUNT=$($script:PrecheckCount)"; Write-Output "PASSED_PRECHECK_COUNT=$($script:PassedPrecheckCount)"; Write-Output 'PRECHECK_MANIFEST=PASS'; Set-State 'ABORTED_BEFORE_MUTATION'; $script:Evidence.outcome='ABORTED_BEFORE_MUTATION'; $script:Evidence|ConvertTo-Json -Depth 4; exit 0 }
     Write-Output 'MUTATION_BOUNDARY_REACHED'
     $script:Mutated=$true; Set-State 'ROLLBACK_STATE_CAPTURED'; Atomic-Copy $script:ProductionEnv $script:EnvBackup; Capture-TaskState
     Set-State 'STAGED'; if($SimulateStagingFailure){ Fail 'forced simulated staging failure' }; Expand-Archive -LiteralPath $ArtifactPath -DestinationPath $script:TargetRelease -ErrorAction Stop
