@@ -19,7 +19,7 @@ Exact local reproduction is impossible without changing the Development
 topology: NARGES is not the governed host, the session is not elevated, IIS and
 WebAdministration are absent, and the Production filesystem and Scheduled Task
 do not exist. Installing or fabricating that topology was rejected. A controlled
-harness proves the tooling contract; only R7 read-only Production ValidateOnly
+harness proves the tooling contract; only R8 read-only Production ValidateOnly
 can prove real IIS integration.
 
 ## Root cause and REQ-3 escape
@@ -37,11 +37,13 @@ SimulationRoot and QualificationRoot substituted `iis.txt`, bypassing the real
 IIS branch. The tests therefore qualified the DB parser but neither clean-shell
 IIS initialization nor the complete Production dependency path.
 
-R7 removes per-line ordinal inflation for duplicate-key detection and emits the
+R8 removes per-line ordinal inflation for duplicate-key detection and emits the
 expected, executed, and passed totals at the successful end of ValidateOnly.
-Conditional CORS validation remains visible as its own gate. GO is emitted only
-when every executed expected gate passed and the final manifest marker is
-present.
+The expected total is independently selected from a fixed branch registry:
+normal operator mode 49, SimulationRoot 39, and controlled QualificationRoot
+59, plus the explicitly classified optional singular-CORS gate. The qualified
+harness therefore requires exactly 60/60/60. GO is emitted only when expected,
+executed, and passed are equal and the final manifest marker is present.
 
 ## Clean-process and IIS contract
 
@@ -101,19 +103,33 @@ Source qualification covers the eight IIS state failures, positive contract
 path, clean child processes, normal-mode fail-closed behavior on NARGES,
 database/Alembic regression, external dependency failures, ValidateOnly zero
 mutation, simulated deployment, post-deployment verification, and exact
-rollback. Final exact-package values are recorded below after the one-time R7
-build.
+rollback. R7 was built during qualification, rejected because its expected gate
+count was not independent of runtime execution, and marked `.DISCARDED` without
+being overwritten or authorized. The corrected R8 package was then built once.
 
 - Windows PowerShell: `5.1.26100.9278`
 - real IIS provider: not available on NARGES
 - Production access/change/deployment: none
-- R7 package: pending immutable build
+- source tests: 55/55 PASS
+- exact frozen-package tests: 45/45 PASS
+- governed failure injection: 42/42
+- fresh Windows PowerShell processes: 10/10
+- expected/executed/passed prechecks: 60/60/60
+- unhandled tooling exceptions: 0
+- ValidateOnly active mutation count: 0
+- simulated deployment/post-verification/rollback: PASS/PASS/PASS
+- package: `D2-VALIDATION-S7-RC-f11f2ab-r8-final`
+- package size: 1,282,910 bytes
+- package SHA-256: `b0e95e22179f1e262f23b0834f57a8394c97770c247c5d14700f0c2cf5608a50`
+- package manifest SHA-256: `b1f59cea252a5cecdd0165de61e0f839930adfbf8512277421c5e8fec5fc8657`
+- release-tooling provenance: `2d062671c089bec27e2af25f6df61b50a12dafd4`
+- package rebuilt after qualification: no
 
 ## Residual risk and release state
 
 The controlled harness proves release-tooling sequencing and failure handling,
 not real IIS integration. The only authorized next Production operation is
-exact-byte verification, staging extraction, and read-only R7 ValidateOnly.
+exact-byte verification, staging extraction, and read-only R8 ValidateOnly.
 Deployment remains forbidden until that run returns `VALIDATION_RESULT=GO`.
 
 `FINAL_RELEASE_STATE=READY_FOR_PRODUCTION_VALIDATEONLY_ONLY`
