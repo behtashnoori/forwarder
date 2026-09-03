@@ -36,9 +36,14 @@ $script:Evidence = [ordered]@{ candidate_id=$CandidateId; source_commit=$SourceC
 
 function Set-State([string]$Value) { $script:State=$Value; $script:Evidence.states += $Value; Write-Output "STATE=$Value" }
 function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
-function Require([bool]$Condition,[string]$Message) {
+function Require([object]$Condition,[string]$Message) {
     $script:PrecheckCount++
     $label='PRECHECK_{0:D2}' -f $script:PrecheckCount
+    $runtimeType=if($null -eq $Condition){'<null>'}else{$Condition.GetType().FullName}
+    $caller=(Get-PSCallStack)[1]
+    Write-Host "$label`_GATE=$($caller.FunctionName):$($caller.ScriptLineNumber):$Message"
+    Write-Host "$label`_RUNTIME_TYPE=$runtimeType"
+    if($runtimeType -ne 'System.Boolean'){ Fail "TOOLING_DEFECT: Boolean gate '$Message' produced $runtimeType" }
     if(-not $Condition){ Write-Host "$label=FAIL"; Write-Host "GATE=$Message"; Write-Host 'RESULT=FAIL'; Fail $Message }
     Write-Host "$label=PASS"
 }
@@ -89,7 +94,7 @@ function Require-Artifact([string]$Artifact,[string]$Sidecar) {
 function Get-GovernedPostgreSqlUrl([string]$RawUrl) {
     Require (-not [string]::IsNullOrWhiteSpace($RawUrl)) 'DATABASE_URL is absent'
     $match=[regex]::Match($RawUrl,'^(?<engine>postgresql)(?:\+(?<driver>psycopg2))?://',[Text.RegularExpressions.RegexOptions]::IgnoreCase)
-    Require $match.Success 'DATABASE_URL is not a supported PostgreSQL URL'
+    Require ($match.Success) 'DATABASE_URL is not a supported PostgreSQL URL'
     $normalized=[regex]::Replace($RawUrl,'^postgresql\+psycopg2://','postgresql://',[Text.RegularExpressions.RegexOptions]::IgnoreCase)
     try { $uri=[uri]$normalized } catch { Fail 'DATABASE_URL is malformed' }
     Require (-not [string]::IsNullOrWhiteSpace($uri.Host)) 'DATABASE_URL is malformed'
@@ -107,7 +112,7 @@ function Assert-DatabaseIdentity {
         return
     }
     $uri=$connection.Uri
-    $userInfo=$uri.UserInfo.Split(':',2); Require ($userInfo[0]) 'database user is absent'
+    $userInfo=$uri.UserInfo.Split(':',2); Require (-not [string]::IsNullOrWhiteSpace($userInfo[0])) 'database user is absent'
     $oldPassword=$env:PGPASSWORD
     try {
         if($userInfo.Count -gt 1){ $env:PGPASSWORD=[uri]::UnescapeDataString($userInfo[1]) }
@@ -152,6 +157,7 @@ function Rollback {
         Atomic-Copy $script:EnvBackup $script:ProductionEnv
         Restore-TaskState
         Set-IisReference (Join-Path $script:PreviousRelease 'dist')
+        if(Test-Path -LiteralPath $script:TargetRelease){ Remove-Item -LiteralPath $script:TargetRelease -Recurse -Force }
         Require ((Hash $script:ProductionEnv) -eq $script:PreviousEnvHash) 'rollback configuration hash mismatch'
         Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'rollback task reference mismatch'
         Require ((Get-IisReference) -eq (Join-Path $script:PreviousRelease 'dist')) 'rollback IIS path mismatch'
@@ -162,7 +168,7 @@ function Rollback {
 try {
     Require (-not ($ValidateOnly -and $Execute)) 'choose only one execution mode'
     if(-not $ValidateOnly -and -not $Execute){ $ValidateOnly=$true }
-    if($Execute){ Require $ConfirmDeployment '-Execute requires -ConfirmDeployment' }
+    if($Execute){ Require ($ConfirmDeployment.IsPresent -eq $true) '-Execute requires -ConfirmDeployment' }
     if($SimulationRoot){ Require (Test-Path -LiteralPath $SimulationRoot -PathType Container) 'simulation root is absent'; $script:ProductionRoot=Get-Sim 'production'; $script:RuntimeRoot=Get-Sim 'runtime'; $script:StagingRoot=Get-Sim 'staging'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env'; $ArtifactPath=Join-Path $script:StagingRoot $ArtifactName; $ManifestPath="$ArtifactPath.manifest.json" }
     else { Require ([Environment]::MachineName -eq $ExpectedHost) 'wrong host'; Require (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) 'Administrator is required'; $script:ProductionRoot='C:\1-webapp\forwarder-production'; $script:RuntimeRoot='C:\1-webapp\forwarder-runtime'; $script:PreviousRelease=Join-Path $script:ProductionRoot 'release-adcc5da-adr043'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-f11f2ab-s7'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env' }
     Require-Artifact $ArtifactPath $ManifestPath

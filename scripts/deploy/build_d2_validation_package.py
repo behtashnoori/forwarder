@@ -5,7 +5,7 @@ import hashlib, json, shutil, sys, zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-PACKAGE_ID="D2-VALIDATION-S7-RC-f11f2ab-r3-final"
+PACKAGE_ID="D2-VALIDATION-S7-RC-f11f2ab-r5-final"
 SOURCE_COMMIT="f11f2abfbff396f66f261f11c7f4bdb80b2d2007"
 ARTIFACT_HASH="a7bfac4e250e54e4aca2338783eb4667680781499ad1da2262b949ae9379544d"
 SIDECAR_HASH="4bff7378c3fbd0ef36dee33ea0bc40bd3e9661c618092c12a5fc1e6d0e12665f"
@@ -26,7 +26,8 @@ def main(output: Path, package_id: str = PACKAGE_ID) -> int:
     for source,name in ((artifact,artifact.name),(sidecar,sidecar.name),(ROOT/"scripts/deploy/deploy_s7_rc_f11f2ab.ps1","deploy_s7_rc_f11f2ab.ps1"),(ROOT/"scripts/deploy/validate_forwarder_s7_rc_f11f2ab.ps1","validate_forwarder_s7_rc_f11f2ab.ps1")):
         shutil.copy2(source,output/name)
     wrapper=output/"validate_forwarder_s7_rc_f11f2ab.ps1"
-    wrapper.write_text(wrapper.read_text(encoding="utf-8").replace(PACKAGE_ID+"'",package_id+"'"),encoding="utf-8")
+    if package_id != PACKAGE_ID:
+        wrapper.write_bytes(wrapper.read_bytes().replace((PACKAGE_ID+"'").encode(),(package_id+"'").encode()))
     (output/"expected-production-baseline.json").write_text(json.dumps({"host":"SRV8756807400","current_release":"C:\\1-webapp\\forwarder-production\\release-adcc5da-adr043","runtime_root":"C:\\1-webapp\\forwarder-runtime","runtime_wrapper":"phase1b_production_cutover_runtime.py","task":"Forwarder Backend Production","listener":"127.0.0.1:5101","iis_site":"forwarder","iis_path":"C:\\1-webapp\\forwarder-production\\release-adcc5da-adr043\\dist","canonical_host":"samand.forwarderet.ir","canonical_origin":"https://samand.forwarderet.ir","legacy_origin":"https://server.logisticmarket.ir","database":"forwarder_prod_20260728_161711","alembic_head":"20260907_direct_shipment_responsibility","current_cors":"LEGACY_TRANSITION_EXPECTED"},indent=2)+"\n",encoding="utf-8")
     (output/"README-OPERATOR.txt").write_text("STEP 1: Copy this complete folder to the approved staging directory.\nSTEP 2: Open PowerShell as Administrator.\nSTEP 3: Run: PowerShell.exe -ExecutionPolicy Bypass -File .\\validate_forwarder_s7_rc_f11f2ab.ps1\nSTEP 4: Copy back the generated D2-validation-report JSON.\nSTEP 5: STOP. DO NOT DEPLOY. DO NOT EDIT ANY PRODUCTION FILE. If VALIDATION_RESULT=NO_GO, return the report to Development; do not repair Production.\n",encoding="utf-8")
     files=[]

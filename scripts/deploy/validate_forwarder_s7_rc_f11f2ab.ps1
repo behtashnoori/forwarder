@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([string]$SimulationRoot,[string]$ExpectedPackageId='D2-VALIDATION-S7-RC-f11f2ab-r3-final')
+param([string]$SimulationRoot,[string]$ExpectedPackageId='D2-VALIDATION-S7-RC-f11f2ab-r5-final')
 
 $ErrorActionPreference='Stop'
 $Root=Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -20,9 +20,15 @@ try {
     $entry=Join-Path $Root 'deploy_s7_rc_f11f2ab.ps1'
     $artifact=Join-Path $Root 'Forwarder-S7-RC-f11f2ab.zip'
     $sidecar=Join-Path $Root 'Forwarder-S7-RC-f11f2ab.zip.manifest.json'
-    $childArguments=@('-NoProfile','-ExecutionPolicy','Bypass','-File',$entry,'-ValidateOnly','-ArtifactPath',$artifact,'-ManifestPath',$sidecar)
+    $ps51=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    if(-not (Test-Path -LiteralPath $ps51 -PathType Leaf)){NoGo 'Windows PowerShell 5.1 executable is absent'}
+    $actualVersion=& $ps51 -NoProfile -Command '$PSVersionTable.PSVersion.ToString()'
+    if($LASTEXITCODE -ne 0 -or -not ([string]$actualVersion).StartsWith('5.1.')){NoGo 'Windows PowerShell 5.1 runtime is required'}
+    $resolvedEntry=(Resolve-Path -LiteralPath $entry).Path
+    if($resolvedEntry -ne [IO.Path]::GetFullPath((Join-Path $Root 'deploy_s7_rc_f11f2ab.ps1'))){NoGo 'deployment script resolved outside the package'}
+    $childArguments=@('-NoProfile','-ExecutionPolicy','Bypass','-File',$resolvedEntry,'-ValidateOnly','-ArtifactPath',$artifact,'-ManifestPath',$sidecar)
     if($SimulationRoot){$childArguments+=@('-SimulationRoot',$SimulationRoot)}
-    $result=& powershell.exe @childArguments 2>&1
+    $result=& $ps51 @childArguments 2>&1
     $exit=$LASTEXITCODE
     $report=[ordered]@{timestamp_utc=[DateTime]::UtcNow.ToString('o');validation_package_id=$PackageId;candidate_id='S7-RC-f11f2ab';source_commit='f11f2abfbff396f66f261f11c7f4bdb80b2d2007';artifact_sha256='a7bfac4e250e54e4aca2338783eb4667680781499ad1da2262b949ae9379544d';manifest_sha256='4bff7378c3fbd0ef36dee33ea0bc40bd3e9661c618092c12a5fc1e6d0e12665f';current_cors_classification='LEGACY_TRANSITION_EXPECTED';target_cors_contract='https://samand.forwarderet.ir; allow-all=0; legacy rejected';validate_only_zero_mutation='YES';production_mutation='NO';deployment_performed='NO';d1_output=@($result|ForEach-Object {[string]$_})}
     $report.validation_result=if($exit -eq 0 -and ($report.d1_output -join "`n") -match 'ABORTED_BEFORE_MUTATION'){'GO'}else{'NO_GO'}
