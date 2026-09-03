@@ -1,0 +1,23 @@
+{
+  "schema": "forwarder-dp1-local-qualification-v1",
+  "deployment_package_id": "D2-VALIDATION-S7-RC-a257669-rg1-frozen-r3",
+  "scope": "LOCAL_ONLY_NO_PRODUCTION_ACCESS",
+  "application_identity": {
+    "release_id": "S7-RC-a257669-rg1-frozen",
+    "source_sha": "a2576690364fcaf58ca7ddc6c57143c3084bbb00",
+    "application_zip_sha256": "aca7a147cad97edf0e3f03d763c63471c283f62021a23a4e6a47b5e59aa88534",
+    "target_alembic_head": "20260908_governed_international_geography"
+  },
+  "package": {
+    "filename": "D2-VALIDATION-S7-RC-a257669-rg1-frozen-r3.zip",
+    "sha256": "20aa3bc34181df10a4059cdb3b8e5bbe6b40c3ccdfc42c8dfae6a115115536c6",
+    "sidecar_sha256": "9505431145701f52b9a80815f0a8c34ff429d17904d0ded13c9523ca417ce353"
+  },
+  "local_qualification": {
+    "contract_tests": "3 passed",
+    "powershell_parser": "3 scripts passed",
+    "fresh_extraction": "PASS; 4 payload files matched manifest SHA-256 and byte count",
+    "authorization_boundary": "PASS; deployment script exited 1 with DEPLOYMENT_STOP when -Execute/-ConfirmDeployment were omitted"
+  },
+  "known_boundary": "The deployment script deliberately terminates after READY_FOR_FIRST_MUTATION. No Production mutation implementation or Production access is authorized by this DP.1 package."
+}

@@ -54,3 +54,5 @@ backend/routes/__pycache__/shipment_request.cpython-312.pyc
 # records contain the immutable names and SHA-256 values.
 /release-candidates/**/Forwarder-*.zip
 /release-candidates/**/Forwarder-*.zip.manifest.json
+/release-candidates/**/D2-VALIDATION-*.zip
+/release-candidates/**/D2-VALIDATION-*.zip.manifest.json
