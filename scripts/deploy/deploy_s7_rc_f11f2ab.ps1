@@ -255,6 +255,30 @@ function Get-GovernedListenerCount {
     if($SimulationRoot -or $QualificationRoot){ return $(if((Get-Content -Raw -LiteralPath (Get-Sim 'listener.txt')).Trim() -eq '127.0.0.1:5101'){1}else{0}) }
     return @((Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)).Count
 }
+function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbsent) {
+    if($SimulationRoot -or $QualificationRoot){
+        if((Get-GovernedListenerCount) -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
+        return [pscustomobject]@{ProcessId=5101;ExecutablePath=(Join-Path $ExpectedRelease '.venv\Scripts\python.exe');CommandLine="$(Join-Path $ExpectedRelease '.venv\Scripts\python.exe') -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
+    }
+    $connections=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
+    if($connections.Count -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
+    if($connections.Count -ne 1){Fail 'backend listener identity is ambiguous'}
+    $listenerPid=[int]$connections[0].OwningProcess
+    $processes=@(Get-CimInstance Win32_Process -Filter "ProcessId = $listenerPid" -ErrorAction SilentlyContinue)
+    if($processes.Count -ne 1){Fail 'backend listener process identity is unavailable'}
+    $process=$processes[0]
+    $commandLine=[string]$process.CommandLine
+    $expectedPython=Join-Path $ExpectedRelease '.venv\Scripts\python.exe'
+    if([string]::IsNullOrWhiteSpace($commandLine)){Fail 'backend listener command line is unavailable'}
+    if(-not [string]::Equals((Split-Path -Leaf ([string]$process.ExecutablePath)),'python.exe',[StringComparison]::OrdinalIgnoreCase)){Fail 'backend listener executable is not Python'}
+    if($commandLine.IndexOf($expectedPython,[StringComparison]::OrdinalIgnoreCase) -lt 0){Fail 'backend listener does not belong to expected release Python'}
+    if($commandLine -notmatch '(?i)(^|\s)-m\s+waitress(\s|$)'){Fail 'backend listener is not Waitress'}
+    if($commandLine.IndexOf('backend.wsgi:app',[StringComparison]::OrdinalIgnoreCase) -lt 0){Fail 'backend listener is not Forwarder WSGI'}
+    Write-Host "GOVERNED_BACKEND_LISTENER_PID=$listenerPid"
+    Write-Host "GOVERNED_BACKEND_RELEASE=$ExpectedRelease"
+    Write-Host 'GOVERNED_BACKEND_PROCESS_IDENTITY=PASS'
+    return $process
+}
 function Wait-GovernedListenerCount([int]$Expected,[string]$Message) {
     for($attempt=0;$attempt -lt 60;$attempt++){
         if((Get-GovernedListenerCount) -eq $Expected){ return }
@@ -262,19 +286,27 @@ function Wait-GovernedListenerCount([int]$Expected,[string]$Message) {
     }
     Fail $Message
 }
-function Stop-GovernedBackend {
+function Stop-GovernedBackend([string]$ExpectedRelease) {
     if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value 'STOPPED' -NoNewline }
-    else { try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction Stop } catch { Fail 'governed backend stop failed' } }
+    else {
+        Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+        $listener=Get-GovernedBackendListener $ExpectedRelease -AllowAbsent
+        if($null -ne $listener){
+            try { Stop-Process -Id ([int]$listener.ProcessId) -Force -ErrorAction Stop } catch { Fail 'verified governed backend termination failed' }
+            Write-Output "GOVERNED_BACKEND_TERMINATED_PID=$([int]$listener.ProcessId)"
+        }
+    }
     Wait-GovernedListenerCount 0 'previous backend listener did not stop'
     $script:BackendStopped=$true
     Write-Output 'PREVIOUS_BACKEND_STOPPED=YES'
 }
-function Start-GovernedBackend {
+function Start-GovernedBackend([string]$ExpectedRelease) {
     if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value '127.0.0.1:5101' -NoNewline }
     else {
         try { Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null; Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop } catch { Fail 'governed backend start failed' }
     }
     Wait-GovernedListenerCount 1 'new backend listener did not start'
+    Get-GovernedBackendListener $ExpectedRelease | Out-Null
     Write-Output 'NEW_BACKEND_LISTENER_ACQUIRED=YES'
 }
 function Get-IisReference { return (Get-GovernedIisPhysicalPath) }
@@ -307,15 +339,13 @@ function Rollback {
     Set-State 'ROLLBACK_RUNNING'
     try {
         if($script:BackendStopped){
-            if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value 'STOPPED' -NoNewline }
-            else { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue }
-            Wait-GovernedListenerCount 0 'failed target backend listener did not stop'
+            Stop-GovernedBackend $script:TargetRelease
         }
         Atomic-Copy $script:EnvBackup $script:ProductionEnv
         Restore-TaskState
         Set-IisReference (Join-Path $script:PreviousRelease 'dist')
         if($script:TargetReleaseOwned -and (Test-Path -LiteralPath $script:TargetRelease)){ Remove-Item -LiteralPath $script:TargetRelease -Recurse -Force }
-        if($script:BackendStopped){ Start-GovernedBackend }
+        if($script:BackendStopped){ Start-GovernedBackend $script:PreviousRelease }
         Require ((Hash $script:ProductionEnv) -eq $script:PreviousEnvHash) 'rollback configuration hash mismatch'
         Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'rollback task reference mismatch'
         Assert-IisReference (Join-Path $script:PreviousRelease 'dist') 'rollback IIS path mismatch'
@@ -347,6 +377,7 @@ try {
     Assert-TargetConfigCanBePrepared
     Initialize-ScheduledTaskInspection
     Initialize-IisInspection
+    if(-not $SimulationRoot -and -not $QualificationRoot){ Get-GovernedBackendListener $script:PreviousRelease | Out-Null }
     Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'Scheduled Task does not reference governed previous release'
     Assert-IisReference (Join-Path $script:PreviousRelease 'dist') 'IIS does not reference governed previous release dist'
     Require (-not (Test-Path -LiteralPath $script:TargetRelease)) 'target release already exists; refusing reuse'
@@ -387,11 +418,11 @@ try {
     Set-State 'STAGED'; if($SimulateStagingFailure){ Fail 'forced simulated staging failure' }; $script:TargetReleaseOwned=$true; Expand-Archive -LiteralPath $ArtifactPath -DestinationPath $script:TargetRelease -ErrorAction Stop
     Verify-Release $script:TargetRelease
     Set-State 'CONFIG_PREPARED'; Write-Governed-Env $script:ProductionEnv; Validate-Env $script:ProductionEnv
-    Set-State 'SWITCHING'; Stop-GovernedBackend; Set-TaskReference $script:TargetRelease; Set-IisReference (Join-Path $script:TargetRelease 'dist')
+    Set-State 'SWITCHING'; Stop-GovernedBackend $script:PreviousRelease; Set-TaskReference $script:TargetRelease; Set-IisReference (Join-Path $script:TargetRelease 'dist')
     $updatedTaskReference=Get-TaskReference
     Require ($updatedTaskReference -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target reference was not installed'
     Require (-not ($updatedTaskReference -match [regex]::Escape($script:PreviousRelease))) 'Scheduled Task retains previous release reference'
-    Set-State 'STARTING'; Start-GovernedBackend
+    Set-State 'STARTING'; Start-GovernedBackend $script:TargetRelease
     Set-State 'VERIFYING'; Verify-Release $script:TargetRelease -Runtime
     Require ((Get-TaskReference) -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target verification failed'; Assert-IisReference (Join-Path $script:TargetRelease 'dist') 'IIS target verification failed'
     Set-State 'DEPLOYED_AND_VERIFIED'; $script:Evidence.outcome='DEPLOYED_AND_VERIFIED'; $script:Evidence|ConvertTo-Json -Depth 4

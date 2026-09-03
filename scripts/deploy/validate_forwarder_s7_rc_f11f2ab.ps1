@@ -1,6 +1,6 @@
 #requires -Version 5.1
 [CmdletBinding()]
-param([string]$SimulationRoot,[string]$PsqlPath,[string]$ExpectedPackageId='D2-VALIDATION-S7-RC-f11f2ab-r11-final')
+param([string]$SimulationRoot,[string]$PsqlPath,[string]$ExpectedPackageId='D2-VALIDATION-S7-RC-f11f2ab-r12-final')
 
 $ErrorActionPreference='Stop'
 $Root=Split-Path -Parent $MyInvocation.MyCommand.Path
