@@ -68,9 +68,20 @@ boundary.
 Windows PowerShell reference runtime: `5.1.26100.9278`.
 
 Development qualification passed 18 source-level REQ-3/regression tests. The
-final immutable package qualification, exact ZIP hashes, full precheck count,
-ten-run result, simulated deployment/rollback, and provenance are recorded in
-the final mission report after the single build and extracted-package run.
+final immutable package is `D2-VALIDATION-S7-RC-f11f2ab-r6-final3`, built from
+release-tooling commit `014316c79217225dd7d2bd1fb6707d6f63f9d7d6`. Its ZIP is
+1,281,884 bytes with SHA-256
+`ca165077f68cd9cf1efba68dc177cc0142c5efc94ee8599fa9cfe73aebcd2a3a`;
+its package manifest SHA-256 is
+`9b0af38a2319be79b541203c9a6a3d63e9f8456e0fa537aca34a1e6066417d2f`.
+
+Qualification used only an extraction of that ZIP. The complete ValidateOnly
+path passed 64/64 prechecks, including all original 58 and the new strict
+identity-contract gates. It returned GO 10/10 consecutively through the
+non-Simulation database path. The exact-package identity matrix passed 11/11;
+source tests additionally covered quoted/BOM baseline behavior. Simulated
+deployment, post-deployment verification, and exact rollback restore passed.
+The ZIP hash remained unchanged after all qualification.
 
 ## Residual risks
 
