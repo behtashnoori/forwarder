@@ -32,6 +32,7 @@ $TaskName = 'Forwarder Backend Production'
 $Port = 5101
 $CanonicalOrigin = 'https://samand.forwarderet.ir'
 $LegacyOrigin = 'https://server.logisticmarket.ir'
+$RuntimeWrapperHash = 'f99238f35468a3bec7d387b62493e5b1af3efa721801f93bbd90a21d5f8ecbc7'
 $script:State = 'PRECHECK'
 $script:Mutated = $false
 $script:PrecheckCount = 0
@@ -40,6 +41,8 @@ $script:ExpectedDatabase = $ExpectedDatabase
 $script:ExpectedAlembic = $TargetHead
 $script:PassedPrecheckCount = 0
 $script:IisInspectionReady = $false
+$script:BackendStopped = $false
+$script:TargetReleaseOwned = $false
 
 function Set-State([string]$Value) { $script:State=$Value; $script:Evidence.states += $Value; Write-Output "STATE=$Value" }
 function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
@@ -248,6 +251,32 @@ function Get-TaskReference { if($SimulationRoot -or $QualificationRoot){ return 
 function Capture-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy (Get-Sim 'task.txt') $script:TaskBackup; return }; Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $script:TaskBackup -Encoding UTF8 }
 function Restore-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy $script:TaskBackup (Get-Sim 'task.txt'); return }; Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $script:TaskBackup) -Force | Out-Null }
 function Set-TaskReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $Reference -NoNewline; return }; $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($script:PreviousRelease)) 'Scheduled Task does not contain governed previous release'; Register-ScheduledTask -TaskName $TaskName -Xml $xml.Replace($script:PreviousRelease,$Reference) -Force | Out-Null }
+function Get-GovernedListenerCount {
+    if($SimulationRoot -or $QualificationRoot){ return $(if((Get-Content -Raw -LiteralPath (Get-Sim 'listener.txt')).Trim() -eq '127.0.0.1:5101'){1}else{0}) }
+    return @((Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)).Count
+}
+function Wait-GovernedListenerCount([int]$Expected,[string]$Message) {
+    for($attempt=0;$attempt -lt 60;$attempt++){
+        if((Get-GovernedListenerCount) -eq $Expected){ return }
+        Start-Sleep -Milliseconds 500
+    }
+    Fail $Message
+}
+function Stop-GovernedBackend {
+    if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value 'STOPPED' -NoNewline }
+    else { try { Stop-ScheduledTask -TaskName $TaskName -ErrorAction Stop } catch { Fail 'governed backend stop failed' } }
+    Wait-GovernedListenerCount 0 'previous backend listener did not stop'
+    $script:BackendStopped=$true
+    Write-Output 'PREVIOUS_BACKEND_STOPPED=YES'
+}
+function Start-GovernedBackend {
+    if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value '127.0.0.1:5101' -NoNewline }
+    else {
+        try { Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null; Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop } catch { Fail 'governed backend start failed' }
+    }
+    Wait-GovernedListenerCount 1 'new backend listener did not start'
+    Write-Output 'NEW_BACKEND_LISTENER_ACQUIRED=YES'
+}
 function Get-IisReference { return (Get-GovernedIisPhysicalPath) }
 function Set-IisReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'iis.txt') -Value $Reference -NoNewline; return }; Set-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -Value $Reference }
 function Verify-Release([string]$Release,[switch]$Runtime) {
@@ -277,10 +306,16 @@ function Verify-Release([string]$Release,[switch]$Runtime) {
 function Rollback {
     Set-State 'ROLLBACK_RUNNING'
     try {
+        if($script:BackendStopped){
+            if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value 'STOPPED' -NoNewline }
+            else { Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue }
+            Wait-GovernedListenerCount 0 'failed target backend listener did not stop'
+        }
         Atomic-Copy $script:EnvBackup $script:ProductionEnv
         Restore-TaskState
         Set-IisReference (Join-Path $script:PreviousRelease 'dist')
-        if(Test-Path -LiteralPath $script:TargetRelease){ Remove-Item -LiteralPath $script:TargetRelease -Recurse -Force }
+        if($script:TargetReleaseOwned -and (Test-Path -LiteralPath $script:TargetRelease)){ Remove-Item -LiteralPath $script:TargetRelease -Recurse -Force }
+        if($script:BackendStopped){ Start-GovernedBackend }
         Require ((Hash $script:ProductionEnv) -eq $script:PreviousEnvHash) 'rollback configuration hash mismatch'
         Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'rollback task reference mismatch'
         Assert-IisReference (Join-Path $script:PreviousRelease 'dist') 'rollback IIS path mismatch'
@@ -304,7 +339,9 @@ try {
     if($SimulationRoot -or $QualificationRoot){ Require ((Get-Content -Raw -LiteralPath (Get-Sim 'host.txt')).Trim() -eq $ExpectedHost) 'wrong host'; Require ((Get-Content -Raw -LiteralPath (Get-Sim 'admin.txt')).Trim() -eq 'yes') 'Administrator is required' }
     Require (Test-Path -LiteralPath $script:PreviousRelease -PathType Container) 'current release is absent'
     Require (Test-Path -LiteralPath $script:ProductionEnv -PathType Leaf) 'production.env is absent'
-    Require (Test-Path -LiteralPath (Join-Path $script:RuntimeRoot 'phase1b_production_cutover_runtime.py') -PathType Leaf) 'runtime wrapper is absent'
+    $script:RuntimeWrapper=Join-Path $script:RuntimeRoot 'phase1b_production_cutover_runtime.py'
+    Require (Test-Path -LiteralPath $script:RuntimeWrapper -PathType Leaf) 'runtime wrapper is absent'
+    if(-not $SimulationRoot -and -not $QualificationRoot){ Require ((Hash $script:RuntimeWrapper) -eq $RuntimeWrapperHash) 'runtime wrapper SHA-256 mismatch' }
     Assert-DatabaseIdentity
     $hasSingularCors=(Env-Map $script:ProductionEnv).Contains('CORS_ORIGIN')
     Assert-TargetConfigCanBePrepared
@@ -336,7 +373,7 @@ try {
     $script:PreviousEnvHash=Hash $script:ProductionEnv; $script:EnvBackup=Join-Path $script:RuntimeRoot ("production.env.$CandidateId.rollback"); $script:TaskBackup=Join-Path $script:RuntimeRoot ("$TaskName.$CandidateId.rollback.xml")
     Set-State 'STAGED_VERIFIED'
     if($ValidateOnly){
-        $expectedBase=if($QualificationRoot){59}elseif($SimulationRoot){39}else{49}
+        $expectedBase=if($QualificationRoot){59}elseif($SimulationRoot){39}else{50}
         $expectedPrecheckCount=$expectedBase+$(if($hasSingularCors){1}else{0})
         Write-Output "PRECHECK_CONDITIONAL_CORS_ORIGIN=$(if($hasSingularCors){'EXECUTED'}else{'NOT_APPLICABLE'})"
         Write-Output "EXPECTED_PRECHECK_COUNT=$expectedPrecheckCount"
@@ -347,11 +384,14 @@ try {
     }
     Write-Output 'MUTATION_BOUNDARY_REACHED'
     $script:Mutated=$true; Set-State 'ROLLBACK_STATE_CAPTURED'; Atomic-Copy $script:ProductionEnv $script:EnvBackup; Capture-TaskState
-    Set-State 'STAGED'; if($SimulateStagingFailure){ Fail 'forced simulated staging failure' }; Expand-Archive -LiteralPath $ArtifactPath -DestinationPath $script:TargetRelease -ErrorAction Stop
+    Set-State 'STAGED'; if($SimulateStagingFailure){ Fail 'forced simulated staging failure' }; $script:TargetReleaseOwned=$true; Expand-Archive -LiteralPath $ArtifactPath -DestinationPath $script:TargetRelease -ErrorAction Stop
     Verify-Release $script:TargetRelease
     Set-State 'CONFIG_PREPARED'; Write-Governed-Env $script:ProductionEnv; Validate-Env $script:ProductionEnv
-    Set-State 'SWITCHING'; Set-TaskReference $script:TargetRelease; Set-IisReference (Join-Path $script:TargetRelease 'dist')
-    Set-State 'STARTING'; if(-not $SimulationRoot -and -not $QualificationRoot){ Enable-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName }
+    Set-State 'SWITCHING'; Stop-GovernedBackend; Set-TaskReference $script:TargetRelease; Set-IisReference (Join-Path $script:TargetRelease 'dist')
+    $updatedTaskReference=Get-TaskReference
+    Require ($updatedTaskReference -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target reference was not installed'
+    Require (-not ($updatedTaskReference -match [regex]::Escape($script:PreviousRelease))) 'Scheduled Task retains previous release reference'
+    Set-State 'STARTING'; Start-GovernedBackend
     Set-State 'VERIFYING'; Verify-Release $script:TargetRelease -Runtime
     Require ((Get-TaskReference) -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target verification failed'; Assert-IisReference (Join-Path $script:TargetRelease 'dist') 'IIS target verification failed'
     Set-State 'DEPLOYED_AND_VERIFIED'; $script:Evidence.outcome='DEPLOYED_AND_VERIFIED'; $script:Evidence|ConvertTo-Json -Depth 4
