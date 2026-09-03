@@ -80,6 +80,37 @@ def test_adoption_does_not_automatically_materialize(adoption_app):
     with app.app_context(): assert db.session.query(LogisticsPoint).count()==0
 
 
+def test_add_from_reference_is_atomic_idempotent_and_preserves_provenance(adoption_app):
+    app, c = adoption_app
+    url = f"/api/admin/global-logistics-points/{c['active']}/add-to-organization-network"
+    with app.test_client() as client:
+        created = client.post(url, headers=c["a"], json={"display_label": "Network Port"})
+        assert created.status_code == 201
+        item = created.get_json()["item"]
+        repeated = client.post(url, headers=c["a"], json={})
+        assert repeated.status_code == 200
+        assert repeated.get_json()["item"]["logistics_point_public_id"] == item["logistics_point_public_id"]
+        assert client.post(url, headers=c["b"], json={}).status_code == 201
+        assert client.post(url, headers=c["expert"], json={}).status_code == 403
+        with app.app_context():
+            row = db.session.query(LogisticsPoint).filter_by(public_id=item["logistics_point_public_id"]).one()
+            assert row.global_adoption_id and row.global_logistics_point_id
+            assert row.immutable_code == "XZ-ACTIVE-PORT"
+
+
+def test_add_from_reference_refuses_inactive_adoption_and_deprecated_global(adoption_app):
+    app, c = adoption_app
+    url = f"/api/admin/global-logistics-points/{c['active']}/add-to-organization-network"
+    with app.test_client() as client:
+        adoption = _adopt(client, c)
+        assert client.post(f"/api/admin/global-logistics-point-adoptions/{adoption['public_id']}/deactivate", headers=c["a"], json={"version": 1}).status_code == 200
+        assert client.post(url, headers=c["a"], json={}).status_code == 409
+        with app.app_context():
+            db.session.query(GlobalLogisticsPoint).filter_by(public_id=c["active"]).update({"lifecycle_status": "DEPRECATED"})
+            db.session.commit()
+        assert client.post(url, headers=c["b"], json={}).status_code == 409
+
+
 def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts(adoption_app):
     app, c = adoption_app
     with app.test_client() as client:

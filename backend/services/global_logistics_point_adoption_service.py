@@ -143,6 +143,102 @@ def materialize(public_id, payload, org_id, actor_id):
     return materialized, True
 
 
+def add_from_reference(global_public_id, payload, org_id, actor_id):
+    """Atomically select a governed reference point for an organization.
+
+    Adoption remains the tenant-private governance record, but it is not a
+    separate operational decision: this command creates/reuses it and returns
+    the one tenant LogisticsPoint materialized from it.
+    """
+    _strict(payload, {"organization_reference_code", "display_label", "notes"})
+    point = _global(global_public_id)
+    if point.lifecycle_status != "ACTIVE" or point.verification_status != "VERIFIED":
+        _fail("GLOBAL_POINT_INELIGIBLE", "Only ACTIVE verified global points may be added.", 409)
+    if not point.point_type.is_active or len(point.geography_key) > 200:
+        _fail("MATERIALIZATION_MAPPING_INVALID", "Global point type or geography is not valid for an operational LogisticsPoint.", 409)
+
+    row = db.session.scalar(select(OrganizationGlobalLogisticsPointAdoption).where(
+        OrganizationGlobalLogisticsPointAdoption.organization_id == org_id,
+        OrganizationGlobalLogisticsPointAdoption.global_logistics_point_id == point.id,
+    ))
+    if row is not None and row.status != "ACTIVE":
+        _fail("ADOPTION_INELIGIBLE", "An inactive adoption must be reactivated through its administrative lifecycle before it can be added.", 409)
+    if row is not None:
+        existing = db.session.scalar(select(LogisticsPoint).where(
+            LogisticsPoint.global_adoption_id == row.id,
+            LogisticsPoint.organization_id == org_id,
+        ))
+        if existing:
+            return existing, False, row
+    else:
+        row = OrganizationGlobalLogisticsPointAdoption(
+            organization_id=org_id, global_point=point,
+            organization_reference_code=_text(payload, "organization_reference_code", 64),
+            display_label=_text(payload, "display_label", 160),
+            notes=_text(payload, "notes", 1000), status="ACTIVE",
+            created_by=actor_id, updated_by=actor_id,
+        )
+        db.session.add(row)
+        try:
+            db.session.flush()
+        except IntegrityError as exc:
+            db.session.rollback()
+            row = db.session.scalar(select(OrganizationGlobalLogisticsPointAdoption).where(
+                OrganizationGlobalLogisticsPointAdoption.organization_id == org_id,
+                OrganizationGlobalLogisticsPointAdoption.global_logistics_point_id == point.id,
+            ))
+            if row is None:
+                raise OperationalError("ADOPTION_CONFLICT", "Global point could not be selected for this organization.", 409) from exc
+            if row.status != "ACTIVE":
+                _fail("ADOPTION_INELIGIBLE", "An inactive adoption must be reactivated through its administrative lifecycle before it can be added.", 409)
+            existing = db.session.scalar(select(LogisticsPoint).where(
+                LogisticsPoint.global_adoption_id == row.id,
+                LogisticsPoint.organization_id == org_id,
+            ))
+            if existing:
+                return existing, False, row
+        _audit(org_id, actor_id, "GLOBAL_POINT_ADOPTED", row)
+
+    adoption_id = row.id
+
+    label = row.display_label or point.fa_name
+    duplicate = db.session.scalar(select(LogisticsPoint).where(
+        LogisticsPoint.organization_id == org_id,
+        ((LogisticsPoint.immutable_code == point.immutable_code) |
+         ((LogisticsPoint.normalized_name == normalize_name(label)) &
+          (LogisticsPoint.logistics_point_type_id == point.logistics_point_type_id) &
+          (LogisticsPoint.country_id == point.country_id) &
+          (LogisticsPoint.geography_key == point.geography_key))))
+    )
+    if duplicate:
+        db.session.rollback()
+        _fail("MATERIALIZATION_DUPLICATE", f"Matching tenant LogisticsPoint {duplicate.public_id} exists; automatic merge is not allowed.", 409)
+
+    materialized = LogisticsPoint(
+        organization_id=org_id, global_logistics_point_id=point.id, global_adoption_id=row.id,
+        immutable_code=point.immutable_code, logistics_point_type_id=point.logistics_point_type_id,
+        fa_name=label, normalized_name=normalize_name(label), en_name=point.en_name,
+        country_id=point.country_id, province_id=point.province_id, city_id=point.city_id,
+        geography_key=point.geography_key, short_address=point.short_address, is_active=True,
+        created_by=actor_id, updated_by=actor_id,
+    )
+    db.session.add(materialized)
+    try:
+        db.session.flush()
+        _audit(org_id, actor_id, "GLOBAL_POINT_MATERIALIZED", row)
+        db.session.commit()
+    except IntegrityError as exc:
+        db.session.rollback()
+        existing = db.session.scalar(select(LogisticsPoint).where(
+            LogisticsPoint.global_adoption_id == adoption_id,
+            LogisticsPoint.organization_id == org_id,
+        ))
+        if existing:
+            return existing, False, row
+        raise OperationalError("MATERIALIZATION_CONFLICT", "Operational point could not be added from the reference network.", 409) from exc
+    return materialized, True, row
+
+
 def catalog_projection(point, adoption):
     if point.lifecycle_status == "DEPRECATED": state = "PLATFORM_DEPRECATED"
     elif adoption is None: state = "AVAILABLE"

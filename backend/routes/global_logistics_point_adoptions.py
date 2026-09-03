@@ -31,6 +31,21 @@ def adopt(public_id):
     except OperationalError as exc: return _error(exc)
 
 
+@global_logistics_point_adoptions_bp.post("/api/admin/global-logistics-points/<public_id>/add-to-organization-network")
+@require_organization_admin_context(allow_platform=False)
+def add_to_organization_network(public_id):
+    try:
+        org, actor = _context()
+        point, created, adoption = svc.add_from_reference(public_id, request.get_json(silent=True), org, actor)
+        return jsonify({"item": {
+            "logistics_point_public_id": point.public_id,
+            "adoption_public_id": adoption.public_id,
+            "global_point_public_id": adoption.global_point.public_id,
+            "created": created,
+        }}), 201 if created else 200
+    except OperationalError as exc: return _error(exc)
+
+
 @global_logistics_point_adoptions_bp.get("/api/admin/global-logistics-point-adoptions/<public_id>")
 @require_organization_admin_context(allow_platform=False)
 def detail(public_id):

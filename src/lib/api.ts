@@ -3952,6 +3952,8 @@ export const listOrganizationGlobalPoints = (filters:Record<string,string|number
 };
 export const adoptOrganizationGlobalPoint = (publicId:string,payload:Record<string,unknown>) =>
   request<{item:OrganizationGlobalPointAdoption}>(`/api/admin/global-logistics-points/${publicId}/adopt`,{method:"POST",body:JSON.stringify(payload)});
+export const addOrganizationGlobalPointToNetwork = (publicId:string,payload:Record<string,unknown>={}) =>
+  request<{item:{logistics_point_public_id:string;adoption_public_id:string;global_point_public_id:string;created:boolean}}>(`/api/admin/global-logistics-points/${publicId}/add-to-organization-network`,{method:"POST",body:JSON.stringify(payload)});
 export const updateOrganizationGlobalPointAdoption = (row:OrganizationGlobalPointAdoption,payload:Record<string,unknown>) =>
   request<{item:OrganizationGlobalPointAdoption}>(`/api/admin/global-logistics-point-adoptions/${row.public_id}`,{method:"PATCH",body:JSON.stringify({...payload,version:row.version})});
 export const transitionOrganizationGlobalPointAdoption = (row:OrganizationGlobalPointAdoption,action:"activate"|"deactivate") =>
