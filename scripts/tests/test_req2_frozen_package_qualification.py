@@ -17,7 +17,7 @@ PS51 = Path(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
 PACKAGE = Path(os.environ.get("REQ2_PACKAGE", ""))
 ZIP = Path(os.environ.get("REQ2_PACKAGE_ZIP", ""))
 EXPECTED_ZIP_SHA256 = os.environ.get("REQ2_PACKAGE_SHA256", "")
-PACKAGE_ID = os.environ.get("REQ2_PACKAGE_ID", "D2-VALIDATION-S7-RC-f11f2ab-req12-final")
+PACKAGE_ID = os.environ.get("REQ2_PACKAGE_ID", "D2-VALIDATION-S7-RC-f11f2ab-req12-listener-fix-final")
 
 
 def digest(path: Path) -> str:

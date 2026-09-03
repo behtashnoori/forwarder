@@ -83,3 +83,13 @@ tooling tests, real packaged-runtime Waitress GET/OPTIONS/CORS checks, a real
 ephemeral Windows Scheduled Task lifecycle, ten consecutive full deployment
 rehearsals, and ten consecutive rollback rehearsals. Production was neither
 accessed nor modified.
+
+## ValidateOnly current-listener ownership repair
+
+The Production ValidateOnly evidence proved a single healthy previous-release
+listener using `<previous>\.venv\Scripts\python.exe`. REQ-12 had incorrectly
+applied the future packaged-runtime interpreter expectation before the mutation
+boundary. The pre-mutation and rollback contracts now require the governed
+previous release interpreter; only the post-switch target listener requires
+`<target>\runtime\python.exe`. Unknown, absent, ambiguous, wrong-address, and
+wrong-release listeners remain fail-closed.

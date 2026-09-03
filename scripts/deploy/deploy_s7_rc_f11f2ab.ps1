@@ -336,10 +336,11 @@ function Get-GovernedListenerCount {
     if($SimulationRoot -or $QualificationRoot){ return $(if((Get-Content -Raw -LiteralPath (Get-Sim 'listener.txt')).Trim() -eq '127.0.0.1:5101'){1}else{0}) }
     return @((Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)).Count
 }
-function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbsent) {
+function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbsent,[switch]$PackagedRuntime) {
     if($SimulationRoot -or $QualificationRoot){
         if((Get-GovernedListenerCount) -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
-        return [pscustomobject]@{ProcessId=5101;ExecutablePath=(Join-Path $ExpectedRelease 'runtime\python.exe');CommandLine="$(Join-Path $ExpectedRelease 'runtime\python.exe') -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
+        $python=if($PackagedRuntime){Join-Path $ExpectedRelease 'runtime\python.exe'}else{Join-Path $ExpectedRelease '.venv\Scripts\python.exe'}
+        return [pscustomobject]@{ProcessId=5101;ExecutablePath=$python;CommandLine="$python -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
     }
     $connections=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
     if($connections.Count -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
@@ -349,7 +350,7 @@ function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbse
     if($processes.Count -ne 1){Fail 'backend listener process identity is unavailable'}
     $process=$processes[0]
     $commandLine=[string]$process.CommandLine
-    $expectedPython=Join-Path $ExpectedRelease 'runtime\python.exe'
+    $expectedPython=if($PackagedRuntime){Join-Path $ExpectedRelease 'runtime\python.exe'}else{Join-Path $ExpectedRelease '.venv\Scripts\python.exe'}
     if([string]::IsNullOrWhiteSpace($commandLine)){Fail 'backend listener command line is unavailable'}
     if(-not [string]::Equals((Split-Path -Leaf ([string]$process.ExecutablePath)),'python.exe',[StringComparison]::OrdinalIgnoreCase)){Fail 'backend listener executable is not Python'}
     if($commandLine.IndexOf($expectedPython,[StringComparison]::OrdinalIgnoreCase) -lt 0){Fail 'backend listener does not belong to expected release Python'}
@@ -372,7 +373,7 @@ function Stop-GovernedBackend([string]$ExpectedRelease) {
     if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'listener.txt') -Value 'STOPPED' -NoNewline }
     else {
         Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
-        $listener=Get-GovernedBackendListener $ExpectedRelease -AllowAbsent
+        $listener=Get-GovernedBackendListener $ExpectedRelease -AllowAbsent -PackagedRuntime:([string]::Equals($ExpectedRelease,$script:TargetRelease,[StringComparison]::OrdinalIgnoreCase))
         if($null -ne $listener){
             try { Stop-Process -Id ([int]$listener.ProcessId) -Force -ErrorAction Stop } catch { Fail 'verified governed backend termination failed' }
             Write-Output "GOVERNED_BACKEND_TERMINATED_PID=$([int]$listener.ProcessId)"
@@ -396,7 +397,7 @@ function Start-GovernedBackend([string]$ExpectedRelease) {
         try { Enable-ScheduledTask -TaskName $TaskName -ErrorAction Stop | Out-Null; Start-ScheduledTask -TaskName $TaskName -ErrorAction Stop; $script:StartupAttempt.task_start_result='PASS' } catch { $script:StartupAttempt.task_start_result="FAIL: $($_.Exception.Message)"; Fail 'governed backend start failed' }
     }
     Wait-GovernedListenerCount 1 'new backend listener did not start'
-    Get-GovernedBackendListener $ExpectedRelease | Out-Null
+    Get-GovernedBackendListener $ExpectedRelease -PackagedRuntime:([string]::Equals($ExpectedRelease,$script:TargetRelease,[StringComparison]::OrdinalIgnoreCase)) | Out-Null
     Write-Output 'NEW_BACKEND_LISTENER_ACQUIRED=YES'
 }
 function Get-IisReference { return (Get-GovernedIisPhysicalPath) }
