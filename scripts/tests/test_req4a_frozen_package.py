@@ -74,7 +74,7 @@ CASES = {
     "env_missing": lambda r,e: (r/"runtime/production.env").unlink(),
     "runtime_wrapper_missing": lambda r,e: (r/"runtime/phase1b_production_cutover_runtime.py").unlink(),
     "task_reference_wrong": lambda r,e: (r/"task.txt").write_text("wrong"),
-    "iis_reference_wrong": lambda r,e: (r/"iis.txt").write_text("wrong"),
+    "iis_reference_wrong": lambda r,e: contract(r,physical_path_records=["C:\\wrong\\dist"]),
     "target_already_exists": lambda r,e: (r/"production/release-f11f2ab-s7").mkdir(),
     "task_metadata_wrong": lambda r,e: (r/"task-metadata.txt").write_text("wrong"),
     "iis_state_wrong": lambda r,e: (r/"iis-state.txt").write_text("Stopped"),
@@ -102,6 +102,12 @@ CASES = {
     "artifact_missing": lambda r,e: (r/"staging/Forwarder-S7-RC-f11f2ab.zip").unlink(),
     "artifact_wrong": lambda r,e: (r/"staging/Forwarder-S7-RC-f11f2ab.zip").write_bytes(b"wrong"),
     "artifact_manifest_wrong": lambda r,e: (r/"staging/Forwarder-S7-RC-f11f2ab.zip.manifest.json").write_text("{}"),
+    "iis_actual_null": lambda r,e: contract(r,physical_path_records=None),
+    "iis_actual_empty": lambda r,e: contract(r,physical_path_records=[""]),
+    "iis_actual_multiple": lambda r,e: contract(r,physical_path_records=["C:\\one", "C:\\two"]),
+    "iis_actual_provider_object": lambda r,e: contract(r,physical_path_shape="PROVIDER_OBJECT"),
+    "iis_actual_whitespace": lambda r,e: contract(r,physical_path_records=[" C:\\wrong\\dist "]),
+    "iis_actual_relative": lambda r,e: contract(r,physical_path_records=["relative\\dist"]),
 }
 
 
@@ -119,7 +125,18 @@ def test_ten_fresh_process_exact_package_runs(tmp_path: Path) -> None:
     counts = set()
     for index in range(10):
         root = tmp_path/f"run-{index:02d}"
-        result, before = run(root)
+        def representation(r: Path, env: dict[str, str]) -> None:
+            expected=str(r/"production/release-adcc5da-adr043/dist")
+            variant=index % 5
+            if variant == 1: value=expected.swapcase()
+            elif variant == 2: value=expected+"\\"
+            elif variant == 3: value=expected.replace("\\", "/")
+            elif variant == 4:
+                env["REQ5_IIS_ROOT"]=str(r/"production/release-adcc5da-adr043")
+                value="%REQ5_IIS_ROOT%\\dist"
+            else: value=expected
+            contract(r,physical_path_records=[value])
+        result, before = run(root, representation)
         output = result.stdout + result.stderr
         assert result.returncode == 0, output
         assert "HARNESS_IIS_CONTRACT_PATH=PASS" in output and "PRECHECK_MANIFEST=PASS" in output

@@ -146,6 +146,39 @@ function Assert-DatabaseIdentity {
     } finally { $env:PGPASSWORD=$oldPassword }
 }
 function Get-Sim([string]$Name) { Join-Path $(if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}) $Name }
+function ConvertTo-GovernedWindowsPath([string]$Value) {
+    if([string]::IsNullOrWhiteSpace($Value)){Fail 'IIS physical path is null or empty'}
+    if($Value -ne $Value.Trim()){Fail 'IIS physical path contains leading or trailing whitespace'}
+    $expanded=[Environment]::ExpandEnvironmentVariables($Value).Replace('/','\')
+    if(-not [IO.Path]::IsPathRooted($expanded)){Fail 'IIS physical path is not absolute'}
+    try { $full=[IO.Path]::GetFullPath($expanded) } catch { Fail 'IIS physical path is malformed' }
+    $root=[IO.Path]::GetPathRoot($full)
+    if($full.Length -gt $root.Length){$full=$full.TrimEnd('\')}
+    return [string]$full
+}
+function Get-GovernedIisPhysicalPath {
+    if($SimulationRoot){$records=@((Get-Content -Raw -LiteralPath (Get-Sim 'iis.txt')))}
+    elseif($QualificationRoot){
+        $contract=Get-Content -Raw -LiteralPath (Join-Path $QualificationRoot 'iis-contract.json')|ConvertFrom-Json
+        if($contract.physical_path_shape -eq 'PROVIDER_OBJECT'){$records=@([pscustomobject]@{physicalPath=$contract.physical_path_records[0]})}
+        else{$records=@($contract.physical_path_records)}
+    } else {
+        Require $script:IisInspectionReady 'IIS inspection prerequisites were not initialized'
+        try {$records=@((Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -ErrorAction Stop).physicalPath)} catch {Fail 'IIS physical path unreadable'}
+    }
+    if($records.Count -ne 1){Fail 'IIS physical path must return exactly one scalar'}
+    if($null -eq $records[0] -or $records[0].GetType().FullName -ne 'System.String'){Fail 'IIS physical path must be one scalar string'}
+    return (ConvertTo-GovernedWindowsPath ([string]$records[0]))
+}
+function Assert-IisReference([string]$ExpectedPath,[string]$FailureMessage) {
+    $expected=ConvertTo-GovernedWindowsPath $ExpectedPath
+    $actual=Get-GovernedIisPhysicalPath
+    Write-Host "EXPECTED_IIS_DIST_VALUE=$expected"; Write-Host "EXPECTED_IIS_DIST_TYPE=$($expected.GetType().FullName)"; Write-Host "EXPECTED_IIS_DIST_LENGTH=$($expected.Length)"
+    Write-Host "ACTUAL_IIS_DIST_VALUE=$actual"; Write-Host "ACTUAL_IIS_DIST_TYPE=$($actual.GetType().FullName)"; Write-Host "ACTUAL_IIS_DIST_LENGTH=$($actual.Length)"
+    $equal=[string]::Equals($actual,$expected,[StringComparison]::OrdinalIgnoreCase)
+    Write-Host "IIS_DIST_EQUALS_RESULT=$equal"
+    Require $equal $FailureMessage
+}
 function Initialize-IisInspection {
     if($SimulationRoot){ Write-Output 'IIS_INSPECTION_MODE=SIMULATED'; return }
     if($QualificationRoot){
@@ -205,7 +238,7 @@ function Get-TaskReference { if($SimulationRoot -or $QualificationRoot){ return 
 function Capture-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy (Get-Sim 'task.txt') $script:TaskBackup; return }; Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $script:TaskBackup -Encoding UTF8 }
 function Restore-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy $script:TaskBackup (Get-Sim 'task.txt'); return }; Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $script:TaskBackup) -Force | Out-Null }
 function Set-TaskReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $Reference -NoNewline; return }; $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($script:PreviousRelease)) 'Scheduled Task does not contain governed previous release'; Register-ScheduledTask -TaskName $TaskName -Xml $xml.Replace($script:PreviousRelease,$Reference) -Force | Out-Null }
-function Get-IisReference { if($SimulationRoot -or $QualificationRoot){ return (Get-Content -Raw -LiteralPath (Get-Sim 'iis.txt')).Trim() }; Require $script:IisInspectionReady 'IIS inspection prerequisites were not initialized'; try { return (Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -ErrorAction Stop).physicalPath } catch { Fail 'IIS physical path unreadable' } }
+function Get-IisReference { return (Get-GovernedIisPhysicalPath) }
 function Set-IisReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'iis.txt') -Value $Reference -NoNewline; return }; Set-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -Value $Reference }
 function Verify-Release([string]$Release,[switch]$Runtime) {
     Require (Test-Path -LiteralPath (Join-Path $Release 'dist\index.html') -PathType Leaf) 'release frontend structure missing'
@@ -240,7 +273,7 @@ function Rollback {
         if(Test-Path -LiteralPath $script:TargetRelease){ Remove-Item -LiteralPath $script:TargetRelease -Recurse -Force }
         Require ((Hash $script:ProductionEnv) -eq $script:PreviousEnvHash) 'rollback configuration hash mismatch'
         Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'rollback task reference mismatch'
-        Require ((Get-IisReference) -eq (Join-Path $script:PreviousRelease 'dist')) 'rollback IIS path mismatch'
+        Assert-IisReference (Join-Path $script:PreviousRelease 'dist') 'rollback IIS path mismatch'
         Set-State 'FAILED_AND_RECOVERED'; $script:Evidence.outcome='FAILED_AND_RECOVERED'
     } catch { Set-State 'FAILED_AND_NOT_RECOVERED'; $script:Evidence.outcome='FAILED_AND_NOT_RECOVERED'; throw }
 }
@@ -268,7 +301,7 @@ try {
     Initialize-ScheduledTaskInspection
     Initialize-IisInspection
     Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'Scheduled Task does not reference governed previous release'
-    Require ((Get-IisReference) -eq (Join-Path $script:PreviousRelease 'dist')) 'IIS does not reference governed previous release dist'
+    Assert-IisReference (Join-Path $script:PreviousRelease 'dist') 'IIS does not reference governed previous release dist'
     Require (-not (Test-Path -LiteralPath $script:TargetRelease)) 'target release already exists; refusing reuse'
     if($SimulationRoot -or $QualificationRoot){
         Require ((Get-Content -Raw -LiteralPath (Get-Sim 'task-metadata.txt')).Trim() -eq $TaskName) 'Scheduled Task metadata mismatch'
@@ -310,7 +343,7 @@ try {
     Set-State 'SWITCHING'; Set-TaskReference $script:TargetRelease; Set-IisReference (Join-Path $script:TargetRelease 'dist')
     Set-State 'STARTING'; if(-not $SimulationRoot -and -not $QualificationRoot){ Enable-ScheduledTask -TaskName $TaskName; Start-ScheduledTask -TaskName $TaskName }
     Set-State 'VERIFYING'; Verify-Release $script:TargetRelease -Runtime
-    Require ((Get-TaskReference) -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target verification failed'; Require ((Get-IisReference) -eq (Join-Path $script:TargetRelease 'dist')) 'IIS target verification failed'
+    Require ((Get-TaskReference) -match [regex]::Escape($script:TargetRelease)) 'Scheduled Task target verification failed'; Assert-IisReference (Join-Path $script:TargetRelease 'dist') 'IIS target verification failed'
     Set-State 'DEPLOYED_AND_VERIFIED'; $script:Evidence.outcome='DEPLOYED_AND_VERIFIED'; $script:Evidence|ConvertTo-Json -Depth 4
 } catch {
     $message=$_.Exception.Message

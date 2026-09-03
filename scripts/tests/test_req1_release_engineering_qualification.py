@@ -49,7 +49,8 @@ def fixture(root: Path, database_url: str = "postgresql+psycopg2://user:p%40ss%3
         "import_result": "PASS", "provider_available": "YES", "drive_available": "YES",
         "site_available": "YES", "physical_path_read": "PASS", "binding_read": "PASS",
         "result_shape": "VALID", "scheduled_tasks_available": "YES",
-        "scheduled_task_available": "YES",
+        "scheduled_task_available": "YES", "physical_path_shape": "SCALAR",
+        "physical_path_records": [str(previous / "dist")],
     }), encoding="utf-8")
     staging = root / "staging"
     staging.mkdir()

@@ -16,7 +16,7 @@ from scripts.tests.test_req3_database_identity_forensics import ALEMBIC, DB, fak
 ROOT = Path(__file__).resolve().parents[2]
 PS51 = Path(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
 BUILDER = ROOT / "scripts/deploy/build_d2_validation_package.py"
-PACKAGE_ID = "D2-VALIDATION-S7-RC-f11f2ab-r8-final"
+PACKAGE_ID = "D2-VALIDATION-S7-RC-f11f2ab-r9-final"
 
 
 def build(path: Path) -> Path:
@@ -24,7 +24,8 @@ def build(path: Path) -> Path:
     return path
 
 
-def run_contract(package: Path, root: Path, changes: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def run_contract(package: Path, root: Path, changes: dict[str, object] | None = None,
+                 env_changes: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
     fixture(root)
     contract_path = root / "iis-contract.json"
     contract = json.loads(contract_path.read_text(encoding="utf-8"))
@@ -39,6 +40,7 @@ def run_contract(package: Path, root: Path, changes: dict[str, str] | None = Non
     env.update(FORWARDER_REQ4A_HARNESS="REQ-4A-CONTROLLED-HARNESS",
                FORWARDER_PSQL_STDOUT=str(stdout), FORWARDER_PSQL_STDERR=str(stderr),
                FORWARDER_PSQL_EXIT="0")
+    env.update(env_changes or {})
     return subprocess.run(
         [str(PS51), "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
          str(package / "deploy_s7_rc_f11f2ab.ps1"), "-ValidateOnly",
@@ -115,3 +117,40 @@ def test_no_validateonly_iis_mutators_before_boundary() -> None:
     assert "Initialize-IisInspection" in source and source.index("Initialize-IisInspection", 1000) < boundary
     for forbidden in ("restart-webapppool", "new-webbinding", "remove-webbinding", "stop-website", "start-website"):
         assert forbidden not in source.lower()
+
+
+@pytest.mark.parametrize("variant", ["exact", "case", "trailing", "slash", "environment"])
+def test_iis_reference_normalization_contract(package: Path, tmp_path: Path, variant: str) -> None:
+    root = tmp_path / variant
+    expected = str(root / "production/release-adcc5da-adr043/dist")
+    values = {
+        "exact": expected,
+        "case": expected.swapcase(),
+        "trailing": expected + "\\",
+        "slash": expected.replace("\\", "/"),
+        "environment": "%REQ5_IIS_ROOT%\\dist",
+    }
+    env = {"REQ5_IIS_ROOT": str(root / "production/release-adcc5da-adr043")}
+    result = run_contract(package, root, {"physical_path_records": [values[variant]]}, env)
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert "IIS_DIST_EQUALS_RESULT=True" in output
+    assert "ACTUAL_IIS_DIST_TYPE=System.String" in output
+
+
+@pytest.mark.parametrize("changes", [
+    {"physical_path_records": None},
+    {"physical_path_records": [""]},
+    {"physical_path_records": ["C:\\one", "C:\\two"]},
+    {"physical_path_shape": "PROVIDER_OBJECT"},
+    {"physical_path_records": [" C:\\wrong\\dist "]},
+    {"physical_path_records": ["relative\\dist"]},
+    {"physical_path_records": ["C:\\wrong-release\\dist"]},
+    {"physical_path_records": ["C:\\wrong-release"]},
+])
+def test_invalid_iis_reference_shapes_are_governed(package: Path, tmp_path: Path,
+                                                    changes: dict[str, object]) -> None:
+    result = run_contract(package, tmp_path / str(abs(hash(repr(changes)))), changes)
+    output = result.stdout + result.stderr
+    assert result.returncode != 0 and "STATE=ABORTED_BEFORE_MUTATION" in output
+    assert "MUTATION_BOUNDARY_REACHED" not in output and "Cannot find drive" not in output
