@@ -31,19 +31,27 @@ $CanonicalOrigin = 'https://samand.forwarderet.ir'
 $LegacyOrigin = 'https://server.logisticmarket.ir'
 $script:State = 'PRECHECK'
 $script:Mutated = $false
+$script:PrecheckCount = 0
 $script:Evidence = [ordered]@{ candidate_id=$CandidateId; source_commit=$SourceCommit; states=@(); outcome=$null }
 
 function Set-State([string]$Value) { $script:State=$Value; $script:Evidence.states += $Value; Write-Output "STATE=$Value" }
 function Fail([string]$Message) { throw "DEPLOYMENT_GATE: $Message" }
-function Require([bool]$Condition,[string]$Message) { if(-not $Condition){ Fail $Message } }
+function Require([bool]$Condition,[string]$Message) {
+    $script:PrecheckCount++
+    $label='PRECHECK_{0:D2}' -f $script:PrecheckCount
+    if(-not $Condition){ Write-Host "$label=FAIL"; Write-Host "GATE=$Message"; Write-Host 'RESULT=FAIL'; Fail $Message }
+    Write-Host "$label=PASS"
+}
 function Hash([string]$Path) { $stream=[IO.File]::OpenRead($Path);$sha=[Security.Cryptography.SHA256]::Create();try{([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$stream.Dispose();$sha.Dispose()} }
 function Atomic-Copy([string]$Source,[string]$Destination) { $tmp="$Destination.$([guid]::NewGuid().ToString('N')).tmp"; Copy-Item -LiteralPath $Source -Destination $tmp -Force; Move-Item -LiteralPath $tmp -Destination $Destination -Force }
 function Env-Map([string]$Path) {
     $map=[ordered]@{}
     foreach($line in [IO.File]::ReadAllLines($Path)){
-        if($line -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$'){
-            $key=$Matches[1].Trim([char]0xFEFF); $value=$Matches[2].Trim()
+        $normalizedLine=$line.TrimStart([char]0xFEFF)
+        if($normalizedLine -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$'){
+            $key=$Matches[1]; $value=$Matches[2].Trim()
             if($value.Length -ge 2 -and (($value.StartsWith('"') -and $value.EndsWith('"')) -or ($value.StartsWith("'") -and $value.EndsWith("'")))){$value=$value.Substring(1,$value.Length-2).Trim()}
+            Require (-not $map.Contains($key)) "duplicate configuration key: $key"
             $map[$key]=$value
         }
     }
@@ -89,7 +97,7 @@ function Get-GovernedPostgreSqlUrl([string]$RawUrl) {
     [pscustomobject]@{ Uri=$uri; Driver=if($match.Groups['driver'].Success){'psycopg2'}else{'default'} }
 }
 function Assert-DatabaseIdentity {
-    $map=Env-Map $script:ProductionEnv; Require $map.Contains('DATABASE_URL') 'DATABASE_URL is absent'
+    $map=Env-Map $script:ProductionEnv; Require ($map.Contains('DATABASE_URL')) 'DATABASE_URL is absent'
     $connection=Get-GovernedPostgreSqlUrl $map['DATABASE_URL']
     Write-Output 'DATABASE_URL_PRESENT=YES'; Write-Output 'DATABASE_ENGINE=POSTGRESQL'; Write-Output ("DATABASE_DRIVER="+$connection.Driver)
     if($SimulationRoot){
@@ -167,7 +175,20 @@ try {
     Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'Scheduled Task does not reference governed previous release'
     Require ((Get-IisReference) -eq (Join-Path $script:PreviousRelease 'dist')) 'IIS does not reference governed previous release dist'
     Require (-not (Test-Path -LiteralPath $script:TargetRelease)) 'target release already exists; refusing reuse'
-    if(-not $SimulationRoot){
+    if($SimulationRoot){
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'task-metadata.txt')).Trim() -eq $TaskName) 'Scheduled Task metadata mismatch'
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'iis-state.txt')).Trim() -eq 'Started') 'IIS site is not Started'
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'iis-bindings.txt')).Trim() -eq 'http,https') 'canonical IIS bindings mismatch'
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'listener.txt')).Trim() -eq '127.0.0.1:5101') 'backend listener mismatch'
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'current-health.txt')).Trim() -eq '200') 'current backend health failed'
+        $freeGb=[double](Get-Content -Raw -LiteralPath (Get-Sim 'disk-gb.txt'))
+        Require ($freeGb -ge 5) 'insufficient disk capacity'
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'current-cors.txt')).Trim() -eq 'LEGACY_TRANSITION_EXPECTED') 'current CORS state cannot transition'
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'target-cors.txt')).Trim() -eq $CanonicalOrigin) 'invalid canonical CORS target'
+        Require ((Get-Content -Raw -LiteralPath (Get-Sim 'unknown-origin.txt')).Trim() -eq 'REJECTED') 'unknown origin behavior mismatch'
+        Write-Output 'CURRENT_STATE_CAN_TRANSITION=YES'
+        Write-Output 'TARGET_CONFIGURATION_VALID=YES'
+    } else {
         $task=Get-ScheduledTask -TaskName $TaskName; Require ($null -ne $task) 'Scheduled Task is absent'
         $site=Get-Website -Name 'forwarder'; Require ($site.State -eq 'Started') 'IIS site is not Started'
         $bindings=Get-WebBinding -Name 'forwarder'; Require (@($bindings|Where-Object {$_.bindingInformation -eq '*:80:samand.forwarderet.ir'}).Count -eq 1) 'canonical HTTP binding is absent'; Require (@($bindings|Where-Object {$_.bindingInformation -eq '*:443:samand.forwarderet.ir'}).Count -eq 1) 'canonical HTTPS binding is absent'

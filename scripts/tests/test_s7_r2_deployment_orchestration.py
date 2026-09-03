@@ -15,7 +15,7 @@ SIDECAR = ARTIFACT_ROOT / "Forwarder-S7-RC-f11f2ab.zip.manifest.json"
 
 
 def pwsh():
-    return shutil.which("pwsh") or shutil.which("powershell")
+    return shutil.which("powershell")
 
 
 def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.1:5432/forwarder_prod_20260728_161711", *, quoted=False, crlf=False):
@@ -43,6 +43,15 @@ def fixture(root: Path, database_url="postgresql+psycopg2://user:secret@127.0.0.
     (root / "preflight.txt").write_text("https://samand.forwarderet.ir", encoding="utf-8")
     (root / "host.txt").write_text("SRV8756807400", encoding="utf-8")
     (root / "admin.txt").write_text("yes", encoding="utf-8")
+    (root / "task-metadata.txt").write_text("Forwarder Backend Production", encoding="utf-8")
+    (root / "iis-state.txt").write_text("Started", encoding="utf-8")
+    (root / "iis-bindings.txt").write_text("http,https", encoding="utf-8")
+    (root / "listener.txt").write_text("127.0.0.1:5101", encoding="utf-8")
+    (root / "current-health.txt").write_text("200", encoding="utf-8")
+    (root / "disk-gb.txt").write_text("10", encoding="utf-8")
+    (root / "current-cors.txt").write_text("LEGACY_TRANSITION_EXPECTED", encoding="utf-8")
+    (root / "target-cors.txt").write_text("https://samand.forwarderet.ir", encoding="utf-8")
+    (root / "unknown-origin.txt").write_text("REJECTED", encoding="utf-8")
     (root / "database.txt").write_text(
         "forwarder_prod_20260728_161711|20260907_direct_shipment_responsibility",
         encoding="utf-8",
