@@ -160,12 +160,22 @@ function Get-GovernedIisPhysicalPath {
     if($SimulationRoot){$records=@((Get-Content -Raw -LiteralPath (Get-Sim 'iis.txt')))}
     elseif($QualificationRoot){
         $contract=Get-Content -Raw -LiteralPath (Join-Path $QualificationRoot 'iis-contract.json')|ConvertFrom-Json
-        if($contract.physical_path_shape -eq 'PROVIDER_OBJECT'){$records=@([pscustomobject]@{physicalPath=$contract.physical_path_records[0]})}
-        else{$records=@($contract.physical_path_records)}
+        switch($contract.physical_path_shape){
+            'PROVIDER_THROWS' { Fail 'IIS physical path unreadable' }
+            'PROVIDER_OBJECT' { $records=@([pscustomobject]@{physicalPath=$contract.physical_path_records[0]}) }
+            'INTEGER' { $records=@([int]$contract.physical_path_records[0]) }
+            'BOOLEAN' { $records=@([bool]$contract.physical_path_records[0]) }
+            'STRING_ARRAY' { $records=[object[]]::new(1); $records[0]=[string[]]@($contract.physical_path_records) }
+            'ZERO_RECORDS' { $records=@() }
+            default { $records=@($contract.physical_path_records) }
+        }
     } else {
         Require $script:IisInspectionReady 'IIS inspection prerequisites were not initialized'
-        try {$records=@((Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -ErrorAction Stop).physicalPath)} catch {Fail 'IIS physical path unreadable'}
+        try {$records=@(Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -ErrorAction Stop)} catch {Fail 'IIS physical path unreadable'}
     }
+    Write-Host "RAW_IIS_PROVIDER_RECORD_COUNT=$($records.Count)"
+    $recordType=if($records.Count -eq 1 -and $null -ne $records[0]){$records[0].GetType().FullName}else{'<none>'}
+    Write-Host "RAW_IIS_PROVIDER_RECORD_TYPE=$recordType"
     if($records.Count -ne 1){Fail 'IIS physical path must return exactly one scalar'}
     if($null -eq $records[0] -or $records[0].GetType().FullName -ne 'System.String'){Fail 'IIS physical path must be one scalar string'}
     return (ConvertTo-GovernedWindowsPath ([string]$records[0]))

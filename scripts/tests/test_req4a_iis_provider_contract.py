@@ -16,7 +16,7 @@ from scripts.tests.test_req3_database_identity_forensics import ALEMBIC, DB, fak
 ROOT = Path(__file__).resolve().parents[2]
 PS51 = Path(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
 BUILDER = ROOT / "scripts/deploy/build_d2_validation_package.py"
-PACKAGE_ID = "D2-VALIDATION-S7-RC-f11f2ab-r9-final"
+PACKAGE_ID = "D2-VALIDATION-S7-RC-f11f2ab-r10-final"
 
 
 def build(path: Path) -> Path:
@@ -88,6 +88,10 @@ def test_ten_fresh_process_contract_runs(package: Path, tmp_path: Path) -> None:
         output = result.stdout + result.stderr
         assert result.returncode == 0, output
         assert "HARNESS_IIS_CONTRACT_PATH=PASS" in output
+        assert "RAW_IIS_PROVIDER_RECORD_COUNT=1" in output
+        assert "RAW_IIS_PROVIDER_RECORD_TYPE=System.String" in output
+        assert "ACTUAL_IIS_DIST_TYPE=System.String" in output
+        assert "IIS_DIST_EQUALS_RESULT=True" in output
         assert "DATABASE_IDENTITY=PASS" in output and "ALEMBIC_IDENTITY=PASS" in output
         assert "PRECHECK_MANIFEST=PASS" in output and "STATE=ABORTED_BEFORE_MUTATION" in output
         assert protected(root) == before
@@ -140,13 +144,20 @@ def test_iis_reference_normalization_contract(package: Path, tmp_path: Path, var
 
 @pytest.mark.parametrize("changes", [
     {"physical_path_records": None},
+    {"physical_path_shape": "ZERO_RECORDS", "physical_path_records": []},
     {"physical_path_records": [""]},
     {"physical_path_records": ["C:\\one", "C:\\two"]},
+    {"physical_path_shape": "STRING_ARRAY", "physical_path_records": ["C:\\one", "C:\\two"]},
     {"physical_path_shape": "PROVIDER_OBJECT"},
+    {"physical_path_shape": "INTEGER", "physical_path_records": [42]},
+    {"physical_path_shape": "BOOLEAN", "physical_path_records": [True]},
     {"physical_path_records": [" C:\\wrong\\dist "]},
+    {"physical_path_records": ["C:\\wrong\\dist "]},
     {"physical_path_records": ["relative\\dist"]},
+    {"physical_path_records": ["C:\\bad\u0000path"]},
     {"physical_path_records": ["C:\\wrong-release\\dist"]},
     {"physical_path_records": ["C:\\wrong-release"]},
+    {"physical_path_shape": "PROVIDER_THROWS"},
 ])
 def test_invalid_iis_reference_shapes_are_governed(package: Path, tmp_path: Path,
                                                     changes: dict[str, object]) -> None:
@@ -154,3 +165,49 @@ def test_invalid_iis_reference_shapes_are_governed(package: Path, tmp_path: Path
     output = result.stdout + result.stderr
     assert result.returncode != 0 and "STATE=ABORTED_BEFORE_MUTATION" in output
     assert "MUTATION_BOUNDARY_REACHED" not in output and "Cannot find drive" not in output
+
+
+def test_real_production_scalar_shape_and_old_r9_failure_are_explicit(package: Path, tmp_path: Path) -> None:
+    production_value = r"C:\1-webapp\forwarder-production\release-adcc5da-adr043\dist"
+    command = (
+        f"$raw='{production_value}';"
+        "$has=$null -ne $raw.PSObject.Properties['physicalPath'];"
+        "$old=$raw.physicalPath;"
+        "Write-Output ('RAW_PROVIDER_RESULT_TYPE='+$raw.GetType().FullName);"
+        "Write-Output ('RAW_PROVIDER_RESULT_HAS_PHYSICALPATH_PROPERTY='+$(if($has){'YES'}else{'NO'}));"
+        "Write-Output ('OLD_R9_DOT_PROPERTY_RESULT='+$(if($null -eq $old){'NULL'}else{$old}));"
+        "if($raw.GetType().FullName -ne 'System.String' -or $has -or $null -ne $old){exit 1}"
+    )
+    proof = subprocess.run([str(PS51), "-NoProfile", "-Command", command], capture_output=True, text=True)
+    assert proof.returncode == 0, proof.stdout + proof.stderr
+    assert "RAW_PROVIDER_RESULT_TYPE=System.String" in proof.stdout
+    assert "RAW_PROVIDER_RESULT_HAS_PHYSICALPATH_PROPERTY=NO" in proof.stdout
+    assert "OLD_R9_DOT_PROPERTY_RESULT=NULL" in proof.stdout
+
+    root = tmp_path / "real-production-provider-shape"
+    root.mkdir()
+    (root / "iis-contract.json").write_text(json.dumps({
+        "physical_path_shape": "SCALAR", "physical_path_records": [production_value],
+    }), encoding="utf-8")
+    deploy = str(package / "deploy_s7_rc_f11f2ab.ps1").replace("'", "''")
+    qualification = str(root).replace("'", "''")
+    extraction = rf"""
+$tokens=$null;$errors=$null
+$ast=[Management.Automation.Language.Parser]::ParseFile('{deploy}',[ref]$tokens,[ref]$errors)
+foreach($name in @('Fail','ConvertTo-GovernedWindowsPath','Get-GovernedIisPhysicalPath')){{
+  $function=$ast.FindAll({{param($node) $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name}},$true)|Select-Object -First 1
+  Invoke-Expression $function.Extent.Text
+}}
+$QualificationRoot='{qualification}';$SimulationRoot=$null
+$result=@(Get-GovernedIisPhysicalPath)
+Write-Output ('IIS_HELPER_PIPELINE_OUTPUT_COUNT='+$result.Count)
+Write-Output ('NEW_R10_EXTRACTION_RESULT='+$result[0])
+if($result.Count -ne 1 -or $result[0].GetType().FullName -ne 'System.String' -or $result[0] -ne '{production_value}'){{exit 1}}
+"""
+    fixed = subprocess.run([str(PS51), "-NoProfile", "-Command", extraction], capture_output=True, text=True)
+    output = fixed.stdout + fixed.stderr
+    assert fixed.returncode == 0, output
+    assert "RAW_IIS_PROVIDER_RECORD_COUNT=1" in output
+    assert "RAW_IIS_PROVIDER_RECORD_TYPE=System.String" in output
+    assert "IIS_HELPER_PIPELINE_OUTPUT_COUNT=1" in output
+    assert f"NEW_R10_EXTRACTION_RESULT={production_value}" in output
