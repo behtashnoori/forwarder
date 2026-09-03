@@ -263,6 +263,7 @@ try {
     Require (Test-Path -LiteralPath $script:ProductionEnv -PathType Leaf) 'production.env is absent'
     Require (Test-Path -LiteralPath (Join-Path $script:RuntimeRoot 'phase1b_production_cutover_runtime.py') -PathType Leaf) 'runtime wrapper is absent'
     Assert-DatabaseIdentity
+    $hasSingularCors=(Env-Map $script:ProductionEnv).Contains('CORS_ORIGIN')
     Assert-TargetConfigCanBePrepared
     Initialize-ScheduledTaskInspection
     Initialize-IisInspection
@@ -291,7 +292,16 @@ try {
     }
     $script:PreviousEnvHash=Hash $script:ProductionEnv; $script:EnvBackup=Join-Path $script:RuntimeRoot ("production.env.$CandidateId.rollback"); $script:TaskBackup=Join-Path $script:RuntimeRoot ("$TaskName.$CandidateId.rollback.xml")
     Set-State 'STAGED_VERIFIED'
-    if($ValidateOnly){ if($script:PrecheckCount -ne $script:PassedPrecheckCount){Fail 'precheck manifest incomplete'}; Write-Output "EXPECTED_PRECHECK_COUNT=$($script:PrecheckCount)"; Write-Output "EXECUTED_PRECHECK_COUNT=$($script:PrecheckCount)"; Write-Output "PASSED_PRECHECK_COUNT=$($script:PassedPrecheckCount)"; Write-Output 'PRECHECK_MANIFEST=PASS'; Set-State 'ABORTED_BEFORE_MUTATION'; $script:Evidence.outcome='ABORTED_BEFORE_MUTATION'; $script:Evidence|ConvertTo-Json -Depth 4; exit 0 }
+    if($ValidateOnly){
+        $expectedBase=if($QualificationRoot){59}elseif($SimulationRoot){39}else{49}
+        $expectedPrecheckCount=$expectedBase+$(if($hasSingularCors){1}else{0})
+        Write-Output "PRECHECK_CONDITIONAL_CORS_ORIGIN=$(if($hasSingularCors){'EXECUTED'}else{'NOT_APPLICABLE'})"
+        Write-Output "EXPECTED_PRECHECK_COUNT=$expectedPrecheckCount"
+        Write-Output "EXECUTED_PRECHECK_COUNT=$($script:PrecheckCount)"
+        Write-Output "PASSED_PRECHECK_COUNT=$($script:PassedPrecheckCount)"
+        if($expectedPrecheckCount -ne $script:PrecheckCount -or $script:PrecheckCount -ne $script:PassedPrecheckCount){Fail 'precheck manifest incomplete'}
+        Write-Output 'PRECHECK_MANIFEST=PASS'; Set-State 'ABORTED_BEFORE_MUTATION'; $script:Evidence.outcome='ABORTED_BEFORE_MUTATION'; $script:Evidence|ConvertTo-Json -Depth 4; exit 0
+    }
     Write-Output 'MUTATION_BOUNDARY_REACHED'
     $script:Mutated=$true; Set-State 'ROLLBACK_STATE_CAPTURED'; Atomic-Copy $script:ProductionEnv $script:EnvBackup; Capture-TaskState
     Set-State 'STAGED'; if($SimulateStagingFailure){ Fail 'forced simulated staging failure' }; Expand-Archive -LiteralPath $ArtifactPath -DestinationPath $script:TargetRelease -ErrorAction Stop

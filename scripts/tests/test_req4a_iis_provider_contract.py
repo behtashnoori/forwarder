@@ -16,7 +16,7 @@ from scripts.tests.test_req3_database_identity_forensics import ALEMBIC, DB, fak
 ROOT = Path(__file__).resolve().parents[2]
 PS51 = Path(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
 BUILDER = ROOT / "scripts/deploy/build_d2_validation_package.py"
-PACKAGE_ID = "D2-VALIDATION-S7-RC-f11f2ab-r7-final"
+PACKAGE_ID = "D2-VALIDATION-S7-RC-f11f2ab-r8-final"
 
 
 def build(path: Path) -> Path:
