@@ -1,0 +1,28 @@
+{
+  "candidate_id": "S7-RC-a257669-rg1-frozen",
+  "application_source_commit": "a2576690364fcaf58ca7ddc6c57143c3084bbb00",
+  "release_engineering_commit": "c8d42336b05075716423234fedcbe2668aeb34f1",
+  "artifact": {
+    "name": "Forwarder-S7-RC-a257669-rg1-frozen-a257669.zip",
+    "size_bytes": 1323912,
+    "sha256": "aca7a147cad97edf0e3f03d763c63471c283f62021a23a4e6a47b5e59aa88534"
+  },
+  "artifact_sidecar_manifest": {
+    "name": "Forwarder-S7-RC-a257669-rg1-frozen-a257669.zip.manifest.json",
+    "sha256": "e826468900d11408a4c7f8c01da45f9f86dff8f19e25155ed840080d5cf8a613"
+  },
+  "migration_head": "20260908_governed_international_geography",
+  "qualification": {
+    "backend": "860 passed, 92 skipped, 1 xfailed in 338.28s",
+    "frontend": "34 files passed, 163 tests passed",
+    "production_build": "passed",
+    "runtime_smoke": "package test-client: /, /api/health, /api/health/ping returned 200",
+    "fresh_extraction": "391 files, exact-byte mismatches: 0",
+    "package_secret_policy": "passed",
+    "forbidden_package_local_state": "0"
+  },
+  "production_accessed": false,
+  "production_changed": false,
+  "deployment_performed": false,
+  "frozen": true
+}

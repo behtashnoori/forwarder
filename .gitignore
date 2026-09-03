@@ -49,3 +49,8 @@ backend/routes/__pycache__/shipment_request.cpython-312.pyc
 /backend/forwarder_dev.db
 /test_live.db
 /test_run.db
+
+# Frozen release archives remain local deliverables; their committed candidate
+# records contain the immutable names and SHA-256 values.
+/release-candidates/**/Forwarder-*.zip
+/release-candidates/**/Forwarder-*.zip.manifest.json
