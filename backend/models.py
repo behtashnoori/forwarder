@@ -118,7 +118,11 @@ class Country(db.Model):
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     name_en = db.Column(db.String(100), nullable=False)
     name_fa = db.Column(db.String(100), nullable=False)
-    code = db.Column(db.String(3), nullable=False, unique=True)  # ISO country code
+    # Canonical business identity: ISO 3166-1 alpha-2.  Do not repurpose this
+    # field for alpha-3 or a local display code.
+    # Existing historical/test rows may contain legacy non-alpha-2 codes; new
+    # governed snapshot writes are validated as ISO alpha-2 by the reconciler.
+    code = db.Column(db.String(3), nullable=False, unique=True)
     is_active = db.Column(db.Boolean, default=True)
     effective_from = db.Column(db.Date, nullable=True)
     effective_to = db.Column(db.Date, nullable=True)
@@ -138,6 +142,10 @@ class InternationalCity(db.Model):
     """Represents a city or port in a country for international shipping."""
 
     __tablename__ = "international_city"
+    __table_args__ = (
+        db.UniqueConstraint("country_id", "un_locode", name="uq_international_city_country_un_locode"),
+        db.CheckConstraint("un_locode IS NULL OR (length(un_locode) = 5 AND un_locode = upper(un_locode))", name="ck_international_city_un_locode"),
+    )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     name_en = db.Column(db.String(100), nullable=False)
@@ -149,6 +157,14 @@ class InternationalCity(db.Model):
     is_major_port = db.Column(db.Boolean, default=False)
     is_major_airport = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
+    # Optional because existing legacy rows predate S1.  When populated this
+    # is the complete five-character UNECE UN/LOCODE, not a Global Logistics
+    # Point identity.
+    un_locode = db.Column(db.String(5), nullable=True)
+    source_organization = db.Column(db.String(160), nullable=True)
+    source_reference = db.Column(db.String(500), nullable=True)
+    source_version = db.Column(db.String(100), nullable=True)
+    dataset_id = db.Column(db.String(100), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     country = db.relationship("Country", back_populates="cities")

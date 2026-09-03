@@ -1,0 +1,35 @@
+{
+  "dataset_id": "forwarder-international-geography-v1",
+  "domain": "General Geography / international request selector",
+  "owner_role": "Reference Data Owner",
+  "country_authority": "ISO 3166-1 alpha-2",
+  "international_location_authority": "UNECE UN/LOCODE",
+  "snapshot_version": "2025-1",
+  "runtime_network_policy": "Runtime must not fetch ISO or UNECE. Reconciliation uses this checked-in approved snapshot only.",
+  "reconciliation_policy": "Idempotent, non-destructive, identity-stable, and never reactivates existing inactive records.",
+  "records": [
+    {
+      "country": {
+        "code": "TM",
+        "name_en": "Turkmenistan",
+        "name_fa": "ترکمنستان",
+        "source_organization": "ISO",
+        "source_reference": "ISO 3166-1 alpha-2: TM",
+        "source_version": "ISO 3166-1"
+      },
+      "locations": [
+        {
+          "name_en": "Ashkhabad",
+          "name_fa": "عشق‌آباد",
+          "city_type": "city",
+          "is_major_port": false,
+          "is_major_airport": true,
+          "un_locode": "TMASB",
+          "source_organization": "UNECE",
+          "source_reference": "https://service.unece.org/trade/locode/tm.htm",
+          "source_version": "UN/LOCODE 2025-1"
+        }
+      ]
+    }
+  ]
+}

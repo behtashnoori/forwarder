@@ -8,6 +8,16 @@ from datetime import datetime
 from backend.__init__ import create_app
 from backend.models import Country, InternationalCity
 from backend.extensions import db
+from backend.services.international_geography_readiness import approved_snapshot, validate_snapshot
+
+
+def _governed_records():
+    """Return S1 additions from a checked-in, versioned snapshot only."""
+    snapshot = approved_snapshot()
+    errors = validate_snapshot(snapshot)
+    if errors:
+        raise ValueError("Invalid international geography snapshot: " + "; ".join(errors))
+    return snapshot["records"], snapshot
 
 def seed_international_data(app=None):
     """Reconcile the checked-in international reference input, idempotently.
@@ -164,18 +174,32 @@ def seed_international_data(app=None):
                 ]
             }
         ]
+        governed_records, snapshot = _governed_records()
+        # Keep the established legacy catalog compatible while adding new
+        # approved records exclusively through the governed snapshot.
+        for record in governed_records:
+            country = dict(record["country"])
+            country["cities"] = [dict(location) for location in record["locations"]]
+            countries_data.append(country)
         
         countries_created = cities_created = 0
         # Create only missing countries and cities.  Existing lifecycle state
         # is managed by admin CRUD and must not be silently reactivated here.
         for country_data in countries_data:
-            country = Country.query.filter_by(code=country_data["code"]).one_or_none()
+            code = str(country_data["code"]).upper()
+            if len(code) != 2 or not code.isalpha():
+                raise ValueError(f"Country code must be ISO alpha-2: {code!r}")
+            country = Country.query.filter_by(code=code).one_or_none()
             if country is None:
                 country = Country(
                     name_en=country_data["name_en"],
                     name_fa=country_data["name_fa"],
-                    code=country_data["code"],
+                    code=code,
                     is_active=True,
+                    source_organization=country_data.get("source_organization"),
+                    source_reference=country_data.get("source_reference"),
+                    source_version=country_data.get("source_version"),
+                    dataset_id=snapshot["dataset_id"] if country_data.get("source_organization") else None,
                     created_at=datetime.utcnow()
                 )
                 db.session.add(country)
@@ -184,9 +208,9 @@ def seed_international_data(app=None):
 
             # Create cities for this country
             for city_data in country_data["cities"]:
-                city = InternationalCity.query.filter_by(
-                    country_id=country.id, name_en=city_data["name_en"]
-                ).one_or_none()
+                un_locode = city_data.get("un_locode")
+                city = (InternationalCity.query.filter_by(country_id=country.id, un_locode=un_locode).one_or_none()
+                        if un_locode else InternationalCity.query.filter_by(country_id=country.id, name_en=city_data["name_en"]).one_or_none())
                 if city is None:
                     db.session.add(InternationalCity(
                         name_en=city_data["name_en"],
@@ -196,6 +220,11 @@ def seed_international_data(app=None):
                         is_major_port=city_data["is_major_port"],
                         is_major_airport=city_data["is_major_airport"],
                         is_active=True,
+                        un_locode=un_locode,
+                        source_organization=city_data.get("source_organization"),
+                        source_reference=city_data.get("source_reference"),
+                        source_version=city_data.get("source_version"),
+                        dataset_id=snapshot["dataset_id"] if un_locode else None,
                         created_at=datetime.utcnow()
                     ))
                     cities_created += 1
