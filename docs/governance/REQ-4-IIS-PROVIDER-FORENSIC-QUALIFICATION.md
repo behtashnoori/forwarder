@@ -121,7 +121,7 @@ being overwritten or authorized. The corrected R8 package was then built once.
 - package: `D2-VALIDATION-S7-RC-f11f2ab-r8-final`
 - package size: 1,282,910 bytes
 - package SHA-256: `b0e95e22179f1e262f23b0834f57a8394c97770c247c5d14700f0c2cf5608a50`
-- package manifest SHA-256: `b1f59cea252a5cecdd0165de61e0f839930adfbf8512277421c5e8fec5fc8657`
+- package manifest SHA-256: `772673ad5526e54744ee7600bd19b57d6b77e9ccfa40248576a7311536054e60`
 - release-tooling provenance: `2d062671c089bec27e2af25f6df61b50a12dafd4`
 - package rebuilt after qualification: no
 
