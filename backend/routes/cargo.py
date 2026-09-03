@@ -10,7 +10,14 @@ from backend.cargo_models import ShipmentCargoItem
 from backend.extensions import db
 from backend.security import require_auth
 from backend.services import cargo_service as svc
-from backend.services.admin_authorization_service import require_organization_admin_context
+from backend.services.admin_authorization_service import (
+    AdminAuthorizationError,
+    ORGANIZATION_ADMIN,
+    effective_authority,
+    organization_context_for_authenticated_user,
+    require_organization_admin_context,
+)
+from backend.models import ExpertUser
 
 cargo_bp = Blueprint("cargo", __name__, url_prefix="/api/internal")
 
@@ -25,6 +32,21 @@ def _error(exc):
     if isinstance(exc, IntegrityError):
         return jsonify({"error": "conflicting cargo data"}), 409
     return jsonify({"error": str(exc)}), getattr(exc, "status", 400)
+
+
+def _cargo_options_organization(user):
+    """Resolve the tenant for the two approved cargo-options consumers.
+
+    Catalog administration is organization-admin scoped, while shipment cargo
+    entry is permission scoped.  Both paths must still derive exactly one
+    active organization from the authenticated user's membership.
+    """
+    actor = db.session.get(ExpertUser, user["id"])
+    if actor and effective_authority(actor) == ORGANIZATION_ADMIN:
+        organization_context_for_authenticated_user(actor.id)
+    else:
+        svc.operational_service.require_permission(user, "operational_shipment.read")
+    return svc.org_for(user)
 
 
 @cargo_bp.get("/cargo-catalog")
@@ -213,8 +235,7 @@ def shipment_items(shipment_id):
 def cargo_options():
     try:
         user = _user()
-        svc.operational_service.require_permission(user, "operational_shipment.read")
-        org = svc.org_for(user)
+        org = _cargo_options_organization(user)
         from backend.cargo_models import CargoCatalogItem
         from backend.models import CargoType, UnitOfMeasure
 
@@ -274,7 +295,7 @@ def cargo_options():
                 ],
             }
         )
-    except (svc.CargoError, svc.operational_service.OperationalError) as exc:
+    except (svc.CargoError, svc.operational_service.OperationalError, AdminAuthorizationError) as exc:
         return _error(exc)
 
 

@@ -1,6 +1,7 @@
 """Seed script to create international countries and cities data."""
 import sys
 import os
+from contextlib import nullcontext
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from datetime import datetime
@@ -8,17 +9,19 @@ from backend.__init__ import create_app
 from backend.models import Country, InternationalCity
 from backend.extensions import db
 
-def seed_international_data():
-    """Create international countries and cities data."""
-    app = create_app()
+def seed_international_data(app=None):
+    """Reconcile the checked-in international reference input, idempotently.
+
+    Passing an application is intended for controlled maintenance and tests;
+    it never contacts another environment.
+    """
+    app = app or create_app()
     
-    with app.app_context():
-        # Check if countries already exist
-        if Country.query.count() > 0:
-            print("International data already exists. Skipping seed.")
-            return
-        
-        # Create countries
+    context = nullcontext() if app is not None and app.config.get("TESTING") else app.app_context()
+    with context:
+        # Checked-in, governed historical reference input.  Reconcile each
+        # entry independently: an earlier Iran-only seed must not suppress
+        # the rest of the catalog or Iran's InternationalCity continuation.
         countries_data = [
             {
                 "name_en": "China",
@@ -162,35 +165,44 @@ def seed_international_data():
             }
         ]
         
-        # Create countries and their cities
+        countries_created = cities_created = 0
+        # Create only missing countries and cities.  Existing lifecycle state
+        # is managed by admin CRUD and must not be silently reactivated here.
         for country_data in countries_data:
-            country = Country(
-                name_en=country_data["name_en"],
-                name_fa=country_data["name_fa"],
-                code=country_data["code"],
-                is_active=True,
-                created_at=datetime.utcnow()
-            )
-            db.session.add(country)
-            db.session.flush()  # Get the country ID
-            
-            # Create cities for this country
-            for city_data in country_data["cities"]:
-                city = InternationalCity(
-                    name_en=city_data["name_en"],
-                    name_fa=city_data["name_fa"],
-                    country_id=country.id,
-                    city_type=city_data["city_type"],
-                    is_major_port=city_data["is_major_port"],
-                    is_major_airport=city_data["is_major_airport"],
+            country = Country.query.filter_by(code=country_data["code"]).one_or_none()
+            if country is None:
+                country = Country(
+                    name_en=country_data["name_en"],
+                    name_fa=country_data["name_fa"],
+                    code=country_data["code"],
                     is_active=True,
                     created_at=datetime.utcnow()
                 )
-                db.session.add(city)
+                db.session.add(country)
+                db.session.flush()
+                countries_created += 1
+
+            # Create cities for this country
+            for city_data in country_data["cities"]:
+                city = InternationalCity.query.filter_by(
+                    country_id=country.id, name_en=city_data["name_en"]
+                ).one_or_none()
+                if city is None:
+                    db.session.add(InternationalCity(
+                        name_en=city_data["name_en"],
+                        name_fa=city_data["name_fa"],
+                        country_id=country.id,
+                        city_type=city_data["city_type"],
+                        is_major_port=city_data["is_major_port"],
+                        is_major_airport=city_data["is_major_airport"],
+                        is_active=True,
+                        created_at=datetime.utcnow()
+                    ))
+                    cities_created += 1
         
         try:
             db.session.commit()
-            print(f"Successfully seeded {len(countries_data)} countries with their cities.")
+            print(f"International reference reconciliation complete: {countries_created} countries and {cities_created} cities created.")
         except Exception as e:
             db.session.rollback()
             print(f"Error seeding international data: {e}")
