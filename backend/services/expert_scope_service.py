@@ -9,7 +9,10 @@ from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 from backend.operational_models import OperationalMembership
 
-EXPERT_ROLES = ("expert", "business_expert")
+# The current PostgreSQL role contract and authority model have one ordinary
+# operational role: expert.  Legacy business_expert references are not a
+# valid role value for the governed database and must not receive this baseline.
+EXPERT_ROLES = ("expert",)
 # A normal active Expert is an operational user.  This baseline deliberately
 # grants workflow capability, not tenant-wide visibility or administrative
 # authority: endpoint guards and assigned-work policy remain authoritative.

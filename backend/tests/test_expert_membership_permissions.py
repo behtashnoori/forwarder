@@ -92,14 +92,13 @@ def _headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-@pytest.mark.parametrize("role", ["expert", "business_expert"])
-def test_organization_expert_provisioning_receives_operational_baseline(permission_app, role):
+def test_organization_expert_provisioning_receives_operational_baseline(permission_app):
     app, context = permission_app
     client = app.test_client()
     response = client.post(
         "/api/user-management/users",
         headers=_headers(context["admin_token"]),
-        json={"username": f"new-{role}", "password": "test123", "full_name": role, "role": role},
+        json={"username": "new-expert", "password": "test123", "full_name": "Expert", "role": "expert"},
     )
     assert response.status_code == 201
     user_id = response.get_json()["user_id"]
