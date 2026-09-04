@@ -817,10 +817,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   // Load international cities for destination country
   useEffect(() => {
     let active = true;
-    const selectedCountry = countries.find(
-      (country) => country.id.toString() === formData.destCountry,
-    );
-    if (!formData.destCountry || selectedCountry?.code === "IR") {
+    if (!formData.destCountry) {
       setDestinationInternationalCities([]);
       setIsLoadingDestinationInternationalCities(false);
       return () => {
@@ -858,7 +855,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return () => {
       active = false;
     };
-  }, [countries, formData.destCountry, t, toast]);
+  }, [formData.destCountry, t, toast]);
 
   // Derive the destination province from the selected port (port mode).
   useEffect(() => {
@@ -1162,6 +1159,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       
     }
 
+    if (isValid && formData.pickupDate && formData.deliveryDate && formData.pickupDate > formData.deliveryDate) {
+      isValid = false;
+      errorMessage = t("requestForm.validation.availabilityRangeInvalid");
+    }
+
     if (!isValid) {
       toast({
         title: t("common.error"),
@@ -1209,19 +1211,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         const originCity = originInternationalCities.find(c => c.id.toString() === formData.originCityInternational);
         const destCity = destinationInternationalCities.find(c => c.id.toString() === formData.destCityInternational);
         
-        payload.origin_country = originCountry?.name || "";
-        payload.origin_city_international = originCity?.name || "";
+        payload.origin_country_id = Number(formData.originCountry);
+        payload.origin_international_city_id = Number(formData.originCityInternational);
         payload.origin_address_international = formData.originAddressInternational;
-        payload.dest_country = destCountry?.name || "";
-        if (destCountry?.code !== "IR") {
-          payload.dest_city_international = destCity?.name || "";
-        }
+        payload.dest_country_id = Number(formData.destCountry);
+        payload.dest_international_city_id = Number(formData.destCityInternational);
         payload.dest_address_international = formData.destAddressInternational;
-        
-        // Add the structured Iran destination point if destination is Iran
-        if (destCountry?.code === "IR") {
-          applyIranDestinationToPayload(payload);
-        }
       }
 
       // Add customer details if provided
@@ -1296,19 +1291,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         const originCity = originInternationalCities.find(c => c.id.toString() === formData.originCityInternational);
         const destCity = destinationInternationalCities.find(c => c.id.toString() === formData.destCityInternational);
         
-        payload.origin_country = originCountry?.name || "";
-        payload.origin_city_international = originCity?.name || "";
+        payload.origin_country_id = Number(formData.originCountry);
+        payload.origin_international_city_id = Number(formData.originCityInternational);
         payload.origin_address_international = formData.originAddressInternational;
-        payload.dest_country = destCountry?.name || "";
-        if (destCountry?.code !== "IR") {
-          payload.dest_city_international = destCity?.name || "";
-        }
+        payload.dest_country_id = Number(formData.destCountry);
+        payload.dest_international_city_id = Number(formData.destCityInternational);
         payload.dest_address_international = formData.destAddressInternational;
-        
-        // Add the structured Iran destination point if destination is Iran
-        if (destCountry?.code === "IR") {
-          applyIranDestinationToPayload(payload);
-        }
       }
 
       // Add customer details if provided
@@ -2645,89 +2633,26 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               />
             </div>
 
-            {/* Dates Row */}
-            <div className="grid grid-cols-2 gap-3">
-              {shippingType === "domestic" && (
-                <>
-                  <JalaliDateInput
-                    id="pickupDate"
-                    label={t("requestForm.pickupDate")}
-                    selectLabel={t("requestForm.selectJalaliDate")}
-                    nextMonthLabel={t("requestForm.nextMonth")}
-                    previousMonthLabel={t("requestForm.previousMonth")}
-                    clearLabel={t("requestForm.clearDate")}
-                    value={formData.pickupDate}
-                    onChange={(pickupDate) => {
-                      setFormData({
-                        ...formData,
-                        pickupDate,
-                      });
-                    }}
-                  />
-                  <JalaliDateInput
-                    id="deliveryDate"
-                    label={t("requestForm.deliveryDate")}
-                    selectLabel={t("requestForm.selectJalaliDate")}
-                    nextMonthLabel={t("requestForm.nextMonth")}
-                    previousMonthLabel={t("requestForm.previousMonth")}
-                    clearLabel={t("requestForm.clearDate")}
-                    value={formData.deliveryDate}
-                    onChange={(deliveryDate) => {
-                      setFormData({
-                        ...formData,
-                        deliveryDate,
-                      });
-                    }}
-                  />
-                </>
-              )}
-              {shippingType !== "domestic" && (
+            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+              <div>
+                <p className="text-sm font-medium">{t("requestForm.availabilityWindow")}</p>
+                <p className={helperTextClass}>{t("requestForm.availabilityWindowHelp")}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                <Label htmlFor="pickupDate" className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  {t("requestForm.pickupDate")}
-                </Label>
-                <Input
-                  id="pickupDate"
-                  type="date"
-                  value={formData.pickupDate}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      pickupDate: e.target.value,
-                    });
-                  }}
-                />
+                  <Label htmlFor="pickupDate">{t("requestForm.availabilityFrom")}</Label>
+                  <Input id="pickupDate" type="date" value={formData.pickupDate} onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })} />
                 </div>
-              )}
-              {shippingType !== "domestic" && (
                 <div className="space-y-2">
-                <Label htmlFor="deliveryDate" className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="w-4 h-4 text-muted-foreground" />
-                  {t("requestForm.deliveryDate")}
-                </Label>
-                <Input
-                  id="deliveryDate"
-                  type="date"
-                  value={formData.deliveryDate}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      deliveryDate: e.target.value,
-                    });
-                  }}
-                />
+                  <Label htmlFor="deliveryDate">{t("requestForm.availabilityTo")}</Label>
+                  <Input id="deliveryDate" type="date" value={formData.deliveryDate} onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })} />
                 </div>
-              )}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <JalaliDateInput id="pickupDateJalali" label={t("requestForm.availabilityFromJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.pickupDate} onChange={(pickupDate) => setFormData({ ...formData, pickupDate })} />
+                <JalaliDateInput id="deliveryDateJalali" label={t("requestForm.availabilityToJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.deliveryDate} onChange={(deliveryDate) => setFormData({ ...formData, deliveryDate })} />
+              </div>
             </div>
-            {shippingType === "domestic" && (
-              <p className={helperTextClass}>
-                {t("requestForm.domesticDateHelp")}
-              </p>
-            )}
-            <p className={shippingType === "domestic" ? "hidden" : helperTextClass}>
-              {t("requestForm.browserDateHelp")}
-            </p>
           </div>
         )}
 

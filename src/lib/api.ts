@@ -104,6 +104,11 @@ export interface ShipmentRequestPayload {
   dest_county_id?: number | null;
   dest_city_id?: number | null;
   // International shipping fields
+  // Canonical governed references. These are the preferred public-form write path.
+  origin_country_id?: number;
+  origin_international_city_id?: number;
+  dest_country_id?: number;
+  dest_international_city_id?: number;
   origin_country?: string;
   origin_city_international?: string;
   origin_address_international?: string;
