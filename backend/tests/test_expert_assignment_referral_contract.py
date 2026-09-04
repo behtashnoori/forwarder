@@ -63,7 +63,7 @@ def expert_contract_app():
             password_hash=password_hash,
             full_name="Phase 4H Other Expert",
             email="phase4h-other@example.test",
-            role="business_expert",
+            role="expert",
             is_active=True,
         )
         organization = OperationalOrganization(name="Expert Contract Organization")

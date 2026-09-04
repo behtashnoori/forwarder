@@ -73,7 +73,7 @@ def user_management_app():
             password_hash=password_hash,
             full_name="Phase 5B Other",
             email="phase5b-other@example.test",
-            role="business_expert",
+            role="expert",
             is_active=True,
         )
         db.session.add_all([admin, expert, other_expert])
