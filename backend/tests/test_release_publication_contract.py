@@ -55,6 +55,8 @@ def test_builder_backend_qualification_has_progress_and_bounded_stall_diagnostic
     assert '"-vv"' in source
     assert '"--durations=25"' in source
     assert '"faulthandler_timeout=120"' in source
+    assert "NPM_CI_TIMEOUT_SECONDS = 600" in source
+    assert "command TIMEOUT; diagnostics=" in source
 
 
 def test_builder_packages_importer_migrations_baseline_dist_and_secret_verifier():

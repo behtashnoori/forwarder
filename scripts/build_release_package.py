@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,15 +48,95 @@ class BuildError(RuntimeError):
     pass
 
 
-def run(args, cwd, *, env=None, output=True):
-    p = subprocess.run(args, cwd=cwd, env=env, text=True, capture_output=output)
+DEFAULT_COMMAND_TIMEOUT_SECONDS = 900
+NPM_CI_TIMEOUT_SECONDS = 600
+NPM_BUILD_TIMEOUT_SECONDS = 300
+COMMAND_EVIDENCE = []
+
+
+def command_timeout(args):
+    """Return the bounded timeout for a release-build external command."""
+    normalized = tuple(map(str, args))
+    if len(normalized) >= 2 and normalized[1] == "ci" and "npm" in Path(normalized[0]).name:
+        return NPM_CI_TIMEOUT_SECONDS
+    if len(normalized) >= 3 and normalized[1:3] == ("run", "build"):
+        return NPM_BUILD_TIMEOUT_SECONDS
+    return DEFAULT_COMMAND_TIMEOUT_SECONDS
+
+
+def command_record(args, cwd, process, started_utc, started_monotonic, stdout, stderr, *, timeout, outcome):
+    return {
+        "command": list(map(str, args)),
+        "executable": shutil.which(str(args[0])) or str(args[0]),
+        "working_directory": str(cwd),
+        "process_id": process.pid,
+        "started_utc": started_utc.isoformat(),
+        "elapsed_seconds": round(time.monotonic() - started_monotonic, 3),
+        "timeout_seconds": timeout,
+        "outcome": outcome,
+        "exit_code": process.returncode,
+        "stdout_tail": stdout.strip().splitlines()[-20:],
+        "stderr_tail": stderr.strip().splitlines()[-20:],
+    }
+
+
+def terminate_owned_process_tree(process):
+    """Terminate only the tree rooted at the PID created by this invocation."""
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill.exe", "/PID", str(process.pid), "/T", "/F"],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+    else:
+        process.kill()
+
+
+def run(args, cwd, *, env=None, output=True, timeout_seconds=None):
+    """Run one release command with captured diagnostics and an owned timeout."""
+    timeout = command_timeout(args) if timeout_seconds is None else timeout_seconds
+    started_utc = datetime.now(timezone.utc).replace(microsecond=0)
+    started_monotonic = time.monotonic()
+    flags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    p = subprocess.Popen(
+        args,
+        cwd=cwd,
+        env=env,
+        text=True,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        creationflags=flags,
+    )
+    try:
+        stdout, stderr = p.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        terminate_owned_process_tree(p)
+        stdout, stderr = p.communicate()
+        record = command_record(
+            args, cwd, p, started_utc, started_monotonic, stdout, stderr, timeout=timeout, outcome="TIMEOUT"
+        )
+        raise BuildError("command TIMEOUT; diagnostics=" + json.dumps(record, sort_keys=True))
     if p.returncode:
-        lines = (p.stderr or p.stdout or "").strip().splitlines()
+        record = command_record(
+            args, cwd, p, started_utc, started_monotonic, stdout, stderr, timeout=timeout, outcome="FAIL"
+        )
+        lines = (stderr or stdout or "").strip().splitlines()
         raise BuildError(
             f"command failed ({p.returncode}): {' '.join(map(str, args))}"
             + (f"; {lines[-1]}" if lines else "")
+            + "; diagnostics=" + json.dumps(record, sort_keys=True)
         )
-    return (p.stdout or "").strip()
+    COMMAND_EVIDENCE.append(
+        command_record(
+            args, cwd, p, started_utc, started_monotonic, stdout, stderr,
+            timeout=timeout, outcome="PASS"
+        )
+    )
+    return stdout.strip()
 
 
 def file_hash(path):
@@ -116,6 +197,7 @@ def validate_source(source, commit):
 
 def gates(source):
     npm = "npm.cmd" if os.name == "nt" else "npm"
+    evidence_start = len(COMMAND_EVIDENCE)
     with tempfile.TemporaryDirectory(prefix="forwarder-release-venv-") as raw:
         venv = Path(raw)
         run([sys.executable, "-m", "venv", str(venv)], source)
@@ -183,6 +265,7 @@ def gates(source):
             "python": run([str(python), "--version"], source),
             "node": run(["node", "--version"], source),
             "npm": run([npm, "--version"], source),
+            "command_evidence": COMMAND_EVIDENCE[evidence_start:],
         }
 
 

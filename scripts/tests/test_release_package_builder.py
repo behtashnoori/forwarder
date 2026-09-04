@@ -1,6 +1,7 @@
 import hashlib
 import importlib.util
 import json
+import sys
 import zipfile
 from pathlib import Path
 
@@ -30,6 +31,28 @@ def test_builder_pins_current_head_and_approved_baseline():
 def test_builder_rejects_non_full_or_unavailable_authorized_commit(tmp_path):
     with pytest.raises(builder.BuildError, match="authorized commit"):
         builder.build(ROOT, "052a63d", tmp_path, "test", skip_gates=True)
+
+
+def test_external_release_commands_are_bounded_and_timeout_is_diagnostic(tmp_path):
+    with pytest.raises(builder.BuildError, match="TIMEOUT") as failure:
+        builder.run(
+            [sys.executable, "-c", "import time; time.sleep(2)"],
+            tmp_path,
+            timeout_seconds=0.05,
+        )
+    message = str(failure.value)
+    assert '"outcome": "TIMEOUT"' in message
+    assert '"process_id"' in message
+    assert '"working_directory"' in message
+
+
+def test_npm_commands_have_specific_bounded_contracts():
+    source = (ROOT / "scripts/build_release_package.py").read_text(encoding="utf-8")
+    assert 'NPM_CI_TIMEOUT_SECONDS = 600' in source
+    assert 'NPM_BUILD_TIMEOUT_SECONDS = 300' in source
+    assert 'subprocess.CREATE_NEW_PROCESS_GROUP' in source
+    assert '"taskkill.exe", "/PID", str(process.pid), "/T", "/F"' in source
+    assert '"taskkill.exe", "/IM"' not in source
 
 
 def test_artifact_verifier_checks_structure_hashes_and_membership(tmp_path):
