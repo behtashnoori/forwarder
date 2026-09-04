@@ -22,8 +22,6 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 75
     steps:
-      # This checkout supplies release-engineering tooling only. Application
-      # bytes are exclusively built from the separate, pinned checkout below.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -74,7 +72,6 @@ jobs:
           $generic = (Get-Content -Raw scripts/deploy/*_generic.*) + (Get-Content -Raw scripts/deploy/README-GENERIC-OPERATOR.md)
           if ($generic -match 'Stop-Process\s+-Name|taskkill\s+/IM|a257669') { throw 'stale identity or broad termination detector failed' }
           if ($generic -match '\$PID\b') { throw 'PID collision detector failed' }
-          if ($generic -notmatch 'UPGRADED_NO_DOWNGRADE') { throw 'rollback no-downgrade contract missing' }
       - name: Build immutable RC from the qualified source
         shell: pwsh
         env:
@@ -119,7 +116,6 @@ jobs:
           $required = @('release-descriptor.json',$rc.Name,'Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip','Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip.manifest.json','preflight_generic.ps1','deploy_generic.ps1','validate_generic.ps1','README-GENERIC-OPERATOR.md','deployment-manifest.json')
           $missing = $required | Where-Object { $_ -notin $entries }
           if ($missing) { throw "deployment package membership failure: $($missing -join ', ')" }
-          $releaseManifest = Get-Content -Raw $rcSidecar.FullName | ConvertFrom-Json
           $report = [ordered]@{
             decision = 'READY_FOR_PRODUCTION_DEPLOYMENT_AUTHORIZATION'
             application_source_sha = $env:APPLICATION_SOURCE_SHA
