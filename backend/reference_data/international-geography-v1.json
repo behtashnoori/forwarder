@@ -10,6 +10,51 @@
   "records": [
     {
       "country": {
+        "code": "IR",
+        "name_en": "Iran",
+        "name_fa": "ایران",
+        "source_organization": "ISO",
+        "source_reference": "ISO 3166-1 alpha-2: IR",
+        "source_version": "ISO 3166-1"
+      },
+      "locations": [
+        {
+          "name_en": "Tehran",
+          "name_fa": "تهران",
+          "city_type": "city",
+          "is_major_port": false,
+          "is_major_airport": true,
+          "un_locode": "IRTHR",
+          "source_organization": "UNECE",
+          "source_reference": "https://service.unece.org/trade/locode/ir.htm",
+          "source_version": "UN/LOCODE 2025-1"
+        },
+        {
+          "name_en": "Imam Khomeini International Apt/Tehran",
+          "name_fa": "فرودگاه بین‌المللی امام خمینی تهران",
+          "city_type": "airport",
+          "is_major_port": false,
+          "is_major_airport": true,
+          "un_locode": "IRIKA",
+          "source_organization": "UNECE",
+          "source_reference": "https://service.unece.org/trade/locode/ir.htm",
+          "source_version": "UN/LOCODE 2025-1"
+        },
+        {
+          "name_en": "Bandar Abbas",
+          "name_fa": "بندرعباس",
+          "city_type": "port",
+          "is_major_port": true,
+          "is_major_airport": true,
+          "un_locode": "IRBND",
+          "source_organization": "UNECE",
+          "source_reference": "https://service.unece.org/trade/locode/ir.htm",
+          "source_version": "UN/LOCODE 2025-1"
+        }
+      ]
+    },
+    {
+      "country": {
         "code": "TM",
         "name_en": "Turkmenistan",
         "name_fa": "ترکمنستان",

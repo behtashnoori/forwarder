@@ -1947,7 +1947,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                   </SelectContent>
                 </Select>
 
-                {!isIranDestination && (
+                {(
                   <>
                     <Label className="flex items-center gap-1 text-sm font-medium">
                       {t("requestForm.destinationCityPort")}

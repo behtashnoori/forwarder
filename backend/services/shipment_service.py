@@ -274,7 +274,10 @@ def _normalize_international_locations(payload: dict[str, Any]) -> dict[str, Any
         **{key: None for key in IRAN_DEST_KEYS},
     }
 
-    if origin_country.country_code == "IR":
+    # As with destination, IR uses the standard governed international
+    # continuation whenever the caller supplies it; the province path is
+    # retained solely for compatibility with older payloads.
+    if origin_country.country_code == "IR" and not payload.get("origin_international_city_id"):
         province_id = _required_ref_id(payload, "origin_province_id")
         try:
             province = resolve_location(
@@ -307,7 +310,11 @@ def _normalize_international_locations(payload: dict[str, Any]) -> dict[str, Any
         result["origin_international_city_id"] = city_id
         result["origin_city_international"] = city.display_label
 
-    if dest_country.country_code == "IR":
+    # A governed InternationalCity is the standard destination continuation
+    # for every country, including IR.  The older domestic Iran destination
+    # path remains a compatibility fallback only when that standard selection
+    # was not supplied.
+    if dest_country.country_code == "IR" and not payload.get("dest_international_city_id"):
         selection = payload.get("iran_destination")
         if selection is None and payload.get("iran_dest_type"):
             legacy_ids = {

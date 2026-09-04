@@ -35,16 +35,21 @@ def test_snapshot_contract_and_empty_database_reconcile_to_iran_and_turkmenistan
     with app.app_context():
         iran, turkmenistan = db.session.get(Country, iran_id), db.session.get(Country, turkmenistan_id)
         ashkhabad = InternationalCity.query.filter_by(country_id=turkmenistan.id, un_locode="TMASB").one()
+        iran_locations = InternationalCity.query.filter_by(country_id=iran.id).order_by(InternationalCity.un_locode).all()
         assert iran.code == "IR" and turkmenistan.code == "TM"
+        assert iran.is_active is True
+        assert [row.un_locode for row in iran_locations] == ["IRBND", "IRIKA", "IRTHR"]
+        assert all(row.is_active and row.source_organization == "UNECE" for row in iran_locations)
+        assert all(row.source_version == "UN/LOCODE 2025-1" for row in iran_locations)
         assert ashkhabad.name_en == "Ashkhabad"
         assert ashkhabad.source_organization == "UNECE"
         report = readiness_report()
         assert report["valid"] is True
-        assert {row["code"] for row in report["countries"]} == {"TM"}
-        assert report["countries"][0]["selectable"] is True
+        assert {row["code"] for row in report["countries"]} == {"IR", "TM"}
+        assert all(row["selectable"] for row in report["countries"])
 
 
-def test_partial_dataset_recovers_iran_location_and_turkmenistan_without_reactivation(app):
+def test_upgrade_enriches_legacy_iran_location_without_reactivation(app):
     with app.app_context():
         iran = Country(code="IR", name_en="Iran", name_fa="ایران", is_active=False)
         unrelated = Country(code="ZZ", name_en="Unrelated", name_fa="نامرتبط")
@@ -54,8 +59,11 @@ def test_partial_dataset_recovers_iran_location_and_turkmenistan_without_reactiv
         db.session.commit()
         seed_international_data(app)
         assert Country.query.filter_by(code="IR").one().is_active is False
-        assert InternationalCity.query.filter_by(country_id=iran.id, name_en="Tehran").one().is_active is False
-        assert InternationalCity.query.filter_by(country_id=iran.id, name_en="Mashhad").one() is not None
+        tehran = InternationalCity.query.filter_by(country_id=iran.id, name_en="Tehran").one()
+        assert tehran.is_active is False
+        assert tehran.un_locode == "IRTHR"
+        assert tehran.source_organization == "UNECE"
+        assert InternationalCity.query.filter_by(country_id=iran.id, un_locode="IRBND").one() is not None
         assert Country.query.filter_by(code="TM").one() is not None
 
 
@@ -84,11 +92,29 @@ def test_selector_and_canonical_request_persistence_for_turkmenistan(app):
         "origin_country_id": tm_id, "origin_international_city_id": ashkhabad["id"],
         "dest_country_id": tm_id, "dest_international_city_id": ashkhabad["id"],
     })
-    assert response.status_code == 201
+    assert response.status_code == 201, response.get_json()
     with app.app_context():
         row = db.session.get(ShipmentRequest, response.get_json()["id"])
         assert (row.origin_country_id, row.origin_international_city_id) == (tm_id, ashkhabad["id"])
         assert (row.dest_country_id, row.dest_international_city_id) == (tm_id, ashkhabad["id"])
+
+
+def test_iran_is_consumable_in_both_public_selector_flows(app):
+    iran_id, _tm_id = _seed(app)
+    client = app.test_client()
+    countries = client.get("/api/countries").get_json()
+    assert next(row for row in countries if row["code"] == "IR")["id"] == iran_id
+    locations = client.get(f"/api/international-cities?country_id={iran_id}").get_json()
+    assert {row["name_en"] for row in locations} == {
+        "Tehran", "Imam Khomeini International Apt/Tehran", "Bandar Abbas"
+    }
+    tehran = next(row for row in locations if row["name_en"] == "Tehran")
+    response = client.post("/api/shipment-request", json={
+        "shipping_type": "international", "contact_phone": "09123456789",
+        "origin_country_id": iran_id, "origin_international_city_id": tehran["id"],
+        "dest_country_id": iran_id, "dest_international_city_id": tehran["id"],
+    })
+    assert response.status_code == 201, response.get_json()
 
 
 def test_readiness_reports_inactive_without_treating_reference_as_missing(app):
@@ -97,5 +123,5 @@ def test_readiness_reports_inactive_without_treating_reference_as_missing(app):
         tm = Country.query.filter_by(code="TM").one()
         tm.is_active = False
         db.session.commit()
-        item = readiness_report()["countries"][0]
+        item = next(row for row in readiness_report()["countries"] if row["code"] == "TM")
         assert item["exists"] is True and item["is_active"] is False and item["selectable"] is False

@@ -30,8 +30,8 @@ def seed_international_data(app=None):
     context = nullcontext() if app is not None and app.config.get("TESTING") else app.app_context()
     with context:
         # Checked-in, governed historical reference input.  Reconcile each
-        # entry independently: an earlier Iran-only seed must not suppress
-        # the rest of the catalog or Iran's InternationalCity continuation.
+        # entry independently.  Governed records below are the sole source
+        # for their Country and InternationalCity continuations.
         countries_data = [
             {
                 "name_en": "China",
@@ -159,20 +159,6 @@ def seed_international_data(app=None):
                     {"name_en": "Novosibirsk", "name_fa": "نووسیبیرسک", "city_type": "city", "is_major_port": False, "is_major_airport": True},
                 ]
             },
-            {
-                "name_en": "Iran",
-                "name_fa": "ایران",
-                "code": "IR",
-                "cities": [
-                    {"name_en": "Tehran", "name_fa": "تهران", "city_type": "city", "is_major_port": False, "is_major_airport": True},
-                    {"name_en": "Bandar Abbas", "name_fa": "بندرعباس", "city_type": "port", "is_major_port": True, "is_major_airport": True},
-                    {"name_en": "Imam Khomeini Port", "name_fa": "بندر امام خمینی", "city_type": "port", "is_major_port": True, "is_major_airport": False},
-                    {"name_en": "Mashhad", "name_fa": "مشهد", "city_type": "city", "is_major_port": False, "is_major_airport": True},
-                    {"name_en": "Shiraz", "name_fa": "شیراز", "city_type": "city", "is_major_port": False, "is_major_airport": True},
-                    {"name_en": "Tabriz", "name_fa": "تبریز", "city_type": "city", "is_major_port": False, "is_major_airport": True},
-                    {"name_en": "Isfahan", "name_fa": "اصفهان", "city_type": "city", "is_major_port": False, "is_major_airport": True},
-                ]
-            }
         ]
         governed_records, snapshot = _governed_records()
         # Keep the established legacy catalog compatible while adding new
@@ -205,12 +191,26 @@ def seed_international_data(app=None):
                 db.session.add(country)
                 db.session.flush()
                 countries_created += 1
+            elif country_data.get("source_organization"):
+                # Upgrade legacy rows by filling only missing governed
+                # provenance; never replace identity, labels, or lifecycle.
+                for field in ("source_organization", "source_reference", "source_version"):
+                    if getattr(country, field) is None:
+                        setattr(country, field, country_data[field])
+                if country.dataset_id is None:
+                    country.dataset_id = snapshot["dataset_id"]
 
             # Create cities for this country
             for city_data in country_data["cities"]:
                 un_locode = city_data.get("un_locode")
                 city = (InternationalCity.query.filter_by(country_id=country.id, un_locode=un_locode).one_or_none()
                         if un_locode else InternationalCity.query.filter_by(country_id=country.id, name_en=city_data["name_en"]).one_or_none())
+                if city is None and un_locode:
+                    # Pre-S1 rows had no UN/LOCODE.  A same-country exact-name
+                    # match can be enriched safely without changing lifecycle.
+                    city = InternationalCity.query.filter_by(
+                        country_id=country.id, name_en=city_data["name_en"], un_locode=None
+                    ).one_or_none()
                 if city is None:
                     db.session.add(InternationalCity(
                         name_en=city_data["name_en"],
@@ -228,6 +228,12 @@ def seed_international_data(app=None):
                         created_at=datetime.utcnow()
                     ))
                     cities_created += 1
+                elif un_locode:
+                    for field in ("un_locode", "source_organization", "source_reference", "source_version"):
+                        if getattr(city, field) is None:
+                            setattr(city, field, city_data[field])
+                    if city.dataset_id is None:
+                        city.dataset_id = snapshot["dataset_id"]
         
         try:
             db.session.commit()

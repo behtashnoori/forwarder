@@ -20,11 +20,11 @@ describe("international destination rules", () => {
     expect(isInternationalRouteComplete(route())).toBe(true);
   });
 
-  it("allows Iran without a generic or precise destination", () => {
+  it("requires a governed international location for Iran too", () => {
     expect(isInternationalRouteComplete(route({
       destinationCity: "",
       isIranDestination: true,
-    }))).toBe(true);
+    }))).toBe(false);
     expect(buildIranDestinationPayload({ type: "city" })).toEqual({});
   });
 
