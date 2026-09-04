@@ -19,7 +19,7 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def main(source: Path, artifact: Path) -> int:
+def main(source: Path, artifact: Path, runtime_id: str, source_identity: str) -> int:
     source = source.resolve()
     python = source / "python.exe"
     if not python.is_file() or not (source / "python312._pth").is_file():
@@ -44,6 +44,11 @@ def main(source: Path, artifact: Path) -> int:
             records.append({"path": relative, "bytes": path.stat().st_size, "sha256": sha256(path)})
     manifest = {
         "schema": "forwarder-governed-windows-runtime-v1",
+        "runtime_id": runtime_id,
+        "source_identity": source_identity,
+        "source_tree_sha256": hashlib.sha256("\n".join(
+            f"{r['path']}:{r['sha256']}" for r in records
+        ).encode("utf-8")).hexdigest(),
         "python_version": subprocess.check_output([str(python), "-c", "import platform;print(platform.python_version())"], text=True).strip(),
         "architecture": subprocess.check_output([str(python), "-c", "import platform;print(platform.machine())"], text=True).strip(),
         "artifact": artifact.name,
@@ -59,7 +64,7 @@ def main(source: Path, artifact: Path) -> int:
 
 if __name__ == "__main__":
     try:
-        raise SystemExit(main(Path(sys.argv[1]), Path(sys.argv[2])))
+        raise SystemExit(main(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3], sys.argv[4]))
     except (IndexError, RuntimeError) as exc:
         print(str(exc), file=sys.stderr)
         raise SystemExit(1)
