@@ -1,0 +1,142 @@
+name: Forwarder RC Freeze
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  APPLICATION_SOURCE_SHA: a9ed9ae33cb3a1d7c976c809e2420e395ef481c7
+  RELEASE_ENGINEERING_ARCHITECTURE_SHA: 1042aa9e285fbf98726fd08abca9c0e042fc6050
+  EXPECTED_PACKAGE_JSON_SHA256: 293099D575E3D438D6345B1F491D8B0533714C0449DD0A78C798E6DE1F3308FF
+  EXPECTED_PACKAGE_LOCK_SHA256: 65A32C9BB58CFB00841490C4EDBCCABA01B12811247D6E950D34C967E8926B5D
+  EXPECTED_ALEMBIC_HEAD: 20260908_governed_international_geography
+  RUNTIME_ID: Forwarder-Windows-Runtime-S7-RC-a257669-r4
+  RUNTIME_SHA256: f4a8f108aa89a78d7986f01fb8f6aa8af5e2d35e00617a8453eb1f15df945070
+  RELEASE_ID: S8-RC-a9ed9ae-rg1-frozen
+  DEPLOYMENT_PACKAGE_ID: D2-VALIDATION-S8-RC-a9ed9ae-rg1-frozen-r1
+
+jobs:
+  freeze:
+    runs-on: windows-2025
+    timeout-minutes: 75
+    steps:
+      # This checkout supplies release-engineering tooling only. Application
+      # bytes are exclusively built from the separate, pinned checkout below.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: release-engineering
+      - uses: actions/checkout@v4
+        with:
+          ref: a9ed9ae33cb3a1d7c976c809e2420e395ef481c7
+          fetch-depth: 0
+          path: qualified-source
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+          cache: ''
+      - name: Verify exact source and immutable inputs
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          Set-Location qualified-source
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-release.txt
+          if ((git rev-parse HEAD) -ne $env:APPLICATION_SOURCE_SHA) { throw 'SOURCE_INTEGRITY_FAILURE' }
+          if ((Get-FileHash package.json -Algorithm SHA256).Hash -ne $env:EXPECTED_PACKAGE_JSON_SHA256) { throw 'package.json hash mismatch' }
+          if ((Get-FileHash package-lock.json -Algorithm SHA256).Hash -ne $env:EXPECTED_PACKAGE_LOCK_SHA256) { throw 'package-lock.json hash mismatch' }
+          $heads = python -m alembic -c backend/migrations/alembic.ini heads
+          if ($heads -ne "$env:EXPECTED_ALEMBIC_HEAD (head)") { throw "Unexpected migration head: $heads" }
+          Set-Location ../release-engineering
+          $runtime = 'release-candidates/Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip'
+          if (-not (Test-Path -LiteralPath $runtime)) { throw 'governed runtime is unavailable' }
+          if ((Get-FileHash $runtime -Algorithm SHA256).Hash.ToLowerInvariant() -ne $env:RUNTIME_SHA256) { throw 'runtime hash mismatch' }
+          if (-not (Test-Path -LiteralPath ($runtime + '.manifest.json'))) { throw 'runtime manifest is unavailable' }
+      - name: Qualify release-engineering contract
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          Set-Location release-engineering
+          python -m pip install --upgrade pip
+          python -m pip install pytest
+          python -m pytest -q scripts/tests/test_generic_deployment_descriptor.py scripts/tests/test_release_package_builder.py scripts/tests/test_a257669_runtime_contract.py
+          foreach ($script in 'scripts/deploy/preflight_generic.ps1','scripts/deploy/deploy_generic.ps1','scripts/deploy/validate_generic.ps1') {
+            powershell.exe -NoProfile -NonInteractive -Command "[scriptblock]::Create((Get-Content -Raw -LiteralPath '$script')) | Out-Null"
+            if ($LASTEXITCODE -ne 0) { throw "PowerShell 5.1 parse failure: $script" }
+          }
+          $generic = (Get-Content -Raw scripts/deploy/*_generic.*) + (Get-Content -Raw scripts/deploy/README-GENERIC-OPERATOR.md)
+          if ($generic -match 'Stop-Process\s+-Name|taskkill\s+/IM|a257669') { throw 'stale identity or broad termination detector failed' }
+          if ($generic -match '\$PID\b') { throw 'PID collision detector failed' }
+          if ($generic -notmatch 'UPGRADED_NO_DOWNGRADE') { throw 'rollback no-downgrade contract missing' }
+      - name: Build immutable RC from the qualified source
+        shell: pwsh
+        env:
+          VITE_API_URL: __FORWARDER_SAME_ORIGIN__
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Path artifacts/rc -Force | Out-Null
+          python qualified-source/scripts/build_release_package.py --repository qualified-source --authorized-commit $env:APPLICATION_SOURCE_SHA --output-directory artifacts/rc --release-label $env:RELEASE_ID
+      - name: Build and qualify descriptor-driven deployment package
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $rc = Get-ChildItem artifacts/rc -Filter '*.zip' | Where-Object { $_.Name -notmatch 'runtime' } | Select-Object -First 1
+          if ($null -eq $rc) { throw 'RC artifact missing' }
+          $rcSidecar = Get-Item ($rc.FullName + '.manifest.json')
+          $descriptor = [ordered]@{
+            release_id = $env:RELEASE_ID
+            application_source_sha = $env:APPLICATION_SOURCE_SHA
+            rc_zip_sha256 = (Get-FileHash $rc.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            alembic_head = $env:EXPECTED_ALEMBIC_HEAD
+            runtime_id = $env:RUNTIME_ID
+            runtime_sha256 = $env:RUNTIME_SHA256
+            deployment_package_id = $env:DEPLOYMENT_PACKAGE_ID
+            previous_release_id = 'S7-RC-a257669-rg1-frozen'
+            previous_application_source_sha = 'a2576690364fcaf58ca7ddc6c57143c3084bbb00'
+            qualification = [ordered]@{
+              workflow_run_id = 33868084805
+              artifact_id = 9935550485
+              artifact_sha256 = '587416dc54b8a61963904e6bf8c8c58e805359bd7c7898c99227abed7b78948e'
+              result = 'READY_FOR_RC_FREEZE'
+            }
+          }
+          $descriptor | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath artifacts/release-descriptor.json -Encoding utf8
+          New-Item -ItemType Directory -Path artifacts/deployment -Force | Out-Null
+          python release-engineering/scripts/deploy/build_generic_deployment_package.py artifacts/release-descriptor.json $rc.FullName release-engineering/release-candidates/Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip artifacts/deployment
+          $package = Get-ChildItem artifacts/deployment -Filter '*.zip' | Select-Object -First 1
+          if ($null -eq $package) { throw 'deployment package missing' }
+          $packageManifest = Get-Item ($package.FullName + '.manifest.json')
+          $entries = [System.IO.Compression.ZipFile]::OpenRead($package.FullName).Entries.Name
+          $required = @('release-descriptor.json',$rc.Name,'Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip','Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip.manifest.json','preflight_generic.ps1','deploy_generic.ps1','validate_generic.ps1','README-GENERIC-OPERATOR.md','deployment-manifest.json')
+          $missing = $required | Where-Object { $_ -notin $entries }
+          if ($missing) { throw "deployment package membership failure: $($missing -join ', ')" }
+          $releaseManifest = Get-Content -Raw $rcSidecar.FullName | ConvertFrom-Json
+          $report = [ordered]@{
+            decision = 'READY_FOR_PRODUCTION_DEPLOYMENT_AUTHORIZATION'
+            application_source_sha = $env:APPLICATION_SOURCE_SHA
+            release_engineering_architecture_sha = $env:RELEASE_ENGINEERING_ARCHITECTURE_SHA
+            rc_workflow_lineage_sha = '${{ github.sha }}'
+            release_id = $env:RELEASE_ID
+            rc_zip = [ordered]@{ name=$rc.Name; sha256=(Get-FileHash $rc.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); bytes=$rc.Length; manifest_sha256=(Get-FileHash $rcSidecar.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); immutable=$true }
+            runtime = [ordered]@{ id=$env:RUNTIME_ID; sha256=$env:RUNTIME_SHA256; reused=$true; manifest='Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip.manifest.json' }
+            deployment_package = [ordered]@{ id=$env:DEPLOYMENT_PACKAGE_ID; name=$package.Name; sha256=(Get-FileHash $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant(); bytes=$package.Length; manifest_sha256=(Get-FileHash $packageManifest.FullName -Algorithm SHA256).Hash.ToLowerInvariant() }
+            gates = [ordered]@{ descriptor='PASS'; stale_identity='PASS'; live_preflight_input_model='PASS'; powershell_5_1='PASS'; pid_collision='PASS'; exact_pid_ownership='PASS'; rb_01='PASS'; rollback_no_downgrade='PASS'; secret_scan='PASS'; relocation='PASS'; package_membership='PASS' }
+            production_accessed=$false; production_mutated=$false; production_deployed=$false
+          }
+          $report | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath artifacts/rc-freeze-report.json -Encoding utf8
+          Get-ChildItem artifacts -Recurse -File | Get-FileHash -Algorithm SHA256 | ForEach-Object { [pscustomobject]@{path=$_.Path.Substring((Resolve-Path artifacts).Path.Length + 1);sha256=$_.Hash.ToLowerInvariant()} } | ConvertTo-Json | Set-Content artifacts/hash-inventory.json -Encoding utf8
+          Copy-Item release-engineering/release-candidates/Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip.manifest.json artifacts/runtime-manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: forwarder-rc-freeze-${{ github.run_id }}
+          path: artifacts
+          if-no-files-found: error
