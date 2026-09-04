@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from sqlalchemy.orm import selectinload
 
 from backend.extensions import db
 from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
@@ -12,6 +13,7 @@ from backend.models import (
     ShipmentTransportUnitUpdate,
     TrackingLocationReference,
 )
+from backend.operational_models import OperationalShipment
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 
 
@@ -109,6 +111,13 @@ def enable_tracking(req: ShipmentRequest, actor_id: int, *, now: datetime | None
             operational_organization_id=req.operational_organization_id,
         )
         db.session.add(tracking)
+    shipment = db.session.scalar(
+        db.select(OperationalShipment).where(OperationalShipment.shipment_request_id == req.id)
+    )
+    if shipment is not None:
+        if tracking.operational_shipment_id not in (None, shipment.id):
+            raise TrackingValidationError("tracking belongs to another operational shipment")
+        tracking.operational_shipment_id = shipment.id
     if not tracking.is_enabled:
         tracking.is_enabled = True
         tracking.enabled_at = now
@@ -116,6 +125,52 @@ def enable_tracking(req: ShipmentRequest, actor_id: int, *, now: datetime | None
     tracking.disabled_at = None
     tracking.disabled_by_user_id = None
     return tracking
+
+
+def enable_tracking_for_shipment(shipment: OperationalShipment, actor_id: int, *, now: datetime | None = None):
+    """Enable the one tracking root for an operational shipment of either origin."""
+    if shipment.organization_id is None:
+        raise TrackingValidationError("tracking requires an explicit tenant-owned shipment")
+    now = _utc_naive(now or datetime.utcnow())
+    tracking = db.session.scalar(
+        db.select(ShipmentTracking).where(ShipmentTracking.operational_shipment_id == shipment.id)
+    )
+    if tracking is None and shipment.shipment_request_id:
+        req = db.session.get(ShipmentRequest, shipment.shipment_request_id)
+        if req and req.shipment_tracking:
+            tracking = req.shipment_tracking
+    if tracking is None:
+        tracking = ShipmentTracking(
+            operational_shipment_id=shipment.id,
+            shipment_request_id=shipment.shipment_request_id,
+            operational_organization_id=shipment.organization_id,
+        )
+        db.session.add(tracking)
+    if tracking.operational_shipment_id not in (None, shipment.id):
+        raise TrackingValidationError("tracking belongs to another operational shipment")
+    tracking.operational_shipment_id = shipment.id
+    if tracking.operational_organization_id != shipment.organization_id:
+        raise TrackingValidationError("tracking belongs to a different Organization")
+    if not tracking.is_enabled:
+        tracking.is_enabled = True
+        tracking.enabled_at = now
+        tracking.enabled_by_user_id = actor_id
+    tracking.disabled_at = None
+    tracking.disabled_by_user_id = None
+    # Direct-operation units are created before tracking is enabled; converge
+    # them onto this one root instead of creating a parallel unit set.
+    for unit in db.session.scalars(
+        db.select(ShipmentTransportUnit).where(
+            ShipmentTransportUnit.operational_shipment_id == shipment.id,
+            ShipmentTransportUnit.tracking_id.is_(None),
+        )
+    ):
+        unit.tracking = tracking
+    return tracking
+
+
+def tracking_for_shipment(shipment: OperationalShipment):
+    return db.session.scalar(db.select(ShipmentTracking).where(ShipmentTracking.operational_shipment_id == shipment.id))
 
 
 def disable_tracking(tracking: ShipmentTracking, actor_id: int, *, now: datetime | None = None):
@@ -151,6 +206,7 @@ def add_unit(
     reference = _clean_optional(vehicle_reference, "vehicle_reference", 100)
     unit = ShipmentTransportUnit(
         tracking=tracking,
+        operational_shipment_id=tracking.operational_shipment_id,
         ownership_scope="TENANT",
         operational_organization_id=tracking.operational_organization_id,
         unit_code=code,
@@ -195,7 +251,7 @@ def add_update(
     now: datetime | None = None,
 ):
     """Append a manual unit update; existing updates are intentionally immutable."""
-    if not unit.tracking.is_enabled:
+    if unit.tracking is None or not unit.tracking.is_enabled:
         raise TrackingValidationError("tracking is not enabled")
     if not unit.is_active:
         raise TrackingValidationError("unit is inactive")
@@ -362,13 +418,20 @@ def _aggregate(latest_rows):
     return status, summary, last_updated
 
 
-def build_internal_unit_tracking(req: ShipmentRequest):
-    """Return authenticated management data, including IDs required by mutations."""
-    tracking = req.shipment_tracking
+def build_internal_tracking_for_shipment(shipment: OperationalShipment):
+    """Authenticated tracking projection rooted at the operational shipment."""
+    tracking = tracking_for_shipment(shipment)
     if tracking is None or not tracking.is_enabled:
         return None
     latest_rows = _latest_visible_updates(tracking)
     aggregate_status, summary, last_updated = _aggregate(latest_rows)
+    # Allocation is an execution read-model, not a tracking event.  It is
+    # deliberately attached here only so a tracker can see a unit's cargo.
+    from backend.cargo_models import ShipmentCargoTransportAllocation
+    by_unit = {}
+    rows = db.session.scalars(db.select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id).options(selectinload(ShipmentCargoTransportAllocation.cargo_item))).all()
+    for row in rows:
+        by_unit.setdefault(row.transport_unit_id, []).append({"cargo_item_public_id": row.cargo_item.public_id, "cargo_name": row.cargo_item.display_name_snapshot, "allocated_quantity": str(row.allocated_quantity), "uom_symbol": row.cargo_item.uom_symbol_snapshot})
     return {
         "enabled": True,
         "enabled_at": _iso(tracking.enabled_at),
@@ -395,10 +458,29 @@ def build_internal_unit_tracking(req: ShipmentRequest):
                     else None
                 ),
                 "latest_event_at": _iso(latest.occurred_at) if latest else None,
+                "allocated_cargo": by_unit.get(unit.id, []),
+                "history": [{"id": event.id, "status": event.status, "location": _location_payload(event), "customer_message": event.customer_message, "internal_note": event.internal_note, "is_customer_visible": event.is_customer_visible, "occurred_at": _iso(event.occurred_at)} for event in sorted(unit.updates, key=lambda x: (x.occurred_at, x.id or 0), reverse=True)],
             }
             for unit, _history, latest in latest_rows
         ],
     }
+
+
+def build_internal_unit_tracking(req: ShipmentRequest):
+    """Legacy request-root projection, retained for compatible request URLs."""
+    shipment = db.session.scalar(
+        db.select(OperationalShipment).where(OperationalShipment.shipment_request_id == req.id)
+    )
+    tracking = req.shipment_tracking
+    if shipment is not None and tracking is not None and tracking_for_shipment(shipment) is tracking:
+        return build_internal_tracking_for_shipment(shipment)
+    # Historical request tracking before the operational root was materialized
+    # (and old fixtures) remains a fully functional compatible projection.
+    if tracking is None or not tracking.is_enabled:
+        return None
+    latest_rows = _latest_visible_updates(tracking)
+    aggregate_status, summary, last_updated = _aggregate(latest_rows)
+    return {"enabled": True, "enabled_at": _iso(tracking.enabled_at), "aggregate_status": aggregate_status, "summary": summary, "last_updated_at": _iso(last_updated), "units": [{"id": unit.id, "unit_code": unit.unit_code, "unit_type": unit.unit_type, "display_name": unit.display_name, "vehicle_reference": unit.vehicle_reference, "is_active": unit.is_active, "latest_status": latest.status if latest else "not_started", "latest_location": _location_payload(_latest_location_row(history))["location_name"] if _latest_location_row(history) else None, "latest_location_detail": _location_payload(_latest_location_row(history)) if _latest_location_row(history) else None, "latest_event_at": _iso(latest.occurred_at) if latest else None, "allocated_cargo": [], "history": [{"id": event.id, "status": event.status, "location": _location_payload(event), "customer_message": event.customer_message, "internal_note": event.internal_note, "is_customer_visible": event.is_customer_visible, "occurred_at": _iso(event.occurred_at)} for event in sorted(unit.updates, key=lambda x: (x.occurred_at, x.id or 0), reverse=True)]} for unit, history, latest in latest_rows]}
 
 
 def build_public_unit_tracking(req: ShipmentRequest):

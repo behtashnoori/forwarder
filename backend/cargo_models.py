@@ -204,6 +204,29 @@ class ShipmentCargoItem(db.Model):
     __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
 
 
+class ShipmentCargoTransportAllocation(db.Model):
+    """Quantity of one immutable cargo line assigned to one execution unit."""
+    __tablename__ = "shipment_cargo_transport_allocation"
+    __table_args__ = (
+        db.UniqueConstraint("shipment_cargo_item_id", "transport_unit_id", name="uq_cargo_transport_allocation_pair"),
+        db.CheckConstraint("allocated_quantity > 0", name="ck_cargo_transport_allocation_positive"),
+        db.Index("ix_cargo_transport_allocation_shipment", "operational_shipment_id"),
+        db.Index("ix_cargo_transport_allocation_unit", "transport_unit_id"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    operational_shipment_id = db.Column(BIGINT, db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"), nullable=False)
+    shipment_cargo_item_id = db.Column(BIGINT, db.ForeignKey("shipment_cargo_item.id", ondelete="RESTRICT"), nullable=False)
+    transport_unit_id = db.Column(BIGINT, db.ForeignKey("shipment_transport_unit.id", ondelete="RESTRICT"), nullable=False)
+    allocated_quantity = db.Column(db.Numeric(18, 6), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    created_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    updated_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    cargo_item = db.relationship("ShipmentCargoItem")
+    transport_unit = db.relationship("ShipmentTransportUnit")
+
+
 @event.listens_for(CargoCatalogItem, "before_update")
 def _prevent_catalog_code_change(_mapper, _connection, target) -> None:
     if inspect(target).attrs.immutable_code.history.has_changes():

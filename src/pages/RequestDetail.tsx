@@ -1395,7 +1395,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
           </CardContent>
         </Card>
         {!data.unit_tracking?.units.length && <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">{t("multiTracking.emptyUnits")}</p>}
-        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: <span dir="ltr">{u.vehicle_reference}</span></p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
+        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: <span dir="ltr">{u.vehicle_reference}</span></p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p>{u.allocated_cargo?.length ? <p className="mt-2 text-sm">Cargo: {u.allocated_cargo.map(c => `${c.cargo_name} — ${c.allocated_quantity} ${c.uom_symbol}`).join(" · ")}</p> : null}<p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
       </>}
     </div>
   );

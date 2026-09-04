@@ -10,9 +10,9 @@ import unicodedata
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem
+from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem, ShipmentCargoTransportAllocation
 from backend.extensions import db
-from backend.models import CargoType, ShipmentRequest, UnitOfMeasure
+from backend.models import CargoType, ShipmentRequest, ShipmentTracking, ShipmentTransportUnit, UnitOfMeasure
 from backend.operational_models import OperationalShipment, Project
 from backend.services import operational_service
 from backend.services.tracking_projection_service import project_operational_shipments
@@ -460,6 +460,7 @@ def scoped_shipment(user, public_id):
 
 
 def shipment_item_dict(row):
+    allocated = db.session.scalar(select(func.coalesce(func.sum(ShipmentCargoTransportAllocation.allocated_quantity), 0)).where(ShipmentCargoTransportAllocation.shipment_cargo_item_id == row.id))
     return {
         "public_id": row.public_id,
         "line_number": row.line_number,
@@ -470,6 +471,8 @@ def shipment_item_dict(row):
         "cargo_type_public_id": row.cargo_type.public_id,
         "uom_public_id": row.uom.public_id,
         "quantity": str(row.quantity),
+        "allocated_quantity": str(allocated),
+        "remaining_quantity": str(row.quantity - allocated),
         "display_name_snapshot": row.display_name_snapshot,
         "cargo_type_code_snapshot": row.cargo_type_code_snapshot,
         "cargo_type_fa_snapshot": row.cargo_type_fa_snapshot,
@@ -486,6 +489,63 @@ def shipment_item_dict(row):
         "created_at": row.created_at.isoformat(),
         "updated_at": row.updated_at.isoformat(),
     }
+
+
+def _allocation_quantity(value):
+    try: q = Decimal(str(value))
+    except (InvalidOperation, TypeError): raise CargoError("allocated_quantity must be positive", 422)
+    if q <= 0: raise CargoError("allocated_quantity must be positive", 422)
+    return q
+
+
+def allocation_dict(row):
+    return {"public_id": row.public_id, "cargo_item_public_id": row.cargo_item.public_id,
+            "transport_unit_id": row.transport_unit_id, "allocated_quantity": str(row.allocated_quantity),
+            "uom_symbol": row.cargo_item.uom_symbol_snapshot, "cargo_name": row.cargo_item.display_name_snapshot,
+            "transport_unit_code": row.transport_unit.unit_code, "transport_unit_type": row.transport_unit.unit_type}
+
+
+def shipment_allocation_view(user, shipment):
+    operational_service.require_permission(user, "operational_shipment.read")
+    allocations = db.session.scalars(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id).options(selectinload(ShipmentCargoTransportAllocation.cargo_item), selectinload(ShipmentCargoTransportAllocation.transport_unit))).all()
+    units = db.session.scalars(select(ShipmentTransportUnit).where(ShipmentTransportUnit.operational_shipment_id == shipment.id, ShipmentTransportUnit.operational_organization_id == shipment.organization_id, ShipmentTransportUnit.is_active.is_(True))).all()
+    # Request-derived units remain canonical and are admitted only when their tracking request is this shipment's root.
+    if shipment.shipment_request_id:
+        units += db.session.scalars(select(ShipmentTransportUnit).join(ShipmentTransportUnit.tracking).where(ShipmentTransportUnit.operational_organization_id == shipment.organization_id, ShipmentTracking.shipment_request_id == shipment.shipment_request_id, ShipmentTransportUnit.is_active.is_(True))).all()
+    return {"allocations": [allocation_dict(x) for x in allocations], "transport_units": [{"id":x.id,"unit_code":x.unit_code,"unit_type":x.unit_type,"display_name":x.display_name,"vehicle_reference":x.vehicle_reference} for x in {x.id:x for x in units}.values()]}
+
+
+def create_transport_unit(user, shipment, data):
+    operational_service.require_permission(user, "operational_shipment.create")
+    code = _required(data, "unit_code", 64)
+    unit_type = _required(data, "unit_type", 32).lower()
+    if unit_type not in {"truck", "container", "wagon", "other"}: raise CargoError("invalid unit_type", 422)
+    row = ShipmentTransportUnit(operational_shipment_id=shipment.id, operational_organization_id=shipment.organization_id, ownership_scope="TENANT", unit_code=code, unit_type=unit_type, display_name=_optional(data,"display_name",100), vehicle_reference=_optional(data,"vehicle_reference",100), created_by_user_id=user["id"])
+    db.session.add(row); db.session.commit(); return row
+
+
+def save_allocation(user, shipment, data, row=None):
+    operational_service.require_permission(user, "operational_shipment.create")
+    cargo = db.session.scalar(select(ShipmentCargoItem).where(ShipmentCargoItem.public_id == data.get("cargo_item_public_id", row.cargo_item.public_id if row else None), ShipmentCargoItem.operational_shipment_id == shipment.id))
+    unit_id = data.get("transport_unit_id", row.transport_unit_id if row else None)
+    unit = db.session.get(ShipmentTransportUnit, unit_id)
+    if not cargo or not unit or unit.operational_organization_id != shipment.organization_id: raise CargoError("invalid cargo or transport unit", 422)
+    valid_ids = {x["id"] for x in shipment_allocation_view(user, shipment)["transport_units"]}
+    if unit.id not in valid_ids: raise CargoError("transport unit belongs to another shipment", 422)
+    quantity = _allocation_quantity(data.get("allocated_quantity", row.allocated_quantity if row else None))
+    allocated = db.session.scalar(select(func.coalesce(func.sum(ShipmentCargoTransportAllocation.allocated_quantity), 0)).where(ShipmentCargoTransportAllocation.shipment_cargo_item_id == cargo.id, ShipmentCargoTransportAllocation.id != (row.id if row else -1)))
+    if allocated + quantity > cargo.quantity: raise CargoError("allocation exceeds remaining cargo quantity", 422)
+    if row is None:
+        row = ShipmentCargoTransportAllocation(operational_shipment_id=shipment.id, shipment_cargo_item_id=cargo.id, transport_unit_id=unit.id, allocated_quantity=quantity, created_by=user["id"], updated_by=user["id"]); db.session.add(row)
+    else: row.allocated_quantity=quantity; row.updated_by=user["id"]
+    db.session.commit(); return row
+
+
+def delete_allocation(user, shipment, public_id):
+    operational_service.require_permission(user, "operational_shipment.create")
+    row = db.session.scalar(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.public_id == public_id, ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id))
+    if not row: raise CargoError("not found",404)
+    db.session.delete(row); db.session.commit()
 
 
 def create_shipment_item(user, shipment, data):

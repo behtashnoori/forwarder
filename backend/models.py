@@ -524,7 +524,16 @@ class ShipmentTracking(db.Model):
     shipment_request_id = db.Column(
         SQLITE_COMPAT_BIGINT,
         db.ForeignKey("shipment_request.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
+    )
+    # The operational shipment is the execution root.  Request linkage is
+    # retained for compatibility/public tracking, but direct work has none.
+    operational_shipment_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"),
+        nullable=True,
+        unique=True,
+        index=True,
     )
     is_enabled = db.Column(db.Boolean, nullable=False, default=False)
     enabled_at = db.Column(db.DateTime, nullable=True)
@@ -541,6 +550,7 @@ class ShipmentTracking(db.Model):
     )
 
     shipment_request = db.relationship("ShipmentRequest", back_populates="shipment_tracking")
+    operational_shipment = db.relationship("OperationalShipment", foreign_keys=[operational_shipment_id])
     enabled_by_user = db.relationship("ExpertUser", foreign_keys=[enabled_by_user_id])
     disabled_by_user = db.relationship("ExpertUser", foreign_keys=[disabled_by_user_id])
     units = db.relationship(
@@ -585,7 +595,13 @@ class ShipmentTransportUnit(db.Model):
     tracking_id = db.Column(
         SQLITE_COMPAT_BIGINT,
         db.ForeignKey("shipment_tracking.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,
+    )
+    operational_shipment_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
     )
     unit_code = db.Column(db.String(64), nullable=False)
     unit_type = db.Column(db.String(32), nullable=False)
@@ -602,6 +618,7 @@ class ShipmentTransportUnit(db.Model):
     )
 
     tracking = db.relationship("ShipmentTracking", back_populates="units", foreign_keys=[tracking_id])
+    operational_shipment = db.relationship("OperationalShipment", foreign_keys=[operational_shipment_id])
     created_by_user = db.relationship("ExpertUser", foreign_keys=[created_by_user_id])
     updates = db.relationship(
         "ShipmentTransportUnitUpdate",
@@ -1169,19 +1186,23 @@ def _validate_crm_multi_parent_tenant(_mapper, connection, target) -> None:
 def _validate_transport_unit_tenant(_mapper, connection, target) -> None:
     if target.ownership_scope is None:
         return
-    tracking_org = (
+    owner_org = (
         target.tracking.operational_organization_id
         if target.tracking is not None
         else connection.execute(
             select(ShipmentTracking.operational_organization_id).where(ShipmentTracking.id == target.tracking_id)
         ).scalar_one_or_none()
     )
+    if owner_org is None and target.operational_shipment_id is not None:
+        owner_org = connection.execute(
+            select(OperationalShipment.organization_id).where(OperationalShipment.id == target.operational_shipment_id)
+        ).scalar_one_or_none()
     if (
         target.ownership_scope != "TENANT"
         or target.operational_organization_id is None
-        or tracking_org != target.operational_organization_id
+        or owner_org != target.operational_organization_id
     ):
-        raise ValueError("transport unit must belong to its tracking Organization")
+        raise ValueError("transport unit must belong to its tracked or operational shipment Organization")
 
 
 @event.listens_for(ShipmentTransportUnitUpdate, "before_insert")

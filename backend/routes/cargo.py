@@ -1,5 +1,6 @@
 """Internal-only cargo catalog and shipment cargo APIs."""
 
+from datetime import datetime
 from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +11,7 @@ from backend.cargo_models import ShipmentCargoItem
 from backend.extensions import db
 from backend.security import require_auth
 from backend.services import cargo_service as svc
+from backend.services import multi_unit_tracking_service as tracking_svc
 from backend.services.admin_authorization_service import (
     AdminAuthorizationError,
     ORGANIZATION_ADMIN,
@@ -32,6 +34,15 @@ def _error(exc):
     if isinstance(exc, IntegrityError):
         return jsonify({"error": "conflicting cargo data"}), 409
     return jsonify({"error": str(exc)}), getattr(exc, "status", 400)
+
+
+def _parse_tracking_datetime(value):
+    if not isinstance(value, str) or not value.strip():
+        raise tracking_svc.TrackingValidationError("occurred_at is required")
+    try:
+        return datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise tracking_svc.TrackingValidationError("occurred_at must be an ISO-8601 datetime") from exc
 
 
 def _cargo_options_organization(user):
@@ -359,3 +370,93 @@ def shipment_item_update(shipment_id, item_id):
         )
     except svc.CargoError as exc:
         return _error(exc)
+
+
+@cargo_bp.get("/operational-shipments/<shipment_id>/cargo-transport-allocations")
+@require_auth
+def allocation_list(shipment_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        return jsonify(svc.shipment_allocation_view(_user(), shipment))
+    except svc.CargoError as exc: return _error(exc)
+
+
+@cargo_bp.post("/operational-shipments/<shipment_id>/transport-units")
+@require_auth
+def allocation_transport_create(shipment_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        row = svc.create_transport_unit(_user(), shipment, request.get_json(silent=True) or {})
+        return jsonify({"transport_unit": {"id": row.id, "unit_code": row.unit_code, "unit_type": row.unit_type}}), 201
+    except svc.CargoError as exc: return _error(exc)
+
+
+@cargo_bp.get("/operational-shipments/<shipment_id>/transport-tracking")
+@require_auth
+def operational_transport_tracking(shipment_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        return jsonify({"source_type": shipment.source_type, "tracking": tracking_svc.build_internal_tracking_for_shipment(shipment)})
+    except svc.CargoError as exc: return _error(exc)
+
+
+@cargo_bp.post("/operational-shipments/<shipment_id>/transport-tracking/enable")
+@require_auth
+def operational_transport_tracking_enable(shipment_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        tracking_svc.enable_tracking_for_shipment(shipment, _user()["id"])
+        db.session.commit()
+        return jsonify({"source_type": shipment.source_type, "tracking": tracking_svc.build_internal_tracking_for_shipment(shipment)})
+    except (svc.CargoError, tracking_svc.TrackingValidationError) as exc:
+        db.session.rollback(); return _error(exc)
+
+
+@cargo_bp.post("/operational-shipments/<shipment_id>/transport-units/<int:unit_id>/tracking-updates")
+@require_auth
+def operational_transport_tracking_update(shipment_id, unit_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        unit = db.session.get(tracking_svc.ShipmentTransportUnit, unit_id)
+        tracking = tracking_svc.tracking_for_shipment(shipment)
+        if not unit or not tracking or unit.tracking_id != tracking.id or unit.operational_shipment_id != shipment.id:
+            raise svc.CargoError("transport unit not found", 404)
+        data = request.get_json(silent=True) or {}
+        if any(key in data for key in ("organization_id", "operational_organization_id")):
+            raise svc.CargoError("organization override is not allowed", 403)
+        tracking_svc.add_update(unit, _user()["id"], status=data.get("status"), occurred_at=_parse_tracking_datetime(data.get("occurred_at")), location=data.get("location"), logistics_point_public_id=data.get("logistics_point_public_id"), location_reference_id=data.get("location_reference_id"), location_text=data.get("location_text"), customer_message=data.get("customer_message"), internal_note=data.get("internal_note"), is_customer_visible=data.get("is_customer_visible", True))
+        db.session.commit()
+        return jsonify({"tracking": tracking_svc.build_internal_tracking_for_shipment(shipment)}), 201
+    except (svc.CargoError, tracking_svc.TrackingValidationError) as exc:
+        db.session.rollback(); return _error(exc)
+
+
+@cargo_bp.post("/operational-shipments/<shipment_id>/cargo-transport-allocations")
+@require_auth
+def allocation_create(shipment_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        return jsonify({"allocation": svc.allocation_dict(svc.save_allocation(_user(), shipment, request.get_json(silent=True) or {}))}), 201
+    except (svc.CargoError, IntegrityError) as exc: return _error(exc)
+
+
+@cargo_bp.patch("/operational-shipments/<shipment_id>/cargo-transport-allocations/<allocation_id>")
+@require_auth
+def allocation_update(shipment_id, allocation_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        from backend.cargo_models import ShipmentCargoTransportAllocation
+        row = db.session.scalar(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.public_id == allocation_id, ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id))
+        if not row: raise svc.CargoError("not found", 404)
+        return jsonify({"allocation": svc.allocation_dict(svc.save_allocation(_user(), shipment, request.get_json(silent=True) or {}, row))})
+    except svc.CargoError as exc: return _error(exc)
+
+
+@cargo_bp.delete("/operational-shipments/<shipment_id>/cargo-transport-allocations/<allocation_id>")
+@require_auth
+def allocation_delete(shipment_id, allocation_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        svc.delete_allocation(_user(), shipment, allocation_id)
+        return "", 204
+    except svc.CargoError as exc: return _error(exc)

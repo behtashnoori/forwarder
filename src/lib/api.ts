@@ -764,6 +764,7 @@ export interface InternalTransportUnitTracking {
   latest_status: TrackingUnitStatus;
   latest_location: string | null;
   latest_event_at: string | null;
+  allocated_cargo?: { cargo_item_public_id:string; cargo_name:string; allocated_quantity:string; uom_symbol:string }[];
 }
 export interface InternalMultiUnitTracking {
   enabled: true;
@@ -3061,6 +3062,8 @@ export interface ShipmentCargoItem {
   cargo_type_public_id: string;
   uom_public_id: string;
   quantity: string;
+  allocated_quantity?: string;
+  remaining_quantity?: string;
   display_name_snapshot: string;
   cargo_type_code_snapshot: string;
   cargo_type_fa_snapshot: string;
@@ -3075,6 +3078,16 @@ export interface ShipmentCargoItem {
   description_snapshot?: string | null;
   version: number;
 }
+export interface CargoTransportAllocation { public_id:string; cargo_item_public_id:string; transport_unit_id:number; allocated_quantity:string; uom_symbol:string; cargo_name:string; transport_unit_code:string; transport_unit_type:string; }
+export interface ShipmentTransportUnitOption { id:number; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null; }
+export const getCargoTransportAllocations=(shipmentId:string)=>request<{allocations:CargoTransportAllocation[];transport_units:ShipmentTransportUnitOption[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-transport-allocations`);
+export const createCargoTransportAllocation=(shipmentId:string,payload:Record<string,unknown>)=>request<{allocation:CargoTransportAllocation}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-transport-allocations`,{method:"POST",body:JSON.stringify(payload)});
+export const deleteCargoTransportAllocation=(shipmentId:string,id:string)=>request<void>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-transport-allocations/${encodeURIComponent(id)}`,{method:"DELETE"});
+export interface TransportTrackingEvent { id:number; status:string; location:{location_name?:string|null}; customer_message?:string|null; internal_note?:string|null; is_customer_visible:boolean; occurred_at:string; }
+export interface OperationalTransportTracking { enabled:boolean; units:Array<ShipmentTransportUnitOption & { latest_status:string; allocated_cargo:Array<{cargo_name:string;allocated_quantity:string;uom_symbol:string}>; history:TransportTrackingEvent[] }>; }
+export const getOperationalTransportTracking=(shipmentId:string)=>request<{source_type:string;tracking:OperationalTransportTracking|null}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-tracking`);
+export const enableOperationalTransportTracking=(shipmentId:string)=>request<{tracking:OperationalTransportTracking}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-tracking/enable`,{method:"POST"});
+export const addOperationalTransportTrackingUpdate=(shipmentId:string,unitId:number,payload:Record<string,unknown>)=>request<{tracking:OperationalTransportTracking}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-units/${unitId}/tracking-updates`,{method:"POST",body:JSON.stringify(payload)});
 export const listShipmentCargoItems = (shipmentId: string) =>
   request<{ items: ShipmentCargoItem[] }>(
     `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`,
