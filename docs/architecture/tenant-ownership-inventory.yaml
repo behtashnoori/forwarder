@@ -108,6 +108,7 @@
     "RouteDependency": {"kind":"persisted_model","table":"route_dependency","scope":"TENANT_OWNED_INDIRECT","owner_path":"route_plan.operational_shipment.organization_id"},
     "CargoItemAlias": {"kind":"persisted_model","table":"cargo_item_alias","scope":"TENANT_OWNED_INDIRECT","owner_path":"cargo_catalog_item.organization_id"},
     "ShipmentCargoItem": {"kind":"persisted_model","table":"shipment_cargo_item","scope":"TENANT_OWNED_INDIRECT","owner_path":"operational_shipment.organization_id"},
+    "ShipmentCargoTransportAllocation": {"kind":"persisted_model","table":"shipment_cargo_transport_allocation","scope":"TENANT_OWNED_INDIRECT","owner_path":"operational_shipment.organization_id"},
     "ProjectService": {"kind":"persisted_model","table":"project_service","scope":"TENANT_OWNED_INDIRECT","owner_path":"project.organization_id"},
     "ProjectDocumentRequirement": {"kind":"persisted_model","table":"project_document_requirement","scope":"TENANT_OWNED_INDIRECT","owner_path":"project.organization_id"},
     "ProjectMilestoneDefinition": {"kind":"persisted_model","table":"project_milestone_definition","scope":"TENANT_OWNED_INDIRECT","owner_path":"project.organization_id"},
