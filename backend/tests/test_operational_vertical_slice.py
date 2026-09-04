@@ -25,6 +25,7 @@ from backend.operational_models import (
 )
 from backend.services import operational_service as service
 from backend.services import document_readiness_service, economics_service
+from backend.services.expert_scope_service import EXPERT_BASELINE_OPERATIONAL_PERMISSIONS
 from backend.auth import auth_manager
 
 
@@ -260,6 +261,20 @@ def test_direct_permission_is_not_implied_by_legacy_or_quote_permission(
                     f"denied-{permission}",
                 )
             assert forbidden.value.code == "FORBIDDEN_OPERATION"
+
+
+def test_expert_operational_baseline_allows_direct_creation(operational_app):
+    """Provisioning supplies create_direct; the endpoint guard still enforces it."""
+    with operational_app.app_context():
+        membership = OperationalMembership.query.filter_by(
+            user_id=operational_app.config["phase1a"]["user"]
+        ).one()
+        membership.permissions = list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
+        db.session.commit()
+        shipment, created = service.create_direct(
+            _direct_payload(operational_app), _user(operational_app), "baseline-direct"
+        )
+        assert created is True and shipment.source_type == "direct"
 
 
 def test_direct_http_list_detail_and_source_specific_capabilities(operational_app):

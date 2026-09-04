@@ -1,14 +1,24 @@
 """Shared eligibility rules for expert shipment scopes."""
 from __future__ import annotations
 
-from typing import Iterable, TypeVar
+from typing import Any, Iterable, TypeVar
 
+from sqlalchemy import select
+
+from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
+from backend.operational_models import OperationalMembership
 
 EXPERT_ROLES = ("expert", "business_expert")
-# ADR-043: Basic Expert baseline is intentionally empty.  A selector grant is
-# explicit and purpose-bounded; role provisioning never grants tenant browsing.
-EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = ()
+# A normal active Expert is an operational user.  This baseline deliberately
+# grants workflow capability, not tenant-wide visibility or administrative
+# authority: endpoint guards and assigned-work policy remain authoritative.
+EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = (
+    "operational_shipment.create",
+    "operational_shipment.create_direct",
+    "operational_shipment.create_from_quote",
+    "operational_shipment.read",
+)
 T = TypeVar("T", bound=ExpertUser)
 
 
@@ -21,6 +31,50 @@ def default_operational_permissions_for_role(role: str | None) -> list[str]:
     if is_expert_role(role):
         return list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
     return []
+
+
+def merge_expert_baseline_permissions(permissions: Iterable[Any] | None) -> list[str]:
+    """Return a deterministic, duplicate-free additive Expert permission set."""
+    existing = {value for value in (permissions or []) if isinstance(value, str) and value}
+    return sorted(existing | set(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS))
+
+
+def reconcile_expert_baseline_permissions(*, apply: bool = False) -> dict[str, Any]:
+    """Plan or apply additive baseline convergence for active Expert memberships.
+
+    Inactive users/memberships and non-Expert roles are deliberately excluded.
+    The caller owns transaction commit, making dry-run and apply explicit.
+    """
+    rows = db.session.execute(
+        select(OperationalMembership, ExpertUser).join(
+            ExpertUser, ExpertUser.id == OperationalMembership.user_id
+        ).where(OperationalMembership.is_active.is_(True), ExpertUser.is_active.is_(True))
+    ).all()
+    changes: list[dict[str, Any]] = []
+    skipped = 0
+    for membership, user in rows:
+        if not is_expert_role(user.role):
+            skipped += 1
+            continue
+        merged = merge_expert_baseline_permissions(membership.permissions)
+        current = sorted({value for value in (membership.permissions or []) if isinstance(value, str) and value})
+        if merged == current:
+            continue
+        changes.append({
+            "membership_id": membership.id,
+            "organization_id": membership.organization_id,
+            "user_id": user.id,
+            "added_permissions": sorted(set(merged) - set(current)),
+        })
+        if apply:
+            membership.permissions = merged
+    return {
+        "mode": "apply" if apply else "dry-run",
+        "targeted_memberships": len(rows) - skipped,
+        "skipped_non_expert_or_inactive": skipped,
+        "changed_memberships": len(changes),
+        "changes": changes,
+    }
 
 
 def can_handle_request(expert: ExpertUser, shipment_request: ShipmentRequest) -> bool:

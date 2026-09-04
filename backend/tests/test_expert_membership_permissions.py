@@ -9,6 +9,10 @@ from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
 from backend.models import Country, ExpertUser
 from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services.auth_session_service import create_session_tokens
+from backend.services.expert_scope_service import (
+    EXPERT_BASELINE_OPERATIONAL_PERMISSIONS,
+    reconcile_expert_baseline_permissions,
+)
 
 
 @pytest.fixture()
@@ -89,7 +93,7 @@ def _headers(token: str) -> dict[str, str]:
 
 
 @pytest.mark.parametrize("role", ["expert", "business_expert"])
-def test_organization_expert_provisioning_has_no_automatic_selector_read_permission(permission_app, role):
+def test_organization_expert_provisioning_receives_operational_baseline(permission_app, role):
     app, context = permission_app
     client = app.test_client()
     response = client.post(
@@ -104,13 +108,12 @@ def test_organization_expert_provisioning_has_no_automatic_selector_read_permiss
         membership = OperationalMembership.query.filter_by(user_id=user_id).one()
         assert membership.organization_id == context["organization_id"]
         assert isinstance(membership.permissions, list)
-        assert membership.permissions == []
+        assert membership.permissions == list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
         expert_token = create_session_tokens(user_id)["access_token"]
 
-    selector = client.get(
-        "/api/internal/logistics-points/tracking-selector", headers=_headers(expert_token)
-    )
-    assert selector.status_code == 403
+    context = client.get("/api/operational-context", headers=_headers(expert_token))
+    assert context.status_code == 200
+    assert context.get_json()["data"]["permissions"] == list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
 
     management = client.post(
         "/api/admin/logistics-point-types",
@@ -118,6 +121,35 @@ def test_organization_expert_provisioning_has_no_automatic_selector_read_permiss
         json={"immutable_code": "DENIED", "fa_name": "Denied", "en_name": "Denied"},
     )
     assert management.status_code == 403
+
+
+def test_expert_baseline_reconciliation_is_additive_and_idempotent(permission_app):
+    app, context = permission_app
+    with app.app_context():
+        empty = ExpertUser(username="empty-expert", password_hash="x", full_name="Empty", role="expert", is_active=True)
+        subset = ExpertUser(username="subset-expert", password_hash="x", full_name="Subset", role="expert", is_active=True)
+        explicit = ExpertUser(username="explicit-expert", password_hash="x", full_name="Explicit", role="expert", is_active=True)
+        inactive = ExpertUser(username="inactive-expert", password_hash="x", full_name="Inactive", role="expert", is_active=False)
+        non_expert = ExpertUser(username="non-expert", password_hash="x", full_name="Non Expert", role="crm_manager", is_active=True)
+        db.session.add_all([empty, subset, explicit, inactive, non_expert]); db.session.flush()
+        db.session.add_all([
+            OperationalMembership(organization_id=context["organization_id"], user_id=empty.id, permissions=[]),
+            OperationalMembership(organization_id=context["organization_id"], user_id=subset.id, permissions=["operational_shipment.read"]),
+            OperationalMembership(organization_id=context["organization_id"], user_id=explicit.id, permissions=["custom.explicit"]),
+            OperationalMembership(organization_id=context["organization_id"], user_id=inactive.id, permissions=[]),
+            OperationalMembership(organization_id=context["organization_id"], user_id=non_expert.id, permissions=[]),
+        ])
+        db.session.commit()
+        plan = reconcile_expert_baseline_permissions()
+        assert plan["mode"] == "dry-run" and plan["changed_memberships"] == 3
+        assert OperationalMembership.query.filter_by(user_id=empty.id).one().permissions == []
+        applied = reconcile_expert_baseline_permissions(apply=True); db.session.commit()
+        assert applied["changed_memberships"] == 3
+        assert OperationalMembership.query.filter_by(user_id=empty.id).one().permissions == list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
+        assert OperationalMembership.query.filter_by(user_id=explicit.id).one().permissions == sorted([*EXPERT_BASELINE_OPERATIONAL_PERMISSIONS, "custom.explicit"])
+        assert OperationalMembership.query.filter_by(user_id=inactive.id).one().permissions == []
+        assert OperationalMembership.query.filter_by(user_id=non_expert.id).one().permissions == []
+        assert reconcile_expert_baseline_permissions(apply=True)["changed_memberships"] == 0
 
 
 def test_organization_crm_manager_does_not_receive_expert_permissions(permission_app):

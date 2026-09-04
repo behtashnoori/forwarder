@@ -14,6 +14,7 @@ from backend.extensions import db
 from backend.models import ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.operational_models import CanonicalLocation, Milestone, MilestoneEvent, OperationalAudit, OperationalCheckpoint, OperationalIdempotency, OperationalMembership, OperationalOrganization, OperationalOutbox, OperationalShipment, OperationalWorkItem, RouteDependency, RouteLeg, RoutePlan
 from backend.services.operational_service import OperationalError, reconcile_overdue
+from backend.services.expert_scope_service import reconcile_expert_baseline_permissions
 
 
 PHASE1B_PREFIX = "phase1b_uat_"
@@ -258,13 +259,14 @@ def seed_phase1b_uat(app, password: str) -> dict:
 def main(argv=None) -> int:
     parser=argparse.ArgumentParser(); sub=parser.add_subparsers(dest="command", required=True)
     reconcile=sub.add_parser("reconcile-overdue"); reconcile.add_argument("--organization-id", type=int, required=True); reconcile.add_argument("--confirm", action="store_true")
+    expert_baseline=sub.add_parser("reconcile-expert-baseline"); expert_baseline.add_argument("--apply", action="store_true")
     bootstrap=sub.add_parser("bootstrap-organization"); bootstrap.add_argument("--name", required=True); bootstrap.add_argument("--user-id", type=int, required=True); bootstrap.add_argument("--permissions", required=True); bootstrap.add_argument("--confirm", action="store_true")
     scope_quote=sub.add_parser("scope-quote"); scope_quote.add_argument("--quote-id", type=int, required=True); scope_quote.add_argument("--organization-id", type=int, required=True); scope_quote.add_argument("--confirm", action="store_true")
     provision=sub.add_parser("provision-uat"); provision.add_argument("--confirm", action="store_true")
     phase1b=sub.add_parser("seed-phase1b-uat"); phase1b.add_argument("--confirm", action="store_true")
     cleanup=sub.add_parser("cleanup-uat"); cleanup.add_argument("--confirm", action="store_true")
     args=parser.parse_args(argv)
-    if not args.confirm:
+    if args.command != "reconcile-expert-baseline" and not args.confirm:
         print("Refusing operational write without --confirm.", file=sys.stderr); return 2
     if args.command in {"provision-uat","cleanup-uat"} and os.getenv("APP_ENV", "").lower() not in {"test","development"}:
         print("UAT commands are restricted to APP_ENV=test or development.", file=sys.stderr); return 2
@@ -323,6 +325,13 @@ def main(argv=None) -> int:
             db.session.commit();print("uat cleanup completed")
         elif args.command == "reconcile-overdue":
             count=reconcile_overdue(organization_id=args.organization_id); print(f"reconciled organization={args.organization_id} opened={count}")
+        elif args.command == "reconcile-expert-baseline":
+            result = reconcile_expert_baseline_permissions(apply=args.apply)
+            if args.apply:
+                db.session.commit()
+            else:
+                db.session.rollback()
+            print(json.dumps(result, sort_keys=True))
         elif args.command == "bootstrap-organization":
             if db.session.get(ExpertUser, args.user_id) is None: raise OperationalError("RESOURCE_NOT_FOUND", "User was not found.", 404)
             permissions=sorted({value.strip() for value in args.permissions.split(",") if value.strip()})
