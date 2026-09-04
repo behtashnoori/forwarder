@@ -15,6 +15,7 @@ def test_r4_fails_closed_and_preserves_the_no_downgrade_policy():
     assert "-Execute -ConfirmDeployment" in DEPLOY
     assert "PRECHECK_COMPLETE" in DEPLOY and "READY_FOR_FIRST_MUTATION" in DEPLOY
     assert "ROLLBACK=PREVIOUS_APPLICATION_RUNTIME;DB=UPGRADED_NO_DOWNGRADE" in DEPLOY
+    assert "DB predecessor Alembic mismatch" in DEPLOY
     assert "taskkill /IM python.exe" not in DEPLOY
     assert "Stop-Process -Id" in DEPLOY
 

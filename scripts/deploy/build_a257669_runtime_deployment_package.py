@@ -4,7 +4,7 @@ import hashlib, json, shutil, sys, tempfile, zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PACKAGE_ID = "D2-VALIDATION-S7-RC-a257669-rg1-frozen-r4"
+PACKAGE_ID = "D2-VALIDATION-S7-RC-a257669-rg1-frozen-r5"
 RUNTIME_ID = "Forwarder-Windows-Runtime-S7-RC-a257669-r4"
 APP = ROOT / "release-candidates" / "S7-RC-a257669-rg1-frozen" / "Forwarder-S7-RC-a257669-rg1-frozen-a257669.zip"
 RUNTIME = ROOT / "release-candidates" / (RUNTIME_ID + ".zip")
