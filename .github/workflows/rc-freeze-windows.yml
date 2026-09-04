@@ -80,7 +80,10 @@ jobs:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Path artifacts/rc -Force | Out-Null
-          python qualified-source/scripts/build_release_package.py --repository qualified-source --authorized-commit $env:APPLICATION_SOURCE_SHA --output-directory artifacts/rc --release-label $env:RELEASE_ID
+          # Force UTF-8 mode for the release builder so subprocess output from
+          # npm/vitest is decoded deterministically on Windows runners instead
+          # of using the runner's cp1252 locale.
+          python -X utf8 qualified-source/scripts/build_release_package.py --repository qualified-source --authorized-commit $env:APPLICATION_SOURCE_SHA --output-directory artifacts/rc --release-label $env:RELEASE_ID
       - name: Build and qualify descriptor-driven deployment package
         shell: pwsh
         run: |
