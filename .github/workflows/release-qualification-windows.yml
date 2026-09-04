@@ -1,0 +1,100 @@
+name: Forwarder Release Qualification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  EXPECTED_SOURCE_SHA: a9ed9ae33cb3a1d7c976c809e2420e395ef481c7
+  EXPECTED_PACKAGE_JSON_SHA256: 293099D575E3D438D6345B1F491D8B0533714C0449DD0A78C798E6DE1F3308FF
+  EXPECTED_PACKAGE_LOCK_SHA256: 65A32C9BB58CFB00841490C4EDBCCABA01B12811247D6E950D34C967E8926B5D
+  EXPECTED_ALEMBIC_HEAD: 20260908_governed_international_geography
+
+jobs:
+  npm-stability-1:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps: &stability
+      - uses: actions/checkout@v4
+        with: { ref: a9ed9ae33cb3a1d7c976c809e2420e395ef481c7, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.20.0, cache: '' }
+      - shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne $env:EXPECTED_SOURCE_SHA) { throw 'SOURCE_INTEGRITY_FAILURE' }
+          if ((Get-FileHash package.json -Algorithm SHA256).Hash -ne $env:EXPECTED_PACKAGE_JSON_SHA256) { throw 'SOURCE_INTEGRITY_FAILURE package.json' }
+          if ((Get-FileHash package-lock.json -Algorithm SHA256).Hash -ne $env:EXPECTED_PACKAGE_LOCK_SHA256) { throw 'SOURCE_INTEGRITY_FAILURE package-lock.json' }
+          node --version; npm --version; Get-Command node,npm | Format-List Source
+          $started = Get-Date; npm ci; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "npm_ci_duration_seconds=$([math]::Round(((Get-Date)-$started).TotalSeconds, 3))" | Out-File -Append $env:GITHUB_STEP_SUMMARY
+
+  npm-stability-2:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps: *stability
+
+  npm-stability-3:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps: *stability
+
+  frontend-clean:
+    needs: [npm-stability-1, npm-stability-2, npm-stability-3]
+    runs-on: windows-2025
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: a9ed9ae33cb3a1d7c976c809e2420e395ef481c7, fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24.20.0, cache: '' }
+      - shell: pwsh
+        env: { VITE_API_URL: __FORWARDER_SAME_ORIGIN__ }
+        run: |
+          if ((git rev-parse HEAD) -ne $env:EXPECTED_SOURCE_SHA) { throw 'SOURCE_INTEGRITY_FAILURE' }
+          npm ci; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run test:frontend; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm exec tsc -- --noEmit; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run lint; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+
+  backend-and-release-regressions:
+    needs: frontend-clean
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: a9ed9ae33cb3a1d7c976c809e2420e395ef481c7, fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne $env:EXPECTED_SOURCE_SHA) { throw 'SOURCE_INTEGRITY_FAILURE' }
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r requirements-release.txt
+          python -m pytest -q backend/tests
+          python -m pytest -q scripts/tests backend/tests/test_release_publication_contract.py
+          $heads = python -m alembic -c backend/migrations/alembic.ini heads
+          if ($heads -ne "$env:EXPECTED_ALEMBIC_HEAD (head)") { throw "Unexpected migration head: $heads" }
+          git log --oneline a2576690364fcaf58ca7ddc6c57143c3084bbb00..HEAD
+          git diff --name-status a2576690364fcaf58ca7ddc6c57143c3084bbb00..HEAD
+
+  qualification-decision:
+    if: always()
+    needs: [npm-stability-1, npm-stability-2, npm-stability-3, frontend-clean, backend-and-release-regressions]
+    runs-on: windows-2025
+    steps:
+      - shell: pwsh
+        run: |
+          $results = @{ npm_stability_1 = '${{ needs.npm-stability-1.result }}'; npm_stability_2 = '${{ needs.npm-stability-2.result }}'; npm_stability_3 = '${{ needs.npm-stability-3.result }}'; frontend_clean = '${{ needs.frontend-clean.result }}'; backend_and_release_regressions = '${{ needs.backend-and-release-regressions.result }}' }
+          $decision = if ($results.npm_stability_1 -ne 'success' -or $results.npm_stability_2 -ne 'success' -or $results.npm_stability_3 -ne 'success') { 'CLEAN_RELEASE_HOST_NOT_STABLE' } elseif ($results.frontend_clean -ne 'success' -or $results.backend_and_release_regressions -ne 'success') { 'RELEASE_BLOCKED_BY_TEST_REGRESSION' } else { 'READY_FOR_RC_FREEZE' }
+          @{ decision = $decision; source_sha = $env:EXPECTED_SOURCE_SHA; workflow_run_id = $env:GITHUB_RUN_ID; runner_os = $env:RUNNER_OS; jobs = $results; production_accessed = $false; production_mutated = $false; production_deployed = $false } | ConvertTo-Json | Set-Content release-qualification-report.json
+          "# Forwarder Release Qualification`n`nDecision: **$decision**" | Set-Content release-qualification-summary.md
+          if ($decision -ne 'READY_FOR_RC_FREEZE') { throw $decision }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forwarder-release-qualification-${{ github.run_id }}
+          path: release-qualification-*.json
+          if-no-files-found: error
