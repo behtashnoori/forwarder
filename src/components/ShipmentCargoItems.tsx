@@ -6,22 +6,23 @@ import {
   addOperationalTransportTrackingUpdate, createCargoTransportAllocation,
   createShipmentCargoItem, deleteCargoTransportAllocation,
   enableOperationalTransportTracking, getCargoTransportAllocations,
-  getOperationalTransportTracking, listShipmentCargoItems, request,
+  getOperationalTransportTracking, getShipmentCargoOptions, listShipmentCargoItems,
   updateShipmentCargoItem, type CargoTransportAllocation,
   type OperationalTransportTracking, type ShipmentCargoItem,
   type ShipmentTransportUnitOption,
 } from "@/lib/api";
 
-type Option = { public_id: string; code: string; name: string; cargo_type_public_id?: string; default_uom_public_id?: string | null; symbol?: string };
+type Option = { public_id: string; code: string; name: string; cargo_type_public_id?: string; default_uom_public_id?: string | null; symbol?: string; preferred?: boolean };
 const statusLabel: Record<string, string> = { loading: "در حال بارگیری", departed: "حرکت کرده", in_transit: "در مسیر", at_checkpoint: "در نقطه کنترل", delayed: "با تأخیر", arrived_destination: "رسیده به مقصد", delivered: "تحویل شده", cancelled: "لغو شده" };
 const label = (status?: string) => statusLabel[status || ""] || status || "ثبت نشده";
 const time = (value?: string) => value ? new Date(value).toLocaleString("fa-IR") : "ثبت نشده";
 
-export default function ShipmentCargoItems({ shipmentPublicId, legacyDescription }: { shipmentPublicId: string; legacyDescription?: string | null }) {
+export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, legacyDescription }: { shipmentPublicId: string; projectPublicId?: string | null; legacyDescription?: string | null }) {
   const [items, setItems] = useState<ShipmentCargoItem[]>([]);
   const [options, setOptions] = useState<{ catalog: Option[]; cargo_types: Option[]; uoms: Option[] }>({ catalog: [], cargo_types: [], uoms: [] });
   const [error, setError] = useState("");
   const [form, setForm] = useState({ line_number: "1", catalog_item_public_id: "", display_name: "", cargo_type_public_id: "", quantity: "", uom_public_id: "" });
+  const [cargoQuery, setCargoQuery] = useState("");
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [allocations, setAllocations] = useState<CargoTransportAllocation[]>([]);
   const [units, setUnits] = useState<ShipmentTransportUnitOption[]>([]);
@@ -31,10 +32,10 @@ export default function ShipmentCargoItems({ shipmentPublicId, legacyDescription
   const [trackingForm, setTrackingForm] = useState({ status: "in_transit", location_text: "", customer_message: "", internal_note: "", is_customer_visible: true });
   const load = useCallback(async () => {
     try {
-      const [lines, opts, allocationData, trackingData] = await Promise.all([listShipmentCargoItems(shipmentPublicId), request<{ catalog: Option[]; cargo_types: Option[]; uoms: Option[] }>("/api/internal/cargo-options"), getCargoTransportAllocations(shipmentPublicId), getOperationalTransportTracking(shipmentPublicId)]);
+      const [lines, opts, allocationData, trackingData] = await Promise.all([listShipmentCargoItems(shipmentPublicId), getShipmentCargoOptions(projectPublicId || undefined, cargoQuery), getCargoTransportAllocations(shipmentPublicId), getOperationalTransportTracking(shipmentPublicId)]);
       setItems(lines.items); setOptions(opts); setAllocations(allocationData.allocations); setUnits(allocationData.transport_units); setTracking(trackingData.tracking); setError("");
     } catch { setError("اطلاعات کالا، وسیله حمل یا پیگیری قابل دریافت نیست. اجازه دسترسی یا اتصال را بررسی کنید."); }
-  }, [shipmentPublicId]);
+  }, [shipmentPublicId, projectPublicId, cargoQuery]);
   useEffect(() => { void load(); }, [load]);
   const latest = useMemo(() => tracking?.units.flatMap((unit) => unit.history.map((event) => ({ unit, event }))).sort((a, b) => Date.parse(b.event.occurred_at) - Date.parse(a.event.occurred_at))[0], [tracking]);
   const choose = (id: string) => {
@@ -57,7 +58,8 @@ export default function ShipmentCargoItems({ shipmentPublicId, legacyDescription
       {legacyDescription && <p className="rounded bg-amber-50 p-3 text-sm"><strong>شرح ثبت‌شده پیشین:</strong> {legacyDescription}</p>}
       <details><summary className="cursor-pointer font-medium">افزودن کالا</summary><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         <Input aria-label="Cargo line number" type="number" min="1" value={form.line_number} onChange={(event) => setForm({ ...form, line_number: event.target.value })} />
-        <select aria-label="Catalog item" className="min-h-11 rounded border px-3" value={form.catalog_item_public_id} onChange={(event) => choose(event.target.value)}><option value="">انتخاب از فهرست کالا</option>{options.catalog.map((option) => <option key={option.public_id} value={option.public_id}>{option.code} — {option.name}</option>)}</select>
+        <Input aria-label="Search cargo catalog" placeholder="جست‌وجوی نام، نام جایگزین، کد، برند یا مدل" value={cargoQuery} onChange={(event) => setCargoQuery(event.target.value)} />
+        <select aria-label="Catalog item" className="min-h-11 rounded border px-3" value={form.catalog_item_public_id} onChange={(event) => choose(event.target.value)}><option value="">ورود دستی کالا</option>{options.catalog.some((option) => option.preferred)&&<optgroup label="کالاهای ترجیحی پروژه">{options.catalog.filter((option)=>option.preferred).map((option) => <option key={option.public_id} value={option.public_id}>★ {option.code} — {option.name}</option>)}</optgroup>}<optgroup label="سایر کالاهای سازمان">{options.catalog.filter((option)=>!option.preferred).map((option) => <option key={option.public_id} value={option.public_id}>{option.code} — {option.name}</option>)}</optgroup></select>
         <Input aria-label="Cargo display name" placeholder="نام کالا" value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} />
         <select aria-label="Cargo type" className="min-h-11 rounded border px-3" value={form.cargo_type_public_id} onChange={(event) => setForm({ ...form, cargo_type_public_id: event.target.value })}><option value="">نوع کالا</option>{options.cargo_types.map((option) => <option key={option.public_id} value={option.public_id}>{option.name}</option>)}</select>
         <Input aria-label="Cargo quantity" type="number" min="0.000001" step="any" placeholder="مقدار" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })} />

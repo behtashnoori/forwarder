@@ -2,12 +2,17 @@
 
 from datetime import datetime
 from flask import Blueprint, jsonify, request
-from sqlalchemy import select
+from sqlalchemy import and_, case, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from backend.auth import get_current_user
-from backend.cargo_models import ShipmentCargoItem
+from backend.cargo_models import (
+    CargoCatalogItem,
+    CargoItemAlias,
+    ProjectCargoCatalogItem,
+    ShipmentCargoItem,
+)
 from backend.extensions import db
 from backend.security import require_auth
 from backend.services import cargo_service as svc
@@ -20,6 +25,7 @@ from backend.services.admin_authorization_service import (
     require_organization_admin_context,
 )
 from backend.models import ExpertUser
+from backend.operational_models import Project
 
 cargo_bp = Blueprint("cargo", __name__, url_prefix="/api/internal")
 
@@ -46,17 +52,24 @@ def _parse_tracking_datetime(value):
 
 
 def _cargo_options_organization(user):
-    """Resolve the tenant for the two approved cargo-options consumers.
+    """Resolve the tenant for approved cargo selectors.
 
     Catalog administration is organization-admin scoped, while shipment cargo
-    entry is permission scoped.  Both paths must still derive exactly one
-    active organization from the authenticated user's membership.
+    entry and Project Configuration are permission scoped.  Every path still
+    derives exactly one active organization from the authenticated membership.
     """
     actor = db.session.get(ExpertUser, user["id"])
     if actor and effective_authority(actor) == ORGANIZATION_ADMIN:
         organization_context_for_authenticated_user(actor.id)
     else:
-        svc.operational_service.require_permission(user, "operational_shipment.read")
+        try:
+            svc.operational_service.require_permission(
+                user, "operational_shipment.read"
+            )
+        except svc.operational_service.OperationalError:
+            svc.operational_service.require_permission(
+                user, "project_configuration.read"
+            )
     return svc.org_for(user)
 
 
@@ -247,11 +260,29 @@ def cargo_options():
     try:
         user = _user()
         org = _cargo_options_organization(user)
-        from backend.cargo_models import CargoCatalogItem
         from backend.models import CargoType, UnitOfMeasure
 
-        catalog = db.session.scalars(
-            select(CargoCatalogItem)
+        project = None
+        project_public_id = str(request.args.get("project_public_id") or "").strip()
+        if project_public_id:
+            project = db.session.scalar(
+                select(Project).where(
+                    Project.public_id == project_public_id,
+                    Project.organization_id == org,
+                )
+            )
+            if not project:
+                raise svc.CargoError("project not found", 404)
+
+        preference_join = and_(
+            ProjectCargoCatalogItem.cargo_catalog_item_id == CargoCatalogItem.id,
+            ProjectCargoCatalogItem.project_id == (project.id if project else -1),
+            ProjectCargoCatalogItem.organization_id == org,
+            ProjectCargoCatalogItem.is_active.is_(True),
+        )
+        query = (
+            select(CargoCatalogItem, ProjectCargoCatalogItem)
+            .outerjoin(ProjectCargoCatalogItem, preference_join)
             .where(
                 CargoCatalogItem.organization_id == org,
                 CargoCatalogItem.is_active.is_(True),
@@ -260,7 +291,41 @@ def cargo_options():
                 selectinload(CargoCatalogItem.cargo_type),
                 selectinload(CargoCatalogItem.default_uom),
             )
-            .order_by(CargoCatalogItem.fa_name)
+        )
+        raw_q = str(request.args.get("q") or "").strip()
+        if len(raw_q) > 200:
+            raise svc.CargoError("q is too long", 422)
+        if raw_q:
+            normalized = f"%{svc.normalize_text(raw_q)}%"
+            contains = f"%{raw_q}%"
+            query = query.where(
+                or_(
+                    CargoCatalogItem.search_text.like(normalized),
+                    CargoCatalogItem.immutable_code.ilike(contains),
+                    CargoCatalogItem.fa_name.ilike(contains),
+                    CargoCatalogItem.en_name.ilike(contains),
+                    CargoCatalogItem.part_number.ilike(contains),
+                    CargoCatalogItem.customer_item_code.ilike(contains),
+                    CargoCatalogItem.hs_code.ilike(contains),
+                    CargoCatalogItem.brand.ilike(contains),
+                    CargoCatalogItem.model.ilike(contains),
+                    CargoCatalogItem.aliases.any(
+                        and_(
+                            CargoItemAlias.is_active.is_(True),
+                            CargoItemAlias.normalized_alias.like(normalized),
+                        )
+                    ),
+                )
+            )
+        query = query.order_by(
+            case((ProjectCargoCatalogItem.id.is_not(None), 0), else_=1),
+            ProjectCargoCatalogItem.display_order,
+            CargoCatalogItem.fa_name,
+            CargoCatalogItem.immutable_code,
+            CargoCatalogItem.id,
+        )
+        catalog = db.session.execute(
+            query
             .limit(100)
         ).all()
         cargo_types = db.session.scalars(
@@ -280,12 +345,16 @@ def cargo_options():
                         "public_id": r.public_id,
                         "code": r.immutable_code,
                         "name": r.fa_name,
+                        "preferred": preference is not None,
+                        "preference_order": preference.display_order
+                        if preference
+                        else None,
                         "cargo_type_public_id": r.cargo_type.public_id,
                         "default_uom_public_id": r.default_uom.public_id
                         if r.default_uom
                         else None,
                     }
-                    for r in catalog
+                    for r, preference in catalog
                 ],
                 "cargo_types": [
                     {

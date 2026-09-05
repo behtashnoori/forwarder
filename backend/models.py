@@ -2080,7 +2080,12 @@ from backend.operational_models import (  # noqa: E402,F401
     RouteLeg,
     RoutePlan,
 )
-from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem  # noqa: E402
+from backend.cargo_models import (  # noqa: E402
+    CargoCatalogItem,
+    CargoItemAlias,
+    ProjectCargoCatalogItem,
+    ShipmentCargoItem,
+)
 from backend.mdpm_models import (  # noqa: E402,F401
     ArtifactAssociation,
     DocumentAssessment,

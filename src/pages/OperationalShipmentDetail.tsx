@@ -141,7 +141,7 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
 
-          <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
+          <ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
 
           <details className="rounded border bg-white" open={false}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات و سوابق بیشتر</summary>

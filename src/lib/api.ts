@@ -3085,14 +3085,21 @@ export interface ShipmentCargoOption {
   cargo_type_public_id?: string;
   default_uom_public_id?: string | null;
   symbol?: string;
+  preferred?: boolean;
+  preference_order?: number | null;
 }
 export interface ShipmentCargoOptions {
   catalog: ShipmentCargoOption[];
   cargo_types: ShipmentCargoOption[];
   uoms: ShipmentCargoOption[];
 }
-export const getShipmentCargoOptions = () =>
-  request<ShipmentCargoOptions>("/api/internal/cargo-options");
+export const getShipmentCargoOptions = (projectPublicId?: string, q?: string) =>
+  request<ShipmentCargoOptions>(
+    withQuery("/api/internal/cargo-options", {
+      project_public_id: projectPublicId || undefined,
+      q: q || undefined,
+    }),
+  );
 export interface CargoTransportAllocation { public_id:string; cargo_item_public_id:string; transport_unit_id:number; allocated_quantity:string; uom_symbol:string; cargo_name:string; transport_unit_code:string; transport_unit_type:string; }
 export interface ShipmentTransportUnitOption { id:number; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null; }
 export const getCargoTransportAllocations=(shipmentId:string)=>request<{allocations:CargoTransportAllocation[];transport_units:ShipmentTransportUnitOption[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-transport-allocations`);
@@ -3380,9 +3387,15 @@ export interface ProjectConfigurationItem {
   target_duration_value?: number | null;
   warning_duration_value?: number | null;
   duration_unit?: "MINUTE" | "HOUR" | "DAY" | null;
+  cargo_catalog_item_public_id?: string;
+  cargo_catalog_item_code?: string;
+  cargo_catalog_item_name?: string;
 }
 export type ProjectConfigurationResource =
-  "services" | "document-requirements" | "milestone-definitions";
+  | "services"
+  | "document-requirements"
+  | "milestone-definitions"
+  | "commodities";
 const configurationPath = (
   projectId: string,
   resource: ProjectConfigurationResource,

@@ -180,7 +180,7 @@ beforeEach(() => {
     ],
     meta: { count: 1, limit: 50 },
   });
-  vi.mocked(api.getShipmentCargoOptions).mockResolvedValue({
+  vi.mocked(api.getShipmentCargoOptions).mockImplementation(async (projectId) => ({
     catalog: [
       {
         public_id: "catalog-active",
@@ -188,6 +188,15 @@ beforeEach(() => {
         name: "Active catalog cargo",
         cargo_type_public_id: "cargo-type-1",
         default_uom_public_id: "uom-ea",
+        preferred: Boolean(projectId),
+      },
+      {
+        public_id: "catalog-fallback",
+        code: "CAT-2",
+        name: "Organization fallback cargo",
+        cargo_type_public_id: "cargo-type-1",
+        default_uom_public_id: "uom-ea",
+        preferred: false,
       },
     ],
     cargo_types: [
@@ -196,7 +205,7 @@ beforeEach(() => {
     uoms: [
       { public_id: "uom-ea", code: "EA", name: "Each", symbol: "ea" },
     ],
-  });
+  }));
   vi.mocked(api.listLogisticsPoints).mockResolvedValue({
     items: [organizationPoint, preferredPoint],
     page: 1,
@@ -340,6 +349,15 @@ describe("Slice 5 governed creation", () => {
       screen.getByLabelText("Project (optional)"),
       "project-public",
     );
+    await waitFor(() =>
+      expect(api.getShipmentCargoOptions).toHaveBeenCalledWith(
+        "project-public",
+        "",
+      ),
+    );
+    expect(screen.getByRole("group", { name: "Preferred for this project" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Organization fallback cargo/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Manual cargo/ })).toBeInTheDocument();
     await waitFor(() =>
       expect(api.listProjectLogisticsPoints).toHaveBeenCalledWith(
         "project-public",

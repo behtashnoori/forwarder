@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 from backend.extensions import db
+from backend.cargo_models import CargoCatalogItem, ProjectCargoCatalogItem
 from backend.models import DocumentDefinition, ServiceType
 from backend.operational_models import Project, utcnow
 from backend.logistics_network_models import ProjectLogisticsPoint
@@ -116,6 +117,13 @@ def projection(row):
             conditional_description=row.conditional_description,
             notes=row.notes,
         )
+    elif isinstance(row, ProjectCargoCatalogItem):
+        out.update(
+            cargo_catalog_item_public_id=row.catalog_item.public_id,
+            cargo_catalog_item_code=row.catalog_item.immutable_code,
+            cargo_catalog_item_name=row.catalog_item.fa_name,
+            display_order=row.display_order,
+        )
     else:
         out.update(
             milestone_type_public_id=row.milestone_type.public_id,
@@ -150,6 +158,7 @@ def list_rows(model, owner, args):
         ProjectService: {"display_order": ProjectService.display_order, "created_at": ProjectService.created_at},
         ProjectDocumentRequirement: {"display_order": ProjectDocumentRequirement.display_order, "requirement_level": ProjectDocumentRequirement.requirement_level},
         ProjectMilestoneDefinition: {"sequence": ProjectMilestoneDefinition.sequence, "created_at": ProjectMilestoneDefinition.created_at},
+        ProjectCargoCatalogItem: {"display_order": ProjectCargoCatalogItem.display_order, "created_at": ProjectCargoCatalogItem.created_at},
     }[model]
     default_sort = "sequence" if model is ProjectMilestoneDefinition else "display_order"
     sort = args.get("sort", default_sort)
@@ -163,6 +172,7 @@ def list_rows(model, owner, args):
             ProjectMilestoneDefinition.milestone_type,
             ProjectMilestoneDefinition.project_logistics_point,
         ),
+        ProjectCargoCatalogItem: (ProjectCargoCatalogItem.catalog_item,),
     }[model]
     query = select(model).where(model.project_id == owner.id).options(
         *(selectinload(relationship) for relationship in relationships)
@@ -184,6 +194,10 @@ def list_rows(model, owner, args):
         query = query.where(model.requirement_level == level)
     elif model is ProjectMilestoneDefinition and args.get("milestone_type_public_id"):
         query = query.join(ProjectMilestoneDefinition.milestone_type).where(MilestoneType.public_id == args["milestone_type_public_id"])
+    elif model is ProjectCargoCatalogItem and args.get("cargo_catalog_item_public_id"):
+        query = query.join(ProjectCargoCatalogItem.catalog_item).where(
+            CargoCatalogItem.public_id == args["cargo_catalog_item_public_id"]
+        )
     total = db.session.scalar(select(db.func.count()).select_from(query.order_by(None).subquery())) or 0
     column = sort_fields[sort]
     ordered = column.desc() if direction == "desc" else column.asc()
@@ -338,6 +352,38 @@ def create_milestone(owner, p, user):
     return row
 
 
+def create_commodity(owner, p, user):
+    ref = db.session.scalar(
+        select(CargoCatalogItem).where(
+            CargoCatalogItem.public_id == p.get("cargo_catalog_item_public_id"),
+            CargoCatalogItem.organization_id == owner.organization_id,
+            CargoCatalogItem.is_active.is_(True),
+        )
+    )
+    if not ref:
+        raise OperationalError("NOT_FOUND", "Active CargoCatalogItem not found.", 404)
+    try:
+        display_order = int(p.get("display_order", 0))
+    except (TypeError, ValueError) as exc:
+        raise OperationalError(
+            "VALIDATION_FAILED", "display_order must be a non-negative integer."
+        ) from exc
+    if display_order < 0:
+        raise OperationalError(
+            "VALIDATION_FAILED", "display_order must be a non-negative integer."
+        )
+    row = ProjectCargoCatalogItem(
+        organization_id=owner.organization_id,
+        project_id=owner.id,
+        cargo_catalog_item_id=ref.id,
+        display_order=display_order,
+        created_by=user["id"],
+        updated_by=user["id"],
+    )
+    db.session.add(row)
+    return row
+
+
 def update(row, p, user):
     _version(row, p)
     if isinstance(row, ProjectService):
@@ -364,6 +410,23 @@ def update(row, p, user):
         row.conditional_description = conditional if level == "CONDITIONAL" else None
         if "display_order" in p:
             row.display_order = max(0, int(p["display_order"]))
+    elif isinstance(row, ProjectCargoCatalogItem):
+        if "cargo_catalog_item_public_id" in p:
+            raise OperationalError(
+                "VALIDATION_FAILED", "Commodity preference identity cannot be changed."
+            )
+        if "display_order" in p:
+            try:
+                display_order = int(p["display_order"])
+            except (TypeError, ValueError) as exc:
+                raise OperationalError(
+                    "VALIDATION_FAILED", "display_order must be a non-negative integer."
+                ) from exc
+            if display_order < 0:
+                raise OperationalError(
+                    "VALIDATION_FAILED", "display_order must be a non-negative integer."
+                )
+            row.display_order = display_order
     else:
         if "sequence" in p:
             if not isinstance(p["sequence"], int) or p["sequence"] < 1:
@@ -407,6 +470,18 @@ def update(row, p, user):
 
 def active(row, value, p, user):
     _version(row, p)
+    if isinstance(row, ProjectCargoCatalogItem) and value:
+        catalog_is_active = db.session.scalar(
+            select(CargoCatalogItem.is_active).where(
+                CargoCatalogItem.id == row.cargo_catalog_item_id,
+                CargoCatalogItem.organization_id == row.organization_id,
+            )
+        )
+        if catalog_is_active is not True:
+            raise OperationalError(
+                "VALIDATION_FAILED",
+                "An inactive catalog item cannot be preferred for new selection.",
+            )
     row.is_active = value
     row.version += 1
     _common(row, p, user)

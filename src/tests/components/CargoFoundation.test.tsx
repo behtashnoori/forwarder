@@ -7,7 +7,7 @@ const api = vi.hoisted(() => ({
   listCargoCatalog: vi.fn(), createCargoCatalogItem: vi.fn(), updateCargoCatalogItem: vi.fn(),
   setCargoCatalogActive: vi.fn(), createCargoAlias: vi.fn(), updateCargoAlias: vi.fn(),
   getCargoCatalogShipmentUsage: vi.fn(),
-  listShipmentCargoItems: vi.fn(), createShipmentCargoItem: vi.fn(), updateShipmentCargoItem: vi.fn(), request: vi.fn(),
+  listShipmentCargoItems: vi.fn(), createShipmentCargoItem: vi.fn(), updateShipmentCargoItem: vi.fn(), request: vi.fn(), getShipmentCargoOptions: vi.fn(),
   getCargoTransportAllocations: vi.fn(), createCargoTransportAllocation: vi.fn(),
   deleteCargoTransportAllocation: vi.fn(), getOperationalTransportTracking: vi.fn(),
   enableOperationalTransportTracking: vi.fn(), addOperationalTransportTrackingUpdate: vi.fn(),
@@ -37,6 +37,7 @@ describe("Cargo foundation UI", () => {
     api.listCargoCatalog.mockResolvedValue({items:[catalog],page:1,per_page:20,total:1,pages:1});
     api.listShipmentCargoItems.mockResolvedValue({items:[shipmentItem]});
     api.request.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1"}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea"}]});
+    api.getShipmentCargoOptions.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:true},{public_id:"catalog-2",code:"ITEM-2",name:"کالای سازمان",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:false}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea"}]});
     api.updateShipmentCargoItem.mockResolvedValue({item:{...shipmentItem,quantity:"3",version:2}});
     api.getCargoTransportAllocations.mockResolvedValue({allocations:[],transport_units:[]});
     api.getOperationalTransportTracking.mockResolvedValue({source_type:"direct",tracking:null});
@@ -76,8 +77,12 @@ describe("Cargo foundation UI", () => {
   });
 
   it("shows legacy cargo separately and updates quantity without snapshot fields", async () => {
-    render(<ShipmentCargoItems shipmentPublicId="shipment-1" legacyDescription="Legacy machinery"/>);
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1" legacyDescription="Legacy machinery"/>);
     expect(await screen.findByText("Legacy machinery")).toBeTruthy();
+    expect(api.getShipmentCargoOptions).toHaveBeenCalledWith("project-1","");
+    expect(screen.getByRole("group",{name:"کالاهای ترجیحی پروژه"})).toBeTruthy();
+    expect(screen.getByRole("option",{name:/ITEM-2/})).toBeTruthy();
+    expect(screen.getByRole("option",{name:"ورود دستی کالا"})).toBeTruthy();
     expect(screen.getByText("Historical snapshot")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Edit quantity line 1"),{target:{value:"3"}});
     fireEvent.click(screen.getByRole("button",{name:/Save/}));

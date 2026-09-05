@@ -297,6 +297,9 @@ def _refresh_search(row):
             row.en_name,
             row.part_number,
             row.customer_item_code,
+            row.hs_code,
+            row.brand,
+            row.model,
         ]
         if v
     )

@@ -14,6 +14,7 @@ from backend.project_configuration_models import (
     ProjectDocumentRequirement,
     ProjectMilestoneDefinition,
 )
+from backend.cargo_models import ProjectCargoCatalogItem
 from backend.services import project_configuration_service as svc
 from backend.services.operational_service import OperationalError
 
@@ -214,12 +215,14 @@ RESOURCES = {
     "services": (ProjectService, svc.create_service),
     "document-requirements": (ProjectDocumentRequirement, svc.create_document),
     "milestone-definitions": (ProjectMilestoneDefinition, svc.create_milestone),
+    "commodities": (ProjectCargoCatalogItem, svc.create_commodity),
 }
 
 
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/services", defaults={"resource": "services"}, methods=["GET", "POST"])
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/document-requirements", defaults={"resource": "document-requirements"}, methods=["GET", "POST"])
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/milestone-definitions", defaults={"resource": "milestone-definitions"}, methods=["GET", "POST"])
+@project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/commodities", defaults={"resource": "commodities"}, methods=["GET", "POST"])
 @require_auth
 def collection(project_id, resource):
     try:
@@ -239,9 +242,11 @@ def collection(project_id, resource):
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/services/<public_id>", defaults={"resource": "services"}, methods=["GET", "PATCH"])
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/document-requirements/<public_id>", defaults={"resource": "document-requirements"}, methods=["GET", "PATCH"])
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/milestone-definitions/<public_id>", defaults={"resource": "milestone-definitions"}, methods=["GET", "PATCH"])
+@project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/commodities/<public_id>", defaults={"resource": "commodities"}, methods=["GET", "PATCH"])
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/services/<public_id>/<action>", defaults={"resource": "services"}, methods=["POST"])
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/document-requirements/<public_id>/<action>", defaults={"resource": "document-requirements"}, methods=["POST"])
 @project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/milestone-definitions/<public_id>/<action>", defaults={"resource": "milestone-definitions"}, methods=["POST"])
+@project_configuration_bp.route("/api/v2/projects/<project_id>/configuration/commodities/<public_id>/<action>", defaults={"resource": "commodities"}, methods=["POST"])
 @require_auth
 def item(project_id, resource, public_id, action=None):
     try:

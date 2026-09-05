@@ -6,11 +6,18 @@ from backend import create_app
 from backend.auth import auth_manager
 from backend.extensions import db
 from backend.milestone_type_catalog import load_catalog, plan_catalog
-from backend.models import Customer, DocumentDefinition, ExpertUser, ServiceType
+from backend.models import CargoType, Customer, DocumentDefinition, ExpertUser, ServiceType, UnitOfMeasure
+from backend.cargo_models import (
+    CargoCatalogItem,
+    CargoItemAlias,
+    ProjectCargoCatalogItem,
+    ShipmentCargoItem,
+)
 from backend.logistics_network_models import ProjectLogisticsPoint
 from backend.operational_models import (
     OperationalMembership,
     OperationalOrganization,
+    OperationalShipment,
     Project,
 )
 from backend.project_configuration_models import (
@@ -58,6 +65,7 @@ def configured_app():
             "project_configuration.manage",
             "milestone_type.read",
             "milestone_type.manage",
+            "operational_shipment.read",
         ]
         db.session.add_all(
             [
@@ -99,7 +107,82 @@ def configured_app():
             created_by=admin.id,
             updated_by=admin.id,
         )
-        db.session.add_all([project, service, document, milestone])
+        foreign_project = Project(
+            organization_id=other.id,
+            primary_customer_id=customer.id,
+            project_code="CFG-OTHER",
+            tracking_code="opaque-config-other",
+            created_by_user_id=outsider.id,
+        )
+        cargo_type = CargoType(
+            immutable_code="CFG_CARGO", fa_name="نوع کالا", en_name="Cargo type"
+        )
+        uom = UnitOfMeasure(
+            immutable_code="CFG_EA",
+            fa_name="عدد",
+            en_name="Each",
+            symbol="ea",
+            measurement_dimension="COUNT",
+        )
+        db.session.add_all([project, foreign_project, service, document, milestone, cargo_type, uom])
+        db.session.flush()
+        preferred_catalog = CargoCatalogItem(
+            organization_id=org.id,
+            immutable_code="Z-PREFERRED",
+            fa_name="کالای ترجیحی",
+            en_name="Preferred gearbox",
+            cargo_type=cargo_type,
+            default_uom=uom,
+            part_number="PART-42",
+            customer_item_code="CUSTOMER-42",
+            hs_code="HS-4242",
+            brand="AcmeBrand",
+            model="Model-X",
+            created_by=admin.id,
+            updated_by=admin.id,
+        )
+        fallback_catalog = CargoCatalogItem(
+            organization_id=org.id,
+            immutable_code="A-FALLBACK",
+            fa_name="کالای عمومی",
+            en_name="Fallback cargo",
+            cargo_type=cargo_type,
+            default_uom=uom,
+            created_by=admin.id,
+            updated_by=admin.id,
+        )
+        inactive_catalog = CargoCatalogItem(
+            organization_id=org.id,
+            immutable_code="INACTIVE-CARGO",
+            fa_name="کالای غیرفعال",
+            en_name="Inactive cargo",
+            cargo_type=cargo_type,
+            default_uom=uom,
+            is_active=False,
+            created_by=admin.id,
+            updated_by=admin.id,
+        )
+        foreign_catalog = CargoCatalogItem(
+            organization_id=other.id,
+            immutable_code="FOREIGN-CARGO",
+            fa_name="کالای خارجی",
+            en_name="Foreign cargo",
+            cargo_type=cargo_type,
+            default_uom=uom,
+            created_by=outsider.id,
+            updated_by=outsider.id,
+        )
+        db.session.add_all([preferred_catalog, fallback_catalog, inactive_catalog, foreign_catalog])
+        db.session.flush()
+        db.session.add(CargoItemAlias(
+            catalog_item_id=preferred_catalog.id,
+            alias_text="Special Gear",
+            normalized_alias="special gear",
+            language="en",
+            alias_type="COMMON_NAME",
+            created_by=admin.id,
+            updated_by=admin.id,
+        ))
         db.session.commit()
         yield (
             app,
@@ -108,6 +191,11 @@ def configured_app():
                 "service": service.public_id,
                 "document": document.public_id,
                 "milestone": milestone.public_id,
+                "foreign_project": foreign_project.public_id,
+                "preferred_catalog": preferred_catalog.public_id,
+                "fallback_catalog": fallback_catalog.public_id,
+                "inactive_catalog": inactive_catalog.public_id,
+                "foreign_catalog": foreign_catalog.public_id,
                 "auth": {
                     "Authorization": f"Bearer {auth_manager.generate_tokens(admin.id)['access_token']}"
                 },
@@ -135,8 +223,204 @@ def test_identity_catalog_and_single_head(configured_app):
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20260909_cargo_transport_allocation"
+        "20260911_project_cargo_preference"
     ]
+    migration = (
+        root / "migrations" / "versions" / "20260911_project_cargo_preference.py"
+    ).read_text(encoding="utf-8")
+    assert 'down_revision = "20260910_route_leg_logistics_points"' in migration
+    assert "fk_project_cargo_item_project_same_org" in migration
+    assert "fk_project_cargo_item_catalog_same_org" in migration
+    assert "uq_project_cargo_catalog_item_pair" in migration
+    assert "op.execute" not in migration and "bulk_insert" not in migration
+
+
+def test_project_commodity_crud_lifecycle_order_and_tenant_integrity(configured_app):
+    app, ctx = configured_app
+    client = app.test_client()
+    base = f"/api/v2/projects/{ctx['project']}/configuration/commodities"
+
+    created_response = client.post(
+        base,
+        headers=ctx["auth"],
+        json={
+            "cargo_catalog_item_public_id": ctx["preferred_catalog"],
+            "display_order": 7,
+        },
+    )
+    assert created_response.status_code == 201
+    created = created_response.get_json()["item"]
+    assert created["cargo_catalog_item_public_id"] == ctx["preferred_catalog"]
+    assert created["display_order"] == 7 and created["is_active"] is True
+    assert client.post(
+        base,
+        headers=ctx["auth"],
+        json={"cargo_catalog_item_public_id": ctx["preferred_catalog"]},
+    ).status_code == 409
+    assert client.post(
+        base,
+        headers=ctx["auth"],
+        json={"cargo_catalog_item_public_id": ctx["foreign_catalog"]},
+    ).status_code == 404
+    assert client.get(base, headers=ctx["other"]).status_code == 404
+
+    changed = client.patch(
+        f"{base}/{created['public_id']}",
+        headers=ctx["auth"],
+        json={"display_order": 2, "version": created["version"]},
+    ).get_json()["item"]
+    assert changed["display_order"] == 2
+    inactive = client.post(
+        f"{base}/{created['public_id']}/deactivate",
+        headers=ctx["auth"],
+        json={"version": changed["version"]},
+    ).get_json()["item"]
+    assert inactive["is_active"] is False
+    active = client.post(
+        f"{base}/{created['public_id']}/activate",
+        headers=ctx["auth"],
+        json={"version": inactive["version"]},
+    ).get_json()["item"]
+    assert active["is_active"] is True
+    inactive_again = client.post(
+        f"{base}/{created['public_id']}/deactivate",
+        headers=ctx["auth"],
+        json={"version": active["version"]},
+    ).get_json()["item"]
+    with app.app_context():
+        catalog = CargoCatalogItem.query.filter_by(
+            public_id=ctx["preferred_catalog"]
+        ).one()
+        catalog.is_active = False
+        catalog.version += 1
+        db.session.commit()
+    assert client.post(
+        f"{base}/{created['public_id']}/activate",
+        headers=ctx["auth"],
+        json={"version": inactive_again["version"]},
+    ).status_code == 422
+
+    constraints = {
+        constraint.name: (
+            tuple(column.name for column in constraint.columns),
+            tuple(element.target_fullname for element in constraint.elements),
+        )
+        for constraint in ProjectCargoCatalogItem.__table__.foreign_key_constraints
+    }
+    assert constraints["fk_project_cargo_item_project_same_org"] == (
+        ("project_id", "organization_id"),
+        ("project.id", "project.organization_id"),
+    )
+    assert constraints["fk_project_cargo_item_catalog_same_org"] == (
+        ("cargo_catalog_item_id", "organization_id"),
+        ("cargo_catalog_item.id", "cargo_catalog_item.organization_id"),
+    )
+
+
+def test_operational_options_rank_fallback_filter_search_and_validate_project(configured_app):
+    app, ctx = configured_app
+    client = app.test_client()
+    project_options = f"/api/internal/cargo-options?project_public_id={ctx['project']}"
+
+    before = client.get(project_options, headers=ctx["auth"])
+    assert before.status_code == 200
+    assert client.get(project_options, headers=ctx["manager"]).status_code == 200
+    baseline_codes = [x["code"] for x in before.get_json()["catalog"]]
+    assert set(baseline_codes) == {"A-FALLBACK", "Z-PREFERRED"}
+    assert not any(x["preferred"] for x in before.get_json()["catalog"])
+
+    created = client.post(
+        f"/api/v2/projects/{ctx['project']}/configuration/commodities",
+        headers=ctx["auth"],
+        json={
+            "cargo_catalog_item_public_id": ctx["preferred_catalog"],
+            "display_order": 1,
+        },
+    ).get_json()["item"]
+    ranked = client.get(project_options, headers=ctx["auth"]).get_json()["catalog"]
+    assert [x["code"] for x in ranked] == ["Z-PREFERRED", "A-FALLBACK"]
+    assert ranked[0]["preferred"] is True and ranked[1]["preferred"] is False
+    assert "INACTIVE-CARGO" not in {x["code"] for x in ranked}
+
+    for query in (
+        "Preferred", "Special Gear", "PART-42", "CUSTOMER-42",
+        "HS-4242", "AcmeBrand", "Model-X",
+    ):
+        searched = client.get(
+            project_options + f"&q={query}", headers=ctx["auth"]
+        ).get_json()["catalog"]
+        assert [x["code"] for x in searched] == ["Z-PREFERRED"]
+
+    assert client.get(
+        f"/api/internal/cargo-options?project_public_id={ctx['foreign_project']}",
+        headers=ctx["auth"],
+    ).status_code == 404
+    no_project = client.get("/api/internal/cargo-options", headers=ctx["auth"])
+    assert [x["code"] for x in no_project.get_json()["catalog"]] == baseline_codes
+
+    deactivated = client.post(
+        f"/api/v2/projects/{ctx['project']}/configuration/commodities/{created['public_id']}/deactivate",
+        headers=ctx["auth"],
+        json={"version": created["version"]},
+    )
+    assert deactivated.status_code == 200
+    after = client.get(project_options, headers=ctx["auth"]).get_json()["catalog"]
+    assert not any(x["preferred"] for x in after)
+    assert [x["code"] for x in after] == baseline_codes
+
+
+def test_preference_and_catalog_changes_do_not_rewrite_shipment_snapshot(configured_app):
+    app, ctx = configured_app
+    with app.app_context():
+        project = Project.query.filter_by(public_id=ctx["project"]).one()
+        catalog = CargoCatalogItem.query.filter_by(public_id=ctx["preferred_catalog"]).one()
+        user = ExpertUser.query.filter_by(username="config-admin").one()
+        customer = Customer.query.one()
+        shipment = OperationalShipment(
+            organization_id=project.organization_id,
+            project_id=project.id,
+            source_type="direct",
+            customer_id=customer.id,
+            created_by_user_id=user.id,
+        )
+        db.session.add(shipment)
+        db.session.flush()
+        line = ShipmentCargoItem(
+            operational_shipment_id=shipment.id,
+            line_number=1,
+            catalog_item_id=catalog.id,
+            cargo_type_id=catalog.cargo_type_id,
+            quantity=1,
+            uom_id=catalog.default_uom_id,
+            display_name_snapshot=catalog.fa_name,
+            cargo_type_code_snapshot=catalog.cargo_type.immutable_code,
+            cargo_type_fa_snapshot=catalog.cargo_type.fa_name,
+            cargo_type_en_snapshot=catalog.cargo_type.en_name,
+            uom_code_snapshot=catalog.default_uom.immutable_code,
+            uom_symbol_snapshot=catalog.default_uom.symbol,
+            part_number_snapshot=catalog.part_number,
+            created_by=user.id,
+            updated_by=user.id,
+        )
+        association = ProjectCargoCatalogItem(
+            organization_id=project.organization_id,
+            project_id=project.id,
+            cargo_catalog_item_id=catalog.id,
+            created_by=user.id,
+            updated_by=user.id,
+        )
+        db.session.add_all([line, association])
+        db.session.commit()
+        original = (line.catalog_item_id, line.display_name_snapshot, line.part_number_snapshot)
+        association.is_active = False
+        association.display_order = 99
+        association.version += 1
+        catalog.fa_name = "نام جدید کاتالوگ"
+        catalog.part_number = "PART-NEW"
+        catalog.is_active = False
+        catalog.version += 1
+        db.session.commit()
+        assert (line.catalog_item_id, line.display_name_snapshot, line.part_number_snapshot) == original
 
 
 def test_same_project_point_constraint_metadata_matches_migration(configured_app):

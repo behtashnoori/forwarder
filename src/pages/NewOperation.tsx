@@ -238,6 +238,7 @@ export default function NewOperation() {
     uoms: [],
   });
   const [cargoCatalogId, setCargoCatalogId] = useState("");
+  const [cargoQuery, setCargoQuery] = useState("");
   const [cargoQuantity, setCargoQuantity] = useState("");
   const [cargoUomId, setCargoUomId] = useState("");
   const [origin, setOrigin] = useState<Side>(initialSide);
@@ -289,13 +290,15 @@ export default function NewOperation() {
     searchIranDestinations()
       .then((response) => setIran(response.data))
       .catch((caught) => setSelectorError(errorText(caught)));
-    getShipmentCargoOptions()
-      .then(setCargoOptions)
-      .catch((caught) => setError(errorText(caught)));
     listLogisticsPoints({ active: 1, per_page: 100 })
       .then((response) => setLogisticsPoints(response.items.filter((point) => point.is_active)))
       .catch((caught) => setSelectorError(errorText(caught)));
   }, []);
+  useEffect(() => {
+    getShipmentCargoOptions(projectId || undefined, cargoQuery)
+      .then(setCargoOptions)
+      .catch((caught) => setError(errorText(caught)));
+  }, [projectId, cargoQuery]);
   const loadCustomers = async (query = "") => {
     setLoading("customer");
     setSelectorError("");
@@ -978,6 +981,12 @@ export default function NewOperation() {
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="cargo-catalog">Catalog item (optional)</Label>
+                <Input
+                  aria-label="Search commodities"
+                  placeholder="Search name, alias, codes, brand or model"
+                  value={cargoQuery}
+                  onChange={(event) => setCargoQuery(event.target.value)}
+                />
                 <select
                   id="cargo-catalog"
                   aria-label="Catalog item"
@@ -992,13 +1001,19 @@ export default function NewOperation() {
                     setCargoUomId(item?.default_uom_public_id || "");
                   }}
                 >
-                  <option value="">No cargo line in this step</option>
-                  {cargoOptions.catalog.map((option) => (
-                    <option key={option.public_id} value={option.public_id}>
-                      {option.code} — {option.name}
-                    </option>
-                  ))}
+                  <option value="">Manual cargo / no catalog item in this step</option>
+                  {cargoOptions.catalog.some((option) => option.preferred) && <optgroup label="Preferred for this project">
+                    {cargoOptions.catalog.filter((option) => option.preferred).map((option) => (
+                      <option key={option.public_id} value={option.public_id}>★ {option.code} — {option.name}</option>
+                    ))}
+                  </optgroup>}
+                  <optgroup label="Other organization commodities">
+                    {cargoOptions.catalog.filter((option) => !option.preferred).map((option) => (
+                      <option key={option.public_id} value={option.public_id}>{option.code} — {option.name}</option>
+                    ))}
+                  </optgroup>
                 </select>
+                <p className="text-xs text-muted-foreground">Project preferences change ranking only. Manual cargo can also be added after creation.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cargo-quantity">Quantity</Label>

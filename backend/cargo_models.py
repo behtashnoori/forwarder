@@ -126,6 +126,75 @@ class CargoItemAlias(db.Model):
     catalog_item = db.relationship("CargoCatalogItem", back_populates="aliases")
 
 
+class ProjectCargoCatalogItem(db.Model):
+    """Project-specific ranking metadata for an organization catalog item."""
+
+    __tablename__ = "project_cargo_catalog_item"
+    __table_args__ = (
+        db.ForeignKeyConstraint(
+            ["project_id", "organization_id"],
+            ["project.id", "project.organization_id"],
+            name="fk_project_cargo_item_project_same_org",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["cargo_catalog_item_id", "organization_id"],
+            ["cargo_catalog_item.id", "cargo_catalog_item.organization_id"],
+            name="fk_project_cargo_item_catalog_same_org",
+            ondelete="RESTRICT",
+        ),
+        db.UniqueConstraint(
+            "project_id",
+            "cargo_catalog_item_id",
+            name="uq_project_cargo_catalog_item_pair",
+        ),
+        db.CheckConstraint(
+            "display_order >= 0", name="ck_project_cargo_catalog_item_order"
+        ),
+        db.CheckConstraint(
+            "version >= 1", name="ck_project_cargo_catalog_item_version"
+        ),
+        db.Index(
+            "ix_project_cargo_catalog_item_preference",
+            "project_id",
+            "is_active",
+            "display_order",
+        ),
+        db.Index(
+            "ix_project_cargo_catalog_item_catalog",
+            "cargo_catalog_item_id",
+            "project_id",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid4())
+    )
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    project_id = db.Column(BIGINT, nullable=False)
+    cargo_catalog_item_id = db.Column(BIGINT, nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+    created_by = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    updated_by = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    catalog_item = db.relationship("CargoCatalogItem")
+
+    __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
+
+
 class ShipmentCargoItem(db.Model):
     __tablename__ = "shipment_cargo_item"
     __table_args__ = (
