@@ -15,4 +15,7 @@ $process=Get-CimInstance Win32_Process -Filter "ProcessId = $($connection.Owning
 if(([string]$process.CommandLine).IndexOf((Join-Path $target 'runtime\python.exe'),[StringComparison]::OrdinalIgnoreCase) -lt 0){throw 'VERIFY_FAIL: listener runtime provenance mismatch'}
 if((Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:5101/api/health').StatusCode -ne 200){throw 'VERIFY_FAIL: health endpoint failed'}
 if((Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:5101/api/health/ping').StatusCode -ne 200){throw 'VERIFY_FAIL: ping endpoint failed'}
-Write-Output 'IIS_TARGET=PASS';Write-Output 'TASK_TARGET=PASS';Write-Output 'LISTENER_TARGET=PASS';Write-Output 'HEALTH=PASS';Write-Output 'PING=PASS';Write-Output 'RELEASE_IDENTITY_MATCH=YES'
+$origin='https://samand.forwarderet.ir'
+$cors=Invoke-WebRequest -UseBasicParsing "$origin/api/health" -Headers @{Origin=$origin}
+if($cors.StatusCode -ne 200 -or $cors.Headers['Access-Control-Allow-Origin'] -ne $origin){throw 'VERIFY_FAIL: canonical same-origin/CORS check failed'}
+Write-Output 'IIS_TARGET=PASS';Write-Output 'TASK_TARGET=PASS';Write-Output 'LISTENER_TARGET=PASS';Write-Output 'HEALTH=PASS';Write-Output 'PING=PASS';Write-Output 'CORS=PASS';Write-Output 'RELEASE_IDENTITY_MATCH=YES'
