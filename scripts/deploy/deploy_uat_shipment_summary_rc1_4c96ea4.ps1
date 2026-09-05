@@ -262,7 +262,7 @@ function Get-GovernedIisPhysicalPath {
         }
     } else {
         Require $script:IisInspectionReady 'IIS inspection prerequisites were not initialized'
-        try {$records=@(Get-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -ErrorAction Stop)} catch {Fail 'IIS physical path unreadable'}
+        try {$records=@([string](Get-Website -Name 'forwarder' -ErrorAction Stop).physicalPath)} catch {Fail 'IIS physical path unreadable'}
     }
     Write-Host "RAW_IIS_PROVIDER_RECORD_COUNT=$($records.Count)"
     $recordType=if($records.Count -eq 1 -and $null -ne $records[0]){$records[0].GetType().FullName}else{'<none>'}
@@ -310,13 +310,8 @@ function Initialize-IisInspection {
     Require ($available.Count -gt 0) 'required IIS PowerShell module unavailable'
     try { Import-Module WebAdministration -ErrorAction Stop } catch { Fail 'IIS PowerShell module import failed' }
     Write-Output 'WEBADMINISTRATION_IMPORT_RESULT=PASS'
-    $provider=@(Get-PSProvider -PSProvider WebAdministration -ErrorAction SilentlyContinue)
-    Write-Output "IIS_PROVIDER_AVAILABLE=$(if($provider.Count -gt 0){'YES'}else{'NO'})"
-    Require ($provider.Count -gt 0) 'IIS PowerShell provider unavailable'
-    $drive=@(Get-PSDrive -Name IIS -PSProvider WebAdministration -ErrorAction SilentlyContinue)
-    Write-Output "IIS_DRIVE_AVAILABLE=$(if($drive.Count -gt 0){'YES'}else{'NO'})"
-    Require ($drive.Count -gt 0) 'IIS PowerShell drive unavailable'
-    Require (Test-Path -LiteralPath 'IIS:\Sites\forwarder' -PathType Container) 'governed IIS site unavailable'
+    try {$site=Get-Website -Name 'forwarder' -ErrorAction Stop} catch {Fail 'governed IIS site unavailable'}
+    Require ($null -ne $site) 'governed IIS site unavailable'
     $script:IisInspectionReady=$true
 }
 function Initialize-ScheduledTaskInspection {
@@ -412,7 +407,12 @@ function Start-GovernedBackend([string]$ExpectedRelease) {
     Write-Output 'NEW_BACKEND_LISTENER_ACQUIRED=YES'
 }
 function Get-IisReference { return (Get-GovernedIisPhysicalPath) }
-function Set-IisReference([string]$Reference) { if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'iis.txt') -Value $Reference -NoNewline; return }; Set-ItemProperty -LiteralPath 'IIS:\Sites\forwarder' -Name physicalPath -Value $Reference }
+function Set-IisReference([string]$Reference) {
+    if($SimulationRoot -or $QualificationRoot){ Set-Content -LiteralPath (Get-Sim 'iis.txt') -Value $Reference -NoNewline; return }
+    try {
+        Set-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Filter "/system.applicationHost/sites/site[@name='forwarder']/application[@path='/']/virtualDirectory[@path='/']" -Name physicalPath -Value $Reference -ErrorAction Stop
+    } catch { Fail 'IIS physical path update failed' }
+}
 function Verify-Release([string]$Release,[switch]$Runtime) {
     Require (Test-Path -LiteralPath (Join-Path $Release 'dist\index.html') -PathType Leaf) 'release frontend structure missing'
     Require (Test-Path -LiteralPath (Join-Path $Release 'backend\migrations\versions\20260909_cargo_transport_allocation.py') -PathType Leaf) 'release migration identity missing'
@@ -461,12 +461,15 @@ try {
     if($Execute){ Require ($ConfirmDeployment.IsPresent -eq $true) '-Execute requires -ConfirmDeployment' }
     if($SimulationRoot -or $QualificationRoot){ $fixtureRoot=if($QualificationRoot){$QualificationRoot}else{$SimulationRoot}; Require (Test-Path -LiteralPath $fixtureRoot -PathType Container) 'fixture root is absent'; $script:ProductionRoot=Join-Path $fixtureRoot 'production'; $script:RuntimeRoot=Join-Path $fixtureRoot 'runtime'; $script:StagingRoot=Join-Path $fixtureRoot 'staging'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-UAT-Shipment-Summary-RC1-4c96ea4'; $script:PreviousRelease=if($PreviousBackendReleasePath){Resolve-PreviousReleasePath $PreviousBackendReleasePath 'PreviousBackendReleasePath'}else{Join-Path $script:ProductionRoot 'release-adcc5da-adr043'}; $script:PreviousFrontendRelease=if($PreviousFrontendReleasePath){Resolve-PreviousReleasePath $PreviousFrontendReleasePath 'PreviousFrontendReleasePath'}else{$script:PreviousRelease}; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env'; $ArtifactPath=Join-Path $script:StagingRoot $ArtifactName; $ManifestPath="$ArtifactPath.manifest.json"; if(-not $RuntimeArtifactPath){$RuntimeArtifactPath=Join-Path $script:StagingRoot $RuntimeArtifactName}; if(-not $RuntimeManifestPath){$RuntimeManifestPath="$RuntimeArtifactPath.manifest.json"} }
     else { Require ([Environment]::MachineName -eq $ExpectedHost) 'wrong host'; Require (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) 'Administrator is required'; $script:ProductionRoot='C:\1-webapp\forwarder-production'; $script:RuntimeRoot='C:\1-webapp\forwarder-runtime'; $script:TargetRelease=Join-Path $script:ProductionRoot 'release-UAT-Shipment-Summary-RC1-4c96ea4'; $script:PreviousRelease=Resolve-PreviousReleasePath $PreviousBackendReleasePath 'PreviousBackendReleasePath'; $script:PreviousFrontendRelease=Resolve-PreviousReleasePath $PreviousFrontendReleasePath 'PreviousFrontendReleasePath'; $script:ProductionEnv=Join-Path $script:RuntimeRoot 'production.env' }
-    if(-not $BaselinePath){$BaselinePath=Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'expected-production-baseline.json'}
+    $packageRoot=Split-Path -Parent $MyInvocation.MyCommand.Path
+    if(-not $BaselinePath){$BaselinePath=Join-Path $packageRoot 'expected-production-baseline.json'}
     if(-not (Test-Path -LiteralPath $BaselinePath -PathType Leaf)){Fail 'expected Production baseline is absent'}
     $baseline=Get-Content -Raw -LiteralPath $BaselinePath|ConvertFrom-Json
     if(-not ($baseline.database -is [string]) -or [string]::IsNullOrWhiteSpace($baseline.database)){Fail 'baseline database must be one scalar string'}
     if(-not ($baseline.alembic_head -is [string]) -or [string]::IsNullOrWhiteSpace($baseline.alembic_head)){Fail 'baseline Alembic must be one scalar string'}
     $script:ExpectedDatabase=$baseline.database; $script:ExpectedAlembic=$baseline.alembic_head
+    if(-not $ArtifactPath){$ArtifactPath=Join-Path $packageRoot $ArtifactName}
+    if(-not $ManifestPath){$ManifestPath="$ArtifactPath.manifest.json"}
     Require-Artifact $ArtifactPath $ManifestPath
     if(-not $RuntimeArtifactPath){$RuntimeArtifactPath=Join-Path (Split-Path -Parent $ArtifactPath) $RuntimeArtifactName}; if(-not $RuntimeManifestPath){$RuntimeManifestPath="$RuntimeArtifactPath.manifest.json"}
     Require-RuntimeArtifact $RuntimeArtifactPath $RuntimeManifestPath
