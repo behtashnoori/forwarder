@@ -346,7 +346,11 @@ function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbse
     if($SimulationRoot -or $QualificationRoot){
         if((Get-GovernedListenerCount) -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
         $python=Join-Path $ExpectedRelease 'runtime\python.exe'
-        return [pscustomobject]@{ProcessId=5101;ExecutablePath=$python;CommandLine="$python -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
+        $simulatedCommand=if(Test-Path -LiteralPath (Get-Sim 'listener-command.txt')){Get-Content -Raw -LiteralPath (Get-Sim 'listener-command.txt')}else{"$python -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
+        $simulatedExecutable=if(Test-Path -LiteralPath (Get-Sim 'listener-executable.txt')){Get-Content -Raw -LiteralPath (Get-Sim 'listener-executable.txt')}else{$python}
+        Require ($simulatedCommand.IndexOf($python,[StringComparison]::OrdinalIgnoreCase) -ge 0) 'simulated listener does not belong to expected release Python'
+        Require ([string]::Equals($simulatedExecutable.Trim(),$python,[StringComparison]::OrdinalIgnoreCase)) 'simulated listener executable provenance mismatch'
+        return [pscustomobject]@{ProcessId=5101;ExecutablePath=$python;CommandLine=$simulatedCommand}
     }
     $connections=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
     if($connections.Count -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
@@ -485,7 +489,7 @@ try {
     Assert-TargetConfigCanBePrepared
     Initialize-ScheduledTaskInspection
     Initialize-IisInspection
-    if(-not $SimulationRoot -and -not $QualificationRoot){ Get-GovernedBackendListener $script:PreviousRelease | Out-Null }
+    Get-GovernedBackendListener $script:PreviousRelease | Out-Null
     Require ((Get-TaskReference) -match [regex]::Escape($script:PreviousRelease)) 'Scheduled Task does not reference governed previous release'
     Assert-IisReference (Join-Path $script:PreviousFrontendRelease 'dist') 'IIS does not reference governed previous frontend release dist'
     Require (-not (Test-Path -LiteralPath $script:TargetRelease)) 'target release already exists; refusing reuse'
@@ -512,7 +516,7 @@ try {
     $script:PreviousEnvHash=Hash $script:ProductionEnv; $script:EnvBackup=Join-Path $script:RuntimeRoot ("production.env.$CandidateId.rollback"); $script:TaskBackup=Join-Path $script:RuntimeRoot ("$TaskName.$CandidateId.rollback.xml")
     Set-State 'STAGED_VERIFIED'
     if($ValidateOnly){
-        $expectedBase=if($QualificationRoot){66}elseif($SimulationRoot){55}else{57}
+        $expectedBase=if($QualificationRoot){66}elseif($SimulationRoot){57}else{57}
         $expectedPrecheckCount=$expectedBase+$(if($hasSingularCors){1}else{0})
         Write-Output "PRECHECK_CONDITIONAL_CORS_ORIGIN=$(if($hasSingularCors){'EXECUTED'}else{'NOT_APPLICABLE'})"
         Write-Output "EXPECTED_PRECHECK_COUNT=$expectedPrecheckCount"
