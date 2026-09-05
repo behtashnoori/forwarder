@@ -35,16 +35,16 @@ import OperationsNav from "@/components/OperationsNav";
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
   if (error instanceof ApiError) {
-    if (error.status === 403) return "You do not have permission to perform this action.";
-    if (error.status === 404) return "This operational record is no longer available.";
-    if (error.status === 409) return "The record changed. Refresh and try again.";
-    if (error.status === 422) return "Check the entered values and try again.";
-    return "The operation could not be completed.";
+    if (error.status === 403) return "اجازه انجام این کار را ندارید.";
+    if (error.status === 404) return "این محموله دیگر در دسترس نیست.";
+    if (error.status === 409) return "اطلاعات محموله تغییر کرده است؛ صفحه را تازه‌سازی کنید.";
+    if (error.status === 422) return "اطلاعات واردشده را بررسی کنید.";
+    return "انجام این کار ممکن نشد.";
   }
-  return error instanceof Error ? error.message : "The operation could not be completed.";
+  return error instanceof Error ? error.message : "انجام این کار ممکن نشد.";
 };
 const when = (value: string | null | undefined, locale: string) =>
-  value ? new Date(value).toLocaleString(locale, { timeZoneName: "short" }) : "Not recorded";
+  value ? new Date(value).toLocaleString(locale, { timeZoneName: "short" }) : "ثبت نشده";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const invalidIdentityMessage = "This shipment link does not contain a valid resource identity.";
 const inconsistentIdentityMessage = "The shipment identity returned by the server does not match this link.";
@@ -123,12 +123,30 @@ export default function OperationalShipmentDetail() {
         {notice && <div role="status" className="rounded bg-emerald-50 p-3 text-emerald-800">{notice}</div>}
         {data && <>
           <header>
-            <h1 className="text-2xl font-bold">{t("operations.shipmentDetail")}</h1>
-            <p>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "Not provided"} · {data.status} · Shipment v{data.version}</p>
+            <h1 className="text-2xl font-bold">خلاصه محموله</h1>
+            <p className="text-sm text-slate-600">شناسه محموله: <span dir="ltr">{data.public_id}</span></p>
           </header>
 
           <OperationsNav />
-          <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? t("operations.source.direct") : t("operations.source.quote")}</p><p>{t("operations.customerLabel")}: {typeof data.customer === "string" ? data.customer : data.customer?.display_name || t("operations.governedIncomplete")}</p><p>{t("operations.projectLabel")}: {data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id} · بخش‌های اجرایی حمل</Link> : "—"}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ?? t("operations.notApplicable")}</p></CardContent></Card>
+          <Card>
+            <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+              <p><span className="text-slate-500">مشتری</span><br /><strong>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</strong></p>
+              <p><span className="text-slate-500">پروژه</span><br />{data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id}</Link> : "—"}</p>
+              <p><span className="text-slate-500">مسیر</span><br /><strong>{data.route_leg.origin.display_name} → {data.route_leg.destination.display_name}</strong></p>
+              <p><span className="text-slate-500">روش حمل</span><br /><strong>{data.route_leg.transport_mode}</strong></p>
+              <p><span className="text-slate-500">وضعیت فعلی</span><br /><strong>{data.status}</strong></p>
+              <p><span className="text-slate-500">حرکت برنامه‌ریزی‌شده</span><br />{when(data.route_leg.planned_departure, locale)}</p>
+              <p><span className="text-slate-500">رسیدن برنامه‌ریزی‌شده</span><br />{when(data.route_leg.planned_arrival, locale)}</p>
+              <p><span className="text-slate-500">منبع محموله</span><br />{data.source.type === "direct" ? "عملیات مستقیم" : "پیش‌فاکتور پذیرفته‌شده"}</p>
+            </CardContent>
+          </Card>
+
+          <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
+
+          <details className="rounded border bg-white" open={false}>
+            <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات و سوابق بیشتر</summary>
+            <div className="space-y-5 border-t p-3 sm:p-4">
+              <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? t("operations.source.direct") : t("operations.source.quote")}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ?? t("operations.notApplicable")}</p></CardContent></Card>
 
           <Card>
             <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle></CardHeader>
@@ -150,7 +168,6 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
 
-          <ShipmentCargoItems shipmentPublicId={data.public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
           {data.source.type === "direct" ? <Card><CardHeader><CardTitle>{t("operations.documentsMdpm")}</CardTitle></CardHeader><CardContent>{t("operations.requestDocumentsNa")}</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
           <ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/>
@@ -245,7 +262,9 @@ export default function OperationalShipmentDetail() {
           </Card>
 
           <Card><CardHeader><CardTitle>{t("operations.eventHistory")}</CardTitle></CardHeader><CardContent>{!data.recent_events.length ? <p>No event history.</p> : data.recent_events.map((event) => <div key={event.id}>{event.event_type} · {when(event.occurred_at, locale)} {event.reason && `· ${event.reason}`}</div>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle>Audit history</CardTitle></CardHeader><CardContent>{!data.audit_summary.length ? <p>No audit history.</p> : data.audit_summary.map((item) => <div key={item.id}>{item.action} · {when(item.recorded_at, locale)}</div>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle>سوابق ثبت‌شده</CardTitle></CardHeader><CardContent>{!data.audit_summary.length ? <p>سابقه‌ای ثبت نشده است.</p> : data.audit_summary.map((item) => <div key={item.id}>{item.action} · {when(item.recorded_at, locale)}</div>)}</CardContent></Card>
+            </div>
+          </details>
         </>}
       </div>
     </main>

@@ -17,9 +17,9 @@ vi.mock("../../components/OperationalPermission", () => ({
   default: ({ permission, children }: { permission: string; children: unknown }) =>
     controls.permissions.has(permission) ? children : null,
 }));
-vi.mock("../../components/ShipmentCargoItems", () => ({ default: () => null }));
-vi.mock("../../components/OperationalExecutionSection", () => ({ default: () => null }));
-vi.mock("../../components/DocumentReadinessSection", () => ({ default: () => null }));
+vi.mock("../../components/ShipmentCargoItems", () => ({ default: () => <><h2>کالا و وسایل حمل</h2><h2>وضعیت و پیگیری حمل</h2></> }));
+vi.mock("../../components/OperationalExecutionSection", () => ({ default: () => <p>اجرای عملیاتی</p> }));
+vi.mock("../../components/DocumentReadinessSection", () => ({ default: () => <p>آمادگی اسناد</p> }));
 vi.mock("../../components/ShipmentEconomicsSection", () => ({ default: () => null }));
 vi.mock("../../components/ShipmentExternalReferences", () => ({ default: () => null }));
 vi.mock("../../lib/api", async () => {
@@ -96,6 +96,26 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.getByRole("button", { name: "Report arrival" })).toHaveClass("min-h-11");
   });
 
+  it("puts the shipment story first and keeps specialist work in more details", async () => {
+    renderDetail();
+    expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
+    expect(screen.getByText("UAT Customer")).toBeInTheDocument();
+    expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
+    expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
+    expect(screen.getByText("جزئیات و سوابق بیشتر")).toBeInTheDocument();
+    expect(screen.getByText("Active route plan")).toBeInTheDocument();
+    expect(screen.getByText("اجرای عملیاتی")).toBeInTheDocument();
+  });
+
+  it("renders the same primary detail structure for a direct operation", async () => {
+    vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, source: { type: "direct", accepted_quote_id: null, shipment_request_id: null } } });
+    renderDetail();
+    expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
+    expect(screen.getByText("عملیات مستقیم")).toBeInTheDocument();
+    expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
+    expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
+  });
+
   it("uses the route UUID for every detail subrequest when the response has no numeric id", async () => {
     renderDetail();
     await screen.findByText("Timeline reconciliation");
@@ -147,7 +167,7 @@ describe("Phase 1B shipment detail behavior", () => {
     vi.mocked(api.reconcileRouteTimeline).mockRejectedValue(new api.ApiError(409, "STALE_ROUTE_PLAN_VERSION", "database detail"));
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("The record changed. Refresh and try again.");
+    expect(await screen.findByRole("alert")).toHaveTextContent("اطلاعات محموله تغییر کرده است");
     expect(screen.queryByText("database detail")).not.toBeInTheDocument();
   });
 
@@ -222,9 +242,9 @@ describe("Phase 1B shipment detail behavior", () => {
   });
 
   it.each([
-    [403, "You do not have permission"],
-    [404, "no longer available"],
-    [409, "record changed"],
+    [403, "اجازه انجام این کار را ندارید"],
+    [404, "این محموله دیگر در دسترس نیست"],
+    [409, "اطلاعات محموله تغییر کرده است"],
   ])("sanitizes %s command errors", async (status, expected) => {
     vi.mocked(api.reconcileRouteTimeline).mockRejectedValue(new api.ApiError(status, "INTERNAL_CODE", "sensitive database message"));
     renderDetail();
