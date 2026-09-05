@@ -345,7 +345,7 @@ function Get-GovernedListenerCount {
 function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbsent,[switch]$PackagedRuntime) {
     if($SimulationRoot -or $QualificationRoot){
         if((Get-GovernedListenerCount) -eq 0){if($AllowAbsent){return $null};Fail 'governed backend listener is absent'}
-        $python=if($PackagedRuntime){Join-Path $ExpectedRelease 'runtime\python.exe'}else{Join-Path $ExpectedRelease '.venv\Scripts\python.exe'}
+        $python=Join-Path $ExpectedRelease 'runtime\python.exe'
         return [pscustomobject]@{ProcessId=5101;ExecutablePath=$python;CommandLine="$python -m waitress --listen=127.0.0.1:5101 backend.wsgi:app"}
     }
     $connections=@(Get-NetTCPConnection -LocalAddress 127.0.0.1 -LocalPort $Port -State Listen -ErrorAction SilentlyContinue)
@@ -356,7 +356,7 @@ function Get-GovernedBackendListener([string]$ExpectedRelease,[switch]$AllowAbse
     if($processes.Count -ne 1){Fail 'backend listener process identity is unavailable'}
     $process=$processes[0]
     $commandLine=[string]$process.CommandLine
-    $expectedPython=if($PackagedRuntime){Join-Path $ExpectedRelease 'runtime\python.exe'}else{Join-Path $ExpectedRelease '.venv\Scripts\python.exe'}
+    $expectedPython=Join-Path $ExpectedRelease 'runtime\python.exe'
     if([string]::IsNullOrWhiteSpace($commandLine)){Fail 'backend listener command line is unavailable'}
     if(-not [string]::Equals((Split-Path -Leaf ([string]$process.ExecutablePath)),'python.exe',[StringComparison]::OrdinalIgnoreCase)){Fail 'backend listener executable is not Python'}
     if($commandLine.IndexOf($expectedPython,[StringComparison]::OrdinalIgnoreCase) -lt 0){Fail 'backend listener does not belong to expected release Python'}
