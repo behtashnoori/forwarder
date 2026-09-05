@@ -152,6 +152,8 @@ def _serialize_leg(row: RouteLeg) -> dict:
     return {
         "id": row.id, "sequence_number": row.sequence_number,
         "origin": row.origin_snapshot, "destination": row.destination_snapshot,
+        "origin_location_id": row.origin_location_id, "destination_location_id": row.destination_location_id,
+        "origin_logistics_point_id": row.origin_logistics_point_id, "destination_logistics_point_id": row.destination_logistics_point_id,
         "transport_mode": row.transport_mode, "carrier_reference": row.carrier_reference,
         "planned_departure": row.planned_departure.isoformat(), "planned_arrival": row.planned_arrival.isoformat(),
         "projected_departure": row.projected_departure.isoformat() if row.projected_departure else None,
@@ -201,7 +203,7 @@ def create_plan(shipment_id: int, payload: dict, user: dict) -> dict:
     plan = RoutePlan(operational_shipment_id=shipment.id, revision_number=revision, status="draft", is_active=False, created_by_user_id=user["id"])
     db.session.add(plan); db.session.flush()
     for index, item in enumerate(payload.get("legs") or [], 1):
-        _add_leg(plan, {**item, "sequence_number": item.get("sequence_number", index)})
+        _add_leg(plan, {**item, "sequence_number": item.get("sequence_number", index)}, shipment.organization_id)
     for index, item in enumerate(payload.get("checkpoints") or [], 1):
         _add_checkpoint(plan, {**item, "sequence_number": item.get("sequence_number", index)}, user)
     base._audit(shipment.organization_id, user["id"], "route_plan.created", "RoutePlan", plan.id)
@@ -210,21 +212,29 @@ def create_plan(shipment_id: int, payload: dict, user: dict) -> dict:
     return _serialize_plan(plan)
 
 
-def _add_leg(plan: RoutePlan, payload: dict) -> RouteLeg:
+def _add_leg(plan: RoutePlan, payload: dict, organization_id: int | None = None) -> RouteLeg:
     if plan.status != "draft":
         raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT", "Only draft plans can be changed.", 409)
     mode = str(payload.get("transport_mode") or "")
     if mode not in TRANSPORT_MODES:
         raise base.OperationalError("ROUTE_PLAN_INVALID", "Unsupported transport mode.")
-    origin, destination = _location(payload.get("origin") or payload.get("origin_location_id")), _location(payload.get("destination") or payload.get("destination_location_id"))
+    if organization_id is None:
+        organization_id = db.session.scalar(select(OperationalShipment.organization_id).where(OperationalShipment.id == plan.operational_shipment_id))
+    origin, destination = base._endpoint(payload.get("origin") or payload.get("origin_location_id") or {}, organization_id), base._endpoint(payload.get("destination") or payload.get("destination_location_id") or {}, organization_id)
     departure = base._parse_utc(payload.get("planned_departure"), "planned_departure")
     arrival = base._parse_utc(payload.get("planned_arrival"), "planned_arrival")
     if arrival < departure:
         raise base.OperationalError("INVALID_ROUTE_TIMELINE", "Arrival cannot precede departure.")
+    origin_location, destination_location = base._endpoint_location(origin), base._endpoint_location(destination)
+    origin_point = origin.logistics_point.id if isinstance(origin, base.ResolvedFacilityEndpoint) else None
+    destination_point = destination.logistics_point.id if isinstance(destination, base.ResolvedFacilityEndpoint) else None
+    if origin_location.canonical_location.id == destination_location.canonical_location.id and origin_point == destination_point:
+        raise base.OperationalError("INVALID_ROUTE_TIMELINE", "Origin and destination must be different.")
     row = RouteLeg(route_plan_id=plan.id, sequence_number=int(payload.get("sequence_number")),
-        origin_location_id=origin.canonical_location.id,
-        destination_location_id=destination.canonical_location.id,
-        origin_snapshot=base._location_snapshot(origin), destination_snapshot=base._location_snapshot(destination),
+        origin_location_id=origin_location.canonical_location.id,
+        destination_location_id=destination_location.canonical_location.id,
+        origin_logistics_point_id=origin_point, destination_logistics_point_id=destination_point,
+        origin_snapshot=base._endpoint_snapshot(origin), destination_snapshot=base._endpoint_snapshot(destination),
         transport_mode=mode, carrier_reference=payload.get("carrier_reference"),
         planned_departure=departure, planned_arrival=arrival, status="planned")
     db.session.add(row); db.session.flush()
@@ -233,7 +243,7 @@ def _add_leg(plan: RoutePlan, payload: dict) -> RouteLeg:
 
 def add_leg(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
     shipment, plan = _plan(shipment_id, plan_id, user, "route_leg.manage", True)
-    row = _add_leg(plan, payload)
+    row = _add_leg(plan, payload, shipment.organization_id)
     base._audit(shipment.organization_id, user["id"], "route_leg.created", "RouteLeg", row.id)
     base._outbox(shipment.organization_id, "route_leg.created", "RouteLeg", row.id)
     try: db.session.commit()
@@ -244,12 +254,25 @@ def add_leg(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
 
 
 def update_leg(shipment_id: int, plan_id: int, leg_id: int, payload: dict, user: dict) -> dict:
-    _, plan=_plan(shipment_id,plan_id,user,"route_leg.manage",True)
+    shipment, plan=_plan(shipment_id,plan_id,user,"route_leg.manage",True)
     if plan.status!="draft": raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT","Only draft plans can be changed.",409)
     row=db.session.scalar(select(RouteLeg).where(RouteLeg.id==leg_id,RouteLeg.route_plan_id==plan.id).with_for_update())
     if row is None: raise base.OperationalError("RESOURCE_NOT_FOUND","Route leg was not found.",404)
     if row.version!=payload.get("expected_version"): raise base.OperationalError("STALE_ROUTE_VERSION","Route leg version is stale.",409)
     if row.actual_departure or row.actual_arrival: raise base.OperationalError("ACTUAL_DATA_IMMUTABLE","A leg with actual data cannot be structurally edited.",409)
+    if "origin" in payload or "destination" in payload:
+        origin = base._endpoint(payload["origin"], shipment.organization_id) if "origin" in payload else None
+        destination = base._endpoint(payload["destination"], shipment.organization_id) if "destination" in payload else None
+        origin_location_id = base._endpoint_location(origin).canonical_location.id if origin else row.origin_location_id
+        destination_location_id = base._endpoint_location(destination).canonical_location.id if destination else row.destination_location_id
+        origin_point = origin.logistics_point.id if isinstance(origin, base.ResolvedFacilityEndpoint) else (None if origin else row.origin_logistics_point_id)
+        destination_point = destination.logistics_point.id if isinstance(destination, base.ResolvedFacilityEndpoint) else (None if destination else row.destination_logistics_point_id)
+        if origin_location_id == destination_location_id and origin_point == destination_point:
+            raise base.OperationalError("INVALID_ROUTE_TIMELINE", "Origin and destination must be different.")
+        row.origin_location_id, row.destination_location_id = origin_location_id, destination_location_id
+        row.origin_logistics_point_id, row.destination_logistics_point_id = origin_point, destination_point
+        if origin: row.origin_snapshot = base._endpoint_snapshot(origin)
+        if destination: row.destination_snapshot = base._endpoint_snapshot(destination)
     if "sequence_number" in payload: row.sequence_number=int(payload["sequence_number"])
     if "carrier_reference" in payload: row.carrier_reference=payload["carrier_reference"]
     row.version+=1
@@ -509,6 +532,8 @@ def replan(
                 sequence_number=int(update.get("sequence_number", leg.sequence_number)),
                 origin_location_id=leg.origin_location_id,
                 destination_location_id=leg.destination_location_id,
+                origin_logistics_point_id=leg.origin_logistics_point_id,
+                destination_logistics_point_id=leg.destination_logistics_point_id,
                 origin_snapshot=leg.origin_snapshot,
                 destination_snapshot=leg.destination_snapshot,
                 transport_mode=update.get("transport_mode", leg.transport_mode),

@@ -32,6 +32,7 @@ from backend.services.location_resolver import LocationResolutionError, Resolved
 from backend.services.location_resolver import (
     resolve_location as resolve_canonical_location,
 )
+from backend.services.facility_endpoint_resolver import resolve_facility_endpoint, ResolvedFacilityEndpoint
 
 TRANSPORT_MODES = {
     "road",
@@ -408,7 +409,37 @@ def _location_snapshot(
     }
 
 
-def _route_command(payload: dict[str, Any]):
+def _endpoint(reference: dict[str, Any], organization_id: int):
+    if reference.get("source_type") == "logistics_point":
+        try:
+            return resolve_facility_endpoint(organization_id, reference.get("source_id"))
+        except LocationResolutionError as exc:
+            raise OperationalError(exc.code, exc.message, exc.status) from exc
+    return resolve_location(reference)
+
+
+def _endpoint_location(endpoint: ResolvedLocation | ResolvedFacilityEndpoint) -> ResolvedLocation:
+    return endpoint.geography if isinstance(endpoint, ResolvedFacilityEndpoint) else endpoint
+
+
+def _endpoint_snapshot(endpoint: ResolvedLocation | ResolvedFacilityEndpoint) -> dict[str, Any]:
+    geography = _endpoint_location(endpoint)
+    snapshot = _location_snapshot(geography)
+    if isinstance(endpoint, ResolvedFacilityEndpoint):
+        snapshot["facility"] = endpoint.snapshot()
+    return snapshot
+
+
+def _endpoint_reference(endpoint: ResolvedLocation | ResolvedFacilityEndpoint) -> dict[str, Any]:
+    if isinstance(endpoint, ResolvedFacilityEndpoint):
+        return {
+            "source_type": "logistics_point",
+            "source_id": endpoint.logistics_point.public_id,
+        }
+    return {"source_type": endpoint.source_type, "source_id": endpoint.source_id}
+
+
+def _route_command(payload: dict[str, Any], organization_id: int):
     route = payload.get("route") if isinstance(payload.get("route"), dict) else payload
     departure = _parse_utc(route.get("planned_departure"), "planned_departure")
     arrival = _parse_utc(route.get("planned_arrival"), "planned_arrival")
@@ -417,11 +448,11 @@ def _route_command(payload: dict[str, Any]):
             "INVALID_ROUTE_TIMELINE",
             "Planned arrival cannot be before planned departure.",
         )
-    origin, destination = (
-        resolve_location(route.get("origin") or {}),
-        resolve_location(route.get("destination") or {}),
-    )
-    if origin.canonical_location.id == destination.canonical_location.id:
+    origin, destination = (_endpoint(route.get("origin") or {}, organization_id), _endpoint(route.get("destination") or {}, organization_id))
+    origin_location, destination_location = _endpoint_location(origin), _endpoint_location(destination)
+    origin_point = origin.logistics_point.id if isinstance(origin, ResolvedFacilityEndpoint) else None
+    destination_point = destination.logistics_point.id if isinstance(destination, ResolvedFacilityEndpoint) else None
+    if origin_location.canonical_location.id == destination_location.canonical_location.id and origin_point == destination_point:
         raise OperationalError(
             "INVALID_ROUTE_TIMELINE", "Origin and destination must be different."
         )
@@ -491,10 +522,12 @@ def _initialize_aggregate(
     leg = RouteLeg(
         route_plan_id=plan.id,
         sequence_number=1,
-        origin_location_id=origin.canonical_location.id,
-        destination_location_id=destination.canonical_location.id,
-        origin_snapshot=_location_snapshot(origin),
-        destination_snapshot=_location_snapshot(destination),
+        origin_location_id=_endpoint_location(origin).canonical_location.id,
+        destination_location_id=_endpoint_location(destination).canonical_location.id,
+        origin_logistics_point_id=origin.logistics_point.id if isinstance(origin, ResolvedFacilityEndpoint) else None,
+        destination_logistics_point_id=destination.logistics_point.id if isinstance(destination, ResolvedFacilityEndpoint) else None,
+        origin_snapshot=_endpoint_snapshot(origin),
+        destination_snapshot=_endpoint_snapshot(destination),
         transport_mode=mode,
         planned_departure=departure,
         planned_arrival=arrival,
@@ -598,20 +631,14 @@ def create_direct(
     if responsible_membership.organization_id != org:
         raise OperationalError("DIRECT_RESPONSIBLE_EXPERT_TENANT_MISMATCH", "Responsible Expert must have the shipment tenant membership.", 403)
     project = _project(org, payload.get("project_public_id"), customer.id)
-    route = _route_command(payload)
+    route = _route_command(payload, org)
     canonical = {
         "source_type": "direct",
         "customer_id": customer.id,
         "project_public_id": project.public_id if project else None,
         "route": {
-            "origin": {
-                "source_type": route[0].source_type,
-                "source_id": route[0].source_id,
-            },
-            "destination": {
-                "source_type": route[1].source_type,
-                "source_id": route[1].source_id,
-            },
+            "origin": _endpoint_reference(route[0]),
+            "destination": _endpoint_reference(route[1]),
             "transport_mode": route[2],
             "planned_departure": route[3].isoformat(),
             "planned_arrival": route[4].isoformat(),
@@ -755,7 +782,7 @@ def create_from_accepted_quote(
         request_id=request_row.id,
         quote_id=quote.id,
         project=project,
-        route=_route_command(payload),
+        route=_route_command(payload, org),
         operation="create_shipment",
         resource_type="accepted_quote",
         resource_id=quote.id,
@@ -894,6 +921,10 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             "sequence_number": row.sequence_number,
             "origin": row.origin_snapshot,
             "destination": row.destination_snapshot,
+            "origin_location_id": row.origin_location_id,
+            "destination_location_id": row.destination_location_id,
+            "origin_logistics_point_id": row.origin_logistics_point_id,
+            "destination_logistics_point_id": row.destination_logistics_point_id,
             "transport_mode": row.transport_mode,
             "planned_departure": row.planned_departure.isoformat(),
             "planned_arrival": row.planned_arrival.isoformat(),

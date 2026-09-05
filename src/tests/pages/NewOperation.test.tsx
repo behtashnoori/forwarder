@@ -71,6 +71,8 @@ vi.mock("@/lib/api", async () => {
     searchAcceptedOperationalQuotes: vi.fn(),
     searchIranDestinations: vi.fn(),
     getShipmentCargoOptions: vi.fn(),
+    listLogisticsPoints: vi.fn(),
+    listProjectLogisticsPoints: vi.fn(),
     createDirectOperationalShipment: vi.fn(),
     createQuoteOperationalShipment: vi.fn(),
     createShipmentCargoItem: vi.fn(),
@@ -81,6 +83,30 @@ const countries = [
   { id: 10, name: "Iran", name_en: "Iran", code: "IR" },
   { id: 20, name: "Germany", name_en: "Germany", code: "DE" },
 ];
+const logisticsPoint = (
+  publicId: string,
+  name: string,
+): api.LogisticsPointView =>
+  ({
+    public_id: publicId,
+    immutable_code: publicId.toUpperCase(),
+    fa_name: name,
+    en_name: name,
+    is_active: true,
+    version: 1,
+    point_type: {
+      public_id: "warehouse-type",
+      immutable_code: "WAREHOUSE",
+      fa_name: "Warehouse",
+      en_name: "Warehouse",
+      display_order: 1,
+      is_active: true,
+      version: 1,
+    },
+    country: { code: "IR", fa_name: "Iran", en_name: "Iran" },
+  });
+const preferredPoint = logisticsPoint("preferred-point", "Preferred depot");
+const organizationPoint = logisticsPoint("organization-point", "Organization depot");
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.fetchProvinces).mockResolvedValue([province]);
@@ -169,6 +195,24 @@ beforeEach(() => {
     ],
     uoms: [
       { public_id: "uom-ea", code: "EA", name: "Each", symbol: "ea" },
+    ],
+  });
+  vi.mocked(api.listLogisticsPoints).mockResolvedValue({
+    items: [organizationPoint, preferredPoint],
+    page: 1,
+    pages: 1,
+    total: 2,
+  });
+  vi.mocked(api.listProjectLogisticsPoints).mockResolvedValue({
+    items: [
+      {
+        public_id: "association-1",
+        project_role: "DESTINATION",
+        sequence_number: 1,
+        is_active: true,
+        version: 1,
+        logistics_point: preferredPoint,
+      },
     ],
   });
 });
@@ -276,6 +320,68 @@ describe("Slice 5 governed creation", () => {
       destination: { source_type: "international_city", source_id: 66 },
     });
     expect(submit).toBeDisabled();
+  });
+  it("ranks project facilities but keeps organization points selectable and submits typed facility identities", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getOperationalContext).mockResolvedValue({
+      data: {
+        organization_id: 1,
+        permissions: ["operational_shipment.create_direct"],
+      },
+    });
+    vi.mocked(api.createDirectOperationalShipment).mockReturnValue(
+      new Promise(() => {}),
+    );
+    renderPage("/operations/shipments/new?source=direct");
+    await screen.findByRole("option", { name: "Canonical Co" });
+    await user.selectOptions(screen.getByLabelText("Customer"), "7");
+    await screen.findByRole("option", { name: /P-1/ });
+    await user.selectOptions(
+      screen.getByLabelText("Project (optional)"),
+      "project-public",
+    );
+    await waitFor(() =>
+      expect(api.listProjectLogisticsPoints).toHaveBeenCalledWith(
+        "project-public",
+      ),
+    );
+
+    const origin = screen.getByLabelText(
+      "Origin operational facility",
+    ) as HTMLSelectElement;
+    const destination = screen.getByLabelText(
+      "Destination operational facility",
+    ) as HTMLSelectElement;
+    await waitFor(() => expect(origin.options[1]).toHaveValue("preferred-point"));
+    expect(origin).toHaveTextContent("Organization depot");
+    await user.selectOptions(origin, "preferred-point");
+    await user.selectOptions(destination, "organization-point");
+    expect(origin).toHaveValue("preferred-point");
+    expect(destination).toHaveValue("organization-point");
+    expect(screen.getAllByText(/governed master data/)).toHaveLength(2);
+
+    fireEvent.change(screen.getByLabelText("Planned departure"), {
+      target: { value: "2026-08-10T10:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Planned arrival"), {
+      target: { value: "2026-08-10T11:00" },
+    });
+    await user.click(screen.getByRole("button", { name: "Create operation" }));
+    await waitFor(() =>
+      expect(api.createDirectOperationalShipment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          origin: {
+            source_type: "logistics_point",
+            source_id: "preferred-point",
+          },
+          destination: {
+            source_type: "logistics_point",
+            source_id: "organization-point",
+          },
+        }),
+        expect.any(String),
+      ),
+    );
   });
   it("requires and reviews an Iran origin province", async () => {
     vi.mocked(api.getOperationalContext).mockResolvedValue({

@@ -487,7 +487,8 @@ class RouteLeg(db.Model):
             "sequence_number >= 1", name="ck_route_leg_sequence_positive"
         ),
         db.CheckConstraint(
-            "origin_location_id <> destination_location_id",
+            "origin_location_id <> destination_location_id OR "
+            "COALESCE(origin_logistics_point_id, 0) <> COALESCE(destination_logistics_point_id, 0)",
             name="ck_route_leg_distinct_locations",
         ),
         db.CheckConstraint(
@@ -515,6 +516,18 @@ class RouteLeg(db.Model):
         BIGINT,
         db.ForeignKey("canonical_location.id", ondelete="RESTRICT"),
         nullable=False,
+    )
+    origin_logistics_point_id = db.Column(
+        BIGINT,
+        db.ForeignKey("logistics_point.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
+    destination_logistics_point_id = db.Column(
+        BIGINT,
+        db.ForeignKey("logistics_point.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
     )
     origin_snapshot = db.Column(db.JSON, nullable=False)
     destination_snapshot = db.Column(db.JSON, nullable=False)

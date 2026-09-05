@@ -1554,8 +1554,8 @@ export class ApiError extends Error {
 }
 
 export interface OperationalLocationRef {
-  source_type: "province" | "city" | "country" | "international_city" | "iran_port" | "customs_office";
-  source_id: number;
+  source_type: "province" | "city" | "country" | "international_city" | "iran_port" | "customs_office" | "logistics_point";
+  source_id: number | string;
 }
 export interface OperationalCustomerSelector { id: number; label: string }
 export interface OperationalProjectSelector { public_id: string; label: string; project_code: string; primary_customer_id: number; lifecycle_status: string }

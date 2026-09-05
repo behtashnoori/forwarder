@@ -15,6 +15,8 @@ import {
   fetchProvinces,
   getOperationalContext,
   getShipmentCargoOptions,
+  listLogisticsPoints,
+  listProjectLogisticsPoints,
   searchAcceptedOperationalQuotes,
   searchIranDestinations,
   searchOperationalCustomers,
@@ -28,6 +30,7 @@ import {
   type OperationalQuoteSelector,
   type Province,
   type ShipmentCargoOptions,
+  type LogisticsPointView,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
@@ -38,6 +41,7 @@ type Side = {
   provinceId: string;
   cityId: string;
   iranId: string;
+  logisticsPointId: string;
 };
 type FieldError =
   | "customer"
@@ -56,6 +60,7 @@ const initialSide: Side = {
   provinceId: "",
   cityId: "",
   iranId: "",
+  logisticsPointId: "",
 };
 const backendMessages: Record<string, string> = {
   VALIDATION_FAILED: "Check the required fields.",
@@ -225,6 +230,8 @@ export default function NewOperation() {
     InternationalCity[]
   >([]);
   const [iran, setIran] = useState<IranDestinationOption[]>([]);
+  const [logisticsPoints, setLogisticsPoints] = useState<LogisticsPointView[]>([]);
+  const [preferredPointIds, setPreferredPointIds] = useState<Set<string>>(new Set());
   const [cargoOptions, setCargoOptions] = useState<ShipmentCargoOptions>({
     catalog: [],
     cargo_types: [],
@@ -285,6 +292,9 @@ export default function NewOperation() {
     getShipmentCargoOptions()
       .then(setCargoOptions)
       .catch((caught) => setError(errorText(caught)));
+    listLogisticsPoints({ active: 1, per_page: 100 })
+      .then((response) => setLogisticsPoints(response.items.filter((point) => point.is_active)))
+      .catch((caught) => setSelectorError(errorText(caught)));
   }, []);
   const loadCustomers = async (query = "") => {
     setLoading("customer");
@@ -348,6 +358,19 @@ export default function NewOperation() {
     // Selector loaders intentionally follow permission capability changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canDirect, canQuote]);
+  useEffect(() => {
+    if (!projectId) {
+      setPreferredPointIds(new Set());
+      return;
+    }
+    listProjectLogisticsPoints(projectId)
+      .then((response) => setPreferredPointIds(new Set(response.items.filter((item) => item.is_active).map((item) => item.logistics_point.public_id))))
+      .catch(() => setPreferredPointIds(new Set()));
+  }, [projectId]);
+  const rankedLogisticsPoints = useMemo(
+    () => [...logisticsPoints].sort((left, right) => Number(preferredPointIds.has(right.public_id)) - Number(preferredPointIds.has(left.public_id))),
+    [logisticsPoints, preferredPointIds],
+  );
 
   const countryChange = async (
     sideName: "origin" | "destination",
@@ -368,6 +391,8 @@ export default function NewOperation() {
     } else if (sideName === "destination") void loadIran();
   };
   const location = (side: Side): OperationalLocationRef | null => {
+    if (side.logisticsPointId)
+      return { source_type: "logistics_point", source_id: side.logisticsPointId };
     const selected = iran.find(
       (option) =>
         `${option.identity.type}:${option.identity.id}` === side.iranId,
@@ -521,7 +546,25 @@ export default function NewOperation() {
           <option value="domestic">{t("operations.domesticIran")}</option>
           <option value="international">{t("operations.international")}</option>
         </select>
-        {side.kind === "domestic" && sideName === "destination" ? (
+        <Label htmlFor={`${sideName}-logistics-point`}>Operational facility (optional)</Label>
+        <select
+          id={`${sideName}-logistics-point`}
+          aria-label={`${label} operational facility`}
+          className="min-h-11 w-full rounded border px-3"
+          value={side.logisticsPointId}
+          onChange={(event) => setter({ ...side, logisticsPointId: event.target.value })}
+        >
+          <option value="">Use geographic location</option>
+          {rankedLogisticsPoints.map((point) => (
+            <option key={point.public_id} value={point.public_id}>
+              {preferredPointIds.has(point.public_id) ? "★ " : ""}{point.fa_name} — {point.point_type.fa_name}
+            </option>
+          ))}
+        </select>
+        {side.logisticsPointId ? (
+          <p role="status">Facility geography will be resolved from governed master data.</p>
+        ) : (
+        <>{side.kind === "domestic" && sideName === "destination" ? (
           <SearchSelect
             id="destination"
             label={t("operations.iranDestination")}
@@ -680,6 +723,7 @@ export default function NewOperation() {
               </>
             )}
           </>
+        )}</>
         )}
       </fieldset>
     );

@@ -356,7 +356,11 @@ def test_logistics_migration_is_the_single_head():
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260909_cargo_transport_allocation"]
+    assert script.get_heads() == ["20260910_route_leg_logistics_points"]
+    assert (
+        script.get_revision("20260910_route_leg_logistics_points").down_revision
+        == "20260909_cargo_transport_allocation"
+    )
     assert (
         script.get_revision("20260810_logistics_network").down_revision
         == "20260809_cargo_catalog_items"
