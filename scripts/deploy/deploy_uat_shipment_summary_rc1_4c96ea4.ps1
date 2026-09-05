@@ -334,7 +334,7 @@ function Get-TaskReference { if($SimulationRoot -or $QualificationRoot){ return 
 function Capture-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy (Get-Sim 'task.txt') $script:TaskBackup; return }; Export-ScheduledTask -TaskName $TaskName | Set-Content -LiteralPath $script:TaskBackup -Encoding UTF8 }
 function Restore-TaskState { if($SimulationRoot -or $QualificationRoot){ Atomic-Copy $script:TaskBackup (Get-Sim 'task.txt'); return }; Register-ScheduledTask -TaskName $TaskName -Xml (Get-Content -Raw -LiteralPath $script:TaskBackup) -Force | Out-Null }
 function Set-TaskReference([string]$Reference) {
-    $oldPython=Join-Path $script:PreviousRelease '.venv\Scripts\python.exe'; $newPython=Join-Path $Reference 'runtime\python.exe'
+    $oldPython=Join-Path $script:PreviousRelease 'runtime\python.exe'; $newPython=Join-Path $Reference 'runtime\python.exe'
     if($SimulationRoot -or $QualificationRoot){$taskText=Get-Content -Raw -LiteralPath (Get-Sim 'task.txt');$taskText=$taskText.Replace($oldPython,$newPython).Replace($script:PreviousRelease,$Reference);Set-Content -LiteralPath (Get-Sim 'task.txt') -Value $taskText -NoNewline;return}
     $xml=Export-ScheduledTask -TaskName $TaskName; Require ($xml.Contains($oldPython)) 'Scheduled Task does not contain governed previous interpreter'; $xml=$xml.Replace($oldPython,$newPython).Replace($script:PreviousRelease,$Reference); Register-ScheduledTask -TaskName $TaskName -Xml $xml -Force|Out-Null
 }
