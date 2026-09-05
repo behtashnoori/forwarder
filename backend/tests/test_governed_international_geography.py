@@ -117,6 +117,33 @@ def test_iran_is_consumable_in_both_public_selector_flows(app):
     assert response.status_code == 201, response.get_json()
 
 
+def test_governed_iran_operation_reference_returns_tehran_ikia_and_bandar_abbas(app):
+    iran_id, _tm_id = _seed(app)
+    with app.app_context():
+        expected = {
+            row.name_en: row.id
+            for row in InternationalCity.query.filter_by(country_id=iran_id).all()
+        }
+    response = app.test_client().get(
+        "/api/locations/iran-destinations?type=international_city"
+    )
+    assert response.status_code == 200
+    rows = response.json["data"]
+    assert {row["identity"]["id"] for row in rows} == set(expected.values())
+    assert {row["identity"]["type"] for row in rows} == {"international_city"}
+    assert set(expected) == {
+        "Tehran",
+        "Imam Khomeini International Apt/Tehran",
+        "Bandar Abbas",
+    }
+    bandar = app.test_client().get(
+        "/api/locations/iran-destinations?q=Bandar%20Abbas"
+    )
+    assert [row["identity"]["id"] for row in bandar.json["data"]] == [
+        expected["Bandar Abbas"]
+    ]
+
+
 def test_readiness_reports_inactive_without_treating_reference_as_missing(app):
     _seed(app)
     with app.app_context():

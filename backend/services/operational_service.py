@@ -216,12 +216,15 @@ def project_selector(args: dict[str, Any], user: dict[str, Any]) -> dict[str, An
     }
 
 
-def _eligible_quote_query(org: int):
+def _eligible_quote_query(org: int, user: dict[str, Any]):
+    from backend.services.assigned_work_authorization import assigned_request_scope
+
     return (
         select(ExpertQuote)
         .join(ShipmentRequest, ShipmentRequest.id == ExpertQuote.shipment_request_id)
         .where(
             ExpertQuote.operational_organization_id == org,
+            assigned_request_scope(user),
             ExpertQuote.customer_response == "accepted",
             ShipmentRequest.customer_id.is_not(None),
             ~exists(
@@ -241,7 +244,7 @@ def accepted_quote_selector(
         {"operational_shipment.create_from_quote", "operational_shipment.create"},
     )
     q, limit = _selector_terms(args)
-    query = _eligible_quote_query(org)
+    query = _eligible_quote_query(org, user)
     if q:
         pattern = f"%{q}%"
         query = query.where(
@@ -632,7 +635,11 @@ def create_direct(
                 "Idempotency key was already used with a different payload.",
                 409,
             )
-        return db.session.get(OperationalShipment, replay.result_resource_id), False
+        shipment = db.session.get(OperationalShipment, replay.result_resource_id)
+        from backend.services.assigned_work_authorization import authorize_work_action
+        if shipment is None or not authorize_work_action(user, shipment, "shipment.read").allowed:
+            raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
+        return shipment, False
     shipment = _initialize_aggregate(
         org=org,
         user=user,
@@ -689,6 +696,9 @@ def create_from_accepted_quote(
                 409,
             )
         shipment = db.session.get(OperationalShipment, replay.result_resource_id)
+        from backend.services.assigned_work_authorization import authorize_work_action
+        if shipment is None or not authorize_work_action(user, shipment, "shipment.read").allowed:
+            raise OperationalError("RESOURCE_NOT_FOUND", "The accepted quote was not found.", 404)
         return shipment, False
     quote = db.session.scalar(
         select(ExpertQuote).where(ExpertQuote.id == quote_id).with_for_update()
@@ -704,6 +714,16 @@ def create_from_accepted_quote(
     if quote.customer_response != "accepted":
         raise OperationalError(
             "QUOTE_NOT_ACCEPTED", "The selected quote is not accepted.", 422
+        )
+    request_row = db.session.get(ShipmentRequest, quote.shipment_request_id)
+    if request_row is None:
+        raise OperationalError(
+            "RESOURCE_NOT_FOUND", "The source shipment request was not found.", 404
+        )
+    from backend.services.assigned_work_authorization import authorize_work_action
+    if not authorize_work_action(user, request_row, "request.read").allowed:
+        raise OperationalError(
+            "RESOURCE_NOT_FOUND", "The accepted quote was not found.", 404
         )
     existing = db.session.scalar(
         select(OperationalShipment).where(
@@ -721,11 +741,6 @@ def create_from_accepted_quote(
             "OPERATIONAL_SHIPMENT_ALREADY_EXISTS",
             "An operational shipment already exists for this quote.",
             409,
-        )
-    request_row = db.session.get(ShipmentRequest, quote.shipment_request_id)
-    if request_row is None:
-        raise OperationalError(
-            "RESOURCE_NOT_FOUND", "The source shipment request was not found.", 404
         )
     if request_row.customer_id is None:
         raise OperationalError(

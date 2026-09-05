@@ -1560,7 +1560,7 @@ export interface OperationalLocationRef {
 export interface OperationalCustomerSelector { id: number; label: string }
 export interface OperationalProjectSelector { public_id: string; label: string; project_code: string; primary_customer_id: number; lifecycle_status: string }
 export interface OperationalQuoteSelector { id: number; request_public_id: string; customer_label: string; route_label: string | null; quote_label: string; accepted_at: string | null }
-export interface IranDestinationOption { identity: { type: "city" | "port" | "customs"; id: number }; label: string; province: { id: number; name: string }; secondary_label: string }
+export interface IranDestinationOption { identity: { type: "city" | "port" | "customs" | "international_city"; id: number }; label: string; province: { id: number; name: string } | null; secondary_label: string }
 export interface SelectorPage<T> { items: T[]; meta: { count: number; limit: number } }
 export interface OperationalShipmentSummary {
   public_id: string;
@@ -3078,6 +3078,21 @@ export interface ShipmentCargoItem {
   description_snapshot?: string | null;
   version: number;
 }
+export interface ShipmentCargoOption {
+  public_id: string;
+  code: string;
+  name: string;
+  cargo_type_public_id?: string;
+  default_uom_public_id?: string | null;
+  symbol?: string;
+}
+export interface ShipmentCargoOptions {
+  catalog: ShipmentCargoOption[];
+  cargo_types: ShipmentCargoOption[];
+  uoms: ShipmentCargoOption[];
+}
+export const getShipmentCargoOptions = () =>
+  request<ShipmentCargoOptions>("/api/internal/cargo-options");
 export interface CargoTransportAllocation { public_id:string; cargo_item_public_id:string; transport_unit_id:number; allocated_quantity:string; uom_symbol:string; cargo_name:string; transport_unit_code:string; transport_unit_type:string; }
 export interface ShipmentTransportUnitOption { id:number; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null; }
 export const getCargoTransportAllocations=(shipmentId:string)=>request<{allocations:CargoTransportAllocation[];transport_units:ShipmentTransportUnitOption[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-transport-allocations`);

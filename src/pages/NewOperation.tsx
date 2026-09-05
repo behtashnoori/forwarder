@@ -9,10 +9,12 @@ import {
   ApiError,
   createDirectOperationalShipment,
   createQuoteOperationalShipment,
+  createShipmentCargoItem,
   fetchCountries,
   fetchInternationalCities,
   fetchProvinces,
   getOperationalContext,
+  getShipmentCargoOptions,
   searchAcceptedOperationalQuotes,
   searchIranDestinations,
   searchOperationalCustomers,
@@ -25,6 +27,7 @@ import {
   type OperationalProjectSelector,
   type OperationalQuoteSelector,
   type Province,
+  type ShipmentCargoOptions,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 
@@ -44,7 +47,9 @@ type FieldError =
   | "departure"
   | "arrival"
   | "timeline"
-  | "iranProvince";
+  | "iranProvince"
+  | "cargoQuantity"
+  | "cargoUom";
 const initialSide: Side = {
   kind: "domestic",
   countryId: "",
@@ -220,6 +225,14 @@ export default function NewOperation() {
     InternationalCity[]
   >([]);
   const [iran, setIran] = useState<IranDestinationOption[]>([]);
+  const [cargoOptions, setCargoOptions] = useState<ShipmentCargoOptions>({
+    catalog: [],
+    cargo_types: [],
+    uoms: [],
+  });
+  const [cargoCatalogId, setCargoCatalogId] = useState("");
+  const [cargoQuantity, setCargoQuantity] = useState("");
+  const [cargoUomId, setCargoUomId] = useState("");
   const [origin, setOrigin] = useState<Side>(initialSide);
   const [destination, setDestination] = useState<Side>(initialSide);
   const [mode, setMode] = useState("road");
@@ -252,6 +265,9 @@ export default function NewOperation() {
     (option) =>
       `${option.identity.type}:${option.identity.id}` === destination.iranId,
   );
+  const selectedCargo = cargoOptions.catalog.find(
+    (option) => option.public_id === cargoCatalogId,
+  );
 
   useEffect(() => {
     getOperationalContext()
@@ -262,6 +278,9 @@ export default function NewOperation() {
         setProvinces(provinceRows);
         setCountries(countryRows);
       })
+      .catch((caught) => setError(errorText(caught)));
+    getShipmentCargoOptions()
+      .then(setCargoOptions)
       .catch((caught) => setError(errorText(caught)));
   }, []);
   const loadCustomers = async (query = "") => {
@@ -362,7 +381,7 @@ export default function NewOperation() {
                 ? "iran_port"
                 : selected.identity.type === "customs"
                   ? "customs_office"
-                  : "city",
+                  : selected.identity.type,
             source_id: selected.identity.id,
           }
         : null;
@@ -388,6 +407,10 @@ export default function NewOperation() {
     if (!arrival) next.arrival = t("operations.validation.arrival");
     if (departure && arrival && new Date(arrival) <= new Date(departure))
       next.timeline = t("operations.validation.timeline");
+    if (cargoCatalogId && (!cargoQuantity || Number(cargoQuantity) <= 0))
+      next.cargoQuantity = "Enter a positive cargo quantity.";
+    if (cargoCatalogId && !cargoUomId)
+      next.cargoUom = "Select a unit of measure.";
     setFieldErrors(next);
     return next;
   };
@@ -442,6 +465,15 @@ export default function NewOperation() {
               payload as Parameters<typeof createQuoteOperationalShipment>[0],
               key.current,
             );
+      if (selectedCargo) {
+        await createShipmentCargoItem(result.data.public_id, {
+          line_number: 1,
+          catalog_item_public_id: selectedCargo.public_id,
+          cargo_type_public_id: selectedCargo.cargo_type_public_id,
+          quantity: cargoQuantity,
+          uom_public_id: cargoUomId,
+        });
+      }
       navigate(`/operations/shipments/${result.data.public_id}`);
     } catch (caught) {
       setError(errorText(caught));
@@ -874,6 +906,80 @@ export default function NewOperation() {
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>کالای محموله / Shipment cargo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              کاتالوگ توسط مدیر سازمان نگهداری می‌شود؛ کالای فعال را برای این محموله انتخاب کنید.
+              / Organization Admin maintains the catalog; select an active item for this shipment.
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="cargo-catalog">Catalog item (optional)</Label>
+                <select
+                  id="cargo-catalog"
+                  aria-label="Catalog item"
+                  className="min-h-11 w-full rounded border px-3"
+                  value={cargoCatalogId}
+                  onChange={(event) => {
+                    const catalogId = event.target.value;
+                    const item = cargoOptions.catalog.find(
+                      (option) => option.public_id === catalogId,
+                    );
+                    setCargoCatalogId(catalogId);
+                    setCargoUomId(item?.default_uom_public_id || "");
+                  }}
+                >
+                  <option value="">No cargo line in this step</option>
+                  {cargoOptions.catalog.map((option) => (
+                    <option key={option.public_id} value={option.public_id}>
+                      {option.code} — {option.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cargo-quantity">Quantity</Label>
+                <Input
+                  id="cargo-quantity"
+                  data-field="cargoQuantity"
+                  aria-label="Cargo quantity"
+                  type="number"
+                  min="0.000001"
+                  step="any"
+                  disabled={!cargoCatalogId}
+                  value={cargoQuantity}
+                  onChange={(event) => setCargoQuantity(event.target.value)}
+                  aria-invalid={!!fieldErrors.cargoQuantity}
+                />
+                <FieldMessage id="cargo-quantity-error" message={fieldErrors.cargoQuantity} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cargo-uom">Unit of measure</Label>
+                <select
+                  id="cargo-uom"
+                  data-field="cargoUom"
+                  aria-label="Unit of measure"
+                  className="min-h-11 w-full rounded border px-3"
+                  disabled={!cargoCatalogId}
+                  value={cargoUomId}
+                  onChange={(event) => setCargoUomId(event.target.value)}
+                  aria-invalid={!!fieldErrors.cargoUom}
+                >
+                  <option value="">Select…</option>
+                  {cargoOptions.uoms.map((option) => (
+                    <option key={option.public_id} value={option.public_id}>
+                      {option.name}{option.symbol ? ` (${option.symbol})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <FieldMessage id="cargo-uom-error" message={fieldErrors.cargoUom} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>{t("operations.review")}</CardTitle>
           </CardHeader>
           <CardContent>
@@ -902,7 +1008,12 @@ export default function NewOperation() {
             {selectedIranDestination && (
               <p role="status">
                 {t("operations.derivedProvince")}:{" "}
-                {selectedIranDestination.province.name}
+                {selectedIranDestination.province?.name || selectedIranDestination.secondary_label}
+              </p>
+            )}
+            {selectedCargo && (
+              <p role="status">
+                Cargo: {selectedCargo.code} — {selectedCargo.name} · {cargoQuantity || "—"}
               </p>
             )}
           </CardContent>

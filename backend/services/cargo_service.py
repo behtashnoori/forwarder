@@ -446,17 +446,12 @@ def update_alias(user, row, data):
 
 
 def scoped_shipment(user, public_id):
-    operational_service.require_permission(user, "operational_shipment.read")
-    org = org_for(user)
-    row = db.session.scalar(
-        select(OperationalShipment).where(
-            OperationalShipment.public_id == public_id,
-            OperationalShipment.organization_id == org,
-        )
-    )
-    if not row:
-        raise CargoError("not found", 404)
-    return row
+    try:
+        return operational_service.scoped_shipment(public_id, user)
+    except operational_service.OperationalError as exc:
+        # Keep the cargo API's error boundary while reusing the canonical
+        # tenant + current assignment/ownership decision.
+        raise CargoError("not found", 404) from exc
 
 
 def shipment_item_dict(row):

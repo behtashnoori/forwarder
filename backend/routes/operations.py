@@ -334,13 +334,13 @@ def list_shipments():
         ).join(RouteLeg, RouteLeg.route_plan_id == RoutePlan.id)
         if request.args.get("origin"):
             query = query.where(
-                RouteLeg.origin_snapshot.cast(db.String).ilike(
+                RouteLeg.origin_snapshot["display_name"].as_string().ilike(
                     f"%{request.args['origin'].strip()}%"
                 )
             )
         if request.args.get("destination"):
             query = query.where(
-                RouteLeg.destination_snapshot.cast(db.String).ilike(
+                RouteLeg.destination_snapshot["display_name"].as_string().ilike(
                     f"%{request.args['destination'].strip()}%"
                 )
             )

@@ -10,7 +10,16 @@ import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import Customer, ExpertQuote, ExpertUser, Province, ShipmentRequest
+from backend.cargo_models import CargoCatalogItem, ShipmentCargoItem
+from backend.models import (
+    CargoType,
+    Customer,
+    ExpertQuote,
+    ExpertUser,
+    Province,
+    ShipmentRequest,
+    UnitOfMeasure,
+)
 from backend.operational_models import (
     Milestone,
     MilestoneEvent,
@@ -325,6 +334,254 @@ def _auth(app, key="user"):
     with app.app_context():
         token = auth_manager.generate_tokens(app.config["phase1a"][key])["access_token"]
     return {"Authorization": f"Bearer {token}"}
+
+
+def _auth_user(app, user_id):
+    with app.app_context():
+        token = auth_manager.generate_tokens(user_id)["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_baseline_direct_creator_opens_route_detail_but_peer_cannot(operational_app):
+    with operational_app.app_context():
+        ids = operational_app.config["phase1a"]
+        membership = OperationalMembership.query.filter_by(user_id=ids["user"]).one()
+        membership.permissions = list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
+        peer = ExpertUser(
+            username="phase1a-peer",
+            password_hash="unused",
+            full_name="Phase1A Peer",
+            role="expert",
+            is_active=True,
+        )
+        db.session.add(peer)
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=ids["org"],
+            user_id=peer.id,
+            permissions=list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS),
+        ))
+        db.session.commit()
+        peer_id = peer.id
+
+    client = operational_app.test_client()
+    direct_payload = _direct_payload(operational_app)
+    created = client.post(
+        "/api/operational-shipments",
+        json=direct_payload,
+        headers={**_auth(operational_app), "Idempotency-Key": "baseline-detail"},
+    )
+    assert created.status_code == 201
+    shipment_id = created.json["data"]["public_id"]
+    owner_headers = _auth(operational_app)
+    for path in (
+        f"/api/operational-shipments/{shipment_id}",
+        f"/api/operational-shipments/{shipment_id}/route-plans",
+        f"/api/operational-shipments/{shipment_id}/timeline",
+        f"/api/operational-shipments/{shipment_id}/route-exceptions",
+    ):
+        assert client.get(path, headers=owner_headers).status_code == 200
+        assert client.get(path, headers=_auth_user(operational_app, peer_id)).status_code == 404
+    replay_probe = client.post(
+        "/api/operational-shipments",
+        json=direct_payload,
+        headers={
+            **_auth_user(operational_app, peer_id),
+            "Idempotency-Key": "baseline-detail",
+        },
+    )
+    assert replay_probe.status_code == 404
+
+
+def test_operation_list_filters_cover_direct_and_request_derived_shipments(operational_app):
+    departure = datetime(2030, 1, 10, 10, tzinfo=timezone.utc)
+    arrival = departure + timedelta(hours=5)
+    with operational_app.app_context():
+        direct, _ = service.create_direct(
+            _direct_payload(operational_app, departure, arrival),
+            _user(operational_app),
+            "filter-direct",
+        )
+        derived, _ = service.create_from_accepted_quote(
+            _payload(operational_app, departure=departure, arrival=arrival),
+            _user(operational_app),
+            "filter-derived",
+        )
+        expected = {direct.public_id, derived.public_id}
+
+    client = operational_app.test_client()
+    headers = _auth(operational_app)
+
+    def ids_for(query):
+        response = client.get(f"/api/operational-shipments?{query}", headers=headers)
+        assert response.status_code == 200, response.get_json()
+        return {row["public_id"] for row in response.json["data"]}
+
+    assert ids_for("origin=%D9%85%D8%A8%D8%AF%D8%A3") == expected
+    assert ids_for("origin=%D9%85%D9%82%D8%B5%D8%AF") == set()
+    assert ids_for("destination=%D9%85%D9%82%D8%B5%D8%AF") == expected
+    assert ids_for("status=planned") == expected
+    assert ids_for("customer=Canonical") == expected
+    assert ids_for("date_from=2029-01-01T00:00:00Z") == expected
+    assert ids_for("date_to=2031-01-01T00:00:00Z") == expected
+    assert ids_for("overdue=false") == expected
+    outsider = client.get(
+        "/api/operational-shipments?origin=%D9%85%D8%A8%D8%AF%D8%A3",
+        headers=_auth(operational_app, "outsider"),
+    )
+    assert outsider.status_code == 200 and outsider.json["data"] == []
+
+
+def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scope(operational_app):
+    with operational_app.app_context():
+        ids = operational_app.config["phase1a"]
+        membership = OperationalMembership.query.filter_by(user_id=ids["user"]).one()
+        membership.permissions = list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
+        cargo_type = CargoType(
+            public_id="uat-cargo-type", immutable_code="UAT_GENERAL",
+            fa_name="کالای آزمون", en_name="UAT cargo", display_order=1,
+            is_active=True, version=1,
+        )
+        uom = UnitOfMeasure(
+            public_id="uat-uom", immutable_code="UAT_EA", fa_name="عدد",
+            en_name="Each", display_order=1, is_active=True, version=1,
+            symbol="ea", measurement_dimension="COUNT",
+        )
+        db.session.add_all([cargo_type, uom])
+        db.session.flush()
+        active = CargoCatalogItem(
+            public_id="uat-active-catalog", organization_id=ids["org"],
+            immutable_code="UAT-ACTIVE", fa_name="کالای فعال",
+            en_name="Active cargo", cargo_type=cargo_type, default_uom=uom,
+            is_active=True, created_by=ids["user"], updated_by=ids["user"],
+        )
+        inactive = CargoCatalogItem(
+            public_id="uat-inactive-catalog", organization_id=ids["org"],
+            immutable_code="UAT-INACTIVE", fa_name="کالای غیرفعال",
+            en_name="Inactive cargo", cargo_type=cargo_type, default_uom=uom,
+            is_active=False, created_by=ids["user"], updated_by=ids["user"],
+        )
+        foreign = CargoCatalogItem(
+            public_id="uat-foreign-catalog", organization_id=ids["other_org"],
+            immutable_code="UAT-FOREIGN", fa_name="کالای سازمان دیگر",
+            en_name="Foreign cargo", cargo_type=cargo_type, default_uom=uom,
+            is_active=True, created_by=ids["outsider"], updated_by=ids["outsider"],
+        )
+        peer = ExpertUser(
+            username="request-cargo-peer", password_hash="unused",
+            full_name="Request Cargo Peer", role="expert", is_active=True,
+        )
+        db.session.add_all([active, inactive, foreign, peer])
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=ids["org"], user_id=peer.id,
+            permissions=list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS),
+        ))
+        db.session.commit()
+        peer_id = peer.id
+
+    client = operational_app.test_client()
+    headers = _auth(operational_app)
+    direct = client.post(
+        "/api/operational-shipments",
+        json=_direct_payload(operational_app),
+        headers={**headers, "Idempotency-Key": "direct-cargo-chain"},
+    )
+    assert direct.status_code == 201
+    direct_id = direct.json["data"]["public_id"]
+    options = client.get("/api/internal/cargo-options", headers=headers)
+    assert options.status_code == 200
+    assert [row["public_id"] for row in options.json["catalog"]] == ["uat-active-catalog"]
+    cargo_payload = {
+        "line_number": 1,
+        "catalog_item_public_id": "uat-active-catalog",
+        "cargo_type_public_id": "uat-cargo-type",
+        "quantity": "12.5",
+        "uom_public_id": "uat-uom",
+    }
+    direct_cargo = client.post(
+        f"/api/internal/operational-shipments/{direct_id}/cargo-items",
+        json={**cargo_payload, "quantity": "3.25"},
+        headers=headers,
+    )
+    assert direct_cargo.status_code == 201
+    assert direct_cargo.json["item"]["quantity"] == "3.250000"
+
+    eligible = client.get("/api/operations/selectors/accepted-quotes", headers=headers)
+    assert eligible.status_code == 200
+    assert [row["id"] for row in eligible.json["items"]] == [operational_app.config["phase1a"]["accepted"]]
+    quote_payload = _payload(operational_app)
+    created = client.post(
+        "/api/operational-shipments/from-accepted-quote",
+        json=quote_payload,
+        headers={**headers, "Idempotency-Key": "request-cargo-chain"},
+    )
+    assert created.status_code == 201, created.get_json()
+    shipment_id = created.json["data"]["public_id"]
+    assert client.get(f"/api/operational-shipments/{shipment_id}", headers=headers).status_code == 200
+
+    cargo = client.post(
+        f"/api/internal/operational-shipments/{shipment_id}/cargo-items",
+        json=cargo_payload,
+        headers=headers,
+    )
+    assert cargo.status_code == 201, cargo.get_json()
+    cargo_id = cargo.json["item"]["public_id"]
+    assert cargo.json["item"]["quantity"] == "12.500000"
+    assert cargo.json["item"]["uom_public_id"] == "uat-uom"
+    for catalog_id, status in (("uat-inactive-catalog", 422), ("uat-foreign-catalog", 404)):
+        rejected = client.post(
+            f"/api/internal/operational-shipments/{shipment_id}/cargo-items",
+            json={**cargo_payload, "line_number": 2, "catalog_item_public_id": catalog_id},
+            headers=headers,
+        )
+        assert rejected.status_code == status
+
+    unit = client.post(
+        f"/api/internal/operational-shipments/{shipment_id}/transport-units",
+        json={"unit_code": "UAT-TRUCK", "unit_type": "truck"},
+        headers=headers,
+    )
+    assert unit.status_code == 201
+    allocation = client.post(
+        f"/api/internal/operational-shipments/{shipment_id}/cargo-transport-allocations",
+        json={
+            "cargo_item_public_id": cargo_id,
+            "transport_unit_id": unit.json["transport_unit"]["id"],
+            "allocated_quantity": "12.5",
+        },
+        headers=headers,
+    )
+    assert allocation.status_code == 201, allocation.get_json()
+    enabled = client.post(
+        f"/api/internal/operational-shipments/{shipment_id}/transport-tracking/enable",
+        headers=headers,
+    )
+    assert enabled.status_code == 200
+    tracked = client.post(
+        f"/api/internal/operational-shipments/{shipment_id}/transport-units/{unit.json['transport_unit']['id']}/tracking-updates",
+        json={
+            "status": "in_transit", "occurred_at": datetime.now(timezone.utc).isoformat(),
+            "location_text": "Tehran", "is_customer_visible": True,
+        },
+        headers=headers,
+    )
+    assert tracked.status_code == 201
+    assert tracked.json["tracking"]["units"][0]["allocated_cargo"][0]["cargo_name"] == "کالای فعال"
+
+    peer_headers = _auth_user(operational_app, peer_id)
+    assert client.get(f"/api/operational-shipments/{shipment_id}", headers=peer_headers).status_code == 404
+    assert client.get(
+        f"/api/internal/operational-shipments/{shipment_id}/cargo-items",
+        headers=peer_headers,
+    ).status_code == 404
+    assert client.get("/api/operations/selectors/accepted-quotes", headers=peer_headers).json["items"] == []
+    replay_probe = client.post(
+        "/api/operational-shipments/from-accepted-quote",
+        json=quote_payload,
+        headers={**peer_headers, "Idempotency-Key": "request-cargo-chain"},
+    )
+    assert replay_probe.status_code == 404
 
 
 def test_create_from_accepted_quote_is_complete_and_idempotent(operational_app):

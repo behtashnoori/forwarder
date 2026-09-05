@@ -70,8 +70,10 @@ vi.mock("@/lib/api", async () => {
     searchOperationalProjects: vi.fn(),
     searchAcceptedOperationalQuotes: vi.fn(),
     searchIranDestinations: vi.fn(),
+    getShipmentCargoOptions: vi.fn(),
     createDirectOperationalShipment: vi.fn(),
     createQuoteOperationalShipment: vi.fn(),
+    createShipmentCargoItem: vi.fn(),
   };
 });
 const province = { id: 1, name: "Tehran", code: "THR" };
@@ -132,6 +134,23 @@ beforeEach(() => {
       },
     ],
     meta: { count: 1, limit: 50 },
+  });
+  vi.mocked(api.getShipmentCargoOptions).mockResolvedValue({
+    catalog: [
+      {
+        public_id: "catalog-active",
+        code: "CAT-1",
+        name: "Active catalog cargo",
+        cargo_type_public_id: "cargo-type-1",
+        default_uom_public_id: "uom-ea",
+      },
+    ],
+    cargo_types: [
+      { public_id: "cargo-type-1", code: "GENERAL", name: "General" },
+    ],
+    uoms: [
+      { public_id: "uom-ea", code: "EA", name: "Each", symbol: "ea" },
+    ],
   });
 });
 const renderPage = (url = "/operations/shipments/new") =>
@@ -280,6 +299,78 @@ describe("Slice 5 governed creation", () => {
       screen.getByRole("option", { name: /Hormozgan/ }),
     ).toBeInTheDocument();
   });
+  it.each(["direct", "accepted_quote"] as const)(
+    "persists selected active catalog cargo before leaving the %s creation flow",
+    async (source) => {
+      const user = userEvent.setup();
+      vi.mocked(api.getOperationalContext).mockResolvedValue({
+        data: {
+          organization_id: 1,
+          permissions: [
+            source === "direct"
+              ? "operational_shipment.create_direct"
+              : "operational_shipment.create_from_quote",
+          ],
+        },
+      });
+      const shipment = {
+        data: { public_id: "11111111-1111-4111-8111-111111111111" },
+        meta: { created: true, replayed: false },
+      };
+      vi.mocked(api.createDirectOperationalShipment).mockResolvedValue(
+        shipment as never,
+      );
+      vi.mocked(api.createQuoteOperationalShipment).mockResolvedValue(
+        shipment as never,
+      );
+      vi.mocked(api.createShipmentCargoItem).mockResolvedValue({ item: {} } as never);
+      renderPage(
+        source === "direct"
+          ? "/operations/shipments/new?source=direct"
+          : "/operations/shipments/new?source=accepted_quote&accepted_quote_id=9&request_ref=REQ-9",
+      );
+      if (source === "direct") {
+        await screen.findByRole("option", { name: "Canonical Co" });
+        await user.selectOptions(screen.getByLabelText("Customer"), "7");
+      } else {
+        await waitFor(() =>
+          expect(screen.getByLabelText("Accepted quote")).toHaveValue("9"),
+        );
+      }
+      fireEvent.change(screen.getByLabelText("Origin province"), {
+        target: { value: "1" },
+      });
+      fireEvent.change(screen.getByLabelText("Destination province"), {
+        target: { value: "1" },
+      });
+      fireEvent.change(screen.getByLabelText("Planned departure"), {
+        target: { value: "2026-08-10T10:00" },
+      });
+      fireEvent.change(screen.getByLabelText("Planned arrival"), {
+        target: { value: "2026-08-10T11:00" },
+      });
+      await user.selectOptions(
+        await screen.findByLabelText("Catalog item"),
+        "catalog-active",
+      );
+      await user.type(screen.getByLabelText("Cargo quantity"), "4.5");
+      expect(screen.getByLabelText("Unit of measure")).toHaveValue("uom-ea");
+      await user.click(screen.getByRole("button", { name: "Create operation" }));
+      await waitFor(() =>
+        expect(api.createShipmentCargoItem).toHaveBeenCalledWith(
+          "11111111-1111-4111-8111-111111111111",
+          {
+            line_number: 1,
+            catalog_item_public_id: "catalog-active",
+            cargo_type_public_id: "cargo-type-1",
+            quantity: "4.5",
+            uom_public_id: "uom-ea",
+          },
+        ),
+      );
+      expect(await screen.findByText("created detail")).toBeInTheDocument();
+    },
+  );
   it("associates required errors and focuses the first invalid control", async () => {
     vi.mocked(api.getOperationalContext).mockResolvedValue({
       data: {

@@ -134,7 +134,7 @@ def selector_app():
         )
         db.session.flush()
 
-        def request(customer_id, tracking_code):
+        def request(customer_id, tracking_code, assigned_to, organization_id=org.id):
             row = ShipmentRequest(
                 contact_phone="09000000009",
                 tracking_code=tracking_code,
@@ -143,15 +143,19 @@ def selector_app():
                 status_request_status="new",
                 origin_city_international="Origin",
                 dest_city_international="Destination",
+                assigned_to=assigned_to,
+                operational_organization_id=organization_id,
+                ownership_scope="TENANT",
             )
             db.session.add(row)
             db.session.flush()
             return row
 
-        eligible_request = request(alpha.id, "REQ-ELIGIBLE")
-        converted_request = request(alpha.id, "REQ-CONVERTED")
-        incomplete_request = request(None, "REQ-INCOMPLETE")
-        foreign_request = request(alpha.id, "REQ-FOREIGN")
+        eligible_request = request(alpha.id, "REQ-ELIGIBLE", quote_user.id)
+        legacy_request = request(alpha.id, "REQ-LEGACY", legacy_user.id)
+        converted_request = request(alpha.id, "REQ-CONVERTED", quote_user.id)
+        incomplete_request = request(None, "REQ-INCOMPLETE", quote_user.id)
+        foreign_request = request(alpha.id, "REQ-FOREIGN", quote_user.id, foreign_org.id)
         now = datetime.now(timezone.utc)
 
         def quote(request_row, organization_id, response="accepted"):
@@ -170,6 +174,7 @@ def selector_app():
             return row
 
         eligible_quote = quote(eligible_request, org.id)
+        legacy_quote = quote(legacy_request, org.id)
         converted_quote = quote(converted_request, org.id)
         quote(incomplete_request, org.id)
         quote(eligible_request, org.id, "declined")
@@ -196,6 +201,7 @@ def selector_app():
             "beta": beta.id,
             "project": local_project.public_id,
             "eligible_quote": eligible_quote.id,
+            "legacy_quote": legacy_quote.id,
             "origin": origin.id,
             "destination": destination.id,
         }
@@ -268,20 +274,26 @@ def test_project_selector_is_tenant_scoped_and_customer_filterable(selector_app)
     assert no_match.json["items"] == []
 
 
-@pytest.mark.parametrize("permission_user", ["quote", "legacy"])
+@pytest.mark.parametrize(
+    ("permission_user", "query", "quote_key"),
+    [
+        ("quote", "ELIGIBLE", "eligible_quote"),
+        ("legacy", "LEGACY", "legacy_quote"),
+    ],
+)
 def test_accepted_quote_selector_permissions_eligibility_and_create_consistency(
-    selector_app, permission_user
+    selector_app, permission_user, query, quote_key
 ):
     client = selector_app.test_client()
     response = client.get(
-        "/api/operations/selectors/accepted-quotes?q=ELIGIBLE",
+        f"/api/operations/selectors/accepted-quotes?q={query}",
         headers=_headers(selector_app, permission_user),
     )
     assert response.status_code == 200
     assert len(response.json["items"]) == 1
     item = response.json["items"][0]
-    assert item["id"] == selector_app.config["selector_ids"]["eligible_quote"]
-    assert item["request_public_id"] == "REQ-ELIGIBLE"
+    assert item["id"] == selector_app.config["selector_ids"][quote_key]
+    assert item["request_public_id"] == f"REQ-{query}"
     assert set(item) == {
         "id",
         "request_public_id",

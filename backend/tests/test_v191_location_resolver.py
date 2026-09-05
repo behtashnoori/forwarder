@@ -334,6 +334,9 @@ def test_quote_conversion_uses_shared_resolver_and_enriched_snapshot(app):
             status="waiting_for_customer",
             status_request_status="new",
             customer_id=customer.id,
+            assigned_to=user.id,
+            operational_organization_id=org.id,
+            ownership_scope="TENANT",
         )
         db.session.add(request)
         db.session.flush()

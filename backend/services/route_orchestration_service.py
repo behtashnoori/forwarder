@@ -86,7 +86,15 @@ def _invalidate_checkpoint_actual(checkpoint: OperationalCheckpoint, milestone: 
 
 
 def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipment:
-    base.require_permission(user, permission)
+    # Route reads are part of the baseline operational-shipment detail view.
+    # Mutation capabilities remain explicit, while every route operation is
+    # additionally fenced by the canonical assigned-shipment policy below.
+    required_permission = (
+        "operational_shipment.read"
+        if permission == PLAN_PERMISSIONS["read"]
+        else permission
+    )
+    base.require_permission(user, required_permission)
     org = base.organization_for_user(int(user["id"]))
     identity_clause = (
         OperationalShipment.id == shipment_id
@@ -97,6 +105,9 @@ def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipm
         identity_clause, OperationalShipment.organization_id == org
     ))
     if row is None:
+        raise base.OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
+    from backend.services.assigned_work_authorization import authorize_work_action
+    if not authorize_work_action(user, row, "shipment.read").allowed:
         raise base.OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
     return row
 
@@ -1105,7 +1116,10 @@ def reconcile_route_exceptions(
 
 
 def list_route_exceptions(user: dict, status="open") -> list[dict]:
-    base.require_permission(user, "route_exception.read")
+    # The result is already constrained to assigned shipments.  Requiring the
+    # shipment-read baseline keeps the detail page coherent for normal Experts
+    # without widening visibility to tenant-wide route exceptions.
+    base.require_permission(user, "operational_shipment.read")
     org = base.organization_for_user(user["id"])
     from backend.services.assigned_work_authorization import assigned_shipment_scope
     allowed_shipments = select(OperationalShipment.id).where(assigned_shipment_scope(user))

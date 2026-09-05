@@ -205,7 +205,15 @@ def resolve_location(
 
 def iran_destination_results(q: str | None = None, source_type: str | None = None, province_id: int | None = None, limit: int = 50) -> list[dict[str, Any]]:
     """Return the bounded eligible projection; invalid master data is omitted."""
-    type_map = {"city": (City, "city"), "port": (IranPort, "iran_port"), "customs": (CustomsOffice, "customs_office")}
+    type_map = {
+        "city": (City, "city"),
+        "port": (IranPort, "iran_port"),
+        "customs": (CustomsOffice, "customs_office"),
+        # Governed UN/LOCODE records for Iran live in InternationalCity.  They
+        # are a distinct identity type and must not be reinterpreted as a
+        # domestic City row with a coincidentally equal numeric id.
+        "international_city": (InternationalCity, "international_city"),
+    }
     selected = [source_type] if source_type else list(type_map)
     if any(item not in type_map for item in selected):
         raise LocationResolutionError("VALIDATION_FAILED", "Unsupported Iran destination type.", 400)
@@ -216,24 +224,32 @@ def iran_destination_results(q: str | None = None, source_type: str | None = Non
     for public_type in selected:
         model, canonical_type = type_map[public_type]
         query = select(model).where(model.is_active.is_(True))
+        if model is InternationalCity:
+            query = query.where(InternationalCity.country_id == iran.id)
         if q:
             pattern = f"%{q.strip()}%"
             names = [model.name_fa.ilike(pattern)]
             if hasattr(model, "name_en"):
                 names.append(model.name_en.ilike(pattern))
             query = query.where(or_(*names))
-        if province_id is not None:
+        if province_id is not None and hasattr(model, "province_id"):
             query = query.where(model.province_id == province_id)
+        elif province_id is not None:
+            continue
         for row in db.session.scalars(query.order_by(model.name_fa, model.id).limit(limit)).all():
             try:
                 resolved = resolve_location({"source_type": canonical_type, "source_id": row.id}, expected_country_id=iran.id)
             except LocationResolutionError:
                 continue
-            label = f"{resolved.display_label} — {public_type} — {resolved.province_name}"
+            administrative_label = resolved.province_name or resolved.country_name
+            label = f"{resolved.display_label} — {public_type} — {administrative_label}"
             results.append({
                 "identity": {"type": public_type, "id": row.id},
                 "label": label,
-                "province": {"id": resolved.province_id, "name": resolved.province_name},
-                "secondary_label": f"{public_type} — {resolved.province_name}",
+                "province": (
+                    {"id": resolved.province_id, "name": resolved.province_name}
+                    if resolved.province_id is not None else None
+                ),
+                "secondary_label": f"{public_type} — {administrative_label}",
             })
     return sorted(results, key=lambda item: (item["label"], item["identity"]["id"]))[:limit]
