@@ -146,6 +146,13 @@ export default function OperationalShipmentDetail() {
           <details className="rounded border bg-white" open={false}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات و سوابق بیشتر</summary>
             <div className="space-y-5 border-t p-3 sm:p-4">
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Card><CardHeader><CardTitle>مسیر حمل</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p>{data.origin?.display_name || "—"} ← مسیر تا ← {data.destination?.display_name || "—"}</p><p>روش حمل: {data.transport_method || "—"}</p>{(plan?.legs || data.route_legs || [data.route_leg]).map((leg, index) => <div key={leg.id} className="rounded bg-slate-50 p-3">بخش {index + 1}: {leg.origin.display_name || "—"} ← {leg.destination.display_name || "—"}<br />{leg.transport_mode} · {when(leg.actual_departure || leg.planned_departure, locale)} تا {when(leg.actual_arrival || leg.planned_arrival, locale)}</div>)}</CardContent></Card>
+                <Card><CardHeader><CardTitle>اسناد و شماره‌های مرجع</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><p>شماره محموله: {data.public_id}</p><p>مرجع مشتری: {data.source.request_public_id || "ثبت نشده"}</p><p>مرجع تجاری: {data.source.accepted_quote_id || "ثبت نشده"}</p><p className="text-slate-600">اسناد حمل و شماره‌های CMR، AWB، BL یا گمرکی در صورت ثبت در همین محموله نمایش داده می‌شوند.</p></CardContent></Card>
+                <Card><CardHeader><CardTitle>تأخیرها و موارد خاص</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{(timeline?.delays?.length || exceptions.length) ? <>{timeline?.delays?.map((delay) => <p key={delay.checkpoint_id}>تأخیر ثبت‌شده: {Math.ceil(delay.seconds / 60)} دقیقه</p>)}{exceptions.map((item) => <p key={item.id}>{item.type} · {item.status === "open" ? "نیازمند رسیدگی" : "بررسی‌شده"}{item.reason ? ` · ${item.reason}` : ""}</p>)}</> : <p className="text-slate-600">مورد مهم یا تأخیر ثبت‌شده‌ای وجود ندارد.</p>}</CardContent></Card>
+                <Card><CardHeader><CardTitle>تاریخچه محموله</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{data.recent_events.length || data.audit_summary.length ? <>{data.recent_events.map((event) => <p key={event.id}>{when(event.occurred_at, locale)} · {event.event_type}{event.reason ? ` · ${event.reason}` : ""}</p>)}{data.audit_summary.map((item) => <p key={item.id}>{when(item.recorded_at, locale)} · {item.action}</p>)}</> : <p className="text-slate-600">هنوز رویداد مهمی ثبت نشده است.</p>}</CardContent></Card>
+              </div>
+              <div className="space-y-5">
               <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? t("operations.source.direct") : t("operations.source.quote")}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ?? t("operations.notApplicable")}</p></CardContent></Card>
 
           <Card>
@@ -263,6 +270,7 @@ export default function OperationalShipmentDetail() {
 
           <Card><CardHeader><CardTitle>{t("operations.eventHistory")}</CardTitle></CardHeader><CardContent>{!data.recent_events.length ? <p>No event history.</p> : data.recent_events.map((event) => <div key={event.id}>{event.event_type} · {when(event.occurred_at, locale)} {event.reason && `· ${event.reason}`}</div>)}</CardContent></Card>
           <Card><CardHeader><CardTitle>سوابق ثبت‌شده</CardTitle></CardHeader><CardContent>{!data.audit_summary.length ? <p>سابقه‌ای ثبت نشده است.</p> : data.audit_summary.map((item) => <div key={item.id}>{item.action} · {when(item.recorded_at, locale)}</div>)}</CardContent></Card>
+              </div>
             </div>
           </details>
         </>}
