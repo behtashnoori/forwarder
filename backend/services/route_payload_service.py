@@ -109,8 +109,16 @@ def _location_state(req: ShipmentRequest) -> str:
         return "canonical"
     origin_country = db.session.get(Country, req.origin_country_id) if req.origin_country_id else None
     dest_country = db.session.get(Country, req.dest_country_id) if req.dest_country_id else None
+    def international_city_matches(country, city_id):
+        # Read historical selections even after reference deactivation. Activity
+        # is a write-time eligibility rule, not a reason to lose stored identity.
+        city = db.session.get(InternationalCity, city_id) if city_id else None
+        return bool(country and city and city.country_id == country.id)
+
     origin_complete = bool(origin_country and (
-        req.origin_province_id if origin_country.code == "IR" else req.origin_international_city_id
+        (international_city_matches(origin_country, req.origin_international_city_id)
+         if req.origin_international_city_id else bool(req.origin_province_id))
+        if origin_country.code == "IR" else req.origin_international_city_id
     ))
     iran_destination_ids = (
         req.iran_entry_port_id,
@@ -118,7 +126,9 @@ def _location_state(req: ShipmentRequest) -> str:
         req.iran_dest_city_id,
     )
     destination_complete = bool(dest_country and (
-        sum(value is not None for value in iran_destination_ids) == 1
+        (international_city_matches(dest_country, req.dest_international_city_id)
+         if req.dest_international_city_id
+         else sum(value is not None for value in iran_destination_ids) == 1)
         if dest_country.code == "IR" else req.dest_international_city_id
     ))
     if origin_complete and destination_complete:

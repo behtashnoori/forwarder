@@ -15,9 +15,6 @@ import {
   Province,
   Country,
   InternationalCity,
-  IranPort,
-  BorderCustoms,
-  RecommendedPort,
   TransportMethod,
   TransportMethodOptions,
   ShipmentRequestPayload,
@@ -26,12 +23,8 @@ import {
   fetchProvinces,
   fetchCountries,
   fetchInternationalCities,
-  fetchIranPorts,
-  fetchBorderCustoms,
-  fetchRecommendedPorts,
   fetchTransportMethodOptions,
   submitShipmentRequest,
-  buildIranDestinationPayload,
   isInternationalRouteComplete,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
@@ -51,14 +44,7 @@ interface LocationFormData {
   destCountry: string;
   destCityInternational: string;
   destAddressInternational: string;
-  // Iran destination point (for international shipping to Iran)
-  // iranDestType selects how the in-Iran destination is named: port | customs | city
-  iranDestType: "port" | "customs" | "city";
-  iranEntryPort: string;        // port mode selection (iran_port id)
-  iranDestCustomsOffice: string; // customs mode selection (customs_office id)
-  iranDestCounty: string;        // city mode: county in the destination province
-  iranDestCity: string;          // city mode: final delivery city (city id)
-  iranEntryProvince: string;     // destination province: derived (port/customs) or chosen (city)
+
   // Common fields
   phoneNumber: string;
   // Customer details (optional)
@@ -405,11 +391,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [countries, setCountries] = useState<Country[]>([]);
   const [originInternationalCities, setOriginInternationalCities] = useState<InternationalCity[]>([]);
   const [destinationInternationalCities, setDestinationInternationalCities] = useState<InternationalCity[]>([]);
-  const [iranPorts, setIranPorts] = useState<IranPort[]>([]);
-  const [borderCustoms, setBorderCustoms] = useState<BorderCustoms[]>([]);
-  const [iranDestCounties, setIranDestCounties] = useState<County[]>([]);
-  const [iranDestCities, setIranDestCities] = useState<City[]>([]);
-  const [recommendedPorts, setRecommendedPorts] = useState<RecommendedPort[]>([]);
   const [transportMethodOptions, setTransportMethodOptions] = useState<TransportMethodOptions | null>(null);
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingOriginCounties, setIsLoadingOriginCounties] = useState(false);
@@ -419,11 +400,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isLoadingOriginInternationalCities, setIsLoadingOriginInternationalCities] = useState(false);
   const [isLoadingDestinationInternationalCities, setIsLoadingDestinationInternationalCities] = useState(false);
-  const [isLoadingIranPorts, setIsLoadingIranPorts] = useState(false);
-  const [isLoadingBorderCustoms, setIsLoadingBorderCustoms] = useState(false);
-  const [isLoadingIranDestCounties, setIsLoadingIranDestCounties] = useState(false);
-  const [isLoadingIranDestCities, setIsLoadingIranDestCities] = useState(false);
-  const [isLoadingRecommendedPorts, setIsLoadingRecommendedPorts] = useState(false);
   const [formData, setFormData] = useState<LocationFormData>({
     // Domestic shipping fields
     originProvince: "",
@@ -439,13 +415,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     destCountry: "",
     destCityInternational: "",
     destAddressInternational: "",
-    // Iran destination point fields (default to final delivery city)
-    iranDestType: "city",
-    iranEntryPort: "",
-    iranDestCustomsOffice: "",
-    iranDestCounty: "",
-    iranDestCity: "",
-    iranEntryProvince: "",
+
     // Common fields
     phoneNumber: "",
     customerFirstName: "",
@@ -545,53 +515,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       }
     };
 
-    const loadIranPorts = async () => {
-      setIsLoadingIranPorts(true);
-      try {
-        const data = await fetchIranPorts();
-        if (active) {
-          setIranPorts(data);
-        }
-      } catch (error) {
-        if (active) {
-          toast({
-            title: t("requestForm.loadIranPortsErrorTitle"),
-            description: error instanceof Error ? error.message : t("requestForm.loadIranPortsError"),
-            variant: "destructive",
-          });
-        }
-      } finally {
-        if (active) {
-          setIsLoadingIranPorts(false);
-        }
-      }
-    };
-
-    const loadBorderCustoms = async () => {
-      setIsLoadingBorderCustoms(true);
-      try {
-        const data = await fetchBorderCustoms();
-        if (active) {
-          setBorderCustoms(data);
-        }
-      } catch (error) {
-        if (active) {
-          console.error("Error fetching border customs:", error);
-        }
-      } finally {
-        if (active) {
-          setIsLoadingBorderCustoms(false);
-        }
-      }
-    };
-
     if (shippingType === "domestic") {
       loadProvinces();
     } else {
       loadCountries();
-      loadProvinces(); // Needed for the Iran destination province/city cascade
-      loadIranPorts(); // Load Iran ports for international shipping
-      loadBorderCustoms(); // Load border customs offices for Iran destination
     }
 
     return () => {
@@ -857,144 +784,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     };
   }, [formData.destCountry, t, toast]);
 
-  // Derive the destination province from the selected port (port mode).
-  useEffect(() => {
-    if (formData.iranDestType !== "port" || !formData.iranEntryPort) {
-      return;
-    }
-    const selectedPort = iranPorts.find(port => port.id.toString() === formData.iranEntryPort);
-    if (selectedPort) {
-      setFormData(prev => ({ ...prev, iranEntryProvince: selectedPort.province_id.toString() }));
-    }
-  }, [formData.iranDestType, formData.iranEntryPort, iranPorts]);
-
-  // Derive the destination province from the selected border customs (customs mode).
-  useEffect(() => {
-    if (formData.iranDestType !== "customs" || !formData.iranDestCustomsOffice) {
-      return;
-    }
-    const selectedCustoms = borderCustoms.find(c => c.id.toString() === formData.iranDestCustomsOffice);
-    if (selectedCustoms?.province_id) {
-      setFormData(prev => ({ ...prev, iranEntryProvince: selectedCustoms.province_id!.toString() }));
-    }
-  }, [formData.iranDestType, formData.iranDestCustomsOffice, borderCustoms]);
-
-  // Load a "suggested entry port" hint for whatever destination province is active.
-  useEffect(() => {
-    let active = true;
-    if (!formData.iranEntryProvince) {
-      setRecommendedPorts([]);
-      setIsLoadingRecommendedPorts(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    const provinceId = Number(formData.iranEntryProvince);
-    setIsLoadingRecommendedPorts(true);
-
-    const loadRecommendedPorts = async () => {
-      try {
-        const data = await fetchRecommendedPorts(provinceId);
-        if (active) {
-          setRecommendedPorts(data);
-        }
-      } catch (error) {
-        if (active) {
-          console.error("Error fetching recommended ports:", error);
-        }
-      } finally {
-        if (active) {
-          setIsLoadingRecommendedPorts(false);
-        }
-      }
-    };
-
-    loadRecommendedPorts();
-
-    return () => {
-      active = false;
-    };
-  }, [formData.iranEntryProvince]);
-
-  // City mode: load counties for the chosen destination province.
-  useEffect(() => {
-    let active = true;
-    if (formData.iranDestType !== "city" || !formData.iranEntryProvince) {
-      setIranDestCounties([]);
-      setIsLoadingIranDestCounties(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    const provinceId = Number(formData.iranEntryProvince);
-    setIsLoadingIranDestCounties(true);
-    setIranDestCounties([]);
-
-    const loadCounties = async () => {
-      try {
-        const data = await fetchCounties(provinceId);
-        if (active) {
-          setIranDestCounties(data);
-        }
-      } catch (error) {
-        if (active) {
-          console.error("Error fetching Iran destination counties:", error);
-        }
-      } finally {
-        if (active) {
-          setIsLoadingIranDestCounties(false);
-        }
-      }
-    };
-
-    loadCounties();
-
-    return () => {
-      active = false;
-    };
-  }, [formData.iranDestType, formData.iranEntryProvince]);
-
-  // City mode: load cities for the chosen destination county.
-  useEffect(() => {
-    let active = true;
-    if (formData.iranDestType !== "city" || !formData.iranDestCounty) {
-      setIranDestCities([]);
-      setIsLoadingIranDestCities(false);
-      return () => {
-        active = false;
-      };
-    }
-
-    const countyId = Number(formData.iranDestCounty);
-    setIsLoadingIranDestCities(true);
-    setIranDestCities([]);
-
-    const loadCities = async () => {
-      try {
-        const data = await fetchCities(countyId);
-        if (active) {
-          setIranDestCities(data);
-        }
-      } catch (error) {
-        if (active) {
-          console.error("Error fetching Iran destination cities:", error);
-        }
-      } finally {
-        if (active) {
-          setIsLoadingIranDestCities(false);
-        }
-      }
-    };
-
-    loadCities();
-
-    return () => {
-      active = false;
-    };
-  }, [formData.iranDestType, formData.iranDestCounty]);
-
   const provinceOptions = useMemo(
     () => [...provinces].sort((a, b) => a.name.localeCompare(b.name)),
     [provinces],
@@ -1051,26 +840,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     const dCountry = countryOptions.find((c) => c.id.toString() === formData.destCountry);
     const dCity = destinationInternationalCityOptions.find((c) => c.id.toString() === formData.destCityInternational);
 
-    // When shipping to Iran, spell out the chosen in-Iran destination point.
-    let iranDestLabel = "";
-    if (dCountry?.code === "IR") {
-      const provinceName = provinceOptions.find((p) => p.id.toString() === formData.iranEntryProvince)?.name;
-      if (formData.iranDestType === "port") {
-        iranDestLabel = iranPorts.find((p) => p.id.toString() === formData.iranEntryPort)?.name_fa || "";
-      } else if (formData.iranDestType === "customs") {
-        iranDestLabel = borderCustoms.find((c) => c.id.toString() === formData.iranDestCustomsOffice)?.name_fa || "";
-      } else if (formData.iranDestType === "city") {
-        const cityName = iranDestCities.find((c) => c.id.toString() === formData.iranDestCity)?.name;
-        const countyName = iranDestCounties.find((c) => c.id.toString() === formData.iranDestCounty)?.name;
-        iranDestLabel = [cityName, countyName, provinceName].filter(Boolean).join("، ");
-      }
-    }
-
     return {
       origin: [oCity?.name, oCountry?.name].filter(Boolean).join("، ") || "—",
       destination:
         [dCity?.name, dCountry?.name].filter(Boolean).join("، ")
-          + (iranDestLabel ? ` ← ${iranDestLabel}` : "")
         || "—",
     };
   }, [
@@ -1085,12 +858,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     formData.originCityInternational,
     formData.destCountry,
     formData.destCityInternational,
-    formData.iranDestType,
-    formData.iranEntryPort,
-    formData.iranDestCustomsOffice,
-    formData.iranDestCounty,
-    formData.iranDestCity,
-    formData.iranEntryProvince,
     provinceOptions,
     originCountyOptions,
     destinationCountyOptions,
@@ -1099,27 +866,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     countryOptions,
     originInternationalCityOptions,
     destinationInternationalCityOptions,
-    iranPorts,
-    borderCustoms,
-    iranDestCounties,
-    iranDestCities,
   ]);
-
-  // Attach the structured Iran destination point to an international payload when
-  // the destination country is Iran. Shared by the preview and final submit paths.
-  const applyIranDestinationToPayload = (payload: ShipmentRequestPayload) => {
-    const selectedProvince = provinces.find(p => p.id.toString() === formData.iranEntryProvince);
-    const selectedPort = iranPorts.find(p => p.id.toString() === formData.iranEntryPort);
-    Object.assign(payload, buildIranDestinationPayload({
-      type: formData.iranDestType,
-      provinceId: formData.iranEntryProvince,
-      provinceName: selectedProvince?.name,
-      portId: formData.iranEntryPort,
-      portName: selectedPort?.name_fa,
-      customsOfficeId: formData.iranDestCustomsOffice,
-      cityId: formData.iranDestCity,
-    }));
-  };
 
   const handleSubmit = async () => {
     // Validate required fields based on shipping type
@@ -1366,13 +1113,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       destCountry: "",
       destCityInternational: "",
       destAddressInternational: "",
-      // Iran destination point fields
-      iranDestType: "city",
-      iranEntryPort: "",
-      iranDestCustomsOffice: "",
-      iranDestCounty: "",
-      iranDestCity: "",
-      iranEntryProvince: "",
+
       // Common fields
       phoneNumber: "",
       customerFirstName: "",
@@ -1908,12 +1649,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       ...formData,
                       destCountry: value,
                       destCityInternational: "",
-                      iranDestType: "city",
-                      iranEntryPort: "",
-                      iranDestCustomsOffice: "",
-                      iranDestCounty: "",
-                      iranDestCity: "",
-                      iranEntryProvince: "",
                     });
                   }}
                   disabled={isLoadingCountries && countryOptions.length === 0}
@@ -1998,298 +1733,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               </div>
             </div>
 
-            {/* Iran Destination Section - Only show if destination is Iran */}
-            {isIranDestination && (
-              <>
-                {/* Arrow */}
-                <div className="flex justify-center">
-                  <div className="p-2 bg-accent rounded-full">
-                    <ArrowLeft className="w-4 h-4 text-muted-foreground rotate-90" />
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                    <div className="w-3 h-3 bg-primary rounded-full"></div>
-                    {t("requestForm.iranDestStepTitle")}
-                  </div>
-
-                  <div className="space-y-3 pr-5">
-                    {/* Destination point type: port / customs / city */}
-                    <Label className="flex items-center gap-1 text-sm font-medium">
-                      {t("requestForm.iranDestTypeLabel")}
-                    </Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {([
-                        { type: "city" as const, icon: "🏙️", label: t("requestForm.iranDestTypeCity") },
-                        { type: "port" as const, icon: "🚢", label: t("requestForm.iranDestTypePort") },
-                        { type: "customs" as const, icon: "🛃", label: t("requestForm.iranDestTypeCustoms") },
-                      ]).map(({ type, icon, label }) => (
-                        <Button
-                          key={type}
-                          type="button"
-                          variant={formData.iranDestType === type ? "default" : "outline"}
-                          onClick={() => {
-                            setFormData({
-                              ...formData,
-                              iranDestType: type,
-                              // Reset every mode-specific selection when the type changes.
-                              iranEntryPort: "",
-                              iranDestCustomsOffice: "",
-                              iranDestCounty: "",
-                              iranDestCity: "",
-                              iranEntryProvince: "",
-                            });
-                          }}
-                          className="h-auto flex-col gap-1 py-2 text-xs"
-                        >
-                          <span className="text-base leading-none">{icon}</span>
-                          <span>{label}</span>
-                        </Button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t("requestForm.iranDestTypeHint")}
-                    </p>
-
-                    {/* PORT MODE */}
-                    {formData.iranDestType === "port" && (
-                      <>
-                        <Label className="flex items-center gap-1 text-sm font-medium">
-                          {t("requestForm.entryPort")}
-                        </Label>
-                        <Select
-                          value={formData.iranEntryPort}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, iranEntryPort: value, iranEntryProvince: "" });
-                          }}
-                          disabled={isLoadingIranPorts && iranPorts.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingIranPorts ? t("requestForm.loading") : t("requestForm.selectEntryPort")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {iranPorts.map((port) => (
-                              <SelectItem key={port.id} value={port.id.toString()}>
-                                {port.name_fa} ({port.port_type === "sea" ? t("requestForm.portSea") : port.port_type === "air" ? t("requestForm.portAir") : t("requestForm.portLand")})
-                                {port.is_major_port && " ⭐"}
-                              </SelectItem>
-                            ))}
-                            {iranPorts.length === 0 && !isLoadingIranPorts && (
-                              <SelectItem value="no-port" disabled>
-                                {t("requestForm.noPort")}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-
-                        {formData.iranEntryPort && (
-                          <div className="p-3 bg-accent rounded-md">
-                            {(() => {
-                              const selectedPort = iranPorts.find(p => p.id.toString() === formData.iranEntryPort);
-                              return selectedPort ? (
-                                <div className="space-y-1 text-sm">
-                                  <div className="font-medium">{selectedPort.name_fa}</div>
-                                  {selectedPort.description && (
-                                    <div className="text-muted-foreground text-xs">{selectedPort.description}</div>
-                                  )}
-                                  <div className="text-muted-foreground text-xs">
-                                    {t("requestForm.portType")}: {selectedPort.port_type === "sea" ? t("requestForm.portSea") : selectedPort.port_type === "air" ? t("requestForm.portAir") : t("requestForm.portLand")}
-                                  </div>
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {/* CUSTOMS MODE */}
-                    {formData.iranDestType === "customs" && (
-                      <>
-                        <Label className="flex items-center gap-1 text-sm font-medium">
-                          {t("requestForm.borderCustoms")}
-                        </Label>
-                        <Select
-                          value={formData.iranDestCustomsOffice}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, iranDestCustomsOffice: value, iranEntryProvince: "" });
-                          }}
-                          disabled={isLoadingBorderCustoms && borderCustoms.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingBorderCustoms ? t("requestForm.loading") : t("requestForm.selectBorderCustoms")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {borderCustoms.map((office) => (
-                              <SelectItem key={office.id} value={office.id.toString()}>
-                                {office.name_fa}
-                                {office.customs_type === "rail" ? ` (${t("requestForm.customsRail")})` : ` (${t("requestForm.customsRoad")})`}
-                              </SelectItem>
-                            ))}
-                            {borderCustoms.length === 0 && !isLoadingBorderCustoms && (
-                              <SelectItem value="no-customs" disabled>
-                                {t("requestForm.noBorderCustoms")}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-
-                        {formData.iranDestCustomsOffice && (
-                          <div className="p-3 bg-accent rounded-md">
-                            {(() => {
-                              const office = borderCustoms.find(c => c.id.toString() === formData.iranDestCustomsOffice);
-                              return office ? (
-                                <div className="space-y-1 text-sm">
-                                  <div className="font-medium">{office.name_fa}</div>
-                                  {office.description && (
-                                    <div className="text-muted-foreground text-xs">{office.description}</div>
-                                  )}
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                        )}
-                      </>
-                    )}
-
-                    {/* CITY MODE */}
-                    {formData.iranDestType === "city" && (
-                      <>
-                        <Label className="flex items-center gap-1 text-sm font-medium">
-                          {t("requestForm.entryProvince")}
-                        </Label>
-                        <Select
-                          value={formData.iranEntryProvince}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, iranEntryProvince: value, iranDestCounty: "", iranDestCity: "" });
-                          }}
-                          disabled={isLoadingProvinces && provinceOptions.length === 0}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={isLoadingProvinces ? t("requestForm.loading") : t("requestForm.selectEntryProvince")} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {provinceOptions.map((province) => (
-                              <SelectItem key={province.id} value={province.id.toString()}>
-                                {province.name}
-                              </SelectItem>
-                            ))}
-                            {provinceOptions.length === 0 && !isLoadingProvinces && (
-                              <SelectItem value="no-province" disabled>
-                                {t("requestForm.noProvince")}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-
-                        <Label className="flex items-center gap-1 text-sm font-medium">
-                          {t("requestForm.destinationCounty")}
-                        </Label>
-                        <Select
-                          value={formData.iranDestCounty}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, iranDestCounty: value, iranDestCity: "" });
-                          }}
-                          disabled={!formData.iranEntryProvince || isLoadingIranDestCounties}
-                        >
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                !formData.iranEntryProvince
-                                  ? t("requestForm.selectProvinceFirst")
-                                  : isLoadingIranDestCounties
-                                    ? t("requestForm.loading")
-                                    : t("requestForm.selectCounty")
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {iranDestCounties.map((county) => (
-                              <SelectItem key={county.id} value={county.id.toString()}>
-                                {county.name}
-                              </SelectItem>
-                            ))}
-                            {iranDestCounties.length === 0 && formData.iranEntryProvince && !isLoadingIranDestCounties && (
-                              <SelectItem value="no-county" disabled>
-                                {t("requestForm.noCounty")}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-
-                        <Label className="flex items-center gap-1 text-sm font-medium">
-                          {t("requestForm.destinationCity")}
-                        </Label>
-                        <Select
-                          value={formData.iranDestCity}
-                          onValueChange={(value) => {
-                            setFormData({ ...formData, iranDestCity: value });
-                          }}
-                          disabled={!formData.iranDestCounty || isLoadingIranDestCities}
-                        >
-                          <SelectTrigger>
-                            <SelectValue
-                              placeholder={
-                                !formData.iranDestCounty
-                                  ? t("requestForm.selectCountyFirst")
-                                  : isLoadingIranDestCities
-                                    ? t("requestForm.loading")
-                                    : t("requestForm.selectCity")
-                              }
-                            />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {iranDestCities.map((city) => (
-                              <SelectItem key={city.id} value={city.id.toString()}>
-                                {city.name}
-                              </SelectItem>
-                            ))}
-                            {iranDestCities.length === 0 && formData.iranDestCounty && !isLoadingIranDestCities && (
-                              <SelectItem value="no-city" disabled>
-                                {t("requestForm.noCity")}
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </>
-                    )}
-
-                    {/* Derived province notice for port / customs modes */}
-                    {formData.iranDestType !== "city" && formData.iranEntryProvince && (
-                      <div className="text-xs text-muted-foreground">
-                        {t("requestForm.derivedProvince")}:{" "}
-                        <span className="font-medium text-foreground">
-                          {provinces.find(p => p.id.toString() === formData.iranEntryProvince)?.name}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Suggested entry port hint (city mode) */}
-                    {formData.iranDestType === "city" && formData.iranEntryProvince && recommendedPorts.length > 0 && (
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-muted-foreground">
-                          {t("requestForm.suggestedEntryPorts")}
-                        </Label>
-                        <div className="space-y-1">
-                          {recommendedPorts.slice(0, 3).map((port, index) => (
-                            <div key={port.port_id} className="flex items-center justify-between p-2 bg-accent rounded-md text-sm">
-                              <span className="flex items-center gap-2">
-                                {index === 0 && "🥇"} {index === 1 && "🥈"} {index === 2 && "🥉"}
-                                {port.port_name_fa} ({port.port_type === "sea" ? t("requestForm.portSea") : port.port_type === "air" ? t("requestForm.portAir") : t("requestForm.portLand")})
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {port.estimated_days} {t("requestForm.dayUnit")}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
           </>
         )}
 
