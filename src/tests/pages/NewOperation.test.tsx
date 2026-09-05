@@ -127,6 +127,25 @@ beforeEach(() => {
   vi.mocked(api.searchIranDestinations).mockResolvedValue({
     data: [
       {
+        identity: { type: "international_city", id: 66 },
+        label: "بندرعباس — international_city — ایران",
+        province: null,
+        secondary_label: "international_city — ایران",
+      },
+      {
+        identity: { type: "international_city", id: 64 },
+        label: "تهران — international_city — ایران",
+        province: null,
+        secondary_label: "international_city — ایران",
+      },
+      {
+        identity: { type: "international_city", id: 65 },
+        label:
+          "فرودگاه بین‌المللی امام خمینی تهران — international_city — ایران",
+        province: null,
+        secondary_label: "international_city — ایران",
+      },
+      {
         identity: { type: "port", id: 8 },
         label: "Bandar — port — Hormozgan",
         province: { id: 2, name: "Hormozgan" },
@@ -231,9 +250,10 @@ describe("Slice 5 governed creation", () => {
     fireEvent.change(screen.getByLabelText("Origin province"), {
       target: { value: "1" },
     });
-    fireEvent.change(screen.getByLabelText("Destination province"), {
-      target: { value: "1" },
-    });
+    await user.selectOptions(
+      screen.getByLabelText("Destination"),
+      "international_city:66",
+    );
     fireEvent.change(screen.getByLabelText("Planned departure"), {
       target: { value: "2026-08-10T10:00" },
     });
@@ -253,7 +273,7 @@ describe("Slice 5 governed creation", () => {
       customer_id: 7,
       project_public_id: "project-public",
       origin: { source_type: "province", source_id: 1 },
-      destination: { source_type: "province", source_id: 1 },
+      destination: { source_type: "international_city", source_id: 66 },
     });
     expect(submit).toBeDisabled();
   });
@@ -299,6 +319,50 @@ describe("Slice 5 governed creation", () => {
       screen.getByRole("option", { name: /Hormozgan/ }),
     ).toBeInTheDocument();
   });
+  it("uses the governed Iran selector for a domestic Tehran to Bandar Abbas operation", async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.getOperationalContext).mockResolvedValue({
+      data: {
+        organization_id: 1,
+        permissions: ["operational_shipment.create_direct"],
+      },
+    });
+    vi.mocked(api.createDirectOperationalShipment).mockResolvedValue({
+      data: { public_id: "11111111-1111-4111-8111-111111111111" },
+      meta: { created: true, replayed: false },
+    } as never);
+    renderPage("/operations/shipments/new?source=direct");
+    await screen.findByRole("option", { name: "Canonical Co" });
+    expect(api.searchIranDestinations).toHaveBeenCalledWith();
+    await user.selectOptions(screen.getByLabelText("Customer"), "7");
+    await user.selectOptions(screen.getByLabelText("Origin province"), "1");
+    expect(screen.getByLabelText("Destination")).toHaveTextContent(
+      "تهران — international_city — ایران",
+    );
+    expect(screen.getByLabelText("Destination")).toHaveTextContent(
+      "فرودگاه بین‌المللی امام خمینی تهران",
+    );
+    await user.selectOptions(
+      screen.getByLabelText("Destination"),
+      "international_city:66",
+    );
+    fireEvent.change(screen.getByLabelText("Planned departure"), {
+      target: { value: "2026-08-10T10:00" },
+    });
+    fireEvent.change(screen.getByLabelText("Planned arrival"), {
+      target: { value: "2026-08-10T11:00" },
+    });
+    await user.click(screen.getByRole("button", { name: "Create operation" }));
+    await waitFor(() =>
+      expect(api.createDirectOperationalShipment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          origin: { source_type: "province", source_id: 1 },
+          destination: { source_type: "international_city", source_id: 66 },
+        }),
+        expect.any(String),
+      ),
+    );
+  });
   it.each(["direct", "accepted_quote"] as const)(
     "persists selected active catalog cargo before leaving the %s creation flow",
     async (source) => {
@@ -340,9 +404,10 @@ describe("Slice 5 governed creation", () => {
       fireEvent.change(screen.getByLabelText("Origin province"), {
         target: { value: "1" },
       });
-      fireEvent.change(screen.getByLabelText("Destination province"), {
-        target: { value: "1" },
-      });
+      await user.selectOptions(
+        screen.getByLabelText("Destination"),
+        "international_city:66",
+      );
       fireEvent.change(screen.getByLabelText("Planned departure"), {
         target: { value: "2026-08-10T10:00" },
       });

@@ -279,6 +279,9 @@ export default function NewOperation() {
         setCountries(countryRows);
       })
       .catch((caught) => setError(errorText(caught)));
+    searchIranDestinations()
+      .then((response) => setIran(response.data))
+      .catch((caught) => setSelectorError(errorText(caught)));
     getShipmentCargoOptions()
       .then(setCargoOptions)
       .catch((caught) => setError(errorText(caught)));
@@ -365,27 +368,25 @@ export default function NewOperation() {
     } else if (sideName === "destination") void loadIran();
   };
   const location = (side: Side): OperationalLocationRef | null => {
+    const selected = iran.find(
+      (option) =>
+        `${option.identity.type}:${option.identity.id}` === side.iranId,
+    );
+    if (selected)
+      return {
+        source_type:
+          selected.identity.type === "port"
+            ? "iran_port"
+            : selected.identity.type === "customs"
+              ? "customs_office"
+              : selected.identity.type,
+        source_id: selected.identity.id,
+      };
     if (side.kind === "domestic" || (isIran(side) && side.provinceId))
       return side.provinceId
         ? { source_type: "province", source_id: Number(side.provinceId) }
         : null;
-    if (isIran(side)) {
-      const selected = iran.find(
-        (option) =>
-          `${option.identity.type}:${option.identity.id}` === side.iranId,
-      );
-      return selected
-        ? {
-            source_type:
-              selected.identity.type === "port"
-                ? "iran_port"
-                : selected.identity.type === "customs"
-                  ? "customs_office"
-                  : selected.identity.type,
-            source_id: selected.identity.id,
-          }
-        : null;
-    }
+    if (isIran(side)) return null;
     return side.cityId
       ? { source_type: "international_city", source_id: Number(side.cityId) }
       : null;
@@ -520,7 +521,24 @@ export default function NewOperation() {
           <option value="domestic">{t("operations.domesticIran")}</option>
           <option value="international">{t("operations.international")}</option>
         </select>
-        {side.kind === "domestic" ? (
+        {side.kind === "domestic" && sideName === "destination" ? (
+          <SearchSelect
+            id="destination"
+            label={t("operations.iranDestination")}
+            value={side.iranId}
+            onChange={(value) => setter({ ...side, iranId: value })}
+            items={iran}
+            loading={loading === "iran"}
+            error={selectorError}
+            onSearch={loadIran}
+            getId={(option) =>
+              `${option.identity.type}:${option.identity.id}`
+            }
+            render={(option) => option.label}
+            required
+            fieldError={sideError}
+          />
+        ) : side.kind === "domestic" ? (
           <>
             <Label htmlFor={`${sideName}-province`}>
               <RequiredLabel required>{t("operations.province")}</RequiredLabel>
