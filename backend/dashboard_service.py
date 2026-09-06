@@ -48,7 +48,7 @@ def list_(user):
     return [serialize(x) for x in db.session.scalars(select(Dashboard).where(Dashboard.organization_id == org, Dashboard.owner_user_id == uid, Dashboard.status == "ACTIVE").order_by(Dashboard.updated_at.desc())).all()]
 def get(public_id, user): return serialize(_get(public_id, user))
 def update(public_id, payload, user):
-    row = _get(public_id, user); expected = payload.get("expected_version")
+    row = _get(public_id, user, include_archived=False); expected = payload.get("expected_version")
     if not isinstance(expected, int): raise OperationalError("EXPECTED_VERSION_REQUIRED", "expected_version is required.", 422)
     if expected != row.version: raise OperationalError("DASHBOARD_VERSION_CONFLICT", f"current_version={row.version}; updated_at={row.updated_at.isoformat()}", 409)
     mutable = {"definition", "name", "description"}

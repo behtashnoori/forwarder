@@ -65,6 +65,9 @@ def test_revision_concurrency_and_lifecycle_do_not_mutate_history(dashboard_cont
     assert invalid.value.code == "EMPTY_DASHBOARD_PATCH"
     before = db.session.query(DashboardRevision).count()
     assert service.lifecycle(created["public_id"], user, "ARCHIVED")["status"] == "ARCHIVED"
+    with pytest.raises(OperationalError) as archived:
+        service.update(created["public_id"], {"expected_version": 2, "name": "نباید ذخیره شود"}, user)
+    assert archived.value.code == "DASHBOARD_NOT_FOUND"
     assert service.lifecycle(created["public_id"], user, "ACTIVE")["status"] == "ACTIVE"
     assert db.session.query(DashboardRevision).count() == before
 

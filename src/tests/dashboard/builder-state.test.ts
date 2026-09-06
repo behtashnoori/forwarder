@@ -1,0 +1,14 @@
+import { describe, expect, it } from "vitest";
+import { assess, builderReducer, newWidget, normalizeWidgetOrder, type BuilderState } from "@/dashboard/builder-state";
+import { operationsControlTower } from "@/dashboard/control-tower";
+import type { AnalyticsSemanticRegistry } from "@/lib/api";
+
+const metric=(metric_key:string,supported_dimensions:string[]=[])=>({metric_key,business_name:metric_key,grain:"fact",unit:"count",readiness:"READY" as const,supported_dimensions,supported_filters:["TIME","CUSTOMER","PROJECT"],supported_time_dimensions:["created"],supported_time_grains:["day"],drilldown_type:"shipment_list",drilldown_supported:true,semantic_version:"analytics-semantic-v1"});
+const registry:AnalyticsSemanticRegistry={semantic_version:"analytics-semantic-v1",metrics:[metric("ACTIVE_SHIPMENT_COUNT"),metric("OPEN_EXCEPTION_COUNT"),metric("OPEN_WORK_ITEM_COUNT"),metric("DOCUMENT_READINESS_COVERAGE"),metric("SHIPMENT_COUNT",["SHIPMENT_STATUS"]),metric("ROUTE_LEG_COUNT",["LEG_STATUS","TRANSPORT_MODE"]),metric("DELAY_CASE_COUNT",["TIME"])],dimensions:["TIME","CUSTOMER","PROJECT","SHIPMENT_STATUS","LEG_STATUS","TRANSPORT_MODE"].map(dimension_key=>({dimension_key,business_name:dimension_key,identity_source:"test",history_policy:"test",readiness:"READY" as const,nullable:true,semantic_version:"analytics-semantic-v1"})),relationships:[],coverage:{},null_semantics:["VALUE","ZERO","NULL_UNKNOWN","NOT_APPLICABLE","NOT_READY","OUT_OF_SCOPE"]};
+const draft=()=>({name:"شخصی",description:"توضیح",definition:structuredClone(operationsControlTower)});
+
+describe("dashboard builder state",()=>{
+  it("distinguishes semantic edits from UI selection",()=>{const persisted=draft();const state:BuilderState={persisted,draft:structuredClone(persisted),selectedWidgetId:null,status:"READY_CLEAN",issues:[]};expect(builderReducer(state,{type:"SELECT_WIDGET",widgetId:"active"}).status).toBe("READY_CLEAN");expect(builderReducer(state,{type:"CHANGE_META",field:"name",value:"جدید",registry}).status).toBe("READY_DIRTY_VALID")});
+  it("marks invalid drafts dirty and blocks incompatible widget definitions",()=>{const persisted=draft();const invalid=structuredClone(persisted);invalid.definition.widgets[0].query.metric_keys=["UNKNOWN"];expect(assess(persisted,invalid,registry).status).toBe("READY_DIRTY_INVALID")});
+  it("creates stable unique widget identity and normalizes accessible order",()=>{const first=newWidget("KPI_CARD","ACTIVE_SHIPMENT_COUNT","فعال");const second=newWidget("KPI_CARD","ACTIVE_SHIPMENT_COUNT","فعال");expect(first.widget_id).not.toBe(second.widget_id);const changed=normalizeWidgetOrder(operationsControlTower,["exceptions","active",...operationsControlTower.sections[0].widget_ids.slice(2)]);expect(changed.sections[0].widget_ids[0]).toBe("exceptions");expect(changed.widgets.find(item=>item.widget_id==="exceptions")?.layout.order).toBe(1)});
+});

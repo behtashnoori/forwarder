@@ -21,6 +21,16 @@ export function validateDashboardDefinition(definition: DashboardDefinition, reg
       if (widget.drilldown.enabled && !metric.drilldown_supported) issues.push({ widget_id: widget.widget_id, message: `${metricKey} does not support drilldown.` });
     }
     for (const dimension of widget.query.dimension_keys) if (!registry.dimensions.some((item) => item.dimension_key === dimension)) issues.push({ widget_id: widget.widget_id, message: `Unknown dimension: ${dimension}.` });
+    const dimensions = widget.query.dimension_keys;
+    if (widget.widget_type === "KPI_CARD" && (widget.query.metric_keys.length !== 1 || dimensions.length !== 0)) issues.push({widget_id:widget.widget_id,message:"KPI card requires one metric and no dimensions."});
+    if (widget.widget_type === "TREND" && (widget.query.metric_keys.length !== 1 || dimensions.length !== 1 || dimensions[0] !== "TIME" || !widget.query.time_dimension || !widget.query.time_grain)) issues.push({widget_id:widget.widget_id,message:"Trend requires governed time configuration."});
+    if (["BAR","STACKED_BAR","STATUS_DISTRIBUTION"].includes(widget.widget_type) && (widget.query.metric_keys.length !== 1 || dimensions.length !== 1 || dimensions[0] === "TIME")) issues.push({widget_id:widget.widget_id,message:"Chart requires one metric and one categorical dimension."});
+    if (![1,2,3,4].includes(widget.layout.col_span) || !Number.isInteger(widget.layout.order)) issues.push({widget_id:widget.widget_id,message:"Widget layout is invalid."});
+  }
+  const references = definition.sections.flatMap((section) => section.widget_ids);
+  if (new Set(references).size !== references.length || references.length !== widgetIds.size || references.some((id) => !widgetIds.has(id))) issues.push({message:"Sections must reference every widget exactly once."});
+  for (const filter of definition.global_filters) {
+    if (!["TIME","CUSTOMER","PROJECT"].includes(filter.dimension_key) || !filter.applicable_widget_ids.length || filter.applicable_widget_ids.some((id)=>!widgetIds.has(id))) issues.push({message:"Global filter applicability is invalid."});
   }
   return issues;
 }

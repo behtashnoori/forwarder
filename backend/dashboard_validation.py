@@ -38,4 +38,19 @@ def validate(definition):
             if q.get("time_grain") and ("TIME" not in dims or q["time_grain"] not in d["supported_time_grains"]): fail("UNSUPPORTED_TIME_GRAIN", m)
             if w.get("drilldown",{}).get("enabled") and not d["drilldown_supported"]: fail("DRILLDOWN_NOT_SUPPORTED",m)
         if any(x not in DIMENSIONS for x in dims): fail("UNKNOWN_DIMENSION", "unknown dimension")
+        widget_type=w["widget_type"]
+        if widget_type == "KPI_CARD" and (len(metrics) != 1 or dims): fail("INVALID_WIDGET_SHAPE", "KPI_CARD requires one metric and no dimensions")
+        if widget_type == "TREND" and (len(metrics) != 1 or dims != ["TIME"] or not q.get("time_dimension") or not q.get("time_grain")): fail("INVALID_WIDGET_SHAPE", "TREND requires one metric and governed time configuration")
+        if widget_type in {"BAR", "STATUS_DISTRIBUTION", "STACKED_BAR"} and (len(metrics) != 1 or len(dims) != 1 or dims[0] == "TIME"): fail("INVALID_WIDGET_SHAPE", "chart requires one metric and one categorical dimension")
+        layout=w.get("layout",{})
+        if layout.get("col_span") not in {1,2,3,4} or not isinstance(layout.get("order"),int): fail("INVALID_WIDGET_LAYOUT", "widget layout is invalid")
+    referenced=[]
+    for section in sections:
+        if not isinstance(section,dict) or not isinstance(section.get("widget_ids"),list): fail("INVALID_SECTION", "section shape is invalid")
+        referenced.extend(section["widget_ids"])
+    if len(referenced) != len(set(referenced)) or set(referenced) != ids: fail("INVALID_SECTION_WIDGETS", "sections must reference every widget exactly once")
+    for global_filter in definition.get("global_filters",[]):
+        if not isinstance(global_filter,dict) or global_filter.get("dimension_key") not in {"TIME","CUSTOMER","PROJECT"}: fail("INVALID_GLOBAL_FILTER", "global filter is not governed")
+        applicable=global_filter.get("applicable_widget_ids")
+        if not isinstance(applicable,list) or not applicable or not set(applicable).issubset(ids): fail("INVALID_GLOBAL_FILTER", "global filter applicability is invalid")
     return definition

@@ -4034,10 +4034,11 @@ export const queryAnalytics = (payload: AnalyticsQuery) => request<{data:Analyti
 // semantic query that produced the aggregate; no client population rebuilding.
 export const drilldownAnalytics = (metric:string, payload:AnalyticsDrilldownRequest) => request<{data:AnalyticsDrilldownResponse}>(`/api/v2/analytics/drilldown/${encodeURIComponent(metric)}`, { method:"POST", body:JSON.stringify(payload) });
 
-export interface PersistedDashboard { public_id:string; dashboard_type:"PERSONAL"; name:string; description:string; visibility:"PRIVATE"; status:"ACTIVE"|"ARCHIVED"; semantic_version:string; dashboard_schema_version:string; version:number; source_dashboard_public_id?:string|null; source_version?:number|null; source_type?:"SYSTEM"|null; definition:Record<string, unknown>; }
+export interface PersistedDashboard { public_id:string; dashboard_type:"PERSONAL"; name:string; description:string; visibility:"PRIVATE"; status:"ACTIVE"|"ARCHIVED"; semantic_version:string; dashboard_schema_version:string; version:number; source_dashboard_public_id?:string|null; source_version?:number|null; source_type?:"SYSTEM"|null; definition:import("@/dashboard/types").DashboardDefinition; }
 export const listDashboards = () => request<{data:PersistedDashboard[]}>("/api/v2/dashboards");
 export const getDashboard = (publicId:string) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}`);
 export const cloneSystemDashboard = (systemId:string, name?:string) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/system/${encodeURIComponent(systemId)}/clone`, {method:"POST",body:JSON.stringify(name ? {name} : {})});
-export const updateDashboard = (publicId:string, payload:Record<string, unknown>) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}`, {method:"PATCH",body:JSON.stringify(payload)});
+export interface DashboardUpdate { expected_version:number; name?:string; description?:string; definition?:import("@/dashboard/types").DashboardDefinition; change_reason?:string; }
+export const updateDashboard = (publicId:string, payload:DashboardUpdate) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}`, {method:"PATCH",body:JSON.stringify(payload)});
 export const archiveDashboard = (publicId:string) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}/archive`, {method:"POST"});
 export const restoreDashboard = (publicId:string) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}/restore`, {method:"POST"});
