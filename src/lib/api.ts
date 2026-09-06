@@ -4011,3 +4011,13 @@ export const materializeOrganizationGlobalPointAdoption = (row:OrganizationGloba
   request<{item:{adoption_public_id:string;global_point_public_id:string;logistics_point_public_id:string;
     materialization_state:"MATERIALIZED";version:number}}>(`/api/admin/global-logistics-point-adoptions/${row.public_id}/materialize`,
     {method:"POST",body:JSON.stringify({immutable_code:immutableCode})});
+
+// Analytics Foundation v1 types only. Dashboard UI intentionally does not exist yet.
+export type AnalyticsReadiness = "READY" | "PARTIAL" | "NOT_READY" | "BUSINESS_DEFINITION_REQUIRED";
+export type AnalyticsValueState = "VALUE" | "ZERO" | "NULL_UNKNOWN" | "NOT_APPLICABLE" | "NOT_READY" | "OUT_OF_SCOPE";
+export interface AnalyticsMetricDefinition { metric_key:string; business_name:string; grain:string; unit:string; readiness:AnalyticsReadiness; supported_dimensions:string[]; drilldown_type:string; semantic_version:string; }
+export interface AnalyticsDimensionDefinition { dimension_key:string; business_name:string; identity_source:string; history_policy:string; readiness:AnalyticsReadiness; nullable:boolean; semantic_version:string; }
+export interface AnalyticsCoverage { coverage_key:string; definition:string; eligible_count:number; covered_count:number; coverage_percent:number|null; state:AnalyticsValueState; }
+export interface AnalyticsQuery { metrics:string[]; dimensions?:string[]; filters?:Array<{dimension:string;value:string|number|boolean|string[]}>; time_grain?:"day"|"week"|"month"|"quarter"|"year"; limit?:number; cursor?:string; }
+export interface AnalyticsResponse { semantic_version:string; query:AnalyticsQuery; columns:string[]; rows:Array<Record<string, unknown>>; coverage:AnalyticsCoverage[]; warnings:string[]; pagination:{limit:number;cursor:string|null}; execution:{read_only:true;organization_scoped:true}; }
+export interface AnalyticsSemanticRegistry { semantic_version:string; metrics:AnalyticsMetricDefinition[]; dimensions:AnalyticsDimensionDefinition[]; relationships:Array<Record<string,string>>; coverage:Record<string,string>; null_semantics:AnalyticsValueState[]; }

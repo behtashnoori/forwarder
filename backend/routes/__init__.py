@@ -29,6 +29,7 @@ from .economics import economics_bp
 from .system import system_bp
 from .global_logistics_points import global_logistics_points_bp
 from .global_logistics_point_adoptions import global_logistics_point_adoptions_bp
+from .analytics import analytics_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -63,3 +64,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(system_bp)
     app.register_blueprint(global_logistics_points_bp)
     app.register_blueprint(global_logistics_point_adoptions_bp)
+    app.register_blueprint(analytics_bp)

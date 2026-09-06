@@ -80,6 +80,7 @@
     "LogisticsPoint": {"kind":"persisted_model","table":"logistics_point","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "ProjectLogisticsPoint": {"kind":"persisted_model","table":"project_logistics_point","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "CargoCatalogItem": {"kind":"persisted_model","table":"cargo_catalog_item","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
+    "ProjectCargoCatalogItem": {"kind":"persisted_model","table":"project_cargo_catalog_item","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Tenant-owned dependent preference association; composite foreign keys keep both the Project and CargoCatalogItem in the same organization and preference does not grant or restrict catalog eligibility."},
     "OperationalDocumentRequirement": {"kind":"persisted_model","table":"operational_document_requirement","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "ArtifactAssociation": {"kind":"persisted_model","table":"operational_artifact_association","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","integrity_risks":["document_file_id points into legacy-ambiguous case documents"]},
     "DocumentAssessment": {"kind":"persisted_model","table":"operational_document_assessment","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
