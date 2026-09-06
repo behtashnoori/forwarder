@@ -36,7 +36,7 @@ export interface DashboardDefinition {
   dashboard_id: string;
   name: string;
   description: string;
-  dashboard_type: "SYSTEM";
+  dashboard_type: "SYSTEM" | "PERSONAL";
   semantic_version: typeof DASHBOARD_SEMANTIC_VERSION;
   global_filters: GlobalFilterDefinition[];
   sections: DashboardSection[];

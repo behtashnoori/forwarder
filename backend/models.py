@@ -2113,6 +2113,7 @@ from backend.external_reference_models import (  # noqa: E402,F401
     ExternalReferenceType,
     OperationalShipmentExternalReference,
 )
+from backend.dashboard_models import Dashboard, DashboardRevision  # noqa: E402,F401
 
 
 __all__ = [
@@ -2211,4 +2212,6 @@ __all__ = [
     "GlobalLogisticsPointMode",
     "GlobalLogisticsPointSource",
     "OrganizationGlobalLogisticsPointAdoption",
+    "Dashboard",
+    "DashboardRevision",
 ]

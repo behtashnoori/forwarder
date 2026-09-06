@@ -29,6 +29,7 @@ tags:
   - name: CRM
   - name: User Management
   - name: Admin Panel
+  - name: Dashboards
   - name: Customer Gamification
   - name: Site Settings
 components:
@@ -918,6 +919,63 @@ components:
       properties:
         items: { type: array, items: { type: object, additionalProperties: false, required: [id, request_public_id, customer_label, route_label, quote_label, accepted_at], properties: { id: { type: integer, description: Accepted Quote compatibility ID; ExpertQuote has no public ID in the current schema. }, request_public_id: { type: string }, customer_label: { type: string }, route_label: { type: string, nullable: true }, quote_label: { type: string }, accepted_at: { type: string, format: date-time, nullable: true } } } }
         meta: { $ref: '#/components/schemas/SelectorMeta' }
+    DashboardDefinition:
+      type: object
+      description: Governed, server-validated dashboard-definition-v1 payload. Its query semantics never grant data access.
+      required: [dashboard_id, name, description, dashboard_type, semantic_version, widgets, sections]
+      properties:
+        dashboard_id: { type: string }
+        name: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        dashboard_type: { type: string, enum: [SYSTEM, PERSONAL] }
+        semantic_version: { type: string, example: analytics-semantic-v1 }
+        dashboard_schema_version: { type: string, example: dashboard-definition-v1 }
+        widgets: { type: array, maxItems: 30, items: { type: object } }
+        sections: { type: array, maxItems: 10, items: { type: object } }
+    Dashboard:
+      type: object
+      required: [public_id, dashboard_type, name, description, visibility, status, semantic_version, dashboard_schema_version, version, definition]
+      properties:
+        public_id: { type: string, format: uuid, description: Opaque public dashboard identity. }
+        dashboard_type: { type: string, enum: [PERSONAL] }
+        name: { type: string }
+        description: { type: string }
+        visibility: { type: string, enum: [PRIVATE] }
+        status: { type: string, enum: [ACTIVE, ARCHIVED] }
+        semantic_version: { type: string }
+        dashboard_schema_version: { type: string }
+        version: { type: integer, minimum: 1 }
+        source_dashboard_public_id: { type: string, nullable: true, description: Source-controlled System Dashboard identifier. }
+        source_version: { type: integer, nullable: true }
+        source_type: { type: string, enum: [SYSTEM], nullable: true }
+        cloned_at: { type: string, format: date-time, nullable: true }
+        definition: { $ref: '#/components/schemas/DashboardDefinition' }
+    DashboardEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { $ref: '#/components/schemas/Dashboard' } }
+    DashboardListEnvelope:
+      type: object
+      required: [data]
+      properties: { data: { type: array, items: { $ref: '#/components/schemas/Dashboard' } } }
+    DashboardPatch:
+      type: object
+      required: [expected_version]
+      additionalProperties: false
+      properties:
+        expected_version: { type: integer, minimum: 1 }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        definition: { $ref: '#/components/schemas/DashboardDefinition' }
+        change_reason: { type: string, maxLength: 255 }
+    DashboardError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties: { code: { type: string, example: DASHBOARD_VERSION_CONFLICT }, message: { type: string } }
 paths:
   /api/v2/analytics/drilldown/{metric}:
     parameters: [{ name: metric, in: path, required: true, description: Governed Analytics metric key; tenant identity is derived from the bearer context., schema: { type: string } }]
@@ -3197,3 +3255,14 @@ paths:
     post: { tags: [Shipment Economics], summary: Record an explicit contractual or manually approved FX fact, security: [{ bearerAuth: [] }], responses: { '201': { description: FX rate fact recorded. }, '422': { description: Invalid pair, rate, source, or authority. } } }
   /api/v2/projects/{project_id}/economics/projection:
     get: { tags: [Shipment Economics], summary: Aggregate complete shipment projections without zero filling, security: [{ bearerAuth: [] }], parameters: [{ name: project_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: stage, in: query, schema: { type: string, enum: [ESTIMATE, COMMITMENT, ACTUAL] } }, { name: reporting_currency, in: query, schema: { type: string } }], responses: { '200': { description: Project aggregation and shipment coverage. } } }
+  /api/v2/dashboards:
+    get: { tags: [Dashboards], summary: List the caller's active private personal dashboards, security: [{ bearerAuth: [] }], responses: { '200': { description: Active dashboards owned by the active member only., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardListEnvelope' } } } }, '401': { $ref: '#/components/responses/Unauthorized' } } }
+  /api/v2/dashboards/{public_id}:
+    get: { tags: [Dashboards], summary: Get a caller-owned private personal dashboard, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Dashboard, content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible; existence is deliberately hidden., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardError' } } } } } }
+    patch: { tags: [Dashboards], summary: Update a caller-owned private dashboard with optimistic concurrency, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/DashboardPatch' } } } }, responses: { '200': { description: Updated dashboard and immutable revision., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible. }, '409': { description: DASHBOARD_VERSION_CONFLICT; no rejected revision is created., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardError' } } } }, '422': { description: Structured validation error; no revision is created., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardError' } } } } } }
+  /api/v2/dashboards/system/{system_id}/clone:
+    post: { tags: [Dashboards], summary: Clone the canonical source-controlled System Dashboard into a private personal dashboard, security: [{ bearerAuth: [] }], parameters: [{ name: system_id, in: path, required: true, schema: { type: string, example: operations-control-tower } }], requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { name: { type: string, maxLength: 120 } } } } } }, responses: { '200': { description: Exact independent clone at revision 1, content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Unknown system dashboard. }, '422': { description: Validation failure. } } }
+  /api/v2/dashboards/{public_id}/archive:
+    post: { tags: [Dashboards], summary: Archive a caller-owned personal dashboard without changing definition revisions, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Archived dashboard., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible. } } }
+  /api/v2/dashboards/{public_id}/restore:
+    post: { tags: [Dashboards], summary: Restore a caller-owned archived personal dashboard without changing definition revisions, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Restored dashboard., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible. } } }
