@@ -13,6 +13,7 @@ servers:
 tags:
   - name: Operational Shipments
   - name: Operational Intelligence
+  - name: Analytics
   - name: Document Readiness
   - name: Operational Execution
   - name: Project Configuration
@@ -918,6 +919,37 @@ components:
         items: { type: array, items: { type: object, additionalProperties: false, required: [id, request_public_id, customer_label, route_label, quote_label, accepted_at], properties: { id: { type: integer, description: Accepted Quote compatibility ID; ExpertQuote has no public ID in the current schema. }, request_public_id: { type: string }, customer_label: { type: string }, route_label: { type: string, nullable: true }, quote_label: { type: string }, accepted_at: { type: string, format: date-time, nullable: true } } } }
         meta: { $ref: '#/components/schemas/SelectorMeta' }
 paths:
+  /api/v2/analytics/drilldown/{metric}:
+    parameters: [{ name: metric, in: path, required: true, description: Governed Analytics metric key; tenant identity is derived from the bearer context., schema: { type: string } }]
+    get:
+      tags: [Analytics]
+      summary: Legacy default drilldown only
+      description: Body-free compatibility route for the uncontextualised default metric population. Contextual browser clients MUST use POST.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 100 } }]
+      responses: { '200': { description: Authorized default drilldown population. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { description: Metric is not drillable or pagination is invalid. } }
+    post:
+      tags: [Analytics]
+      summary: Drill into the exact normalized semantic population
+      description: Uses the same governed filters, time role, time grain, and optional selected semantic segment as the aggregate query. Raw SQL, database tables, database columns, and client-supplied organization authority are not accepted.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                metrics: { type: array, items: { type: string }, description: Must contain exactly the path metric when present. }
+                dimensions: { type: array, items: { type: string, description: Governed semantic dimension key. } }
+                filters: { type: array, items: { type: object, required: [dimension, value], properties: { dimension: { type: string }, value: {} } } }
+                time_dimension: { type: string }
+                time_grain: { type: string, enum: [day, week, month, quarter, year] }
+                limit: { type: integer, minimum: 1, maximum: 200, default: 100 }
+                cursor: { type: string, description: Opaque continuation token returned by the previous response. }
+                segment: { type: object, required: [dimension, value], additionalProperties: false, properties: { dimension: { type: string, description: Compatible governed dimension selected in the chart. }, value: {} } }
+      responses: { '200': { description: Tenant-authorized, population-equivalent items and cursor pagination. }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { description: Invalid semantic context, incompatible segment, metric readiness, or cursor. } }
   /api/v2/operational-shipments/{shipment_id}/history:
     get:
       summary: Bounded shipment history across retained route revisions

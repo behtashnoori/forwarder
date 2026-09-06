@@ -21,9 +21,9 @@ const projection = {
   shipment_public_id: "shipment-public",
   calculated_at: "2026-08-09T00:00:00Z",
   stages: {
-    ESTIMATE: { revenue: { amount: "100.000000", currency: "USD" }, cost: null, margin: null, currency: "USD", completeness: "INCOMPLETE" as const, missing_inputs: ["COST_VISIBILITY_RESTRICTED"], source_observation_ids: [], applied_fx_rate_ids: [] },
-    COMMITMENT: { revenue: null, cost: null, margin: null, currency: null, completeness: "INCOMPLETE" as const, missing_inputs: [], source_observation_ids: [], applied_fx_rate_ids: [] },
-    ACTUAL: { revenue: null, cost: null, margin: null, currency: null, completeness: "INCOMPLETE" as const, missing_inputs: [], source_observation_ids: [], applied_fx_rate_ids: [] },
+    ESTIMATE: { revenue: { amount: "100.000000", currency: "USD" }, cost: null, margin: null, margin_percentage: null, currency: "USD", completeness: "INCOMPLETE" as const, missing_inputs: ["COST_VISIBILITY_RESTRICTED"], source_observation_ids: [], applied_fx_rate_ids: [] },
+    COMMITMENT: { revenue: null, cost: null, margin: null, margin_percentage: null, currency: null, completeness: "INCOMPLETE" as const, missing_inputs: [], source_observation_ids: [], applied_fx_rate_ids: [] },
+    ACTUAL: { revenue: null, cost: null, margin: null, margin_percentage: null, currency: null, completeness: "INCOMPLETE" as const, missing_inputs: [], source_observation_ids: [], applied_fx_rate_ids: [] },
   },
 };
 

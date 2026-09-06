@@ -84,3 +84,36 @@ def test_drilldown_reuses_metric_population_and_is_bounded(operational_app):
         detail = service.drilldown("PLANNED_SHIPMENT_COUNT", _user(operational_app), {}, 1)
         assert detail["items"] == [{"shipment_public_id": shipment.public_id}]
         assert detail["pagination"]["limit"] == 1
+
+def test_post_drilldown_carries_normalized_filters_and_segment(operational_app):
+    with operational_app.app_context():
+        shipment, leg, _milestones = setup(operational_app)
+        client = operational_app.test_client()
+        response = client.post(
+            "/api/v2/analytics/drilldown/SHIPMENT_COUNT",
+            json={"metrics": ["SHIPMENT_COUNT"], "dimensions": ["SHIPMENT_STATUS"], "filters": [], "segment": {"dimension": "SHIPMENT_STATUS", "value": "planned"}, "limit": 1},
+            headers=_auth(operational_app, "user"),
+        )
+        assert response.status_code == 200
+        data = response.json["data"]
+        assert data["items"] == [{"shipment_public_id": shipment.public_id}]
+        assert data["normalized_query"]["filters"] == [{"dimension": "SHIPMENT_STATUS", "value": "planned"}]
+
+        legs = client.post(
+            "/api/v2/analytics/drilldown/ROUTE_LEG_COUNT",
+            json={"metrics": ["ROUTE_LEG_COUNT"], "dimensions": ["LEG_STATUS"], "segment": {"dimension": "LEG_STATUS", "value": leg.status}},
+            headers=_auth(operational_app, "user"),
+        )
+        assert legs.status_code == 200
+        assert legs.json["data"]["items"] == [{"route_leg_id": leg.id, "shipment_public_id": shipment.public_id}]
+
+def test_legacy_get_ignores_a_json_body(operational_app):
+    with operational_app.app_context():
+        setup(operational_app)
+    response = operational_app.test_client().get(
+        "/api/v2/analytics/drilldown/SHIPMENT_COUNT",
+        json={"filters": [{"dimension": "SHIPMENT_STATUS", "value": "cancelled"}]},
+        headers=_auth(operational_app, "user"),
+    )
+    assert response.status_code == 200
+    assert response.json["data"]["normalized_query"]["filters"] == []

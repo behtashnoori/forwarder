@@ -29,4 +29,16 @@ def query(): return _call(service.query, request.get_json(silent=True) or {}, _u
 
 @analytics_bp.get("/api/v2/analytics/drilldown/<string:metric>")
 @require_auth
-def drilldown(metric): return _call(service.drilldown, metric, _user(), request.get_json(silent=True) or {}, request.args.get("limit", 100))
+def drilldown(metric):
+    """Legacy convenience route for the default (uncontextualised) population.
+
+    Contextual drilldowns use the POST route below.  In particular, this route
+    deliberately does not read a request body: GET bodies are not a browser
+    transport contract.
+    """
+    return _call(service.drilldown, metric, _user(), {"limit": request.args.get("limit", 100)})
+
+@analytics_bp.post("/api/v2/analytics/drilldown/<string:metric>")
+@require_auth
+def drilldown_context(metric):
+    return _call(service.drilldown, metric, _user(), request.get_json(silent=True) or {})

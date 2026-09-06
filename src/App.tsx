@@ -21,6 +21,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import OperationalShipments from "./pages/OperationalShipments";
 import OperationalShipmentDetail from "./pages/OperationalShipmentDetail";
 import OperationalWorkQueue from "./pages/OperationalWorkQueue";
+import OperationsControlTower from "./pages/OperationsControlTower";
 import NewOperation from "./pages/NewOperation";
 import OipSituationDetail from "./pages/OipSituationDetail";
 import AdminRoute from "./components/AdminRoute";
@@ -140,6 +141,7 @@ const App = () => (
                 <Route path="/operations/shipments/new" element={<ProtectedRoute><NewOperation /></ProtectedRoute>} />
                 <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalShipmentDetail /></ProtectedRoute>} />
                 <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalWorkQueue /></ProtectedRoute>} />
+                <Route path="/operations/control-tower" element={<ProtectedRoute><OperationsControlTower /></ProtectedRoute>} />
                 <Route path="/operations/intelligence/:id" element={<ProtectedRoute><OipSituationDetail /></ProtectedRoute>} />
                 <Route path="/operations/projects/:projectId/units" element={<ProtectedRoute><ExecutionUnits /></ProtectedRoute>} />
                 <Route path="/customer/:customerId" element={

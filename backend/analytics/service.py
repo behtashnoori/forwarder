@@ -225,12 +225,51 @@ def query(payload, user):
     normalized = {"metrics": metrics, "dimensions": dimensions, "filters": filters, "time_grain": time_grain, "time_dimension": time_dimension}
     return {"semantic_version": SEMANTIC_VERSION, "normalized_query": normalized, "query": normalized, "columns": columns, "rows": rows[:limit], "coverage": coverage(org), "warnings": warnings, "pagination": {"limit": limit, "next_cursor": None}, "execution": {"read_only": True, "organization_scoped": True}}
 
-def drilldown(metric, user, payload=None, limit=100):
+def _drilldown_context(metric, payload):
+    """Validate a drilldown as the original semantic query plus one segment.
+
+    The segment is intentionally not a free-form database predicate.  It must
+    be a dimension supported by the metric and is converted to the same
+    governed filter vocabulary used by aggregate queries.
+    """
+    payload = dict(payload or {})
+    cursor = payload.pop("cursor", None)
+    if cursor is not None and (not isinstance(cursor, str) or not cursor.isdigit()):
+        _error("INVALID_CURSOR", "cursor must be an opaque numeric continuation token.")
+    segment = payload.pop("segment", None)
+    supplied_metrics = payload.get("metrics")
+    if supplied_metrics is not None and supplied_metrics != [metric]:
+        _error("METRIC_CONTEXT_MISMATCH", "Drilldown context must name exactly the path metric.")
+    payload["metrics"] = [metric]
+    filters = list(payload.get("filters") or [])
+    if segment is not None:
+        if not isinstance(segment, dict) or set(segment) != {"dimension", "value"}:
+            _error("INVALID_SEGMENT", "segment requires a semantic dimension and value.")
+        dimension, value = segment["dimension"], segment["value"]
+        if dimension not in METRICS[metric]["supported_dimensions"]:
+            _error("INCOMPATIBLE_DIMENSION", f"{metric} cannot be segmented by {dimension}.")
+        if dimension not in METRICS[metric]["supported_filters"]:
+            _error("INCOMPATIBLE_FILTER", f"{metric} cannot be filtered by {dimension}.")
+        if any(item.get("dimension") == dimension and item.get("value") != value for item in filters if isinstance(item, dict)):
+            _error("FILTER_SEGMENT_CONFLICT", "The selected segment conflicts with the normalized query.")
+        if not any(item.get("dimension") == dimension for item in filters if isinstance(item, dict)):
+            filters.append({"dimension": dimension, "value": value})
+    payload["filters"] = filters
+    _metrics, dimensions, filters, requested_limit, time_grain, time_dimension = _check_request(payload)
+    return dimensions, filters, requested_limit, time_grain, time_dimension, segment, int(cursor or 0)
+
+def _page(items, limit, offset):
+    page = items[offset:offset + limit]
+    next_offset = offset + len(page)
+    return page, str(next_offset) if next_offset < len(items) else None
+
+def drilldown(metric, user, payload=None, limit=None):
     require_permission(user, "operational_shipment.read")
     if metric not in METRICS or METRICS[metric]["readiness"] not in {READY, PARTIAL}: _error("METRIC_NOT_READY", "Metric is not drillable.")
     if not METRICS[metric]["drilldown_supported"]: _error("INCOMPATIBLE_DIMENSION", "This metric has no safe drilldown.")
-    payload = dict(payload or {}); payload["metrics"] = [metric]; payload["limit"] = limit
-    _metrics, dimensions, filters, requested_limit, time_grain, time_dimension = _check_request(payload)
+    payload = dict(payload or {})
+    if limit is not None: payload["limit"] = limit
+    dimensions, filters, requested_limit, time_grain, time_dimension, segment, cursor = _drilldown_context(metric, payload)
     org = organization_for_user(int(user["id"])); scoped = _scope_shipment_ids(org, filters)
     items = []
     if metric in {"ROUTE_LEG_COUNT", "COMPLETED_LEG_COUNT", "LEG_TRANSIT_TIME"}:
@@ -251,13 +290,23 @@ def drilldown(metric, user, payload=None, limit=100):
         for row in db.session.scalars(select(OperationalException).where(OperationalException.organization_id == org)).all():
             if row.operational_shipment_id in scoped and (metric != "OPEN_EXCEPTION_COUNT" or row.resolved_at is None):
                 items.append({"exception_public_id": row.public_id, "shipment_public_id": db.session.get(OperationalShipment, row.operational_shipment_id).public_id})
-    elif metric == "DOCUMENT_REQUIREMENT_COUNT":
-        for row in db.session.scalars(select(OperationalDocumentRequirement).where(OperationalDocumentRequirement.organization_id == org, OperationalDocumentRequirement.is_active.is_(True), OperationalDocumentRequirement.applicability_state == "APPLICABLE")).all():
-            if row.operational_shipment_id in scoped:
-                items.append({"document_requirement_public_id": row.public_id, "shipment_public_id": db.session.get(OperationalShipment, row.operational_shipment_id).public_id})
+    elif metric in {"DOCUMENT_REQUIREMENT_COUNT", "DOCUMENT_READINESS_COVERAGE"}:
+        # Coverage is defined over the governed, applicable document scope.  A
+        # coverage drilldown returns that eligible shipment population with its
+        # readiness flag rather than substituting a generic shipment list.
+        if metric == "DOCUMENT_READINESS_COVERAGE":
+            ready = {row.operational_shipment_id for row in db.session.scalars(select(OperationalDocumentRequirement).where(OperationalDocumentRequirement.organization_id == org, OperationalDocumentRequirement.is_active.is_(True))).all()}
+            for shipment in _shipments(org):
+                if shipment.id in scoped:
+                    items.append({"shipment_public_id": shipment.public_id, "document_readiness": shipment.id in ready})
+        else:
+            for row in db.session.scalars(select(OperationalDocumentRequirement).where(OperationalDocumentRequirement.organization_id == org, OperationalDocumentRequirement.is_active.is_(True), OperationalDocumentRequirement.applicability_state == "APPLICABLE")).all():
+                if row.operational_shipment_id in scoped:
+                    items.append({"document_requirement_public_id": row.public_id, "shipment_public_id": db.session.get(OperationalShipment, row.operational_shipment_id).public_id})
     else:
         # Shipment-facing metrics are represented by the authorized population, never a tenant-wide fallback.
         for shipment in _shipments(org):
             status = {"ACTIVE_SHIPMENT_COUNT": {"planned", "in_progress"}, "PLANNED_SHIPMENT_COUNT": {"planned"}, "IN_PROGRESS_SHIPMENT_COUNT": {"in_progress"}, "COMPLETED_SHIPMENT_COUNT": {"completed"}, "CANCELLED_SHIPMENT_COUNT": {"cancelled"}}.get(metric)
             if shipment.id in scoped and (not status or shipment.lifecycle_status in status): items.append({"shipment_public_id": shipment.public_id})
-    return {"semantic_version": SEMANTIC_VERSION, "metric": metric, "drilldown_type": METRICS[metric]["drilldown_type"], "normalized_query": {"filters": filters, "dimensions": dimensions, "time_grain": time_grain, "time_dimension": time_dimension}, "items": items[:requested_limit], "pagination": {"limit": requested_limit, "next_cursor": None}}
+    page, next_cursor = _page(items, requested_limit, cursor)
+    return {"semantic_version": SEMANTIC_VERSION, "metric": metric, "drilldown_type": METRICS[metric]["drilldown_type"], "normalized_query": {"metrics": [metric], "filters": filters, "dimensions": dimensions, "time_grain": time_grain, "time_dimension": time_dimension}, "segment": segment, "items": page, "pagination": {"limit": requested_limit, "next_cursor": next_cursor}}
