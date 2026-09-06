@@ -1,5 +1,9 @@
 """Phase 1B multi-leg route-plan and checkpoint orchestration."""
 from __future__ import annotations
+from backend.services.occurrence_projection_service import atomic_command
+from backend.services import occurrence_projection_service as projection
+from backend.services import operational_read_service as reads
+from copy import deepcopy
 
 from datetime import datetime, timedelta, timezone
 import heapq
@@ -58,33 +62,6 @@ def _reserve_idempotency(org: int, operation: str, resource_type: str, resource_
     ))
 
 
-def _synchronize_checkpoint_actual(checkpoint: OperationalCheckpoint, milestone: Milestone, occurred_at) -> None:
-    """Keep checkpoint actuals derived from the currently verified milestone event."""
-    milestone.occurred_at = occurred_at
-    if milestone.milestone_type == "checkpoint_arrival":
-        checkpoint.actual_arrival_at = occurred_at
-    elif milestone.milestone_type == "checkpoint_processing_complete":
-        checkpoint.status = "ready_to_depart" if occurred_at is not None else "processing"
-    elif milestone.milestone_type == "checkpoint_departure":
-        checkpoint.actual_departure_at = occurred_at
-        checkpoint.status = "completed" if occurred_at is not None else "ready_to_depart"
-
-
-def _invalidate_checkpoint_actual(checkpoint: OperationalCheckpoint, milestone: Milestone) -> None:
-    """Invalidate a corrected verified value until its replacement is re-verified."""
-    milestone.occurred_at = None
-    if milestone.milestone_type == "checkpoint_arrival":
-        checkpoint.actual_arrival_at = None
-        # A departure cannot remain current when its prerequisite arrival was corrected.
-        checkpoint.actual_departure_at = None
-        checkpoint.status = "arrived"
-    elif milestone.milestone_type == "checkpoint_processing_complete":
-        checkpoint.status = "processing"
-    elif milestone.milestone_type == "checkpoint_departure":
-        checkpoint.actual_departure_at = None
-        checkpoint.status = "ready_to_depart"
-
-
 def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipment:
     # Route reads are part of the baseline operational-shipment detail view.
     # Mutation capabilities remain explicit, while every route operation is
@@ -132,6 +109,8 @@ def _location(reference: Any):
 
 def _serialize_plan(plan: RoutePlan, include_children=True) -> dict:
     data = {
+        **reads.scope(plan),
+        "scope": "current_route" if plan.is_active else "historical_route" if plan.status == "superseded" else "route_plan",
         "id": plan.id,
         "revision_number": plan.revision_number, "status": plan.status,
         "is_active": plan.is_active, "created_from_plan_id": plan.created_from_plan_id,
@@ -150,6 +129,9 @@ def _serialize_plan(plan: RoutePlan, include_children=True) -> dict:
 
 def _serialize_leg(row: RouteLeg) -> dict:
     return {
+        **reads.scope(db.session.get(RoutePlan, row.route_plan_id)),
+        "departure_time": reads.time_value(row.planned_departure, row.projected_departure, row.actual_departure),
+        "arrival_time": reads.time_value(row.planned_arrival, row.projected_arrival, row.actual_arrival),
         "id": row.id, "sequence_number": row.sequence_number,
         "origin": row.origin_snapshot, "destination": row.destination_snapshot,
         "origin_location_id": row.origin_location_id, "destination_location_id": row.destination_location_id,
@@ -167,6 +149,9 @@ def _serialize_leg(row: RouteLeg) -> dict:
 def _serialize_checkpoint(row: OperationalCheckpoint) -> dict:
     milestones = db.session.scalars(select(Milestone).where(Milestone.checkpoint_id == row.id).order_by(Milestone.planned_at, Milestone.id)).all()
     return {
+        **reads.scope(db.session.get(RoutePlan, row.route_plan_id)),
+        "arrival_time": reads.time_value(row.planned_arrival_at, row.projected_arrival_at, row.actual_arrival_at),
+        "departure_time": reads.time_value(row.planned_departure_at, row.projected_departure_at, row.actual_departure_at),
         "id": row.id, "route_leg_id": row.route_leg_id, "sequence_number": row.sequence_number,
         "checkpoint_type": row.checkpoint_type, "canonical_location_id": row.canonical_location_id,
         "planned_arrival_at": row.planned_arrival_at.isoformat() if row.planned_arrival_at else None,
@@ -238,6 +223,8 @@ def _add_leg(plan: RoutePlan, payload: dict, organization_id: int | None = None)
         transport_mode=mode, carrier_reference=payload.get("carrier_reference"),
         planned_departure=departure, planned_arrival=arrival, status="planned")
     db.session.add(row); db.session.flush()
+    shipment = db.session.get(OperationalShipment, plan.operational_shipment_id)
+    projection.ensure_leg_milestones(row, shipment)
     return row
 
 
@@ -387,7 +374,7 @@ def validate_plan(shipment_id: int, plan_id: int, user: dict) -> dict:
     if [x.sequence_number for x in legs] != list(range(1, len(legs)+1)): error("ROUTE_SEQUENCE_GAP", f"route_plan:{plan.id}", "sequence_number", "Leg sequence must be contiguous.")
     for previous, current in zip(legs, legs[1:]):
         if previous.destination_location_id != current.origin_location_id: error("ROUTE_LOCATION_DISCONTINUITY", f"route_leg:{current.id}", "origin_location_id", "Adjacent legs must be location-continuous.")
-        if current.planned_departure < previous.planned_arrival: error("INVALID_ROUTE_TIMELINE", f"route_leg:{current.id}", "planned_departure", "Legs cannot overlap.")
+        if _aware(current.planned_departure) < _aware(previous.planned_arrival): error("INVALID_ROUTE_TIMELINE", f"route_leg:{current.id}", "planned_departure", "Legs cannot overlap.")
     finals = [x for x in checkpoints if x.checkpoint_type == "final_delivery"]
     if len(finals) > 1: error("CHECKPOINT_SEQUENCE_INVALID", f"route_plan:{plan.id}", "checkpoints", "Final delivery must be unique.")
     if finals and finals[0] is not checkpoints[-1]: error("CHECKPOINT_SEQUENCE_INVALID", f"checkpoint:{finals[0].id}", "sequence_number", "Final delivery must be last.")
@@ -413,12 +400,16 @@ def activate_plan(shipment_id: int, plan_id: int, payload: dict, user: dict) -> 
     if not result["valid"]: raise base.OperationalError("ROUTE_PLAN_INVALID", "Route plan validation failed.")
     active = db.session.scalar(select(RoutePlan).where(RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True)).with_for_update())
     if active:
+        if reads.plan_has_execution(active):
+            raise base.OperationalError("EXECUTED_ROUTE_REQUIRES_REPLAN", "Preserve executed segments through replan.", 409)
         active.is_active=False; active.status="superseded"; active.version += 1
         base._audit(shipment.organization_id, user["id"], "route_plan.superseded", "RoutePlan", active.id)
         db.session.flush()
     plan.is_active=True; plan.status="active"; plan.effective_at=utcnow(); plan.version += 1
     base._audit(shipment.organization_id, user["id"], "route_plan.activated", "RoutePlan", plan.id)
     base._outbox(shipment.organization_id, "route_plan.activated", "RoutePlan", plan.id)
+    db.session.flush()
+    projection.project_shipment(shipment)
     db.session.commit()
     return _serialize_plan(plan)
 
@@ -509,7 +500,9 @@ def replan(
             update = leg_updates.get(leg.id, {})
             if update and (
                 leg.status == "completed" or leg.actual_departure is not None
-                or leg.actual_arrival is not None
+                or leg.actual_arrival is not None or leg.status == "in_progress"
+                or any(projection.effective_occurrence(m) is not None for m in db.session.scalars(
+                    select(Milestone).where(Milestone.route_leg_id == leg.id)))
             ):
                 raise base.OperationalError(
                     "COMPLETED_ROUTE_SEGMENT_IMMUTABLE",
@@ -562,6 +555,8 @@ def replan(
             if update and (
                 row.status == "completed" or row.actual_arrival_at is not None
                 or row.actual_departure_at is not None or verified
+                or any(projection.effective_occurrence(m) is not None for m in db.session.scalars(
+                    select(Milestone).where(Milestone.checkpoint_id == row.id)))
             ):
                 raise base.OperationalError(
                     "COMPLETED_ROUTE_SEGMENT_IMMUTABLE",
@@ -634,7 +629,11 @@ def replan(
         ).order_by(Milestone.id)).all()
         for row in milestones:
             checkpoint_update = checkpoint_updates.get(row.checkpoint_id, {})
+            leg_update = leg_updates.get(row.route_leg_id, {})
             planned_at = row.planned_at
+            leg_time = {"departure": "planned_departure", "arrival": "planned_arrival"}.get(row.milestone_type)
+            if leg_time and leg_time in leg_update:
+                planned_at = base._parse_utc(leg_update[leg_time], leg_time)
             if row.milestone_type == "checkpoint_arrival" and "planned_arrival_at" in checkpoint_update:
                 planned_at = base._parse_utc(
                     checkpoint_update["planned_arrival_at"], "planned_arrival_at",
@@ -652,9 +651,34 @@ def replan(
                 source_milestone_id=row.id, milestone_type=row.milestone_type,
                 planned_at=planned_at, projected_at=planned_at,
                 occurred_at=row.occurred_at, projected_state=row.projected_state,
+                lifecycle_status=row.lifecycle_status, prior_active_status=row.prior_active_status,
+                started_at=row.started_at, completed_at=row.completed_at, skipped_at=row.skipped_at,
+                cancelled_at=row.cancelled_at, blocked_at=row.blocked_at,
                 verification_state=row.verification_state, version=row.version,
+                milestone_type_snapshot=deepcopy(row.milestone_type_snapshot),
+                expected_point_id=row.expected_point_id,
+                expected_point_snapshot=deepcopy(row.expected_point_snapshot),
+                target_metadata=deepcopy(row.target_metadata), sequence=row.sequence,
             ))
         db.session.flush()
+        for leg_id in leg_map.values():
+            projection.ensure_leg_milestones(db.session.get(RouteLeg, leg_id), shipment)
+        db.session.flush()
+        # Rebuild inherited execution if a legacy source cache predates report-based projection.
+        for inherited in db.session.scalars(select(Milestone).where(Milestone.route_plan_id == target.id)):
+            event = projection.effective_occurrence(inherited)
+            if event is None:
+                continue
+            inherited.occurred_at = event.occurred_at
+            if inherited.milestone_type in projection.PHYSICAL:
+                inherited.lifecycle_status = "COMPLETED"
+                inherited.completed_at = event.occurred_at
+            owner = db.session.get(RouteLeg, inherited.route_leg_id) if inherited.route_leg_id else None
+            field = {"departure": "actual_departure", "arrival": "actual_arrival"}.get(inherited.milestone_type)
+            if owner and field and _aware(getattr(owner, field)) != _aware(event.occurred_at):
+                verification = inherited.verification_state
+                projection.project(inherited)
+                inherited.verification_state = verification
         _replan_failure("milestone_clone", _fail_at)
 
         validation = validate_plan(shipment_id, target.id, user)
@@ -716,6 +740,8 @@ def replan(
             "target_revision": target.revision_number,
         })
         _replan_failure("before_commit", _fail_at)
+        db.session.flush()
+        projection.project_shipment(shipment)
         db.session.commit()
         return _serialize_plan(target)
     except IntegrityError as exc:
@@ -729,6 +755,7 @@ def replan(
         raise
 
 
+@atomic_command
 def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user: dict, key: str, action: str) -> dict:
     base.require_permission(user, "checkpoint.report")
     shipment = _shipment(shipment_id, user, "operational_shipment.read")
@@ -736,6 +763,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
         OperationalCheckpoint.id == checkpoint_id, RoutePlan.operational_shipment_id == shipment.id
     ).with_for_update())
     if checkpoint is None: raise base.OperationalError("RESOURCE_NOT_FOUND", "Checkpoint was not found.", 404)
+    payload = {**payload, "occurred_at": base._parse_utc(payload.get("occurred_at"), "occurred_at").isoformat()}
     operation = f"checkpoint_{action}_report"
     replay, request_hash = _idempotency(shipment.organization_id, operation, "checkpoint", checkpoint.id, key, payload)
     if replay:
@@ -750,6 +778,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
     ).with_for_update())
     if milestone is None:
         raise base.OperationalError("REQUIRED_CHECKPOINT_MISSING", "Checkpoint milestone definition was not found.", 409)
+    projection.assert_new_root(milestone)
     if action == "arrive":
         if checkpoint.status not in {"planned", "approaching"}: raise base.OperationalError("INVALID_CHECKPOINT_TRANSITION", "Checkpoint cannot arrive from its current state.", 409)
         checkpoint.status="arrived"
@@ -771,6 +800,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
     db.session.add(event)
     milestone.occurred_at=occurred; milestone.verification_state="reported"; milestone.projected_state="reported"; milestone.version += 1
     checkpoint.verification_state="reported"; checkpoint.version += 1
+    projection.project(milestone)
     _reserve_idempotency(shipment.organization_id, operation, "checkpoint", checkpoint.id, key, request_hash, checkpoint.id)
     event_name = {"arrive":"checkpoint.arrived","complete_processing":"checkpoint.processing_completed","depart":"checkpoint.departed"}[action]
     base._audit(shipment.organization_id, user["id"], event_name, "OperationalCheckpoint", checkpoint.id)
@@ -779,6 +809,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
     return _serialize_checkpoint(checkpoint)
 
 
+@atomic_command
 def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_id: int, expected_version: int, user: dict, key: str) -> dict:
     base.require_permission(user, "checkpoint.verify")
     shipment = _shipment(shipment_id, user, "operational_shipment.read")
@@ -802,19 +833,16 @@ def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_
     if milestone.version != expected_version: raise base.OperationalError("STALE_MILESTONE_VERSION", "Milestone version is stale.", 409)
     if milestone.verification_state != "reported":
         raise base.OperationalError("INVALID_MILESTONE_TRANSITION", "Only a reported milestone can be verified.", 409)
-    report = db.session.scalar(select(MilestoneEvent).where(
-        MilestoneEvent.milestone_id == milestone.id,
-        MilestoneEvent.event_type.in_(["reported", "corrected"]),
-    ).order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc()))
+    report = projection.effective_occurrence(milestone)
     if report is None: raise base.OperationalError("INVALID_CHECKPOINT_TRANSITION", "No report is available to verify.", 409)
     if report.actor_user_id == user["id"]:
         raise base.OperationalError("REPORTER_CANNOT_VERIFY_OWN_EVENT", "Reporter and verifier must be different users.", 403)
     event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="verified", occurred_at=report.occurred_at,
-        actor_user_id=user["id"], supersedes_event_id=report.id,
+        actor_user_id=user["id"], related_event_id=report.id,
         idempotency_key=f"verify:{key}", request_hash=request_hash)
     db.session.add(event); milestone.verification_state="verified"; milestone.version += 1
     checkpoint.verification_state="verified"; checkpoint.version += 1
-    _synchronize_checkpoint_actual(checkpoint, milestone, report.occurred_at)
+    # Verification is a decision only; actuals already came from the report.
     db.session.flush()
     _reserve_idempotency(
         shipment.organization_id, "checkpoint_milestone_verify", "milestone",
@@ -826,6 +854,7 @@ def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_
     return {"checkpoint": _serialize_checkpoint(checkpoint), "milestone": {"id": milestone.id, "version": milestone.version, "verification_state": milestone.verification_state}}
 
 
+@atomic_command
 def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_id: int, payload: dict, user: dict, key: str) -> dict:
     base.require_permission(user, "milestone.correct")
     shipment = _shipment(shipment_id, user, "operational_shipment.read")
@@ -834,18 +863,15 @@ def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone
         RoutePlan.operational_shipment_id == shipment.id,
     ).with_for_update())
     if milestone is None: raise base.OperationalError("RESOURCE_NOT_FOUND", "Checkpoint milestone was not found.", 404)
+    payload = {**payload, "occurred_at": base._parse_utc(payload.get("occurred_at"), "occurred_at").isoformat(),
+               "reason": str(payload.get("reason") or "").strip()}
     replay, request_hash = _idempotency(shipment.organization_id, "checkpoint_milestone_correct", "milestone", milestone.id, key, payload)
     if replay:
         return {"id": milestone.id, "version": milestone.version, "verification_state": milestone.verification_state}
     if milestone.version != payload.get("expected_version"): raise base.OperationalError("STALE_MILESTONE_VERSION", "Milestone version is stale.", 409)
-    if milestone.verification_state != "verified":
-        raise base.OperationalError("INVALID_MILESTONE_TRANSITION", "Only a verified milestone can be corrected.", 409)
     reason = str(payload.get("reason") or "").strip()
     if not reason: raise base.OperationalError("CORRECTION_REASON_REQUIRED", "Correction reason is required.")
-    previous = db.session.scalar(select(MilestoneEvent).where(
-        MilestoneEvent.milestone_id == milestone.id,
-        MilestoneEvent.event_type.in_(["reported", "corrected"]),
-    ).order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc()))
+    previous = projection.effective_occurrence(milestone)
     if previous is None: raise base.OperationalError("INVALID_CHECKPOINT_TRANSITION", "No event exists to correct.", 409)
     occurred = base._parse_utc(payload.get("occurred_at"), "occurred_at")
     event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="corrected", occurred_at=occurred,
@@ -854,7 +880,7 @@ def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone
     checkpoint = db.session.get(OperationalCheckpoint, checkpoint_id)
     db.session.add(event); milestone.verification_state="reported"; milestone.version += 1
     checkpoint.verification_state="reported"; checkpoint.version += 1
-    _invalidate_checkpoint_actual(checkpoint, milestone)
+    projection.project(milestone)
     _reserve_idempotency(shipment.organization_id, "checkpoint_milestone_correct", "milestone", milestone.id, key, request_hash, milestone.id)
     base._audit(shipment.organization_id, user["id"], "checkpoint.milestone_corrected", "Milestone", milestone.id)
     base._outbox(shipment.organization_id, "checkpoint.milestone_corrected", "Milestone", milestone.id)
@@ -973,7 +999,7 @@ def recalculate_projected_timeline(shipment_id: int, user: dict, expected_versio
             "checkpoint_departure": projected_departure,
         }
         for milestone in milestones:
-            target = _aware(milestone.occurred_at) if milestone.verification_state == "verified" else milestone_times[milestone.milestone_type]
+            target = _aware(milestone.occurred_at) if milestone.occurred_at is not None else milestone_times[milestone.milestone_type]
             if _aware(milestone.projected_at) != target:
                 milestone.projected_at = target
                 changed = True
@@ -1072,7 +1098,7 @@ def reconcile_route_exceptions(
         predecessor, successor = by_id[dep.predecessor_checkpoint_id], by_id[dep.successor_checkpoint_id]
         if predecessor.status not in {"departed", "completed"} and successor.status in {"approaching", "arrived", "processing", "ready_to_depart", "blocked"}:
             conditions[(successor.id, "ROUTE_DEPENDENCY_BLOCKED")] = (now, "A predecessor checkpoint is incomplete.", "critical")
-            successor.status = "blocked"
+            projection.block_checkpoint(successor, shipment, user, "ROUTE_DEPENDENCY_BLOCKED")
     all_rows = db.session.scalars(select(OperationalWorkItem).where(
         OperationalWorkItem.organization_id == shipment.organization_id,
         OperationalWorkItem.operational_shipment_id == shipment.id,
@@ -1230,13 +1256,16 @@ def _resolve_route_exception(
 
 def timeline(shipment_id: int, user: dict) -> dict:
     shipment = _shipment(shipment_id, user, PLAN_PERMISSIONS["read"])
-    plan = db.session.scalar(select(RoutePlan).where(RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True)))
-    if plan is None: return {"planned": [], "projected": [], "actual": [], "delays": [], "dependencies": [], "open_exceptions": []}
+    plan = projection.active_plan(shipment)
+    route_read = reads.current_route(shipment, plan)
+    if plan is None:
+        return {**route_read, "planned": [], "projected": [], "actual": [], "effective": [],
+                "delays": [], "dependencies": [], "open_exceptions": []}
     checkpoints = db.session.scalars(select(OperationalCheckpoint).where(OperationalCheckpoint.route_plan_id == plan.id).order_by(OperationalCheckpoint.sequence_number)).all()
     now = utcnow(); delays = []
     for row in checkpoints:
-        baseline = row.planned_departure_at or row.planned_arrival_at
-        projected = row.projected_departure_at or row.projected_arrival_at
+        baseline = _aware(row.planned_departure_at or row.planned_arrival_at)
+        projected = _aware(row.projected_departure_at or row.projected_arrival_at)
         if baseline and projected and projected > baseline:
             delays.append({"checkpoint_id": row.id, "seconds": int((projected-baseline).total_seconds())})
         elif baseline and not row.actual_departure_at and baseline < now:
@@ -1248,8 +1277,8 @@ def timeline(shipment_id: int, user: dict) -> dict:
     )).all()
     effective = []
     for checkpoint in checkpoints:
-        arrival_source = "actual" if checkpoint.actual_arrival_at else "projected" if checkpoint.projected_arrival_at else "planned"
-        departure_source = "actual" if checkpoint.actual_departure_at else "projected" if checkpoint.projected_departure_at else "planned"
+        arrival_source = "actual" if checkpoint.actual_arrival_at else "projected" if checkpoint.projected_arrival_at else "planned" if checkpoint.planned_arrival_at else "unavailable"
+        departure_source = "actual" if checkpoint.actual_departure_at else "projected" if checkpoint.projected_departure_at else "planned" if checkpoint.planned_departure_at else "unavailable"
         effective.append({"checkpoint_id": checkpoint.id,
                           "arrival_at": (_aware(checkpoint.actual_arrival_at or checkpoint.projected_arrival_at or checkpoint.planned_arrival_at).isoformat()
                                          if checkpoint.actual_arrival_at or checkpoint.projected_arrival_at or checkpoint.planned_arrival_at else None),
@@ -1258,6 +1287,8 @@ def timeline(shipment_id: int, user: dict) -> dict:
                                            if checkpoint.actual_departure_at or checkpoint.projected_departure_at or checkpoint.planned_departure_at else None),
                           "departure_source": departure_source})
     return {
+        **route_read,
+        "diagnostics": {"reconciliation_version": plan.version},
         "route_plan_id": plan.id, "route_plan_revision": plan.revision_number,
         "reconciliation_version": plan.version,
         "reconciled_at": plan.timeline_reconciled_at.isoformat() if plan.timeline_reconciled_at else None,

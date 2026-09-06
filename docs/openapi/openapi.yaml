@@ -904,6 +904,30 @@ components:
         items: { type: array, items: { type: object, additionalProperties: false, required: [id, request_public_id, customer_label, route_label, quote_label, accepted_at], properties: { id: { type: integer, description: Accepted Quote compatibility ID; ExpertQuote has no public ID in the current schema. }, request_public_id: { type: string }, customer_label: { type: string }, route_label: { type: string, nullable: true }, quote_label: { type: string }, accepted_at: { type: string, format: date-time, nullable: true } } } }
         meta: { $ref: '#/components/schemas/SelectorMeta' }
 paths:
+  /api/v2/operational-shipments/{shipment_id}/history:
+    get:
+      summary: Bounded shipment history across retained route revisions
+      description: Includes physical occurrences, verification decisions, corrections and revision records. Relationship ambiguity is explicit. Recording order does not determine effective occurrence authority.
+      parameters:
+        - in: path
+          name: shipment_id
+          required: true
+          schema: {type: string}
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 1, default: 1}
+        - in: query
+          name: per_page
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200':
+          description: Shipment-scoped items, pagination and current route revision metadata
+        '403':
+          description: Permission denied
+        '404':
+          description: Shipment not found within authorized scope
+        '422':
+          description: Invalid pagination
   /api/operations/selectors/customers:
     get: { tags: [Operational Shipments], summary: Search minimal canonical customer selectors for direct creation permission, description: Requires operational_shipment.create_direct and exactly one active operational membership. Customers are canonical identities, not evidence of tenant ownership., security: [{ bearerAuth: [] }], parameters: [{ name: q, in: query, schema: { type: string, maxLength: 160 } }, { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }], responses: { '200': { description: Stable, bounded minimal customer results with no contact or CRM details., content: { application/json: { schema: { $ref: '#/components/schemas/CustomerSelectorPage' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '422': { description: Invalid selector query. } } }
   /api/operations/selectors/projects:

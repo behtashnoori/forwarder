@@ -1,6 +1,7 @@
 """Transactional application services for the Phase 1A operational slice."""
 
 from __future__ import annotations
+from backend.services.occurrence_projection_service import atomic_command
 
 from datetime import datetime, timedelta, timezone
 import hashlib
@@ -841,29 +842,30 @@ def scoped_shipment_by_public_id(
 
 
 def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
-    plan = db.session.scalar(
-        select(RoutePlan).where(
-            RoutePlan.operational_shipment_id == shipment.id,
-            RoutePlan.is_active.is_(True),
-        )
-    )
+    from backend.services import operational_read_service as reads
+    from backend.services import occurrence_projection_service as authority
+    plan = authority.active_plan(shipment)
+    route_read = reads.current_route(shipment, plan)
     legs = db.session.scalars(
         select(RouteLeg)
-        .where(RouteLeg.route_plan_id == plan.id)
+        .where(RouteLeg.route_plan_id == (plan.id if plan else -1))
         .order_by(RouteLeg.sequence_number)
     ).all()
-    leg = legs[0]
+    leg = legs[0] if legs else None
     leg_ids = [row.id for row in legs]
     milestones = db.session.scalars(
         select(Milestone)
         .where(
-            (Milestone.route_plan_id == plan.id) | (Milestone.route_leg_id.in_(leg_ids))
+            (Milestone.route_plan_id == (plan.id if plan else -1)) | (Milestone.route_leg_id.in_(leg_ids)),
+            Milestone.operational_shipment_id == shipment.id,
+            Milestone.organization_id == shipment.organization_id,
         )
         .order_by(Milestone.planned_at, Milestone.id)
     ).all()
     events = db.session.scalars(
         select(MilestoneEvent)
-        .where(MilestoneEvent.milestone_id.in_([m.id for m in milestones]))
+        .where(MilestoneEvent.milestone_id.in_([m.id for m in milestones]),
+               MilestoneEvent.organization_id == shipment.organization_id)
         .order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc())
         .limit(20)
     ).all()
@@ -881,24 +883,19 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
     customer_row = (
         db.session.get(Customer, shipment.customer_id) if shipment.customer_id else None
     )
-    audits = db.session.scalars(
-        select(OperationalAudit)
-        .where(
-            OperationalAudit.organization_id == shipment.organization_id,
-            OperationalAudit.entity_id.in_([shipment.id] + [m.id for m in milestones]),
-        )
-        .order_by(OperationalAudit.recorded_at.desc())
-        .limit(20)
-    ).all()
+    audits = db.session.scalars(reads.audit_query(shipment).order_by(
+        OperationalAudit.recorded_at.desc(), OperationalAudit.id.desc()).limit(20)).all()
+    proofs = route_read["milestone_evidence"]
     current = next(
-        (m for m in milestones if m.verification_state != "verified"),
-        milestones[-1] if milestones else None,
+        (m for m in milestones if not proofs.get(m.id, {}).get("effective_event_public_id")),
+        None,
     )
     now = utcnow()
     overdue = [
         m
         for m in milestones
-        if m.verification_state != "verified"
+        if not proofs.get(m.id, {}).get("effective_event_public_id")
+        and m.planned_at is not None
         and m.planned_at.replace(tzinfo=m.planned_at.tzinfo or timezone.utc) < now
     ]
     display_name = (
@@ -930,11 +927,16 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             "planned_arrival": row.planned_arrival.isoformat(),
             "status": row.status,
             "version": row.version,
+            "execution_provenance": next((v for v in route_read["route_legs"] if v["id"] == row.id), None),
         }
 
     return {
         "public_id": shipment.public_id,
-        "status": shipment.lifecycle_status,
+        "status": route_read["status"],
+        "operational_provenance": route_read,
+        "scope": "current_route",
+        "recent_events_scope": "current_route",
+        "history_scope": "shipment_history",
         "version": shipment.version,
         "customer": customer,
         "project_public_id": db.session.scalar(
@@ -962,8 +964,8 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             "status": plan.status,
             "is_active": plan.is_active,
             "version": plan.version,
-        },
-        "route_leg": leg_data(leg),
+        } if plan else None,
+        "route_leg": leg_data(leg) if leg else None,
         "route_legs": [leg_data(row) for row in legs],
         "current_milestone": current.milestone_type if current else None,
         "overdue": bool(overdue),
@@ -975,25 +977,15 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             {
                 "id": m.id,
                 "type": m.milestone_type,
-                "planned_at": m.planned_at.isoformat(),
-                "occurred_at": m.occurred_at.isoformat() if m.occurred_at else None,
+                "planned_at": reads.iso(m.planned_at),
+                "execution_evidence": proofs.get(m.id),
+                "occurred_at": proofs.get(m.id, {}).get("effective_occurred_at"),
                 "verification_state": m.verification_state,
                 "version": m.version,
             }
             for m in milestones
         ],
-        "recent_events": [
-            {
-                "id": e.id,
-                "milestone_id": e.milestone_id,
-                "event_type": e.event_type,
-                "occurred_at": e.occurred_at.isoformat(),
-                "recorded_at": e.recorded_at.isoformat(),
-                "reason": e.reason,
-                "supersedes_event_id": e.supersedes_event_id,
-            }
-            for e in events
-        ],
+        "recent_events": [reads.event_view(e, shipment) for e in events],
         "open_work_items": [
             {
                 "id": w.id,
@@ -1006,7 +998,8 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             for w in work
         ],
         "audit_summary": [
-            {"id": a.id, "action": a.action, "recorded_at": a.recorded_at.isoformat()}
+            {"id": a.id, "action": a.action, "recorded_at": a.recorded_at.isoformat(),
+             "entity_type": a.entity_type, "entity_id": a.entity_id, "scope": "shipment_audit"}
             for a in audits
         ],
     }
@@ -1034,6 +1027,7 @@ def _milestone_target(
     return shipment, milestone
 
 
+@atomic_command
 def record_event(
     shipment_id: int, milestone_id: int, payload: dict, user: dict, key: str
 ) -> MilestoneEvent:
@@ -1062,6 +1056,8 @@ def record_event(
                 409,
             )
         return existing
+    from backend.services import occurrence_projection_service as projection
+    projection.assert_new_root(milestone)
     event = MilestoneEvent(
         organization_id=shipment.organization_id,
         milestone_id=milestone.id,
@@ -1084,16 +1080,24 @@ def record_event(
         milestone.id,
     )
     _outbox(shipment.organization_id, "milestone.reported", "Milestone", milestone.id)
+    projection.project(milestone)
     db.session.commit()
     return event
 
 
+@atomic_command
 def verify_milestone(
     shipment_id: int, milestone_id: int, expected_version: int, user: dict
 ) -> Milestone:
     shipment, milestone = _milestone_target(
         shipment_id, milestone_id, user, "milestone.verify"
     )
+    replay = db.session.scalar(select(MilestoneEvent).where(
+        MilestoneEvent.milestone_id == milestone.id,
+        MilestoneEvent.idempotency_key == f"verify:{milestone.id}:{expected_version}",
+    ))
+    if replay and replay.actor_user_id == user["id"]:
+        return milestone
     if milestone.version != expected_version:
         raise OperationalError(
             "STALE_AGGREGATE_VERSION",
@@ -1106,14 +1110,10 @@ def verify_milestone(
             "Only a reported milestone can be verified.",
             409,
         )
-    latest_report = db.session.scalar(
-        select(MilestoneEvent)
-        .where(
-            MilestoneEvent.milestone_id == milestone.id,
-            MilestoneEvent.event_type.in_(["reported", "corrected"]),
-        )
-        .order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc())
-    )
+    from backend.services import occurrence_projection_service as projection
+    latest_report = projection.effective_occurrence(milestone)
+    if latest_report is None:
+        raise OperationalError("INVALID_EVENT_TARGET", "No occurrence is available to verify.", 409)
     if latest_report and latest_report.actor_user_id == user["id"]:
         raise OperationalError(
             "FORBIDDEN_OPERATION",
@@ -1124,6 +1124,7 @@ def verify_milestone(
         organization_id=shipment.organization_id,
         milestone_id=milestone.id,
         event_type="verified",
+        related_event_id=latest_report.id,
         occurred_at=milestone.occurred_at,
         actor_user_id=user["id"],
         idempotency_key=f"verify:{milestone.id}:{expected_version}",
@@ -1133,7 +1134,7 @@ def verify_milestone(
     )
     db.session.add(event)
     milestone.verification_state = "verified"
-    milestone.projected_state = "verified"
+    milestone.projected_state = "reported"
     milestone.version += 1
     for item in db.session.scalars(
         select(OperationalWorkItem).where(
@@ -1170,6 +1171,7 @@ def verify_milestone(
     return milestone
 
 
+@atomic_command
 def correct_milestone(
     shipment_id: int, milestone_id: int, payload: dict, user: dict, key: str
 ) -> MilestoneEvent:
@@ -1212,11 +1214,8 @@ def correct_milestone(
             "Milestone was changed by another operation.",
             409,
         )
-    previous = db.session.scalar(
-        select(MilestoneEvent)
-        .where(MilestoneEvent.milestone_id == milestone.id)
-        .order_by(MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc())
-    )
+    from backend.services import occurrence_projection_service as projection
+    previous = projection.effective_occurrence(milestone)
     if previous is None:
         raise OperationalError(
             "INVALID_MILESTONE_TRANSITION", "There is no event to correct.", 409
@@ -1246,6 +1245,7 @@ def correct_milestone(
         {"reason": reason},
     )
     _outbox(shipment.organization_id, "milestone.corrected", "Milestone", milestone.id)
+    projection.project(milestone)
     db.session.commit()
     return event
 

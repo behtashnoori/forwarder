@@ -50,7 +50,13 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Applying explicit migration to {target}; revision={args.revision}")
     cfg = alembic_config(url)
     prepare_version_table_for_upgrade(url, cfg)
-    command.upgrade(cfg, args.revision)
+    from backend.migration_runtime import database_engine
+    from backend.milestone_upgrade_bridge import upgrade_with_bridge
+    engine = database_engine(url)
+    try:
+        upgrade_with_bridge(cfg, args.revision, engine)
+    finally:
+        engine.dispose()
     print("Migration completed.")
     return 0
 

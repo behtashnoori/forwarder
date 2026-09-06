@@ -1563,6 +1563,9 @@ export interface OperationalQuoteSelector { id: number; request_public_id: strin
 export interface IranDestinationOption { identity: { type: "city" | "port" | "customs" | "international_city"; id: number }; label: string; province: { id: number; name: string } | null; secondary_label: string }
 export interface SelectorPage<T> { items: T[]; meta: { count: number; limit: number } }
 export interface OperationalShipmentSummary {
+  scope?: "current_route";
+  recent_events_scope?: "current_route";
+  history_scope?: "shipment_history";
   public_id: string;
   status: string;
   version: number;

@@ -116,9 +116,32 @@ def reopen(shipment_id, milestone_id):
 @require_auth
 def events(shipment_id):
     try:
-        return jsonify({"data": svc.events(shipment_id, user())})
+        return jsonify({"data": svc.events(shipment_id, user(), request.args.get("page", 1), request.args.get("per_page", 100)),
+                        "meta": {"scope": "shipment_events", "history_endpoint": f"/api/v2/operational-shipments/{shipment_id}/history"}})
     except OperationalError as exc:
         return error(exc)
+
+
+@operational_execution_bp.get("/api/v2/operational-shipments/<shipment_id>/history")
+@require_auth
+def shipment_history(shipment_id):
+    from backend.services import operational_read_service as reads
+    from backend.services.operational_service import scoped_shipment, require_permission
+    try:
+        actor = user()
+        require_permission(actor, "operational_shipment.read")
+        shipment = scoped_shipment(shipment_id, actor)
+        return jsonify({"data": reads.history(shipment, request.args.get("page", 1), request.args.get("per_page", 50))})
+    except OperationalError as exc:
+        return error(exc)
+
+
+def event_payload():
+    payload = dict(request.get_json(silent=True) or {})
+    key = request.headers.get("Idempotency-Key")
+    if key is not None:
+        payload["idempotency_key"] = key
+    return payload
 
 
 @operational_execution_bp.post(
@@ -128,7 +151,7 @@ def events(shipment_id):
 def create_event(shipment_id, milestone_id):
     try:
         row = svc.create_event(
-            shipment_id, milestone_id, request.get_json(silent=True) or {}, user()
+            shipment_id, milestone_id, event_payload(), user()
         )
         return jsonify({"data": {"public_id": row.public_id}}), 201
     except OperationalError as exc:
@@ -142,7 +165,7 @@ def create_event(shipment_id, milestone_id):
 def correct_event(shipment_id, event_id):
     try:
         row = svc.correct_event(
-            shipment_id, event_id, request.get_json(silent=True) or {}, user()
+            shipment_id, event_id, event_payload(), user()
         )
         return jsonify({"data": {"public_id": row.public_id}}), 201
     except OperationalError as exc:
@@ -158,7 +181,7 @@ def verify(shipment_id, event_id):
         return jsonify(
             {
                 "data": svc.verify_event(
-                    shipment_id, event_id, request.get_json(silent=True) or {}, user()
+                    shipment_id, event_id, event_payload(), user()
                 )
             }
         )

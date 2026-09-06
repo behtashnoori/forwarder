@@ -324,9 +324,8 @@ def test_verification_separation_and_one_migration_head(execution_app):
         rows, _ = svc.initialize(
             shipment.public_id, {"expected_shipment_version": 1}, actor(execution_app)
         )
-        event = MilestoneEvent.query.filter_by(
-            milestone_id=rows[0].id, event_type="INITIALIZED"
-        ).one()
+        event = svc.create_event(shipment.public_id, rows[0].public_id,
+            {"expected_version": 1, "effective_at": datetime.now(timezone.utc).isoformat()}, actor(execution_app))
         with pytest.raises(svc.OperationalError) as self_verify:
             svc.verify_event(
                 shipment.public_id, event.public_id, {}, actor(execution_app)
@@ -336,12 +335,12 @@ def test_verification_separation_and_one_migration_head(execution_app):
             shipment.public_id, event.public_id, {}, actor(execution_app, "verifier")
         )
         assert (
-            event.verification_state == "verified"
-            and MilestoneEvent.query.filter_by(event_type="VERIFIED").count() == 1
+            event.verification_state == "unverified"
+            and MilestoneEvent.query.filter_by(event_type="VERIFIED", related_event_id=event.id).count() == 1
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20260909_cargo_transport_allocation"
+        "20260912_execution_authority"
     ]
 
 

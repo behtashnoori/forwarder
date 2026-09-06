@@ -850,8 +850,21 @@ class MilestoneEvent(db.Model):
     supersedes_event_id = db.Column(
         BIGINT, db.ForeignKey("milestone_event.id", ondelete="RESTRICT"), nullable=True
     )
+    related_event_id = db.Column(
+        BIGINT, db.ForeignKey("milestone_event.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     idempotency_key = db.Column(db.String(100), nullable=False)
     request_hash = db.Column(db.String(64), nullable=False)
+
+
+# ORM runtime protection also applies to SQLite; PostgreSQL additionally protects raw SQL.
+from sqlalchemy import event as _sa_event
+
+
+@_sa_event.listens_for(MilestoneEvent, "before_update")
+@_sa_event.listens_for(MilestoneEvent, "before_delete")
+def _immutable_milestone_event(mapper, connection, target):
+    raise ValueError("milestone_event is append-only")
 
 
 class OperationalReasonMixin:

@@ -467,7 +467,7 @@ def test_checkpoint_report_verify_correct_and_actual_derivation(operational_app)
         arrival=Milestone.query.filter_by(checkpoint_id=checkpoint.id,milestone_type="checkpoint_arrival").one()
         occurred=datetime.now(timezone.utc)-timedelta(minutes=5)
         service.checkpoint_command(shipment.id,checkpoint.id,{"expected_version":1,"occurred_at":occurred.isoformat()},_user(operational_app),"arrival-report","arrive")
-        assert checkpoint.actual_arrival_at is None and arrival.verification_state=="reported"
+        assert checkpoint.actual_arrival_at.replace(tzinfo=timezone.utc) == occurred and arrival.verification_state=="reported"
         with pytest.raises(base.OperationalError) as separation:
             service.verify_checkpoint_milestone(
                 shipment.id,checkpoint.id,arrival.id,arrival.version,_user(operational_app),"self-verify"
@@ -487,7 +487,7 @@ def test_checkpoint_report_verify_correct_and_actual_derivation(operational_app)
         assert corrected["verification_state"]=="reported"
         event=MilestoneEvent.query.filter_by(milestone_id=arrival.id,event_type="corrected").one()
         assert event.supersedes_event_id and event.reason
-        assert checkpoint.actual_arrival_at is None and old_actual != checkpoint.actual_arrival_at
+        assert checkpoint.actual_arrival_at.replace(tzinfo=timezone.utc) == occurred+timedelta(minutes=1) and old_actual != checkpoint.actual_arrival_at
         reverified=service.verify_checkpoint_milestone(
             shipment.id,checkpoint.id,arrival.id,arrival.version,_user(operational_app,"verifier"),"reverify-arrival"
         )
@@ -638,7 +638,7 @@ def test_http_checkpoint_lifecycle_correction_and_reverification(operational_app
     )
     assert corrected.status_code == 201
     with operational_app.app_context():
-        assert db.session.get(OperationalCheckpoint,checkpoint_id).actual_arrival_at is None
+        assert db.session.get(OperationalCheckpoint,checkpoint_id).actual_arrival_at.replace(tzinfo=timezone.utc) == corrected_at
     reverified=client.post(
         f"/api/operational-shipments/{shipment_id}/checkpoints/{checkpoint_id}/milestones/{milestone_id}/verify",
         json={"expected_version":4},

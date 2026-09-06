@@ -1,6 +1,8 @@
 """Bounded Release 1.9.0 operational execution commands and read models."""
 
 from __future__ import annotations
+from backend.services.occurrence_projection_service import atomic_command
+from backend.services import occurrence_projection_service as projection
 from datetime import timezone
 import hashlib
 import json
@@ -390,6 +392,8 @@ def transition(shipment_id, milestone_id, payload, user):
             "Milestone was changed by another operation.",
             409,
         )
+    if m.route_leg_id or m.checkpoint_id:
+        raise OperationalError("OCCURRENCE_COMMAND_REQUIRED", "Route milestones require occurrence commands.", 409)
     target = str(payload.get("target_status") or "").upper()
     reason = str(payload.get("reason") or "").strip() or None
     allowed = TRANSITIONS.get(m.lifecycle_status, set())
@@ -489,6 +493,8 @@ def reopen(shipment_id, milestone_id, payload, user):
             "Milestone was changed by another operation.",
             409,
         )
+    if m.route_leg_id or m.checkpoint_id:
+        raise OperationalError("OCCURRENCE_COMMAND_REQUIRED", "Route milestones require occurrence correction.", 409)
     reason = str(payload.get("reason") or "").strip()
     if m.lifecycle_status not in {"COMPLETED", "SKIPPED", "CANCELLED"} or not reason:
         raise OperationalError(
@@ -513,34 +519,66 @@ def reopen(shipment_id, milestone_id, payload, user):
     return milestone_projection(m)
 
 
-def events(shipment_id, user):
+def events(shipment_id, user, page=1, per_page=100):
     shipment = _shipment(shipment_id, user)
+    try:
+        page, per_page = int(page), int(per_page)
+    except (ValueError, TypeError):
+        raise OperationalError("INVALID_PAGINATION", "Pagination must be numeric.", 422)
+    if page < 1 or not 1 <= per_page <= 100:
+        raise OperationalError("INVALID_PAGINATION", "Page must be positive; per_page must be 1-100.", 422)
     mids = select(Milestone.id).where(Milestone.operational_shipment_id == shipment.id)
-    rows = db.session.scalars(
-        select(MilestoneEvent)
-        .where(
-            MilestoneEvent.organization_id == shipment.organization_id,
-            MilestoneEvent.milestone_id.in_(mids),
-        )
-        .order_by(
-            MilestoneEvent.occurred_at, MilestoneEvent.recorded_at, MilestoneEvent.id
-        )
-    ).all()
-    milestones = (
-        {
-            row.id: row
-            for row in db.session.scalars(
-                select(Milestone).where(
-                    Milestone.id.in_({event.milestone_id for event in rows})
-                )
-            ).all()
-        }
-        if rows
-        else {}
-    )
-    event_by_id = {row.id: row for row in rows}
+    from backend.services import operational_read_service as reads
+    from backend.operational_models import RoutePlan
+    joined = db.session.execute(select(MilestoneEvent, Milestone, RoutePlan)
+        .join(Milestone, Milestone.id == MilestoneEvent.milestone_id)
+        .outerjoin(RoutePlan, RoutePlan.id == Milestone.route_plan_id)
+        .where(MilestoneEvent.organization_id == shipment.organization_id,
+               Milestone.operational_shipment_id == shipment.id,
+               Milestone.organization_id == shipment.organization_id)
+        .order_by(MilestoneEvent.occurred_at.desc(), MilestoneEvent.recorded_at.desc(), MilestoneEvent.id.desc())
+        .offset((page-1)*per_page).limit(per_page)).all()
+    rows = [e for e, m, p in joined]
+    milestones = {m.id: m for e, m, p in joined}
+    plans = {p.id: p for e, m, p in joined if p is not None}
+    event_by_id = {e.id: e for e in rows}
+    missing_targets = {e.related_event_id or e.supersedes_event_id for e in rows} - set(event_by_id) - {None}
+    if missing_targets:
+        for target in db.session.scalars(select(MilestoneEvent).where(
+            MilestoneEvent.id.in_(missing_targets), MilestoneEvent.organization_id == shipment.organization_id,
+            MilestoneEvent.milestone_id.in_(mids))):
+            event_by_id[target.id] = target
+    decisions = {}
+    decision_rows = db.session.scalars(select(MilestoneEvent).where(
+        MilestoneEvent.organization_id == shipment.organization_id,
+        MilestoneEvent.event_type.in_(projection.DECISIONS),
+        (MilestoneEvent.related_event_id.in_([e.id for e in rows]) |
+         MilestoneEvent.supersedes_event_id.in_([e.id for e in rows])))).all() if rows else []
+    for decision in decision_rows:
+        if decision.event_type not in projection.DECISIONS:
+            continue
+        target_id = decision.related_event_id or decision.supersedes_event_id
+        if target_id not in event_by_id or event_by_id[target_id].event_type not in projection.OCCURRENCES or event_by_id[target_id].milestone_id != decision.milestone_id:
+            continue
+        previous = decisions.get(target_id)
+        if previous is None or (decision.recorded_at, decision.id) > (previous.recorded_at, previous.id):
+            decisions[target_id] = decision
+    def relationship(event):
+        category = reads.classification(event)
+        target_id = (event.related_event_id or event.supersedes_event_id) if category == "VERIFICATION_DECISION" else event.supersedes_event_id if category == "CORRECTION" else None
+        target = event_by_id.get(target_id)
+        valid = bool(target and target.milestone_id == event.milestone_id and target.event_type in projection.OCCURRENCES)
+        return {"related_event_public_id": target.public_id if valid and category == "VERIFICATION_DECISION" else None,
+                "correction_of_event_public_id": target.public_id if valid and category == "CORRECTION" else None,
+                "relationship_status": "RESOLVED" if valid else "UNRESOLVED" if category in {"CORRECTION", "VERIFICATION_DECISION"} else "NOT_APPLICABLE"}
     return [
         {
+            **reads.scope(plans.get(milestones[e.milestone_id].route_plan_id)),
+            "scope": "shipment_events",
+            "classification": reads.classification(e),
+            "business_label": reads.business_label(e),
+            "diagnostics": {"raw_event_type": e.event_type},
+            "actor_user_id": e.actor_user_id,
             "public_id": e.public_id,
             "milestone_public_id": milestones[e.milestone_id].public_id,
             "event_type": e.event_type,
@@ -549,118 +587,124 @@ def events(shipment_id, user):
             "source_channel": e.source_channel,
             "reason": e.reason,
             "note": e.note,
-            "verification_state": e.verification_state,
-            "verified_at": e.verified_at.isoformat() if e.verified_at else None,
-            "correction_of_event_public_id": event_by_id[
-                e.supersedes_event_id
-            ].public_id
-            if e.supersedes_event_id
-            else None,
+            "verification_state": "verified" if e.id in decisions else e.verification_state,
+            "verified_at": (decisions[e.id].verified_at or decisions[e.id].recorded_at).isoformat()
+                if e.id in decisions else e.verified_at.isoformat() if e.verified_at else None,
+            **relationship(e),
         }
         for e in rows
     ]
 
 
+def _command_key(payload, operation, target):
+    # Legacy clients have no key: derive a stable command identity, including version.
+    from backend.services.operational_service import _hash, _require_idempotency_key
+    key = payload.get("idempotency_key")
+    if key is None:
+        key = _hash({"operation": operation, "target": target, "payload": payload})
+    _require_idempotency_key(key)
+    return key
+
+
+def _replay(milestone, key, command):
+    from backend.services.operational_service import _hash
+    digest = _hash(command)
+    row = db.session.scalar(select(MilestoneEvent).where(
+        MilestoneEvent.milestone_id == milestone.id, MilestoneEvent.idempotency_key == key,
+    ))
+    if row and row.request_hash != digest:
+        raise OperationalError("IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD", "Command differs.", 409)
+    return row, digest
+
+
+@atomic_command
 def create_event(shipment_id, milestone_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_event.create")
     milestone = _milestone(shipment, milestone_id, True)
-    if milestone.version != payload.get("expected_version"):
-        raise OperationalError(
-            "STALE_AGGREGATE_VERSION",
-            "Milestone was changed by another operation.",
-            409,
-        )
     effective = _parse_utc(payload.get("effective_at"), "effective_at")
-    event = _event(
-        milestone,
-        user,
-        "reported",
-        effective,
-        note=payload.get("note"),
-    )
-    milestone.occurred_at = effective
-    milestone.verification_state = "reported"
+    command = {"type": "reported", "effective_at": effective.isoformat(), "note": payload.get("note"),
+               "expected_version": payload.get("expected_version")}
+    key = _command_key({**command, "idempotency_key": payload.get("idempotency_key")}, "report", milestone.public_id)
+    replay, digest = _replay(milestone, key, command)
+    if replay:
+        return replay
+    if milestone.version != payload.get("expected_version"):
+        raise OperationalError("STALE_AGGREGATE_VERSION", "Milestone was changed.", 409)
+    if milestone.checkpoint_id:
+        raise OperationalError("CHECKPOINT_COMMAND_REQUIRED", "Use the checkpoint occurrence command with processing and dependency checks.", 409)
+    projection.assert_new_root(milestone)
+    event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id,
+        event_type="reported", occurred_at=effective, actor_user_id=user["id"], note=payload.get("note"),
+        idempotency_key=key, request_hash=digest)
+    db.session.add(event)
     milestone.version += 1
-    _audit(shipment, user, "milestone_event.created", "MilestoneEvent", milestone.id)
+    projection.project(milestone)
+    db.session.flush()
+    _audit(shipment, user, "milestone_event.created", "MilestoneEvent", event.id)
     db.session.commit()
     return event
 
 
+def _target_event(shipment, event_id):
+    event = db.session.scalar(select(MilestoneEvent).where(
+        MilestoneEvent.public_id == event_id, MilestoneEvent.organization_id == shipment.organization_id,
+    ))
+    if event is None:
+        raise OperationalError("RESOURCE_NOT_FOUND", "Event was not found.", 404)
+    milestone = _milestone(shipment, db.session.get(Milestone, event.milestone_id).public_id, True)
+    projection.validate_target(milestone, event)
+    return milestone, event
+
+
+@atomic_command
 def correct_event(shipment_id, event_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_event.correct")
-    original = db.session.scalar(
-        select(MilestoneEvent)
-        .where(
-            MilestoneEvent.public_id == event_id,
-            MilestoneEvent.organization_id == shipment.organization_id,
-        )
-        .with_for_update()
-    )
-    if original is None:
-        raise OperationalError("RESOURCE_NOT_FOUND", "Event was not found.", 404)
-    milestone = _milestone(
-        shipment, db.session.get(Milestone, original.milestone_id).public_id, True
-    )
-    if milestone.version != payload.get("expected_version"):
-        raise OperationalError(
-            "STALE_AGGREGATE_VERSION",
-            "Milestone was changed by another operation.",
-            409,
-        )
+    milestone, original = _target_event(shipment, event_id)
+    effective = _parse_utc(payload.get("effective_at"), "effective_at")
     reason = str(payload.get("reason") or "").strip()
     if not reason:
-        raise OperationalError(
-            "CORRECTION_REASON_REQUIRED", "Correction reason is required.", 422
-        )
-    effective = _parse_utc(payload.get("effective_at"), "effective_at")
-    corrected = _event(
-        milestone,
-        user,
-        "CORRECTED",
-        effective,
-        reason,
-        payload.get("note"),
-        original.id,
-    )
-    db.session.flush()
-    milestone.occurred_at = effective
-    milestone.verification_state = "reported"
+        raise OperationalError("CORRECTION_REASON_REQUIRED", "Correction reason is required.", 422)
+    command = {"type": "CORRECTED", "target": event_id, "effective_at": effective.isoformat(),
+               "reason": reason, "note": payload.get("note"), "expected_version": payload.get("expected_version")}
+    key = _command_key({**command, "idempotency_key": payload.get("idempotency_key")}, "correct", event_id)
+    replay, digest = _replay(milestone, key, command)
+    if replay:
+        return replay
+    if milestone.version != payload.get("expected_version"):
+        raise OperationalError("STALE_AGGREGATE_VERSION", "Milestone was changed.", 409)
+    projection.validate_target(milestone, original, correction=True)
+    corrected = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id,
+        event_type="CORRECTED", occurred_at=effective, actor_user_id=user["id"], reason=reason,
+        note=payload.get("note"), supersedes_event_id=original.id, idempotency_key=key, request_hash=digest)
+    db.session.add(corrected)
     milestone.version += 1
+    projection.project(milestone)
+    db.session.flush()
     _audit(shipment, user, "milestone_event.corrected", "MilestoneEvent", corrected.id)
     db.session.commit()
     return corrected
 
 
+@atomic_command
 def verify_event(shipment_id, event_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_event.verify")
-    event = db.session.scalar(
-        select(MilestoneEvent)
-        .where(
-            MilestoneEvent.public_id == event_id,
-            MilestoneEvent.organization_id == shipment.organization_id,
-        )
-        .with_for_update()
-    )
-    if (
-        event is None
-        or db.session.get(Milestone, event.milestone_id).operational_shipment_id
-        != shipment.id
-    ):
-        raise OperationalError("RESOURCE_NOT_FOUND", "Event was not found.", 404)
-    if event.actor_user_id == user["id"]:
-        raise OperationalError(
-            "SELF_VERIFICATION_FORBIDDEN",
-            "The asserting actor cannot verify this event.",
-            403,
-        )
-    if event.verification_state == "verified":
+    milestone, original = _target_event(shipment, event_id)
+    if original.actor_user_id == user["id"]:
+        raise OperationalError("SELF_VERIFICATION_FORBIDDEN", "The asserting actor cannot verify this event.", 403)
+    key = _command_key(payload, "verify", event_id)
+    replay, digest = _replay(milestone, key, {"type": "VERIFIED", "target": event_id})
+    if replay:
         return events(shipment_id, user)
-    event.verification_state = "verified"
-    event.verified_by_user_id = user["id"]
-    event.verified_at = utcnow()
-    m = db.session.get(Milestone, event.milestone_id)
-    _event(m, user, "VERIFIED", event.occurred_at, supersedes=event.id)
-    _audit(shipment, user, "milestone_event.verified", "MilestoneEvent", event.id)
+    decision = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id,
+        event_type="VERIFIED", occurred_at=original.occurred_at, actor_user_id=user["id"],
+        related_event_id=original.id, verified_at=utcnow(), verified_by_user_id=user["id"],
+        verification_state="verified", idempotency_key=key, request_hash=digest)
+    db.session.add(decision)
+    effective = projection.effective_occurrence(milestone)
+    if effective and effective.id == original.id:
+        milestone.verification_state = "verified"
+        milestone.version += 1
+    _audit(shipment, user, "milestone_event.verified", "MilestoneEvent", original.id)
     db.session.commit()
     return events(shipment_id, user)
 
