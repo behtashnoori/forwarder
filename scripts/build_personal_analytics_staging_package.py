@@ -17,17 +17,19 @@ def sha(path):
 
 def run(*args): return subprocess.check_output(args,cwd=ROOT,text=True).strip()
 
-def build(output: Path, runtime: Path|None=None):
+def build(output: Path, runtime: Path|None=None, suffix: str=""):
     if run("git","cat-file","-t",COMMIT) != "commit": raise RuntimeError("the exact RC commit is unavailable")
     if run("git","status","--porcelain","--untracked-files=no"): raise RuntimeError("tracked worktree must be clean")
     if run("python","-c","from alembic.config import Config; from alembic.script import ScriptDirectory; print(','.join(ScriptDirectory.from_config(Config('backend/migrations/alembic.ini')).get_heads()))") != HEAD: raise RuntimeError("unexpected Alembic head")
     if not (ROOT/"dist"/"index.html").is_file(): raise RuntimeError("build frontend first; dist/index.html is required")
-    output.mkdir(parents=True,exist_ok=True); artifact=output/f"Forwarder-{RC_ID}-{COMMIT[:7]}.zip"
+    if suffix and not suffix.replace("-", "").isalnum(): raise RuntimeError("unsafe artifact suffix")
+    output.mkdir(parents=True,exist_ok=True); artifact=output/f"Forwarder-{RC_ID}-{COMMIT[:7]}{suffix}.zip"
     if artifact.exists(): raise RuntimeError("refusing to overwrite an immutable artifact")
     names=[name for name in run("git","ls-tree","-r","--name-only",COMMIT).splitlines() if not any(name==item or name.startswith(item) for item in EXCLUDE)]
     with zipfile.ZipFile(artifact,"x",zipfile.ZIP_DEFLATED,compresslevel=9) as archive:
         for name in names: archive.write(ROOT/name,name)
-        for name in FIXTURE_COMPANION: archive.write(ROOT/name,name)
+        for name in FIXTURE_COMPANION:
+            if name not in names: archive.write(ROOT/name,name)
         for path in sorted((ROOT/"dist").rglob("*")):
             if path.is_file(): archive.write(path,Path("dist")/path.relative_to(ROOT/"dist"))
     scripts={path.name:sha(path) for path in OPERATOR.glob("*") if path.is_file()}
@@ -42,4 +44,5 @@ def build(output: Path, runtime: Path|None=None):
 
 if __name__=="__main__":
     parser=argparse.ArgumentParser(); parser.add_argument("--output",required=True); parser.add_argument("--runtime-package")
-    args=parser.parse_args(); print(json.dumps([str(item) for item in build(Path(args.output),Path(args.runtime_package) if args.runtime_package else None)]))
+    parser.add_argument("--artifact-suffix",default="")
+    args=parser.parse_args(); print(json.dumps([str(item) for item in build(Path(args.output),Path(args.runtime_package) if args.runtime_package else None,args.artifact_suffix)]))
