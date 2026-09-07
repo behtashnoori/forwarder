@@ -5,8 +5,7 @@ from sqlalchemy import select
 
 from backend.extensions import db
 from backend.saved_view_models import SavedView, SavedViewRevision
-from backend.saved_view_validation import SAVED_VIEW_SCHEMA_VERSION, validate
-from backend.analytics import SEMANTIC_VERSION
+from backend.saved_view_validation import SAVED_VIEW_SCHEMA_VERSION, align_v1_to_v2, runtime_definition, validate
 from backend.services.operational_service import OperationalError, organization_for_user, require_permission
 
 
@@ -31,7 +30,13 @@ def _revision(row, actor, reason=None):
 
 
 def serialize(row):
-    return {key: getattr(row, key) for key in ("public_id", "name", "description", "visibility", "status", "semantic_version", "saved_view_schema_version", "version", "created_at", "updated_at")} | {"definition": deepcopy(row.definition_json)}
+    data = {key: getattr(row, key) for key in ("public_id", "name", "description", "visibility", "status", "semantic_version", "saved_view_schema_version", "version", "created_at", "updated_at")} | {"definition": deepcopy(row.definition_json)}
+    try:
+        data["runtime_definition"] = runtime_definition(row.definition_json)
+        data["compatibility_state"] = "COMPATIBLE"
+    except ValueError as exc:
+        data["compatibility_state"] = getattr(exc, "code", "INCOMPATIBLE_LEGACY_DEFINITION")
+    return data
 
 
 def list_(user, archived_only=False):
@@ -55,7 +60,7 @@ def create(payload, user):
         raise OperationalError("INVALID_DESCRIPTION", "description exceeds 1000 characters.", 422)
     definition = validate(payload.get("definition"))
     org, uid = _context(user)
-    row = SavedView(organization_id=org, owner_user_id=uid, name=name.strip(), description=description, semantic_version=SEMANTIC_VERSION, saved_view_schema_version=SAVED_VIEW_SCHEMA_VERSION, definition_json=definition, created_by=uid, updated_by=uid)
+    row = SavedView(organization_id=org, owner_user_id=uid, name=name.strip(), description=description, semantic_version=definition["semantic_version"], saved_view_schema_version=definition["schema_version"], definition_json=definition, created_by=uid, updated_by=uid)
     db.session.add(row); db.session.flush(); _revision(row, uid, "create"); db.session.commit()
     return serialize(row)
 
@@ -83,9 +88,17 @@ def update(public_id, payload, user):
     reason = payload.get("change_reason")
     if reason is not None and (not isinstance(reason, str) or len(reason) > 255):
         raise OperationalError("INVALID_CHANGE_REASON", "change_reason exceeds 255 characters.", 422)
+    # Clicking update on an untouched v1 view must not create a conversion-only
+    # revision: compare its deterministic runtime v2 representation.
+    if row.definition_json.get("schema_version") == SAVED_VIEW_SCHEMA_VERSION and next_definition.get("schema_version") != SAVED_VIEW_SCHEMA_VERSION:
+        try:
+            if next_definition == align_v1_to_v2(row.definition_json) and (next_name, next_description) == (row.name, row.description): return serialize(row)
+        except ValueError:
+            pass
     if (next_name, next_description, next_definition) == (row.name, row.description, row.definition_json):
         return serialize(row)
     row.name, row.description, row.definition_json = next_name, next_description, next_definition
+    row.semantic_version, row.saved_view_schema_version = next_definition["semantic_version"], next_definition["schema_version"]
     row.version += 1; row.updated_by = int(user["id"]); _revision(row, int(user["id"]), reason); db.session.commit()
     return serialize(row)
 

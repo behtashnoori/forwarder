@@ -6,9 +6,10 @@ import json
 
 from backend.analytics import SEMANTIC_VERSION
 from backend.analytics.registry import DIMENSIONS, METRICS, PARTIAL, READY
-from backend.analytics.shipment_rowset import SHIPMENT_COLUMNS, SHIPMENT_SORTS
+from backend.analytics.shipment_rowset import ROWSET_SEMANTIC_VERSION, SHIPMENT_COLUMNS, SHIPMENT_SORTS, normalize_rowset_query
 
 SAVED_VIEW_SCHEMA_VERSION = "saved-view-definition-v1"
+SAVED_VIEW_SCHEMA_VERSION_V2 = "saved-view-definition-v2"
 SURFACE = "OPERATIONAL_SHIPMENTS"
 MAX_JSON = 128 * 1024
 MAX_FILTERS = 12
@@ -33,6 +34,8 @@ def validate(definition):
         _fail("DEFINITION_TOO_LARGE", "definition exceeds 128KB")
     if set(definition) != {"schema_version", "semantic_version", "surface", "query_definition", "presentation"}:
         _fail("INVALID_SAVED_VIEW_DEFINITION", "definition fields are not supported")
+    if definition.get("schema_version") == SAVED_VIEW_SCHEMA_VERSION_V2:
+        return _validate_v2(definition)
     if definition.get("schema_version") != SAVED_VIEW_SCHEMA_VERSION:
         _fail("SAVED_VIEW_SCHEMA_VERSION_UNSUPPORTED", "saved view schema version is unsupported")
     if definition.get("semantic_version") != SEMANTIC_VERSION:
@@ -83,3 +86,43 @@ def validate(definition):
     normalized = deepcopy(definition)
     normalized["query_definition"]["filters"] = sorted(filters, key=lambda item: (item["dimension"], json.dumps(item["value"], sort_keys=True)))
     return normalized
+
+
+def _validate_v2(definition):
+    if definition.get("semantic_version") != ROWSET_SEMANTIC_VERSION:
+        _fail("SEMANTIC_VERSION_UNSUPPORTED", "v2 Saved Views require analytics-semantic-v2")
+    if definition.get("surface") != SURFACE:
+        _fail("SAVED_VIEW_SURFACE_UNSUPPORTED", "saved view surface is unsupported")
+    if set(definition) != {"schema_version", "semantic_version", "surface", "query_definition", "presentation"}:
+        _fail("INVALID_SAVED_VIEW_DEFINITION", "definition fields are not supported")
+    try:
+        query = normalize_rowset_query(definition.get("query_definition") or {})
+    except Exception as exc:
+        _fail(getattr(exc, "code", "INVALID_QUERY_DEFINITION"), str(exc))
+    presentation = definition.get("presentation")
+    if not isinstance(presentation, dict) or set(presentation) != {"display_type"} or presentation.get("display_type") != "LIST":
+        _fail("UNSUPPORTED_DISPLAY_TYPE", "v2 Saved Views support LIST presentation only")
+    normalized = deepcopy(definition)
+    normalized["query_definition"] = {key: value for key, value in query.items() if key not in {"window", "status"}}
+    return normalized
+
+
+def align_v1_to_v2(definition):
+    """Side-effect-free correction of v1 UI intent to the ROWSET contract.
+
+    v1's `created` time label was an aggregate-era artifact; Operational
+    Shipments date controls always represented the route-envelope window.
+    """
+    legacy = validate(definition)
+    if legacy["schema_version"] != SAVED_VIEW_SCHEMA_VERSION:
+        _fail("UNSUPPORTED_SCHEMA_VERSION", "Only saved-view-definition-v1 can be aligned")
+    filters, window = [], None
+    for item in legacy["query_definition"]["filters"]:
+        if item["dimension"] == "SHIPMENT_STATUS": filters.append(item)
+        elif item["dimension"] == "TIME": window = item["value"]
+        else: _fail("INCOMPATIBLE_LEGACY_DEFINITION", f"Legacy filter {item['dimension']} cannot be aligned")
+    return _validate_v2({"schema_version": SAVED_VIEW_SCHEMA_VERSION_V2, "semantic_version": ROWSET_SEMANTIC_VERSION, "surface": SURFACE, "query_definition": {"query_kind": "ROWSET", "semantic_version": ROWSET_SEMANTIC_VERSION, "population": "SHIPMENTS", "columns": legacy["presentation"]["columns"], "filters": filters, **({"operational_window": window} if window else {}), "sort": legacy["presentation"]["sort"], "limit": legacy["presentation"]["limit"]}, "presentation": {"display_type": "LIST"}})
+
+
+def runtime_definition(definition):
+    return align_v1_to_v2(definition) if definition.get("schema_version") == SAVED_VIEW_SCHEMA_VERSION else validate(definition)

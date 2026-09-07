@@ -92,7 +92,10 @@ def normalize_rowset_query(payload):
         _error("INVALID_LIMIT", "limit must be an integer.")
     if isinstance(payload.get("limit", 20), bool) or not 1 <= limit <= MAX_ROWSET_LIMIT:
         _error("INVALID_LIMIT", "ROWSET limit must be between 1 and 100.")
-    return {"query_kind": "ROWSET", "semantic_version": ROWSET_SEMANTIC_VERSION, "population": ROWSET_POPULATION, "columns": columns, "filters": filters, "status": status, "operational_window": {k: v.isoformat() for k, v in (("from", governed_window.from_), ("to", governed_window.to)) if v is not None}, "window": governed_window, "sort": sort, "limit": limit}
+    normalized = {"query_kind": "ROWSET", "semantic_version": ROWSET_SEMANTIC_VERSION, "population": ROWSET_POPULATION, "columns": columns, "filters": filters, "status": status, "window": governed_window, "sort": sort, "limit": limit}
+    window_values = {k: v.isoformat() for k, v in (("from", governed_window.from_), ("to", governed_window.to)) if v is not None}
+    if window_values: normalized["operational_window"] = window_values
+    return normalized
 
 
 def _ordered(statement, sort):
