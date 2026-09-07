@@ -154,6 +154,17 @@ def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> 
             return AuthorizationDecision(_has_capability(membership, action), "ORG_ADMIN_CAPABILITY_REQUIRED", membership.organization_id, "OperationalShipment", resource.id)
         if action not in INTRINSIC_SHIPMENT_ACTIONS:
             return _deny("EXPLICIT_GOVERNED_CAPABILITY_REQUIRED")
+        # Project access expands business-record visibility only.  It never
+        # supplies a write permission or responsibility assignment.
+        if action == "shipment.read" and resource.project_id is not None:
+            from backend.services.project_access_authorization import authorized_project_scope
+            from backend.operational_models import Project
+            project_allowed = db.session.scalar(select(Project.id).where(
+                Project.id == resource.project_id,
+                authorized_project_scope(actor),
+            ))
+            if project_allowed is not None:
+                return AuthorizationDecision(True, "PROJECT_DERIVED_SHIPMENT_READ", membership.organization_id, "OperationalShipment", resource.id)
         request = _request_root(resource)
         if request is not None:
             return AuthorizationDecision(request.assigned_to == user_id, "REQUEST_ROOT_ASSIGNMENT_REQUIRED", membership.organization_id, "ShipmentRequest", request.id)
@@ -183,7 +194,7 @@ def assigned_request_scope(actor: dict[str, Any], action: str = "request.read"):
 
 
 def assigned_shipment_scope(actor: dict[str, Any], action: str = "operational_shipment.read"):
-    """Canonical OperationalShipment SQL scope, applied before pagination."""
+    """Canonical Shipment read scope: direct/request assignment OR Project access."""
     user_id = _actor_id(actor)
     if user_id is None:
         return false()
@@ -204,4 +215,13 @@ def assigned_shipment_scope(actor: dict[str, Any], action: str = "operational_sh
         ShipmentRequest.assigned_to == user_id,
     ))
     direct_assigned = (OperationalShipment.source_type == "direct") & (OperationalShipment.primary_responsible_expert_id == user_id)
-    return tenant & or_(request_assigned, direct_assigned)
+    if action != "operational_shipment.read":
+        return tenant & or_(request_assigned, direct_assigned)
+    from backend.services.project_access_authorization import authorized_project_scope
+    # Project scope is expressed against Project; use its ids directly so the
+    # predicate remains composable in every consumer query.
+    from backend.operational_models import Project
+    project_derived = OperationalShipment.project_id.in_(
+        select(Project.id).where(authorized_project_scope(actor))
+    )
+    return tenant & or_(request_assigned, direct_assigned, project_derived)

@@ -33,7 +33,7 @@ def access_app():
         a2 = Project(organization_id=oa.id, primary_customer_id=customer.id, project_code="A2", created_by_user_id=aa.id)
         b1 = Project(organization_id=ob.id, primary_customer_id=customer.id, project_code="B1", created_by_user_id=ab.id)
         db.session.add_all([a1, a2, b1]); db.session.flush()
-        shipment = OperationalShipment(public_id="project-non-propagation", organization_id=oa.id, project_id=a1.id, source_type="direct", customer_id=customer.id, lifecycle_status="planned", created_by_user_id=eb.id, primary_responsible_expert_id=eb.id)
+        shipment = OperationalShipment(public_id="00000000-0000-0000-0000-000000000011", organization_id=oa.id, project_id=a1.id, source_type="direct", customer_id=customer.id, lifecycle_status="planned", created_by_user_id=eb.id, primary_responsible_expert_id=eb.id)
         db.session.add(shipment); db.session.commit()
         users = {k: v for k, v in (("ea", ea), ("eb", eb), ("aa", aa), ("ab", ab), ("platform", platform), ("inactive", inactive))}
         def headers(key): return {"Authorization": f"Bearer {auth_manager.generate_tokens(users[key].id)['access_token']}"}
@@ -77,11 +77,11 @@ def test_actor_matrix_selector_detail_and_client_spoof(access_app):
     assert client.get(f"/api/v2/projects/{x['b1'].public_id}/execution-units", headers=h("ea")).status_code == 404
 
 
-def test_project_access_does_not_expand_shipment_or_analytics(access_app):
+def test_project_access_propagates_shipment_and_analytics_read_scope(access_app):
     app, x = access_app; client = app.test_client(); h = x["headers"]
     assert client.post(f"/api/v2/projects/{x['a1'].public_id}/access", headers=h("aa"), json={"username": "project-ea"}).status_code == 201
-    assert client.get(f"/api/operational-shipments/{x['shipment'].public_id}", headers=h("ea")).status_code == 404
+    assert client.get(f"/api/operational-shipments/{x['shipment'].public_id}", headers=h("ea")).status_code == 200
     result = analytics.query({"metrics": ["SHIPMENT_COUNT"], "filters": [{"dimension": "PROJECT", "value": x["a1"].public_id}]}, {"id": x["users"]["ea"].id})
-    assert result["rows"][0]["SHIPMENT_COUNT"]["value"] == 0
+    assert result["rows"][0]["SHIPMENT_COUNT"]["value"] == 1
     admin = analytics.query({"metrics": ["SHIPMENT_COUNT"]}, {"id": x["users"]["aa"].id})
     assert admin["rows"][0]["SHIPMENT_COUNT"]["value"] == 1
