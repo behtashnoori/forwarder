@@ -1,15 +1,20 @@
 """Acceptance freeze for independent Saved View Dashboard TABLE snapshots."""
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
+import json
 
 import pytest
 
 from backend import dashboard_service, saved_view_service
 from backend.analytics import service as analytics
 from backend.extensions import db
-from backend.saved_view_models import SavedViewRevision
+from backend.operational_models import CanonicalLocation, OperationalShipment, RouteLeg, RoutePlan
+from backend.saved_view_models import SavedView, SavedViewRevision
+from backend.services import project_access_authorization
 from backend.services.operational_service import OperationalError
 from backend.tests.test_saved_view_contract import context
 from backend.tests.test_saved_view_rowset_alignment import _v2
+from backend.tests.test_project_access_foundation import access_app
 
 
 def _dashboard(user):
@@ -54,3 +59,94 @@ def test_snapshot_security_concurrency_and_provenance_controls(context):
     with pytest.raises(OperationalError) as immutable:
         dashboard_service.update(own["public_id"], {"expected_version":snapshot["version"],"definition":forged}, context["a"])
     assert immutable.value.code == "DASHBOARD_WIDGET_PROVENANCE_IMMUTABLE"
+
+
+def test_snapshot_widget_uses_current_project_authorization_after_revocation(access_app):
+    """A copied ROWSET stays immutable while its Shipment authorization is live."""
+    _app, x = access_app
+    expert, admin = x["users"]["ea"], x["users"]["aa"]
+    project = x["a1"]
+    project_only = x["shipment"]
+    direct = OperationalShipment(
+        organization_id=project.organization_id,
+        project_id=project.id,
+        source_type="direct",
+        customer_id=project.primary_customer_id,
+        lifecycle_status="planned",
+        created_by_user_id=expert.id,
+        primary_responsible_expert_id=expert.id,
+    )
+    origin = CanonicalLocation(
+        source_type="province", source_id=9001, location_type="province", display_name="Origin"
+    )
+    destination = CanonicalLocation(
+        source_type="province", source_id=9002, location_type="province", display_name="Destination"
+    )
+    db.session.add_all([direct, origin, destination])
+    db.session.flush()
+    departure = datetime(2041, 1, 1, 8, tzinfo=timezone.utc)
+    for shipment, offset in ((project_only, 0), (direct, 1)):
+        plan = RoutePlan(
+            operational_shipment_id=shipment.id, revision=1, is_active=True, created_by_user_id=admin.id
+        )
+        db.session.add(plan)
+        db.session.flush()
+        db.session.add(RouteLeg(
+            route_plan_id=plan.id, sequence_number=1,
+            origin_location_id=origin.id, destination_location_id=destination.id,
+            origin_snapshot={"display_name": "Origin"},
+            destination_snapshot={"display_name": "Destination"},
+            transport_mode="road", planned_departure=departure + timedelta(hours=offset),
+            planned_arrival=departure + timedelta(hours=offset + 1),
+        ))
+    db.session.commit()
+
+    grant = project_access_authorization.add_assignment(
+        project.public_id, {"username": expert.username}, {"id": admin.id}
+    )
+    actor = {"id": expert.id}
+    source = saved_view_service.create(
+        {"name": "Live project scope", "definition": _v2("planned")}, actor
+    )
+    target = _dashboard(actor)
+    snapshot = _snapshot(source, target, actor)
+    widget = next(
+        item for item in snapshot["definition"]["widgets"] if item["widget_id"] == snapshot["created_widget_id"]
+    )
+    query_before, provenance_before = deepcopy(widget["query"]), deepcopy(widget["provenance"])
+    source_before = saved_view_service.get(source["public_id"], actor)
+    dashboard_before = deepcopy(snapshot["definition"])
+
+    assert [row["shipment_public_id"] for row in analytics.query(
+        source_before["runtime_definition"]["query_definition"], actor
+    )["rows"]] == [project_only.public_id, direct.public_id]
+    assert [row["shipment_public_id"] for row in analytics.query(query_before, actor)["rows"]] == [
+        project_only.public_id, direct.public_id
+    ]
+    assert provenance_before == {
+        "source_type": "SAVED_VIEW", "source_public_id": source["public_id"],
+        "source_version": 1, "source_name_snapshot": "Live project scope",
+    }
+    persisted_widget = json.dumps(widget, sort_keys=True).lower()
+    assert "projectaccess" not in persisted_widget and "project_access" not in persisted_widget
+    assert project_only.public_id not in persisted_widget and direct.public_id not in persisted_widget
+
+    assert project_access_authorization.revoke_assignment(
+        project.public_id, grant["public_id"], {"id": admin.id}
+    )["revoked"] is True
+
+    reloaded = dashboard_service.get(target["public_id"], actor)
+    same_widget = next(
+        item for item in reloaded["definition"]["widgets"] if item["widget_id"] == widget["widget_id"]
+    )
+    assert [row["shipment_public_id"] for row in analytics.query(same_widget["query"], actor)["rows"]] == [
+        direct.public_id
+    ]
+    assert same_widget["query"] == query_before
+    assert same_widget["provenance"] == provenance_before
+    assert reloaded["definition"] == dashboard_before and reloaded["version"] == snapshot["version"]
+    source_after = saved_view_service.get(source["public_id"], actor)
+    assert source_after["definition"] == source_before["definition"]
+    assert source_after["version"] == source_before["version"]
+    view_id = db.session.scalar(db.select(SavedView.id).where(SavedView.public_id == source["public_id"]))
+    assert db.session.query(SavedViewRevision).filter_by(saved_view_id=view_id).count() == 1
