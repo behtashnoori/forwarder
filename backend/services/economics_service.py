@@ -889,13 +889,8 @@ def quote_confirm(shipment_id, payload, user):
 def project_projection(project_id, user, stage="COMMITMENT", reporting_currency=None):
     require_permission(user, "economics.revenue.view")
     org = organization_for_user(user["id"])
-    project = db.session.scalar(
-        select(Project).where(
-            Project.public_id == project_id, Project.organization_id == org
-        )
-    )
-    if not project:
-        raise OperationalError("PROJECT_NOT_FOUND", "Project was not found.", 404)
+    from backend.services.project_access_authorization import scoped_project
+    project = scoped_project(project_id, user)
     shipments = db.session.scalars(
         select(OperationalShipment).where(
             OperationalShipment.project_id == project.id,

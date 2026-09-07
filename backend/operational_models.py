@@ -158,6 +158,26 @@ class Project(db.Model):
     )
 
 
+class ProjectAccess(db.Model):
+    """Explicit, tenant-consistent user authorization for one Project."""
+
+    __tablename__ = "project_access"
+    __table_args__ = (
+        db.UniqueConstraint("organization_id", "project_id", "user_id", name="uq_project_access_org_project_user"),
+        db.ForeignKeyConstraint(["project_id", "organization_id"], ["project.id", "project.organization_id"], name="fk_project_access_project_org", ondelete="CASCADE"),
+        db.ForeignKeyConstraint(["organization_id", "user_id"], ["operational_membership.organization_id", "operational_membership.user_id"], name="fk_project_access_membership_org_user", ondelete="CASCADE"),
+        db.Index("ix_project_access_org_user", "organization_id", "user_id"),
+        db.Index("ix_project_access_project", "project_id"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4()))
+    organization_id = db.Column(BIGINT, nullable=False)
+    project_id = db.Column(BIGINT, nullable=False)
+    user_id = db.Column(BIGINT, nullable=False)
+    created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 class ExecutionUnit(db.Model):
     """Canonical independently managed unit within a Project (ADR-018)."""
 

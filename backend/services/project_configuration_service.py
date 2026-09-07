@@ -66,15 +66,8 @@ def project(public_id, user, manage=False):
     require_permission(
         user, "project_configuration.manage" if manage else "project_configuration.read"
     )
-    org = organization_for_user(user["id"])
-    row = db.session.scalar(
-        select(Project).where(
-            Project.public_id == public_id, Project.organization_id == org
-        )
-    )
-    if not row:
-        raise OperationalError("NOT_FOUND", "Project not found.", 404)
-    return row
+    from backend.services.project_access_authorization import scoped_project
+    return scoped_project(public_id, user)
 
 
 def scoped(model, owner, public_id):

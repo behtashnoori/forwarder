@@ -64,6 +64,7 @@
 
     "OperationalMembership": {"kind":"persisted_model","table":"operational_membership","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "Project": {"kind":"persisted_model","table":"project","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","integrity_risks":["primary_customer_id references legacy-unscoped Customer"]},
+    "ProjectAccess": {"kind":"persisted_model","table":"project_access","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Explicit user-to-Project business access; composite foreign keys keep both Project and active membership identity in the same organization."},
     "OperationalShipment": {"kind":"persisted_model","table":"operational_shipment","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","integrity_risks":["customer_id, shipment_request_id and accepted_quote_id do not prove same-tenant ownership"]},
     "OperationalShipmentExternalReference": {"kind":"persisted_model","table":"operational_shipment_external_reference","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"ADR-039 value row has a composite same-tenant OperationalShipment foreign key."},
     "ExecutionUnitExternalReference": {"kind":"persisted_model","table":"execution_unit_external_reference","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","integrity_risks":["ExecutionUnit has no direct tenant key; writes must lock and validate its canonical Project/Shipment hierarchy"]},

@@ -177,8 +177,10 @@ def project_selector(args: dict[str, Any], user: dict[str, Any]) -> dict[str, An
         },
     )
     q, limit = _selector_terms(args)
+    from backend.services.project_access_authorization import authorized_project_scope
     query = select(Project).where(
         Project.organization_id == org,
+        authorized_project_scope(user),
         Project.lifecycle_status.not_in(("completed", "cancelled")),
     )
     customer_id = args.get("customer_id")

@@ -19,6 +19,7 @@ from backend.operational_models import (
     OperationalOrganization,
     OperationalShipment,
     Project,
+    ProjectAccess,
 )
 from backend.project_configuration_models import (
     MilestoneType,
@@ -44,6 +45,7 @@ def configured_app():
             password_hash="x",
             full_name="Admin",
             role="admin",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         outsider = ExpertUser(
@@ -126,6 +128,7 @@ def configured_app():
         )
         db.session.add_all([project, foreign_project, service, document, milestone, cargo_type, uom])
         db.session.flush()
+        db.session.add_all([ProjectAccess(organization_id=org.id, project_id=project.id, user_id=user.id, created_by_user_id=admin.id) for user in (manager, expert, readonly)])
         preferred_catalog = CargoCatalogItem(
             organization_id=org.id,
             immutable_code="Z-PREFERRED",
@@ -223,7 +226,7 @@ def test_identity_catalog_and_single_head(configured_app):
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260914_saved_view_persistence"
+        "20260915_project_access_foundation"
     ]
     migration = (
         root / "migrations" / "versions" / "20260911_project_cargo_preference.py"

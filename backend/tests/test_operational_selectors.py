@@ -15,6 +15,7 @@ from backend.operational_models import (
     OperationalOrganization,
     OperationalShipment,
     Project,
+    ProjectAccess,
 )
 from backend.services import operational_service
 
@@ -133,6 +134,7 @@ def selector_app():
             [local_project, completed_project, foreign_project, origin, destination]
         )
         db.session.flush()
+        db.session.add(ProjectAccess(organization_id=org.id, project_id=local_project.id, user_id=direct_user.id, created_by_user_id=direct_user.id))
 
         def request(customer_id, tracking_code, assigned_to, organization_id=org.id):
             row = ShipmentRequest(

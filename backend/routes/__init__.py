@@ -32,6 +32,7 @@ from .global_logistics_point_adoptions import global_logistics_point_adoptions_b
 from .analytics import analytics_bp
 from .dashboards import dashboard_bp
 from .saved_views import saved_view_bp
+from .project_access import project_access_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -69,3 +70,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(analytics_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(saved_view_bp)
+    app.register_blueprint(project_access_bp)

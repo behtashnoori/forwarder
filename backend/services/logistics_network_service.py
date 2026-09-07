@@ -528,15 +528,8 @@ def set_active(row, active, payload, user):
 
 def scoped_project(public_id, user, permission="project_logistics_point.read"):
     require_permission(user, permission)
-    org = organization_for_user(user["id"])
-    row = db.session.scalar(
-        select(Project).where(
-            Project.public_id == public_id, Project.organization_id == org
-        )
-    )
-    if not row:
-        raise OperationalError("NOT_FOUND", "Project not found.", 404)
-    return row
+    from backend.services.project_access_authorization import scoped_project as authorized_project
+    return authorized_project(public_id, user)
 
 
 def list_associations(project):

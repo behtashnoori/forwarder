@@ -17,6 +17,7 @@ from backend.operational_models import (
     OperationalMembership,
     OperationalOrganization,
     Project,
+    ProjectAccess,
 )
 from backend.services.logistics_network_service import normalize_name
 
@@ -39,7 +40,7 @@ def network_app():
             password_hash="x",
             full_name="Admin",
             role="admin",
-            authority="PLATFORM_ADMIN",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         outsider = ExpertUser(
@@ -50,9 +51,10 @@ def network_app():
             authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
+        platform = ExpertUser(username="network-platform", password_hash="x", full_name="Platform", role="admin", authority="PLATFORM_ADMIN", is_active=True)
         customer = Customer(first_name="Project", last_name="Customer")
         country = Country(code="IR", name_en="Iran", name_fa="ایران")
-        db.session.add_all([org, other, admin, outsider, customer, country])
+        db.session.add_all([org, other, admin, outsider, platform, customer, country])
         db.session.flush()
         permissions = [
             "logistics_point.read",
@@ -100,6 +102,7 @@ def network_app():
                 "other_auth": {
                     "Authorization": f"Bearer {auth_manager.generate_tokens(outsider.id)['access_token']}"
                 },
+                "platform_auth": {"Authorization": f"Bearer {auth_manager.generate_tokens(platform.id)['access_token']}"},
             },
         )
         db.session.remove()
@@ -136,7 +139,7 @@ def test_exact_duplicate_org_boundary_and_no_public_surface(network_app):
     with app.test_client() as client:
         point_type = client.post(
             "/api/admin/logistics-point-types",
-            headers=ctx["auth"],
+            headers=ctx["platform_auth"],
             json={
                 "immutable_code": "FACTORY",
                 "fa_name": "کارخانه",
@@ -356,7 +359,7 @@ def test_logistics_migration_is_the_single_head():
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260914_saved_view_persistence"]
+    assert script.get_heads() == ["20260915_project_access_foundation"]
     assert (
         script.get_revision("20260910_route_leg_logistics_points").down_revision
         == "20260909_cargo_transport_allocation"

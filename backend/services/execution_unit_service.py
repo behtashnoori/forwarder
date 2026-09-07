@@ -79,11 +79,10 @@ def _organization_admin_oversight(user: dict, organization_id: int, permission: 
 
 
 def scoped_project(public_id: str, user: dict, permission: str = "execution_unit.read") -> Project:
-    org = organization_for_user(int(user["id"]))
-    project = db.session.scalar(select(Project).where(Project.public_id == public_id, Project.organization_id == org))
-    if project is None or not _organization_admin_oversight(user, org, permission):
-        raise OperationalError("NOT_FOUND", "Project not found.", 404)
-    return project
+    from backend.services.operational_service import require_permission
+    from backend.services.project_access_authorization import scoped_project as authorized_project
+    require_permission(user, permission)
+    return authorized_project(public_id, user)
 
 
 def scoped_unit(project: Project, public_id: str) -> ExecutionUnit:
