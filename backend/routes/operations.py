@@ -22,6 +22,11 @@ from backend.services import operational_service as service
 from backend.services import route_orchestration_service as routes
 from backend.services import external_reference_service as external_references
 from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
+from backend.services.shipment_population_service import (
+    OperationalWindow,
+    operational_shipment_population,
+    parse_transport_datetime,
+)
 
 
 operations_bp = Blueprint("operations", __name__)
@@ -284,14 +289,15 @@ def list_shipments():
         user = _user()
         service.require_permission(user, "operational_shipment.read")
         org = service.organization_for_user(user["id"])
-        from backend.services.assigned_work_authorization import assigned_shipment_scope
         page = max(1, request.args.get("page", 1, type=int))
         per_page = min(100, max(1, request.args.get("per_page", 20, type=int)))
-        query = select(OperationalShipment).where(assigned_shipment_scope(user))
-        if request.args.get("status"):
-            query = query.where(
-                OperationalShipment.lifecycle_status == request.args["status"]
-            )
+        window = OperationalWindow(
+            from_=parse_transport_datetime(request.args.get("date_from"), "date_from"),
+            to=parse_transport_datetime(request.args.get("date_to"), "date_to"),
+        )
+        query = operational_shipment_population(
+            user, status=request.args.get("status") or None, window=window
+        ).order_by(None)
         customer = request.args.get("customer", "").strip()
         if customer:
             pattern = f"%{customer}%"
@@ -344,23 +350,6 @@ def list_shipments():
                     f"%{request.args['destination'].strip()}%"
                 )
             )
-        for name, column in (
-            ("date_from", RouteLeg.planned_departure),
-            ("date_to", RouteLeg.planned_arrival),
-        ):
-            value = request.args.get(name)
-            if value:
-                try:
-                    query = query.where(
-                        column >= datetime.fromisoformat(value.replace("Z", "+00:00"))
-                        if name == "date_from"
-                        else column
-                        <= datetime.fromisoformat(value.replace("Z", "+00:00"))
-                    )
-                except ValueError:
-                    raise service.OperationalError(
-                        "INVALID_ROUTE_TIMELINE", f"{name} must be ISO-8601."
-                    )
         if request.args.get("overdue") in {"true", "false"}:
             overdue = exists(
                 select(Milestone.id).where(
@@ -374,7 +363,10 @@ def list_shipments():
             )
         query = query.distinct()
         rows = db.session.scalars(
-            query.order_by(OperationalShipment.created_at.desc())
+            query.order_by(
+                OperationalShipment.created_at.desc(),
+                OperationalShipment.public_id.asc(),
+            )
             .offset((page - 1) * per_page)
             .limit(per_page + 1)
         ).all()
