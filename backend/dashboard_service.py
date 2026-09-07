@@ -8,6 +8,7 @@ from backend.extensions import db
 from backend.dashboard_models import Dashboard, DashboardRevision
 from backend.dashboard_validation import validate
 from backend.services.operational_service import organization_for_user, require_permission, OperationalError
+from backend.analytics.shipment_rowset import ROWSET_SEMANTIC_VERSION
 
 _MANIFEST_PATH = Path(__file__).resolve().parents[1] / "contracts" / "dashboard" / "system" / "operations-control-tower.v1.json"
 
@@ -56,7 +57,10 @@ def update(public_id, payload, user):
     if "definition" in payload:
         definition = validate(payload["definition"])
         if definition.get("name") != row.definition_json.get("name") or definition.get("description") != row.definition_json.get("description"): raise OperationalError("DASHBOARD_PRESENTATION_IDENTITY_IMMUTABLE", "Use name/description fields for dashboard identity.", 422)
-        row.definition_json = deepcopy(definition)
+        existing = {w.get("widget_id"): w.get("provenance") for w in row.definition_json.get("widgets", [])}
+        for widget in definition.get("widgets", []):
+            if widget.get("widget_id") in existing and widget.get("provenance") != existing[widget.get("widget_id")]: raise OperationalError("DASHBOARD_WIDGET_PROVENANCE_IMMUTABLE", "Widget provenance is immutable.", 422)
+        row.definition_json = deepcopy(definition); row.semantic_version = definition["semantic_version"]
     if "name" in payload:
         if not isinstance(payload["name"], str) or not payload["name"] or len(payload["name"]) > 120: raise OperationalError("INVALID_NAME", "name must be 1-120 characters.", 422)
         row.name = payload["name"]
@@ -67,3 +71,16 @@ def update(public_id, payload, user):
     row.version += 1; row.updated_by = int(user["id"]); _revision(row, int(user["id"]), payload.get("change_reason")); db.session.commit(); return serialize(row)
 def lifecycle(public_id, user, status):
     row = _get(public_id, user); row.status = status; row.updated_by = int(user["id"]); db.session.commit(); return serialize(row)
+
+def add_saved_view_snapshot(saved_view, runtime_definition, payload, user):
+    target, expected = payload.get("target_dashboard_public_id"), payload.get("expected_dashboard_version")
+    if not isinstance(target, str) or not isinstance(expected, int): raise OperationalError("EXPECTED_VERSION_REQUIRED", "target dashboard and expected version are required.", 422)
+    row = _get(target, user, include_archived=False)
+    if row.version != expected: raise OperationalError("DASHBOARD_VERSION_CONFLICT", f"current_version={row.version}; updated_at={row.updated_at.isoformat()}", 409)
+    definition = deepcopy(row.definition_json); widget_id = __import__("uuid").uuid4().hex
+    title = payload.get("widget_title") or saved_view.name
+    if not isinstance(title, str) or not title.strip() or len(title) > 120: raise OperationalError("INVALID_WIDGET_TITLE", "widget title must be 1-120 characters.", 422)
+    widget = {"widget_id": widget_id, "widget_type": "TABLE", "title": title.strip(), "query": deepcopy(runtime_definition["query_definition"]), "coverage_policy": "SHOW_ALWAYS", "warnings_policy": "SHOW_WHEN_PRESENT", "drilldown": {"enabled": False}, "layout": {"col_span": 2, "order": max((w.get("layout", {}).get("order", 0) for w in definition["widgets"]), default=-1) + 1}, "required_permissions": ["operational_shipment.read"], "provenance": {"source_type": "SAVED_VIEW", "source_public_id": saved_view.public_id, "source_version": saved_view.version, "source_name_snapshot": saved_view.name}}
+    definition["widgets"].append(widget); definition["sections"][0]["widget_ids"].append(widget_id); definition["semantic_version"] = ROWSET_SEMANTIC_VERSION
+    validate(definition); row.definition_json = definition; row.semantic_version = ROWSET_SEMANTIC_VERSION; row.version += 1; row.updated_by = int(user["id"]); _revision(row, int(user["id"]), "saved_view_snapshot"); db.session.commit()
+    return serialize(row) | {"created_widget_id": widget_id}

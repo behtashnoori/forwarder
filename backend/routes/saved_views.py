@@ -48,6 +48,11 @@ def create_saved_view():
 def patch_saved_view(public_id):
     return _call(service.update, public_id, request.get_json(silent=True) or {}, _user())
 
+@saved_view_bp.post("/api/v2/saved-views/<string:public_id>/dashboard-snapshot")
+@require_auth
+def snapshot_saved_view(public_id):
+    return _call(service.dashboard_snapshot, public_id, request.get_json(silent=True) or {}, _user())
+
 
 @saved_view_bp.post("/api/v2/saved-views/<string:public_id>/archive")
 @require_auth

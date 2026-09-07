@@ -3364,6 +3364,14 @@ paths:
       security: [{ bearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SemanticAnalyticsQuery' } } } }
       responses: { '200': { description: Discriminated semantic result., content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/SemanticAnalyticsResult' } } } } } }, '422': { description: Governed semantic validation error. } }
+  /api/v2/saved-views/{public_id}/dashboard-snapshot:
+    post:
+      tags: [Saved Views]
+      summary: Copy a compatible Saved View runtime definition into a personal Dashboard TABLE widget
+      security: [{ bearerAuth: [] }]
+      parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, additionalProperties: false, required: [target_dashboard_public_id, expected_dashboard_version], properties: { target_dashboard_public_id: { type: string, format: uuid }, expected_dashboard_version: { type: integer }, widget_title: { type: string, maxLength: 120 } } } } } }
+      responses: { '200': { description: Dashboard with independent TABLE snapshot and immutable source provenance. }, '404': { description: Source or target is inaccessible. }, '409': { description: DASHBOARD_VERSION_CONFLICT. }, '422': { description: Incompatible Saved View or invalid target choice. } }
   /api/v2/saved-views:
     get: { tags: [Saved Views], summary: List caller-owned active private personal Saved Views, security: [{ bearerAuth: [] }], parameters: [{ name: status, in: query, schema: { type: string, enum: [ARCHIVED] } }], responses: { '200': { description: Saved Views., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewListEnvelope' } } } } } }
     post: { tags: [Saved Views], summary: Create a private personal Saved View at revision 1, security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewCreate' } } } }, responses: { '201': { description: Created., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewEnvelope' } } } }, '422': { description: Validation failure; no row or revision is created. } } }

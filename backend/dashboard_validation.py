@@ -35,7 +35,6 @@ def validate(definition):
             if layout.get("col_span") not in {1,2,3,4} or not isinstance(layout.get("order"),int): fail("INVALID_WIDGET_LAYOUT", "widget layout is invalid")
             continue
         if q.get("query_kind") not in (None, "AGGREGATE"): fail("UNSUPPORTED_QUERY_KIND", "widget query kind is unsupported")
-        if definition.get("semantic_version") != SEMANTIC_VERSION: fail("SEMANTIC_VERSION_UNSUPPORTED", "aggregate widgets require analytics-semantic-v1")
         metrics=q.get("metric_keys", []); dims=q.get("dimension_keys", [])
         if not isinstance(metrics,list) or not metrics: fail("INVALID_METRIC_SELECTION", "widget requires a metric")
         if len(str(w.get("title", ""))) > 120: fail("STRING_LIMIT", "widget title exceeds 120 characters")

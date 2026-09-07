@@ -112,3 +112,12 @@ def lifecycle(public_id, payload, user, status):
         return serialize(row)
     row.status = status; row.updated_by = int(user["id"]); db.session.commit()
     return serialize(row)
+
+def dashboard_snapshot(public_id, payload, user):
+    row = _get(public_id, user, include_archived=False)
+    runtime = runtime_definition(row.definition_json)
+    query = runtime.get("query_definition", {})
+    if query.get("query_kind") != "ROWSET" or query.get("population") != "SHIPMENTS":
+        raise OperationalError("SAVED_VIEW_SNAPSHOT_INCOMPATIBLE", "Saved view is not a compatible Shipment ROWSET.", 422)
+    from backend import dashboard_service
+    return dashboard_service.add_saved_view_snapshot(row, runtime, payload, user)
