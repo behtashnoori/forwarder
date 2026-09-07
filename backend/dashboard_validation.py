@@ -15,7 +15,7 @@ DASHBOARD_SCHEMA_VERSION = "dashboard-definition-v1"
 MAX_WIDGETS, MAX_SECTIONS, MAX_JSON = 30, 10, 256 * 1024
 WIDGETS = {"KPI_CARD", "TREND", "BAR", "STACKED_BAR", "STATUS_DISTRIBUTION", "TABLE", "ATTENTION_LIST"}
 def fail(code, message): raise DashboardValidationError(code, message)
-def validate(definition):
+def validate(definition, *, allow_provenance=False):
     if not isinstance(definition, dict): fail("INVALID_DASHBOARD_DEFINITION", "definition must be an object")
     if len(json.dumps(definition, separators=(",", ":")).encode()) > MAX_JSON: fail("DEFINITION_TOO_LARGE", "definition exceeds 256KB")
     if definition.get("semantic_version") not in {SEMANTIC_VERSION, ROWSET_SEMANTIC_VERSION}: fail("SEMANTIC_VERSION_UNSUPPORTED", "analytics semantic version is unsupported")
@@ -26,6 +26,7 @@ def validate(definition):
     ids=set()
     for w in widgets:
         if not isinstance(w, dict) or w.get("widget_id") in ids or w.get("widget_type") not in WIDGETS: fail("INVALID_WIDGET", "widget shape is invalid")
+        if w.get("provenance") is not None and not allow_provenance: fail("DASHBOARD_WIDGET_PROVENANCE_IMMUTABLE", "Widget provenance is server-controlled")
         ids.add(w["widget_id"]); q=w.get("query", {});
         if q.get("query_kind") == "ROWSET":
             try: normalize_rowset_query(q)

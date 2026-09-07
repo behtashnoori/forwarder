@@ -55,11 +55,12 @@ def update(public_id, payload, user):
     mutable = {"definition", "name", "description"}
     if not mutable.intersection(payload): raise OperationalError("EMPTY_DASHBOARD_PATCH", "At least one mutable dashboard field is required.", 422)
     if "definition" in payload:
-        definition = validate(payload["definition"])
+        definition = validate(payload["definition"], allow_provenance=True)
         if definition.get("name") != row.definition_json.get("name") or definition.get("description") != row.definition_json.get("description"): raise OperationalError("DASHBOARD_PRESENTATION_IDENTITY_IMMUTABLE", "Use name/description fields for dashboard identity.", 422)
         existing = {w.get("widget_id"): w.get("provenance") for w in row.definition_json.get("widgets", [])}
         for widget in definition.get("widgets", []):
             if widget.get("widget_id") in existing and widget.get("provenance") != existing[widget.get("widget_id")]: raise OperationalError("DASHBOARD_WIDGET_PROVENANCE_IMMUTABLE", "Widget provenance is immutable.", 422)
+            if widget.get("widget_id") not in existing and widget.get("provenance") is not None: raise OperationalError("DASHBOARD_WIDGET_PROVENANCE_IMMUTABLE", "Widget provenance is server-controlled.", 422)
         row.definition_json = deepcopy(definition); row.semantic_version = definition["semantic_version"]
     if "name" in payload:
         if not isinstance(payload["name"], str) or not payload["name"] or len(payload["name"]) > 120: raise OperationalError("INVALID_NAME", "name must be 1-120 characters.", 422)
@@ -82,5 +83,5 @@ def add_saved_view_snapshot(saved_view, runtime_definition, payload, user):
     if not isinstance(title, str) or not title.strip() or len(title) > 120: raise OperationalError("INVALID_WIDGET_TITLE", "widget title must be 1-120 characters.", 422)
     widget = {"widget_id": widget_id, "widget_type": "TABLE", "title": title.strip(), "query": deepcopy(runtime_definition["query_definition"]), "coverage_policy": "SHOW_ALWAYS", "warnings_policy": "SHOW_WHEN_PRESENT", "drilldown": {"enabled": False}, "layout": {"col_span": 2, "order": max((w.get("layout", {}).get("order", 0) for w in definition["widgets"]), default=-1) + 1}, "required_permissions": ["operational_shipment.read"], "provenance": {"source_type": "SAVED_VIEW", "source_public_id": saved_view.public_id, "source_version": saved_view.version, "source_name_snapshot": saved_view.name}}
     definition["widgets"].append(widget); definition["sections"][0]["widget_ids"].append(widget_id); definition["semantic_version"] = ROWSET_SEMANTIC_VERSION
-    validate(definition); row.definition_json = definition; row.semantic_version = ROWSET_SEMANTIC_VERSION; row.version += 1; row.updated_by = int(user["id"]); _revision(row, int(user["id"]), "saved_view_snapshot"); db.session.commit()
+    validate(definition, allow_provenance=True); row.definition_json = definition; row.semantic_version = ROWSET_SEMANTIC_VERSION; row.version += 1; row.updated_by = int(user["id"]); _revision(row, int(user["id"]), "saved_view_snapshot"); db.session.commit()
     return serialize(row) | {"created_widget_id": widget_id}
