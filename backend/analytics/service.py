@@ -13,6 +13,7 @@ from backend.operational_models import (Milestone, MilestoneEvent, OperationalCh
     OperationalException, OperationalShipment, OperationalWorkItem, Project, RouteLeg, RoutePlan)
 from backend.services import occurrence_projection_service as authority
 from backend.services.operational_service import OperationalError, organization_for_user, require_permission
+from backend.services.assigned_work_authorization import assigned_shipment_scope
 
 MAX_METRICS, MAX_DIMENSIONS, MAX_FILTERS, MAX_LIMIT = 10, 4, 12, 200
 
@@ -96,12 +97,22 @@ def _rows(groups, dimensions, metric, unknown=None):
     if not groups and not dimensions: return [{metric: {"state": "ZERO", "value": 0}}]
     return [{**{d: value for d, value in zip(dimensions, key)}, metric: {"state": "VALUE" if value is not None else "NULL_UNKNOWN", "value": value, **unknown.get(key, {})}} for key, value in groups.items()]
 
-def _shipments(org): return db.session.scalars(select(OperationalShipment).where(OperationalShipment.organization_id == org)).all()
-def _active_legs(org):
-    return db.session.execute(select(RouteLeg, OperationalShipment).join(RoutePlan, RouteLeg.route_plan_id == RoutePlan.id).join(OperationalShipment, RoutePlan.operational_shipment_id == OperationalShipment.id).where(OperationalShipment.organization_id == org, RoutePlan.is_active.is_(True), RouteLeg.status != "cancelled")).all()
+def _authorized_shipment_statement(org, user):
+    """Apply tenancy and canonical business access before analytics computation."""
+    return select(OperationalShipment).where(
+        OperationalShipment.organization_id == org,
+        assigned_shipment_scope(user),
+    )
 
-def _scope_shipment_ids(org, filters):
-    rows = _shipments(org)
+def _shipments(org, user):
+    return db.session.scalars(_authorized_shipment_statement(org, user)).all()
+
+def _active_legs(org, user):
+    authorized_ids = _authorized_shipment_statement(org, user).with_only_columns(OperationalShipment.id)
+    return db.session.execute(select(RouteLeg, OperationalShipment).join(RoutePlan, RouteLeg.route_plan_id == RoutePlan.id).join(OperationalShipment, RoutePlan.operational_shipment_id == OperationalShipment.id).where(OperationalShipment.organization_id == org, OperationalShipment.id.in_(authorized_ids), RoutePlan.is_active.is_(True), RouteLeg.status != "cancelled")).all()
+
+def _scope_shipment_ids(org, user, filters):
+    rows = _shipments(org, user)
     for item in filters:
         key, value = item["dimension"], item["value"]
         if key == "PROJECT":
@@ -134,18 +145,18 @@ def _matches_leg_filters(leg, filters):
     values = _leg_dimensions(leg, type("S", (), {"project_id": None, "customer_id": None, "lifecycle_status": None, "created_at": leg.created_at})(), [f["dimension"] for f in filters])
     return all(f["dimension"] not in values or values[f["dimension"]] == f["value"] for f in filters)
 
-def _metric(metric, org, dimensions, scoped_shipments, filters=(), time_grain=None, time_dimension="created"):
+def _metric(metric, org, user, dimensions, scoped_shipments, filters=(), time_grain=None, time_dimension="created"):
     groups = defaultdict(lambda: 0)
     shipment_metrics = {"SHIPMENT_COUNT", "ACTIVE_SHIPMENT_COUNT", "PLANNED_SHIPMENT_COUNT", "IN_PROGRESS_SHIPMENT_COUNT", "COMPLETED_SHIPMENT_COUNT", "CANCELLED_SHIPMENT_COUNT", "REPLAN_COUNT"}
     if metric in shipment_metrics:
         status = {"ACTIVE_SHIPMENT_COUNT": {"planned", "in_progress"}, "PLANNED_SHIPMENT_COUNT": {"planned"}, "IN_PROGRESS_SHIPMENT_COUNT": {"in_progress"}, "COMPLETED_SHIPMENT_COUNT": {"completed"}, "CANCELLED_SHIPMENT_COUNT": {"cancelled"}}.get(metric)
-        for shipment in _shipments(org):
+        for shipment in _shipments(org, user):
             if shipment.id not in scoped_shipments: continue
             if status and shipment.lifecycle_status not in status: continue
             value = max((db.session.scalar(select(RoutePlan.revision_number).where(RoutePlan.operational_shipment_id == shipment.id).order_by(RoutePlan.revision_number.desc())) or 1) - 1, 0) if metric == "REPLAN_COUNT" else 1
             groups[_key(_shipment_dimensions(shipment, dimensions, shipment.created_at, time_grain), dimensions)] += value
     elif metric in {"ROUTE_LEG_COUNT", "COMPLETED_LEG_COUNT", "LEG_TRANSIT_TIME"}:
-        for leg, shipment in _active_legs(org):
+        for leg, shipment in _active_legs(org, user):
             if shipment.id not in scoped_shipments: continue
             if not _matches_leg_filters(leg, filters): continue
             if metric == "COMPLETED_LEG_COUNT" and leg.status != "completed": continue
@@ -181,7 +192,7 @@ def _metric(metric, org, dimensions, scoped_shipments, filters=(), time_grain=No
             if checkpoint.actual_arrival_at and checkpoint.actual_departure_at:
                 groups[_key(_shipment_dimensions(shipment, dimensions, checkpoint.actual_arrival_at, time_grain), dimensions)] += (authority.aware(checkpoint.actual_departure_at)-authority.aware(checkpoint.actual_arrival_at)).total_seconds()
     elif metric == "DOCUMENT_READINESS_COVERAGE":
-        document = next(row for row in coverage(org) if row["coverage_key"] == "DOCUMENT_READINESS_SCOPE_COVERAGE")
+        document = next(row for row in coverage(org, user) if row["coverage_key"] == "DOCUMENT_READINESS_SCOPE_COVERAGE")
         return _rows({tuple(): document["coverage_percent"]}, dimensions, metric)
     else:
         model, time_attr, open_only = ({"DELAY_CASE_COUNT": (OperationalDelay, "started_at", False), "REPORTED_DELAY_DURATION": (OperationalDelay, "started_at", False), "EXCEPTION_COUNT": (OperationalException, "occurred_at", False), "OPEN_EXCEPTION_COUNT": (OperationalException, "occurred_at", True), "OPEN_WORK_ITEM_COUNT": (OperationalWorkItem, "detected_at", True), "DOCUMENT_REQUIREMENT_COUNT": (OperationalDocumentRequirement, "created_at", False)}).get(metric, (None, None, None))
@@ -205,25 +216,25 @@ def _metric(metric, org, dimensions, scoped_shipments, filters=(), time_grain=No
             groups[_key(_shipment_dimensions(shipment, dimensions, getattr(row, time_attr, None), time_grain), dimensions)] += value
     return _rows(groups, dimensions, metric)
 
-def coverage(org):
-    shipments = _shipments(org); legs = _active_legs(org); cargo = db.session.scalars(select(ShipmentCargoItem).join(OperationalShipment).where(OperationalShipment.organization_id == org)).all()
+def coverage(org, user):
+    shipments = _shipments(org, user); shipment_ids = [row.id for row in shipments]; legs = _active_legs(org, user); cargo = db.session.scalars(select(ShipmentCargoItem).join(OperationalShipment).where(OperationalShipment.organization_id == org, OperationalShipment.id.in_(shipment_ids))).all()
     def item(key, eligible, covered): return {"coverage_key": key, "definition": COVERAGE[key], "eligible_count": eligible, "covered_count": covered, "coverage_percent": (covered / eligible * 100) if eligible else None, "state": "VALUE" if eligible else "NOT_APPLICABLE"}
-    return [item("SHIPMENTS_WITH_PROJECT_COVERAGE", len(shipments), sum(bool(x.project_id) for x in shipments)), item("SHIPMENTS_WITH_CARGO_COVERAGE", len(shipments), len({x.operational_shipment_id for x in cargo})), item("CARGO_CATALOG_LINK_COVERAGE", len(cargo), sum(bool(x.catalog_item_id) for x in cargo)), item("LEGS_WITH_ORIGIN_FACILITY_COVERAGE", len(legs), sum(bool(l.origin_logistics_point_id) for l, _s in legs)), item("LEGS_WITH_DESTINATION_FACILITY_COVERAGE", len(legs), sum(bool(l.destination_logistics_point_id) for l, _s in legs)), item("LEGS_WITH_CARRIER_REFERENCE_COVERAGE", len(legs), sum(bool(l.carrier_reference) for l, _s in legs)), item("COMPLETED_LEGS_WITH_ACTUAL_TIMES_COVERAGE", sum(l.status == "completed" for l, _s in legs), sum(l.status == "completed" and l.actual_departure and l.actual_arrival for l, _s in legs)), item("DOCUMENT_READINESS_SCOPE_COVERAGE", len(shipments), len({x.operational_shipment_id for x in db.session.scalars(select(OperationalDocumentRequirement).where(OperationalDocumentRequirement.organization_id == org, OperationalDocumentRequirement.is_active.is_(True))).all()})), item("CARGO_TRANSPORT_ALLOCATION_COVERAGE", len(cargo), len({x.shipment_cargo_item_id for x in db.session.scalars(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.operational_shipment_id.in_([s.id for s in shipments]))).all()}))]
+    return [item("SHIPMENTS_WITH_PROJECT_COVERAGE", len(shipments), sum(bool(x.project_id) for x in shipments)), item("SHIPMENTS_WITH_CARGO_COVERAGE", len(shipments), len({x.operational_shipment_id for x in cargo})), item("CARGO_CATALOG_LINK_COVERAGE", len(cargo), sum(bool(x.catalog_item_id) for x in cargo)), item("LEGS_WITH_ORIGIN_FACILITY_COVERAGE", len(legs), sum(bool(l.origin_logistics_point_id) for l, _s in legs)), item("LEGS_WITH_DESTINATION_FACILITY_COVERAGE", len(legs), sum(bool(l.destination_logistics_point_id) for l, _s in legs)), item("LEGS_WITH_CARRIER_REFERENCE_COVERAGE", len(legs), sum(bool(l.carrier_reference) for l, _s in legs)), item("COMPLETED_LEGS_WITH_ACTUAL_TIMES_COVERAGE", sum(l.status == "completed" for l, _s in legs), sum(l.status == "completed" and l.actual_departure and l.actual_arrival for l, _s in legs)), item("DOCUMENT_READINESS_SCOPE_COVERAGE", len(shipments), len({x.operational_shipment_id for x in db.session.scalars(select(OperationalDocumentRequirement).where(OperationalDocumentRequirement.organization_id == org, OperationalDocumentRequirement.operational_shipment_id.in_(shipment_ids), OperationalDocumentRequirement.is_active.is_(True))).all()})), item("CARGO_TRANSPORT_ALLOCATION_COVERAGE", len(cargo), len({x.shipment_cargo_item_id for x in db.session.scalars(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.operational_shipment_id.in_(shipment_ids))).all()}))]
 
 def query(payload, user):
     require_permission(user, "operational_shipment.read")
     metrics, dimensions, filters, limit, time_grain, time_dimension = _check_request(payload)
     org = organization_for_user(int(user["id"]))
-    scoped_shipments = _scope_shipment_ids(org, filters)
+    scoped_shipments = _scope_shipment_ids(org, user, filters)
     rows = []
-    for metric in metrics: rows.extend(_metric(metric, org, dimensions, scoped_shipments, filters, time_grain, time_dimension))
+    for metric in metrics: rows.extend(_metric(metric, org, user, dimensions, scoped_shipments, filters, time_grain, time_dimension))
     warnings = []
     if "CARRIER" in dimensions: warnings.append("CARRIER_NOT_GOVERNED")
     if any(METRICS[m]["readiness"] == PARTIAL for m in metrics): warnings.append("PARTIAL_DIMENSION_COVERAGE")
     columns = [{"key": d, "business_name": DIMENSIONS[d]["business_name"], "kind": "dimension", "data_type": "string"} for d in dimensions]
     columns += [{"key": m, "business_name": METRICS[m]["business_name"], "kind": "metric", "data_type": "number", "unit": METRICS[m]["unit"], "null_semantics": METRICS[m]["null_policy"]} for m in metrics]
     normalized = {"metrics": metrics, "dimensions": dimensions, "filters": filters, "time_grain": time_grain, "time_dimension": time_dimension}
-    return {"semantic_version": SEMANTIC_VERSION, "normalized_query": normalized, "query": normalized, "columns": columns, "rows": rows[:limit], "coverage": coverage(org), "warnings": warnings, "pagination": {"limit": limit, "next_cursor": None}, "execution": {"read_only": True, "organization_scoped": True}}
+    return {"semantic_version": SEMANTIC_VERSION, "normalized_query": normalized, "query": normalized, "columns": columns, "rows": rows[:limit], "coverage": coverage(org, user), "warnings": warnings, "pagination": {"limit": limit, "next_cursor": None}, "execution": {"read_only": True, "organization_scoped": True, "business_access_scoped": True}}
 
 def _drilldown_context(metric, payload):
     """Validate a drilldown as the original semantic query plus one segment.
@@ -270,10 +281,10 @@ def drilldown(metric, user, payload=None, limit=None):
     payload = dict(payload or {})
     if limit is not None: payload["limit"] = limit
     dimensions, filters, requested_limit, time_grain, time_dimension, segment, cursor = _drilldown_context(metric, payload)
-    org = organization_for_user(int(user["id"])); scoped = _scope_shipment_ids(org, filters)
+    org = organization_for_user(int(user["id"])); scoped = _scope_shipment_ids(org, user, filters)
     items = []
     if metric in {"ROUTE_LEG_COUNT", "COMPLETED_LEG_COUNT", "LEG_TRANSIT_TIME"}:
-        for leg, shipment in _active_legs(org):
+        for leg, shipment in _active_legs(org, user):
             if shipment.id in scoped and _matches_leg_filters(leg, filters) and (metric != "COMPLETED_LEG_COUNT" or leg.status == "completed"):
                 items.append({"route_leg_id": leg.id, "shipment_public_id": shipment.public_id})
     elif metric in {"RAW_EVENT_COUNT", "EFFECTIVE_BUSINESS_OCCURRENCE_COUNT"}:
@@ -296,7 +307,7 @@ def drilldown(metric, user, payload=None, limit=None):
         # readiness flag rather than substituting a generic shipment list.
         if metric == "DOCUMENT_READINESS_COVERAGE":
             ready = {row.operational_shipment_id for row in db.session.scalars(select(OperationalDocumentRequirement).where(OperationalDocumentRequirement.organization_id == org, OperationalDocumentRequirement.is_active.is_(True))).all()}
-            for shipment in _shipments(org):
+            for shipment in _shipments(org, user):
                 if shipment.id in scoped:
                     items.append({"shipment_public_id": shipment.public_id, "document_readiness": shipment.id in ready})
         else:
@@ -305,7 +316,7 @@ def drilldown(metric, user, payload=None, limit=None):
                     items.append({"document_requirement_public_id": row.public_id, "shipment_public_id": db.session.get(OperationalShipment, row.operational_shipment_id).public_id})
     else:
         # Shipment-facing metrics are represented by the authorized population, never a tenant-wide fallback.
-        for shipment in _shipments(org):
+        for shipment in _shipments(org, user):
             status = {"ACTIVE_SHIPMENT_COUNT": {"planned", "in_progress"}, "PLANNED_SHIPMENT_COUNT": {"planned"}, "IN_PROGRESS_SHIPMENT_COUNT": {"in_progress"}, "COMPLETED_SHIPMENT_COUNT": {"completed"}, "CANCELLED_SHIPMENT_COUNT": {"cancelled"}}.get(metric)
             if shipment.id in scoped and (not status or shipment.lifecycle_status in status): items.append({"shipment_public_id": shipment.public_id})
     page, next_cursor = _page(items, requested_limit, cursor)
