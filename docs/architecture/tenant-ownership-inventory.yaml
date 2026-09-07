@@ -71,6 +71,8 @@
     "OperationalAudit": {"kind":"persisted_model","table":"operational_audit","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "Dashboard": {"kind":"persisted_model","table":"dashboard","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Personal dashboard configuration is tenant-scoped and additionally owner_user_id-scoped; source-controlled system templates have no row."},
     "DashboardRevision": {"kind":"persisted_model","table":"dashboard_revision","scope":"TENANT_OWNED_INDIRECT","owner_path":"dashboard.organization_id","rationale":"Immutable configuration history inherits tenant ownership from Dashboard."},
+    "SavedView": {"kind":"persisted_model","table":"saved_view","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Private personal analytical/list configuration is tenant-scoped and owner_user_id-scoped."},
+    "SavedViewRevision": {"kind":"persisted_model","table":"saved_view_revision","scope":"TENANT_OWNED_INDIRECT","owner_path":"saved_view.organization_id","rationale":"Immutable definition history inherits tenant ownership from SavedView."},
     "OperationalOutbox": {"kind":"persisted_model","table":"operational_outbox","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "OperationalIdempotency": {"kind":"persisted_model","table":"operational_idempotency","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "Milestone": {"kind":"persisted_model","table":"operational_milestone","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},

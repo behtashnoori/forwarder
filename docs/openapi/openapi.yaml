@@ -30,6 +30,7 @@ tags:
   - name: User Management
   - name: Admin Panel
   - name: Dashboards
+  - name: Saved Views
   - name: Customer Gamification
   - name: Site Settings
 components:
@@ -976,6 +977,36 @@ components:
           type: object
           required: [code, message]
           properties: { code: { type: string, example: DASHBOARD_VERSION_CONFLICT }, message: { type: string } }
+    SavedViewDefinition:
+      type: object
+      additionalProperties: false
+      description: Governed saved-view-definition-v1 configuration; stores no result data and grants no access.
+      required: [schema_version, semantic_version, surface, query_definition, presentation]
+      properties:
+        schema_version: { type: string, enum: [saved-view-definition-v1] }
+        semantic_version: { type: string, enum: [analytics-semantic-v1] }
+        surface: { type: string, enum: [OPERATIONAL_SHIPMENTS] }
+        query_definition: { type: object, description: Governed SemanticQueryDefinition. }
+        presentation: { type: object, required: [columns, sort, display_type, limit], properties: { columns: { type: array, minItems: 1, uniqueItems: true, items: { type: string } }, sort: { type: object, required: [field, direction], properties: { field: { type: string, enum: [PLANNED_DEPARTURE, PLANNED_ARRIVAL, CREATED_AT, SHIPMENT_STATUS] }, direction: { type: string, enum: [ASC, DESC] } } }, display_type: { type: string, enum: [LIST] }, limit: { type: integer, minimum: 1, maximum: 100 } } }
+    SavedView:
+      type: object
+      required: [public_id, name, description, visibility, status, semantic_version, saved_view_schema_version, version, definition]
+      properties:
+        public_id: { type: string, format: uuid, description: Opaque caller-owned identity; numeric IDs are never exposed. }
+        name: { type: string, minLength: 1, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        visibility: { type: string, enum: [PRIVATE] }
+        status: { type: string, enum: [ACTIVE, ARCHIVED] }
+        semantic_version: { type: string, enum: [analytics-semantic-v1] }
+        saved_view_schema_version: { type: string, enum: [saved-view-definition-v1] }
+        version: { type: integer, minimum: 1 }
+        definition: { $ref: '#/components/schemas/SavedViewDefinition' }
+    SavedViewEnvelope: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/SavedView' } } }
+    SavedViewListEnvelope: { type: object, required: [data], properties: { data: { type: array, items: { $ref: '#/components/schemas/SavedView' } } } }
+    SavedViewCreate: { type: object, additionalProperties: false, required: [name, definition], properties: { name: { type: string, minLength: 1, maxLength: 120 }, description: { type: string, maxLength: 1000 }, definition: { $ref: '#/components/schemas/SavedViewDefinition' } } }
+    SavedViewPatch: { type: object, additionalProperties: false, required: [expected_version], properties: { expected_version: { type: integer, minimum: 1 }, name: { type: string, minLength: 1, maxLength: 120 }, description: { type: string, maxLength: 1000 }, definition: { $ref: '#/components/schemas/SavedViewDefinition' }, change_reason: { type: string, maxLength: 255 } } }
+    SavedViewVersionCommand: { type: object, additionalProperties: false, required: [expected_version], properties: { expected_version: { type: integer, minimum: 1 } } }
+    SavedViewError: { type: object, required: [error], properties: { error: { type: object, required: [code, message], properties: { code: { type: string, example: SAVED_VIEW_VERSION_CONFLICT }, message: { type: string } } } } }
 paths:
   /api/v2/analytics/drilldown/{metric}:
     parameters: [{ name: metric, in: path, required: true, description: Governed Analytics metric key; tenant identity is derived from the bearer context., schema: { type: string } }]
@@ -3266,3 +3297,13 @@ paths:
     post: { tags: [Dashboards], summary: Archive a caller-owned personal dashboard without changing definition revisions, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Archived dashboard., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible. } } }
   /api/v2/dashboards/{public_id}/restore:
     post: { tags: [Dashboards], summary: Restore a caller-owned archived personal dashboard without changing definition revisions, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Restored dashboard., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible. } } }
+  /api/v2/saved-views:
+    get: { tags: [Saved Views], summary: List caller-owned active private personal Saved Views, security: [{ bearerAuth: [] }], parameters: [{ name: status, in: query, schema: { type: string, enum: [ARCHIVED] } }], responses: { '200': { description: Saved Views., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewListEnvelope' } } } } } }
+    post: { tags: [Saved Views], summary: Create a private personal Saved View at revision 1, security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewCreate' } } } }, responses: { '201': { description: Created., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewEnvelope' } } } }, '422': { description: Validation failure; no row or revision is created. } } }
+  /api/v2/saved-views/{public_id}:
+    get: { tags: [Saved Views], summary: Get a caller-owned private Saved View, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Saved View., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewEnvelope' } } } }, '404': { description: Missing and inaccessible identities are indistinguishable. } } }
+    patch: { tags: [Saved Views], summary: Update with optimistic concurrency, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewPatch' } } } }, responses: { '200': { description: Updated or unchanged Saved View. }, '409': { description: SAVED_VIEW_VERSION_CONFLICT; no rejected revision., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewError' } } } }, '422': { description: Validation failure; no revision. } } }
+  /api/v2/saved-views/{public_id}/archive:
+    post: { tags: [Saved Views], summary: Archive without rewriting definition history, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewVersionCommand' } } } }, responses: { '200': { description: Archived. }, '409': { description: Version conflict. } } }
+  /api/v2/saved-views/{public_id}/restore:
+    post: { tags: [Saved Views], summary: Restore without rewriting definition history, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewVersionCommand' } } } }, responses: { '200': { description: Restored. }, '409': { description: Version conflict. } } }

@@ -4042,3 +4042,11 @@ export interface DashboardUpdate { expected_version:number; name?:string; descri
 export const updateDashboard = (publicId:string, payload:DashboardUpdate) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}`, {method:"PATCH",body:JSON.stringify(payload)});
 export const archiveDashboard = (publicId:string) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}/archive`, {method:"POST"});
 export const restoreDashboard = (publicId:string) => request<{data:PersistedDashboard}>(`/api/v2/dashboards/${encodeURIComponent(publicId)}/restore`, {method:"POST"});
+export type { SavedView, SavedViewDefinition } from "@/saved-view/types";
+import type { SavedView, SavedViewDefinition } from "@/saved-view/types";
+export const listSavedViews = () => request<{data:SavedView[]}>("/api/v2/saved-views");
+export const getSavedView = (publicId:string) => request<{data:SavedView}>(`/api/v2/saved-views/${encodeURIComponent(publicId)}`);
+export const createSavedView = (payload:{name:string;description?:string;definition:SavedViewDefinition}) => request<{data:SavedView}>("/api/v2/saved-views",{method:"POST",body:JSON.stringify(payload)});
+export const updateSavedView = (publicId:string,payload:{expected_version:number;name?:string;description?:string;definition?:SavedViewDefinition;change_reason?:string}) => request<{data:SavedView}>(`/api/v2/saved-views/${encodeURIComponent(publicId)}`,{method:"PATCH",body:JSON.stringify(payload)});
+export const archiveSavedView = (publicId:string,expected_version:number) => request<{data:SavedView}>(`/api/v2/saved-views/${encodeURIComponent(publicId)}/archive`,{method:"POST",body:JSON.stringify({expected_version})});
+export const restoreSavedView = (publicId:string,expected_version:number) => request<{data:SavedView}>(`/api/v2/saved-views/${encodeURIComponent(publicId)}/restore`,{method:"POST",body:JSON.stringify({expected_version})});

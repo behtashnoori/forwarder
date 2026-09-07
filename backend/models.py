@@ -2114,6 +2114,7 @@ from backend.external_reference_models import (  # noqa: E402,F401
     OperationalShipmentExternalReference,
 )
 from backend.dashboard_models import Dashboard, DashboardRevision  # noqa: E402,F401
+from backend.saved_view_models import SavedView, SavedViewRevision  # noqa: E402,F401
 
 
 __all__ = [
@@ -2214,4 +2215,6 @@ __all__ = [
     "OrganizationGlobalLogisticsPointAdoption",
     "Dashboard",
     "DashboardRevision",
+    "SavedView",
+    "SavedViewRevision",
 ]
