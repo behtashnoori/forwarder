@@ -14,6 +14,7 @@ from backend.operational_models import (Milestone, MilestoneEvent, OperationalCh
 from backend.services import occurrence_projection_service as authority
 from backend.services.operational_service import OperationalError, organization_for_user, require_permission
 from backend.services.assigned_work_authorization import assigned_shipment_scope
+from backend.analytics.shipment_rowset import execute_rowset, normalize_rowset_query
 
 MAX_METRICS, MAX_DIMENSIONS, MAX_FILTERS, MAX_LIMIT = 10, 4, 12, 200
 
@@ -223,6 +224,14 @@ def coverage(org, user):
 
 def query(payload, user):
     require_permission(user, "operational_shipment.read")
+    if not isinstance(payload, dict): _error("INVALID_ANALYTICS_QUERY", "Query must be an object.")
+    query_kind = payload.get("query_kind", "AGGREGATE")
+    if query_kind == "ROWSET":
+        return execute_rowset(normalize_rowset_query(payload), user)
+    if query_kind != "AGGREGATE":
+        _error("UNSUPPORTED_QUERY_KIND", "query_kind must be AGGREGATE or ROWSET.")
+    if payload.get("semantic_version") not in (None, SEMANTIC_VERSION):
+        _error("UNSUPPORTED_SEMANTIC_VERSION", "Aggregate queries require analytics-semantic-v1.")
     metrics, dimensions, filters, limit, time_grain, time_dimension = _check_request(payload)
     org = organization_for_user(int(user["id"]))
     scoped_shipments = _scope_shipment_ids(org, user, filters)
@@ -234,7 +243,7 @@ def query(payload, user):
     columns = [{"key": d, "business_name": DIMENSIONS[d]["business_name"], "kind": "dimension", "data_type": "string"} for d in dimensions]
     columns += [{"key": m, "business_name": METRICS[m]["business_name"], "kind": "metric", "data_type": "number", "unit": METRICS[m]["unit"], "null_semantics": METRICS[m]["null_policy"]} for m in metrics]
     normalized = {"metrics": metrics, "dimensions": dimensions, "filters": filters, "time_grain": time_grain, "time_dimension": time_dimension}
-    return {"semantic_version": SEMANTIC_VERSION, "normalized_query": normalized, "query": normalized, "columns": columns, "rows": rows[:limit], "coverage": coverage(org, user), "warnings": warnings, "pagination": {"limit": limit, "next_cursor": None}, "execution": {"read_only": True, "organization_scoped": True, "business_access_scoped": True}}
+    return {"result_kind": "AGGREGATE", "semantic_version": SEMANTIC_VERSION, "normalized_query": normalized, "query": normalized, "columns": columns, "rows": rows[:limit], "coverage": coverage(org, user), "warnings": warnings, "pagination": {"limit": limit, "next_cursor": None}, "execution": {"read_only": True, "organization_scoped": True, "business_access_scoped": True}}
 
 def _drilldown_context(metric, payload):
     """Validate a drilldown as the original semantic query plus one segment.

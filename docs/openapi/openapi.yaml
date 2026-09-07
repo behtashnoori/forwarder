@@ -1007,6 +1007,38 @@ components:
     SavedViewPatch: { type: object, additionalProperties: false, required: [expected_version], properties: { expected_version: { type: integer, minimum: 1 }, name: { type: string, minLength: 1, maxLength: 120 }, description: { type: string, maxLength: 1000 }, definition: { $ref: '#/components/schemas/SavedViewDefinition' }, change_reason: { type: string, maxLength: 255 } } }
     SavedViewVersionCommand: { type: object, additionalProperties: false, required: [expected_version], properties: { expected_version: { type: integer, minimum: 1 } } }
     SavedViewError: { type: object, required: [error], properties: { error: { type: object, required: [code, message], properties: { code: { type: string, example: SAVED_VIEW_VERSION_CONFLICT }, message: { type: string } } } } }
+    SemanticAnalyticsQuery:
+      oneOf:
+        - $ref: '#/components/schemas/SemanticAggregateQuery'
+        - $ref: '#/components/schemas/SemanticShipmentRowsetQuery'
+    SemanticAggregateQuery:
+      type: object
+      required: [metrics]
+      properties: { query_kind: { type: string, enum: [AGGREGATE] }, metrics: { type: array, items: { type: string } }, dimensions: { type: array, items: { type: string } } }
+    SemanticShipmentRowsetQuery:
+      type: object
+      required: [query_kind, semantic_version, population, columns]
+      properties:
+        query_kind: { type: string, enum: [ROWSET] }
+        semantic_version: { type: string, enum: [analytics-semantic-v2] }
+        population: { type: string, enum: [SHIPMENTS] }
+        columns: { type: array, minItems: 1, items: { type: string, enum: [CUSTOMER, ROUTE, PLANNED_TIME, PROJECT, SOURCE, MILESTONE, OPEN_WORK_ITEMS, SHIPMENT_STATUS] } }
+        filters: { type: array, items: { type: object, required: [dimension, value], properties: { dimension: { type: string, enum: [SHIPMENT_STATUS] }, value: { type: string } } } }
+        operational_window: { type: object, properties: { from: { type: string, format: date-time }, to: { type: string, format: date-time } } }
+        sort: { type: object, properties: { field: { type: string, enum: [CREATED_AT, PLANNED_DEPARTURE, PLANNED_ARRIVAL, SHIPMENT_STATUS] }, direction: { type: string, enum: [ASC, DESC] } } }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+    SemanticAnalyticsResult:
+      oneOf:
+        - $ref: '#/components/schemas/SemanticAggregateResult'
+        - $ref: '#/components/schemas/SemanticRowsetResult'
+    SemanticAggregateResult:
+      type: object
+      required: [result_kind, rows, columns]
+      properties: { result_kind: { type: string, enum: [AGGREGATE] }, rows: { type: array, items: { type: object } }, columns: { type: array, items: { type: object } } }
+    SemanticRowsetResult:
+      type: object
+      required: [result_kind, columns, rows, returned_row_count]
+      properties: { result_kind: { type: string, enum: [ROWSET] }, columns: { type: array, items: { type: object } }, rows: { type: array, items: { type: object } }, returned_row_count: { type: integer } }
 paths:
   /api/v2/projects/{project_id}/access:
     parameters:
@@ -3325,6 +3357,13 @@ paths:
     post: { tags: [Dashboards], summary: Archive a caller-owned personal dashboard without changing definition revisions, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Archived dashboard., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible. } } }
   /api/v2/dashboards/{public_id}/restore:
     post: { tags: [Dashboards], summary: Restore a caller-owned archived personal dashboard without changing definition revisions, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Restored dashboard., content: { application/json: { schema: { $ref: '#/components/schemas/DashboardEnvelope' } } } }, '404': { description: Not found or inaccessible. } } }
+  /api/v2/analytics/query:
+    post:
+      tags: [Analytics]
+      summary: Execute a governed aggregate or bounded Shipment ROWSET query
+      security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SemanticAnalyticsQuery' } } } }
+      responses: { '200': { description: Discriminated semantic result., content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/SemanticAnalyticsResult' } } } } } }, '422': { description: Governed semantic validation error. } }
   /api/v2/saved-views:
     get: { tags: [Saved Views], summary: List caller-owned active private personal Saved Views, security: [{ bearerAuth: [] }], parameters: [{ name: status, in: query, schema: { type: string, enum: [ARCHIVED] } }], responses: { '200': { description: Saved Views., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewListEnvelope' } } } } } }
     post: { tags: [Saved Views], summary: Create a private personal Saved View at revision 1, security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewCreate' } } } }, responses: { '201': { description: Created., content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewEnvelope' } } } }, '422': { description: Validation failure; no row or revision is created. } } }

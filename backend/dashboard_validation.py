@@ -2,6 +2,8 @@
 import json
 from backend.analytics import SEMANTIC_VERSION
 from backend.analytics.registry import METRICS, DIMENSIONS, READY, PARTIAL
+from backend.analytics.shipment_rowset import ROWSET_SEMANTIC_VERSION, normalize_rowset_query
+from backend.services.operational_service import OperationalError
 
 class DashboardValidationError(ValueError):
     """A controlled validation failure that is safe to expose to API clients."""
@@ -16,7 +18,7 @@ def fail(code, message): raise DashboardValidationError(code, message)
 def validate(definition):
     if not isinstance(definition, dict): fail("INVALID_DASHBOARD_DEFINITION", "definition must be an object")
     if len(json.dumps(definition, separators=(",", ":")).encode()) > MAX_JSON: fail("DEFINITION_TOO_LARGE", "definition exceeds 256KB")
-    if definition.get("semantic_version") != SEMANTIC_VERSION: fail("SEMANTIC_VERSION_UNSUPPORTED", "analytics semantic version is unsupported")
+    if definition.get("semantic_version") not in {SEMANTIC_VERSION, ROWSET_SEMANTIC_VERSION}: fail("SEMANTIC_VERSION_UNSUPPORTED", "analytics semantic version is unsupported")
     if definition.get("dashboard_schema_version") not in (None, DASHBOARD_SCHEMA_VERSION): fail("DASHBOARD_SCHEMA_VERSION_UNSUPPORTED", "dashboard schema version is unsupported")
     widgets, sections = definition.get("widgets"), definition.get("sections")
     if not isinstance(widgets, list) or not widgets or len(widgets) > MAX_WIDGETS: fail("INVALID_WIDGETS", "select 1-30 widgets")
@@ -24,7 +26,17 @@ def validate(definition):
     ids=set()
     for w in widgets:
         if not isinstance(w, dict) or w.get("widget_id") in ids or w.get("widget_type") not in WIDGETS: fail("INVALID_WIDGET", "widget shape is invalid")
-        ids.add(w["widget_id"]); q=w.get("query", {}); metrics=q.get("metric_keys", []); dims=q.get("dimension_keys", [])
+        ids.add(w["widget_id"]); q=w.get("query", {});
+        if q.get("query_kind") == "ROWSET":
+            try: normalize_rowset_query(q)
+            except OperationalError as exc: fail(exc.code, str(exc))
+            if definition.get("semantic_version") != ROWSET_SEMANTIC_VERSION or w["widget_type"] != "TABLE": fail("INVALID_WIDGET_SHAPE", "ROWSET is supported only by analytics-semantic-v2 TABLE widgets")
+            layout=w.get("layout",{})
+            if layout.get("col_span") not in {1,2,3,4} or not isinstance(layout.get("order"),int): fail("INVALID_WIDGET_LAYOUT", "widget layout is invalid")
+            continue
+        if q.get("query_kind") not in (None, "AGGREGATE"): fail("UNSUPPORTED_QUERY_KIND", "widget query kind is unsupported")
+        if definition.get("semantic_version") != SEMANTIC_VERSION: fail("SEMANTIC_VERSION_UNSUPPORTED", "aggregate widgets require analytics-semantic-v1")
+        metrics=q.get("metric_keys", []); dims=q.get("dimension_keys", [])
         if not isinstance(metrics,list) or not metrics: fail("INVALID_METRIC_SELECTION", "widget requires a metric")
         if len(str(w.get("title", ""))) > 120: fail("STRING_LIMIT", "widget title exceeds 120 characters")
         for m in metrics:

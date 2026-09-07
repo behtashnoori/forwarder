@@ -12,4 +12,11 @@ describe("Dashboard widgets", () => {
   it("renders a KPI value and coverage without calculating it locally", () => { renderWidget({state:"VALUE",response}); expect(screen.getByText("۴")).toBeInTheDocument(); expect(screen.getByText(/پوشش نمونه/)).toBeInTheDocument(); });
   it("does not render unknown as zero", () => { renderWidget({state:"UNKNOWN"}); expect(screen.getByText("مقدار قابل تعیین نیست.")).toBeInTheDocument(); expect(screen.queryByText("۰")).not.toBeInTheDocument(); });
   it("renders an explicit backend failure state", () => { renderWidget({state:"ERROR",error:"backend unavailable"}); expect(screen.getByRole("alert")).toHaveTextContent("backend unavailable"); });
+  it("renders a governed ROWSET table in server order without aggregate reinterpretation", () => {
+    const rowsetWidget = {...widget, widget_type:"TABLE" as const, query:{...widget.query, query_kind:"ROWSET" as const, semantic_version:"analytics-semantic-v2", population:"SHIPMENTS" as const, columns:["CUSTOMER","SHIPMENT_STATUS"], metric_keys:[], dimension_keys:[]}};
+    const rowset = {semantic_version:"analytics-semantic-v2",result_kind:"ROWSET" as const,normalized_query:{query_kind:"ROWSET" as const},query:{query_kind:"ROWSET" as const},columns:[{key:"CUSTOMER",business_name:"مشتری",kind:"dimension" as const,data_type:"string"},{key:"SHIPMENT_STATUS",business_name:"وضعیت",kind:"dimension" as const,data_type:"string"}],rows:[{shipment_public_id:"shipment-2",CUSTOMER:"دوم",SHIPMENT_STATUS:"planned"},{shipment_public_id:"shipment-1",CUSTOMER:"اول",SHIPMENT_STATUS:"completed"}],coverage:[],warnings:[],pagination:{limit:20,next_cursor:null},returned_row_count:2,execution:{read_only:true as const,organization_scoped:true as const}};
+    render(<TooltipProvider><MemoryRouter><DashboardWidget widget={rowsetWidget} result={{state:"VALUE",response:rowset}} /></MemoryRouter></TooltipProvider>);
+    expect(screen.getByText("دوم").compareDocumentPosition(screen.getByText("اول")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.queryByText("محموله فعال")).not.toBeInTheDocument();
+  });
 });

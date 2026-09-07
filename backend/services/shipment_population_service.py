@@ -96,6 +96,11 @@ def _route_envelope_subqueries():
     return first_departure, final_arrival
 
 
+def route_envelope_columns():
+    """Public composable route-envelope expressions for governed consumers."""
+    return _route_envelope_subqueries()
+
+
 def operational_shipment_population(user, *, status: str | None = None, window: OperationalWindow | None = None):
     """Build the authorized, route-based Operational Shipment population."""
     organization_id = organization_for_user(int(user["id"]))

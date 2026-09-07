@@ -8,12 +8,17 @@ export type RefreshPolicy = { mode: "ON_PAGE_LOAD"; interval_ms?: never } | { mo
 export type DashboardSemanticState = "LOADING" | "VALUE" | "EMPTY_ZERO" | "UNKNOWN" | "NOT_APPLICABLE" | "NOT_READY" | "PARTIAL_COVERAGE" | "INCOMPATIBLE_FILTER" | "ERROR" | "OUT_OF_SCOPE" | "STALE_VALUE";
 
 export interface SemanticQueryDefinition {
+  query_kind?: "AGGREGATE" | "ROWSET";
+  semantic_version?: string;
   metric_keys: string[];
   dimension_keys: string[];
   filters?: AnalyticsFilter[];
   time_dimension?: string;
   time_grain?: "day" | "week" | "month" | "quarter" | "year";
-  sort?: "ASC" | "DESC";
+  population?: "SHIPMENTS";
+  columns?: string[];
+  operational_window?: { from?: string; to?: string };
+  sort?: "ASC" | "DESC" | { field: "CREATED_AT" | "PLANNED_DEPARTURE" | "PLANNED_ARRIVAL" | "SHIPMENT_STATUS"; direction: "ASC" | "DESC" };
   limit?: number;
 }
 export interface WidgetLayout { col_span: 1 | 2 | 3 | 4; order: number; }
@@ -37,7 +42,7 @@ export interface DashboardDefinition {
   name: string;
   description: string;
   dashboard_type: "SYSTEM" | "PERSONAL";
-  semantic_version: typeof DASHBOARD_SEMANTIC_VERSION;
+  semantic_version: typeof DASHBOARD_SEMANTIC_VERSION | "analytics-semantic-v2";
   global_filters: GlobalFilterDefinition[];
   sections: DashboardSection[];
   widgets: WidgetDefinition[];
