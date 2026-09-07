@@ -264,6 +264,7 @@ def main(argv=None) -> int:
     scope_quote=sub.add_parser("scope-quote"); scope_quote.add_argument("--quote-id", type=int, required=True); scope_quote.add_argument("--organization-id", type=int, required=True); scope_quote.add_argument("--confirm", action="store_true")
     provision=sub.add_parser("provision-uat"); provision.add_argument("--confirm", action="store_true")
     phase1b=sub.add_parser("seed-phase1b-uat"); phase1b.add_argument("--confirm", action="store_true")
+    personal_analytics=sub.add_parser("seed-personal-analytics-uat"); personal_analytics.add_argument("--confirm", action="store_true")
     cleanup=sub.add_parser("cleanup-uat"); cleanup.add_argument("--confirm", action="store_true")
     args=parser.parse_args(argv)
     if args.command != "reconcile-expert-baseline" and not args.confirm:
@@ -272,7 +273,13 @@ def main(argv=None) -> int:
         print("UAT commands are restricted to APP_ENV=test or development.", file=sys.stderr); return 2
     app=create_app(skip_startup=True)
     with app.app_context():
-        if args.command == "seed-phase1b-uat":
+        if args.command == "seed-personal-analytics-uat":
+            from backend.personal_analytics_uat import provision
+            password=os.getenv("FORWARDER_UAT_PASSWORD")
+            if not password:
+                print("FORWARDER_UAT_PASSWORD is required.", file=sys.stderr); return 2
+            print(json.dumps({"command":"seed-personal-analytics-uat", "result":"ready", **provision(app, password)}, sort_keys=True))
+        elif args.command == "seed-phase1b-uat":
             password=os.getenv("FORWARDER_UAT_PASSWORD")
             if not password:
                 print("FORWARDER_UAT_PASSWORD is required.", file=sys.stderr); return 2

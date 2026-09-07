@@ -1,0 +1,3 @@
+# Personal Analytics Staging UAT
+
+Record the RC commit, package SHA-256, staging hostname, database name, Alembic revision, deployment timestamp, and backup identity. Login as Expert A and verify project-only, direct, and request-assigned Shipments are visible; same-org unauthorized and Org B Shipments are hidden. Create/apply/reload a v2 Saved View; open Dashboard and Builder; add the Saved View to Dashboard; reload; modify then archive the source Saved View and confirm the copied TABLE still works. Revoke Expert A's Project A1 access: only the project-only row disappears; direct/request rows remain. Verify Org Admin A tenant visibility, cross-org denial, RTL, desktop/mobile, loading, empty, and error states.
