@@ -201,6 +201,7 @@ def test_admin_auth_role_requirements_and_read_shapes(user_management_app):
         "email",
         "phone",
         "role",
+        "authority",
         "department",
             "is_active",
                 "can_handle_domestic",
@@ -399,7 +400,6 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
         json={
             "username": "phase5b_created_updated",
             "full_name": "Phase 5B Created Updated",
-            "role": "business_expert",
             "department": "crm",
             "is_active": False,
             "manager_id": None,
@@ -420,7 +420,7 @@ def test_user_create_update_not_found_and_persistence_contracts(user_management_
         updated = db.session.get(ExpertUser, create_payload["user_id"])
         assert updated.username == "phase5b_created_updated"
         assert updated.full_name == "Phase 5B Created Updated"
-        assert updated.role == "business_expert"
+        assert updated.role == "expert"
         assert updated.department == "crm"
         assert updated.is_active is False
         assert updated.manager_id is None

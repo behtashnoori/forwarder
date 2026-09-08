@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router';
 import { rememberCurrentRouteForLogin } from '@/lib/authContinuity';
+import ApplicationNavigation from '@/components/ApplicationNavigation';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -33,7 +34,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, allowedRoles,
     }
   }
   
-  return <>{children}</>;
+  return <><ApplicationNavigation />{children}</>;
 };
 
 export default ProtectedRoute;

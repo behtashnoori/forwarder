@@ -15,6 +15,7 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "test:frontend": "vitest run",
+    "test:e2e": "playwright test",
     "preview": "vite preview",
     "setup:env": "node scripts/setup-env.js",
     "test:api": "node scripts/test-api-simple.js",
@@ -77,6 +78,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",

@@ -340,7 +340,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260915_project_access_foundation"
+            "20260916_personal_dashboard_permissions"
     ]
 
 

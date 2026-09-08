@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Home, LogOut } from "lucide-react";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
 import ReleaseIdentity from "@/components/ReleaseIdentity";
+import { authenticatedHome, safePreviousRoute } from "@/lib/applicationNavigation";
 
 interface PageNavProps {
   /** مسیر بازگشت؛ اگر نباشد از history برمی‌گردد */
@@ -23,7 +24,7 @@ const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, logou
 
   const handleBack = () => {
     if (backTo) navigate(backTo);
-    else navigate(-1);
+    else navigate(safePreviousRoute());
   };
 
   const handleLogout = async () => {
@@ -38,7 +39,7 @@ const PageNav = ({ backTo, backLabel = "بازگشت", showLogout = false, logou
         {backLabel}
       </Button>
       <Button variant="outline" size="sm" asChild>
-        <Link to="/">
+        <Link to={authenticatedHome()}>
           <Home className="w-4 h-4 ml-2" />
           خانه
         </Link>

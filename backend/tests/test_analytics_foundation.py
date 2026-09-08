@@ -4,7 +4,7 @@ import pytest
 from backend.extensions import db
 from backend.analytics import service
 from backend.analytics.registry import DIMENSIONS, METRICS
-from backend.operational_models import MilestoneEvent, RoutePlan
+from backend.operational_models import MilestoneEvent, OperationalMembership, RoutePlan
 from backend.services import route_orchestration_service as routes
 from backend.tests.test_execution_authority_3a import setup, report
 from backend.tests.test_operational_vertical_slice import operational_app, _user, _auth
@@ -23,6 +23,17 @@ def test_registry_is_versioned_unique_and_rejects_undefined_metrics(operational_
         assert METRICS["LEAD_TIME"]["readiness"] == "BUSINESS_DEFINITION_REQUIRED"
         with pytest.raises(Exception, match="not executable"):
             query(operational_app, ["LEAD_TIME"])
+
+def test_dashboard_only_user_can_discover_registry_but_cannot_query(operational_app):
+    with operational_app.app_context():
+        actor = _user(operational_app)
+        membership = OperationalMembership.query.filter_by(user_id=actor["id"]).one()
+        membership.permissions = ["personal_dashboard.read", "personal_dashboard.manage"]
+        db.session.commit()
+        assert service.semantic_registry(actor)["semantic_version"] == "analytics-semantic-v1"
+        with pytest.raises(service.OperationalError) as denied:
+            service.query({"metrics": ["SHIPMENT_COUNT"]}, actor)
+        assert denied.value.status == 403
 
 def test_counts_correction_verification_and_replan_are_lineage_safe(operational_app):
     from backend.services import operational_execution_service as execution

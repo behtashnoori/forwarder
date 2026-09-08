@@ -10,7 +10,7 @@ from backend.operational_models import OperationalMembership, OperationalOrganiz
 from backend.services import operational_service
 from backend.services.project_access_authorization import authorized_project_scope
 
-PERMISSIONS = ["project_configuration.read", "project_configuration.manage", "execution_unit.read", "operational_shipment.create_direct", "operational_shipment.read"]
+PERMISSIONS = ["project_configuration.read", "project_configuration.manage", "execution_unit.read", "operational_shipment.create_direct", "operational_shipment.read", "personal_dashboard.read", "personal_dashboard.manage"]
 
 
 @pytest.fixture()

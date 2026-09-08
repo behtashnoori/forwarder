@@ -26,7 +26,12 @@ describe("persisted dashboard route", () => {
     renderRoute();
     expect(await screen.findByRole("button", { name: "تلاش دوباره" })).toBeInTheDocument();
   });
-  it.each([["semantic_version", "analytics-semantic-v2", "لایهٔ معنایی"], ["dashboard_schema_version", "dashboard-definition-v2", "ساختار"], ["status", "ARCHIVED", "بایگانی"]])("renders explicit persisted state for %s", async (key, value, label) => {
+  it("accepts the governed row-set semantic version used by Saved View snapshots", async () => {
+    vi.mocked(api.getDashboard).mockResolvedValue({ data: dashboard({ semantic_version: "analytics-semantic-v2" }) } as never);
+    renderRoute();
+    expect(await screen.findByTestId("shared-runtime")).toBeInTheDocument();
+  });
+  it.each([["semantic_version", "analytics-semantic-v3", "لایهٔ معنایی"], ["dashboard_schema_version", "dashboard-definition-v2", "ساختار"], ["status", "ARCHIVED", "بایگانی"]])("renders explicit persisted state for %s", async (key, value, label) => {
     vi.mocked(api.getDashboard).mockResolvedValue({ data: dashboard({ [key]: value }) } as never);
     renderRoute();
     expect(await screen.findByText(new RegExp(label))).toBeInTheDocument();

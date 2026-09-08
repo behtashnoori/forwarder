@@ -3364,6 +3364,12 @@ paths:
       security: [{ bearerAuth: [] }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SemanticAnalyticsQuery' } } } }
       responses: { '200': { description: Discriminated semantic result., content: { application/json: { schema: { type: object, properties: { data: { $ref: '#/components/schemas/SemanticAnalyticsResult' } } } } } }, '422': { description: Governed semantic validation error. } }
+  /api/v2/analytics/semantic-registry:
+    get:
+      tags: [Analytics]
+      summary: Discover governed analytics metadata for operational analytics or Personal Dashboard authoring
+      security: [{ bearerAuth: [] }]
+      responses: { '200': { description: Versioned metric and dimension metadata; no Shipment rows or values are exposed. }, '403': { description: Requires operational_shipment.read or personal_dashboard.read. } }
   /api/v2/saved-views/{public_id}/dashboard-snapshot:
     post:
       tags: [Saved Views]

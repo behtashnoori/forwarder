@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from sqlalchemy.engine import make_url
 
 from backend import dashboard_service, saved_view_service
@@ -24,7 +25,8 @@ from backend.services.operational_service import OperationalError
 PREFIX = "personal_analytics_uat_"
 DATABASE_PREFIXES = ("forwarder_personal_analytics_uat", "forwarder_staging_")
 NOW = datetime(2041, 1, 1, 8, tzinfo=timezone.utc)
-READ = ["operational_shipment.read"]
+READ = ["operational_shipment.read", "personal_dashboard.manage", "personal_dashboard.read"]
+DASHBOARD_ONLY = ["personal_dashboard.manage", "personal_dashboard.read"]
 ADMIN = READ + ["project_configuration.manage"]
 
 
@@ -96,33 +98,37 @@ def provision(app, password: str):
         users = {}
         for key, org, authority, permissions in (
             ("expert_a", org_a, "EXPERT", READ), ("expert_b", org_a, "EXPERT", READ),
+            ("dashboard_only", org_a, "EXPERT", DASHBOARD_ONLY),
             ("admin_a", org_a, "ORGANIZATION_ADMIN", ADMIN), ("admin_b", org_b, "ORGANIZATION_ADMIN", ADMIN),
         ):
-            user = _one(ExpertUser, {"password_hash":password, "full_name":f"[PA-UAT] {key}", "role":"expert", "authority":authority, "is_active":True}, username=PREFIX + key)
+            password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+            user = _one(ExpertUser, {"password_hash":password_hash, "full_name":f"[PA-UAT] {key}", "role":"expert", "authority":authority, "is_active":True}, username=PREFIX + key)
+            user.password_hash = password_hash
             user.authority = authority; user.is_active = True
             membership = _one(OperationalMembership, {"permissions":permissions, "is_active":True}, organization_id=org.id, user_id=user.id)
             membership.permissions, membership.is_active = permissions, True; users[key] = user
-        customer = _one(Customer, {"first_name":"Synthetic", "last_name":"Personal Analytics", "phone":"09000000991", "status":"active"}, phone="09000000991")
+        customer_a = _one(Customer, {"first_name":"Synthetic", "last_name":"Personal Analytics A", "status":"active", "operational_organization_id":org_a.id, "ownership_scope":"TENANT"}, phone="09000000991")
+        customer_b = _one(Customer, {"first_name":"Synthetic", "last_name":"Personal Analytics B", "status":"active", "operational_organization_id":org_b.id, "ownership_scope":"TENANT"}, phone="09000000993")
         provinces = []
         for suffix in ("O", "D"):
             province = _one(Province, {"name_fa":f"[PA-UAT] {suffix}"}, code="PAU" + suffix)
             provinces.append(_one(CanonicalLocation, {"location_type":"province", "display_name":f"[PA-UAT] {suffix}"}, source_type="province", source_id=province.id))
         projects = {
-            "a1": _one(Project, {"primary_customer_id":customer.id, "created_by_user_id":users["admin_a"].id}, organization_id=org_a.id, project_code="PA-UAT-A1"),
-            "a2": _one(Project, {"primary_customer_id":customer.id, "created_by_user_id":users["admin_a"].id}, organization_id=org_a.id, project_code="PA-UAT-A2"),
-            "b1": _one(Project, {"primary_customer_id":customer.id, "created_by_user_id":users["admin_b"].id}, organization_id=org_b.id, project_code="PA-UAT-B1"),
+            "a1": _one(Project, {"primary_customer_id":customer_a.id, "created_by_user_id":users["admin_a"].id}, organization_id=org_a.id, project_code="PA-UAT-A1"),
+            "a2": _one(Project, {"primary_customer_id":customer_a.id, "created_by_user_id":users["admin_a"].id}, organization_id=org_a.id, project_code="PA-UAT-A2"),
+            "b1": _one(Project, {"primary_customer_id":customer_b.id, "created_by_user_id":users["admin_b"].id}, organization_id=org_b.id, project_code="PA-UAT-B1"),
         }
         for user, project, admin in ((users["expert_a"], projects["a1"], users["admin_a"]), (users["expert_b"], projects["a2"], users["admin_a"])):
             _one(ProjectAccess, {"created_by_user_id":admin.id}, organization_id=project.organization_id, project_id=project.id, user_id=user.id)
         def direct(code, org, project, responsible, creator):
-            return _one(OperationalShipment, {"organization_id":org.id, "project_id":project.id, "source_type":"direct", "customer_id":customer.id, "lifecycle_status":"planned", "created_by_user_id":creator.id, "primary_responsible_expert_id":responsible.id}, public_id="00000000-0000-0000-0000-00000000" + code)
+            return _one(OperationalShipment, {"organization_id":org.id, "project_id":project.id, "source_type":"direct", "customer_id":project.primary_customer_id, "lifecycle_status":"planned", "created_by_user_id":creator.id, "primary_responsible_expert_id":responsible.id}, public_id="00000000-0000-0000-0000-00000000" + code)
         shipments = {
             "project_only": direct("1001", org_a, projects["a1"], users["expert_b"], users["admin_a"]),
             "direct": direct("1002", org_a, projects["a1"], users["expert_a"], users["expert_a"]),
             "unauthorized": direct("1003", org_a, projects["a2"], users["expert_b"], users["admin_a"]),
             "cross_org": direct("1004", org_b, projects["b1"], users["admin_b"], users["admin_b"]),
         }
-        request = _one(ShipmentRequest, {"status":"waiting_for_customer", "status_request_status":"new", "assigned_to":users["expert_a"].id, "customer_id":customer.id, "operational_organization_id":org_a.id, "ownership_scope":"TENANT"}, contact_phone="09000000992")
+        request = _one(ShipmentRequest, {"status":"waiting_for_customer", "status_request_status":"new", "assigned_to":users["expert_a"].id, "customer_id":customer_a.id, "operational_organization_id":org_a.id, "ownership_scope":"TENANT"}, contact_phone="09000000992")
         quote = _one(ExpertQuote, {"amount":1000, "currency":"TST", "created_by_expert_id":users["expert_a"].id, "customer_response":"accepted", "operational_organization_id":org_a.id}, shipment_request_id=request.id, created_by_expert_id=users["expert_a"].id)
         shipments["request"] = _one(OperationalShipment, {"organization_id":org_a.id, "project_id":projects["a2"].id, "source_type":"accepted_quote", "shipment_request_id":request.id, "accepted_quote_id":quote.id, "lifecycle_status":"planned", "created_by_user_id":users["expert_a"].id}, public_id="00000000-0000-0000-0000-000000001005")
         for offset, shipment in enumerate(shipments.values()): _route(shipment, users["admin_a"] if shipment.organization_id == org_a.id else users["admin_b"], provinces[0], provinces[1], offset)
@@ -134,6 +140,6 @@ def provision(app, password: str):
         db.session.commit()
     except Exception:
         db.session.rollback(); raise
-    return {"organizations":2, "users":4, "projects":3, "project_access":2, "shipments":5,
+    return {"organizations":2, "users":5, "projects":3, "project_access":2, "shipments":5,
             "saved_view_public_id":view["public_id"], "dashboard_public_id":dashboard["public_id"],
             "shipment_public_ids":{key:value.public_id for key,value in shipments.items()}}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router';
+import ApplicationNavigation from '@/components/ApplicationNavigation';
 
 interface AdminRouteProps {
   children: React.ReactNode;
@@ -22,7 +23,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>;
+  return <><ApplicationNavigation />{children}</>;
 };
 
 export default AdminRoute;

@@ -21,6 +21,8 @@ EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = (
     "operational_shipment.create_direct",
     "operational_shipment.create_from_quote",
     "operational_shipment.read",
+    "personal_dashboard.manage",
+    "personal_dashboard.read",
 )
 T = TypeVar("T", bound=ExpertUser)
 

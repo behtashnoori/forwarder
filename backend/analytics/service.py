@@ -12,7 +12,7 @@ from backend.models import Customer
 from backend.operational_models import (Milestone, MilestoneEvent, OperationalCheckpoint, OperationalDelay,
     OperationalException, OperationalShipment, OperationalWorkItem, Project, RouteLeg, RoutePlan)
 from backend.services import occurrence_projection_service as authority
-from backend.services.operational_service import OperationalError, organization_for_user, require_permission
+from backend.services.operational_service import OperationalError, organization_for_user, require_any_permission, require_permission
 from backend.services.assigned_work_authorization import assigned_shipment_scope
 from backend.analytics.shipment_rowset import execute_rowset, normalize_rowset_query
 
@@ -22,7 +22,10 @@ def _error(code, message, status=422):
     raise OperationalError(code, message, status)
 
 def semantic_registry(user):
-    require_permission(user, "operational_shipment.read")
+    # Registry discovery is metadata needed by both the operational analytics
+    # surface and the independently entitled Personal Dashboard builder. Query
+    # execution remains protected by operational_shipment.read below.
+    require_any_permission(user, {"operational_shipment.read", "personal_dashboard.read"})
     return discovery()
 
 def _check_request(payload):

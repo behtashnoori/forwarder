@@ -10,11 +10,13 @@ export default function OperationsNav() {
   const [permissions, setPermissions] = useState<string[]>([]);
   useEffect(() => { getOperationalContext().then(r => setPermissions(r.data.permissions)).catch(() => setPermissions([])); }, []);
   const canCreate = permissions.some(p => ["operational_shipment.create_direct", "operational_shipment.create_from_quote", "operational_shipment.create"].includes(p));
+  const canReadDashboards = permissions.includes("personal_dashboard.read");
   if (!permissions.length) return null;
   return <nav aria-label={t("operations.navLabel")} className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2">
     <Button asChild variant="ghost"><Link to="/operations/shipments">{t("operations.shipmentsTitle")}</Link></Button>
     <Button asChild variant="ghost"><Link to="/operations/control-tower">برج کنترل عملیات</Link></Button>
     <Button asChild variant="ghost"><Link to="/operations/work-queue">{t("operations.workQueue")}</Link></Button>
+    {canReadDashboards && <Button asChild variant="ghost"><Link to="/dashboards">داشبوردهای من</Link></Button>}
     {canCreate && <Button asChild><Link to="/operations/shipments/new">{t("operations.newOperation")}</Link></Button>}
     <div className="ms-auto shrink-0 px-2"><ReleaseIdentity /></div>
   </nav>;

@@ -24,6 +24,7 @@ import OperationalWorkQueue from "./pages/OperationalWorkQueue";
 import OperationsControlTower from "./pages/OperationsControlTower";
 import PersistedDashboard from "./pages/PersistedDashboard";
 import DashboardBuilder from "./pages/DashboardBuilder";
+import DashboardIndex from "./pages/DashboardIndex";
 import NewOperation from "./pages/NewOperation";
 import OipSituationDetail from "./pages/OipSituationDetail";
 import AdminRoute from "./components/AdminRoute";
@@ -144,6 +145,7 @@ const App = () => (
                 <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalShipmentDetail /></ProtectedRoute>} />
                 <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalWorkQueue /></ProtectedRoute>} />
                 <Route path="/operations/control-tower" element={<ProtectedRoute><OperationsControlTower /></ProtectedRoute>} />
+                <Route path="/dashboards" element={<ProtectedRoute><DashboardIndex /></ProtectedRoute>} />
                 <Route path="/dashboards/:public_id" element={<ProtectedRoute><PersistedDashboard /></ProtectedRoute>} />
                 <Route path="/dashboards/:public_id/edit" element={<ProtectedRoute><DashboardBuilder /></ProtectedRoute>} />
                 <Route path="/operations/intelligence/:id" element={<ProtectedRoute><OipSituationDetail /></ProtectedRoute>} />

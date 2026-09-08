@@ -22,9 +22,9 @@ def dashboard_context():
         org_a, org_b = OperationalOrganization(name="Org A"), OperationalOrganization(name="Org B")
         db.session.add_all([first, second, other, org_a, org_b]); db.session.flush()
         db.session.add_all([
-            OperationalMembership(organization_id=org_a.id, user_id=first.id, permissions=["operational_shipment.read"]),
-            OperationalMembership(organization_id=org_a.id, user_id=second.id, permissions=["operational_shipment.read"]),
-            OperationalMembership(organization_id=org_b.id, user_id=other.id, permissions=["operational_shipment.read"]),
+            OperationalMembership(organization_id=org_a.id, user_id=first.id, permissions=["personal_dashboard.read", "personal_dashboard.manage"]),
+            OperationalMembership(organization_id=org_a.id, user_id=second.id, permissions=["personal_dashboard.read", "personal_dashboard.manage"]),
+            OperationalMembership(organization_id=org_b.id, user_id=other.id, permissions=["personal_dashboard.read", "personal_dashboard.manage"]),
         ])
         db.session.commit()
         yield {"a": {"id": first.id}, "b": {"id": second.id}, "other": {"id": other.id}}
@@ -82,3 +82,16 @@ def test_invalid_definition_creates_no_revision(dashboard_context):
         service.update(created["public_id"], {"expected_version": 1, "definition": invalid}, user)
     assert db.session.query(DashboardRevision).count() == before
     assert service.get(created["public_id"], user)["version"] == 1
+
+
+def test_dashboard_entitlement_is_independent_from_shipment_read(dashboard_context):
+    user = dashboard_context["a"]
+    created = service.clone("operations-control-tower", user)
+    assert service.get(created["public_id"], user)["public_id"] == created["public_id"]
+    membership = OperationalMembership.query.filter_by(user_id=user["id"]).one()
+    membership.permissions = ["operational_shipment.read"]
+    db.session.commit()
+    for action in (lambda: service.list_(user), lambda: service.get(created["public_id"], user), lambda: service.clone("operations-control-tower", user)):
+        with pytest.raises(OperationalError) as denied:
+            action()
+        assert denied.value.status == 403

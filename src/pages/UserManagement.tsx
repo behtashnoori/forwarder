@@ -57,6 +57,7 @@ interface User {
   email?: string;
   phone?: string;
   role: string;
+  authority: "PLATFORM_ADMIN" | "ORGANIZATION_ADMIN" | "EXPERT";
   department?: string;
   is_active: boolean;
   can_handle_domestic: boolean;
@@ -127,6 +128,7 @@ const normalizeUser = (value: unknown): User => {
     email: typeof user.email === "string" ? user.email : undefined,
     phone: typeof user.phone === "string" ? user.phone : undefined,
     role: typeof user.role === "string" ? user.role : "",
+    authority: ["PLATFORM_ADMIN", "ORGANIZATION_ADMIN"].includes(String(user.authority)) ? user.authority as User["authority"] : "EXPERT",
     department: typeof user.department === "string" ? user.department : undefined,
     is_active: user.is_active === true,
     can_handle_domestic: user.can_handle_domestic === true,
@@ -284,11 +286,9 @@ const UserManagement = () => {
 
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {
-      admin: "مدیر سیستم",
-      crm_manager: "مدیر CRM",
-      business_expert: "کارشناس بازرگانی",
-      expert: "کارشناس",
-      supervisor: "سرپرست"
+      PLATFORM_ADMIN: "مدیر پلتفرم",
+      ORGANIZATION_ADMIN: "مدیر سازمان",
+      EXPERT: "کارشناس"
     };
     return labels[role] || role;
   };
@@ -303,7 +303,7 @@ const UserManagement = () => {
     }
   };
 
-  const isExpertRole = (role: string) => role === "expert" || role === "business_expert";
+  const isExpertRole = (authority: string) => authority === "EXPERT";
 
   const getScopeLabel = (user: User) => {
     if (user.can_handle_domestic && user.can_handle_international) return "هیبرید";
@@ -336,7 +336,7 @@ const UserManagement = () => {
     const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
-    const matchesRole = selectedRole === "all" || user.role === selectedRole;
+    const matchesRole = selectedRole === "all" || user.authority === selectedRole;
     return matchesSearch && matchesRole;
   });
 
@@ -677,10 +677,9 @@ const UserManagement = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">همه نقش‌ها</SelectItem>
-                      <SelectItem value="admin">مدیر سیستم</SelectItem>
-                      <SelectItem value="crm_manager">مدیر CRM</SelectItem>
-                      <SelectItem value="business_expert">کارشناس بازرگانی</SelectItem>
-                      <SelectItem value="expert">کارشناس</SelectItem>
+                      <SelectItem value="PLATFORM_ADMIN">مدیر پلتفرم</SelectItem>
+                      <SelectItem value="ORGANIZATION_ADMIN">مدیر سازمان</SelectItem>
+                      <SelectItem value="EXPERT">کارشناس</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -707,12 +706,12 @@ const UserManagement = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1 space-y-3">
                           <div className="flex items-center gap-3">
-                            {getRoleIcon(user.role)}
+                            {getRoleIcon(user.authority)}
                             <h3 className="font-semibold text-lg">{user.full_name}</h3>
-                            <Badge className={getRoleColor(user.role)}>
-                              {getRoleLabel(user.role)}
+                            <Badge className={getRoleColor(user.authority)}>
+                              {getRoleLabel(user.authority)}
                             </Badge>
-                            {isExpertRole(user.role) && (
+                            {isExpertRole(user.authority) && (
                               <Badge variant="secondary">{getScopeLabel(user)}</Badge>
                             )}
                             {!user.is_active && (
@@ -753,7 +752,7 @@ const UserManagement = () => {
                             </span>
                             <span>•</span>
                             <span>تخصص‌ها: {user.specializations.length}</span>
-                            {isExpertRole(user.role) && (
+                            {isExpertRole(user.authority) && (
                               <>
                                 <span>•</span>
                                 <span>SLA پاسخ: {user.sla_response_work_minutes} دقیقه کاری</span>
@@ -927,7 +926,7 @@ const UserManagement = () => {
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                {isExpertRole(userFormData.role) && (
+                {isExpertRole("EXPERT") && (
                   <fieldset className="space-y-4 rounded-md border p-3">
                     <legend className="px-1 text-sm font-medium">حوزه فعالیت کارشناس</legend>
                     <div className="mt-2 flex flex-wrap gap-5">
@@ -993,21 +992,8 @@ const UserManagement = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="role">نقش کاربر *</Label>
-                <Select
-                  value={userFormData.role}
-                  onValueChange={(value) => setUserFormData({ ...userFormData, role: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="انتخاب نقش" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="expert">کارشناس</SelectItem>
-                    <SelectItem value="business_expert">کارشناس بازرگانی</SelectItem>
-                    <SelectItem value="supervisor">سرپرست</SelectItem>
-                    <SelectItem value="crm_manager">مدیر CRM</SelectItem>
-                    <SelectItem value="admin">مدیر سیستم</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input id="role" value="کارشناس" readOnly aria-describedby="role-help" />
+                <p id="role-help" className="text-xs text-gray-500">مدیران سازمان فقط کارشناس ایجاد می‌کنند.</p>
               </div>
 
               <div className="space-y-2">
@@ -1135,7 +1121,7 @@ const UserManagement = () => {
                 کاربر فعال است
               </Label>
             </div>
-            {editingUser && isExpertRole(editingUser.role) && (
+            {editingUser && isExpertRole(editingUser.authority) && (
               <fieldset className="space-y-4 rounded-md border p-3">
                 <legend className="px-1 text-sm font-medium">حوزه فعالیت کارشناس</legend>
                 <div className="mt-2 flex flex-wrap gap-5">

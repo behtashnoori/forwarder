@@ -17,6 +17,8 @@ node_modules
 /backfill-validation-*.md
 dist
 dist-ssr
+/playwright-report/
+/test-results/
 *.local
 *.tsbuildinfo
 

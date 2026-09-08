@@ -20,7 +20,7 @@ def context():
     app=create_app({"TESTING":True,"SQLALCHEMY_DATABASE_URI":"sqlite:///:memory:","SECRET_KEY":"saved-view-test"},skip_startup=True)
     with app.app_context():
         db.create_all(); a=ExpertUser(username="sv-a",password_hash="x",full_name="A"); b=ExpertUser(username="sv-b",password_hash="x",full_name="B"); c=ExpertUser(username="sv-c",password_hash="x",full_name="C"); oa=OperationalOrganization(name="A"); ob=OperationalOrganization(name="B")
-        db.session.add_all([a,b,c,oa,ob]);db.session.flush();db.session.add_all([OperationalMembership(organization_id=oa.id,user_id=a.id,permissions=["operational_shipment.read"]),OperationalMembership(organization_id=oa.id,user_id=b.id,permissions=["operational_shipment.read"]),OperationalMembership(organization_id=ob.id,user_id=c.id,permissions=["operational_shipment.read"])]);db.session.commit()
+        db.session.add_all([a,b,c,oa,ob]);db.session.flush();db.session.add_all([OperationalMembership(organization_id=oa.id,user_id=a.id,permissions=["operational_shipment.read","personal_dashboard.read","personal_dashboard.manage"]),OperationalMembership(organization_id=oa.id,user_id=b.id,permissions=["operational_shipment.read","personal_dashboard.read","personal_dashboard.manage"]),OperationalMembership(organization_id=ob.id,user_id=c.id,permissions=["operational_shipment.read","personal_dashboard.read","personal_dashboard.manage"])]);db.session.commit()
         yield {"a":{"id":a.id},"b":{"id":b.id},"c":{"id":c.id}}
         db.session.remove();db.drop_all()
 

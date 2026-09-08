@@ -19,7 +19,7 @@ def test_trigger_repair_remains_in_the_single_head_chain():
     config = Config(str(ROOT / "backend" / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(ROOT / "backend" / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20260915_project_access_foundation"]
+    assert script.get_heads() == ["20260916_personal_dashboard_permissions"]
     revision = script.get_revision("20260716_drop_invalid_shipment_update_trigger")
     assert revision.down_revision == "20260715_multi_unit_tracking"
     assert script.get_revision("20260717_add_customs_office_domain").down_revision == revision.revision

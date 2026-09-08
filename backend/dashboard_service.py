@@ -40,15 +40,19 @@ def _revision(row, actor, reason=None): db.session.add(DashboardRevision(dashboa
 def serialize(row): return {k: getattr(row, k) for k in ("public_id", "dashboard_type", "name", "description", "visibility", "status", "semantic_version", "dashboard_schema_version", "version", "source_dashboard_public_id", "source_version", "source_type", "cloned_at", "created_at", "updated_at")} | {"definition": row.definition_json}
 
 def clone(system_id, user, name=None):
-    require_permission(user, "operational_shipment.read")
+    require_permission(user, "personal_dashboard.manage")
     template = system_dashboard(system_id); org, uid = _org_user(user); definition = deepcopy(template["definition"]); now = datetime.now(timezone.utc)
     row = Dashboard(organization_id=org, owner_user_id=uid, name=name or definition["name"], description=definition["description"], semantic_version=template["semantic_version"], dashboard_schema_version=template["dashboard_schema_version"], definition_json=definition, source_dashboard_public_id=template["system_dashboard_id"], source_version=template["system_version"], source_type="SYSTEM", cloned_at=now, created_by=uid, updated_by=uid)
     db.session.add(row); db.session.flush(); _revision(row, uid, "clone"); db.session.commit(); return serialize(row)
 def list_(user):
+    require_permission(user, "personal_dashboard.read")
     org, uid = _org_user(user)
     return [serialize(x) for x in db.session.scalars(select(Dashboard).where(Dashboard.organization_id == org, Dashboard.owner_user_id == uid, Dashboard.status == "ACTIVE").order_by(Dashboard.updated_at.desc())).all()]
-def get(public_id, user): return serialize(_get(public_id, user))
+def get(public_id, user):
+    require_permission(user, "personal_dashboard.read")
+    return serialize(_get(public_id, user))
 def update(public_id, payload, user):
+    require_permission(user, "personal_dashboard.manage")
     row = _get(public_id, user, include_archived=False); expected = payload.get("expected_version")
     if not isinstance(expected, int): raise OperationalError("EXPECTED_VERSION_REQUIRED", "expected_version is required.", 422)
     if expected != row.version: raise OperationalError("DASHBOARD_VERSION_CONFLICT", f"current_version={row.version}; updated_at={row.updated_at.isoformat()}", 409)
@@ -71,9 +75,11 @@ def update(public_id, payload, user):
     if "change_reason" in payload and (not isinstance(payload["change_reason"], str) or len(payload["change_reason"]) > 255): raise OperationalError("INVALID_CHANGE_REASON", "change_reason exceeds 255 characters.", 422)
     row.version += 1; row.updated_by = int(user["id"]); _revision(row, int(user["id"]), payload.get("change_reason")); db.session.commit(); return serialize(row)
 def lifecycle(public_id, user, status):
+    require_permission(user, "personal_dashboard.manage")
     row = _get(public_id, user); row.status = status; row.updated_by = int(user["id"]); db.session.commit(); return serialize(row)
 
 def add_saved_view_snapshot(saved_view, runtime_definition, payload, user):
+    require_permission(user, "personal_dashboard.manage")
     target, expected = payload.get("target_dashboard_public_id"), payload.get("expected_dashboard_version")
     if not isinstance(target, str) or not isinstance(expected, int): raise OperationalError("EXPECTED_VERSION_REQUIRED", "target dashboard and expected version are required.", 422)
     row = _get(target, user, include_archived=False)

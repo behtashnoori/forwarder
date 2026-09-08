@@ -37,7 +37,7 @@ import {
   type WidgetType,
 } from "@/dashboard/types";
 
-const semanticVersion = "analytics-semantic-v1",
+const supportedSemanticVersions = new Set(["analytics-semantic-v1", "analytics-semantic-v2"]),
   schemaVersion = "dashboard-definition-v1";
 const widgetLabels: Record<WidgetType, string> = {
   KPI_CARD: "شاخص کلیدی",
@@ -121,7 +121,7 @@ export default function DashboardBuilder() {
   if (dashboard.dashboard_type !== "PERSONAL")
     return <PageState message="این داشبورد قابل ویرایش نیست." />;
   if (
-    dashboard.semantic_version !== semanticVersion ||
+    !supportedSemanticVersions.has(dashboard.semantic_version) ||
     dashboard.dashboard_schema_version !== schemaVersion
   )
     return <PageState message="نسخهٔ این داشبورد با ویرایشگر سازگار نیست." />;

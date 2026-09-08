@@ -129,6 +129,9 @@ def test_get_and_post_drilldown_use_authenticated_business_scope(operational_app
 
 def test_dashboard_and_saved_view_runtime_cannot_expand_scope(security_population):
     p = security_population
+    membership = OperationalMembership.query.filter_by(user_id=p["expert"]["id"]).one()
+    membership.permissions = sorted(set(membership.permissions or []) | {"personal_dashboard.read", "personal_dashboard.manage"})
+    db.session.commit()
     dashboard_service.clone("operations-control-tower", p["expert"])
     assert _value(_query(p["expert"])) == 2
     saved = saved_view_service.create({"name": "P0", "definition": _saved_view_definition()}, p["expert"])

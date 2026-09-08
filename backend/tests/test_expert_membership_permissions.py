@@ -151,18 +151,15 @@ def test_expert_baseline_reconciliation_is_additive_and_idempotent(permission_ap
         assert reconcile_expert_baseline_permissions(apply=True)["changed_memberships"] == 0
 
 
-def test_organization_crm_manager_does_not_receive_expert_permissions(permission_app):
+def test_organization_cannot_create_legacy_crm_manager_role(permission_app):
     app, context = permission_app
     response = app.test_client().post(
         "/api/user-management/users",
         headers=_headers(context["admin_token"]),
         json={"username": "new-crm-manager", "password": "test123", "full_name": "CRM", "role": "crm_manager"},
     )
-    assert response.status_code == 201
-    with app.app_context():
-        membership = OperationalMembership.query.filter_by(user_id=response.get_json()["user_id"]).one()
-        assert isinstance(membership.permissions, list)
-        assert membership.permissions == []
+    assert response.status_code == 400
+    assert "canonical Expert" in response.get_json()["error"]
 
 
 def test_legacy_admin_role_does_not_establish_organization_admin_authority(permission_app):

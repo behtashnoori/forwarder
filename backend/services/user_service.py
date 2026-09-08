@@ -56,6 +56,7 @@ def build_user_payload(user: ExpertUser, *, workload: dict[str, Any] | None = No
         "email": user.email,
         "phone": user.phone,
         "role": user.role,
+        "authority": (user.authority or "EXPERT").upper(),
         "department": user.department,
         "is_active": user.is_active,
         "can_handle_domestic": user.can_handle_domestic,
@@ -126,11 +127,6 @@ def add_user_specializations(user_id: int, specializations: list[dict[str, Any]]
 def create_user(payload: dict[str, Any], context=None) -> ExpertUser:
     """Create and commit a user using the current route behavior."""
     data = payload
-    if context is not None and str(data.get("authority", "EXPERT")).upper() != "EXPERT":
-        raise UserValidationError("Organization administrators cannot grant administrative authority.")
-    if str(data.get("role", "")).lower() == "admin":
-        raise UserValidationError("Administrative roles require controlled onboarding.")
-
     if not data.get("username"):
         raise UserValidationError("نام کاربری الزامی است")
     if not data.get("password"):
@@ -139,6 +135,10 @@ def create_user(payload: dict[str, Any], context=None) -> ExpertUser:
         raise UserValidationError("نام کامل الزامی است")
     if not data.get("role"):
         raise UserValidationError("نقش کاربر الزامی است")
+    if str(data.get("authority", "EXPERT")).upper() != "EXPERT":
+        raise UserValidationError("Organization administrators cannot grant administrative authority.")
+    if str(data.get("role", "")).lower() != "expert":
+        raise UserValidationError("Only the canonical Expert role may be created here.")
 
     existing_user = ExpertUser.query.filter_by(username=data.get("username")).first()
     if existing_user:
@@ -220,6 +220,8 @@ def update_user(user_id: int, payload: dict[str, Any], context=None) -> ExpertUs
     password_changed = False
     deactivated = False
     role_changed = False
+    if "authority" in data or "role" in data:
+        raise UserValidationError("Canonical authority cannot be changed in user management.")
     validate_expert_scope(
         data.get("role", user.role),
         data.get("is_active", user.is_active),

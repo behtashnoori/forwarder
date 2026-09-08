@@ -4,11 +4,16 @@ import { DASHBOARD_SEMANTIC_VERSION, type DashboardDefinition, executableReadine
 export type DefinitionIssue = { widget_id?: string; message: string };
 export function validateDashboardDefinition(definition: DashboardDefinition, registry: AnalyticsSemanticRegistry): DefinitionIssue[] {
   const issues: DefinitionIssue[] = [];
-  if (definition.semantic_version !== DASHBOARD_SEMANTIC_VERSION || registry.semantic_version !== definition.semantic_version) issues.push({ message: "Semantic version is not compatible with this dashboard." });
+  if (![DASHBOARD_SEMANTIC_VERSION, "analytics-semantic-v2"].includes(definition.semantic_version) || registry.semantic_version !== DASHBOARD_SEMANTIC_VERSION) issues.push({ message: "Semantic version is not compatible with this dashboard." });
   const widgetIds = new Set<string>();
   for (const widget of definition.widgets) {
     if (widgetIds.has(widget.widget_id)) issues.push({ widget_id: widget.widget_id, message: "Widget IDs must be unique." });
     widgetIds.add(widget.widget_id);
+    if (widget.query.query_kind === "ROWSET") {
+      if (widget.query.semantic_version !== "analytics-semantic-v2" || widget.query.population !== "SHIPMENTS" || !widget.query.columns?.length)
+        issues.push({ widget_id: widget.widget_id, message: "A row-set widget requires the governed Shipment v2 contract." });
+      continue;
+    }
     if (!widget.query.metric_keys.length) issues.push({ widget_id: widget.widget_id, message: "A widget requires a metric." });
     for (const metricKey of widget.query.metric_keys) {
       const metric = registry.metrics.find((item) => item.metric_key === metricKey);

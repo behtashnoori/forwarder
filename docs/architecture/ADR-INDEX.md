@@ -60,6 +60,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [042](../operational/adr/ADR-042-three-persona-authorization-and-governed-capabilities.md) | Three-persona authorization and governed tenant capabilities | ACCEPTED | Authorization/tenant governance | none / none | Governing parent decision accepted; companion decisions and implementation prerequisites remain open | No implementation authority |
 | [043](../operational/adr/ADR-043-assigned-work-authorization-and-operational-lineage.md) | Assigned-Work Authorization and Operational Lineage | ACCEPTED | Authorization/assigned work | none / none | Accepted companion decision; implementation prerequisites remain open | No implementation authority |
 | [044](../operational/adr/ADR-044-reporting-oversight.md) | Reporting oversight companion | ACCEPTED | Reporting authorization | complements ADR-042/043 / none | tenant-fenced Organization Admin and approved Platform Admin reporting | Yes; bounded S4 implementation only |
+| [045](../operational/adr/ADR-045-personal-dashboard-entitlement-and-rbac.md) | Personal Dashboard entitlement and RBAC | ACCEPTED | Personal Analytics authorization | complements ADR-042/043 / none | independent dashboard capability with live widget authorization | Yes; Product Integration Correction v1 |
 
 ## Usage rules
 
