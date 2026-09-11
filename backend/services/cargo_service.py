@@ -10,10 +10,10 @@ import unicodedata
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import selectinload
 
-from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ShipmentCargoItem, ShipmentCargoTransportAllocation
+from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ExecutionUnitCargoAllocation, ShipmentCargoItem, ShipmentCargoTransportAllocation
 from backend.extensions import db
-from backend.models import CargoType, ShipmentRequest, ShipmentTracking, ShipmentTransportUnit, UnitOfMeasure
-from backend.operational_models import OperationalShipment, Project
+from backend.models import Customer, CargoType, ShipmentRequest, ShipmentTracking, ShipmentTransportUnit, UnitOfMeasure
+from backend.operational_models import ExecutionUnit, OperationalShipment, Project
 from backend.services import operational_service
 from backend.services.tracking_projection_service import project_operational_shipments
 
@@ -458,7 +458,11 @@ def scoped_shipment(user, public_id):
 
 
 def shipment_item_dict(row):
-    allocated = db.session.scalar(select(func.coalesce(func.sum(ShipmentCargoTransportAllocation.allocated_quantity), 0)).where(ShipmentCargoTransportAllocation.shipment_cargo_item_id == row.id))
+    # Canonical execution allocations win for a cargo line.  A legacy row is
+    # historical compatibility data only and is shown only when no canonical
+    # allocation exists for that line.
+    canonical = db.session.scalar(select(func.coalesce(func.sum(ExecutionUnitCargoAllocation.allocated_quantity), 0)).where(ExecutionUnitCargoAllocation.shipment_cargo_item_id == row.id))
+    allocated = canonical or db.session.scalar(select(func.coalesce(func.sum(ShipmentCargoTransportAllocation.allocated_quantity), 0)).where(ShipmentCargoTransportAllocation.shipment_cargo_item_id == row.id))
     return {
         "public_id": row.public_id,
         "line_number": row.line_number,
@@ -483,10 +487,35 @@ def shipment_item_dict(row):
         "brand_snapshot": row.brand_snapshot,
         "model_snapshot": row.model_snapshot,
         "description_snapshot": row.description_snapshot,
+        "cargo_owner": None
+        if not row.cargo_owner_customer
+        else {
+            "id": row.cargo_owner_customer.id,
+            "label": operational_service._customer_label(row.cargo_owner_customer),
+        },
         "version": row.version,
         "created_at": row.created_at.isoformat(),
         "updated_at": row.updated_at.isoformat(),
     }
+
+
+def _cargo_owner(shipment, data):
+    """Resolve an explicitly selected active tenant customer, or shipment default."""
+    explicit_owner = "cargo_owner_customer_id" in data
+    raw_id = data.get("cargo_owner_customer_id", shipment.customer_id)
+    if raw_id in (None, ""):
+        return None
+    try:
+        customer_id = int(raw_id)
+    except (TypeError, ValueError) as exc:
+        raise CargoError("cargo_owner_customer_id must be an integer", 422) from exc
+    query = select(Customer).where(Customer.id == customer_id, Customer.status == "active")
+    if explicit_owner:
+        query = query.where(Customer.operational_organization_id == shipment.organization_id)
+    owner = db.session.scalar(query)
+    if not owner:
+        raise CargoError("active cargo owner was not found", 422)
+    return owner
 
 
 def _allocation_quantity(value):
@@ -503,6 +532,14 @@ def allocation_dict(row):
             "transport_unit_code": row.transport_unit.unit_code, "transport_unit_type": row.transport_unit.unit_type}
 
 
+def canonical_allocation_dict(row):
+    return {"public_id": row.public_id, "cargo_item_public_id": row.cargo_item.public_id,
+            "execution_unit_public_id": row.execution_unit.public_id,
+            "allocated_quantity": str(row.allocated_quantity),
+            "uom_symbol": row.cargo_item.uom_symbol_snapshot,
+            "cargo_name": row.cargo_item.display_name_snapshot}
+
+
 def shipment_allocation_view(user, shipment):
     operational_service.require_permission(user, "operational_shipment.read")
     allocations = db.session.scalars(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id).options(selectinload(ShipmentCargoTransportAllocation.cargo_item), selectinload(ShipmentCargoTransportAllocation.transport_unit))).all()
@@ -514,36 +551,67 @@ def shipment_allocation_view(user, shipment):
 
 
 def create_transport_unit(user, shipment, data):
-    operational_service.require_permission(user, "operational_shipment.create")
-    code = _required(data, "unit_code", 64)
-    unit_type = _required(data, "unit_type", 32).lower()
-    if unit_type not in {"truck", "container", "wagon", "other"}: raise CargoError("invalid unit_type", 422)
-    row = ShipmentTransportUnit(operational_shipment_id=shipment.id, operational_organization_id=shipment.organization_id, ownership_scope="TENANT", unit_code=code, unit_type=unit_type, display_name=_optional(data,"display_name",100), vehicle_reference=_optional(data,"vehicle_reference",100), created_by_user_id=user["id"])
-    db.session.add(row); db.session.commit(); return row
+    """Retire the legacy current-write endpoint without fabricating an execution.
+
+    This compatibility route carries neither an execution identity nor the
+    project lineage required to create one.  Creating a ShipmentTransportUnit
+    here used to make a second current transport truth.  Callers must use the
+    project-scoped ExecutionUnit command instead.
+    """
+    raise CargoError("LEGACY_WRITE_MAPPING = NEEDS_DECISION", 409)
+
+
+def _legacy_execution_unit(user, shipment, unit_id):
+    """Map a legacy transport unit only when its execution identity is exact."""
+    unit = db.session.get(ShipmentTransportUnit, unit_id)
+    if not unit or unit.operational_organization_id != shipment.organization_id:
+        raise CargoError("invalid cargo or transport unit", 422)
+    matches = db.session.scalars(select(ExecutionUnit).where(
+        ExecutionUnit.legacy_unit_id == unit.id,
+        ExecutionUnit.organization_id == shipment.organization_id,
+    )).all()
+    if len(matches) != 1:
+        # The legacy request contains no safe execution identity.  Do not
+        # manufacture one or retain a second writable allocation truth.
+        raise CargoError("LEGACY_WRITE_MAPPING = NEEDS_DECISION", 409)
+    return matches[0]
 
 
 def save_allocation(user, shipment, data, row=None):
-    operational_service.require_permission(user, "operational_shipment.create")
-    cargo = db.session.scalar(select(ShipmentCargoItem).where(ShipmentCargoItem.public_id == data.get("cargo_item_public_id", row.cargo_item.public_id if row else None), ShipmentCargoItem.operational_shipment_id == shipment.id))
+    """Compatibility adapter: legacy endpoint writes canonical truth only."""
+    from backend.services import shared_transport_service
+    cargo = db.session.scalar(select(ShipmentCargoItem).where(
+        ShipmentCargoItem.public_id == data.get("cargo_item_public_id", row.cargo_item.public_id if row else None),
+        ShipmentCargoItem.operational_shipment_id == shipment.id,
+    ))
     unit_id = data.get("transport_unit_id", row.transport_unit_id if row else None)
-    unit = db.session.get(ShipmentTransportUnit, unit_id)
-    if not cargo or not unit or unit.operational_organization_id != shipment.organization_id: raise CargoError("invalid cargo or transport unit", 422)
-    valid_ids = {x["id"] for x in shipment_allocation_view(user, shipment)["transport_units"]}
-    if unit.id not in valid_ids: raise CargoError("transport unit belongs to another shipment", 422)
-    quantity = _allocation_quantity(data.get("allocated_quantity", row.allocated_quantity if row else None))
-    allocated = db.session.scalar(select(func.coalesce(func.sum(ShipmentCargoTransportAllocation.allocated_quantity), 0)).where(ShipmentCargoTransportAllocation.shipment_cargo_item_id == cargo.id, ShipmentCargoTransportAllocation.id != (row.id if row else -1)))
-    if allocated + quantity > cargo.quantity: raise CargoError("allocation exceeds remaining cargo quantity", 422)
-    if row is None:
-        row = ShipmentCargoTransportAllocation(operational_shipment_id=shipment.id, shipment_cargo_item_id=cargo.id, transport_unit_id=unit.id, allocated_quantity=quantity, created_by=user["id"], updated_by=user["id"]); db.session.add(row)
-    else: row.allocated_quantity=quantity; row.updated_by=user["id"]
-    db.session.commit(); return row
+    if not cargo:
+        raise CargoError("invalid cargo or transport unit", 422)
+    execution = _legacy_execution_unit(user, shipment, unit_id)
+    try:
+        return shared_transport_service.allocate(
+            execution_public_id=execution.public_id, cargo_public_id=cargo.public_id,
+            allocated_quantity=data.get("allocated_quantity", row.allocated_quantity if row else None), user=user,
+        )
+    except operational_service.OperationalError as exc:
+        raise CargoError(exc.message, exc.status) from exc
 
 
 def delete_allocation(user, shipment, public_id):
-    operational_service.require_permission(user, "operational_shipment.create")
+    from backend.services import shared_transport_service
     row = db.session.scalar(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.public_id == public_id, ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id))
     if not row: raise CargoError("not found",404)
-    db.session.delete(row); db.session.commit()
+    execution = _legacy_execution_unit(user, shipment, row.transport_unit_id)
+    canonical = db.session.scalar(select(ExecutionUnitCargoAllocation).where(
+        ExecutionUnitCargoAllocation.execution_unit_id == execution.id,
+        ExecutionUnitCargoAllocation.shipment_cargo_item_id == row.shipment_cargo_item_id,
+    ))
+    if not canonical:
+        raise CargoError("LEGACY_WRITE_MAPPING = NEEDS_DECISION", 409)
+    try:
+        shared_transport_service.release(execution_public_id=execution.public_id, allocation_public_id=canonical.public_id, user=user)
+    except operational_service.OperationalError as exc:
+        raise CargoError(exc.message, exc.status) from exc
 
 
 def create_shipment_item(user, shipment, data):
@@ -576,6 +644,7 @@ def create_shipment_item(user, shipment, data):
     if catalog and catalog.cargo_type_id != ct.id:
         raise CargoError("cargo_type must match catalog item", 422)
     name = catalog.fa_name if catalog else _required(data, "display_name", 200)
+    owner = _cargo_owner(shipment, data)
     row = ShipmentCargoItem(
         operational_shipment_id=shipment.id,
         line_number=int(data.get("line_number", 0)),
@@ -583,6 +652,7 @@ def create_shipment_item(user, shipment, data):
         cargo_type=ct,
         quantity=quantity,
         uom=uom,
+        cargo_owner_customer=owner,
         display_name_snapshot=name,
         cargo_type_code_snapshot=ct.immutable_code,
         cargo_type_fa_snapshot=ct.fa_name,
@@ -638,6 +708,11 @@ def update_shipment_item(user, row, data):
     }
     if immutable_inputs.intersection(data):
         raise CargoError("shipment cargo snapshots cannot be changed", 422)
+    if "cargo_owner_customer_id" in data:
+        shipment = db.session.get(OperationalShipment, row.operational_shipment_id)
+        if shipment is None:
+            raise CargoError("shipment not found", 404)
+        row.cargo_owner_customer = _cargo_owner(shipment, data)
     row.updated_by = user["id"]
     row.version += 1
     db.session.commit()

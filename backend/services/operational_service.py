@@ -140,10 +140,20 @@ def _customer_label(customer: Customer) -> str:
 
 
 def customer_selector(args: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
-    """Return active canonical customers without implying organization ownership."""
-    _selector_organization(user, {"operational_shipment.create_direct"})
+    """Return active customers in the caller's single operational tenant."""
+    org = _selector_organization(
+        user,
+        {
+            "operational_shipment.create",
+            "operational_shipment.create_direct",
+            "operational_shipment.create_from_quote",
+        },
+    )
     q, limit = _selector_terms(args)
-    query = select(Customer).where(Customer.status == "active")
+    query = select(Customer).where(
+        Customer.status == "active",
+        Customer.operational_organization_id == org,
+    )
     if q:
         pattern = f"%{q}%"
         query = query.where(

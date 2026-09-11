@@ -4,7 +4,7 @@ from types import SimpleNamespace
 import pytest
 
 from backend.cargo_models import CargoCatalogItem
-from backend.models import CargoType, UnitOfMeasure
+from backend.models import Customer, CargoType, UnitOfMeasure
 from backend.services import cargo_service as svc
 
 
@@ -79,7 +79,7 @@ def _capture_create(monkeypatch, *, catalog=None, overrides=None):
     }
     payload.update(overrides or {})
     row = svc.create_shipment_item(
-        {"id": 7}, SimpleNamespace(id=99), payload
+        {"id": 7}, SimpleNamespace(id=99, customer_id=None, organization_id=1), payload
     )
     return row, cargo_type, uom
 
@@ -93,6 +93,31 @@ def test_manual_shipment_item_captures_supplied_creation_snapshot(monkeypatch):
     assert row.hs_code_snapshot == "1234"
     assert row.description_snapshot == "Creation evidence"
     assert row.quantity == svc.Decimal("12.5")
+
+
+def test_cargo_owner_defaults_or_fails_closed_outside_active_tenant(monkeypatch):
+    cargo_type, uom = _master_data()
+    owner = Customer(id=41, first_name="Owner", last_name="A", status="active", operational_organization_id=1)
+    scalars = iter((cargo_type, uom, owner))
+    monkeypatch.setattr(svc.db.session, "scalar", lambda _query: next(scalars))
+    monkeypatch.setattr(svc.db.session, "add", lambda _row: None)
+    monkeypatch.setattr(svc.db.session, "commit", lambda: None)
+    monkeypatch.setattr(svc.operational_service, "require_permission", lambda *_args: None)
+    row = svc.create_shipment_item(
+        {"id": 7},
+        SimpleNamespace(id=99, customer_id=41, organization_id=1),
+        {"line_number": 1, "cargo_type_public_id": cargo_type.public_id, "uom_public_id": uom.public_id, "quantity": "1", "display_name": "Cargo"},
+    )
+    assert row.cargo_owner_customer is owner
+
+    missing_owner_scalars = iter((cargo_type, uom, None))
+    monkeypatch.setattr(svc.db.session, "scalar", lambda _query: next(missing_owner_scalars))
+    with pytest.raises(svc.CargoError, match="active cargo owner"):
+        svc.create_shipment_item(
+            {"id": 7},
+            SimpleNamespace(id=99, customer_id=None, organization_id=1),
+            {"line_number": 2, "cargo_type_public_id": cargo_type.public_id, "uom_public_id": uom.public_id, "quantity": "1", "display_name": "Cargo", "cargo_owner_customer_id": 999},
+        )
 
 
 def test_catalog_linked_creation_captures_catalog_and_master_snapshots(monkeypatch):
@@ -196,5 +221,5 @@ def test_cargo_migration_is_additive_seed_free_and_scoped():
 def test_forbidden_capabilities_and_fields_are_absent_from_models_and_routes():
     root = Path(__file__).parents[1]
     source = (root / "cargo_models.py").read_text(encoding="utf-8") + (root / "routes" / "cargo.py").read_text(encoding="utf-8")
-    for forbidden in ("ExecutionUnitCargoAllocation", "delivered_quantity", "allocation_quantity", "PackagingType", "pg_trgm"):
+    for forbidden in ("delivered_quantity", "allocation_quantity", "PackagingType", "pg_trgm"):
         assert forbidden not in source

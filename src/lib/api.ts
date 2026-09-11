@@ -3079,6 +3079,7 @@ export interface ShipmentCargoItem {
   brand_snapshot?: string | null;
   model_snapshot?: string | null;
   description_snapshot?: string | null;
+  cargo_owner: { id: number; label: string } | null;
   version: number;
 }
 export interface ShipmentCargoOption {
@@ -3109,7 +3110,7 @@ export const getCargoTransportAllocations=(shipmentId:string)=>request<{allocati
 export const createCargoTransportAllocation=(shipmentId:string,payload:Record<string,unknown>)=>request<{allocation:CargoTransportAllocation}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-transport-allocations`,{method:"POST",body:JSON.stringify(payload)});
 export const deleteCargoTransportAllocation=(shipmentId:string,id:string)=>request<void>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-transport-allocations/${encodeURIComponent(id)}`,{method:"DELETE"});
 export interface TransportTrackingEvent { id:number; status:string; location:{location_name?:string|null}; customer_message?:string|null; internal_note?:string|null; is_customer_visible:boolean; occurred_at:string; }
-export interface OperationalTransportTracking { enabled:boolean; units:Array<ShipmentTransportUnitOption & { latest_status:string; allocated_cargo:Array<{cargo_name:string;allocated_quantity:string;uom_symbol:string}>; history:TransportTrackingEvent[] }>; }
+export interface OperationalTransportTracking { enabled:boolean; units:Array<ShipmentTransportUnitOption & { source?:"canonical_execution"|"historical_legacy"; carrier?:string|null; latest_status:string; allocated_cargo:Array<{cargo_name:string;cargo_owner?:string|null;allocated_quantity:string;uom_symbol:string}>; history:TransportTrackingEvent[] }>; }
 export const getOperationalTransportTracking=(shipmentId:string)=>request<{source_type:string;tracking:OperationalTransportTracking|null}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-tracking`);
 export const enableOperationalTransportTracking=(shipmentId:string)=>request<{tracking:OperationalTransportTracking}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-tracking/enable`,{method:"POST"});
 export const addOperationalTransportTrackingUpdate=(shipmentId:string,unitId:number,payload:Record<string,unknown>)=>request<{tracking:OperationalTransportTracking}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-units/${unitId}/tracking-updates`,{method:"POST",body:JSON.stringify(payload)});
@@ -3394,6 +3395,41 @@ export interface ProjectConfigurationItem {
   cargo_catalog_item_code?: string;
   cargo_catalog_item_name?: string;
 }
+
+/** Business-facing operational eligibility; the API deliberately hides role codes. */
+export function fetchCustomerOperationalRoles(customerId: number): Promise<{roles:{carrier_eligible:boolean}}> {
+  return request(`/api/crm/customers/${customerId}/operational-roles`);
+}
+
+export function setCustomerCarrierEligibility(customerId: number, eligible: boolean): Promise<{message:string}> {
+  return request(`/api/crm/customers/${customerId}/operational-roles/carrier`, {method:"PUT", body:JSON.stringify({eligible})});
+}
+
+export interface SharedTransportDetail {
+  execution: { public_id: string; unit_code: string; carrier: { id: number; label: string } | null };
+  allocations: Array<{ public_id: string; allocated_quantity: string; description: string; shipment_public_id: string; cargo_owner: { public_label: string } | null; project: { public_id: string; code: string } | null; uom: { code: string; symbol: string } }>;
+  summary: { cargo_count: number; cargo_owner_count: number; source_shipment_count: number; uom_distribution: string[]; classification: string };
+}
+
+export const getSharedTransport = (projectId: string, unitId: string) =>
+  request<{ data: SharedTransportDetail }>(`/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}/shared-transport`);
+export interface SharedTransportCargo {
+  public_id: string; description: string; quantity: string; uom: {code: string; symbol: string};
+  cargo_owner: {public_label: string} | null; shipment_public_id: string;
+  project: {public_id: string; code: string} | null;
+}
+const sharedTransportPath = (projectId: string, unitId: string) =>
+  `/api/v2/projects/${encodeURIComponent(projectId)}/execution-units/${encodeURIComponent(unitId)}`;
+export const listEligibleSharedCargo = (projectId: string, unitId: string) =>
+  request<{data: SharedTransportCargo[]}>(`${sharedTransportPath(projectId, unitId)}/eligible-cargo`);
+export const addSharedCargo = (projectId: string, unitId: string, cargoPublicId: string, allocatedQuantity: string) =>
+  request<{data: {public_id: string}}>(`${sharedTransportPath(projectId, unitId)}/allocations`, {method: "POST", body: JSON.stringify({cargo_public_id: cargoPublicId, allocated_quantity: allocatedQuantity})});
+export const removeSharedCargo = (projectId: string, unitId: string, allocationId: string) =>
+  request<void>(`${sharedTransportPath(projectId, unitId)}/allocations/${encodeURIComponent(allocationId)}`, {method: "DELETE"});
+export const listSharedCarrierOptions = (projectId: string, unitId: string) =>
+  request<{data: Array<{id: number; label: string}>}>(`${sharedTransportPath(projectId, unitId)}/carrier-options`);
+export const setSharedCarrier = (projectId: string, unitId: string, carrierCustomerId: number | null) =>
+  request<{data: {public_id: string; carrier_assigned: boolean}}>(`${sharedTransportPath(projectId, unitId)}/carrier`, {method: "PATCH", body: JSON.stringify({carrier_customer_id: carrierCustomerId})});
 export type ProjectConfigurationResource =
   | "services"
   | "document-requirements"

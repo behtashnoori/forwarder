@@ -148,6 +148,39 @@ def check_operational_terminology() -> list[Failure]:
     return failures
 
 
+def check_legacy_tracking_runtime_mutators() -> list[Failure]:
+    """Keep compatibility tracking tables out of runtime write paths.
+
+    Imports and SELECTs are intentionally allowed: historic projections still
+    need them.  This detects object construction and session deletion, the
+    operations that would reintroduce a second current source of truth.
+    """
+    legacy_models = {
+        "ShipmentTransportUnit",
+        "ShipmentCargoTransportAllocation",
+        "ShipmentTransportUnitUpdate",
+    }
+    failures = []
+    for path in sorted((ROOT / "backend").rglob("*.py")):
+        if "migrations" in path.parts or "tests" in path.parts:
+            continue
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        aliases = set(legacy_models)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom):
+                aliases.update(
+                    item.asname or item.name
+                    for item in node.names
+                    if item.name in legacy_models
+                )
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id in aliases:
+                failures.append(Failure(
+                    "legacy-tracking-mutator",
+                    f"runtime construction of {node.func.id}: {path.relative_to(ROOT)}:{node.lineno}",
+                ))
+    return failures
+
+
 def check_alembic_sole_head() -> list[Failure]:
     revisions: dict[str, Path] = {}
     parents: set[str] = set()
@@ -186,6 +219,7 @@ def run_checks() -> list[Failure]:
         check_adr_index_coverage,
         check_canonical_datetime_columns,
         check_operational_terminology,
+        check_legacy_tracking_runtime_mutators,
         check_alembic_sole_head,
     )
     return [failure for check in checks for failure in check()]

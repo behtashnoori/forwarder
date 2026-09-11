@@ -84,7 +84,7 @@ def test_direct_resources_have_non_null_canonical_tenant_key(mapped_contract):
     for name, entry in _persisted_entries(inventory).items():
         if entry["scope"] != OwnershipScope.TENANT_OWNED_DIRECT.value:
             continue
-        assert entry["tenant_key"] == "organization_id"
+        assert entry["tenant_key"] in {"organization_id", "operational_organization_id"}
         column = mappers[name].local_table.c[entry["tenant_key"]]
         assert not column.nullable, name
 

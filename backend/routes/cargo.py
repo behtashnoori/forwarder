@@ -37,6 +37,8 @@ def _user():
 
 def _error(exc):
     db.session.rollback()
+    if isinstance(exc, tracking_svc.LegacyWriteMappingError):
+        return jsonify(tracking_svc.legacy_write_mapping_payload()), 409
     if isinstance(exc, IntegrityError):
         return jsonify({"error": "conflicting cargo data"}), 409
     return jsonify({"error": str(exc)}), getattr(exc, "status", 400)
@@ -505,8 +507,11 @@ def operational_transport_tracking_update(shipment_id, unit_id):
 def allocation_create(shipment_id):
     try:
         shipment = svc.scoped_shipment(_user(), shipment_id)
-        return jsonify({"allocation": svc.allocation_dict(svc.save_allocation(_user(), shipment, request.get_json(silent=True) or {}))}), 201
-    except (svc.CargoError, IntegrityError) as exc: return _error(exc)
+        row = svc.save_allocation(_user(), shipment, request.get_json(silent=True) or {})
+        db.session.commit()
+        return jsonify({"allocation": svc.canonical_allocation_dict(row), "compatibility_adapter": True}), 201
+    except (svc.CargoError, IntegrityError) as exc:
+        db.session.rollback(); return _error(exc)
 
 
 @cargo_bp.patch("/operational-shipments/<shipment_id>/cargo-transport-allocations/<allocation_id>")
@@ -517,8 +522,11 @@ def allocation_update(shipment_id, allocation_id):
         from backend.cargo_models import ShipmentCargoTransportAllocation
         row = db.session.scalar(select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.public_id == allocation_id, ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id))
         if not row: raise svc.CargoError("not found", 404)
-        return jsonify({"allocation": svc.allocation_dict(svc.save_allocation(_user(), shipment, request.get_json(silent=True) or {}, row))})
-    except svc.CargoError as exc: return _error(exc)
+        canonical = svc.save_allocation(_user(), shipment, request.get_json(silent=True) or {}, row)
+        db.session.commit()
+        return jsonify({"allocation": svc.canonical_allocation_dict(canonical), "compatibility_adapter": True})
+    except svc.CargoError as exc:
+        db.session.rollback(); return _error(exc)
 
 
 @cargo_bp.delete("/operational-shipments/<shipment_id>/cargo-transport-allocations/<allocation_id>")
@@ -527,5 +535,7 @@ def allocation_delete(shipment_id, allocation_id):
     try:
         shipment = svc.scoped_shipment(_user(), shipment_id)
         svc.delete_allocation(_user(), shipment, allocation_id)
+        db.session.commit()
         return "", 204
-    except svc.CargoError as exc: return _error(exc)
+    except svc.CargoError as exc:
+        db.session.rollback(); return _error(exc)

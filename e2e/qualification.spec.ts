@@ -1,6 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
 
-const password = "Forwarder-E2E-2041!";
+const password = process.env.FORWARDER_E2E_PASSWORD;
+
+if (!password) {
+  throw new Error("FORWARDER_E2E_PASSWORD must be supplied by the local qualification environment.");
+}
 
 type BrowserEvidence = { consoleErrors: string[]; pageErrors: string[]; failedRequests: string[]; unexpectedResponses: string[] };
 

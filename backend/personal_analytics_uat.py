@@ -23,7 +23,11 @@ from backend.saved_view_models import SavedView
 from backend.services.operational_service import OperationalError
 
 PREFIX = "personal_analytics_uat_"
-DATABASE_PREFIXES = ("forwarder_personal_analytics_uat", "forwarder_staging_")
+DATABASE_PREFIXES = (
+    "forwarder_personal_analytics_uat",
+    "forwarder_integrated_cert_personal_analytics_",
+    "forwarder_staging_",
+)
 NOW = datetime(2041, 1, 1, 8, tzinfo=timezone.utc)
 READ = ["operational_shipment.read", "personal_dashboard.manage", "personal_dashboard.read"]
 DASHBOARD_ONLY = ["personal_dashboard.manage", "personal_dashboard.read"]

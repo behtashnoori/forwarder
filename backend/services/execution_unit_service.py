@@ -13,13 +13,17 @@ from sqlalchemy import and_, func, or_, select
 from backend.extensions import db
 from backend.models import ExpertUser
 from backend.operational_models import (
+    CanonicalLocation,
     ExecutionUnit,
     OperationalEvent,
+    OperationalEventLocationEvidence,
     OperationalMembership,
     OperationalShipment,
     Project,
     utcnow,
 )
+from backend.logistics_network_models import LogisticsPoint
+from backend.models import TrackingLocationReference
 from backend.services.operational_service import OperationalError, organization_for_user
 
 LIFECYCLE = {"not_started", "ready", "in_progress", "arrived", "delivered", "cancelled"}
@@ -164,7 +168,7 @@ def create_unit(project: Project, payload: dict, user: dict) -> ExecutionUnit:
     codes = db.session.scalars(select(ExecutionUnit.unit_code).where(ExecutionUnit.project_id == project.id, ExecutionUnit.unit_code.like("U-%"))).all()
     next_number = max([int(match.group(1)) for code in codes if (match := re.fullmatch(r"U-(\d+)", code))] or [0]) + 1
     unit = ExecutionUnit(
-        project_id=project.id, operational_shipment_id=shipment.id if shipment else None,
+        organization_id=project.organization_id, project_id=project.id, operational_shipment_id=shipment.id if shipment else None,
         unit_code=f"U-{next_number:04d}", unit_type=unit_type,
         display_name=(str(payload.get("display_name", "")).strip() or None),
         vehicle_reference=(str(payload.get("vehicle_reference", "")).strip() or None),
@@ -188,6 +192,68 @@ def update_unit(unit: ExecutionUnit, payload: dict) -> ExecutionUnit:
         unit.is_active = payload["is_active"]
     unit.version += 1; unit.updated_at = utcnow()
     return unit
+
+
+def _event_location_evidence(unit: ExecutionUnit, payload: dict) -> OperationalEventLocationEvidence | None:
+    """Build immutable evidence from an explicit structured location payload.
+
+    checkpoint_text deliberately does not enter this function: it is only a
+    presentation/cache fallback and cannot manufacture location truth.
+    """
+    location = payload.get("location")
+    if location is None:
+        return None
+    if not isinstance(location, dict):
+        raise OperationalError("VALIDATION_FAILED", "location must be an object.")
+    point_id = location.get("logistics_point_public_id")
+    canonical_id = location.get("canonical_location_public_id")
+    reference_id = location.get("tracking_location_reference_id")
+    text = str(location.get("location_text", "")).strip() or None
+    supplied = sum(value is not None and value != "" for value in (point_id, canonical_id, reference_id, text))
+    if supplied != 1:
+        raise OperationalError("VALIDATION_FAILED", "location must specify exactly one identity or location_text.")
+    if point_id:
+        point = db.session.scalar(select(LogisticsPoint).where(
+            LogisticsPoint.public_id == str(point_id),
+            LogisticsPoint.organization_id == unit.organization_id,
+            LogisticsPoint.is_active.is_(True),
+        ))
+        if point is None:
+            # Deliberately indistinguishable from a missing point: no tenant probing.
+            raise OperationalError("NOT_FOUND", "Active logistics point not found.", 404)
+        return OperationalEventLocationEvidence(
+            logistics_point_id=point.id, source_type="logistics_point",
+            source_identity=point.public_id, display_name_snapshot=point.fa_name,
+            country_code_snapshot=getattr(point.country, "code", None),
+            name_en_snapshot=point.en_name, location_type_snapshot=point.point_type.immutable_code,
+            city_name_snapshot=getattr(point.city, "name", None),
+        )
+    if canonical_id:
+        row = db.session.scalar(select(CanonicalLocation).where(CanonicalLocation.public_id == str(canonical_id)))
+        if row is None:
+            raise OperationalError("NOT_FOUND", "Canonical location not found.", 404)
+        return OperationalEventLocationEvidence(
+            canonical_location_id=row.id, source_type="canonical_location", source_identity=row.public_id,
+            display_name_snapshot=row.display_name, country_code_snapshot=row.country_code,
+            location_type_snapshot=row.location_type,
+        )
+    if reference_id:
+        try:
+            reference = db.session.get(TrackingLocationReference, int(reference_id))
+        except (TypeError, ValueError):
+            reference = None
+        if reference is None or not reference.is_active:
+            raise OperationalError("VALIDATION_FAILED", "Tracking location reference is not active.")
+        return OperationalEventLocationEvidence(
+            source_type="tracking_location_reference", source_identity=reference.internal_key,
+            display_name_snapshot=reference.name_fa, country_code_snapshot=reference.country_code,
+            name_en_snapshot=reference.name_en, location_type_snapshot=reference.location_type,
+        )
+    if len(text) > 255:
+        raise OperationalError("VALIDATION_FAILED", "location_text is too long.")
+    return OperationalEventLocationEvidence(
+        source_type="manual", display_name_snapshot=text, location_text_snapshot=text,
+    )
 
 
 def create_event(unit: ExecutionUnit, payload: dict, user: dict, idempotency_key: str) -> tuple[OperationalEvent, bool]:
@@ -220,9 +286,14 @@ def create_event(unit: ExecutionUnit, payload: dict, user: dict, idempotency_key
         correlation_id=(str(payload.get("correlation_id", "")).strip()[:100] or None), batch_id=(str(payload.get("batch_id", "")).strip()[:100] or None),
         threshold_policy_version=POLICY_VERSION,
     )
+    evidence = _event_location_evidence(unit, payload)
+    if evidence is not None:
+        event.location_evidence = evidence
     db.session.add(event)
     if status: unit.lifecycle_status = status
-    if event.checkpoint_text: unit.latest_checkpoint = event.checkpoint_text
+    event_location_text = (evidence.display_name_snapshot or evidence.location_text_snapshot) if evidence else None
+    if event_location_text or event.checkpoint_text:
+        unit.latest_checkpoint = event_location_text or event.checkpoint_text
     unit.attention_required, unit.delayed = event.attention_required, event.delayed
     unit.last_event_at = max(filter(None, [_as_utc(unit.last_event_at), occurred]))
     unit.version += 1; unit.updated_at = utcnow()
@@ -238,7 +309,9 @@ def timeline(unit: ExecutionUnit, args: dict, *, customer: bool = False) -> dict
     rows=db.session.scalars(query.order_by(OperationalEvent.occurred_at.desc(),OperationalEvent.id.desc()).offset((page-1)*per_page).limit(per_page)).all()
     data=[]
     for row in rows:
-        item={"public_id":row.public_id,"event_type":row.event_type,"lifecycle_status":row.lifecycle_status,"checkpoint_text":row.checkpoint_text,"customer_message":row.customer_message,"visibility":row.visibility,"occurred_at":_iso(row.occurred_at),"recorded_at":_iso(row.recorded_at),"alerts":{"attention_required":row.attention_required,"delayed":row.delayed}}
+        evidence = row.location_evidence
+        location = None if evidence is None else {"source_type": evidence.source_type, "source_identity": evidence.source_identity, "display_name": evidence.display_name_snapshot, "country_code": evidence.country_code_snapshot, "name_en": evidence.name_en_snapshot, "location_type": evidence.location_type_snapshot, "city_name": evidence.city_name_snapshot, "location_text": evidence.location_text_snapshot}
+        item={"public_id":row.public_id,"event_type":row.event_type,"lifecycle_status":row.lifecycle_status,"checkpoint_text":row.checkpoint_text,"location":location,"customer_message":row.customer_message,"visibility":row.visibility,"occurred_at":_iso(row.occurred_at),"recorded_at":_iso(row.recorded_at),"alerts":{"attention_required":row.attention_required,"delayed":row.delayed}}
         if not customer: item.update({"internal_note":row.internal_note,"source":row.source,"correlation_id":row.correlation_id,"batch_id":row.batch_id,"threshold_policy_version":row.threshold_policy_version})
         data.append(item)
     return {"data":data,"meta":{"page":page,"per_page":per_page,"total":total,"pages":(total+per_page-1)//per_page}}

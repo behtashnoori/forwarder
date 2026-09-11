@@ -31,7 +31,7 @@ function metricValue(response: AnalyticsResponse, metric: string) {
 }
 function Coverage({ items, show }: { items: AnalyticsCoverage[]; show: boolean }) {
   if (!show || !items.length) return null;
-  return <div className="mt-3 space-y-1 border-t pt-3 text-xs text-muted-foreground">{items.map((item) => <p key={item.coverage_key}>{item.definition}: {item.coverage_percent == null ? "قابل اعمال نیست" : `${number(item.coverage_percent)}٪`} ({number(item.covered_count)} از {number(item.eligible_count)})</p>)}</div>;
+  return <div className="mt-3 space-y-1 border-t pt-3 text-xs text-muted-foreground">{items.map((item) => <p key={item.coverage_key}>پوشش داده: {item.coverage_percent == null ? "قابل اعمال نیست" : `${number(item.coverage_percent)}٪`} ({number(item.covered_count)} از {number(item.eligible_count)})</p>)}</div>;
 }
 function WidgetHeader({ widget, result }: { widget: WidgetDefinition; result: WidgetResult }) {
   const response = result.response;
@@ -69,7 +69,7 @@ export function DashboardWidget({ widget, result, notApplicableFilters = [] }: {
       <><ChartContainer config={config} className="h-56 w-full">{widget.widget_type === "TREND" ? <LineChart data={chartData}><CartesianGrid vertical={false}/><XAxis dataKey="label"/><YAxis/><ChartTooltip content={<ChartTooltipContent />}/><Line type="monotone" dataKey="value" stroke="var(--color-value)" connectNulls={false}/></LineChart> : <BarChart data={chartData}><CartesianGrid vertical={false}/><XAxis dataKey="label"/><YAxis/><ChartTooltip content={<ChartTooltipContent />}/><Bar dataKey="value" fill="var(--color-value)" /></BarChart>}</ChartContainer><details className="mt-2 text-xs"><summary>نمایش جدولی قابل دسترس</summary><ul>{chartData.map((row) => <li key={row.label}>{row.label}: {row.value == null ? "نامشخص" : <DrilldownLink widget={widget} result={result} segment={{dimension:widget.query.dimension_keys[0],value:row.label}} onResult={setDrilldown}/>}</li>)}</ul></details></>}
       {notApplicableFilters.length > 0 && <p className="mt-3 text-xs text-muted-foreground">این ویجت تحت‌تأثیر فیلتر {notApplicableFilters.join("، ")} نیست.</p>}
       <Coverage items={response!.coverage} show={coverageVisible(widget, response!.coverage)} />
-      {response!.warnings.length > 0 && <Alert className="mt-3"><AlertDescription>{response!.warnings.join("، ")}</AlertDescription></Alert>}
+      {response!.warnings.length > 0 && <Alert className="mt-3"><AlertDescription>برخی داده‌های این نما پوشش کامل ندارند؛ برای تصمیم عملیاتی، جزئیات مربوط را بررسی کنید.</AlertDescription></Alert>}
       <DrilldownLink widget={widget} result={result} onResult={setDrilldown} />
       {drilldown && <div className="mt-3 border-t pt-3 text-sm"><p className="font-medium">جمعیت معیار</p><ul className="mt-1 space-y-1">{drilldown.items.map((item, index) => <li key={index}>{<ShipmentDetailLink publicId={item.shipment_public_id}/>} {item.route_leg_id ? `· بخش مسیر ${String(item.route_leg_id)}` : ""}</li>)}</ul></div>}
     </CardContent>}</Card>;

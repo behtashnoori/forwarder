@@ -29,6 +29,8 @@ from backend.operational_models import (
     OperationalOutbox,
     OperationalShipment,
     OperationalWorkItem,
+    Project,
+    ProjectAccess,
     RouteLeg,
     RoutePlan,
 )
@@ -436,7 +438,9 @@ def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scop
     with operational_app.app_context():
         ids = operational_app.config["phase1a"]
         membership = OperationalMembership.query.filter_by(user_id=ids["user"]).one()
-        membership.permissions = list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
+        membership.permissions = list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS) + [
+            "execution_unit.read", "execution_unit.create", "execution_unit.update",
+        ]
         cargo_type = CargoType(
             public_id="uat-cargo-type", immutable_code="UAT_GENERAL",
             fa_name="کالای آزمون", en_name="UAT cargo", display_order=1,
@@ -537,20 +541,33 @@ def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scop
         )
         assert rejected.status_code == status
 
+    with operational_app.app_context():
+        shipment = OperationalShipment.query.filter_by(public_id=shipment_id).one()
+        shipment_customer = db.session.get(Customer, shipment.customer_id)
+        shipment_customer.operational_organization_id = shipment.organization_id
+        shipment_customer.ownership_scope = "TENANT"
+        project = Project(
+            organization_id=shipment.organization_id, primary_customer_id=shipment.customer_id,
+            project_code="UAT-REQUEST-JOURNEY", tracking_code="uat-request-journey",
+            created_by_user_id=operational_app.config["phase1a"]["user"],
+        )
+        db.session.add(project); db.session.flush()
+        db.session.add(ProjectAccess(
+            organization_id=shipment.organization_id, project_id=project.id,
+            user_id=operational_app.config["phase1a"]["user"],
+            created_by_user_id=operational_app.config["phase1a"]["user"],
+        ))
+        shipment.project_id = project.id; db.session.commit()
+        project_public_id = project.public_id
     unit = client.post(
-        f"/api/internal/operational-shipments/{shipment_id}/transport-units",
-        json={"unit_code": "UAT-TRUCK", "unit_type": "truck"},
-        headers=headers,
+        f"/api/v2/projects/{project_public_id}/execution-units",
+        json={"unit_type": "truck", "display_name": "UAT Truck",
+              "operational_shipment_public_id": shipment_id}, headers=headers,
     )
     assert unit.status_code == 201
     allocation = client.post(
-        f"/api/internal/operational-shipments/{shipment_id}/cargo-transport-allocations",
-        json={
-            "cargo_item_public_id": cargo_id,
-            "transport_unit_id": unit.json["transport_unit"]["id"],
-            "allocated_quantity": "12.5",
-        },
-        headers=headers,
+        f"/api/v2/projects/{project_public_id}/execution-units/{unit.json['data']['public_id']}/allocations",
+        json={"cargo_public_id": cargo_id, "allocated_quantity": "12.5"}, headers=headers,
     )
     assert allocation.status_code == 201, allocation.get_json()
     enabled = client.post(
@@ -559,15 +576,21 @@ def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scop
     )
     assert enabled.status_code == 200
     tracked = client.post(
-        f"/api/internal/operational-shipments/{shipment_id}/transport-units/{unit.json['transport_unit']['id']}/tracking-updates",
+        f"/api/v2/projects/{project_public_id}/execution-units/{unit.json['data']['public_id']}/events",
         json={
-            "status": "in_transit", "occurred_at": datetime.now(timezone.utc).isoformat(),
-            "location_text": "Tehran", "is_customer_visible": True,
+            "expected_version": 1, "event_type": "in_transit", "lifecycle_status": "in_progress",
+            "occurred_at": datetime.now(timezone.utc).isoformat(),
+            "location": {"location_text": "Tehran"}, "visibility": "customer",
+            "customer_message": "On route",
         },
-        headers=headers,
+        headers={**headers, "Idempotency-Key": "uat-tracking-event"},
     )
     assert tracked.status_code == 201
-    assert tracked.json["tracking"]["units"][0]["allocated_cargo"][0]["cargo_name"] == "کالای فعال"
+    timeline = client.get(
+        f"/api/v2/projects/{project_public_id}/execution-units/{unit.json['data']['public_id']}/timeline",
+        headers=headers,
+    )
+    assert timeline.json["data"][0]["location"]["display_name"] == "Tehran"
 
     peer_headers = _auth_user(operational_app, peer_id)
     assert client.get(f"/api/operational-shipments/{shipment_id}", headers=peer_headers).status_code == 404

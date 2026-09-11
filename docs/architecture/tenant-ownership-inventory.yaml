@@ -63,6 +63,7 @@
     "SiteSetting": {"kind":"persisted_model","table":"site_setting","scope":"PLATFORM_SCOPED","rationale":"Current global product configuration only; it must not be reused as tenant branding (MT-7)."},
 
     "OperationalMembership": {"kind":"persisted_model","table":"operational_membership","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
+    "CustomerRoleAssignment": {"kind":"persisted_model","table":"customer_role_assignment","scope":"TENANT_OWNED_DIRECT","tenant_key":"operational_organization_id","rationale":"Tenant-owned Carrier eligibility is directly bound to OperationalOrganization; the composite Customer/organization foreign key prevents a role assignment from crossing the customer's tenant."},
     "Project": {"kind":"persisted_model","table":"project","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","integrity_risks":["primary_customer_id references legacy-unscoped Customer"]},
     "ProjectAccess": {"kind":"persisted_model","table":"project_access","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Explicit user-to-Project business access; composite foreign keys keep both Project and active membership identity in the same organization."},
     "OperationalShipment": {"kind":"persisted_model","table":"operational_shipment","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","integrity_risks":["customer_id, shipment_request_id and accepted_quote_id do not prove same-tenant ownership"]},
@@ -106,8 +107,10 @@
     "OipProjectionState": {"kind":"persisted_model","table":"oip_projection_state","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "OipProjectionHealthHistory": {"kind":"persisted_model","table":"oip_projection_health_history","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
 
-    "ExecutionUnit": {"kind":"persisted_model","table":"execution_unit","scope":"TENANT_OWNED_INDIRECT","owner_path":"project.organization_id","integrity_risks":["optional operational_shipment_id can disagree with project tenant"]},
-    "OperationalEvent": {"kind":"persisted_model","table":"operational_event","scope":"TENANT_OWNED_INDIRECT","owner_path":"project.organization_id","integrity_risks":["project_id and execution_unit_id tenant equivalence is not database-enforced"]},
+    "ExecutionUnit": {"kind":"persisted_model","table":"execution_unit","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"ADR-046 makes organization_id the canonical, non-null execution owner; project and shipment lineage are compatibility-only and nullable."},
+    "ExecutionUnitCargoAllocation": {"kind":"persisted_model","table":"execution_unit_cargo_allocation","scope":"TENANT_OWNED_INDIRECT","owner_path":"execution_unit.organization_id","rationale":"Canonical ADR-046 allocation inherits tenant ownership from its required ExecutionUnit; shipment and optional project columns record lineage only."},
+    "OperationalEvent": {"kind":"persisted_model","table":"operational_event","scope":"TENANT_OWNED_INDIRECT","owner_path":"execution_unit.organization_id","integrity_risks":["project_id is nullable compatibility lineage; execution_unit_id is the required tenant-owner path under ADR-046"]},
+    "OperationalEventLocationEvidence": {"kind":"persisted_model","table":"operational_event_location_evidence","scope":"TENANT_OWNED_INDIRECT","owner_path":"operational_event.execution_unit.organization_id","rationale":"Immutable event-time evidence belongs to the tenant of its required OperationalEvent and canonical ExecutionUnit; it has no independent tenant authority."},
     "RoutePlan": {"kind":"persisted_model","table":"route_plan","scope":"TENANT_OWNED_INDIRECT","owner_path":"operational_shipment.organization_id"},
     "RouteLeg": {"kind":"persisted_model","table":"route_leg","scope":"TENANT_OWNED_INDIRECT","owner_path":"route_plan.operational_shipment.organization_id"},
     "OperationalCheckpoint": {"kind":"persisted_model","table":"operational_checkpoint","scope":"TENANT_OWNED_INDIRECT","owner_path":"route_plan.operational_shipment.organization_id"},

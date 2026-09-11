@@ -31,9 +31,19 @@ def _iso(value: datetime | None) -> str | None:
     return value.isoformat().replace("+00:00", "Z") if value else None
 
 
-def _event_key(event: OperationalEvent) -> tuple[datetime, datetime, str]:
-    """ADR-040 business ordering; public_id is the immutable final tie-breaker."""
-    return (_utc(event.occurred_at), _utc(event.recorded_at), event.public_id)
+def _event_key(event: OperationalEvent) -> tuple[datetime, datetime, int]:
+    """Business time, recording time, then append order resolve event recency."""
+    return (_utc(event.occurred_at), _utc(event.recorded_at), event.id or 0)
+
+
+def _event_location_text(event: OperationalEvent | None) -> str | None:
+    """Canonical structured evidence wins; old event text is presentation-only."""
+    if event is None:
+        return None
+    evidence = event.location_evidence
+    if evidence is not None:
+        return evidence.display_name_snapshot or evidence.location_text_snapshot
+    return event.checkpoint_text
 
 
 def _effective_events(events: Iterable[OperationalEvent]) -> list[OperationalEvent]:
@@ -54,7 +64,7 @@ def _cache_health(
 ) -> str:
     cached_at = _utc(unit.last_event_at)
     expected_at = _utc(latest_event.occurred_at) if latest_event else None
-    expected_location = location_event.checkpoint_text if location_event else None
+    expected_location = _event_location_text(location_event)
     if expected_at is None and expected_location is None:
         return "NOT_APPLICABLE" if cached_at is None and unit.latest_checkpoint is None else "CACHE_CONFLICT"
     if (expected_at is not None and cached_at is None) or (
@@ -66,7 +76,7 @@ def _cache_health(
 
     effective_times = {_utc(row.occurred_at) for row in events}
     historical_locations = {
-        row.checkpoint_text for row in events if row.checkpoint_text is not None
+        _event_location_text(row) for row in events if _event_location_text(row) is not None
     }
     time_is_older = cached_at in effective_times and expected_at is not None and cached_at < expected_at
     location_is_older = (
@@ -79,7 +89,7 @@ def _cache_health(
 def _unit_projection(unit: ExecutionUnit, events: Iterable[OperationalEvent]) -> dict:
     effective = _effective_events(events)
     latest = effective[0] if effective else None
-    location = next((row for row in effective if row.checkpoint_text is not None), None)
+    location = next((row for row in effective if _event_location_text(row) is not None), None)
     status = next((row for row in effective if row.lifecycle_status is not None), None)
     health = _cache_health(unit, effective, latest, location)
     source = "operational_event" if effective else "unavailable"
@@ -88,12 +98,13 @@ def _unit_projection(unit: ExecutionUnit, events: Iterable[OperationalEvent]) ->
     )
     return {
         "unit_public_id": unit.public_id,
-        "current_location": location.checkpoint_text if location else None,
+        "current_location": _event_location_text(location),
         "location_state": "SINGLE" if location else "UNAVAILABLE",
         "latest_event_at": _iso(latest.occurred_at) if latest else None,
         "latest_event_recorded_at": _iso(latest.recorded_at) if latest else None,
         "latest_event_type": latest.event_type if latest else None,
         "latest_event_public_id": latest.public_id if latest else None,
+        "_latest_event_order_id": latest.id if latest else None,
         "lifecycle_status": status.lifecycle_status if status else "not_started",
         "source": source,
         "source_timestamp": _iso(latest.occurred_at) if latest else None,
@@ -180,7 +191,7 @@ def project_operational_shipments(
             key=lambda row: (
                 row["latest_event_at"],
                 row["latest_event_recorded_at"],
-                row["latest_event_public_id"],
+                row["_latest_event_order_id"],
             ),
             default=None,
         )
@@ -210,6 +221,9 @@ def project_operational_shipments(
             "projection_state": "conflict" if health in {"CACHE_STALE", "CACHE_CONFLICT"} else ("authoritative" if source == "operational_event" else "unavailable"),
             "subject_scope": "operational_shipment",
             "reconciliation_health": health,
-            "units": projected_units,
+            "units": [
+                {key: value for key, value in row.items() if not key.startswith("_")}
+                for row in projected_units
+            ],
         }
     return result

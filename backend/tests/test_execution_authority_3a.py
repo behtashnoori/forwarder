@@ -180,9 +180,7 @@ def test_tracking_and_execution_unit_delivered_do_not_advance_route(operational_
     with operational_app.app_context():
         shipment, leg, milestones = setup(operational_app)
         user = _user(operational_app)
-        root = tracking.enable_tracking_for_shipment(shipment, user["id"])
-        unit = tracking.add_unit(root, user["id"], unit_code="3A-T", unit_type="truck")
-        tracking.add_update(unit, user["id"], status="delivered", occurred_at=datetime.now(timezone.utc))
+        tracking.enable_tracking_for_shipment(shipment, user["id"])
         project = Project(organization_id=shipment.organization_id,
             primary_customer_id=operational_app.config["phase1a"]["customer"], project_code="3A-P",
             created_by_user_id=user["id"])

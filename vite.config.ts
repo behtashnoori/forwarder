@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(packageMetadata.version),
   },
-  test: { environment: "jsdom", setupFiles: ["./src/tests/setup.ts"], include: ["src/**/*.test.{ts,tsx}"] },
+  test: { environment: "jsdom", setupFiles: ["./src/tests/setup.ts"], include: ["src/**/*.test.{ts,tsx}"], fileParallelism: false },
   server: {
     host: "0.0.0.0",
     port: 8080,

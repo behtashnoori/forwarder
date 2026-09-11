@@ -746,7 +746,15 @@ def _protect_referenced_tracking_location(_mapper, connection, target):
         .where(ShipmentTransportUnitUpdate.location_reference_id == target.id)
         .limit(1)
     ).first()
-    if referenced:
+    canonical_reference = connection.execute(
+        db.text(
+            "SELECT id FROM operational_event_location_evidence "
+            "WHERE source_type = 'tracking_location_reference' "
+            "AND source_identity = :identity LIMIT 1"
+        ),
+        {"identity": target.internal_key},
+    ).first()
+    if referenced or canonical_reference:
         raise ValueError("referenced tracking locations cannot be hard deleted")
 
 
@@ -970,9 +978,26 @@ class Customer(db.Model):
     opportunities = db.relationship("Opportunity", backref="customer", lazy=True)
     activities = db.relationship("Activity", backref="customer", lazy=True, foreign_keys="Activity.customer_id")
     requests = db.relationship("ShipmentRequest", back_populates="customer", lazy=True)
+    role_assignments = db.relationship("CustomerRoleAssignment", back_populates="customer", lazy=True)
     
     def __repr__(self) -> str:
         return f"<Customer id={self.id} name={self.first_name} {self.last_name}>"
+
+
+class CustomerRoleAssignment(db.Model):
+    """An additive, tenant-owned operational eligibility for a CRM party."""
+    __tablename__ = "customer_role_assignment"
+    __table_args__ = (db.UniqueConstraint("customer_id", "role_code", name="uq_customer_role_assignment"), db.CheckConstraint("role_code = 'CARRIER'", name="ck_customer_role_assignment_code"))
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    customer_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("customer.id", ondelete="RESTRICT"), nullable=False, index=True)
+    operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False, index=True)
+    role_code = db.Column(db.String(32), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    created_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True)
+    updated_by = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True)
+    customer = db.relationship("Customer", back_populates="role_assignments")
 
 
 class CustomerContact(db.Model):
@@ -2146,6 +2171,7 @@ __all__ = [
     "ExpertQuote",
     # CRM Models
     "Customer",
+    "CustomerRoleAssignment",
     "CustomerContact", 
     "Opportunity",
     "Activity",

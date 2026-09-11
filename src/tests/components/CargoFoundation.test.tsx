@@ -7,7 +7,7 @@ const api = vi.hoisted(() => ({
   listCargoCatalog: vi.fn(), createCargoCatalogItem: vi.fn(), updateCargoCatalogItem: vi.fn(),
   setCargoCatalogActive: vi.fn(), createCargoAlias: vi.fn(), updateCargoAlias: vi.fn(),
   getCargoCatalogShipmentUsage: vi.fn(),
-  listShipmentCargoItems: vi.fn(), createShipmentCargoItem: vi.fn(), updateShipmentCargoItem: vi.fn(), request: vi.fn(), getShipmentCargoOptions: vi.fn(),
+  listShipmentCargoItems: vi.fn(), createShipmentCargoItem: vi.fn(), updateShipmentCargoItem: vi.fn(), searchOperationalCustomers: vi.fn(), request: vi.fn(), getShipmentCargoOptions: vi.fn(),
   getCargoTransportAllocations: vi.fn(), createCargoTransportAllocation: vi.fn(),
   deleteCargoTransportAllocation: vi.fn(), getOperationalTransportTracking: vi.fn(),
   enableOperationalTransportTracking: vi.fn(), addOperationalTransportTrackingUpdate: vi.fn(),
@@ -29,6 +29,7 @@ const shipmentItem = {
   uom_code_snapshot:"UOM_EA", uom_symbol_snapshot:"ea", part_number_snapshot:"PN-1",
   customer_item_code_snapshot:"CC-1", hs_code_snapshot:null, brand_snapshot:null,
   model_snapshot:null, description_snapshot:"Historical snapshot", version:1,
+  cargo_owner:null,
 };
 
 describe("Cargo foundation UI", () => {
@@ -38,6 +39,7 @@ describe("Cargo foundation UI", () => {
     api.listShipmentCargoItems.mockResolvedValue({items:[shipmentItem]});
     api.request.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1"}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea"}]});
     api.getShipmentCargoOptions.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:true},{public_id:"catalog-2",code:"ITEM-2",name:"کالای سازمان",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:false}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea"}]});
+    api.searchOperationalCustomers.mockResolvedValue({items:[{id:1,label:"Customer A"}],meta:{count:1,limit:100}});
     api.updateShipmentCargoItem.mockResolvedValue({item:{...shipmentItem,quantity:"3",version:2}});
     api.getCargoTransportAllocations.mockResolvedValue({allocations:[],transport_units:[]});
     api.getOperationalTransportTracking.mockResolvedValue({source_type:"direct",tracking:null});
@@ -86,6 +88,74 @@ describe("Cargo foundation UI", () => {
     expect(screen.getByText("Historical snapshot")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Edit quantity line 1"),{target:{value:"3"}});
     fireEvent.click(screen.getByRole("button",{name:/Save/}));
-    await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",{quantity:"3",version:1}));
+    await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",{quantity:"3",cargo_owner_customer_id:null,version:1}));
   });
+
+  it("renders and persists Cargo Owners by unique Customer identity", async () => {
+    const consoleError = vi.spyOn(console, "error");
+    const ownedItem = {...shipmentItem,cargo_owner:{id:1,label:"Same Name"}};
+    api.listShipmentCargoItems
+      .mockResolvedValueOnce({items:[ownedItem]})
+      .mockResolvedValue({items:[{...ownedItem,cargo_owner:{id:2,label:"Multi-role Customer"},version:2}]});
+    api.searchOperationalCustomers.mockResolvedValue({
+      items:[
+        {id:1,label:"Same Name"},
+        {id:2,label:"Multi-role Customer"},
+        {id:2,label:"Multi-role Customer"},
+        {id:3,label:"Same Name"},
+      ],
+      meta:{count:4,limit:100},
+    });
+
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1"/>);
+
+    const selector = await screen.findByLabelText("Cargo owner line 1") as HTMLSelectElement;
+    expect(selector.querySelectorAll('option[value="1"]')).toHaveLength(1);
+    expect(selector.querySelectorAll('option[value="2"]')).toHaveLength(1);
+    expect(selector.querySelectorAll('option[value="3"]')).toHaveLength(1);
+    expect(Array.from(selector.options).filter((option)=>option.text === "Same Name")).toHaveLength(2);
+    expect(consoleError).not.toHaveBeenCalled();
+
+    fireEvent.change(selector,{target:{value:"2"}});
+    fireEvent.click(screen.getByRole("button",{name:/Save/}));
+    await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",{
+      quantity:"2.000000",cargo_owner_customer_id:"2",version:1,
+    }));
+    await waitFor(()=>expect((screen.getByLabelText("Cargo owner line 1") as HTMLSelectElement).value).toBe("2"));
+    consoleError.mockRestore();
+  });
+
+  it("qualifies tracking-unit render identity by source domain without masking same-domain duplicates", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const unit = (source:"canonical_execution"|"historical_legacy", id:number, code:string) => ({
+      source,id,unit_code:code,unit_type:"truck",latest_status:"in_transit",
+      allocated_cargo:[],history:[],
+    });
+    api.getOperationalTransportTracking
+      .mockResolvedValueOnce({source_type:"direct",tracking:{enabled:true,units:[
+        unit("historical_legacy",2,"LEGACY-2"),unit("canonical_execution",2,"CANONICAL-2"),
+      ]}})
+      .mockResolvedValueOnce({source_type:"direct",tracking:{enabled:true,units:[
+        unit("canonical_execution",3,"CANONICAL-3"),unit("historical_legacy",2,"LEGACY-2"),
+      ]}})
+      .mockResolvedValueOnce({source_type:"direct",tracking:{enabled:true,units:[
+        unit("canonical_execution",2,"CANONICAL-2-A"),unit("canonical_execution",2,"CANONICAL-2-B"),
+      ]}});
+
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1"/>);
+    expect((await screen.findAllByText("LEGACY-2")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("CANONICAL-2").length).toBeGreaterThan(0);
+    expect(consoleError).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Search cargo catalog"),{target:{value:"reload"}});
+    expect((await screen.findAllByText("CANONICAL-3")).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("LEGACY-2").length).toBeGreaterThan(0);
+    expect(consoleError).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText("Search cargo catalog"),{target:{value:"duplicate"}});
+    expect((await screen.findAllByText("CANONICAL-2-B")).length).toBeGreaterThan(0);
+    await waitFor(()=>expect(consoleError).toHaveBeenCalledWith(expect.stringContaining("same key"),"canonical_execution:2"));
+    consoleError.mockRestore();
+  });
+
 });

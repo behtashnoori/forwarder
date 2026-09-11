@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import uuid
 
+from sqlalchemy import event
+
 from backend.extensions import db
 
 
@@ -179,14 +181,15 @@ class ProjectAccess(db.Model):
 
 
 class ExecutionUnit(db.Model):
-    """Canonical independently managed unit within a Project (ADR-018)."""
+    """Canonical tenant-owned physical transport execution (ADR-046)."""
 
     __tablename__ = "execution_unit"
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_execution_unit_public_id"),
-        db.UniqueConstraint(
-            "project_id", "unit_code", name="uq_execution_unit_project_code"
-        ),
+        # project_id remains a legacy compatibility reference.  New unit codes
+        # are unique within the tenant because an execution is no longer owned
+        # by one project.
+        db.UniqueConstraint("organization_id", "unit_code", name="uq_execution_unit_org_code"),
         db.UniqueConstraint("legacy_unit_id", name="uq_execution_unit_legacy_unit"),
         db.CheckConstraint(
             "lifecycle_status IN ('not_started','ready','in_progress','arrived','delivered','cancelled')",
@@ -200,14 +203,24 @@ class ExecutionUnit(db.Model):
             "is_active",
         ),
         db.Index("ix_execution_unit_project_updated", "project_id", "updated_at"),
+        db.Index("ix_execution_unit_org_status_active", "organization_id", "lifecycle_status", "is_active"),
     )
 
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(
         db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
     )
+    organization_id = db.Column(
+        BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False, index=True
+    )
+    # The existing tenant-scoped CRM Customer master is the canonical Party
+    # identity for a carrier (normally a vendor); a separate carrier master
+    # would duplicate identity and weaken tenant controls.
+    carrier_customer_id = db.Column(
+        BIGINT, db.ForeignKey("customer.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     project_id = db.Column(
-        BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False
+        BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=True
     )
     operational_shipment_id = db.Column(
         BIGINT,
@@ -238,7 +251,10 @@ class ExecutionUnit(db.Model):
         db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
 
+    # Compatibility-only: canonical participation is represented by
+    # ExecutionUnitCargoAllocation, not this legacy project/shipment pair.
     project = db.relationship("Project", back_populates="execution_units")
+    carrier_customer = db.relationship("Customer", foreign_keys=[carrier_customer_id])
     events = db.relationship(
         "OperationalEvent", back_populates="execution_unit", lazy="raise"
     )
@@ -275,8 +291,9 @@ class OperationalEvent(db.Model):
         db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
     )
     project_id = db.Column(
-        BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=False
+        BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=True
     )
+
     execution_unit_id = db.Column(
         BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=False
     )
@@ -306,6 +323,63 @@ class OperationalEvent(db.Model):
     threshold_policy_version = db.Column(db.String(32), nullable=True)
 
     execution_unit = db.relationship("ExecutionUnit", back_populates="events")
+    location_evidence = db.relationship(
+        "OperationalEventLocationEvidence", back_populates="event", uselist=False,
+        lazy="selectin", cascade="all, delete-orphan"
+    )
+
+
+class OperationalEventLocationEvidence(db.Model):
+    """Immutable, event-time location evidence; never a mutable master-data view."""
+
+    __tablename__ = "operational_event_location_evidence"
+    __table_args__ = (
+        db.UniqueConstraint("operational_event_id", name="uq_event_location_evidence_event"),
+        db.CheckConstraint(
+            "source_type IN ('logistics_point','canonical_location','tracking_location_reference','manual')",
+            name="ck_event_location_evidence_source_type",
+        ),
+        db.CheckConstraint(
+            "(logistics_point_id IS NULL OR canonical_location_id IS NULL)",
+            name="ck_event_location_evidence_one_master_identity",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    operational_event_id = db.Column(
+        BIGINT, db.ForeignKey("operational_event.id", ondelete="RESTRICT"), nullable=False
+    )
+    # A tenant-scoped point is the normal operational identity.  CanonicalLocation
+    # is retained for governed non-operational geography where a point is absent.
+    logistics_point_id = db.Column(BIGINT, db.ForeignKey("logistics_point.id", ondelete="RESTRICT"), nullable=True)
+    canonical_location_id = db.Column(BIGINT, db.ForeignKey("canonical_location.id", ondelete="RESTRICT"), nullable=True)
+    source_type = db.Column(db.String(40), nullable=False)
+    source_identity = db.Column(db.String(100), nullable=True)
+    display_name_snapshot = db.Column(db.String(200), nullable=True)
+    country_code_snapshot = db.Column(db.String(3), nullable=True)
+    name_en_snapshot = db.Column(db.String(160), nullable=True)
+    location_type_snapshot = db.Column(db.String(64), nullable=True)
+    city_name_snapshot = db.Column(db.String(160), nullable=True)
+    location_text_snapshot = db.Column(db.String(255), nullable=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    event = db.relationship("OperationalEvent", back_populates="location_evidence")
+
+
+@event.listens_for(OperationalEventLocationEvidence, "before_update")
+@event.listens_for(OperationalEventLocationEvidence, "before_delete")
+def _event_location_evidence_is_immutable(_mapper, _connection, _target):
+    raise ValueError("operational event location evidence is immutable")
+
+
+@event.listens_for(ExecutionUnit, "before_insert")
+def _derive_legacy_execution_unit_organization(_mapper, connection, target):
+    """Bridge pre-ADR-046 callers without guessing tenant ownership."""
+    if target.organization_id is None and target.project_id is not None:
+        target.organization_id = connection.execute(
+            db.select(Project.organization_id).where(Project.id == target.project_id)
+        ).scalar_one_or_none()
+    if target.organization_id is None:
+        raise ValueError("organization_id is required for an ExecutionUnit")
 
 
 class OperationalMembership(db.Model):

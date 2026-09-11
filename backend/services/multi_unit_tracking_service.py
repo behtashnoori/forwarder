@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
+import json
+import uuid
 from sqlalchemy.orm import selectinload
 
 from backend.extensions import db
@@ -13,7 +16,7 @@ from backend.models import (
     ShipmentTransportUnitUpdate,
     TrackingLocationReference,
 )
-from backend.operational_models import OperationalShipment
+from backend.operational_models import ExecutionUnit, OperationalEvent, OperationalShipment, utcnow
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 
 
@@ -68,6 +71,26 @@ SUMMARY_CATEGORIES = {
 
 class TrackingValidationError(ValueError):
     """Raised when a tracking write violates the MVP domain rules."""
+
+
+class LegacyWriteMappingError(TrackingValidationError):
+    """A compatibility write lacks a safe, existing canonical target."""
+
+    status = 409
+    code = "LEGACY_WRITE_MAPPING"
+    state = "NEEDS_DECISION"
+
+    def __init__(self):
+        super().__init__("A canonical execution mapping is required.")
+
+
+def legacy_write_mapping_payload() -> dict:
+    """Stable public error contract; never disclose persistence details."""
+    return {
+        "code": LegacyWriteMappingError.code,
+        "state": LegacyWriteMappingError.state,
+        "error": "A canonical execution mapping is required.",
+    }
 
 
 def _clean_required(value: str | None, field: str, maximum: int) -> str:
@@ -157,15 +180,9 @@ def enable_tracking_for_shipment(shipment: OperationalShipment, actor_id: int, *
         tracking.enabled_by_user_id = actor_id
     tracking.disabled_at = None
     tracking.disabled_by_user_id = None
-    # Direct-operation units are created before tracking is enabled; converge
-    # them onto this one root instead of creating a parallel unit set.
-    for unit in db.session.scalars(
-        db.select(ShipmentTransportUnit).where(
-            ShipmentTransportUnit.operational_shipment_id == shipment.id,
-            ShipmentTransportUnit.tracking_id.is_(None),
-        )
-    ):
-        unit.tracking = tracking
+    # ShipmentTransportUnit is historical compatibility data.  In particular,
+    # enabling a compatibility projection must never attach legacy rows and
+    # thereby promote them to current operational truth.
     return tracking
 
 
@@ -192,33 +209,30 @@ def add_unit(
     vehicle_reference: str | None = None,
     sort_order: int = 0,
 ):
-    if not tracking.is_enabled:
-        raise TrackingValidationError("tracking must be enabled before units are added")
-    if tracking.operational_organization_id is None:
-        raise TrackingValidationError("tracking has ambiguous tenant ownership")
-    code = _clean_required(unit_code, "unit_code", 64)
-    kind = _clean_required(unit_type, "unit_type", 32).lower()
-    if kind not in UNIT_TYPES:
-        raise TrackingValidationError("unsupported unit_type")
-    if not isinstance(sort_order, int) or isinstance(sort_order, bool) or sort_order < 0:
-        raise TrackingValidationError("sort_order must be a non-negative integer")
-    name = _clean_optional(display_name, "display_name", 100)
-    reference = _clean_optional(vehicle_reference, "vehicle_reference", 100)
-    unit = ShipmentTransportUnit(
-        tracking=tracking,
-        operational_shipment_id=tracking.operational_shipment_id,
-        ownership_scope="TENANT",
-        operational_organization_id=tracking.operational_organization_id,
-        unit_code=code,
-        unit_type=kind,
-        display_name=name,
-        vehicle_reference=reference,
-        sort_order=sort_order,
-        is_active=True,
-        created_by_user_id=actor_id,
+    """Retired compatibility command: it cannot safely create an execution."""
+    # This legacy contract has no ExecutionUnit identity or project lineage.
+    # Validating its free-text fields cannot make identity deterministic.
+    raise LegacyWriteMappingError()
+
+
+def _canonical_unit_for_legacy_unit(unit: ShipmentTransportUnit) -> ExecutionUnit:
+    """Resolve only the one explicit back-reference, in the same tenant/root."""
+    if unit.ownership_scope != "TENANT" or unit.operational_organization_id is None:
+        raise LegacyWriteMappingError()
+    execution = db.session.scalar(
+        db.select(ExecutionUnit).where(
+            ExecutionUnit.legacy_unit_id == unit.id,
+            ExecutionUnit.organization_id == unit.operational_organization_id,
+        )
     )
-    db.session.add(unit)
-    return unit
+    if execution is None:
+        raise LegacyWriteMappingError()
+    if (
+        unit.operational_shipment_id is not None
+        and execution.operational_shipment_id != unit.operational_shipment_id
+    ):
+        raise LegacyWriteMappingError()
+    return execution
 
 
 def update_unit_metadata(
@@ -227,12 +241,13 @@ def update_unit_metadata(
     display_name: str | None = None,
     vehicle_reference: str | None = None,
 ):
-    """Update customer-safe optional metadata without changing the business key."""
-    unit.display_name = _clean_optional(display_name, "display_name", 100)
-    unit.vehicle_reference = _clean_optional(
-        vehicle_reference, "vehicle_reference", 100
-    )
-    return unit
+    """Delegate supported compatibility metadata to the mapped execution."""
+    execution = _canonical_unit_for_legacy_unit(unit)
+    execution.display_name = _clean_optional(display_name, "display_name", 160)
+    execution.vehicle_reference = _clean_optional(vehicle_reference, "vehicle_reference", 160)
+    execution.version += 1
+    execution.updated_at = utcnow()
+    return execution
 
 
 def add_update(
@@ -250,13 +265,16 @@ def add_update(
     is_customer_visible: bool = True,
     now: datetime | None = None,
 ):
-    """Append a manual unit update; existing updates are intentionally immutable."""
+    """Append a canonical event for an explicitly mapped legacy unit."""
+    # Resolve identity before legacy-envelope validation so every ambiguous
+    # compatibility write has the one stable fail-closed contract.
+    execution = _canonical_unit_for_legacy_unit(unit)
     if unit.tracking is None or not unit.tracking.is_enabled:
         raise TrackingValidationError("tracking is not enabled")
     if not unit.is_active:
         raise TrackingValidationError("unit is inactive")
     if unit.ownership_scope != "TENANT" or unit.operational_organization_id is None:
-        raise TrackingValidationError("transport unit has ambiguous tenant ownership")
+        raise LegacyWriteMappingError()
     if unit.tracking.operational_organization_id != unit.operational_organization_id:
         raise TrackingValidationError("transport unit belongs to a different Organization")
     normalized_status = _clean_required(status, "status", 32).lower()
@@ -307,29 +325,59 @@ def add_update(
     clean_internal_note = (internal_note or "").strip() or None
     if not isinstance(is_customer_visible, bool):
         raise TrackingValidationError("is_customer_visible must be boolean")
-    update = ShipmentTransportUnitUpdate(
-        unit=unit,
-        ownership_scope="TENANT",
-        operational_organization_id=unit.operational_organization_id,
-        status=normalized_status,
-        location=resolved_location,
-        logistics_point_id=point.id if point else None,
-        location_reference=reference,
-        location_name_snapshot=point.fa_name if point else reference.name_fa if reference else None,
-        country_code_snapshot=point.country.code if point else reference.country_code if reference else None,
-        location_name_en_snapshot=point.en_name if point else None,
-        location_type_code_snapshot=point.point_type.immutable_code if point else None,
-        location_city_name_snapshot=point.city.name_fa if point and point.city else None,
-        location_text=clean_location_text or (clean_location if not reference else None),
+    lifecycle_status, delayed = {
+        "not_started": ("not_started", False),
+        "loading": ("in_progress", False),
+        "departed": ("in_progress", False),
+        "in_transit": ("in_progress", False),
+        "at_checkpoint": ("in_progress", False),
+        "delayed": ("in_progress", True),
+        "arrived_destination": ("arrived", False),
+        "delivered": ("delivered", False),
+        "cancelled": ("cancelled", False),
+    }[normalized_status]
+    payload = {
+        "status": normalized_status,
+        "occurred_at": occurred_at.isoformat(),
+        "location": resolved_location,
+        "customer_message": clean_message,
+        "internal_note": clean_internal_note,
+        "is_customer_visible": is_customer_visible,
+    }
+    event = OperationalEvent(
+        project_id=execution.project_id,
+        execution_unit_id=execution.id,
+        event_type="legacy_tracking_update",
+        lifecycle_status=lifecycle_status,
+        checkpoint_text=resolved_location,
         customer_message=clean_message,
         internal_note=clean_internal_note,
-        is_customer_visible=is_customer_visible,
-        occurred_at=occurred_at,
-        created_by_user_id=actor_id,
-        created_at=created_at,
+        # The canonical event contract requires a customer message for public
+        # visibility.  A legacy update without one is retained internally.
+        visibility="customer" if is_customer_visible and clean_message else "internal",
+        attention_required=False,
+        delayed=delayed,
+        occurred_at=occurred_at.replace(tzinfo=timezone.utc),
+        actor_user_id=actor_id,
+        source="legacy_compatibility",
+        idempotency_key=f"legacy-compat-{uuid.uuid4()}",
+        request_hash=hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest(),
+        threshold_policy_version="legacy-compat-v1",
     )
-    db.session.add(update)
-    return update
+    db.session.add(event)
+    execution.lifecycle_status = lifecycle_status
+    execution.latest_checkpoint = resolved_location or execution.latest_checkpoint
+    execution.delayed = delayed
+    prior_event_at = execution.last_event_at
+    if prior_event_at is not None and prior_event_at.tzinfo is None:
+        prior_event_at = prior_event_at.replace(tzinfo=timezone.utc)
+    execution.last_event_at = max(
+        (value for value in (prior_event_at, event.occurred_at) if value is not None),
+        default=None,
+    )
+    execution.version += 1
+    execution.updated_at = utcnow()
+    return event
 
 
 def _iso(value):
@@ -424,23 +472,104 @@ def build_internal_tracking_for_shipment(shipment: OperationalShipment):
     if tracking is None or not tracking.is_enabled:
         return None
     latest_rows = _latest_visible_updates(tracking)
+    # A direct-operation legacy unit may predate the compatibility tracking
+    # root.  Keep it visible as history without attaching or mutating it.
+    for historical_unit in db.session.scalars(
+        db.select(ShipmentTransportUnit).where(
+            ShipmentTransportUnit.operational_shipment_id == shipment.id,
+            ShipmentTransportUnit.tracking_id.is_(None),
+        )
+    ):
+        history = list(historical_unit.updates)
+        history.sort(key=lambda row: (row.occurred_at, row.id or 0), reverse=True)
+        latest_rows.append((historical_unit, history, history[0] if history else None))
     aggregate_status, summary, last_updated = _aggregate(latest_rows)
-    # Allocation is an execution read-model, not a tracking event.  It is
-    # deliberately attached here only so a tracker can see a unit's cargo.
-    from backend.cargo_models import ShipmentCargoTransportAllocation
+    # Allocation is an execution read-model, not a tracking event.  ADR-046
+    # makes ExecutionUnitCargoAllocation authoritative for current cargo
+    # participation.  The legacy allocation table remains readable only for
+    # cargo that has no canonical allocation; it must never override a
+    # canonical execution shown on the same tracking surface.
+    from backend.cargo_models import (
+        ExecutionUnitCargoAllocation,
+        ShipmentCargoTransportAllocation,
+    )
+    from backend.models import Customer
+    from backend.operational_models import ExecutionUnit
+
+    canonical_rows = db.session.scalars(
+        db.select(ExecutionUnitCargoAllocation)
+        .join(ExecutionUnit, ExecutionUnit.id == ExecutionUnitCargoAllocation.execution_unit_id)
+        .where(
+            ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id,
+            ExecutionUnit.organization_id == shipment.organization_id,
+        )
+        .options(
+            selectinload(ExecutionUnitCargoAllocation.cargo_item),
+            selectinload(ExecutionUnitCargoAllocation.execution_unit),
+        )
+    ).all()
+    canonical_cargo_ids = {
+        row.shipment_cargo_item_id for row in canonical_rows
+    }
+    canonical_by_unit = {}
+    for row in canonical_rows:
+        cargo = row.cargo_item
+        canonical_by_unit.setdefault(row.execution_unit_id, []).append({
+            "cargo_item_public_id": cargo.public_id,
+            "cargo_name": cargo.display_name_snapshot,
+            "cargo_owner": (
+                (db.session.get(Customer, cargo.cargo_owner_customer_id).company_name
+                 or f"{db.session.get(Customer, cargo.cargo_owner_customer_id).first_name} {db.session.get(Customer, cargo.cargo_owner_customer_id).last_name}".strip())
+                if cargo.cargo_owner_customer_id else None
+            ),
+            "allocated_quantity": str(row.allocated_quantity),
+            "uom_symbol": cargo.uom_symbol_snapshot,
+        })
+
     by_unit = {}
-    rows = db.session.scalars(db.select(ShipmentCargoTransportAllocation).where(ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id).options(selectinload(ShipmentCargoTransportAllocation.cargo_item))).all()
+    rows = db.session.scalars(
+        db.select(ShipmentCargoTransportAllocation)
+        .where(ShipmentCargoTransportAllocation.operational_shipment_id == shipment.id)
+        .options(selectinload(ShipmentCargoTransportAllocation.cargo_item))
+    ).all()
     for row in rows:
-        by_unit.setdefault(row.transport_unit_id, []).append({"cargo_item_public_id": row.cargo_item.public_id, "cargo_name": row.cargo_item.display_name_snapshot, "allocated_quantity": str(row.allocated_quantity), "uom_symbol": row.cargo_item.uom_symbol_snapshot})
+        if row.shipment_cargo_item_id in canonical_cargo_ids:
+            continue
+        owner = db.session.get(Customer, row.cargo_item.cargo_owner_customer_id) if row.cargo_item.cargo_owner_customer_id else None
+        by_unit.setdefault(row.transport_unit_id, []).append({"cargo_item_public_id": row.cargo_item.public_id, "cargo_name": row.cargo_item.display_name_snapshot, "cargo_owner": (owner.company_name or f"{owner.first_name} {owner.last_name}".strip()) if owner else None, "allocated_quantity": str(row.allocated_quantity), "uom_symbol": row.cargo_item.uom_symbol_snapshot})
+    canonical_units = []
+    for execution_id, allocated_cargo in canonical_by_unit.items():
+        unit = next(row.execution_unit for row in canonical_rows if row.execution_unit_id == execution_id)
+        carrier = db.session.get(Customer, unit.carrier_customer_id) if unit.carrier_customer_id else None
+        canonical_units.append({
+            "id": unit.id,
+            "public_id": unit.public_id,
+            "source": "canonical_execution",
+            "unit_code": unit.unit_code,
+            "unit_type": unit.unit_type,
+            "display_name": unit.display_name,
+            "vehicle_reference": unit.vehicle_reference,
+            "carrier": (carrier.company_name or f"{carrier.first_name} {carrier.last_name}".strip()) if carrier else None,
+            "is_active": unit.is_active,
+            "latest_status": unit.lifecycle_status,
+            "latest_location": unit.latest_checkpoint,
+            "latest_location_detail": None,
+            "latest_event_at": _iso(unit.last_event_at),
+            "allocated_cargo": allocated_cargo,
+            # Event history belongs to OperationalEvent.  Do not manufacture
+            # ShipmentTransportUnitUpdate history for an ExecutionUnit.
+            "history": [],
+        })
     return {
         "enabled": True,
         "enabled_at": _iso(tracking.enabled_at),
         "aggregate_status": aggregate_status,
         "summary": summary,
         "last_updated_at": _iso(last_updated),
-        "units": [
+        "units": canonical_units + [
             {
                 "id": unit.id,
+                "source": "historical_legacy",
                 "unit_code": unit.unit_code,
                 "unit_type": unit.unit_type,
                 "display_name": unit.display_name,
@@ -488,7 +617,6 @@ def build_public_unit_tracking(req: ShipmentRequest):
     tracking = req.shipment_tracking
     if tracking is None or not tracking.is_enabled:
         return None
-
     public_units = []
     progress_values = []
     latest_rows = _latest_visible_updates(tracking)

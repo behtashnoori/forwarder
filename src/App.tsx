@@ -3,13 +3,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router";
 import Index from "./pages/Index";
 import InformationPage from "./pages/InformationPage";
 import NotFound from "./pages/NotFound";
 import ExpertConsole from "./pages/ExpertConsole";
 import RequestDetail from "./pages/RequestDetail";
 import CRMDashboard from "./pages/CRMDashboard";
+import CustomerRoleManagement from "./pages/CustomerRoleManagement";
 import UserManagement from "./pages/UserManagement";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerRequestDetail from "./pages/CustomerRequestDetail";
@@ -37,6 +38,18 @@ import { I18nProvider, useI18n } from "./i18n";
 
 const queryClient = new QueryClient();
 const CRM_ALLOWED_ROLES = ["admin", "crm_manager", "supervisor", "business_expert"];
+
+function OperationalRoute({ children }: { children: ReactNode }) {
+  const expertUser = localStorage.getItem("expert_user");
+  try {
+    if (expertUser && JSON.parse(expertUser).authority === "PLATFORM_ADMIN") {
+      return <main className="p-6" dir="rtl">این سطح عملیاتی به یک سازمان مشخص نیاز دارد.</main>;
+    }
+  } catch {
+    return <Navigate to="/" replace />;
+  }
+  return <>{children}</>;
+}
 
 function DevHealthCheck() {
   useEffect(() => {
@@ -131,6 +144,7 @@ const App = () => (
                     </PersianOnlyRoute>
                   </AdminRoute>
                 } />
+                <Route path="/admin/customers" element={<AdminRoute><PersianOnlyRoute><ErrorBoundary><CustomerRoleManagement /></ErrorBoundary></PersianOnlyRoute></AdminRoute>} />
                 <Route path="/user-management" element={
                   <AdminRoute>
                     <PersianOnlyRoute>
@@ -140,16 +154,16 @@ const App = () => (
                     </PersianOnlyRoute>
                   </AdminRoute>
                 } />
-                <Route path="/operations/shipments" element={<ProtectedRoute><OperationalShipments /></ProtectedRoute>} />
-                <Route path="/operations/shipments/new" element={<ProtectedRoute><NewOperation /></ProtectedRoute>} />
-                <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalShipmentDetail /></ProtectedRoute>} />
-                <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalWorkQueue /></ProtectedRoute>} />
-                <Route path="/operations/control-tower" element={<ProtectedRoute><OperationsControlTower /></ProtectedRoute>} />
+                <Route path="/operations/shipments" element={<ProtectedRoute><OperationalRoute><OperationalShipments /></OperationalRoute></ProtectedRoute>} />
+                <Route path="/operations/shipments/new" element={<ProtectedRoute><OperationalRoute><NewOperation /></OperationalRoute></ProtectedRoute>} />
+                <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalRoute><OperationalShipmentDetail /></OperationalRoute></ProtectedRoute>} />
+                <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalRoute><OperationalWorkQueue /></OperationalRoute></ProtectedRoute>} />
+                <Route path="/operations/control-tower" element={<ProtectedRoute><OperationalRoute><OperationsControlTower /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/dashboards" element={<ProtectedRoute><DashboardIndex /></ProtectedRoute>} />
                 <Route path="/dashboards/:public_id" element={<ProtectedRoute><PersistedDashboard /></ProtectedRoute>} />
                 <Route path="/dashboards/:public_id/edit" element={<ProtectedRoute><DashboardBuilder /></ProtectedRoute>} />
-                <Route path="/operations/intelligence/:id" element={<ProtectedRoute><OipSituationDetail /></ProtectedRoute>} />
-                <Route path="/operations/projects/:projectId/units" element={<ProtectedRoute><ExecutionUnits /></ProtectedRoute>} />
+                <Route path="/operations/intelligence/:id" element={<ProtectedRoute><OperationalRoute><OipSituationDetail /></OperationalRoute></ProtectedRoute>} />
+                <Route path="/operations/projects/:projectId/units" element={<ProtectedRoute><OperationalRoute><ExecutionUnits /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/customer/:customerId" element={
                   <ErrorBoundary>
                     <CustomerDashboard />

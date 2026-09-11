@@ -4,15 +4,16 @@ import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import Country, ExpertUser, ShipmentRequest, TrackingLocationReference
+from backend.models import Country, Customer, ExpertUser, ShipmentRequest, TrackingLocationReference
 from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
-from backend.operational_models import OperationalOrganization
+from backend.operational_models import OperationalOrganization, OperationalShipment, Project
+from backend.services import execution_unit_service
+from backend.services.tracking_projection_service import project_execution_units
+from backend.tests.canonical_tracking_fixture import (
+    append_event, canonical_tracking_summary, execution_unit,
+)
 from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
-    add_unit,
-    add_update,
-    build_internal_unit_tracking,
-    build_public_unit_tracking,
     disable_tracking,
     enable_tracking,
 )
@@ -50,12 +51,34 @@ def _seed_request(status="won", tracking_code="trk-production-safe"):
         status_request_status="new",
         tracking_code=tracking_code,
     )
-    db.session.add_all([actor, organization])
+    customer = Customer(first_name="Tracking", last_name="Customer")
+    db.session.add_all([actor, organization, customer])
     db.session.flush()
     req.operational_organization_id = organization.id
-    db.session.add(req)
+    project = Project(
+        organization_id=organization.id, primary_customer_id=customer.id,
+        project_code=f"TRACK-{tracking_code}", tracking_code=tracking_code,
+        created_by_user_id=actor.id,
+    )
+    db.session.add_all([req, project])
+    db.session.flush()
+    shipment = OperationalShipment(
+        organization_id=organization.id, project_id=project.id,
+        source_type="direct", customer_id=customer.id, created_by_user_id=actor.id,
+    )
+    db.session.add(shipment)
     db.session.commit()
     return actor, req
+
+
+def _project(req):
+    return db.session.scalar(db.select(Project).where(Project.tracking_code == req.tracking_code))
+
+
+def _shipment(req):
+    return db.session.scalar(
+        db.select(OperationalShipment).join(Project).where(Project.tracking_code == req.tracking_code)
+    )
 
 
 def test_enablement_requires_accepted_request_and_tracking_code(app):
@@ -92,37 +115,39 @@ def test_canonical_logistics_point_snapshots_are_tenant_safe_and_immutable(app):
         )
         db.session.add_all([point, legacy])
         db.session.commit()
-        unit = add_unit(enable_tracking(req, actor.id), actor.id, unit_code="U-1", unit_type="truck")
-        row = add_update(
+        enable_tracking(req, actor.id)
+        unit = execution_unit(_project(req), actor.id, shipment=_shipment(req), unit_code="U-1", unit_type="truck")
+        row = append_event(
             unit, actor.id, status="in_transit",
             occurred_at=datetime.utcnow() - timedelta(minutes=1),
             logistics_point_public_id=point.public_id,
         )
         db.session.commit()
-        assert row.logistics_point_id == point.id
-        assert row.location_name_snapshot == "انبار تهران"
-        assert row.location_name_en_snapshot == "Tehran Warehouse"
-        assert row.location_type_code_snapshot == "WAREHOUSE"
-        assert build_public_unit_tracking(req)["units"][0]["timeline"][0]["location_source"] == "logistics_point"
+        evidence = row.location_evidence
+        assert evidence.logistics_point_id == point.id
+        assert evidence.display_name_snapshot == "انبار تهران"
+        assert evidence.name_en_snapshot == "Tehran Warehouse"
+        assert evidence.location_type_snapshot == "WAREHOUSE"
+        assert execution_unit_service.timeline(unit, {}, customer=False)["data"][0]["location"]["source_type"] == "logistics_point"
         point.fa_name = "نام جدید"
         point.is_active = False
         db.session.commit()
-        assert build_public_unit_tracking(req)["units"][0]["timeline"][0]["location_name"] == "انبار تهران"
-        with pytest.raises(TrackingValidationError, match="active logistics point"):
-            add_update(
+        assert execution_unit_service.timeline(unit, {}, customer=False)["data"][0]["location"]["display_name"] == "انبار تهران"
+        with pytest.raises(Exception, match="[Aa]ctive logistics point not found"):
+            append_event(
                 unit, actor.id, status="in_transit",
                 occurred_at=datetime.utcnow() - timedelta(seconds=1),
                 logistics_point_public_id=point.public_id,
             )
         point.is_active = True
-        with pytest.raises(TrackingValidationError, match="exactly one"):
-            add_update(
+        with pytest.raises(Exception, match="exactly one"):
+            append_event(
                 unit, actor.id, status="in_transit",
                 occurred_at=datetime.utcnow() - timedelta(seconds=1),
                 logistics_point_public_id=point.public_id, location_text="manual",
             )
-        with pytest.raises(TrackingValidationError, match="exactly one"):
-            add_update(
+        with pytest.raises(Exception, match="exactly one"):
+            append_event(
                 unit, actor.id, status="in_transit",
                 occurred_at=datetime.utcnow() - timedelta(seconds=1),
                 logistics_point_public_id=point.public_id, location_reference_id=legacy.id,
@@ -133,78 +158,72 @@ def test_public_projection_aggregates_partial_delivery_and_hides_private_data(ap
         actor, req = _seed_request()
         now = datetime(2026, 7, 15, 12, 0, 0)
         tracking = enable_tracking(req, actor.id, now=now - timedelta(hours=3))
-        truck = add_unit(
-            tracking,
-            actor.id,
+        truck = execution_unit(
+            _project(req), actor.id, shipment=_shipment(req),
             unit_code="TRUCK-01",
             unit_type="truck",
             display_name="Truck 1",
             vehicle_reference="  IR 12 345  ",
         )
-        container = add_unit(
-            tracking,
-            actor.id,
+        container = execution_unit(
+            _project(req), actor.id, shipment=_shipment(req),
             unit_code="CONT-02",
             unit_type="container",
             display_name="Container 2",
             sort_order=1,
         )
-        add_update(
+        append_event(
             truck,
             actor.id,
             status="delivered",
-            location="Tehran",
+            location_text="Tehran",
             customer_message="Delivered safely",
             internal_note="private operations detail",
             occurred_at=now - timedelta(hours=1),
-            now=now,
         )
-        add_update(
+        append_event(
             container,
             actor.id,
             status="in_transit",
-            location="Qom",
+            location_text="Qom",
             customer_message="On route",
             occurred_at=now - timedelta(hours=2),
-            now=now,
         )
-        add_update(
+        append_event(
             container,
             actor.id,
             status="delayed",
-            location="Private depot",
+            location_text="Private depot",
             internal_note="not for customer",
-            is_customer_visible=False,
+            customer_visible=False,
             occurred_at=now - timedelta(minutes=30),
-            now=now,
         )
         db.session.commit()
 
-        payload = build_public_unit_tracking(req)
+        payload = canonical_tracking_summary(_project(req))
         assert payload["aggregate_status"] == "partially_delivered"
         assert payload["summary"]["total_units"] == 2
         assert payload["summary"]["delivered"] == 1
-        assert payload["enabled_at"] == "2026-07-15T09:00:00Z"
-        assert payload["last_updated_at"] == "2026-07-15T11:00:00Z"
-        assert payload["units"][0]["latest_event_at"] == "2026-07-15T11:00:00Z"
-        assert payload["units"][0]["timeline"][0]["event_at"] == "2026-07-15T11:00:00Z"
-        assert payload["units"][1]["latest_status"] == "in_transit"
-        assert payload["units"][0]["vehicle_reference"] == "IR 12 345"
-        assert "id" not in payload["units"][0]
-        assert "internal_note" not in str(payload)
-        assert "Private depot" not in str(payload)
+        assert project_execution_units(req.operational_organization_id, [truck.id])[truck.id]["latest_event_at"] == "2026-07-15T11:00:00Z"
+        public_truck = execution_unit_service.timeline(truck, {}, customer=True)
+        public_container = execution_unit_service.timeline(container, {}, customer=True)
+        assert public_truck["data"][0]["occurred_at"] == "2026-07-15T11:00:00Z"
+        assert public_container["data"][0]["event_type"] == "in_transit"
+        assert truck.vehicle_reference == "IR 12 345"
+        assert "internal_note" not in str(public_truck)
+        assert "Private depot" not in str(public_container)
 
 
 def test_disable_tracking_retains_history_but_removes_public_projection(app):
     with app.app_context():
         actor, req = _seed_request()
         tracking = enable_tracking(req, actor.id)
-        unit = add_unit(tracking, actor.id, unit_code="W-1", unit_type="wagon")
-        add_update(
+        unit = execution_unit(_project(req), actor.id, shipment=_shipment(req), unit_code="W-1", unit_type="wagon")
+        append_event(
             unit,
             actor.id,
             status="arrived_destination",
-            location="Rail terminal",
+            location_text="Rail terminal",
             occurred_at=datetime.utcnow() - timedelta(minutes=1),
         )
         db.session.commit()
@@ -212,8 +231,8 @@ def test_disable_tracking_retains_history_but_removes_public_projection(app):
         disable_tracking(tracking, actor.id)
         db.session.commit()
 
-        assert build_public_unit_tracking(req) is None
-        assert len(tracking.units[0].updates) == 1
+        assert tracking.is_enabled is False
+        assert execution_unit_service.timeline(unit, {}, customer=False)["meta"]["total"] == 1
 
 
 def test_aggregate_contract_precedence_counts_and_tie_breaking(app):
@@ -221,54 +240,59 @@ def test_aggregate_contract_precedence_counts_and_tie_breaking(app):
         actor, req = _seed_request()
         now = datetime(2026, 7, 15, 12, 0, 0)
         tracking = enable_tracking(req, actor.id, now=now - timedelta(hours=4))
-        units = [add_unit(tracking, actor.id, unit_code=f"U-{index}", unit_type="other") for index in range(4)]
+        units = [execution_unit(_project(req), actor.id, shipment=_shipment(req), unit_code=f"U-{index}", unit_type="other") for index in range(4)]
         db.session.flush()
 
-        assert build_public_unit_tracking(req)["aggregate_status"] == "not_started"
-        add_update(units[0], actor.id, status="delivered", occurred_at=now - timedelta(hours=2), now=now)
-        add_update(units[1], actor.id, status="in_transit", occurred_at=now - timedelta(hours=1), now=now)
-        assert build_public_unit_tracking(req)["aggregate_status"] == "partially_delivered"
-        add_update(units[2], actor.id, status="delayed", occurred_at=now - timedelta(minutes=30), now=now)
-        assert build_public_unit_tracking(req)["aggregate_status"] == "attention_required"
+        assert canonical_tracking_summary(_project(req))["aggregate_status"] == "not_started"
+        append_event(units[0], actor.id, status="delivered", occurred_at=now - timedelta(hours=2))
+        append_event(units[1], actor.id, status="in_transit", occurred_at=now - timedelta(hours=1))
+        assert canonical_tracking_summary(_project(req))["aggregate_status"] == "partially_delivered"
+        append_event(units[2], actor.id, status="delayed", occurred_at=now - timedelta(minutes=30))
+        assert canonical_tracking_summary(_project(req))["aggregate_status"] == "attention_required"
 
         same_time = now - timedelta(minutes=10)
-        add_update(units[2], actor.id, status="in_transit", occurred_at=same_time, now=now)
-        add_update(units[2], actor.id, status="delivered", occurred_at=same_time, now=now)
+        in_transit = append_event(units[2], actor.id, status="in_transit", occurred_at=same_time)
+        delivered = append_event(units[2], actor.id, status="delivered", occurred_at=same_time)
+        # Some supported databases store these recording instants at equal
+        # precision. Append order is the explicit final recency rule.
+        delivered.recorded_at = in_transit.recorded_at
         db.session.flush()
-        payload = build_public_unit_tracking(req)
-        assert payload["units"][2]["latest_status"] == "delivered"
+        db.session.expire_all()
+        payload = canonical_tracking_summary(_project(req))
+        projections = [
+            project_execution_units(req.operational_organization_id, [units[2].id])[units[2].id]
+            for _ in range(3)
+        ]
+        assert {row["lifecycle_status"] for row in projections} == {"delivered"}
         assert payload["summary"] == {
             "total_units": 4, "without_updates": 1, "not_started": 0, "loading": 0,
             "in_transit": 1, "delayed": 0, "arrived": 0, "delivered": 2, "cancelled": 0,
         }
-        assert payload["last_updated_at"] == "2026-07-15T11:50:00Z"
+        assert project_execution_units(req.operational_organization_id, [units[2].id])[units[2].id]["latest_event_at"] == "2026-07-15T11:50:00Z"
 
-        add_update(units[3], actor.id, status="delivered", occurred_at=now - timedelta(minutes=5), now=now)
-        add_update(units[1], actor.id, status="delivered", occurred_at=now - timedelta(minutes=4), now=now)
-        assert build_public_unit_tracking(req)["aggregate_status"] == "completed"
+        append_event(units[3], actor.id, status="delivered", occurred_at=now - timedelta(minutes=5))
+        append_event(units[1], actor.id, status="delivered", occurred_at=now - timedelta(minutes=4))
+        assert canonical_tracking_summary(_project(req))["aggregate_status"] == "completed"
 
 
-def test_internal_projection_serializes_legacy_tracking_instants_as_explicit_utc(app):
+def test_internal_projection_serializes_canonical_tracking_instants_as_explicit_utc(app):
     with app.app_context():
         actor, req = _seed_request()
         now = datetime(2026, 8, 20, 9, 26, 0)
         tracking = enable_tracking(req, actor.id, now=datetime(2026, 8, 20, 9, 20, 0))
-        unit = add_unit(tracking, actor.id, unit_code="THR-01", unit_type="truck")
-        update = add_update(
+        unit = execution_unit(_project(req), actor.id, shipment=_shipment(req), unit_code="THR-01", unit_type="truck")
+        update = append_event(
             unit,
             actor.id,
             status="in_transit",
             occurred_at=datetime(2026, 8, 20, 9, 25, 0),
-            now=now,
         )
         db.session.flush()
 
-        payload = build_internal_unit_tracking(req)
-        assert update.occurred_at == datetime(2026, 8, 20, 9, 25, 0)
-        assert update.created_at == now
-        assert payload["enabled_at"] == "2026-08-20T09:20:00Z"
-        assert payload["last_updated_at"] == "2026-08-20T09:25:00Z"
-        assert payload["units"][0]["latest_event_at"] == "2026-08-20T09:25:00Z"
+        payload = project_execution_units(req.operational_organization_id, [unit.id])[unit.id]
+        assert update.occurred_at.isoformat() == "2026-08-20T09:25:00+00:00"
+        assert tracking.enabled_at == datetime(2026, 8, 20, 9, 20, 0)
+        assert payload["latest_event_at"] == "2026-08-20T09:25:00Z"
 
 
 def test_all_cancelled_and_inactive_units_are_derived_correctly(app):
@@ -276,12 +300,12 @@ def test_all_cancelled_and_inactive_units_are_derived_correctly(app):
         actor, req = _seed_request()
         now = datetime(2026, 7, 15, 12, 0, 0)
         tracking = enable_tracking(req, actor.id)
-        first = add_unit(tracking, actor.id, unit_code="C-1", unit_type="container")
-        second = add_unit(tracking, actor.id, unit_code="C-2", unit_type="container")
-        ignored = add_unit(tracking, actor.id, unit_code="C-3", unit_type="container")
+        first = execution_unit(_project(req), actor.id, shipment=_shipment(req), unit_code="C-1", unit_type="container")
+        second = execution_unit(_project(req), actor.id, shipment=_shipment(req), unit_code="C-2", unit_type="container")
+        ignored = execution_unit(_project(req), actor.id, shipment=_shipment(req), unit_code="C-3", unit_type="container")
         ignored.is_active = False
         for unit in (first, second):
-            add_update(unit, actor.id, status="cancelled", occurred_at=now - timedelta(minutes=1), now=now)
-        payload = build_public_unit_tracking(req)
+            append_event(unit, actor.id, status="cancelled", occurred_at=now - timedelta(minutes=1))
+        payload = canonical_tracking_summary(_project(req))
         assert payload["aggregate_status"] == "cancelled"
         assert payload["summary"]["total_units"] == 2

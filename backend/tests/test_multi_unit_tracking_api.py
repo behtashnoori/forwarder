@@ -6,9 +6,9 @@ import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import ExpertUser, ShipmentRequest
+from backend.models import ExpertUser, ShipmentRequest, ShipmentTransportUnit, ShipmentTransportUnitUpdate
 from backend.services.auth_session_service import create_session_tokens
-from backend.operational_models import OperationalMembership, OperationalOrganization
+from backend.operational_models import ExecutionUnit, OperationalEvent, OperationalMembership, OperationalOrganization
 
 
 @pytest.fixture()
@@ -135,7 +135,7 @@ def test_tracking_management_opaque_parent_rejects_substitution(tracking_api_app
     ).status_code == 404
 
 
-def test_manual_tracking_flow_and_public_privacy_contract(tracking_api_app):
+def test_legacy_add_unit_fails_closed_without_creating_a_legacy_row(tracking_api_app):
     client = tracking_api_app["app"].test_client()
     request_id = tracking_api_app["request_id"]
     headers = _headers(tracking_api_app["assignee_token"])
@@ -147,76 +147,121 @@ def test_manual_tracking_flow_and_public_privacy_contract(tracking_api_app):
         headers=headers,
         json={"unit_code": "TRUCK-01", "unit_type": "truck", "display_name": "Truck 1", "vehicle_reference": "  PLATE-77  "},
     )
-    assert created.status_code == 201
-    unit_id = created.get_json()["unit_tracking"]["units"][0]["id"]
-    occurred_at = (datetime.utcnow() - timedelta(minutes=1)).isoformat() + "Z"
-    updated = client.post(
-        f"/api/expert/requests/{request_id}/tracking/units/{unit_id}/updates",
-        headers=headers,
-        json={
-            "status": "in_transit",
-            "location": "Qom",
-            "customer_message": "On route",
-            "internal_note": "private dispatch note",
-            "is_customer_visible": True,
-            "occurred_at": occurred_at,
-        },
-    )
-    assert updated.status_code == 201
-    internal_tracking = updated.get_json()["unit_tracking"]
-    assert internal_tracking["enabled_at"].endswith("Z")
-    assert internal_tracking["last_updated_at"].endswith("Z")
-    assert internal_tracking["units"][0]["latest_event_at"].endswith("Z")
-
-    public = client.get(f"/api/public/track/{tracking_api_app['tracking_code']}")
-    assert public.status_code == 200
-    unit_tracking = public.get_json()["unit_tracking"]
-    assert unit_tracking["summary"]["total_units"] == 1
-    assert unit_tracking["units"][0]["latest_location"] == "Qom"
-    assert unit_tracking["units"][0]["vehicle_reference"] == "PLATE-77"
-    assert unit_tracking["enabled_at"].endswith("Z")
-    assert unit_tracking["last_updated_at"].endswith("Z")
-    assert unit_tracking["units"][0]["latest_event_at"].endswith("Z")
-    assert unit_tracking["units"][0]["timeline"][0]["event_at"].endswith("Z")
-    assert "id" not in unit_tracking["units"][0]
-    assert "created_by_user_id" not in str(unit_tracking)
-    assert "private dispatch note" not in str(unit_tracking)
-
-    legacy_numeric = client.get(f"/api/public/track/{request_id}")
-    assert legacy_numeric.status_code == 200
-    assert "unit_tracking" not in legacy_numeric.get_json()
+    assert created.status_code == 409
+    assert created.get_json() == {
+        "code": "LEGACY_WRITE_MAPPING",
+        "state": "NEEDS_DECISION",
+        "error": "A canonical execution mapping is required.",
+    }
+    with tracking_api_app["app"].app_context():
+        assert db.session.query(ShipmentTransportUnit).count() == 0
 
 
-def test_internal_unit_metadata_update_keeps_id_and_public_response_does_not(tracking_api_app):
+def test_mapped_legacy_metadata_and_update_delegate_to_canonical_models(tracking_api_app):
     client = tracking_api_app["app"].test_client()
     request_id = tracking_api_app["request_id"]
     headers = _headers(tracking_api_app["assignee_token"])
     client.post(f"/api/expert/requests/{request_id}/tracking/enable", headers=headers)
-    created = client.post(
-        f"/api/expert/requests/{request_id}/tracking/units",
-        headers=headers,
-        json={"unit_code": "W-01", "unit_type": "wagon"},
-    )
-    unit_id = created.get_json()["unit_tracking"]["units"][0]["id"]
+    with tracking_api_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        actor = db.session.scalar(db.select(ExpertUser).where(ExpertUser.username == "tracking-assignee"))
+        legacy = ShipmentTransportUnit(
+            tracking=request_row.shipment_tracking,
+            ownership_scope="TENANT",
+            operational_organization_id=request_row.operational_organization_id,
+            unit_code="W-01", unit_type="wagon", created_by_user_id=actor.id,
+        )
+        db.session.add(legacy); db.session.flush()
+        execution = ExecutionUnit(
+            organization_id=request_row.operational_organization_id,
+            legacy_unit_id=legacy.id, unit_code="EXEC-W-01", unit_type="wagon",
+            created_by_user_id=actor.id,
+        )
+        db.session.add(execution); db.session.commit()
+        unit_id, execution_id = legacy.id, execution.id
     updated = client.patch(
         f"/api/expert/requests/{request_id}/tracking/units/{unit_id}",
         headers=headers,
         json={"display_name": " Wagon 1 ", "vehicle_reference": "  WGN-900  "},
     )
     assert updated.status_code == 200
-    internal = updated.get_json()["unit_tracking"]["units"][0]
-    assert internal["id"] == unit_id
-    assert internal["vehicle_reference"] == "WGN-900"
-    too_long = client.patch(
-        f"/api/expert/requests/{request_id}/tracking/units/{unit_id}",
+    occurred_at = (datetime.utcnow() - timedelta(minutes=1)).isoformat() + "Z"
+    event_response = client.post(
+        f"/api/expert/requests/{request_id}/tracking/units/{unit_id}/updates",
         headers=headers,
-        json={"display_name": "Wagon 1", "vehicle_reference": "x" * 101},
+        json={"status": "in_transit", "location": "Qom", "customer_message": "On route", "occurred_at": occurred_at},
     )
-    assert too_long.status_code == 400
-    assert too_long.get_json() == {"error": "vehicle_reference must be at most 100 characters"}
-    public = client.get(f"/api/public/track/{tracking_api_app['tracking_code']}").get_json()["unit_tracking"]
-    assert public["units"][0]["vehicle_reference"] == "WGN-900"
-    assert "id" not in public["units"][0]
+    assert event_response.status_code == 201
+    with tracking_api_app["app"].app_context():
+        execution = db.session.get(ExecutionUnit, execution_id)
+        legacy = db.session.get(ShipmentTransportUnit, unit_id)
+        assert (execution.display_name, execution.vehicle_reference) == ("Wagon 1", "WGN-900")
+        assert execution.lifecycle_status == "in_progress"
+        assert db.session.query(OperationalEvent).filter_by(execution_unit_id=execution_id).count() == 1
+        assert db.session.query(ShipmentTransportUnit).filter_by(id=unit_id).one().display_name is None
+        assert db.session.query(ShipmentTransportUnitUpdate).count() == 0
+
+
+def test_unmapped_historical_legacy_unit_write_paths_fail_closed(tracking_api_app):
+    client = tracking_api_app["app"].test_client()
+    request_id = tracking_api_app["request_id"]
+    headers = _headers(tracking_api_app["assignee_token"])
+    assert client.post(f"/api/expert/requests/{request_id}/tracking/enable", headers=headers).status_code == 200
+    with tracking_api_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        actor = db.session.scalar(db.select(ExpertUser).where(ExpertUser.username == "tracking-assignee"))
+        legacy = ShipmentTransportUnit(
+            tracking=request_row.shipment_tracking, ownership_scope="TENANT",
+            operational_organization_id=request_row.operational_organization_id,
+            unit_code="HIST-01", unit_type="truck", display_name="Historical",
+            created_by_user_id=actor.id,
+        )
+        db.session.add(legacy); db.session.commit(); unit_id = legacy.id
+    historical = client.get(f"/api/expert/requests/{request_id}/tracking", headers=headers)
+    assert historical.status_code == 200
+    assert historical.get_json()["unit_tracking"]["units"][0]["unit_code"] == "HIST-01"
+    metadata = client.patch(
+        f"/api/expert/requests/{request_id}/tracking/units/{unit_id}", headers=headers,
+        json={"display_name": "Must not write"},
+    )
+    update = client.post(
+        f"/api/expert/requests/{request_id}/tracking/units/{unit_id}/updates", headers=headers,
+        json={"status": "in_transit", "occurred_at": (datetime.utcnow() - timedelta(minutes=1)).isoformat() + "Z"},
+    )
+    expected = {"code": "LEGACY_WRITE_MAPPING", "state": "NEEDS_DECISION", "error": "A canonical execution mapping is required."}
+    assert metadata.status_code == update.status_code == 409
+    assert metadata.get_json() == update.get_json() == expected
+    with tracking_api_app["app"].app_context():
+        assert db.session.get(ShipmentTransportUnit, unit_id).display_name == "Historical"
+        assert db.session.query(ShipmentTransportUnitUpdate).count() == 0
+
+
+def test_cross_tenant_canonical_target_is_not_a_legacy_mapping(tracking_api_app):
+    client = tracking_api_app["app"].test_client()
+    request_id = tracking_api_app["request_id"]
+    headers = _headers(tracking_api_app["assignee_token"])
+    assert client.post(f"/api/expert/requests/{request_id}/tracking/enable", headers=headers).status_code == 200
+    with tracking_api_app["app"].app_context():
+        request_row = db.session.get(ShipmentRequest, request_id)
+        actor = db.session.scalar(db.select(ExpertUser).where(ExpertUser.username == "tracking-assignee"))
+        other_org = OperationalOrganization(name="Other tracking tenant")
+        legacy = ShipmentTransportUnit(
+            tracking=request_row.shipment_tracking, ownership_scope="TENANT",
+            operational_organization_id=request_row.operational_organization_id,
+            unit_code="OTHER-01", unit_type="truck", created_by_user_id=actor.id,
+        )
+        db.session.add_all([other_org, legacy]); db.session.flush()
+        db.session.add(ExecutionUnit(
+            organization_id=other_org.id, legacy_unit_id=legacy.id,
+            unit_code="OTHER-EXEC-01", unit_type="truck", created_by_user_id=actor.id,
+        ))
+        db.session.commit(); unit_id = legacy.id
+    response = client.patch(
+        f"/api/expert/requests/{request_id}/tracking/units/{unit_id}", headers=headers,
+        json={"display_name": "Cross tenant"},
+    )
+    assert response.status_code == 409
+    assert response.get_json()["code"] == "LEGACY_WRITE_MAPPING"
 
 
 def test_update_rejects_cross_shipment_unit_id(tracking_api_app):

@@ -136,7 +136,7 @@ def test_unit_projection_orders_effective_events_and_preserves_last_known_locati
         assert row["source"] == "operational_event" and row["is_fallback"] is False
 
 
-def test_same_time_tie_uses_recorded_at_then_public_id_and_corrections_supersede(projection_app):
+def test_same_time_tie_uses_recorded_at_then_append_order_and_corrections_supersede(projection_app):
     ctx = projection_app
     with ctx["app"].app_context():
         occurred = datetime(2026, 8, 20, 8, tzinfo=UTC)
@@ -159,14 +159,48 @@ def test_same_time_tie_uses_recorded_at_then_public_id_and_corrections_supersede
             recorded_at=correction.recorded_at,
             location="Deterministic",
         )
-        correction.public_id = "00000000-0000-0000-0000-000000000001"
-        later_identity.public_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+        assert later_identity.id > correction.id
         db.session.commit()
 
         row = project_execution_units(ctx["org"].id, [unit.id])[unit.id]
         assert row["latest_event_type"] == "same-recorded-time"
         assert row["current_location"] == "Deterministic"
         assert row["reconciliation_health"] == "CACHE_MISSING"
+
+
+def test_multi_unit_latest_event_uses_append_order_not_public_identity(projection_app):
+    ctx = projection_app
+    with ctx["app"].app_context():
+        instant = datetime(2026, 8, 20, 8, tzinfo=UTC)
+        first_unit = _unit(ctx, "U-1")
+        second_unit = _unit(ctx, "U-2")
+        first = _event(
+            ctx,
+            first_unit,
+            "first-append",
+            instant,
+            recorded_at=instant,
+            status="in_transit",
+        )
+        second = _event(
+            ctx,
+            second_unit,
+            "second-append",
+            instant,
+            recorded_at=instant,
+            status="delivered",
+        )
+        first.public_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+        second.public_id = "00000000-0000-0000-0000-000000000000"
+        db.session.commit()
+
+        assert second.id > first.id
+        for _ in range(10):
+            projection = project_operational_shipments(
+                ctx["org"].id, [ctx["shipment"].id]
+            )[ctx["shipment"].id]
+            assert projection["latest_event_type"] == "second-append"
+            assert all("_latest_event_order_id" not in row for row in projection["units"])
 
 
 def test_shipment_location_states_latest_event_inactive_units_and_tenant_fence(projection_app):

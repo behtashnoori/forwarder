@@ -1,0 +1,22 @@
+{
+    "release_id":  "UAT-Shipment-Summary-RC1-4c96ea4",
+    "application_source_sha":  "c2ee16072a63489844b602524a5ae5784aadf78394f6a30e0c8a7812256b6bb8",
+    "rc_zip_sha256":  "f4de1313926a561a687f744b364b23bac119aecb91cb34e594ce3f421e482399",
+    "alembic_head":  "20260909_cargo_transport_allocation",
+    "runtime_id":  "Forwarder-Windows-Runtime-UAT-Shipment-Summary-RC1-4c96ea4-v1",
+    "runtime_sha256":  "f4a8f108aa89a78d7986f01fb8f6aa8af5e2d35e00617a8453eb1f15df945070",
+    "deployment_package_id":  "Forwarder-Deployment-UAT-Shipment-Summary-RC1-4c96ea4",
+    "previous_release_id":  "release-UAT-Fix-RC1-d55a76a",
+    "previous_application_source_sha":  "4d4e9051460a839096677b9efa7edf844a3c3a3b6a441517b3dc52b92ec27a80",
+    "qualification":  {
+                          "source_commit":  "4c96ea4e476767d4f6ab67e75fc21f3fed17f774",
+                          "backend_tests":  "869 passed, 92 skipped, 1 xfailed",
+                          "frontend_tests":  "169 passed",
+                          "typescript":  "PASS",
+                          "lint":  "PASS",
+                          "frontend_build":  "PASS",
+                          "architecture_governance":  "PASS",
+                          "git_diff_check":  "PASS",
+                          "database_migration_required":  false
+                      }
+}

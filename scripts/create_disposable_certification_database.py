@@ -6,6 +6,7 @@ from sqlalchemy.engine import make_url
 
 url = make_url(os.environ["CERT_ADMIN_URL"])
 name = os.environ["CERT_DB_NAME"]
+action = os.environ.get("CERT_DB_ACTION", "create")
 if url.get_backend_name() != "postgresql" or url.host not in {"127.0.0.1", "localhost", "::1"}:
     raise SystemExit("refusing non-loopback PostgreSQL")
 if not re.fullmatch(r"forwarder_integrated_cert_[a-z0-9_]+", name):
@@ -14,6 +15,9 @@ engine = create_engine(url.set(database="postgres"), isolation_level="AUTOCOMMIT
 with engine.connect() as connection:
     connection.execute(text("select pg_terminate_backend(pid) from pg_stat_activity where datname=:name and pid<>pg_backend_pid()"), {"name": name})
     connection.exec_driver_sql(f'DROP DATABASE IF EXISTS "{name}"')
-    connection.exec_driver_sql(f'CREATE DATABASE "{name}" ENCODING \'UTF8\'')
+    if action == "create":
+        connection.exec_driver_sql(f'CREATE DATABASE "{name}" ENCODING \'UTF8\'')
+    elif action != "drop":
+        raise SystemExit("CERT_DB_ACTION must be create or drop")
 engine.dispose()
-print(f"created={name}")
+print(f"{action}=disposable-certification-database")

@@ -501,6 +501,7 @@ export default function NewOperation() {
           cargo_type_public_id: selectedCargo.cargo_type_public_id,
           quantity: cargoQuantity,
           uom_public_id: cargoUomId,
+          ...(customerId ? { cargo_owner_customer_id: Number(customerId) } : {}),
         });
       }
       navigate(`/operations/shipments/${result.data.public_id}`);

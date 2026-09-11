@@ -3,12 +3,14 @@ from flask import Blueprint, jsonify, request, current_app
 from backend.extensions import db
 from backend.auth import get_current_user
 from backend.security import require_role
+from backend.services.admin_authorization_service import require_organization_admin_context
 from backend.services import (
     crm_customer_create_from_request_service,
     crm_customer_link_service,
     crm_dashboard_service,
     crm_service,
     crm_write_service,
+    customer_role_service,
 )
 
 crm_bp = Blueprint("crm", __name__, url_prefix="/api/crm")
@@ -88,6 +90,26 @@ def update_customer(customer_id: int):
         db.session.rollback()
         current_app.logger.error(f"Error updating customer: {e}")
         return jsonify({"error": "خطا در به‌روزرسانی مشتری"}), 500
+
+
+@crm_bp.get("/customers/<int:customer_id>/operational-roles")
+@require_organization_admin_context(allow_platform=False)
+def get_customer_roles(customer_id: int):
+    roles = customer_role_service.roles(customer_id, get_current_user())
+    if roles is None:
+        return jsonify({"error": "مشتری یافت نشد"}), 404
+    return jsonify({"roles": roles})
+
+
+@crm_bp.put("/customers/<int:customer_id>/operational-roles/carrier")
+@require_organization_admin_context(allow_platform=False)
+def set_customer_carrier_role(customer_id: int):
+    eligible = (request.get_json(silent=True) or {}).get("eligible")
+    if not isinstance(eligible, bool):
+        return jsonify({"error": "مقدار صلاحیت معتبر نیست"}), 422
+    if not customer_role_service.set_carrier(customer_id, eligible, get_current_user()):
+        return jsonify({"error": "مشتری یافت نشد"}), 404
+    return jsonify({"message": "صلاحیت عملیاتی به‌روزرسانی شد"})
 
 
 # Manual ShipmentRequest <-> CRM Customer Linking Routes

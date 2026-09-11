@@ -104,9 +104,11 @@ def selector_app():
             email="private@example.test",
             phone="09000000001",
             status="active",
+            operational_organization_id=org.id,
+            ownership_scope="TENANT",
         )
-        beta = Customer(first_name="Beta", last_name="Owner", status="active")
-        inactive = Customer(first_name="Inactive", last_name="Owner", status="inactive")
+        beta = Customer(first_name="Beta", last_name="Owner", status="active", operational_organization_id=org.id, ownership_scope="TENANT")
+        inactive = Customer(first_name="Inactive", last_name="Owner", status="inactive", operational_organization_id=org.id, ownership_scope="TENANT")
         db.session.add_all([alpha, beta, inactive])
         db.session.flush()
         local_project = Project(

@@ -6,13 +6,11 @@ import pytest
 from backend.extensions import db
 from backend.global_logistics_point_models import GlobalLogisticsPoint
 from backend.logistics_network_models import LogisticsPoint, ProjectLogisticsPoint
-from backend.models import (
-    Customer, ShipmentRequest, ShipmentTransportUnit, TrackingLocationReference,
-)
-from backend.operational_models import Project
-from backend.services.multi_unit_tracking_service import (
-    TrackingValidationError, add_unit, add_update, enable_tracking,
-)
+from backend.models import Customer, ShipmentRequest, TrackingLocationReference
+from backend.operational_models import ExecutionUnit, OperationalShipment, Project
+from backend.services.operational_service import OperationalError
+from backend.services.tracking_projection_service import project_execution_units
+from backend.tests.canonical_tracking_fixture import append_event, execution_unit
 from backend.tests.test_global_logistics_point_adoptions import adoption_app  # noqa: F401
 
 
@@ -152,11 +150,17 @@ def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
                 internal_key="p4b-legacy", name_fa="Legacy Point", country_code="XZ",
                 location_type="other", reference_status="internal_reference",
             )
-            db.session.add_all([project, request, legacy]); db.session.commit()
+            db.session.add_all([project, request, legacy]); db.session.flush()
+            shipment = OperationalShipment(
+                organization_id=c["org_a"], project_id=project.id, source_type="direct",
+                customer_id=customer.id, created_by_user_id=c["admin_a_id"],
+            )
+            db.session.add(shipment); db.session.commit()
             project_public_id = project.public_id
             request_id = request.id
             private_public_id = organization_only.public_id
             legacy_id = legacy.id
+            shipment_id = shipment.id
 
         selector = client.get(
             "/api/internal/logistics-points/tracking-selector", headers=c["expert"]
@@ -181,10 +185,11 @@ def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
         assert foreign.status_code == 404
 
         with app.app_context():
-            request = db.session.get(ShipmentRequest, request_id)
-            unit = add_unit(enable_tracking(request, c["expert_id"]), c["expert_id"],
-                            unit_code="P4B-U", unit_type="truck")
-            update = add_update(
+            project = db.session.scalar(db.select(Project).where(Project.public_id == project_public_id))
+            shipment = db.session.get(OperationalShipment, shipment_id)
+            unit = execution_unit(project, c["expert_id"], shipment=shipment,
+                                  unit_code="P4B-U", unit_type="truck")
+            update = append_event(
                 unit, c["expert_id"], status="in_transit",
                 occurred_at=datetime.utcnow() - timedelta(minutes=1),
                 logistics_point_public_id=materialized_a["logistics_point_public_id"],
@@ -194,11 +199,12 @@ def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
             tenant_point = db.session.scalar(db.select(LogisticsPoint).where(
                 LogisticsPoint.public_id == materialized_a["logistics_point_public_id"]
             ))
-            assert update.logistics_point_id == tenant_point.id
-            assert update.location_name_snapshot == tenant_point.fa_name
-            assert update.country_code_snapshot == "XZ"
-            assert update.location_type_code_snapshot == "PORT"
-            assert update.location_city_name_snapshot is None
+            evidence = update.location_evidence
+            assert evidence.logistics_point_id == tenant_point.id
+            assert evidence.display_name_snapshot == tenant_point.fa_name
+            assert evidence.country_code_snapshot == "XZ"
+            assert evidence.location_type_snapshot == "PORT"
+            assert evidence.city_name_snapshot is None
             assert db.session.query(ProjectLogisticsPoint).count() == 2
 
             tenant_point.global_point.lifecycle_status = "DEPRECATED"
@@ -216,13 +222,14 @@ def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
             ))
             tenant_point.is_active = False
             db.session.commit()
-            unit = db.session.get(ShipmentTransportUnit, unit_id)
-            with pytest.raises(TrackingValidationError, match="active logistics point"):
-                add_update(unit, c["expert_id"], status="in_transit",
+            unit = db.session.get(ExecutionUnit, unit_id)
+            with pytest.raises(OperationalError, match="[Aa]ctive logistics point"):
+                append_event(unit, c["expert_id"], status="in_transit",
                            occurred_at=datetime.utcnow() - timedelta(seconds=1),
                            logistics_point_public_id=tenant_point.public_id)
             assert db.session.query(ProjectLogisticsPoint).count() == 2
-            assert unit.updates[0].location_name_snapshot == "Tenant Port"
-            add_update(unit, c["expert_id"], status="in_transit",
+            assert project_execution_units(c["org_a"], [unit.id])[unit.id]["current_location"] == "Tenant Port"
+            reference_event = append_event(unit, c["expert_id"], status="in_transit",
                        occurred_at=datetime.utcnow() - timedelta(seconds=1),
                        location_reference_id=legacy_id)
+            assert reference_event.location_evidence.source_type == "tracking_location_reference"

@@ -33,7 +33,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [015](../operational/adr/ADR-015-repository-secret-scanning.md) | Repository secret scanning | ACCEPTED | Security | none / none | secret scan tooling/CI | Yes |
 | [016](../operational/adr/ADR-016-time-and-timezone-architecture.md) | Time, timezone, session continuity | ACCEPTED | Time | none / none | aware operational models, time helpers | Yes; business-policy phases remain open |
 | [017](../operational/adr/ADR-017-operational-project-architecture.md) | Operational Project | ACCEPTED | Project | none / none | `Project`, project services | Yes |
-| [018](../operational/adr/ADR-018-execution-unit-architecture.md) | Execution Unit | ACCEPTED | Unit execution | none / none | `ExecutionUnit`, execution-unit service | Yes |
+| [018](../operational/adr/ADR-018-execution-unit-architecture.md) | Execution Unit | ACCEPTED | Unit execution | amended by ADR-046 | `ExecutionUnit`, execution-unit service | Yes, except ownership invariants superseded by ADR-046 |
 | [019](../operational/adr/ADR-019-unified-timeline-operational-event-model.md) | Unified operational event timeline | ACCEPTED | Events/timeline | none / none | `OperationalEvent`, timeline projections | Yes |
 | [020](../operational/adr/ADR-020-document-attachment-visibility-architecture.md) | Document attachment and visibility | PROPOSED | Documents | none / none | future attachment scopes; MDPM is narrower | No implementation authority |
 | [021](../operational/adr/ADR-021-master-data-governance-explicit-domain-tables.md) | Explicit master-data tables | ACCEPTED | Master data | none / narrowed by ADR-028 for population | CargoType, ServiceType, UOM, domain tables | Yes, with ADR-028 |
@@ -61,6 +61,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [043](../operational/adr/ADR-043-assigned-work-authorization-and-operational-lineage.md) | Assigned-Work Authorization and Operational Lineage | ACCEPTED | Authorization/assigned work | none / none | Accepted companion decision; implementation prerequisites remain open | No implementation authority |
 | [044](../operational/adr/ADR-044-reporting-oversight.md) | Reporting oversight companion | ACCEPTED | Reporting authorization | complements ADR-042/043 / none | tenant-fenced Organization Admin and approved Platform Admin reporting | Yes; bounded S4 implementation only |
 | [045](../operational/adr/ADR-045-personal-dashboard-entitlement-and-rbac.md) | Personal Dashboard entitlement and RBAC | ACCEPTED | Personal Analytics authorization | complements ADR-042/043 / none | independent dashboard capability with live widget authorization | Yes; Product Integration Correction v1 |
+| [046](../operational/adr/ADR-046-shared-transport-execution.md) | Tenant-owned shared transport execution | ACCEPTED | Shared transport / cargo allocation | supersedes ADR-018 ownership invariants / none | `ExecutionUnit`, `ExecutionUnitCargoAllocation` | Yes |
 
 ## Usage rules
 

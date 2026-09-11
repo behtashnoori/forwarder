@@ -116,6 +116,16 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
   });
 
+  it("renders a direct shipment that has not been route-planned yet", async () => {
+    vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, source: { type: "direct", accepted_quote_id: null, shipment_request_id: null }, route_leg: null, route_legs: [] } });
+    vi.mocked(api.listRoutePlans).mockResolvedValue({ data: [] });
+    vi.mocked(api.getRouteTimeline).mockResolvedValue({ data: { ...timeline, planned: [], projected: [], actual: [], effective: [], delays: [] } });
+    vi.mocked(api.listRouteExceptions).mockResolvedValue({ data: [] });
+    renderDetail();
+    expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
+    expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
+  });
+
   it("uses the route UUID for every detail subrequest when the response has no numeric id", async () => {
     renderDetail();
     await screen.findByText("Timeline reconciliation");

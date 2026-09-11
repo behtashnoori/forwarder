@@ -240,6 +240,9 @@ def create_tracking_unit(request_id: int):
         )
         db.session.commit()
         return jsonify(_tracking_management_payload(req)), 201
+    except multi_unit_tracking_service.LegacyWriteMappingError:
+        db.session.rollback()
+        return jsonify(multi_unit_tracking_service.legacy_write_mapping_payload()), 409
     except multi_unit_tracking_service.TrackingValidationError as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 400
@@ -270,6 +273,9 @@ def update_tracking_unit_metadata(request_id: int, unit_id: int):
         )
         db.session.commit()
         return jsonify(_tracking_management_payload(req)), 200
+    except multi_unit_tracking_service.LegacyWriteMappingError:
+        db.session.rollback()
+        return jsonify(multi_unit_tracking_service.legacy_write_mapping_payload()), 409
     except multi_unit_tracking_service.TrackingValidationError as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 400
@@ -310,6 +316,9 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
         )
         db.session.commit()
         return jsonify(_tracking_management_payload(req)), 201
+    except multi_unit_tracking_service.LegacyWriteMappingError:
+        db.session.rollback()
+        return jsonify(multi_unit_tracking_service.legacy_write_mapping_payload()), 409
     except multi_unit_tracking_service.TrackingValidationError as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 400

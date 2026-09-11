@@ -230,6 +230,11 @@ class ShipmentCargoItem(db.Model):
         db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"),
         nullable=False,
     )
+    # NULL is intentional for historical lines: migration must not guess the
+    # cargo owner.  New shared-transport commands require this field.
+    cargo_owner_customer_id = db.Column(
+        BIGINT, db.ForeignKey("customer.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     line_number = db.Column(db.Integer, nullable=False)
     catalog_item_id = db.Column(
         BIGINT,
@@ -269,6 +274,7 @@ class ShipmentCargoItem(db.Model):
     catalog_item = db.relationship("CargoCatalogItem")
     cargo_type = db.relationship("CargoType")
     uom = db.relationship("UnitOfMeasure")
+    cargo_owner_customer = db.relationship("Customer", foreign_keys=[cargo_owner_customer_id])
 
     __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
 
@@ -294,6 +300,35 @@ class ShipmentCargoTransportAllocation(db.Model):
     updated_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
     cargo_item = db.relationship("ShipmentCargoItem")
     transport_unit = db.relationship("ShipmentTransportUnit")
+
+
+class ExecutionUnitCargoAllocation(db.Model):
+    """Canonical cargo-to-tenant-execution allocation.
+
+    Shipment/project columns retain auditable lineage; they are derived from
+    the cargo line at creation and never serve as alternate ownership truth.
+    """
+    __tablename__ = "execution_unit_cargo_allocation"
+    __table_args__ = (
+        db.UniqueConstraint("shipment_cargo_item_id", "execution_unit_id", name="uq_execution_unit_cargo_allocation_pair"),
+        db.CheckConstraint("allocated_quantity > 0", name="ck_execution_unit_cargo_allocation_positive"),
+        db.Index("ix_execution_unit_cargo_allocation_execution", "execution_unit_id"),
+        db.Index("ix_execution_unit_cargo_allocation_shipment", "operational_shipment_id"),
+        db.Index("ix_execution_unit_cargo_allocation_project", "project_id"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    execution_unit_id = db.Column(BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=False)
+    shipment_cargo_item_id = db.Column(BIGINT, db.ForeignKey("shipment_cargo_item.id", ondelete="RESTRICT"), nullable=False)
+    operational_shipment_id = db.Column(BIGINT, db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"), nullable=False)
+    project_id = db.Column(BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=True)
+    allocated_quantity = db.Column(db.Numeric(18, 6), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    created_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    updated_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    execution_unit = db.relationship("ExecutionUnit")
+    cargo_item = db.relationship("ShipmentCargoItem")
 
 
 @event.listens_for(CargoCatalogItem, "before_update")

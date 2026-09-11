@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from backend import create_app
 from backend.auth import auth_manager
 from backend.extensions import db
-from backend.models import Customer, ExpertUser
-from backend.operational_models import ExecutionUnit, OperationalEvent, OperationalMembership, OperationalOrganization, Project, utcnow
+from backend.models import Customer, CustomerRoleAssignment, ExpertUser
+from backend.operational_models import CanonicalLocation, ExecutionUnit, OperationalEvent, OperationalEventLocationEvidence, OperationalMembership, OperationalOrganization, Project, utcnow
 
 
 @pytest.fixture()
@@ -72,6 +72,32 @@ def test_event_idempotency_concurrency_and_customer_projection(eu_app):
         body=str(public); assert "private" not in body and "actor_user" not in body and '"id"' not in body
 
 
+def test_structured_event_location_is_snapshot_not_checkpoint_text(eu_app):
+    app, ctx = eu_app
+    with app.app_context():
+        location = CanonicalLocation(source_type="international_city", source_id=991,
+            location_type="city", display_name="Event-time Tehran", country_code="IR")
+        db.session.add(location); db.session.commit(); location_id = location.public_id
+    with app.test_client() as client:
+        unit = _create(client, ctx)
+        response = client.post(
+            f"/api/v2/projects/{ctx['project']}/execution-units/{unit['public_id']}/events",
+            headers={**ctx["auth"], "Idempotency-Key":"structured-location"},
+            json={"expected_version": 1, "visibility":"customer", "customer_message":"arrived",
+                  "checkpoint_text":"presentation fallback", "location":{"canonical_location_public_id":location_id}},
+        )
+        assert response.status_code == 201
+    with app.app_context():
+        evidence = db.session.scalar(db.select(OperationalEventLocationEvidence))
+        assert evidence.display_name_snapshot == "Event-time Tehran"
+        CanonicalLocation.query.filter_by(public_id=location_id).update({"display_name":"Renamed master"})
+        db.session.commit()
+        assert evidence.display_name_snapshot == "Event-time Tehran"
+    with app.test_client() as client:
+        timeline = client.get(f"/api/v2/projects/{ctx['project']}/execution-units/{unit['public_id']}/timeline", headers=ctx["auth"]).get_json()
+        assert timeline["data"][0]["location"]["display_name"] == "Event-time Tehran"
+
+
 def test_internal_event_never_leaks_and_cross_org_is_404_safe(eu_app):
     app,ctx=eu_app
     with app.test_client() as client:
@@ -93,6 +119,36 @@ def test_project_only_execution_fails_closed_for_basic_expert(eu_app):
             f"/api/v2/projects/{ctx['project']}/execution-units", headers=ctx["auth"]
         )
         assert response.status_code == 404
+
+
+def test_current_carrier_survives_eligibility_removal_while_options_follow_role(eu_app):
+    app, ctx = eu_app
+    with app.app_context():
+        user = ExpertUser.query.filter_by(username="eu-user").one()
+        membership = OperationalMembership.query.filter_by(user_id=user.id).one()
+        customer = Customer.query.filter_by(first_name="C", last_name="One").one()
+        customer.operational_organization_id = membership.organization_id
+        customer.ownership_scope = "TENANT"
+        customer.status = "active"
+        db.session.add(CustomerRoleAssignment(
+            customer_id=customer.id,
+            operational_organization_id=membership.organization_id,
+            role_code="CARRIER",
+            is_active=True,
+        ))
+        db.session.commit()
+        customer_id = customer.id
+    with app.test_client() as client:
+        unit = _create(client, ctx)
+        base = f"/api/v2/projects/{ctx['project']}/execution-units/{unit['public_id']}"
+        assert client.patch(f"{base}/carrier", headers=ctx["auth"], json={"carrier_customer_id": customer_id}).status_code == 200
+        assert customer_id in {row["id"] for row in client.get(f"{base}/carrier-options", headers=ctx["auth"]).get_json()["data"]}
+        assert client.put(f"/api/crm/customers/{customer_id}/operational-roles/carrier", headers=ctx["auth"], json={"eligible": False}).status_code == 200
+        current = client.get(f"{base}/shared-transport", headers=ctx["auth"]).get_json()["data"]["execution"]["carrier"]
+        assert current["id"] == customer_id
+        assert customer_id not in {row["id"] for row in client.get(f"{base}/carrier-options", headers=ctx["auth"]).get_json()["data"]}
+        assert client.put(f"/api/crm/customers/{customer_id}/operational-roles/carrier", headers=ctx["auth"], json={"eligible": True}).status_code == 200
+        assert customer_id in {row["id"] for row in client.get(f"{base}/carrier-options", headers=ctx["auth"]).get_json()["data"]}
 
 
 def test_summary_alerts_stale_policy_and_500_unit_10000_event_bounded_queries(eu_app):
@@ -136,7 +192,7 @@ def test_summary_alerts_stale_policy_and_500_unit_10000_event_bounded_queries(eu
 
 def test_execution_unit_migration_is_single_head():
     root=Path(__file__).resolve().parents[1]; config=Config(str(root/"migrations"/"alembic.ini")); config.set_main_option("script_location",str(root/"migrations"))
-    assert ScriptDirectory.from_config(config).get_heads() == ["20260916_personal_dashboard_permissions"]
+    assert ScriptDirectory.from_config(config).get_heads() == ["20260919_operational_event_location_evidence"]
 
 
 def test_execution_unit_migration_parent_round_trip_and_indexes(tmp_path):
