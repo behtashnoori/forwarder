@@ -6,7 +6,7 @@ import * as api from "../../lib/api";
 vi.mock("../../lib/api", async () => ({
   ...(await vi.importActual<typeof import("../../lib/api")>("../../lib/api")),
   fetchDocumentCatalog: vi.fn(), fetchDocumentCatalogDefinition: vi.fn(),
-  updateDocumentCatalogDefinition: vi.fn(), transitionDocumentCatalogDefinition: vi.fn(),
+  createDocumentDefinition: vi.fn(), updateDocumentCatalogDefinition: vi.fn(), transitionDocumentCatalogDefinition: vi.fn(),
 }));
 
 const item: api.DocumentCatalogDefinition = {
@@ -19,7 +19,7 @@ const item: api.DocumentCatalogDefinition = {
 };
 
 describe("DocumentDefinitionsTab governed catalog",()=>{
-  beforeEach(()=>{vi.clearAllMocks();vi.mocked(api.fetchDocumentCatalog).mockResolvedValue({items:[item]})});
+  beforeEach(()=>{vi.clearAllMocks();localStorage.clear();vi.mocked(api.fetchDocumentCatalog).mockResolvedValue({items:[item]})});
   it("renders bilingual identity, governance distinctions and server filters",async()=>{
     render(<DocumentDefinitionsTab/>);
     expect(await screen.findByText("بارنامه دریایی")).toBeInTheDocument();
@@ -56,5 +56,24 @@ describe("DocumentDefinitionsTab governed catalog",()=>{
     render(<DocumentDefinitionsTab/>);await screen.findByText("بارنامه دریایی");fireEvent.click(screen.getByText("مشاهده جزئیات"));fireEvent.click(screen.getByText("ارتقا/تغییر به «فعال»"));
     expect(screen.getByText(/فعال‌سازی فقط پس از/)).toBeInTheDocument();fireEvent.click(screen.getByText("تأیید و اجرا"));
     expect(await screen.findByText("قلمرو کاربرد باید مشخص شود.")).toBeInTheDocument();
+  });
+  it("shows creation only to Platform Admin and keeps it absent for Organization Admin",async()=>{
+    localStorage.setItem("expert_user",JSON.stringify({authority:"PLATFORM_ADMIN"}));const {unmount}=render(<DocumentDefinitionsTab/>);
+    expect(await screen.findByRole("button",{name:"ایجاد نوع سند"})).toBeInTheDocument();unmount();
+    localStorage.setItem("expert_user",JSON.stringify({authority:"ORGANIZATION_ADMIN"}));render(<DocumentDefinitionsTab/>);
+    expect(screen.queryByRole("button",{name:"ایجاد نوع سند"})).not.toBeInTheDocument();
+  });
+  it("validates the compact draft form, prevents duplicate submits, refreshes, and opens the created item",async()=>{
+    localStorage.setItem("expert_user",JSON.stringify({authority:"PLATFORM_ADMIN"}));let resolveCreate:(value:api.DocumentDefinition)=>void=()=>{};
+    vi.mocked(api.createDocumentDefinition).mockImplementation(()=>new Promise(resolve=>{resolveCreate=resolve;}));vi.mocked(api.fetchDocumentCatalogDefinition).mockResolvedValue({...item,public_id:"new-doc",code:"new_document",title:"سند جدید",name_fa:"سند جدید"});
+    render(<DocumentDefinitionsTab/>);await screen.findByText("بارنامه دریایی");fireEvent.click(screen.getByRole("button",{name:"ایجاد نوع سند"}));
+    fireEvent.click(screen.getByRole("button",{name:"ایجاد نوع سند"}));expect(await screen.findByRole("alert")).toHaveTextContent("کد سیستمی");
+    fireEvent.change(screen.getByLabelText("کد سیستمی"),{target:{value:"new_document"}});fireEvent.change(screen.getByLabelText("نام سند"),{target:{value:"سند جدید"}});fireEvent.click(screen.getByRole("button",{name:"ایجاد نوع سند"}));
+    expect(screen.getByRole("button",{name:"در حال ایجاد..."})).toBeDisabled();fireEvent.click(screen.getByRole("button",{name:"در حال ایجاد..."}));expect(api.createDocumentDefinition).toHaveBeenCalledTimes(1);
+    resolveCreate({id:2,public_id:"new-doc",code:"new_document",title:"سند جدید",is_required:false,allowed_formats:["pdf"],max_file_size_bytes:10*1024*1024,max_active_file_count:1,sort_order:0,is_active:true,applicability_scope:"all",revision:1,usage_count:0});
+    expect(await screen.findByText("سند جدید")).toBeInTheDocument();expect(api.fetchDocumentCatalog).toHaveBeenCalledTimes(2);expect(api.fetchDocumentCatalogDefinition).toHaveBeenCalledWith("new-doc");
+  });
+  it("keeps entered values after a create error and does not change existing rows",async()=>{
+    localStorage.setItem("expert_user",JSON.stringify({authority:"PLATFORM_ADMIN"}));vi.mocked(api.createDocumentDefinition).mockRejectedValue(new Error("duplicate"));render(<DocumentDefinitionsTab/>);await screen.findByText("بارنامه دریایی");fireEvent.click(screen.getByRole("button",{name:"ایجاد نوع سند"}));fireEvent.change(screen.getByLabelText("کد سیستمی"),{target:{value:"new_document"}});fireEvent.change(screen.getByLabelText("نام سند"),{target:{value:"سند جدید"}});fireEvent.click(screen.getByRole("button",{name:"ایجاد نوع سند"}));expect(await screen.findByRole("alert")).toHaveTextContent("اطلاعات واردشده");expect(screen.getByLabelText("کد سیستمی")).toHaveValue("new_document");expect(screen.getByText("بارنامه دریایی")).toBeInTheDocument();
   });
 });
