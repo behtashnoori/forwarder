@@ -145,11 +145,15 @@ def _candidate_match_metadata(
     reasons: list[str] = []
     score = 0
     phone = suggested_fields.get("phone")
+    company_name = suggested_fields.get("company_name")
     first_name = suggested_fields.get("first_name")
     last_name = suggested_fields.get("last_name")
 
     if phone and phone in {customer.phone, customer.mobile}:
         reasons.append("phone_or_mobile_exact")
+        score += 100
+    if company_name and company_name == customer.company_name:
+        reasons.append("company_name_exact")
         score += 100
     if first_name and first_name == customer.first_name:
         reasons.append("first_name_exact")
@@ -174,10 +178,12 @@ def _candidate_match_metadata(
 
 def find_duplicate_candidates(
     suggested_fields: dict[str, Any],
+    organization_id: int,
     limit: int = 10,
 ) -> list[dict[str, Any]]:
     """Return advisory duplicate candidates without choosing a match."""
     phone = suggested_fields.get("phone")
+    company_name = suggested_fields.get("company_name")
     first_name = suggested_fields.get("first_name")
     last_name = suggested_fields.get("last_name")
 
@@ -185,6 +191,8 @@ def find_duplicate_candidates(
     if phone:
         conditions.append(Customer.phone == phone)
         conditions.append(Customer.mobile == phone)
+    if company_name:
+        conditions.append(Customer.company_name == company_name)
     if first_name and last_name:
         conditions.append(
             (Customer.first_name == first_name) & (Customer.last_name == last_name)
@@ -195,7 +203,11 @@ def find_duplicate_candidates(
 
     customers = (
         db.session.query(Customer)
-        .filter(or_(*conditions))
+        .filter(
+            Customer.ownership_scope == "TENANT",
+            Customer.operational_organization_id == organization_id,
+            or_(*conditions),
+        )
         .order_by(Customer.id.asc())
         .limit(limit)
         .all()
@@ -220,7 +232,8 @@ def get_customer_create_preview(request_id: int) -> dict[str, Any]:
         raise CrmCustomerCreatePreviewNotFoundError("Shipment request not found", 404)
 
     suggested_fields = build_suggested_customer_fields(shipment_request)
-    duplicate_candidates = find_duplicate_candidates(suggested_fields)
+    organization_id = require_tenant_resource(shipment_request)
+    duplicate_candidates = find_duplicate_candidates(suggested_fields, organization_id)
     strong_matches = [
         candidate
         for candidate in duplicate_candidates
@@ -278,7 +291,7 @@ def create_customer_from_request(
     reviewed_customer.update(_clean_customer_payload(submitted_customer))
     _validate_customer_payload(reviewed_customer)
 
-    duplicate_candidates = find_duplicate_candidates(reviewed_customer)
+    duplicate_candidates = find_duplicate_candidates(reviewed_customer, organization_id)
     strong_matches = [
         candidate
         for candidate in duplicate_candidates

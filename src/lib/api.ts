@@ -2463,6 +2463,7 @@ export function createCustomer(customerData: {
   province?: string;
   postal_code?: string;
   country?: string;
+  duplicate_acknowledged?: boolean;
 }): Promise<{ message: string; customer_id: number }> {
   return request("/api/crm/customers", {
     method: "POST",

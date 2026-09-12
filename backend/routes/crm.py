@@ -3,7 +3,7 @@ from flask import Blueprint, jsonify, request, current_app
 from backend.extensions import db
 from backend.auth import get_current_user
 from backend.security import require_role
-from backend.services.admin_authorization_service import require_organization_admin_context
+from backend.services.admin_authorization_service import require_organization_admin_context, require_tenant_crm_context
 from backend.services import (
     crm_customer_create_from_request_service,
     crm_customer_link_service,
@@ -18,6 +18,7 @@ crm_bp = Blueprint("crm", __name__, url_prefix="/api/crm")
 
 # Customer Management Routes
 @crm_bp.get("/customers")
+@require_tenant_crm_context()
 @require_role("business_expert")
 def get_customers():
     """Get filtered and paginated customers."""
@@ -39,6 +40,7 @@ def get_customers():
 
 
 @crm_bp.post("/customers")
+@require_tenant_crm_context()
 @require_role("business_expert")
 def create_customer():
     """Create a new customer."""
@@ -52,6 +54,9 @@ def create_customer():
             "customer_id": customer.id
         }), 201
         
+    except crm_write_service.CustomerWriteError as e:
+        db.session.rollback()
+        return jsonify({"error": {"code": e.code, "message": e.message, "details": e.details}}), e.status_code
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating customer: {e}")
@@ -59,6 +64,7 @@ def create_customer():
 
 
 @crm_bp.get("/customers/<int:customer_id>")
+@require_tenant_crm_context()
 @require_role("business_expert")
 def get_customer_detail(customer_id: int):
     """Get detailed information about a customer."""
@@ -74,6 +80,7 @@ def get_customer_detail(customer_id: int):
 
 
 @crm_bp.put("/customers/<int:customer_id>")
+@require_tenant_crm_context()
 @require_role("business_expert")
 def update_customer(customer_id: int):
     """Update customer information."""

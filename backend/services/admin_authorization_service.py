@@ -74,6 +74,30 @@ def require_organization_admin_context(*, allow_platform=True):
     return decorator
 
 
+def require_tenant_crm_context():
+    """Require a concrete tenant for CRM customer maintenance.
+
+    CRM customers are tenant-owned business data.  Platform administration has
+    no tenant to infer here and must not acquire one through this surface.
+    Legacy CRM-role authorization remains enforced by the route decorator.
+    """
+    def decorator(fn):
+        @wraps(fn)
+        @require_auth
+        def wrapped(*args, **kwargs):
+            user = db.session.get(ExpertUser, g.current_user_id)
+            authority = effective_authority(user) if user and user.is_active else EXPERT
+            if authority == PLATFORM_ADMIN:
+                return jsonify({"error": "Platform administration cannot manage tenant customers."}), 403
+            try:
+                g.organization_context = organization_context_for_authenticated_user(user.id)
+            except AdminAuthorizationError as exc:
+                return jsonify({"error": exc.message}), exc.status_code
+            return fn(*args, **kwargs)
+        return wrapped
+    return decorator
+
+
 def require_reporting_export_oversight():
     """Authorize the approved tenant and platform reporting oversight contract."""
     def decorator(fn):

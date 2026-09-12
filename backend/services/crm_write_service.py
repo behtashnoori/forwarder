@@ -4,6 +4,11 @@ from datetime import datetime
 from backend.extensions import db
 from backend.models import Activity, Customer, Opportunity, ShipmentRequest
 from backend.services.ownership_service import tenant_organization_for_user
+from backend.services.crm_customer_create_from_request_service import (
+    _clean_customer_payload,
+    _validate_customer_payload,
+    find_duplicate_candidates,
+)
 
 CUSTOMER_WRITE_FIELDS = [
     "company_name",
@@ -27,29 +32,55 @@ CUSTOMER_WRITE_FIELDS = [
 ]
 
 
+class CustomerWriteError(ValueError):
+    def __init__(self, code: str, message: str, status_code: int = 422, details: dict | None = None):
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.status_code = status_code
+        self.details = details or {}
+
+
 def create_customer(data: dict, user: dict) -> Customer:
     """Create and commit a CRM customer using the existing route defaults."""
+    if not isinstance(data, dict):
+        raise CustomerWriteError("VALIDATION_FAILED", "Customer payload must be an object.")
+    organization_id = tenant_organization_for_user(user)
+    payload = _clean_customer_payload(data)
+    try:
+        _validate_customer_payload(payload)
+    except Exception as exc:
+        raise CustomerWriteError("VALIDATION_FAILED", str(exc)) from exc
+    duplicates = find_duplicate_candidates(payload, organization_id)
+    strong_duplicates = [item for item in duplicates if item["match_strength"] == "strong"]
+    if strong_duplicates and data.get("duplicate_acknowledged") is not True:
+        raise CustomerWriteError(
+            "DUPLICATE_CUSTOMER_CONFIRMATION_REQUIRED",
+            "A matching tenant customer requires explicit acknowledgement.",
+            409,
+            {"duplicate_candidates": duplicates, "strong_duplicate_count": len(strong_duplicates)},
+        )
     customer = Customer(
         ownership_scope="TENANT",
-        operational_organization_id=tenant_organization_for_user(user),
-        company_name=data.get("company_name"),
-        first_name=data.get("first_name"),
-        last_name=data.get("last_name"),
-        email=data.get("email"),
-        phone=data.get("phone"),
-        mobile=data.get("mobile"),
-        website=data.get("website"),
-        industry=data.get("industry"),
-        company_size=data.get("company_size"),
-        customer_type=data.get("customer_type", "prospect"),
-        status=data.get("status", "active"),
-        source=data.get("source"),
-        notes=data.get("notes"),
-        address=data.get("address"),
-        city=data.get("city"),
-        province=data.get("province"),
-        postal_code=data.get("postal_code"),
-        country=data.get("country", "Iran"),
+        operational_organization_id=organization_id,
+        company_name=payload.get("company_name"),
+        first_name=payload.get("first_name"),
+        last_name=payload.get("last_name"),
+        email=payload.get("email"),
+        phone=payload.get("phone"),
+        mobile=payload.get("mobile"),
+        website=payload.get("website"),
+        industry=payload.get("industry"),
+        company_size=payload.get("company_size"),
+        customer_type=payload.get("customer_type") or "prospect",
+        status=payload.get("status") or "active",
+        source=payload.get("source"),
+        notes=payload.get("notes"),
+        address=payload.get("address"),
+        city=payload.get("city"),
+        province=payload.get("province"),
+        postal_code=payload.get("postal_code"),
+        country=payload.get("country") or "Iran",
     )
 
     db.session.add(customer)

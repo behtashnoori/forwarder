@@ -13,12 +13,14 @@ export default function OperationsNav() {
   const canReadOperations = permissions.includes("operational_shipment.read");
   const canReadWorkQueue = permissions.includes("oip.read");
   const canReadDashboards = permissions.includes("personal_dashboard.read");
+  const canManageCustomers = (() => { try { const user = JSON.parse(localStorage.getItem("expert_user") || "{}"); return user.authority !== "PLATFORM_ADMIN" && ["admin", "crm_manager", "supervisor", "business_expert"].includes(user.role); } catch { return false; } })();
   if (!permissions.length) return null;
   return <nav aria-label={t("operations.navLabel")} className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2">
     {canReadOperations && <Button asChild variant="ghost"><Link to="/operations/shipments">{t("operations.shipmentsTitle")}</Link></Button>}
     {canReadOperations && <Button asChild variant="ghost"><Link to="/operations/control-tower">برج کنترل عملیات</Link></Button>}
     {canReadWorkQueue && <Button asChild variant="ghost"><Link to="/operations/work-queue">{t("operations.workQueue")}</Link></Button>}
     {canReadDashboards && <Button asChild variant="ghost"><Link to="/dashboards">داشبوردهای من</Link></Button>}
+    {canManageCustomers && <Button asChild variant="ghost"><Link to="/customers">مشتریان</Link></Button>}
     {canCreate && <Button asChild><Link to="/operations/shipments/new">{t("operations.newOperation")}</Link></Button>}
     <div className="ms-auto shrink-0 px-2"><ReleaseIdentity /></div>
   </nav>;

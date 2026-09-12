@@ -11,6 +11,7 @@ import ExpertConsole from "./pages/ExpertConsole";
 import RequestDetail from "./pages/RequestDetail";
 import CRMDashboard from "./pages/CRMDashboard";
 import CustomerRoleManagement from "./pages/CustomerRoleManagement";
+import CustomerManagement from "./pages/CustomerManagement";
 import UserManagement from "./pages/UserManagement";
 import CustomerDashboard from "./pages/CustomerDashboard";
 import CustomerRequestDetail from "./pages/CustomerRequestDetail";
@@ -145,6 +146,7 @@ const App = () => (
                   </AdminRoute>
                 } />
                 <Route path="/admin/customers" element={<AdminRoute><PersianOnlyRoute><ErrorBoundary><CustomerRoleManagement /></ErrorBoundary></PersianOnlyRoute></AdminRoute>} />
+                <Route path="/customers" element={<ProtectedRoute><PersianOnlyRoute><ErrorBoundary><CustomerManagement /></ErrorBoundary></PersianOnlyRoute></ProtectedRoute>} />
                 <Route path="/user-management" element={
                   <AdminRoute>
                     <PersianOnlyRoute>

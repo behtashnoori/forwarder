@@ -122,8 +122,17 @@ def operational_app():
             last_name="Customer",
             phone="09000000000",
             status="active",
+            ownership_scope="TENANT",
+            operational_organization_id=org.id,
         )
-        db.session.add_all([origin, destination, customer])
+        foreign_customer = Customer(
+            first_name="Foreign",
+            last_name="Customer",
+            status="active",
+            ownership_scope="TENANT",
+            operational_organization_id=other_org.id,
+        )
+        db.session.add_all([origin, destination, customer, foreign_customer])
         db.session.flush()
         request = ShipmentRequest(
             contact_phone="09000000000",
@@ -169,6 +178,7 @@ def operational_app():
             "origin": origin.id,
             "destination": destination.id,
             "customer": customer.id,
+            "foreign_customer": foreign_customer.id,
         }
     yield app
 
@@ -551,6 +561,7 @@ def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scop
             project_code="UAT-REQUEST-JOURNEY", tracking_code="uat-request-journey",
             created_by_user_id=operational_app.config["phase1a"]["user"],
         )
+
         db.session.add(project); db.session.flush()
         db.session.add(ProjectAccess(
             organization_id=shipment.organization_id, project_id=project.id,
@@ -605,6 +616,17 @@ def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scop
         headers={**peer_headers, "Idempotency-Key": "request-cargo-chain"},
     )
     assert replay_probe.status_code == 404
+
+
+def test_direct_create_hides_foreign_tenant_customer_and_creates_no_shipment(operational_app):
+    with operational_app.app_context():
+        payload = _direct_payload(operational_app)
+        payload["customer_id"] = operational_app.config["phase1a"]["foreign_customer"]
+        before = OperationalShipment.query.count()
+        with pytest.raises(service.OperationalError) as denied:
+            service.create_direct(payload, _user(operational_app), "foreign-customer")
+        assert denied.value.code == "RESOURCE_NOT_FOUND"
+        assert OperationalShipment.query.count() == before
 
 
 def test_create_from_accepted_quote_is_complete_and_idempotent(operational_app):

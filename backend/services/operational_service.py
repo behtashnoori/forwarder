@@ -634,6 +634,8 @@ def create_direct(
             "CUSTOMER_NOT_ELIGIBLE",
             "Customer is not eligible for operational creation.",
         )
+    if customer.ownership_scope != "TENANT" or customer.operational_organization_id != org:
+        raise OperationalError("RESOURCE_NOT_FOUND", "Customer was not found.", 404)
     # A direct shipment created by an authorized Expert is explicitly rooted in
     # that actor unless an in-tenant responsible Expert is supplied. This is a
     # creation-time assignment, not creator-history authorization.
