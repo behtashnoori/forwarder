@@ -51,7 +51,7 @@ const inconsistentIdentityMessage = "شناسه بازگشتی محموله با
 
 export default function OperationalShipmentDetail() {
   const routeShipmentPublicId = useParams().id || "";
-  const { t, direction, locale } = useI18n();
+  const { t, direction, locale, businessLabel, transportLabel } = useI18n();
   const [data, setData] = useState<OperationalShipmentSummary>();
   const [plans, setPlans] = useState<RoutePlanSummary[]>([]);
   const [plan, setPlan] = useState<RoutePlanDetail>();
@@ -136,8 +136,8 @@ export default function OperationalShipmentDetail() {
               <p><span className="text-slate-500">مشتری</span><br /><strong>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</strong></p>
               <p><span className="text-slate-500">پروژه</span><br />{data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id}</Link> : data.source.type === "direct" ? "محموله مستقیم؛ بدون پروژه" : "ثبت نشده"}</p>
               <p><span className="text-slate-500">مبدأ ← مقصد</span><br /><strong>{data.route_leg?.origin.display_name || "ثبت نشده"} → {data.route_leg?.destination.display_name || "ثبت نشده"}</strong></p>
-              <p><span className="text-slate-500">روش حمل</span><br /><strong>{data.route_leg?.transport_mode || "-"}</strong></p>
-              <p><span className="text-slate-500">وضعیت محموله</span><br /><strong>{data.status === "planned" ? "برنامه‌ریزی‌شده" : data.status}</strong></p>
+              <p><span className="text-slate-500">روش حمل</span><br /><strong>{data.route_leg?.transport_mode ? transportLabel(data.route_leg.transport_mode) : "ثبت نشده"}</strong></p>
+              <p><span className="text-slate-500">وضعیت محموله</span><br /><strong>{businessLabel(data.status)}</strong></p>
               <p><span className="text-slate-500">حرکت برنامه‌ریزی‌شده</span><br />{when(data.route_leg?.planned_departure, locale)}</p>
               <p><span className="text-slate-500">رسیدن برنامه‌ریزی‌شده</span><br />{when(data.route_leg?.planned_arrival, locale)}</p>
               <p><span className="text-slate-500">منبع محموله</span><br />{data.source.type === "direct" ? "عملیات مستقیم" : "پیش‌فاکتور پذیرفته‌شده"}</p>
@@ -147,8 +147,8 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>وضعیت و اقدامات قابل انجام</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
-              <p>وضعیت فعلی محموله: <strong>{data.status === "planned" ? "برنامه‌ریزی‌شده" : data.status}</strong></p>
-              {data.recent_events[0] ? <p>آخرین رویداد ثبت‌شده: {data.recent_events[0].event_type} · {when(data.recent_events[0].occurred_at, locale)}</p> : <p>هنوز رویداد عملیاتی ثبت نشده است.</p>}
+              <p>وضعیت فعلی محموله: <strong>{businessLabel(data.status)}</strong></p>
+              {data.recent_events[0] ? <p>آخرین رخداد عملیاتی: {businessLabel(data.recent_events[0].event_type)} · {when(data.recent_events[0].occurred_at, locale)}</p> : <p>هنوز رخداد عملیاتی ثبت نشده است.</p>}
               {data.open_work_items.length > 0 ? <p className="rounded bg-amber-50 p-2 text-amber-900">{data.open_work_items.length} مورد نیازمند رسیدگی در مسیر ثبت شده است.</p> : <p className="text-slate-600">در حال حاضر اقدام عملیاتی مشخصی برای این بخش ثبت نشده است.</p>}
             </CardContent>
           </Card>
@@ -169,24 +169,23 @@ export default function OperationalShipmentDetail() {
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات و سوابق بیشتر</summary>
             <div className="space-y-5 border-t p-3 sm:p-4">
               <div className="grid gap-4 lg:grid-cols-2">
-                <Card><CardHeader><CardTitle>اسناد و شماره‌های مرجع</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><p>شماره محموله: {data.public_id}</p><p>مرجع مشتری: {data.source.request_public_id || "ثبت نشده"}</p><p>مرجع تجاری: {data.source.accepted_quote_id || "ثبت نشده"}</p><p className="text-slate-600">اسناد حمل و شماره‌های CMR، AWB، BL یا گمرکی در صورت ثبت در همین محموله نمایش داده می‌شوند.</p></CardContent></Card>
-                <Card><CardHeader><CardTitle>تأخیرها و موارد خاص</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{(timeline?.delays?.length || exceptions.length) ? <>{timeline?.delays?.map((delay) => <p key={delay.checkpoint_id}>تأخیر ثبت‌شده: {Math.ceil(delay.seconds / 60)} دقیقه</p>)}{exceptions.map((item) => <p key={item.id}>{item.type} · {item.status === "open" ? "نیازمند رسیدگی" : "بررسی‌شده"}{item.reason ? ` · ${item.reason}` : ""}</p>)}</> : <p className="text-slate-600">مورد مهم یا تأخیر ثبت‌شده‌ای وجود ندارد.</p>}</CardContent></Card>
-                <Card><CardHeader><CardTitle>رویدادهای مسیر جاری و سوابق اقدامات</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{data.recent_events.length || data.audit_summary.length ? <>{data.recent_events.map((event) => <p key={event.id}>{when(event.occurred_at, locale)} · {event.event_type}{event.reason ? ` · ${event.reason}` : ""}</p>)}{data.audit_summary.map((item) => <p key={item.id}>{when(item.recorded_at, locale)} · {item.action}</p>)}</> : <p className="text-slate-600">هنوز رویداد مهمی ثبت نشده است.</p>}</CardContent></Card>
+                <Card><CardHeader><CardTitle>انحراف زمانی مسیر و استثناهای عملیاتی</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{(timeline?.delays?.length || exceptions.length) ? <>{timeline?.delays?.map((delay) => <p key={delay.checkpoint_id}>انحراف زمانی محاسبه‌شده مسیر: {Math.ceil(delay.seconds / 60)} دقیقه</p>)}{exceptions.map((item) => <p key={item.id}>استثنای عملیاتی ثبت‌شده · {businessLabel(item.status)}{item.reason ? ` · ${item.reason}` : ""}</p>)}</> : <p className="text-slate-600">انحراف زمانی یا استثنای عملیاتی ثبت‌شده‌ای وجود ندارد.</p>}</CardContent></Card>
+                <Card><CardHeader><CardTitle>رخدادهای کسب‌وکار و سابقه اقدامات سیستمی</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{data.recent_events.length || data.audit_summary.length ? <>{data.recent_events.map((event) => <p key={event.id}>رخداد کسب‌وکار · {when(event.occurred_at, locale)} · {businessLabel(event.event_type)}{event.reason ? ` · ${event.reason}` : ""}</p>)}{data.audit_summary.map((item) => <p key={item.id}>اقدام سیستمی · {when(item.recorded_at, locale)} · {businessLabel(item.action)}</p>)}</> : <p className="text-slate-600">هنوز سابقه‌ای ثبت نشده است.</p>}</CardContent></Card>
               </div>
               <div className="space-y-5">
-              <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? t("operations.source.direct") : t("operations.source.quote")}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ?? t("operations.notApplicable")}</p></CardContent></Card>
+              <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? "عملیات مستقیم" : "درخواست"}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ? "پیشنهاد پذیرفته‌شده مرتبط" : t("operations.notApplicable")}</p></CardContent></Card>
 
           <Card>
             <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <p>{activePlan ? `نسخه مسیر ${activePlan.revision_number} · ${activePlan.status}` : data.source.type === "direct" ? "برای محموله مستقیم، مراحل پروژه کاربرد ندارد." : t("operations.noActiveRoute")}</p>
+              <p>{activePlan ? <>نسخه مسیر {activePlan.revision_number} · {businessLabel(activePlan.status)}</> : data.source.type === "direct" ? "برای این محموله هنوز برنامه مسیر ثبت نشده است." : t("operations.noActiveRoute")}</p>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="Multi-leg route">
                 {displayedLegs.map((leg, index) => (
                   <article key={leg.id} className="min-w-0 rounded border p-3">
                     <strong>بخش مسیر {index + 1}</strong>
                     <p className="break-words">{leg.origin.display_name || "ثبت نشده"} → {leg.destination.display_name || "ثبت نشده"}</p>
-                    <p>{leg.transport_mode} · {leg.status || "planned"} · v{leg.version}</p>
-                    <p>Planned: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>
+                    <p>{transportLabel(leg.transport_mode)} · {businessLabel(leg.status || "planned")} · نسخه {leg.version}</p>
+                    <p>برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>
                     {"projected_departure" in leg && <p>برآورد فعلی: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}
                     {"actual_departure" in leg && <p>زمان واقعی: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}
                     {"source_route_leg_id" in leg && leg.source_route_leg_id && <p>از بازنگری قبلی مسیر منتقل شده است.</p>}
@@ -196,7 +195,7 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
 
-          {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
+          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>مراحل اجرای عملیات</CardTitle></CardHeader><CardContent><p>مراحل وابسته به پروژه برای عملیات مستقیم کاربرد ندارد.</p></CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
           {data.source.type === "direct" ? <Card><CardHeader><CardTitle>اسناد پروژه</CardTitle></CardHeader><CardContent>برای محموله مستقیم، مراحل و اسناد وابسته به پروژه کاربرد ندارد.</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
           <ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/>
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
@@ -204,28 +203,28 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>{t("operations.timelineReconciliation")}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <p>Revision {timeline?.route_plan_revision ?? "—"} · reconciliation v{timeline?.reconciliation_version ?? "—"} · reconciled {when(timeline?.reconciled_at, locale)}</p>
+              <p>نسخه مسیر {timeline?.route_plan_revision ?? "—"} · نسخه به‌روزرسانی برآورد {timeline?.reconciliation_version ?? "—"} · آخرین به‌روزرسانی {when(timeline?.reconciled_at, locale)}</p>
               <div className="overflow-x-auto rounded border">
                 <table className="min-w-[760px] w-full text-sm">
-                  <thead><tr className="bg-slate-100 text-start"><th className="p-2">Checkpoint</th><th>Planned</th><th>Projected</th><th>Actual</th><th>Effective / source</th><th>Delay</th></tr></thead>
+                  <thead><tr className="bg-slate-100 text-start"><th className="p-2">نقطه کنترل</th><th>برنامه‌ریزی‌شده</th><th>برآورد جاری</th><th>زمان واقعی</th><th>زمان مبنا / منبع</th><th>انحراف زمانی محاسبه‌شده</th></tr></thead>
                   <tbody>{(timeline?.planned || []).map((row) => {
                     const projected = timeline?.projected.find((item) => item.checkpoint_id === row.checkpoint_id);
                     const actual = timeline?.actual.find((item) => item.checkpoint_id === row.checkpoint_id);
                     const effective = timeline?.effective.find((item) => item.checkpoint_id === row.checkpoint_id);
                     const delay = timeline?.delays.find((item) => item.checkpoint_id === row.checkpoint_id);
                     return <tr key={row.checkpoint_id} className="border-t align-top">
-                      <td className="p-2">Checkpoint</td>
+                      <td className="p-2">نقطه کنترل</td>
                       <td>{when(row.arrival_at, locale)}<br />{when(row.departure_at, locale)}</td>
                       <td>{when(projected?.arrival_at, locale)}<br />{when(projected?.departure_at, locale)}</td>
                       <td>{when(actual?.arrival_at, locale)}<br />{when(actual?.departure_at, locale)}</td>
-                      <td>{when(effective?.arrival_at, locale)} ({effective?.arrival_source || "—"})<br />{when(effective?.departure_at, locale)} ({effective?.departure_source || "—"})</td>
-                      <td>{delay ? `${Math.ceil(delay.seconds / 60)} min` : "No delay"}</td>
+                      <td>{when(effective?.arrival_at, locale)} ({businessLabel(effective?.arrival_source)})<br />{when(effective?.departure_at, locale)} ({businessLabel(effective?.departure_source)})</td>
+                      <td>{delay ? `${Math.ceil(delay.seconds / 60)} دقیقه` : "بدون انحراف زمانی"}</td>
                     </tr>;
                   })}</tbody>
                 </table>
               </div>
               {!timeline?.planned.length && <p>{t("operations.noTimeline")}</p>}
-              {activePlan && <OperationalPermission permission="route_plan.replan"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("timeline", () => reconcileRouteTimeline(shipmentPublicId, activePlan.version, key()), "Timeline reconciled.")}>{pending === "timeline" ? "Reconciling…" : "Reconcile timeline"}</Button></OperationalPermission>}
+              {activePlan && <OperationalPermission permission="route_plan.replan"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("timeline", () => reconcileRouteTimeline(shipmentPublicId, activePlan.version, key()), "برآورد زمانی مسیر به‌روز شد.")}>{pending === "timeline" ? "در حال به‌روزرسانی…" : "به‌روزرسانی برآورد زمانی"}</Button></OperationalPermission>}
             </CardContent>
           </Card>
 
@@ -234,10 +233,10 @@ export default function OperationalShipmentDetail() {
             <CardContent className="space-y-4">
               {!plan?.checkpoints.length && <p>{t("operations.noCheckpoints")}</p>}
               {plan?.checkpoints.map((checkpoint) => <article key={checkpoint.id} className="rounded border p-3">
-                <h3 className="font-semibold">Checkpoint {checkpoint.sequence_number} · {checkpoint.checkpoint_type} · {checkpoint.status} · v{checkpoint.version}</h3>
-                <p>Planned arrival/departure: {when(checkpoint.planned_arrival_at, locale)} / {when(checkpoint.planned_departure_at, locale)}</p>
-                <p>Projected arrival/departure: {when(checkpoint.projected_arrival_at, locale)} / {when(checkpoint.projected_departure_at, locale)}</p>
-                <p>Actual arrival/departure: {when(checkpoint.actual_arrival_at, locale)} / {when(checkpoint.actual_departure_at, locale)}</p>
+                <h3 className="font-semibold">نقطه کنترل {checkpoint.sequence_number} · {businessLabel(checkpoint.checkpoint_type)} · {businessLabel(checkpoint.status)} · نسخه {checkpoint.version}</h3>
+                <p>ورود/خروج برنامه‌ریزی‌شده: {when(checkpoint.planned_arrival_at, locale)} / {when(checkpoint.planned_departure_at, locale)}</p>
+                <p>برآورد جاری ورود/خروج: {when(checkpoint.projected_arrival_at, locale)} / {when(checkpoint.projected_departure_at, locale)}</p>
+                <p>زمان واقعی ورود/خروج: {when(checkpoint.actual_arrival_at, locale)} / {when(checkpoint.actual_departure_at, locale)}</p>
                 <div className="my-3 flex flex-wrap gap-2">
                   <OperationalPermission permission="checkpoint.report">
                     {(checkpoint.status === "planned" || checkpoint.status === "approaching") && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-arrive`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "arrive", new Date().toISOString(), checkpoint.version, key()), "Arrival recorded.")}>Report arrival</Button>}
@@ -248,8 +247,8 @@ export default function OperationalShipmentDetail() {
                 <div className="grid gap-3 lg:grid-cols-2">{checkpoint.milestones.map((milestone) => {
                   const reasonKey = `milestone-${milestone.id}`;
                   return <div key={milestone.id} className="rounded bg-slate-50 p-3">
-                    <strong>{milestone.type}</strong> · {milestone.verification_state} · milestone v{milestone.version}
-                    <p>Planned {when(milestone.planned_at, locale)} · Projected {when(milestone.projected_at, locale)} · Actual {when(milestone.occurred_at, locale)}</p>
+                    <strong>{businessLabel(milestone.type)}</strong> · وضعیت تأیید: {businessLabel(milestone.verification_state)} · نسخه مرحله {milestone.version}
+                    <p>برنامه‌ریزی‌شده {when(milestone.planned_at, locale)} · برآورد جاری {when(milestone.projected_at, locale)} · زمان واقعی {when(milestone.occurred_at, locale)}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {milestone.verification_state === "reported" && <OperationalPermission permission="checkpoint.verify"><Button className="min-h-11" disabled={!!pending} onClick={() => void run(`verify-${milestone.id}`, () => verifyRouteMilestone(shipmentPublicId, checkpoint.id, milestone.id, milestone.version, key()), "Milestone verified or re-verified.")}>Verify / re-verify</Button></OperationalPermission>}
                     </div>
@@ -263,7 +262,7 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>{direction === "rtl" ? "بازبرنامه‌ریزی و تاریخچه بازبینی" : "Replan and revision history"}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>Revision {item.revision_number}</strong> · {item.is_active ? "Active target" : item.status} · v{item.version}{item.created_from_plan_id ? " · supersedes the prior plan" : ""}<br />{item.replan_reason && `Reason: ${item.replan_reason}`}</div>)}
+              {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>نسخه مسیر {item.revision_number}</strong> · {item.is_active ? "نسخه فعال" : businessLabel(item.status)} · نسخه رکورد {item.version}{item.created_from_plan_id ? " · جایگزین نسخه پیشین" : ""}<br />{item.replan_reason && `دلیل بازبرنامه‌ریزی: ${item.replan_reason}`}</div>)}
               {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Replan reason" placeholder="Replan reason (required)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "A new active revision was created.")}>Replan future segments</Button></div><p className="text-sm text-slate-600">Completed segments remain read-only; only future segments are copied into the new revision.</p></OperationalPermission>}
             </CardContent>
           </Card>
@@ -271,26 +270,26 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>{t("operations.routeExceptions")}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {activePlan && <OperationalPermission permission="route_exception.manage"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("exceptions", () => reconcileRouteExceptions(shipmentPublicId, activePlan.version, key()), "Route exceptions reconciled.")}>Reconcile exceptions</Button></OperationalPermission>}
+              {activePlan && <OperationalPermission permission="route_exception.manage"><Button className="min-h-11" disabled={!!pending} onClick={() => void run("exceptions", () => reconcileRouteExceptions(shipmentPublicId, activePlan.version, key()), "موارد استثنای مسیر به‌روز شد.")}>به‌روزرسانی موارد استثنای مسیر</Button></OperationalPermission>}
               {!exceptions.length && <p>{t("operations.noExceptions")}</p>}
               {exceptions.map((exception) => {
                 const reasonKey = `exception-${exception.id}`;
                 return <article key={exception.id} className="rounded border p-3">
-                  <strong>{exception.type}</strong> · {exception.status} · {exception.severity} · v{exception.version}
-                  <p>{exception.checkpoint_id == null ? "Shipment-level exception" : "Checkpoint exception"}</p>
-                  <p>Detected {when(exception.detected_at, locale)} · due {when(exception.due_at, locale)} · resolved {when(exception.resolved_at, locale)}</p>
-                  <p>Source: {exception.resolution_source || "Not resolved"} · Reason: {exception.resolution_reason || exception.reason || "Not provided"}</p>
-                  {exception.status === "open" && <OperationalPermission permission="route_exception.manage"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Resolution reason for ${exception.type}`} placeholder="Resolution reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason(reasonKey, (reason) => resolveRouteException(exception.id, exception.version, reason, key()), "Exception resolved.")}>Resolve manually</Button></div></OperationalPermission>}
+                  <strong>استثنای عملیاتی ثبت‌شده</strong> · {businessLabel(exception.status)} · شدت {businessLabel(exception.severity)} · نسخه {exception.version}
+                  <p>{exception.checkpoint_id == null ? "در سطح محموله" : "مرتبط با نقطه کنترل"}</p>
+                  <p>شناسایی {when(exception.detected_at, locale)} · مهلت رسیدگی {when(exception.due_at, locale)} · رفع {when(exception.resolved_at, locale)}</p>
+                  <p>منبع رفع: {exception.resolution_source ? businessLabel(exception.resolution_source) : "رفع نشده"} · دلیل: {exception.resolution_reason || exception.reason || "ثبت نشده"}</p>
+                  {exception.status === "open" && <OperationalPermission permission="route_exception.manage"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`دلیل رفع ${exception.id}`} placeholder="دلیل رفع (الزامی)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason(reasonKey, (reason) => resolveRouteException(exception.id, exception.version, reason, key()), "رفع استثنای عملیاتی ثبت شد.")}>ثبت رفع دستی</Button></div></OperationalPermission>}
                 </article>;
               })}
               <h3 className="font-semibold">{t("operations.workQueue")}</h3>
-              {!data.open_work_items.length && <p>No actionable work items.</p>}
-              {data.open_work_items.map((item) => <div key={item.id} className="rounded border p-3">{item.type} · {item.status === "open" ? "Actionable" : "Non-actionable"} · due {when(item.due_at, locale)} · v{item.version}</div>)}
+              {!data.open_work_items.length && <p>در حال حاضر موردی نیازمند رسیدگی نیست.</p>}
+              {data.open_work_items.map((item) => <div key={item.id} className="rounded border p-3"><strong>مورد نیازمند رسیدگی</strong> · {businessLabel(item.status)} · مهلت {when(item.due_at, locale)} · نسخه {item.version}</div>)}
             </CardContent>
           </Card>
 
-          <Card><CardHeader><CardTitle>{t("operations.eventHistory")}</CardTitle></CardHeader><CardContent>{!data.recent_events.length ? <p>No event history.</p> : data.recent_events.map((event) => <div key={event.id}>{event.event_type} · {when(event.occurred_at, locale)} {event.reason && `· ${event.reason}`}</div>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle>سوابق ثبت‌شده</CardTitle></CardHeader><CardContent>{!data.audit_summary.length ? <p>سابقه‌ای ثبت نشده است.</p> : data.audit_summary.map((item) => <div key={item.id}>{item.action} · {when(item.recorded_at, locale)}</div>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle>{t("operations.eventHistory")}</CardTitle></CardHeader><CardContent>{!data.recent_events.length ? <p>رخداد عملیاتی ثبت نشده است.</p> : data.recent_events.map((event) => <div key={event.id}>رخداد کسب‌وکار · {businessLabel(event.event_type)} · {when(event.occurred_at, locale)} {event.reason && `· ${event.reason}`}</div>)}</CardContent></Card>
+          <Card><CardHeader><CardTitle>سوابق ثبت‌شده (فقط خواندنی)</CardTitle></CardHeader><CardContent>{!data.audit_summary.length ? <p>سابقه‌ای ثبت نشده است.</p> : data.audit_summary.map((item) => <div key={item.id}>اقدام سیستمی · {businessLabel(item.action)} · {when(item.recorded_at, locale)}</div>)}</CardContent></Card>
               </div>
             </div>
           </details>

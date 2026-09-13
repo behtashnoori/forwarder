@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
 
 const api = vi.hoisted(() => ({
-  preview: vi.fn(), milestones: vi.fn(), progress: vi.fn(), events: vi.fn(),
+  context: vi.fn(), preview: vi.fn(), milestones: vi.fn(), progress: vi.fn(), events: vi.fn(),
   conditions: vi.fn(), reasons: vi.fn(),
 }));
 
@@ -11,6 +11,7 @@ vi.mock("@/lib/api", async () => {
   const actual = await vi.importActual<typeof import("@/lib/api")>("@/lib/api");
   return {
     ...actual,
+    getOperationalContext: api.context,
     getExecutionPreview: api.preview,
     listExecutionMilestones: api.milestones,
     getExecutionProgress: api.progress,
@@ -20,8 +21,11 @@ vi.mock("@/lib/api", async () => {
   };
 });
 
+vi.mock("@/i18n", () => ({ useI18n: () => ({ businessLabel: (value: string) => value }) }));
+
 beforeEach(() => {
   vi.clearAllMocks();
+  api.context.mockResolvedValue({ data: { permissions: ["operational_execution.manage"] } });
   api.preview.mockResolvedValue({ data: { initialized: false, existing_count: 0, milestones: [{ definition_public_id: "22222222-2222-4222-8222-222222222222" }], findings: [], confirmation_allowed: true } });
   api.milestones.mockResolvedValue({ data: [] });
   api.progress.mockResolvedValue({ data: { initialized: false, total: 0, counts: {}, current_milestone: null, completion_percentage: 0, completion_rule: "rule", active_delay_count: 0, active_exception_count: 0 } });
@@ -35,7 +39,7 @@ describe("operational execution initialization preview", () => {
     render(<OperationalExecutionSection shipmentPublicId="11111111-1111-4111-8111-111111111110" shipmentVersion={1} />);
     expect(await screen.findByText("1 مرحله مورد انتظار")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "تأیید آماده‌سازی" })).toBeEnabled();
-    expect(screen.getByRole("alert")).toHaveTextContent("secondary read failed");
+    expect(screen.getByRole("alert")).toHaveTextContent("دریافت یا ثبت اطلاعات اجرای عملیات ممکن نشد");
   });
 });
 

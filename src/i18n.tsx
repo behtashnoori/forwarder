@@ -1403,6 +1403,37 @@ const translations = {
 
 export type TranslationKey = keyof typeof translations.fa;
 
+const presentationLabels: Record<Language, Record<string, string>> = {
+  fa: {
+    planned: "برنامه‌ریزی‌شده", projected: "برآورد جاری", actual: "زمان واقعی", effective: "زمان مبنا",
+    revision: "نسخه مسیر", reconciliation: "به‌روزرسانی برآورد زمانی", replan: "بازبرنامه‌ریزی",
+    checkpoint: "نقطه کنترل", milestone: "مرحله عملیاتی", delay: "تأخیر عملیاتی ثبت‌شده",
+    exception: "مورد استثنای عملیاتی ثبت‌شده", work_item: "مورد نیازمند رسیدگی",
+    active: "فعال", open: "باز", resolved: "رفع‌شده", pending: "در انتظار", ready: "آماده",
+    in_progress: "در حال انجام", completed: "تکمیل‌شده", cancelled: "لغوشده", canceled: "لغوشده",
+    blocked: "متوقف‌شده", skipped: "صرف‌نظرشده", reported: "گزارش‌شده", verified: "تأییدشده",
+    corrected: "اصلاح‌شده", arrival: "ورود", departure: "خروج", none: "بدون تأخیر",
+    "operational_shipment.created": "ایجاد محموله عملیاتی", "route_plan.replanned": "بازبرنامه‌ریزی مسیر",
+    "operational_delay.created": "ثبت تأخیر عملیاتی", "operational_delay.resolved": "رفع تأخیر عملیاتی",
+    "operational_exception.created": "ثبت مورد استثنای عملیاتی", "operational_exception.resolved": "رفع مورد استثنای عملیاتی",
+    "milestone.reported": "گزارش مرحله عملیاتی", "milestone.verified": "تأیید مرحله عملیاتی",
+    "milestone.corrected": "اصلاح مرحله عملیاتی",
+  },
+  en: {
+    planned: "Planned", projected: "Current estimate", actual: "Actual time", effective: "Baseline time",
+    revision: "Route version", reconciliation: "Update timeline estimate", replan: "Replan",
+    checkpoint: "Checkpoint", milestone: "Operational milestone", delay: "Recorded operational delay",
+    exception: "Recorded operational exception", work_item: "Attention item", active: "Active", open: "Open",
+    resolved: "Resolved", pending: "Pending", ready: "Ready", in_progress: "In progress", completed: "Completed",
+    cancelled: "Cancelled", canceled: "Cancelled", blocked: "Blocked", skipped: "Skipped", reported: "Reported",
+    verified: "Verified", corrected: "Corrected", arrival: "Arrival", departure: "Departure", none: "No delay",
+    "operational_shipment.created": "Operational shipment created", "route_plan.replanned": "Route replanned",
+    "operational_delay.created": "Operational delay recorded", "operational_delay.resolved": "Operational delay resolved",
+    "operational_exception.created": "Operational exception recorded", "operational_exception.resolved": "Operational exception resolved",
+    "milestone.reported": "Milestone reported", "milestone.verified": "Milestone verified", "milestone.corrected": "Milestone corrected",
+  },
+};
+
 type I18nContextValue = {
   language: Language;
   direction: Direction;
@@ -1416,6 +1447,7 @@ type I18nContextValue = {
   stepLabel: (step: string) => string;
   actionLabel: (action: string) => string;
   transportLabel: (method: string) => string;
+  businessLabel: (value: string | null | undefined) => string;
 };
 
 const I18nContext = createContext<I18nContextValue | undefined>(undefined);
@@ -1457,6 +1489,11 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       stepLabel: (step) => translations[language][`step.${step}` as TranslationKey] ?? step,
       actionLabel: (action) => translations[language][`action.${action}` as TranslationKey] ?? action,
       transportLabel: (method) => translations[language][`transport.${method}` as TranslationKey] ?? method,
+      businessLabel: (value) => {
+        if (!value) return "—";
+        const normalized = value.trim().toLowerCase().replace(/[ -]+/g, "_");
+        return presentationLabels[language][value] ?? presentationLabels[language][normalized] ?? (language === "fa" ? "عنوان ثبت‌شده" : "Recorded value");
+      },
     }),
     [direction, language, locale],
   );

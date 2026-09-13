@@ -6,7 +6,7 @@ import OperationalShipmentDetail from "../../pages/OperationalShipmentDetail";
 import OperationalWorkQueue from "../../pages/OperationalWorkQueue";
 import * as api from "../../lib/api";
 vi.mock("../../i18n", () => ({
-  useI18n: () => ({ t: (k: string) => k, direction: "ltr", locale: "en-US" }),
+  useI18n: () => ({ t: (k: string) => k, direction: "ltr", locale: "en-US", businessLabel: (value: string) => value, transportLabel: (value: string) => value }),
 }));
 vi.mock("../../components/OperationalPermission", () => ({
   default: ({ children }: { children: unknown }) => children,

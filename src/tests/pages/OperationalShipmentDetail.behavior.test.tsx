@@ -11,7 +11,7 @@ vi.mock("../../i18n", () => ({
     "operations.timelineReconciliation":"Timeline reconciliation",
     "operations.lifecycle":"Checkpoints and milestone lifecycle",
     "operations.routeExceptions":"Route exceptions and work items",
-  } as Record<string,string>)[key] || key, direction: "ltr", locale: "en-US" }),
+  } as Record<string,string>)[key] || key, direction: "ltr", locale: "en-US", businessLabel: (value: string) => value, transportLabel: (value: string) => value }),
 }));
 vi.mock("../../components/OperationalPermission", () => ({
   default: ({ permission, children }: { permission: string; children: unknown }) =>
@@ -90,7 +90,7 @@ describe("Phase 1B shipment detail behavior", () => {
     const { container } = renderDetail();
     expect(await screen.findByText("Timeline reconciliation")).toBeInTheDocument();
     expect(screen.getAllByText("بخش مسیر 3").length).toBeGreaterThan(0);
-    expect(screen.getByText("Actionable", { exact: false })).toBeInTheDocument();
+    expect(screen.getAllByText("مورد نیازمند رسیدگی", { exact: false }).length).toBeGreaterThan(0);
     expect(container.querySelector("main")).toHaveClass("overflow-x-hidden", "p-3");
     expect(container.querySelector(".overflow-x-auto")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Report arrival" })).toHaveClass("min-h-11");
@@ -114,6 +114,10 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.getByText("عملیات مستقیم")).toBeInTheDocument();
     expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
     expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
+    expect(screen.getByText("مراحل وابسته به پروژه برای عملیات مستقیم کاربرد ندارد.")).toBeInTheDocument();
+    expect(screen.queryByText("Shipment is not assigned to a Project")).not.toBeInTheDocument();
+    expect(screen.queryByText("Project has no active milestone definitions")).not.toBeInTheDocument();
+    expect(screen.queryByText("اجرای عملیاتی")).not.toBeInTheDocument();
   });
 
   it("renders a direct shipment that has not been route-planned yet", async () => {
@@ -161,22 +165,22 @@ describe("Phase 1B shipment detail behavior", () => {
   it("reconciles a timeline and reports success", async () => {
     vi.mocked(api.reconcileRouteTimeline).mockResolvedValue({ data: { route_plan_id: 20, revision: 2, version: 5, reconciled_at: null, updated_checkpoints: 1, actual_override_count: 1, replayed: false } });
     renderDetail();
-    fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
+    fireEvent.click(await screen.findByRole("button", { name: "به‌روزرسانی برآورد زمانی" }));
     await waitFor(() => expect(api.reconcileRouteTimeline).toHaveBeenCalledWith(shipment.public_id, 4, expect.any(String)));
-    expect(await screen.findByRole("status")).toHaveTextContent("Timeline reconciled.");
+    expect(await screen.findByRole("status")).toHaveTextContent("برآورد زمانی مسیر به‌روز شد.");
   });
 
   it("reports a reconciliation no-op", async () => {
     vi.mocked(api.reconcileRouteTimeline).mockResolvedValue({ data: { route_plan_id: 20, revision: 2, version: 4, reconciled_at: null, updated_checkpoints: 0, actual_override_count: 0, replayed: false } });
     renderDetail();
-    fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
+    fireEvent.click(await screen.findByRole("button", { name: "به‌روزرسانی برآورد زمانی" }));
     expect(await screen.findByRole("status")).toHaveTextContent("تغییری در زمان‌بندی مسیر لازم نبود.");
   });
 
   it("sanitizes stale timeline conflicts", async () => {
     vi.mocked(api.reconcileRouteTimeline).mockRejectedValue(new api.ApiError(409, "STALE_ROUTE_PLAN_VERSION", "database detail"));
     renderDetail();
-    fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
+    fireEvent.click(await screen.findByRole("button", { name: "به‌روزرسانی برآورد زمانی" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("اطلاعات محموله تغییر کرده است");
     expect(screen.queryByText("database detail")).not.toBeInTheDocument();
   });
@@ -242,12 +246,12 @@ describe("Phase 1B shipment detail behavior", () => {
   it("renders open/resolved exception history and validates manual resolution", async () => {
     vi.mocked(api.resolveRouteException).mockResolvedValue({});
     renderDetail();
-    expect((await screen.findAllByText("CHECKPOINT_OVERDUE")).length).toBe(2);
-    expect(screen.getByText("Source: manual", { exact: false })).toHaveTextContent("carrier confirmed");
-    fireEvent.click(screen.getByRole("button", { name: "Resolve manually" }));
+    expect((await screen.findAllByText("استثنای عملیاتی ثبت‌شده", { exact: false })).length).toBeGreaterThan(1);
+    expect(screen.getByText("منبع رفع: manual", { exact: false })).toHaveTextContent("carrier confirmed");
+    fireEvent.click(screen.getByRole("button", { name: "ثبت رفع دستی" }));
     expect(screen.getByRole("alert")).toHaveTextContent("ثبت دلیل الزامی است.");
-    fireEvent.change(screen.getByLabelText("Resolution reason for CHECKPOINT_OVERDUE"), { target: { value: "Reviewed evidence" } });
-    fireEvent.click(screen.getByRole("button", { name: "Resolve manually" }));
+    fireEvent.change(screen.getByLabelText("دلیل رفع 40"), { target: { value: "Reviewed evidence" } });
+    fireEvent.click(screen.getByRole("button", { name: "ثبت رفع دستی" }));
     await waitFor(() => expect(api.resolveRouteException).toHaveBeenCalledWith(40, 2, "Reviewed evidence", expect.any(String)));
   });
 
@@ -258,7 +262,7 @@ describe("Phase 1B shipment detail behavior", () => {
   ])("sanitizes %s command errors", async (status, expected) => {
     vi.mocked(api.reconcileRouteTimeline).mockRejectedValue(new api.ApiError(status, "INTERNAL_CODE", "sensitive database message"));
     renderDetail();
-    fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
+    fireEvent.click(await screen.findByRole("button", { name: "به‌روزرسانی برآورد زمانی" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(expected);
     expect(screen.queryByText("sensitive database message")).not.toBeInTheDocument();
   });
