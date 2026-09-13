@@ -192,6 +192,21 @@ def _user(app, outsider=False):
     }
 
 
+def test_shipment_eligible_types_are_catalog_driven(reference_app):
+    with reference_app.app_context():
+        assert {row["code"] for row in service.eligible_types_for_shipment()} == {
+            "AIR_WAYBILL_NUMBER",
+            "BILL_OF_LADING_NUMBER",
+            "CMR_NUMBER",
+        }
+        cmr = ExternalReferenceType.query.filter_by(code="CMR_NUMBER").one()
+        cmr.lifecycle_status = "DEPRECATED"
+        db.session.commit()
+        assert "CMR_NUMBER" not in {
+            row["code"] for row in service.eligible_types_for_shipment()
+        }
+
+
 def test_owner_applicability_tenant_fence_and_uniqueness(reference_app):
     with reference_app.app_context():
         shipment = service.scoped_shipment(

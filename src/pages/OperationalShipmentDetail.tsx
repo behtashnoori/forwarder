@@ -179,7 +179,7 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <p>{activePlan ? `Revision ${activePlan.revision_number} · ${activePlan.status} · plan v${activePlan.version}` : t("operations.noActiveRoute")}</p>
+              <p>{activePlan ? `نسخه مسیر ${activePlan.revision_number} · ${activePlan.status}` : data.source.type === "direct" ? "برای محموله مستقیم، مراحل پروژه کاربرد ندارد." : t("operations.noActiveRoute")}</p>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="Multi-leg route">
                 {displayedLegs.map((leg, index) => (
                   <article key={leg.id} className="min-w-0 rounded border p-3">
@@ -197,7 +197,7 @@ export default function OperationalShipmentDetail() {
           </Card>
 
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>{t("operations.documentsMdpm")}</CardTitle></CardHeader><CardContent>{t("operations.requestDocumentsNa")}</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
+          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>اسناد پروژه</CardTitle></CardHeader><CardContent>برای محموله مستقیم، مراحل و اسناد وابسته به پروژه کاربرد ندارد.</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
           <ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/>
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
 

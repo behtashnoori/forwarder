@@ -84,6 +84,22 @@ def _type(code: str, owner_kind: str) -> ExternalReferenceType:
     return row
 
 
+def eligible_types_for_shipment() -> list[dict]:
+    """Return only active governed types that may be attached to a shipment."""
+    rows = db.session.scalars(
+        select(ExternalReferenceType)
+        .where(
+            ExternalReferenceType.lifecycle_status == "ACTIVE",
+            ExternalReferenceType.allows_operational_shipment.is_(True),
+        )
+        .order_by(ExternalReferenceType.name_fa, ExternalReferenceType.code)
+    ).all()
+    return [
+        {"code": row.code, "name_fa": row.name_fa, "name_en": row.name_en}
+        for row in rows
+    ]
+
+
 def scoped_shipment(
     public_id: str, user: dict, *, manage: bool = False
 ) -> OperationalShipment:

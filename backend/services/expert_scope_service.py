@@ -17,10 +17,14 @@ EXPERT_ROLES = ("expert",)
 # grants workflow capability, not tenant-wide visibility or administrative
 # authority: endpoint guards and assigned-work policy remain authoritative.
 EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = (
+    "execution_unit.create",
+    "execution_unit.update",
     "operational_shipment.create",
     "operational_shipment.create_direct",
     "operational_shipment.create_from_quote",
     "operational_shipment.read",
+    # These are bounded command permissions.  Tenant and assigned-work
+    # authorization is still enforced by the shipment/execution services.
     "personal_dashboard.manage",
     "personal_dashboard.read",
 )

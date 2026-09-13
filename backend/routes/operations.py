@@ -39,6 +39,16 @@ def _reference_owner(kind: str, public_id: str, *, manage: bool = False):
     return external_references.scoped_unit(public_id, _user(), manage=manage)
 
 
+@operations_bp.get("/api/internal/external-reference-types/shipment-eligible")
+@require_auth
+def shipment_eligible_external_reference_types():
+    try:
+        service.require_permission(_user(), "operational_shipment.read")
+        return jsonify({"data": external_references.eligible_types_for_shipment()})
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
 @operations_bp.get(
     "/api/internal/operational-shipments/<shipment_public_id>/external-references"
 )

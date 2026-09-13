@@ -12,6 +12,7 @@ import {
   getOperationalTransportTracking, getShipmentCargoOptions, listShipmentCargoItems,
   searchOperationalCustomers, updateShipmentCargoItem,
   updateCanonicalCargoAllocation,
+  ApiError,
   type CanonicalCargoAllocation, type CanonicalShipmentTransportUnit,
   type OperationalTransportTracking, type ShipmentCargoItem,
   type OperationalCustomerSelector,
@@ -61,7 +62,7 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
   };
   const addUnit = async () => {
     try { await createCanonicalShipmentTransportUnit(shipmentPublicId, { unit_type: "truck", ...unitForm }); setUnitForm({ display_name: "", vehicle_reference: "" }); await load(); }
-    catch { setError("افزودن وسیله حمل انجام نشد."); }
+    catch (caught) { setError(caught instanceof ApiError && caught.status === 403 ? "شما مجوز افزودن وسیله حمل برای این محموله را ندارید." : "افزودن وسیله حمل انجام نشد."); }
   };
   const addAllocation = async () => {
     const quantity = Number(allocationForm.quantity);

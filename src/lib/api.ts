@@ -1669,8 +1669,10 @@ export interface ExternalOperationalReference {
   evidence?: { document_public_id: string; version: number } | null;
   revision: number; created_at: string;
 }
+export interface ShipmentEligibleExternalReferenceType { code:string; name_fa:string; name_en:string; }
+export const listShipmentEligibleExternalReferenceTypes = () => request<{data:ShipmentEligibleExternalReferenceType[]}>("/api/internal/external-reference-types/shipment-eligible");
 export const listShipmentExternalReferences = (shipmentId: string) => request<{ data: ExternalOperationalReference[] }>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references`);
-export const createShipmentExternalReference = (shipmentId: string, payload: {type:ExternalReferenceTypeCode;value:string;issuer_key?:string;source_system?:string;evidence_document_public_id?:string;evidence_version?:number}, key:string) => request<{data:ExternalOperationalReference}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references`, {method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify(payload)});
+export const createShipmentExternalReference = (shipmentId: string, payload: {type:string;value:string;issuer_key?:string;source_system?:string;evidence_document_public_id?:string;evidence_version?:number}, key:string) => request<{data:ExternalOperationalReference}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references`, {method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify(payload)});
 export const transitionShipmentExternalReference = (shipmentId:string, reference:ExternalOperationalReference, action:"supersede"|"cancel", payload:{reason:string;value?:string}, key:string) => request<{data:ExternalOperationalReference}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references/${encodeURIComponent(reference.public_id)}/${action}`, {method:"POST",headers:{"Idempotency-Key":key},body:JSON.stringify({...payload,expected_revision:reference.revision})});
 export function createOperationalShipment(
   payload: {
