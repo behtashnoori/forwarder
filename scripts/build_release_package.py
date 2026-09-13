@@ -75,8 +75,8 @@ def command_record(args, cwd, process, started_utc, started_monotonic, stdout, s
         "timeout_seconds": timeout,
         "outcome": outcome,
         "exit_code": process.returncode,
-        "stdout_tail": stdout.strip().splitlines()[-20:],
-        "stderr_tail": stderr.strip().splitlines()[-20:],
+        "stdout_tail": (stdout or "").strip().splitlines()[-20:],
+        "stderr_tail": (stderr or "").strip().splitlines()[-20:],
     }
 
 
@@ -107,7 +107,11 @@ def run(args, cwd, *, env=None, output=True, timeout_seconds=None):
         env=env,
         text=True,
         stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
+        # Qualification commands such as the full pytest suite can generate
+        # more output than a Windows anonymous pipe can hold.  They are only
+        # captured for diagnostics on request; otherwise discard stdout so
+        # the release builder cannot deadlock before it observes an exit code.
+        stdout=subprocess.PIPE if output else subprocess.DEVNULL,
         stderr=subprocess.PIPE,
         creationflags=flags,
     )
@@ -136,7 +140,7 @@ def run(args, cwd, *, env=None, output=True, timeout_seconds=None):
             timeout=timeout, outcome="PASS"
         )
     )
-    return stdout.strip()
+    return (stdout or "").strip()
 
 
 def file_hash(path):
@@ -237,6 +241,7 @@ def gates(source):
                 "check",
                 "backend/global_logistics_point_catalog.py",
                 "backend/global_logistics_point_catalog_cli.py",
+                "backend/external_reference_type_cli.py",
                 "backend/tests/test_global_logistics_point_catalog_importer.py",
                 "scripts/build_release_package.py",
                 "scripts/verify_release_artifact.py",
@@ -321,10 +326,18 @@ def verify_tree(target):
         BASELINE,
         Path("backend/global_logistics_point_catalog.py"),
         Path("backend/global_logistics_point_catalog_cli.py"),
+        Path("backend/external_reference_type_cli.py"),
     ]
     missing = [x.as_posix() for x in required if not (target / x).exists()]
     if missing:
         raise BuildError(f"artifact structure missing: {missing}")
+    legacy_repairs = [
+        Path("scripts/repair_forwarder_production_workflow.py"),
+        Path("scripts/Repair-ForwarderProductionWorkflow.ps1"),
+    ]
+    present_repairs = [x.as_posix() for x in legacy_repairs if (target / x).exists()]
+    if present_repairs:
+        raise BuildError(f"artifact contains retired manual repair tooling: {present_repairs}")
 
 
 def build(repo, commit, output, label, *, skip_gates=False):
