@@ -13,6 +13,7 @@ import {
   getRouteTimeline,
   listRouteExceptions,
   listRoutePlans,
+  recordOperationalEvent,
   reconcileRouteExceptions,
   reconcileRouteTimeline,
   replanRoute,
@@ -31,17 +32,29 @@ import DocumentReadinessSection from "@/components/DocumentReadinessSection";
 import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
 import ShipmentExternalReferences from "@/components/ShipmentExternalReferences";
 import OperationsNav from "@/components/OperationsNav";
+import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
   if (error instanceof ApiError) {
-    if (error.status === 403) return "اجازه انجام این کار را ندارید.";
+    if (error.status === 403) return "شما مجوز انجام این اقدام را ندارید.";
+    const code = error.code.toUpperCase();
+    if (code === "OCCURRENCE_ALREADY_REPORTED") return "این رخداد قبلاً ثبت شده است؛ برای تغییر زمان از اصلاح استفاده کنید.";
+    if (code === "INVALID_ACTUAL_CHRONOLOGY") return "زمان رسیدن باید پس از زمان حرکت باشد؛ زمان وقوع را بررسی کنید.";
+    if (code === "INVALID_LEG_TRANSITION") return "برای بخش مسیر مسدود یا لغوشده نمی‌توان رخداد ثبت کرد.";
+    if (code === "INVALID_MILESTONE_TRANSITION" && error.message.includes("future")) return "زمان وقوع نمی‌تواند بیش از پنج دقیقه در آینده باشد.";
     if (error.status === 404) return "این محموله دیگر در دسترس نیست.";
-    if (error.status === 409) return "اطلاعات محموله تغییر کرده است؛ صفحه را تازه‌سازی کنید.";
-    if (error.status === 422) return "اطلاعات واردشده را بررسی کنید.";
+    if (error.status === 409) return "اطلاعات عملیات تغییر کرده است. صفحه به‌روزرسانی شد؛ دوباره بررسی کنید.";
+    if (error.status === 422 || error.status === 400) {
+      if (code.includes("FUTURE")) return "زمان وقوع نمی‌تواند بیش از پنج دقیقه در آینده باشد.";
+      if (code.includes("CHRONO") || code.includes("BEFORE") || code.includes("AFTER")) return "ترتیب زمانی رخدادهای مسیر معتبر نیست؛ زمان وقوع را بررسی کنید.";
+      if (code.includes("BLOCK") || code.includes("CANCEL")) return "برای بخش مسیر مسدود یا لغوشده نمی‌توان رخداد ثبت کرد.";
+      if (code.includes("DUPLICATE") || code.includes("ALREADY") || code.includes("EXIST")) return "این رخداد قبلاً ثبت شده است؛ برای تغییر زمان از اصلاح استفاده کنید.";
+      return "اطلاعات واردشده را بررسی کنید.";
+    }
     return "انجام این کار ممکن نشد.";
   }
-  return error instanceof Error ? error.message : "انجام این کار ممکن نشد.";
+  return "انجام این کار ممکن نشد.";
 };
 const when = (value: string | null | undefined, locale: string) =>
   value ? new Date(value).toLocaleString(locale, { timeZoneName: "short" }) : "ثبت نشده";
@@ -107,6 +120,10 @@ export default function OperationalShipmentDetail() {
       await load();
     } catch (caught) {
       setError(safeError(caught));
+      if (caught instanceof ApiError && caught.status === 409) {
+        await load();
+        setError(safeError(caught));
+      }
     } finally {
       setPending("");
     }
@@ -156,7 +173,11 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>مسیر و نقاط عملیاتی</CardTitle></CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {!displayedLegs.length ? <p className="text-slate-600">برنامه مسیر هنوز آماده نشده است.</p> : displayedLegs.map((leg, index) => <article key={leg.id} className="rounded border p-3"><strong>بخش مسیر {index + 1}</strong><p>{leg.origin.display_name || "ثبت نشده"} → {leg.destination.display_name || "ثبت نشده"} · {leg.transport_mode}</p><p>برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>{"projected_departure" in leg && <p>برآورد فعلی: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}{"actual_departure" in leg && <p>زمان واقعی: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}</article>)}
+              {!displayedLegs.length ? <p className="text-slate-600">برنامه مسیر هنوز آماده نشده است.</p> : displayedLegs.map((leg, index) => {
+                const actionable = !!activePlan && !["blocked", "cancelled", "completed"].includes(leg.status);
+                const action = actionable && !leg.actual_departure && leg.departure_milestone_id ? { label: "ثبت حرکت", id: leg.departure_milestone_id } : actionable && leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id ? { label: "ثبت رسیدن", id: leg.arrival_milestone_id } : null;
+                return <article key={leg.id} className="min-w-0 rounded border p-3"><strong>بخش مسیر {index + 1}</strong><p>{leg.origin.display_name || "ثبت نشده"} → {leg.destination.display_name || "ثبت نشده"} · {leg.transport_mode}</p><p>برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>{"projected_departure" in leg && <p>برآورد فعلی: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}{"actual_departure" in leg && <p>زمان واقعی: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}{action && <OperationalPermission permission="milestone_event.create"><div className="mt-3"><OccurrenceTimeAction id={`leg-${leg.id}-time`} action={action.label} pending={!!pending} onSubmit={(occurredAt) => void run(`leg-${leg.id}`, () => recordOperationalEvent(shipmentPublicId, action.id, occurredAt, key()), "رخداد بخش مسیر ثبت شد.")} /></div></OperationalPermission>}</article>;
+              })}
             </CardContent>
           </Card>
 
@@ -239,9 +260,9 @@ export default function OperationalShipmentDetail() {
                 <p>زمان واقعی ورود/خروج: {when(checkpoint.actual_arrival_at, locale)} / {when(checkpoint.actual_departure_at, locale)}</p>
                 <div className="my-3 flex flex-wrap gap-2">
                   <OperationalPermission permission="checkpoint.report">
-                    {(checkpoint.status === "planned" || checkpoint.status === "approaching") && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-arrive`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "arrive", new Date().toISOString(), checkpoint.version, key()), "Arrival recorded.")}>Report arrival</Button>}
-                    {(checkpoint.status === "arrived" || checkpoint.status === "processing") && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-complete-processing`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "complete-processing", new Date().toISOString(), checkpoint.version, key()), "Processing completion recorded.")}>Report processing complete</Button>}
-                    {checkpoint.status === "ready_to_depart" && <Button className="min-h-11" disabled={!!pending} variant="outline" onClick={() => void run(`${checkpoint.id}-depart`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "depart", new Date().toISOString(), checkpoint.version, key()), "Departure recorded.")}>Report departure</Button>}
+                    {(checkpoint.status === "planned" || checkpoint.status === "approaching") && <OccurrenceTimeAction id={`checkpoint-${checkpoint.id}-arrive`} action="Report arrival" pending={!!pending} onSubmit={(occurredAt) => void run(`${checkpoint.id}-arrive`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "arrive", occurredAt, checkpoint.version, key()), "Arrival recorded.")} />}
+                    {(checkpoint.status === "arrived" || checkpoint.status === "processing") && <OccurrenceTimeAction id={`checkpoint-${checkpoint.id}-processing`} action="Report processing complete" pending={!!pending} onSubmit={(occurredAt) => void run(`${checkpoint.id}-complete-processing`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "complete-processing", occurredAt, checkpoint.version, key()), "Processing completion recorded.")} />}
+                    {checkpoint.status === "ready_to_depart" && <OccurrenceTimeAction id={`checkpoint-${checkpoint.id}-depart`} action="Report departure" pending={!!pending} onSubmit={(occurredAt) => void run(`${checkpoint.id}-depart`, () => commandRouteCheckpoint(shipmentPublicId, checkpoint.id, "depart", occurredAt, checkpoint.version, key()), "Departure recorded.")} />}
                   </OperationalPermission>
                 </div>
                 <div className="grid gap-3 lg:grid-cols-2">{checkpoint.milestones.map((milestone) => {
@@ -252,7 +273,7 @@ export default function OperationalShipmentDetail() {
                     <div className="mt-2 flex flex-wrap gap-2">
                       {milestone.verification_state === "reported" && <OperationalPermission permission="checkpoint.verify"><Button className="min-h-11" disabled={!!pending} onClick={() => void run(`verify-${milestone.id}`, () => verifyRouteMilestone(shipmentPublicId, checkpoint.id, milestone.id, milestone.version, key()), "Milestone verified or re-verified.")}>Verify / re-verify</Button></OperationalPermission>}
                     </div>
-                    {milestone.verification_state === "verified" && <OperationalPermission permission="milestone.correct"><div className="mt-2 flex flex-col gap-2 sm:flex-row"><Input aria-label={`Correction reason for ${milestone.type}`} placeholder="Correction reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><Button className="min-h-11" disabled={!!pending} variant="secondary" onClick={() => requireReason(reasonKey, (reason) => correctRouteMilestone(shipmentPublicId, checkpoint.id, milestone.id, new Date().toISOString(), reason, milestone.version, key()), "Milestone corrected.")}>Correct</Button></div></OperationalPermission>}
+                    {milestone.verification_state === "verified" && <OperationalPermission permission="milestone.correct"><div className="mt-2 space-y-2"><Input aria-label={`Correction reason for ${milestone.type}`} placeholder="Correction reason (required)" value={reasons[reasonKey] || ""} onChange={(event) => setReasons({...reasons,[reasonKey]:event.target.value})}/><OccurrenceTimeAction id={`correction-${milestone.id}-time`} action="Correct" pending={!!pending} onSubmit={(occurredAt) => requireReason(reasonKey, (reason) => correctRouteMilestone(shipmentPublicId, checkpoint.id, milestone.id, occurredAt, reason, milestone.version, key()), "Milestone corrected.")} /></div></OperationalPermission>}
                   </div>;
                 })}</div>
               </article>)}

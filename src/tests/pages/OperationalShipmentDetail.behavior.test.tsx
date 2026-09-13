@@ -28,7 +28,7 @@ vi.mock("../../lib/api", async () => {
     ...actual,
     getOperationalShipment: vi.fn(), listRoutePlans: vi.fn(), getRoutePlan: vi.fn(),
     getRouteTimeline: vi.fn(), listRouteExceptions: vi.fn(),
-    reconcileRouteTimeline: vi.fn(), replanRoute: vi.fn(), commandRouteCheckpoint: vi.fn(),
+    reconcileRouteTimeline: vi.fn(), replanRoute: vi.fn(), commandRouteCheckpoint: vi.fn(), recordOperationalEvent: vi.fn(),
     verifyRouteMilestone: vi.fn(), correctRouteMilestone: vi.fn(),
     reconcileRouteExceptions: vi.fn(), resolveRouteException: vi.fn(),
   };
@@ -45,9 +45,9 @@ const shipment = {
 const plan = {
   id: 20, revision_number: 2, status: "active", is_active: true, version: 4,
   legs: [
-    { ...shipment.route_leg, id: 21, sequence_number: 1, status: "completed", actual_departure: "2026-01-01T00:00:00Z", actual_arrival: "2026-01-02T00:00:00Z" },
-    { ...shipment.route_leg, id: 22, sequence_number: 2, status: "planned", origin: { display_name: "Hub" }, destination: { display_name: "Port" } },
-    { ...shipment.route_leg, id: 23, sequence_number: 3, status: "planned", origin: { display_name: "Port" }, destination: { display_name: "Destination" } },
+    { ...shipment.route_leg, id: 21, sequence_number: 1, status: "completed", actual_departure: "2026-01-01T00:00:00Z", actual_arrival: "2026-01-02T00:00:00Z", departure_milestone_id: "leg-21-depart", arrival_milestone_id: "leg-21-arrive" },
+    { ...shipment.route_leg, id: 22, sequence_number: 2, status: "planned", origin: { display_name: "Hub" }, destination: { display_name: "Port" }, departure_milestone_id: "leg-22-depart", arrival_milestone_id: "leg-22-arrive" },
+    { ...shipment.route_leg, id: 23, sequence_number: 3, status: "planned", origin: { display_name: "Port" }, destination: { display_name: "Destination" }, departure_milestone_id: "leg-23-depart", arrival_milestone_id: "leg-23-arrive" },
   ],
   checkpoints: [{
     id: 30, route_leg_id: 21, sequence_number: 1, checkpoint_type: "origin", status: "planned",
@@ -86,6 +86,71 @@ beforeEach(() => {
 });
 
 describe("Phase 1B shipment detail behavior", () => {
+  it("uses each leg's authoritative departure ID and the operator's edited time", async () => {
+    controls.permissions.add("milestone_event.create");
+    vi.mocked(api.recordOperationalEvent).mockResolvedValue({});
+    renderDetail();
+    const buttons = await screen.findAllByRole("button", { name: "ثبت حرکت" });
+    expect(buttons).toHaveLength(2);
+    expect(screen.queryByRole("button", { name: "ثبت رسیدن" })).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("زمان وقوع", { selector: "#leg-22-time" }), { target: { value: "2026-01-03T12:34:56" } });
+    fireEvent.click(buttons[0]);
+    await waitFor(() => expect(api.recordOperationalEvent).toHaveBeenCalledWith(shipment.public_id, "leg-22-depart", new Date("2026-01-03T12:34:56").toISOString(), expect.any(String)));
+    expect(api.getOperationalShipment).toHaveBeenCalledTimes(2);
+    expect(api.getRoutePlan).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(["blocked", "cancelled"])("shows arrival only after departure and hides %s and completed actions", async (status) => {
+    controls.permissions.add("milestone_event.create");
+    vi.mocked(api.getRoutePlan).mockResolvedValue({ data: { ...plan, legs: [
+      plan.legs[0], { ...plan.legs[1], status: "in_progress", actual_departure: "2026-01-03T01:00:00Z" },
+      { ...plan.legs[2], status },
+    ] } });
+    renderDetail();
+    expect(await screen.findByRole("button", { name: "ثبت رسیدن" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ثبت حرکت" })).not.toBeInTheDocument();
+  });
+
+  it.each(["direct", "accepted_quote"] as const)("offers the same route action for %s shipments", async (type) => {
+    controls.permissions.add("milestone_event.create");
+    vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, source: { ...shipment.source, type } } });
+    renderDetail();
+    expect((await screen.findAllByRole("button", { name: "ثبت حرکت" })).length).toBe(2);
+  });
+
+  it("submits edited checkpoint and correction times without changing verification", async () => {
+    vi.mocked(api.commandRouteCheckpoint).mockResolvedValue({});
+    vi.mocked(api.correctRouteMilestone).mockResolvedValue({});
+    renderDetail();
+    await screen.findByRole("button", { name: "Report arrival" });
+    fireEvent.change(screen.getByLabelText("زمان وقوع", { selector: "#checkpoint-30-arrive" }), { target: { value: "2026-01-03T10:00:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Report arrival" }));
+    await waitFor(() => expect(api.commandRouteCheckpoint).toHaveBeenCalledWith(shipment.public_id, 30, "arrive", new Date("2026-01-03T10:00:00").toISOString(), 7, expect.any(String)));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Correct" })).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("Correction reason for checkpoint_departure"), { target: { value: "Corrected log" } });
+    fireEvent.change(screen.getByLabelText("زمان وقوع", { selector: "#correction-32-time" }), { target: { value: "2026-01-03T11:00:00" } });
+    fireEvent.click(screen.getByRole("button", { name: "Correct" }));
+    await waitFor(() => expect(api.correctRouteMilestone).toHaveBeenCalledWith(shipment.public_id, 30, 32, new Date("2026-01-03T11:00:00").toISOString(), "Corrected log", 6, expect.any(String)));
+    expect(screen.getByRole("button", { name: "Verify / re-verify" })).toBeInTheDocument();
+  });
+
+  it("keeps occurrence time after a failed command and hides actions without permission", async () => {
+    controls.permissions.add("milestone_event.create");
+    vi.mocked(api.recordOperationalEvent).mockRejectedValue(new api.ApiError(422, "FUTURE_TIME", "internal detail"));
+    renderDetail();
+    const input = await screen.findByLabelText("زمان وقوع", { selector: "#leg-22-time" }) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "2026-01-03T12:34:56" } });
+    fireEvent.click(screen.getAllByRole("button", { name: "ثبت حرکت" })[0]);
+    expect(await screen.findByRole("alert")).toHaveTextContent("پنج دقیقه");
+    expect(input.value).toBe("2026-01-03T12:34:56.000");
+    expect(screen.queryByText("internal detail")).not.toBeInTheDocument();
+  });
+
+  it("keeps route state readable without report permission", async () => {
+    renderDetail();
+    expect((await screen.findAllByText("Hub → Port", { exact: false })).length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "ثبت حرکت" })).not.toBeInTheDocument();
+  });
   it("renders the detailed timeline and mobile-safe containers", async () => {
     const { container } = renderDetail();
     expect(await screen.findByText("Timeline reconciliation")).toBeInTheDocument();
@@ -181,7 +246,7 @@ describe("Phase 1B shipment detail behavior", () => {
     vi.mocked(api.reconcileRouteTimeline).mockRejectedValue(new api.ApiError(409, "STALE_ROUTE_PLAN_VERSION", "database detail"));
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "به‌روزرسانی برآورد زمانی" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("اطلاعات محموله تغییر کرده است");
+    expect(await screen.findByRole("alert")).toHaveTextContent("اطلاعات عملیات تغییر کرده است");
     expect(screen.queryByText("database detail")).not.toBeInTheDocument();
   });
 
@@ -256,9 +321,9 @@ describe("Phase 1B shipment detail behavior", () => {
   });
 
   it.each([
-    [403, "اجازه انجام این کار را ندارید"],
+    [403, "شما مجوز انجام این اقدام را ندارید"],
     [404, "این محموله دیگر در دسترس نیست"],
-    [409, "اطلاعات محموله تغییر کرده است"],
+    [409, "اطلاعات عملیات تغییر کرده است"],
   ])("sanitizes %s command errors", async (status, expected) => {
     vi.mocked(api.reconcileRouteTimeline).mockRejectedValue(new api.ApiError(status, "INTERNAL_CODE", "sensitive database message"));
     renderDetail();

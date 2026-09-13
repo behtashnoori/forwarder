@@ -1590,11 +1590,15 @@ export interface OperationalShipmentSummary {
     planned_departure: string;
     planned_arrival: string;
     version: number;
+    departure_milestone_id?: string | null;
+    arrival_milestone_id?: string | null;
   };
   route_legs?: Array<
     OperationalShipmentSummary["route_leg"] & {
       sequence_number: number;
       status: string;
+      actual_departure?: string | null;
+      actual_arrival?: string | null;
     }
   >;
   milestones: Array<{
@@ -1710,7 +1714,7 @@ export const createDirectOperationalShipment = (payload: DirectOperationCommand,
 export const createQuoteOperationalShipment = (payload: QuoteOperationCommand, key: string) => request<{data:OperationalShipmentSummary;meta:{created:boolean}}>("/api/operational-shipments/from-accepted-quote", { method:"POST", headers:{"Idempotency-Key":key}, body:JSON.stringify(payload) });
 export function recordOperationalEvent(
   shipmentId: string,
-  milestoneId: number,
+  milestoneId: string,
   occurred_at: string,
   key: string,
 ) {
@@ -1811,6 +1815,8 @@ export interface RouteLeg {
   actual_arrival?: string | null;
   status: string;
   version: number;
+  departure_milestone_id?: string | null;
+  arrival_milestone_id?: string | null;
   source_route_leg_id?: number | null;
 }
 export interface RoutePlanSummary {
