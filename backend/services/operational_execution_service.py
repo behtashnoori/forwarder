@@ -26,6 +26,7 @@ from backend.services.operational_service import (
     OperationalError,
     organization_for_user,
     require_permission,
+    scoped_shipment,
     _parse_utc,
 )
 
@@ -56,6 +57,12 @@ REASON_TARGETS = {"BLOCKED", "SKIPPED", "CANCELLED"}
 
 
 def _shipment(public_id: str, user: dict, permission="operational_execution.read"):
+    # Execution state is a read-only projection of a shipment.  Its GET
+    # surface must use the same tenant, assignment, direct-responsibility and
+    # project-derived scope as the governed shipment detail.  Write callers
+    # retain their existing explicit execution-management contract below.
+    if permission == "operational_execution.read":
+        return scoped_shipment(public_id, user)
     require_permission(user, permission)
     org = organization_for_user(user["id"])
     row = db.session.scalar(
@@ -152,8 +159,11 @@ def milestone_projection(m):
     }
 
 
-def initialization_preview(shipment_id, user):
-    shipment = _shipment(shipment_id, user)
+def initialization_preview(shipment_id, user, *, authorized_shipment=None):
+    # Commands that already passed the explicit manage check may reuse that
+    # exact shipment for their internal readiness calculation.  Public GETs
+    # always resolve through the read-scoped path above.
+    shipment = authorized_shipment or _shipment(shipment_id, user)
     existing = db.session.scalars(
         select(Milestone)
         .where(
@@ -250,7 +260,7 @@ def initialize(shipment_id, payload, user):
         raise OperationalError(
             "STALE_AGGREGATE_VERSION", "Shipment was changed by another operation.", 409
         )
-    preview = initialization_preview(shipment_id, user)
+    preview = initialization_preview(shipment_id, user, authorized_shipment=shipment)
     existing = db.session.scalars(
         select(Milestone)
         .where(
@@ -765,7 +775,10 @@ def progress(shipment_id, user):
 
 def reason_collection(kind, user, payload=None):
     permission = (
-        f"{kind}_reason.manage" if payload is not None else "operational_execution.read"
+        # Reason names are read-only reference data used to label an already
+        # authorized shipment projection.  Managing this governed catalog
+        # remains an explicit, separate permission.
+        f"{kind}_reason.manage" if payload is not None else "operational_shipment.read"
     )
     require_permission(user, permission)
     org = organization_for_user(user["id"])

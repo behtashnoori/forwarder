@@ -85,3 +85,36 @@ def test_project_access_propagates_shipment_and_analytics_read_scope(access_app)
     assert result["rows"][0]["SHIPMENT_COUNT"]["value"] == 1
     admin = analytics.query({"metrics": ["SHIPMENT_COUNT"]}, {"id": x["users"]["aa"].id})
     assert admin["rows"][0]["SHIPMENT_COUNT"]["value"] == 1
+
+
+def test_execution_read_reuses_scoped_shipment_access_without_execution_manage(access_app):
+    """Execution GETs are readable projections, never an execution-write grant."""
+    app, x = access_app; client = app.test_client(); h = x["headers"]
+    shipment_id = x["shipment"].public_id
+    base = f"/api/v2/operational-shipments/{shipment_id}/execution"
+    read_paths = (
+        "/initialization-preview", "/milestones", "/progress", "/events",
+        "/delays", "/exceptions",
+    )
+
+    # Project access is a canonical shipment-read grant.  It must work for
+    # execution state without adding operational_execution.manage.
+    assert client.post(f"/api/v2/projects/{x['a1'].public_id}/access", headers=h("aa"), json={"username": "project-ea"}).status_code == 201
+    for suffix in read_paths:
+        assert client.get(base + suffix, headers=h("ea")).status_code == 200
+    assert client.get("/api/v2/admin/reference-data/delay-reasons", headers=h("ea")).status_code == 200
+    assert client.get("/api/v2/admin/reference-data/exception-reasons", headers=h("ea")).status_code == 200
+    assert client.post("/api/v2/admin/reference-data/delay-reasons", headers=h("ea"), json={"immutable_code": "NOPE"}).status_code == 403
+    assert client.post(base + "/initialize", headers=h("ea"), json={"expected_shipment_version": 1}).status_code == 403
+
+    # Same-tenant visibility alone is insufficient; platform administrators
+    # also have no implicit tenant-work authority.
+    peer = ExpertUser(username="project-peer", password_hash="x", full_name="Peer", authority="EXPERT", is_active=True)
+    db.session.add(peer); db.session.flush()
+    db.session.add(OperationalMembership(organization_id=x["a1"].organization_id, user_id=peer.id, is_active=True, permissions=["operational_shipment.read"]))
+    db.session.commit()
+    peer_headers = {"Authorization": f"Bearer {auth_manager.generate_tokens(peer.id)['access_token']}"}
+    assert client.get(base + "/progress", headers=peer_headers).status_code in {403, 404}
+    assert client.get(base + "/progress", headers=h("ab")).status_code in {403, 404}
+    assert client.get(base + "/progress", headers=h("platform")).status_code in {403, 404}
+    assert client.get(base + "/progress", headers=h("aa")).status_code == 200

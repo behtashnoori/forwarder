@@ -67,6 +67,7 @@ def execution_app():
         db.session.add_all([org, other, operator, verifier, outsider, customer])
         db.session.flush()
         permissions = [
+            "operational_shipment.read",
             "operational_execution.read",
             "operational_execution.manage",
             "operational_event.create",
@@ -411,9 +412,9 @@ def test_opaque_event_create_and_append_only_correction(execution_app):
             payload = svc.events(shipment.public_id, actor(execution_app))
         finally:
             sqlalchemy_event.remove(engine, "before_cursor_execute", capture)
-        # One bounded census-context/fence validation precedes the existing
-        # event queries after the preceding commit starts a new transaction.
-        assert len(statements) <= 7
+        # The canonical shipment scope performs a bounded tenant and
+        # responsibility fence before the existing event projection.
+        assert len(statements) <= 10
         assert len(str(payload).encode("utf-8")) < 16_384
 
 
