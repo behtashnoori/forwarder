@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
 import { getOperationalContext } from "@/lib/api";
+import { currentActorCanManageTenantCustomers } from "@/lib/customerMaintenanceAccess";
 import { useI18n } from "@/i18n";
 import ReleaseIdentity from "@/components/ReleaseIdentity";
 
@@ -13,7 +14,7 @@ export default function OperationsNav() {
   const canReadOperations = permissions.includes("operational_shipment.read");
   const canReadWorkQueue = permissions.includes("oip.read");
   const canReadDashboards = permissions.includes("personal_dashboard.read");
-  const canManageCustomers = (() => { try { const user = JSON.parse(localStorage.getItem("expert_user") || "{}"); return user.authority !== "PLATFORM_ADMIN" && ["admin", "crm_manager", "supervisor", "business_expert"].includes(user.role); } catch { return false; } })();
+  const canManageCustomers = currentActorCanManageTenantCustomers();
   if (!permissions.length) return null;
   return <nav aria-label={t("operations.navLabel")} className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2">
     {canReadOperations && <Button asChild variant="ghost"><Link to="/operations/shipments">{t("operations.shipmentsTitle")}</Link></Button>}

@@ -19,7 +19,6 @@ crm_bp = Blueprint("crm", __name__, url_prefix="/api/crm")
 # Customer Management Routes
 @crm_bp.get("/customers")
 @require_tenant_crm_context()
-@require_role("business_expert")
 def get_customers():
     """Get filtered and paginated customers."""
     try:
@@ -41,7 +40,6 @@ def get_customers():
 
 @crm_bp.post("/customers")
 @require_tenant_crm_context()
-@require_role("business_expert")
 def create_customer():
     """Create a new customer."""
     try:
@@ -65,7 +63,6 @@ def create_customer():
 
 @crm_bp.get("/customers/<int:customer_id>")
 @require_tenant_crm_context()
-@require_role("business_expert")
 def get_customer_detail(customer_id: int):
     """Get detailed information about a customer."""
     try:
@@ -81,7 +78,6 @@ def get_customer_detail(customer_id: int):
 
 @crm_bp.put("/customers/<int:customer_id>")
 @require_tenant_crm_context()
-@require_role("business_expert")
 def update_customer(customer_id: int):
     """Update customer information."""
     try:

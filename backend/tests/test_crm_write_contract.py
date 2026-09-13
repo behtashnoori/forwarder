@@ -29,6 +29,7 @@ def crm_write_app():
             full_name="CRM Write Expert",
             email="crm-write-expert@example.test",
             role="business_expert",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         organization = OperationalOrganization(name="CRM Write Organization")

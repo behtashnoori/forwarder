@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Navigate } from "react-router";
 import { Plus, Search, Users } from "lucide-react";
 import { ApiError, createCustomer, fetchCustomers } from "@/lib/api";
+import { currentActorCanManageTenantCustomers } from "@/lib/customerMaintenanceAccess";
 import PageNav from "@/components/PageNav";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,17 +13,8 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 const emptyForm = { company_name: "", first_name: "", last_name: "", country: "Iran" };
-const customerRoles = new Set(["admin", "crm_manager", "supervisor", "business_expert"]);
-
-function actorCanManageCustomers() {
-  try {
-    const user = JSON.parse(localStorage.getItem("expert_user") || "{}");
-    return user.authority !== "PLATFORM_ADMIN" && customerRoles.has(user.role);
-  } catch { return false; }
-}
-
 export default function CustomerManagement() {
-  const allowed = actorCanManageCustomers();
+  const allowed = currentActorCanManageTenantCustomers();
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [draftSearch, setDraftSearch] = useState("");

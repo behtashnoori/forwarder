@@ -27,6 +27,7 @@ def crm_app():
             full_name="CRM Read Expert",
             email="crm-read-expert@example.test",
             role="business_expert",
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         organization = OperationalOrganization(name="CRM Read Organization")

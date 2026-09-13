@@ -1985,7 +1985,7 @@ paths:
     get:
       tags: [CRM]
       summary: List tenant-owned CRM customers
-      description: Requires an authorized tenant CRM role and exactly one active operational membership. Platform administrators cannot access tenant customer maintenance.
+      description: Requires ORGANIZATION_ADMIN authority and exactly one active operational membership. Platform administrators and Experts cannot access tenant customer maintenance; Experts consume eligible same-tenant customers through operational selectors.
       security:
         - bearerAuth: []
       parameters:
@@ -2020,7 +2020,7 @@ paths:
     post:
       tags: [CRM]
       summary: Create tenant-owned CRM customer
-      description: Tenant identity and ownership scope are derived server-side. Platform administrators cannot create tenant customers.
+      description: Requires ORGANIZATION_ADMIN authority and exactly one active operational membership. Tenant identity and ownership scope are derived server-side. Platform administrators and Experts cannot create tenant customers.
       security:
         - bearerAuth: []
       requestBody:

@@ -79,7 +79,8 @@ def require_tenant_crm_context():
 
     CRM customers are tenant-owned business data.  Platform administration has
     no tenant to infer here and must not acquire one through this surface.
-    Legacy CRM-role authorization remains enforced by the route decorator.
+    Tenant customer maintenance is owned exclusively by Organization Admins;
+    legacy CRM role names and shipment permissions are intentionally irrelevant.
     """
     def decorator(fn):
         @wraps(fn)
@@ -87,8 +88,8 @@ def require_tenant_crm_context():
         def wrapped(*args, **kwargs):
             user = db.session.get(ExpertUser, g.current_user_id)
             authority = effective_authority(user) if user and user.is_active else EXPERT
-            if authority == PLATFORM_ADMIN:
-                return jsonify({"error": "Platform administration cannot manage tenant customers."}), 403
+            if authority != ORGANIZATION_ADMIN:
+                return jsonify({"error": "Organization administrator authority is required for tenant customer maintenance."}), 403
             try:
                 g.organization_context = organization_context_for_authenticated_user(user.id)
             except AdminAuthorizationError as exc:

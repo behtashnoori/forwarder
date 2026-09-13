@@ -17,7 +17,7 @@ const renderPage = () => render(<QueryClientProvider client={new QueryClient({ d
 describe("CustomerManagement", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorage.setItem("expert_user", JSON.stringify({ authority: "ORGANIZATION_ADMIN", role: "admin" }));
+    localStorage.setItem("expert_user", JSON.stringify({ authority: "ORGANIZATION_ADMIN", role: "expert" }));
     vi.mocked(api.fetchCustomers).mockResolvedValue({ customers: [{ id: 9, name: "نماینده ایران خودرو", company_name: "ایران خودرو", customer_type: "prospect", status: "active", created_at: "2026-01-01", total_opportunities: 0, total_activities: 0 }], pagination: { page: 1, per_page: 100, total: 1, pages: 1, has_next: false, has_prev: false } });
   });
 
@@ -60,5 +60,11 @@ describe("CustomerManagement", () => {
   it("does not render for Platform Admin", () => {
     localStorage.setItem("expert_user", JSON.stringify({ authority: "PLATFORM_ADMIN", role: "admin" })); renderPage();
     expect(screen.queryByRole("heading", { name: "مشتریان" })).not.toBeInTheDocument();
+  });
+
+  it("does not render for an ordinary Expert", () => {
+    localStorage.setItem("expert_user", JSON.stringify({ authority: "EXPERT", role: "expert" })); renderPage();
+    expect(screen.queryByRole("heading", { name: "مشتریان" })).not.toBeInTheDocument();
+    expect(api.fetchCustomers).not.toHaveBeenCalled();
   });
 });
