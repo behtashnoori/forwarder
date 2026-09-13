@@ -128,6 +128,11 @@ def _serialize_plan(plan: RoutePlan, include_children=True) -> dict:
 
 
 def _serialize_leg(row: RouteLeg) -> dict:
+    milestones = db.session.scalars(select(Milestone).where(
+        Milestone.route_leg_id == row.id, Milestone.route_plan_id == row.route_plan_id,
+        Milestone.milestone_type.in_(("departure", "arrival")),
+    )).all()
+    milestone_ids = {m.milestone_type: m.public_id for m in milestones}
     return {
         **reads.scope(db.session.get(RoutePlan, row.route_plan_id)),
         "departure_time": reads.time_value(row.planned_departure, row.projected_departure, row.actual_departure),
@@ -143,6 +148,8 @@ def _serialize_leg(row: RouteLeg) -> dict:
         "actual_departure": row.actual_departure.isoformat() if row.actual_departure else None,
         "actual_arrival": row.actual_arrival.isoformat() if row.actual_arrival else None,
         "status": row.status, "version": row.version, "source_route_leg_id": row.source_route_leg_id,
+        "departure_milestone_id": milestone_ids.get("departure"),
+        "arrival_milestone_id": milestone_ids.get("arrival"),
     }
 
 
@@ -757,13 +764,14 @@ def replan(
 
 @atomic_command
 def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user: dict, key: str, action: str) -> dict:
+    base._reject_recorded_at(payload)
     base.require_permission(user, "checkpoint.report")
     shipment = _shipment(shipment_id, user, "operational_shipment.read")
     checkpoint = db.session.scalar(select(OperationalCheckpoint).join(RoutePlan).where(
         OperationalCheckpoint.id == checkpoint_id, RoutePlan.operational_shipment_id == shipment.id
     ).with_for_update())
     if checkpoint is None: raise base.OperationalError("RESOURCE_NOT_FOUND", "Checkpoint was not found.", 404)
-    payload = {**payload, "occurred_at": base._parse_utc(payload.get("occurred_at"), "occurred_at").isoformat()}
+    payload = {**payload, "occurred_at": base._occurrence_time(payload.get("occurred_at")).isoformat()}
     operation = f"checkpoint_{action}_report"
     replay, request_hash = _idempotency(shipment.organization_id, operation, "checkpoint", checkpoint.id, key, payload)
     if replay:
@@ -856,6 +864,7 @@ def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_
 
 @atomic_command
 def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_id: int, payload: dict, user: dict, key: str) -> dict:
+    base._reject_recorded_at(payload)
     base.require_permission(user, "milestone.correct")
     shipment = _shipment(shipment_id, user, "operational_shipment.read")
     milestone = db.session.scalar(select(Milestone).join(OperationalCheckpoint, Milestone.checkpoint_id == OperationalCheckpoint.id).join(RoutePlan).where(
@@ -863,7 +872,7 @@ def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone
         RoutePlan.operational_shipment_id == shipment.id,
     ).with_for_update())
     if milestone is None: raise base.OperationalError("RESOURCE_NOT_FOUND", "Checkpoint milestone was not found.", 404)
-    payload = {**payload, "occurred_at": base._parse_utc(payload.get("occurred_at"), "occurred_at").isoformat(),
+    payload = {**payload, "occurred_at": base._occurrence_time(payload.get("occurred_at")).isoformat(),
                "reason": str(payload.get("reason") or "").strip()}
     replay, request_hash = _idempotency(shipment.organization_id, "checkpoint_milestone_correct", "milestone", milestone.id, key, payload)
     if replay:

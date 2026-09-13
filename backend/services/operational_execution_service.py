@@ -28,6 +28,8 @@ from backend.services.operational_service import (
     require_permission,
     scoped_shipment,
     _parse_utc,
+    _occurrence_time,
+    _reject_recorded_at,
 )
 
 STATUSES = (
@@ -629,9 +631,10 @@ def _replay(milestone, key, command):
 
 @atomic_command
 def create_event(shipment_id, milestone_id, payload, user):
+    _reject_recorded_at(payload)
     shipment = _shipment(shipment_id, user, "operational_event.create")
     milestone = _milestone(shipment, milestone_id, True)
-    effective = _parse_utc(payload.get("effective_at"), "effective_at")
+    effective = _occurrence_time(payload.get("effective_at"), "effective_at")
     command = {"type": "reported", "effective_at": effective.isoformat(), "note": payload.get("note"),
                "expected_version": payload.get("expected_version")}
     key = _command_key({**command, "idempotency_key": payload.get("idempotency_key")}, "report", milestone.public_id)
@@ -643,6 +646,7 @@ def create_event(shipment_id, milestone_id, payload, user):
     if milestone.checkpoint_id:
         raise OperationalError("CHECKPOINT_COMMAND_REQUIRED", "Use the checkpoint occurrence command with processing and dependency checks.", 409)
     projection.assert_new_root(milestone)
+    projection.assert_leg_report_allowed(milestone, effective)
     event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id,
         event_type="reported", occurred_at=effective, actor_user_id=user["id"], note=payload.get("note"),
         idempotency_key=key, request_hash=digest)
@@ -668,9 +672,10 @@ def _target_event(shipment, event_id):
 
 @atomic_command
 def correct_event(shipment_id, event_id, payload, user):
+    _reject_recorded_at(payload)
     shipment = _shipment(shipment_id, user, "operational_event.correct")
     milestone, original = _target_event(shipment, event_id)
-    effective = _parse_utc(payload.get("effective_at"), "effective_at")
+    effective = _occurrence_time(payload.get("effective_at"), "effective_at")
     reason = str(payload.get("reason") or "").strip()
     if not reason:
         raise OperationalError("CORRECTION_REASON_REQUIRED", "Correction reason is required.", 422)

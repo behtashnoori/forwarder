@@ -68,7 +68,11 @@ def current_route(shipment, plan=...):
     for leg in legs:
         sources = {m.milestone_type: proofs[m.id] for m in milestones
                    if m.route_leg_id == leg.id and m.milestone_type in {"departure", "arrival"}}
+        milestone_ids = {m.milestone_type: m.public_id for m in milestones
+                         if m.route_leg_id == leg.id and m.milestone_type in {"departure", "arrival"}}
         leg_views.append({"id": leg.id, "status": leg.status, "source_route_leg_id": leg.source_route_leg_id,
+            "departure_milestone_id": milestone_ids.get("departure"),
+            "arrival_milestone_id": milestone_ids.get("arrival"),
             "departure": time_value(leg.planned_departure, leg.projected_departure, leg.actual_departure),
             "arrival": time_value(leg.planned_arrival, leg.projected_arrival, leg.actual_arrival),
             "occurrence_sources": sources,

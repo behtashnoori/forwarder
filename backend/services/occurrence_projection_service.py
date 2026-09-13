@@ -94,6 +94,23 @@ def assert_new_root(milestone):
         fail("OCCURRENCE_ALREADY_REPORTED", "Use a correction to replace an occurrence.")
 
 
+def assert_leg_report_allowed(milestone, occurred):
+    if milestone.route_leg_id is None or milestone.milestone_type not in {"departure", "arrival"}:
+        return
+    leg = db.session.get(RouteLeg, milestone.route_leg_id)
+    if leg.status in {"blocked", "cancelled"}:
+        fail("INVALID_LEG_TRANSITION", "Blocked or cancelled legs cannot receive new occurrences.")
+    if milestone.milestone_type == "arrival":
+        departure = db.session.scalar(select(Milestone).where(
+            Milestone.route_leg_id == leg.id, Milestone.milestone_type == "departure",
+        ))
+        event = effective_occurrence(departure) if departure else None
+        if event is None:
+            fail("INVALID_ACTUAL_CHRONOLOGY", "Arrival requires an effective departure occurrence.")
+        if aware(occurred) < aware(event.occurred_at):
+            fail("INVALID_ACTUAL_CHRONOLOGY", "Arrival cannot precede departure.")
+
+
 def ensure_leg_milestones(leg, shipment):
     for code, planned in (("departure", leg.planned_departure), ("arrival", leg.planned_arrival)):
         row = db.session.scalar(select(Milestone).where(

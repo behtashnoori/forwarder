@@ -56,7 +56,7 @@ def test_report_verify_correct_idempotency_and_atomic_chronology(operational_app
         count = MilestoneEvent.query.count()
         with pytest.raises(base.OperationalError) as invalid:
             base.correct_milestone(shipment.id, milestones["departure"].id,
-                {"expected_version": milestones["departure"].version, "occurred_at": (start+timedelta(hours=3)).isoformat(),
+                {"expected_version": milestones["departure"].version, "occurred_at": (start+timedelta(hours=1, minutes=30)).isoformat(),
                  "reason": "bad chronology"}, _user(operational_app), "bad")
         assert invalid.value.code == "INVALID_ACTUAL_CHRONOLOGY"
         assert MilestoneEvent.query.count() == count
@@ -72,13 +72,14 @@ def test_report_verify_correct_idempotency_and_atomic_chronology(operational_app
         assert snapshot(departure) == before
 
 
-def test_late_departure_and_competing_roots(operational_app):
+def test_departure_sequence_and_competing_roots(operational_app):
     with operational_app.app_context():
         shipment, leg, milestones = setup(operational_app)
         now = datetime.now(timezone.utc)
+        with pytest.raises(base.OperationalError, match="requires an effective departure"):
+            report(operational_app, shipment, milestones["arrival"], now, "arrival")
+        report(operational_app, shipment, milestones["departure"], now-timedelta(hours=1), "departure")
         report(operational_app, shipment, milestones["arrival"], now, "arrival")
-        assert leg.status == "completed" and leg.actual_departure is None
-        report(operational_app, shipment, milestones["departure"], now-timedelta(hours=1), "late-departure")
         assert leg.status == shipment.lifecycle_status == "completed"
         with pytest.raises(base.OperationalError) as conflict:
             report(operational_app, shipment, milestones["departure"], now-timedelta(minutes=50), "another")
@@ -100,7 +101,9 @@ def test_leg_guard_and_explicit_shipment_cancel(operational_app, guard):
         leg.status = guard
         shipment.lifecycle_status = "cancelled"
         db.session.commit()
-        report(operational_app, shipment, milestones["arrival"], datetime.now(timezone.utc), "arrival")
+        with pytest.raises(base.OperationalError) as rejected:
+            report(operational_app, shipment, milestones["arrival"], datetime.now(timezone.utc), "arrival")
+        assert rejected.value.code == "INVALID_LEG_TRANSITION"
         assert leg.status == guard and shipment.lifecycle_status == "cancelled"
 
 
@@ -122,6 +125,8 @@ def test_zero_multileg_and_cancelled_denominator(operational_app):
         projection.ensure_leg_milestones(second, shipment)
         old.status = "active"; db.session.commit()
         assert Milestone.query.filter_by(route_leg_id=second.id).count() == 2
+        first_departure = datetime.now(timezone.utc)-timedelta(minutes=1)
+        report(operational_app, shipment, milestones["departure"], first_departure, "first-departure")
         report(operational_app, shipment, milestones["arrival"], datetime.now(timezone.utc), "first-arrival")
         assert shipment.lifecycle_status == "in_progress"
         second.status = "cancelled"; projection.project_shipment(shipment)

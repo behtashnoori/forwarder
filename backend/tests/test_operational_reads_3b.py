@@ -27,6 +27,7 @@ def test_replan_retains_evidence_snapshots_and_future_times(operational_app):
         arrival.target_metadata = {"note": "Historical instruction"}
         db.session.commit()
         occurred = datetime.now(timezone.utc)-timedelta(hours=2)
+        report(operational_app, shipment, milestones["departure"], occurred-timedelta(minutes=30), "departure")
         event = report(operational_app, shipment, arrival, occurred, "arrival")
         base.verify_milestone(shipment.id, arrival.id, arrival.version, _user(operational_app, "verifier"))
         assert reads.current_route(shipment)["route_revision"] == 1
@@ -58,7 +59,7 @@ def test_replan_retains_evidence_snapshots_and_future_times(operational_app):
         assert proof["source_route_revision"] == 1
         history = reads.history(shipment)
         physical = [i for i in history["items"] if i["classification"] == "PHYSICAL_OCCURRENCE"]
-        assert len(physical) == 1 and physical[0]["route_revision"] == 1 and not physical[0]["is_active"]
+        assert len(physical) == 2 and all(i["route_revision"] == 1 and not i["is_active"] for i in physical)
         decision = next(i for i in history["items"] if i["classification"] == "VERIFICATION_DECISION")
         assert decision["related_event_public_id"] == event.public_id
         assert len([i for i in history["items"] if i["classification"] == "REPLAN_REVISION"]) == 2

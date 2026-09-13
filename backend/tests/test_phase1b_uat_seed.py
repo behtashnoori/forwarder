@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from datetime import datetime, timezone
 
 import pytest
 from sqlalchemy.engine import URL
@@ -139,7 +140,7 @@ def test_reporter_detail_reads_and_report_are_allowed_but_privileged_actions_are
     report = client.post(
         f"/api/operational-shipments/{shipment.public_id}/checkpoints/{checkpoint.id}/arrive",
         headers={**headers, "Idempotency-Key": "reporter-permission-boundary-arrive"},
-        json={"occurred_at": "2030-01-03T12:00:00Z", "expected_version": checkpoint.version},
+        json={"occurred_at": datetime.now(timezone.utc).isoformat(), "expected_version": checkpoint.version},
     )
     assert report.status_code == 200
     assert client.post(

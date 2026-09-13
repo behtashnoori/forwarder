@@ -318,6 +318,18 @@ def _parse_utc(value: Any, field: str) -> datetime:
     return parsed.astimezone(timezone.utc)
 
 
+def _occurrence_time(value: Any, field: str = "occurred_at") -> datetime:
+    occurred = _parse_utc(value, field)
+    if occurred > utcnow() + timedelta(minutes=5):
+        raise OperationalError("INVALID_MILESTONE_TRANSITION", f"{field} is unreasonably far in the future.")
+    return occurred
+
+
+def _reject_recorded_at(payload: dict) -> None:
+    if "recorded_at" in payload:
+        raise OperationalError("INVALID_MILESTONE_TRANSITION", "recorded_at is server-generated.")
+
+
 def _hash(payload: dict[str, Any]) -> str:
     return hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
@@ -876,6 +888,8 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
         )
         .order_by(Milestone.planned_at, Milestone.id)
     ).all()
+    leg_milestones = {(m.route_leg_id, m.milestone_type): m.public_id for m in milestones
+                      if m.route_leg_id and m.milestone_type in {"departure", "arrival"}}
     events = db.session.scalars(
         select(MilestoneEvent)
         .where(MilestoneEvent.milestone_id.in_([m.id for m in milestones]),
@@ -929,6 +943,8 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
     def leg_data(row):
         return {
             "id": row.id,
+            "departure_milestone_id": leg_milestones.get((row.id, "departure")),
+            "arrival_milestone_id": leg_milestones.get((row.id, "arrival")),
             "sequence_number": row.sequence_number,
             "origin": row.origin_snapshot,
             "destination": row.destination_snapshot,
@@ -1055,12 +1071,8 @@ def record_event(
             MilestoneEvent.idempotency_key == key,
         )
     )
-    occurred = _parse_utc(payload.get("occurred_at"), "occurred_at")
-    if occurred > utcnow() + timedelta(minutes=5):
-        raise OperationalError(
-            "INVALID_MILESTONE_TRANSITION",
-            "occurred_at is unreasonably far in the future.",
-        )
+    _reject_recorded_at(payload)
+    occurred = _occurrence_time(payload.get("occurred_at"))
     event_hash = _hash({"occurred_at": occurred.isoformat(), "event_type": "reported"})
     if existing:
         if existing.request_hash != event_hash:
@@ -1072,6 +1084,7 @@ def record_event(
         return existing
     from backend.services import occurrence_projection_service as projection
     projection.assert_new_root(milestone)
+    projection.assert_leg_report_allowed(milestone, occurred)
     event = MilestoneEvent(
         organization_id=shipment.organization_id,
         milestone_id=milestone.id,
@@ -1199,7 +1212,8 @@ def correct_milestone(
             "CORRECTION_REASON_REQUIRED", "Correction reason is required."
         )
     expected = payload.get("expected_version")
-    occurred = _parse_utc(payload.get("occurred_at"), "occurred_at")
+    _reject_recorded_at(payload)
+    occurred = _occurrence_time(payload.get("occurred_at"))
     event_hash = _hash(
         {
             "occurred_at": occurred.isoformat(),

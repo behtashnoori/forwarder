@@ -23,6 +23,110 @@ def _leg(app, sequence, origin, destination, start):
     }
 
 
+def test_leg_milestone_mapping_and_occurrence_guards(operational_app):
+    with operational_app.app_context():
+        shipment, _ = base.create_from_accepted_quote(_payload(operational_app), _user(operational_app), "integrity-leg")
+        plan = RoutePlan.query.filter_by(operational_shipment_id=shipment.id, is_active=True).one()
+        leg = RouteLeg.query.filter_by(route_plan_id=plan.id).first()
+        milestones = {m.milestone_type: m for m in Milestone.query.filter_by(route_leg_id=leg.id)}
+        read = base.shipment_graph(shipment)["route_legs"][0]
+        route_read = service._serialize_leg(leg)
+        for kind in ("departure", "arrival"):
+            assert read[f"{kind}_milestone_id"] == milestones[kind].public_id
+            assert route_read[f"{kind}_milestone_id"] == milestones[kind].public_id
+        now = datetime.now(timezone.utc)
+        audit_count = OperationalAudit.query.count()
+        outbox_count = OperationalOutbox.query.count()
+        with pytest.raises(base.OperationalError) as missing:
+            base.record_event(shipment.id, milestones["arrival"].id, {"occurred_at": now.isoformat()}, _user(operational_app), "arrival-first")
+        assert missing.value.code == "INVALID_ACTUAL_CHRONOLOGY"
+        assert OperationalAudit.query.count() == audit_count
+        assert OperationalOutbox.query.count() == outbox_count
+        assert MilestoneEvent.query.count() == 0
+        departed = base.record_event(shipment.id, milestones["departure"].id, {"occurred_at": now.isoformat()}, _user(operational_app), "departure")
+        assert base.record_event(shipment.id, milestones["departure"].id, {"occurred_at": now.isoformat()}, _user(operational_app), "departure").id == departed.id
+        with pytest.raises(base.OperationalError) as early:
+            base.record_event(shipment.id, milestones["arrival"].id, {"occurred_at": (now-timedelta(seconds=1)).isoformat()}, _user(operational_app), "early")
+        assert early.value.code == "INVALID_ACTUAL_CHRONOLOGY"
+        for status in ("blocked", "cancelled"):
+            leg.status = status; db.session.commit()
+            for kind in ("departure", "arrival"):
+                target = milestones[kind]
+                with pytest.raises(base.OperationalError) as stopped:
+                    base.record_event(shipment.id, target.id, {"occurred_at": now.isoformat()}, _user(operational_app), f"{status}-{kind}")
+                # A reported departure remains replayable even after state changes.
+                assert stopped.value.code in {"INVALID_LEG_TRANSITION", "OCCURRENCE_ALREADY_REPORTED"}
+
+
+def test_checkpoint_future_time_rejected_atomically(operational_app):
+    with operational_app.app_context():
+        shipment, _, _, checkpoint = _draft_with_checkpoint(operational_app, "integrity-future")
+        future = (datetime.now(timezone.utc) + timedelta(minutes=6)).isoformat()
+        for action in ("arrive", "complete_processing", "depart"):
+            with pytest.raises(base.OperationalError) as error:
+                service.checkpoint_command(shipment.id, checkpoint.id, {"expected_version": 1, "occurred_at": future}, _user(operational_app), f"future-{action}", action)
+            assert error.value.code == "INVALID_MILESTONE_TRANSITION"
+        assert MilestoneEvent.query.count() == 0
+        assert OperationalIdempotency.query.filter(OperationalIdempotency.operation.like("checkpoint_%_report")).count() == 0
+
+
+@pytest.mark.parametrize("status", ["blocked", "cancelled"])
+@pytest.mark.parametrize("kind", ["departure", "arrival"])
+def test_unavailable_leg_rejects_new_occurrence(operational_app, status, kind):
+    with operational_app.app_context():
+        shipment, _ = base.create_from_accepted_quote(_payload(operational_app), _user(operational_app), f"integrity-{status}-{kind}")
+        leg = RouteLeg.query.join(RoutePlan).filter(RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True)).first()
+        target = Milestone.query.filter_by(route_leg_id=leg.id, milestone_type=kind).one()
+        leg.status = status; db.session.commit()
+        before = (MilestoneEvent.query.count(), OperationalAudit.query.count(), OperationalOutbox.query.count())
+        with pytest.raises(base.OperationalError) as error:
+            base.record_event(shipment.id, target.id, {"occurred_at": datetime.now(timezone.utc).isoformat()}, _user(operational_app), f"reject-{status}-{kind}")
+        assert error.value.code == "INVALID_LEG_TRANSITION"
+        assert (MilestoneEvent.query.count(), OperationalAudit.query.count(), OperationalOutbox.query.count()) == before
+
+
+def test_multileg_milestone_mapping(operational_app):
+    with operational_app.app_context():
+        shipment, _ = base.create_from_accepted_quote(_payload(operational_app), _user(operational_app), "integrity-multileg")
+        ids = operational_app.config["phase1a"]
+        start = datetime.now(timezone.utc) + timedelta(days=1)
+        plan = service.create_plan(shipment.id, {"legs": [
+            _leg(operational_app, 1, ids["origin"], ids["destination"], start),
+            _leg(operational_app, 2, ids["destination"], ids["origin"], start + timedelta(hours=3)),
+        ]}, _user(operational_app))
+        service.validate_plan(shipment.id, plan["id"], _user(operational_app))
+        service.activate_plan(shipment.id, plan["id"], {"expected_version": 1}, _user(operational_app))
+        read = base.shipment_graph(shipment)["route_legs"]
+        assert len(read) == 2
+        assert len({row["departure_milestone_id"] for row in read}) == 2
+        for row in read:
+            for kind in ("departure", "arrival"):
+                milestone = Milestone.query.filter_by(route_leg_id=row["id"], milestone_type=kind).one()
+                assert row[f"{kind}_milestone_id"] == milestone.public_id
+
+
+def test_occurrence_time_policy_and_correction(operational_app):
+    with operational_app.app_context():
+        shipment, _ = base.create_from_accepted_quote(_payload(operational_app), _user(operational_app), "integrity-correction-time")
+        leg = RouteLeg.query.join(RoutePlan).filter(RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True)).first()
+        departure = Milestone.query.filter_by(route_leg_id=leg.id, milestone_type="departure").one()
+        for timestamp in ("not-a-date", datetime.now().isoformat()):
+            with pytest.raises(base.OperationalError) as error:
+                base.record_event(shipment.id, departure.id, {"occurred_at": timestamp}, _user(operational_app), "invalid-time")
+            assert error.value.code == "INVALID_ROUTE_TIMELINE"
+        near = (datetime.now(timezone.utc) + timedelta(minutes=4, seconds=50)).isoformat()
+        report = base.record_event(shipment.id, departure.id, {"occurred_at": near}, _user(operational_app), "near-future")
+        assert report.recorded_at is not None and report.occurred_at != report.recorded_at
+        with pytest.raises(base.OperationalError) as error:
+            base.correct_milestone(shipment.id, departure.id, {"expected_version": departure.version,
+                "occurred_at": (datetime.now(timezone.utc)+timedelta(minutes=6)).isoformat(), "reason": "clock"}, _user(operational_app), "future-correction")
+        assert error.value.code == "INVALID_MILESTONE_TRANSITION"
+        assert MilestoneEvent.query.filter_by(milestone_id=departure.id).count() == 1
+        correction = base.correct_milestone(shipment.id, departure.id, {"expected_version": departure.version,
+            "occurred_at": datetime.now(timezone.utc).isoformat(), "reason": "clock"}, _user(operational_app), "valid-correction")
+        assert correction.supersedes_event_id == report.id
+
+
 def test_create_validate_activate_and_replan(operational_app):
     with operational_app.app_context():
         shipment, _ = base.create_from_accepted_quote(_payload(operational_app), _user(operational_app), "phase1b-source")
