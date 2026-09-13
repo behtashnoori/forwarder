@@ -89,7 +89,7 @@ describe("Phase 1B shipment detail behavior", () => {
   it("renders the detailed timeline and mobile-safe containers", async () => {
     const { container } = renderDetail();
     expect(await screen.findByText("Timeline reconciliation")).toBeInTheDocument();
-    expect(screen.getByText("Leg 3")).toBeInTheDocument();
+    expect(screen.getAllByText("بخش مسیر 3").length).toBeGreaterThan(0);
     expect(screen.getByText("Actionable", { exact: false })).toBeInTheDocument();
     expect(container.querySelector("main")).toHaveClass("overflow-x-hidden", "p-3");
     expect(container.querySelector(".overflow-x-auto")).toBeInTheDocument();
@@ -142,7 +142,7 @@ describe("Phase 1B shipment detail behavior", () => {
 
   it("does not request anything for an invalid route identity", async () => {
     render(<MemoryRouter initialEntries={["/operations/shipments/undefined"]}><Routes><Route path="/operations/shipments/:id" element={<OperationalShipmentDetail />} /></Routes></MemoryRouter>);
-    expect(await screen.findByRole("alert")).toHaveTextContent("valid resource identity");
+    expect(await screen.findByRole("alert")).toHaveTextContent("شناسه معتبر");
     expect(api.getOperationalShipment).not.toHaveBeenCalled();
     expect(api.listRoutePlans).not.toHaveBeenCalled();
     expect(api.getRouteTimeline).not.toHaveBeenCalled();
@@ -152,7 +152,7 @@ describe("Phase 1B shipment detail behavior", () => {
   it("stops before subrequests when response public_id disagrees with the route", async () => {
     vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, public_id: "22222222-2222-4222-8222-222222222222" } });
     renderDetail();
-    expect(await screen.findByRole("alert")).toHaveTextContent("does not match this link");
+    expect(await screen.findByRole("alert")).toHaveTextContent("یکسان نیست");
     expect(api.listRoutePlans).not.toHaveBeenCalled();
     expect(api.getRouteTimeline).not.toHaveBeenCalled();
     expect(api.listRouteExceptions).not.toHaveBeenCalled();
@@ -170,7 +170,7 @@ describe("Phase 1B shipment detail behavior", () => {
     vi.mocked(api.reconcileRouteTimeline).mockResolvedValue({ data: { route_plan_id: 20, revision: 2, version: 4, reconciled_at: null, updated_checkpoints: 0, actual_override_count: 0, replayed: false } });
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Reconcile timeline" }));
-    expect(await screen.findByRole("status")).toHaveTextContent("No timeline changes were required.");
+    expect(await screen.findByRole("status")).toHaveTextContent("تغییری در زمان‌بندی مسیر لازم نبود.");
   });
 
   it("sanitizes stale timeline conflicts", async () => {
@@ -215,7 +215,7 @@ describe("Phase 1B shipment detail behavior", () => {
     renderDetail();
 
     fireEvent.click(await screen.findByRole("button", { name: "Correct" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("A reason is required.");
+    expect(screen.getByRole("alert")).toHaveTextContent("ثبت دلیل الزامی است.");
     expect(screen.queryByRole("button", { name: "Report arrival" })).not.toBeInTheDocument();
     expect(api.correctRouteMilestone).not.toHaveBeenCalled();
   });
@@ -223,7 +223,7 @@ describe("Phase 1B shipment detail behavior", () => {
   it("requires correction and replan reasons", async () => {
     renderDetail();
     fireEvent.click(await screen.findByRole("button", { name: "Correct" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("A reason is required.");
+    expect(screen.getByRole("alert")).toHaveTextContent("ثبت دلیل الزامی است.");
     expect(api.correctRouteMilestone).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Replan future segments" }));
     expect(api.replanRoute).not.toHaveBeenCalled();
@@ -245,7 +245,7 @@ describe("Phase 1B shipment detail behavior", () => {
     expect((await screen.findAllByText("CHECKPOINT_OVERDUE")).length).toBe(2);
     expect(screen.getByText("Source: manual", { exact: false })).toHaveTextContent("carrier confirmed");
     fireEvent.click(screen.getByRole("button", { name: "Resolve manually" }));
-    expect(screen.getByRole("alert")).toHaveTextContent("A reason is required.");
+    expect(screen.getByRole("alert")).toHaveTextContent("ثبت دلیل الزامی است.");
     fireEvent.change(screen.getByLabelText("Resolution reason for CHECKPOINT_OVERDUE"), { target: { value: "Reviewed evidence" } });
     fireEvent.click(screen.getByRole("button", { name: "Resolve manually" }));
     await waitFor(() => expect(api.resolveRouteException).toHaveBeenCalledWith(40, 2, "Reviewed evidence", expect.any(String)));

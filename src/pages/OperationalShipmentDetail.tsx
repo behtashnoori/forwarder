@@ -46,8 +46,8 @@ const safeError = (error: unknown) => {
 const when = (value: string | null | undefined, locale: string) =>
   value ? new Date(value).toLocaleString(locale, { timeZoneName: "short" }) : "ثبت نشده";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-const invalidIdentityMessage = "This shipment link does not contain a valid resource identity.";
-const inconsistentIdentityMessage = "The shipment identity returned by the server does not match this link.";
+const invalidIdentityMessage = "پیوند محموله دارای شناسه معتبر نیست.";
+const inconsistentIdentityMessage = "شناسه بازگشتی محموله با پیوند بازشده یکسان نیست.";
 
 export default function OperationalShipmentDetail() {
   const routeShipmentPublicId = useParams().id || "";
@@ -103,7 +103,7 @@ export default function OperationalShipmentDetail() {
       setPending(name); setError(""); setNotice("");
       const response = await action() as { data?: { replayed?: boolean; updated_checkpoints?: number } };
       const noOp = response?.data?.replayed || response?.data?.updated_checkpoints === 0;
-      setNotice(noOp ? "No timeline changes were required." : success);
+      setNotice(noOp ? "تغییری در زمان‌بندی مسیر لازم نبود." : success);
       await load();
     } catch (caught) {
       setError(safeError(caught));
@@ -113,7 +113,7 @@ export default function OperationalShipmentDetail() {
   };
   const requireReason = (name: string, action: (reason: string) => Promise<unknown>, success: string) => {
     const reason = reasons[name]?.trim();
-    if (!reason) { setError("A reason is required."); return; }
+    if (!reason) { setError("ثبت دلیل الزامی است."); return; }
     void run(name, () => action(reason), success);
   };
 
@@ -134,7 +134,7 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
               <p><span className="text-slate-500">مشتری</span><br /><strong>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</strong></p>
-              <p><span className="text-slate-500">پروژه</span><br />{data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id}</Link> : "—"}</p>
+              <p><span className="text-slate-500">پروژه</span><br />{data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id}</Link> : data.source.type === "direct" ? "محموله مستقیم؛ بدون پروژه" : "ثبت نشده"}</p>
               <p><span className="text-slate-500">مبدأ ← مقصد</span><br /><strong>{data.route_leg?.origin.display_name || "ثبت نشده"} → {data.route_leg?.destination.display_name || "ثبت نشده"}</strong></p>
               <p><span className="text-slate-500">روش حمل</span><br /><strong>{data.route_leg?.transport_mode || "-"}</strong></p>
               <p><span className="text-slate-500">وضعیت محموله</span><br /><strong>{data.status === "planned" ? "برنامه‌ریزی‌شده" : data.status}</strong></p>
@@ -183,13 +183,13 @@ export default function OperationalShipmentDetail() {
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="Multi-leg route">
                 {displayedLegs.map((leg, index) => (
                   <article key={leg.id} className="min-w-0 rounded border p-3">
-                    <strong>Leg {index + 1}</strong>
-                    <p className="break-words">{leg.origin.display_name || "Unknown"} → {leg.destination.display_name || "Unknown"}</p>
+                    <strong>بخش مسیر {index + 1}</strong>
+                    <p className="break-words">{leg.origin.display_name || "ثبت نشده"} → {leg.destination.display_name || "ثبت نشده"}</p>
                     <p>{leg.transport_mode} · {leg.status || "planned"} · v{leg.version}</p>
                     <p>Planned: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>
-                    {"projected_departure" in leg && <p>Projected: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}
-                    {"actual_departure" in leg && <p>Actual: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}
-                    {"source_route_leg_id" in leg && leg.source_route_leg_id && <p>Copied from the prior route revision.</p>}
+                    {"projected_departure" in leg && <p>برآورد فعلی: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}
+                    {"actual_departure" in leg && <p>زمان واقعی: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}
+                    {"source_route_leg_id" in leg && leg.source_route_leg_id && <p>از بازنگری قبلی مسیر منتقل شده است.</p>}
                   </article>
                 ))}
               </div>
