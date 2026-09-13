@@ -22,7 +22,7 @@ verifier = module("release_verifier", ROOT / "scripts/verify_release_artifact.py
 
 
 def test_builder_pins_current_head_and_approved_baseline():
-    assert builder.EXPECTED_HEAD == "20260909_cargo_transport_allocation"
+    assert builder.EXPECTED_HEAD == "20260920_legal_customer_nullable_contact_names"
     payload = json.loads((ROOT / builder.BASELINE).read_text(encoding="utf-8"))
     assert builder.canonical(payload) == builder.BASELINE_CHECKSUM
     assert len(payload["approved_global_logistics_points"]) == 9
@@ -47,6 +47,14 @@ def test_normalize_alembic_head_accepts_one_decorated_head(raw):
 def test_normalize_alembic_head_fails_closed(raw):
     with pytest.raises(builder.BuildError, match="unexpected Alembic heads"):
         builder.normalize_alembic_heads(raw)
+
+
+@pytest.mark.parametrize("raw", [
+    "20260919_operational_event_location_evidence (head)",
+    "20260909_cargo_transport_allocation (head)",
+])
+def test_current_governed_head_rejects_other_single_heads(raw):
+    assert builder.normalize_alembic_heads(raw) != builder.EXPECTED_HEAD
 
 
 def test_external_release_commands_are_bounded_and_timeout_is_diagnostic(tmp_path):
