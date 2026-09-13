@@ -35,9 +35,10 @@ def build_customer_summary(customer: Customer | None) -> dict[str, Any] | None:
     if customer is None:
         return None
 
+    contact_name = " ".join(part for part in (customer.first_name, customer.last_name) if part)
     return {
         "id": customer.id,
-        "name": f"{customer.first_name} {customer.last_name}",
+        "name": contact_name,
         "company_name": customer.company_name,
         "email": customer.email,
         "phone": customer.phone,

@@ -47,9 +47,12 @@ def headers(token):
 
 def test_tenant_customer_create_list_search_selector_and_direct_roundtrip(customer_app):
     client = customer_app["app"].test_client()
-    created = client.post("/api/crm/customers", headers=headers(customer_app["tokens"]["a"]), json={"company_name": "ایران خودرو", "first_name": "نماینده", "last_name": "ایران خودرو", "country": "Iran"})
+    created = client.post("/api/crm/customers", headers=headers(customer_app["tokens"]["a"]), json={"company_name": "ایران خودرو", "country": "Iran"})
     assert created.status_code == 201
     customer_id = created.get_json()["customer_id"]
+    with customer_app["app"].app_context():
+        legal_customer = db.session.get(Customer, customer_id)
+        assert legal_customer.first_name is None and legal_customer.last_name is None
     own = client.get("/api/crm/customers?search=ایران", headers=headers(customer_app["tokens"]["a"]))
     assert own.status_code == 200 and [row["id"] for row in own.get_json()["customers"]] == [customer_id]
     foreign = client.get("/api/crm/customers?search=ایران", headers=headers(customer_app["tokens"]["b"]))

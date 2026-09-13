@@ -86,4 +86,4 @@ def test_expert_sla_upgrade_constraints_and_downgrade(tmp_path):
         assert "sla_response_work_minutes" not in columns
         assert "ck_expert_user_sla_response_work_minutes" not in checks
 
-    assert ScriptDirectory.from_config(config).get_heads() == ["20260919_operational_event_location_evidence"]
+    assert ScriptDirectory.from_config(config).get_heads() == ["20260920_legal_customer_nullable_contact_names"]

@@ -28,7 +28,7 @@ describe("CustomerManagement", () => {
     expect(api.fetchCustomers).toHaveBeenCalledWith(expect.objectContaining({ per_page: 100 }));
   });
 
-  it("requires contact fields before creating", async () => {
+  it("requires a company identity before creating", async () => {
     const user = userEvent.setup(); renderPage();
     await screen.findByText("ایران خودرو");
     await user.click(screen.getByRole("button", { name: "ایجاد مشتری" }));
@@ -40,8 +40,6 @@ describe("CustomerManagement", () => {
     const user = userEvent.setup(); vi.mocked(api.createCustomer).mockResolvedValue({ message: "مشتری با موفقیت ایجاد شد", customer_id: 10 }); renderPage();
     await screen.findByText("ایران خودرو"); await user.click(screen.getByRole("button", { name: "ایجاد مشتری" }));
     await user.type(screen.getByLabelText("نام شرکت *"), "ایران خودرو");
-    await user.type(screen.getByLabelText("نام *"), "نماینده");
-    await user.type(screen.getByLabelText("نام خانوادگی *"), "ایران خودرو");
     await user.click(screen.getByRole("button", { name: "ثبت مشتری" }));
     await waitFor(() => expect(api.createCustomer).toHaveBeenCalledWith(expect.objectContaining({ company_name: "ایران خودرو", duplicate_acknowledged: false })));
     await waitFor(() => expect(api.fetchCustomers).toHaveBeenCalledTimes(2));
@@ -51,7 +49,7 @@ describe("CustomerManagement", () => {
     const user = userEvent.setup();
     vi.mocked(api.createCustomer).mockRejectedValueOnce(new api.ApiError(409, "DUPLICATE_CUSTOMER_CONFIRMATION_REQUIRED", "duplicate"));
     renderPage(); await screen.findByText("ایران خودرو"); await user.click(screen.getByRole("button", { name: "ایجاد مشتری" }));
-    await user.type(screen.getByLabelText("نام شرکت *"), "ایران خودرو"); await user.type(screen.getByLabelText("نام *"), "نماینده"); await user.type(screen.getByLabelText("نام خانوادگی *"), "ایران خودرو");
+    await user.type(screen.getByLabelText("نام شرکت *"), "ایران خودرو");
     await user.click(screen.getByRole("button", { name: "ثبت مشتری" }));
     expect(await screen.findByText("مشتری مشابهی در همین سازمان پیدا شد. پس از بررسی، دوباره ایجاد را تایید کنید.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "تایید و ایجاد مشتری" })).toBeInTheDocument();

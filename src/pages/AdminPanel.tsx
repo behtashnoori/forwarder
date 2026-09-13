@@ -42,6 +42,7 @@ import UserManagement from "./UserManagement";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
 import ReleaseIdentity from "@/components/ReleaseIdentity";
+import { currentActorCanManageTenantCustomers } from "@/lib/customerMaintenanceAccess";
 
 type MetricCardProps = {
   label: string;
@@ -135,6 +136,7 @@ const AdminPanel = () => {
       return false;
     }
   }, []);
+  const canManageCustomers = currentActorCanManageTenantCustomers();
 
   const adminLabel = useMemo(() => {
     try {
@@ -331,6 +333,7 @@ const AdminPanel = () => {
             {isPlatformAdmin && <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>کاتالوگ اسناد</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>الزامات مستندات سازمان</TabsTrigger>}
+            {canManageCustomers && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/customers")}><Users className="h-4 w-4"/>مشتریان</Button>}
             {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>}
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
             <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی سازمان</TabsTrigger>

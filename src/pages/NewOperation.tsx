@@ -37,6 +37,7 @@ import { useI18n } from "@/i18n";
 type Source = "direct" | "accepted_quote";
 type Side = {
   kind: "domestic" | "international";
+  locationMode: "facility" | "geography";
   countryId: string;
   provinceId: string;
   cityId: string;
@@ -56,6 +57,7 @@ type FieldError =
   | "cargoUom";
 const initialSide: Side = {
   kind: "domestic",
+  locationMode: "facility",
   countryId: "",
   provinceId: "",
   cityId: "",
@@ -247,6 +249,8 @@ export default function NewOperation() {
   const [departure, setDeparture] = useState("");
   const [arrival, setArrival] = useState("");
   const [loading, setLoading] = useState("");
+  const [facilityLoading, setFacilityLoading] = useState(true);
+  const [facilityError, setFacilityError] = useState("");
   const [selectorError, setSelectorError] = useState("");
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<
@@ -292,7 +296,8 @@ export default function NewOperation() {
       .catch((caught) => setSelectorError(errorText(caught)));
     listLogisticsPoints({ active: 1, per_page: 100 })
       .then((response) => setLogisticsPoints(response.items.filter((point) => point.is_active)))
-      .catch((caught) => setSelectorError(errorText(caught)));
+      .catch((caught) => setFacilityError(errorText(caught)))
+      .finally(() => setFacilityLoading(false));
   }, []);
   useEffect(() => {
     getShipmentCargoOptions(projectId || undefined, cargoQuery)
@@ -394,7 +399,7 @@ export default function NewOperation() {
     } else if (sideName === "destination") void loadIran();
   };
   const location = (side: Side): OperationalLocationRef | null => {
-    if (side.logisticsPointId)
+    if (side.locationMode === "facility" && side.logisticsPointId)
       return { source_type: "logistics_point", source_id: side.logisticsPointId };
     const selected = iran.find(
       (option) =>
@@ -550,15 +555,30 @@ export default function NewOperation() {
           <option value="domestic">{t("operations.domesticIran")}</option>
           <option value="international">{t("operations.international")}</option>
         </select>
-        <Label htmlFor={`${sideName}-logistics-point`}>Operational facility (optional)</Label>
+        <Label htmlFor={`${sideName}-location-mode`}>روش تعیین مکان</Label>
+        <select
+          id={`${sideName}-location-mode`}
+          aria-label={`${label} روش تعیین مکان`}
+          className="min-h-11 w-full rounded border px-3"
+          value={side.locationMode}
+          onChange={(event) => setter({ ...initialSide, kind: side.kind, locationMode: event.target.value as Side["locationMode"] })}
+        >
+          <option value="facility">نقطه عملیاتی</option>
+          <option value="geography">فقط موقعیت جغرافیایی</option>
+        </select>
+        {side.locationMode === "facility" ? <>
+        <Label htmlFor={`${sideName}-logistics-point`}>نقطه عملیاتی</Label>
+        {facilityLoading ? <p role="status">در حال دریافت نقاط عملیاتی…</p> : null}
+        {facilityError ? <p role="alert">{facilityError}</p> : null}
         <select
           id={`${sideName}-logistics-point`}
           aria-label={`${label} operational facility`}
           className="min-h-11 w-full rounded border px-3"
           value={side.logisticsPointId}
+          disabled={facilityLoading || Boolean(facilityError)}
           onChange={(event) => setter({ ...side, logisticsPointId: event.target.value })}
         >
-          <option value="">Use geographic location</option>
+          <option value="">{facilityLoading ? "در حال دریافت نقاط عملیاتی…" : facilityError ? "دریافت نقاط عملیاتی ناموفق بود." : rankedLogisticsPoints.length ? t("operations.select") : "نقطه عملیاتی فعالی برای این سازمان ثبت نشده است."}</option>
           {rankedLogisticsPoints.map((point) => (
             <option key={point.public_id} value={point.public_id}>
               {preferredPointIds.has(point.public_id) ? "★ " : ""}{point.fa_name} — {point.point_type.fa_name}
@@ -566,8 +586,9 @@ export default function NewOperation() {
           ))}
         </select>
         {side.logisticsPointId ? (
-          <p role="status">Facility geography will be resolved from governed master data.</p>
-        ) : (
+          <p role="status">موقعیت جغرافیایی نقطه عملیاتی از داده مرجع سازمان تعیین می‌شود.</p>
+        ) : null}
+        </> : (
         <>{side.kind === "domestic" && sideName === "destination" ? (
           <SearchSelect
             id="destination"

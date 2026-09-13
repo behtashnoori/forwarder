@@ -238,6 +238,48 @@ const renderPage = (url = "/operations/shipments/new") =>
     </MemoryRouter>,
   );
 describe("Slice 5 governed creation", () => {
+  it.each(["domestic", "international"] as const)(
+    "defaults %s routes to a facility and clears hidden location state when switching modes",
+    async (kind) => {
+      const user = userEvent.setup();
+      vi.mocked(api.getOperationalContext).mockResolvedValue({
+        data: { organization_id: 1, permissions: ["operational_shipment.create_direct"] },
+      });
+      renderPage("/operations/shipments/new?source=direct");
+      await screen.findByRole("option", { name: "Canonical Co" });
+      if (kind === "international") {
+        await user.selectOptions(screen.getByLabelText("Origin route type"), "international");
+      }
+      const mode = screen.getByLabelText("Origin روش تعیین مکان");
+      expect(mode).toHaveValue("facility");
+      expect(screen.getAllByRole("option", { name: "فقط موقعیت جغرافیایی" })).toHaveLength(2);
+      const facility = await screen.findByLabelText("Origin operational facility");
+      await waitFor(() => expect(facility).not.toBeDisabled());
+      await user.selectOptions(facility, "preferred-point");
+      expect(facility).toHaveValue("preferred-point");
+      await user.selectOptions(mode, "geography");
+      expect(screen.queryByLabelText("Origin operational facility")).not.toBeInTheDocument();
+      const geographic = kind === "domestic" ? "Origin province" : "Origin country";
+      await user.selectOptions(screen.getByLabelText(geographic), kind === "domestic" ? "1" : "20");
+      await user.selectOptions(mode, "facility");
+      expect(screen.queryByLabelText(geographic)).not.toBeInTheDocument();
+      expect(screen.getByLabelText("Origin operational facility")).toHaveValue("");
+      await user.selectOptions(mode, "geography");
+      expect(screen.getByLabelText(geographic)).toHaveValue("");
+    },
+  );
+
+  it("explains the empty facility list while retaining the geography fallback", async () => {
+    vi.mocked(api.getOperationalContext).mockResolvedValue({
+      data: { organization_id: 1, permissions: ["operational_shipment.create_direct"] },
+    });
+    vi.mocked(api.listLogisticsPoints).mockResolvedValue({ items: [], page: 1, pages: 1, total: 0 });
+    renderPage("/operations/shipments/new?source=direct");
+    expect(await screen.findAllByRole("option", { name: "نقطه عملیاتی فعالی برای این سازمان ثبت نشده است." })).toHaveLength(2);
+    expect(screen.getByLabelText("Origin روش تعیین مکان")).toHaveValue("facility");
+    expect(screen.getByLabelText("Destination روش تعیین مکان")).toHaveValue("facility");
+  });
+
   it.each([
     [["operational_shipment.create_direct"], true, false],
     [["operational_shipment.create_from_quote"], false, true],
@@ -300,6 +342,8 @@ describe("Slice 5 governed creation", () => {
       screen.getByLabelText("Project (optional)"),
       "project-public",
     );
+    await user.selectOptions(screen.getByLabelText("Origin روش تعیین مکان"), "geography");
+    await user.selectOptions(screen.getByLabelText("Destination روش تعیین مکان"), "geography");
     fireEvent.change(screen.getByLabelText("Origin province"), {
       target: { value: "1" },
     });
@@ -376,7 +420,7 @@ describe("Slice 5 governed creation", () => {
     await user.selectOptions(destination, "organization-point");
     expect(origin).toHaveValue("preferred-point");
     expect(destination).toHaveValue("organization-point");
-    expect(screen.getAllByText(/governed master data/)).toHaveLength(2);
+    expect(screen.getAllByText(/موقعیت جغرافیایی نقطه عملیاتی از داده مرجع سازمان/)).toHaveLength(2);
 
     fireEvent.change(screen.getByLabelText("Planned departure"), {
       target: { value: "2026-08-10T10:00" },
@@ -409,9 +453,11 @@ describe("Slice 5 governed creation", () => {
       },
     });
     renderPage("/operations/shipments/new?source=direct");
+    fireEvent.change(await screen.findByLabelText("Origin روش تعیین مکان"), { target: { value: "geography" } });
     fireEvent.change(await screen.findByLabelText("Origin route type"), {
       target: { value: "international" },
     });
+    fireEvent.change(screen.getByLabelText("Origin روش تعیین مکان"), { target: { value: "geography" } });
     fireEvent.change(screen.getByLabelText("Origin country"), {
       target: { value: "10" },
     });
@@ -429,9 +475,11 @@ describe("Slice 5 governed creation", () => {
       },
     });
     renderPage("/operations/shipments/new?source=direct");
+    fireEvent.change(await screen.findByLabelText("Destination روش تعیین مکان"), { target: { value: "geography" } });
     fireEvent.change(await screen.findByLabelText("Destination route type"), {
       target: { value: "international" },
     });
+    fireEvent.change(screen.getByLabelText("Destination روش تعیین مکان"), { target: { value: "geography" } });
     fireEvent.change(screen.getByLabelText("Destination country"), {
       target: { value: "10" },
     });
@@ -458,6 +506,8 @@ describe("Slice 5 governed creation", () => {
     renderPage("/operations/shipments/new?source=direct");
     await screen.findByRole("option", { name: "Canonical Co" });
     expect(api.searchIranDestinations).toHaveBeenCalledWith();
+    await user.selectOptions(screen.getByLabelText("Origin روش تعیین مکان"), "geography");
+    await user.selectOptions(screen.getByLabelText("Destination روش تعیین مکان"), "geography");
     await user.selectOptions(screen.getByLabelText("Customer"), "7");
     await user.selectOptions(screen.getByLabelText("Origin province"), "1");
     expect(screen.getByLabelText("Destination")).toHaveTextContent(
@@ -525,6 +575,8 @@ describe("Slice 5 governed creation", () => {
           expect(screen.getByLabelText("Accepted quote")).toHaveValue("9"),
         );
       }
+      fireEvent.change(screen.getByLabelText("Origin روش تعیین مکان"), { target: { value: "geography" } });
+      fireEvent.change(screen.getByLabelText("Destination روش تعیین مکان"), { target: { value: "geography" } });
       fireEvent.change(screen.getByLabelText("Origin province"), {
         target: { value: "1" },
       });

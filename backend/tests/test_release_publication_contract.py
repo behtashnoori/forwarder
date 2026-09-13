@@ -78,7 +78,7 @@ def test_repository_has_one_expected_alembic_head():
     script = ScriptDirectory.from_config(
         Config(str(ROOT / "backend/migrations/alembic.ini"))
     )
-    assert script.get_heads() == ["20260919_operational_event_location_evidence"]
+    assert script.get_heads() == ["20260920_legal_customer_nullable_contact_names"]
 
 
 def test_packaged_frontend_is_pinned_to_same_origin():

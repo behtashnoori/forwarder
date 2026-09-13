@@ -84,10 +84,10 @@ def _clean_customer_payload(customer_payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _validate_customer_payload(customer_payload: dict[str, Any]) -> None:
-    """Validate the minimum fields needed by the current Customer model."""
-    missing = [
-        field for field in ("first_name", "last_name") if not customer_payload.get(field)
-    ]
+    """Require a legal identity or a complete individual identity."""
+    if customer_payload.get("company_name"):
+        return
+    missing = [field for field in ("first_name", "last_name") if not customer_payload.get(field)]
     if missing:
         raise CrmCustomerCreateValidationError(
             f"Missing required customer fields: {', '.join(missing)}"
@@ -126,7 +126,7 @@ def build_suggested_customer_fields(shipment_request: ShipmentRequest) -> dict[s
 
 def get_missing_fields(suggested_fields: dict[str, Any]) -> dict[str, list[str]]:
     """Return required and optional CRM fields missing from the preview."""
-    required = [
+    required = [] if suggested_fields.get("company_name") else [
         field for field in ("first_name", "last_name") if not suggested_fields.get(field)
     ]
     recommended = [

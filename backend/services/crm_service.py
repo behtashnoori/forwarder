@@ -20,9 +20,10 @@ def pagination_payload(pagination, page: int, per_page: int) -> dict:
 
 def build_customer_list_item(customer: Customer) -> dict:
     """Build a customer row for the CRM customers list."""
+    contact_name = " ".join(part for part in (customer.first_name, customer.last_name) if part)
     return {
         "id": customer.id,
-        "name": f"{customer.first_name} {customer.last_name}",
+        "name": contact_name,
         "company_name": customer.company_name,
         "email": customer.email,
         "phone": customer.phone,
