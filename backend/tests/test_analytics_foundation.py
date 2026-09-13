@@ -4,7 +4,7 @@ import pytest
 from backend.extensions import db
 from backend.analytics import service
 from backend.analytics.registry import DIMENSIONS, METRICS
-from backend.operational_models import MilestoneEvent, OperationalMembership, RoutePlan
+from backend.operational_models import DelayReason, MilestoneEvent, OperationalDelay, OperationalMembership, RoutePlan
 from backend.services import route_orchestration_service as routes
 from backend.tests.test_execution_authority_3a import setup, report
 from backend.tests.test_operational_vertical_slice import operational_app, _user, _auth
@@ -128,3 +128,23 @@ def test_legacy_get_ignores_a_json_body(operational_app):
     )
     assert response.status_code == 200
     assert response.json["data"]["normalized_query"]["filters"] == []
+
+def test_fact_time_filter_does_not_inherit_shipment_created_at(operational_app):
+    """Delay and route-leg populations use their own governed business clocks."""
+    with operational_app.app_context():
+        shipment, leg, _milestones = setup(operational_app)
+        now = datetime.now(timezone.utc).replace(microsecond=0)
+        shipment.created_at = now - timedelta(days=30)
+        leg.created_at = now
+        actor = _user(operational_app)
+        reason = DelayReason(organization_id=shipment.organization_id, immutable_code="TIME_TEST", fa_name="زمان", en_name="Time", created_by_user_id=actor["id"], updated_by_user_id=actor["id"])
+        db.session.add(reason); db.session.flush()
+        db.session.add_all([
+            OperationalDelay(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, reason_id=reason.id, started_at=now, created_by_user_id=actor["id"]),
+            OperationalDelay(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, reason_id=reason.id, started_at=now - timedelta(days=2), created_by_user_id=actor["id"]),
+        ])
+        db.session.commit()
+        window = {"dimension": "TIME", "value": {"from": (now - timedelta(days=1)).isoformat(), "to": (now + timedelta(days=1)).isoformat()}}
+        assert value(query(operational_app, ["DELAY_CASE_COUNT"], filters=[window]), "DELAY_CASE_COUNT") == 1
+        assert value(query(operational_app, ["ROUTE_LEG_COUNT"], filters=[window]), "ROUTE_LEG_COUNT") == 1
+        assert value(query(operational_app, ["SHIPMENT_COUNT"], filters=[window]), "SHIPMENT_COUNT") == 0

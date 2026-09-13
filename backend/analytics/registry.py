@@ -28,14 +28,14 @@ METRICS = {
     "EFFECTIVE_BUSINESS_OCCURRENCE_COUNT": _metric("EFFECTIVE_BUSINESS_OCCURRENCE_COUNT", "FACT_OPERATIONAL_OCCURRENCE", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="occurrence_history", time_dimensions=("effective_occurrence",)),
     "LEG_TRANSIT_TIME": _metric("LEG_TRANSIT_TIME", "FACT_ROUTE_LEG_CURRENT", "seconds", dimensions=_leg_dims, coverage=("COMPLETED_LEGS_WITH_ACTUAL_TIMES_COVERAGE",), drilldown="route_leg_list"),
     "DWELL_TIME": _metric("DWELL_TIME", "FACT_CHECKPOINT", "seconds", dimensions=("TIME", "CUSTOMER", "PROJECT", "ORIGIN_COUNTRY", "DESTINATION_COUNTRY"), drilldown="route_leg_list"),
-    "REPORTED_DELAY_DURATION": _metric("REPORTED_DELAY_DURATION", "FACT_OPERATIONAL_DELAY", "seconds", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="delay_list"),
-    "DELAY_CASE_COUNT": _metric("DELAY_CASE_COUNT", "FACT_OPERATIONAL_DELAY", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="delay_list"),
-    "EXCEPTION_COUNT": _metric("EXCEPTION_COUNT", "FACT_OPERATIONAL_EXCEPTION", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="exception_list"),
-    "OPEN_EXCEPTION_COUNT": _metric("OPEN_EXCEPTION_COUNT", "FACT_OPERATIONAL_EXCEPTION", dimensions=("TIME", "CUSTOMER", "PROJECT"), drilldown="exception_list"),
-    "OPEN_WORK_ITEM_COUNT": _metric("OPEN_WORK_ITEM_COUNT", "FACT_WORK_ITEM", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="work_item_list"),
+    "REPORTED_DELAY_DURATION": _metric("REPORTED_DELAY_DURATION", "FACT_OPERATIONAL_DELAY", "seconds", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="delay_list", time_dimensions=("started",)),
+    "DELAY_CASE_COUNT": _metric("DELAY_CASE_COUNT", "FACT_OPERATIONAL_DELAY", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="delay_list", time_dimensions=("started",)),
+    "EXCEPTION_COUNT": _metric("EXCEPTION_COUNT", "FACT_OPERATIONAL_EXCEPTION", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="exception_list", time_dimensions=("occurred",)),
+    "OPEN_EXCEPTION_COUNT": _metric("OPEN_EXCEPTION_COUNT", "FACT_OPERATIONAL_EXCEPTION", dimensions=("TIME", "CUSTOMER", "PROJECT"), drilldown="exception_list", time_dimensions=("occurred",)),
+    "OPEN_WORK_ITEM_COUNT": _metric("OPEN_WORK_ITEM_COUNT", "FACT_WORK_ITEM", dimensions=("TIME", "CUSTOMER", "PROJECT", "OPERATOR"), drilldown="work_item_list", time_dimensions=("detected",)),
     "REPLAN_COUNT": _metric("REPLAN_COUNT", "FACT_ROUTE_PLAN_REVISION", dimensions=("TIME", "CUSTOMER", "PROJECT"), drilldown="shipment_list"),
     "DOCUMENT_REQUIREMENT_COUNT": _metric("DOCUMENT_REQUIREMENT_COUNT", "FACT_DOCUMENT_READINESS", dimensions=("TIME", "CUSTOMER", "PROJECT", "DOCUMENT_TYPE"), readiness=PARTIAL, coverage=("DOCUMENT_READINESS_SCOPE_COVERAGE",), drilldown="document_requirement_list"),
-    "DOCUMENT_READINESS_COVERAGE": _metric("DOCUMENT_READINESS_COVERAGE", "FACT_DOCUMENT_READINESS", "percent", readiness=PARTIAL, coverage=("DOCUMENT_READINESS_SCOPE_COVERAGE",), drilldown="document_requirement_list"),
+    "DOCUMENT_READINESS_COVERAGE": _metric("DOCUMENT_READINESS_COVERAGE", "FACT_DOCUMENT_READINESS", "percent", dimensions=("TIME", "CUSTOMER", "PROJECT"), readiness=PARTIAL, coverage=("DOCUMENT_READINESS_SCOPE_COVERAGE",), drilldown="document_requirement_list"),
 }
 for key in ("LEAD_TIME", "SHIPMENT_TRANSIT_TIME", "ON_TIME_SHIPMENT_PERCENT", "ON_TIME_LEG_PERCENT", "ON_TIME_CHECKPOINT_PERCENT", "SCHEDULE_DELAY_DURATION", "STALE_SHIPMENT_COUNT", "CURRENT_STAGE_AGE", "NEEDS_ATTENTION_COUNT"):
     METRICS[key] = _metric(key, "UNDEFINED", readiness=BUSINESS_DEFINITION_REQUIRED, description="Business definition is not governed; this metric cannot execute.")

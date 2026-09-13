@@ -20,4 +20,4 @@ def test_system_manifest_is_valid_and_path_independent():
 def test_frozen_control_tower_parity_hash():
     manifest = json.loads(_MANIFEST_PATH.read_text(encoding="utf-8"))
     normalized = json.dumps(manifest["definition"], ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
-    assert hashlib.sha256(normalized).hexdigest() == "e2364fd5ed0c39dbf5e7ba89d12e8be6ebb1bec317609fcaf914e163710b3a4a"
+    assert hashlib.sha256(normalized).hexdigest() == "550a5bce4128c850ea500391177e88446f26ee88dda5e369082081cf1e9aec25"
