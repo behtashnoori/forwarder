@@ -178,6 +178,38 @@ def create_unit(project: Project, payload: dict, user: dict) -> ExecutionUnit:
     return unit
 
 
+def create_shipment_unit(shipment: OperationalShipment, payload: dict, user: dict) -> ExecutionUnit:
+    """Create canonical transport truth directly under an authorized shipment.
+
+    Direct shipments legitimately have no project.  This deliberately reuses
+    the existing nullable shipment association rather than creating a legacy
+    ShipmentTransportUnit or inventing a second relationship.
+    """
+    from backend.services.operational_service import require_permission
+    require_permission(user, "execution_unit.create")
+    unit_type = str(payload.get("unit_type", "truck")).strip().lower()
+    if not unit_type or len(unit_type) > 32:
+        raise OperationalError("VALIDATION_FAILED", "unit_type is required and must not exceed 32 characters.")
+    db.session.execute(select(OperationalShipment.id).where(OperationalShipment.id == shipment.id).with_for_update())
+    codes = db.session.scalars(select(ExecutionUnit.unit_code).where(
+        ExecutionUnit.organization_id == shipment.organization_id,
+        ExecutionUnit.unit_code.like("U-%"),
+    )).all()
+    next_number = max([int(match.group(1)) for code in codes if (match := re.fullmatch(r"U-(\d+)", code))] or [0]) + 1
+    unit = ExecutionUnit(
+        organization_id=shipment.organization_id,
+        project_id=shipment.project_id,
+        operational_shipment_id=shipment.id,
+        unit_code=f"U-{next_number:04d}",
+        unit_type=unit_type,
+        display_name=(str(payload.get("display_name", "")).strip() or None),
+        vehicle_reference=(str(payload.get("vehicle_reference", "")).strip() or None),
+        created_by_user_id=int(user["id"]),
+    )
+    db.session.add(unit); db.session.flush()
+    return unit
+
+
 def update_unit(unit: ExecutionUnit, payload: dict) -> ExecutionUnit:
     expected = payload.get("expected_version")
     if not isinstance(expected, int) or expected != unit.version:

@@ -7,6 +7,7 @@ from backend.extensions import db
 from backend.models import Customer, ShipmentTransportUnit
 from backend.operational_models import ExecutionUnit, OperationalMembership, OperationalShipment
 from backend.services import cargo_service
+from backend.services import execution_unit_service, shared_transport_service
 from backend.services import multi_unit_tracking_service as tracking_service
 from backend.tests.test_cargo_traceability import traceability_app
 
@@ -127,3 +128,27 @@ def test_tracking_prefers_canonical_shared_execution_allocation(traceability_app
         released = tracking_service.build_internal_tracking_for_shipment(shipment)
         assert not any(unit.get("source") == "canonical_execution" for unit in released["units"])
         assert next(unit for unit in released["units"] if unit["id"] == legacy.id)["allocated_cargo"]
+
+
+def test_direct_shipment_split_allocation_enforces_aggregate_limit(traceability_app):
+    """Direct shipment units use canonical truth and cannot over-allocate."""
+    with traceability_app["app"].app_context():
+        user = {"id": traceability_app["user"].id}
+        membership = db.session.get(OperationalMembership, traceability_app["membership"].id)
+        membership.permissions = ["operational_shipment.read", "execution_unit.create", "execution_unit.update"]
+        shipment = db.session.scalar(db.select(OperationalShipment).where(OperationalShipment.public_id == "shipment-active"))
+        shipment.primary_responsible_expert_id = user["id"]
+        cargo = db.session.scalar(db.select(ShipmentCargoItem).where(ShipmentCargoItem.operational_shipment_id == shipment.id))
+        cargo.quantity = "1000"
+        cargo.cargo_owner_customer_id = shipment.customer_id
+        customer = db.session.get(Customer, shipment.customer_id)
+        customer.operational_organization_id = shipment.organization_id
+        customer.ownership_scope = "TENANT"
+        first = execution_unit_service.create_shipment_unit(shipment, {"unit_type": "truck", "display_name": "Truck 1"}, user)
+        second = execution_unit_service.create_shipment_unit(shipment, {"unit_type": "truck", "display_name": "Truck 2"}, user)
+        db.session.commit()
+        shared_transport_service.allocate(execution_public_id=first.public_id, cargo_public_id=cargo.public_id, allocated_quantity="600", user=user)
+        shared_transport_service.allocate(execution_public_id=second.public_id, cargo_public_id=cargo.public_id, allocated_quantity="400", user=user)
+        db.session.commit()
+        with pytest.raises(Exception, match="remaining quantity"):
+            shared_transport_service.allocate(execution_public_id=second.public_id, cargo_public_id=cargo.public_id, allocated_quantity="500", user=user)

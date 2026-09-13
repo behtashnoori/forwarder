@@ -11,6 +11,9 @@ const api = vi.hoisted(() => ({
   getCargoTransportAllocations: vi.fn(), createCargoTransportAllocation: vi.fn(),
   deleteCargoTransportAllocation: vi.fn(), getOperationalTransportTracking: vi.fn(),
   enableOperationalTransportTracking: vi.fn(), addOperationalTransportTrackingUpdate: vi.fn(),
+  getCanonicalShipmentTransportUnits: vi.fn(), createCanonicalShipmentTransportUnit: vi.fn(),
+  getCanonicalCargoAllocations: vi.fn(), createCanonicalCargoAllocation: vi.fn(),
+  updateCanonicalCargoAllocation: vi.fn(), deleteCanonicalCargoAllocation: vi.fn(),
 }));
 vi.mock("@/lib/api", () => api);
 
@@ -43,6 +46,8 @@ describe("Cargo foundation UI", () => {
     api.updateShipmentCargoItem.mockResolvedValue({item:{...shipmentItem,quantity:"3",version:2}});
     api.getCargoTransportAllocations.mockResolvedValue({allocations:[],transport_units:[]});
     api.getOperationalTransportTracking.mockResolvedValue({source_type:"direct",tracking:null});
+    api.getCanonicalShipmentTransportUnits.mockResolvedValue({units:[]});
+    api.getCanonicalCargoAllocations.mockResolvedValue({allocations:[],items:[shipmentItem]});
     api.getCargoCatalogShipmentUsage.mockResolvedValue({cargo_item:catalog,summary:{shipment_count:1,active_shipment_count:1},items:[{operational_shipment_public_id:"shipment-1",project_public_id:"project-1",project_code:"PRJ-1",shipment_request_reference:null,quantity:"2.000000",uom:"ea",status:"in_progress",current_location:"Border",location_source:"operational_event",latest_event_at:"2026-08-20T09:25:00Z",shipment_cargo_line_public_id:"line-1",display_name_snapshot:"کالا"}],limit:50,offset:0});
   });
 
@@ -89,6 +94,18 @@ describe("Cargo foundation UI", () => {
     fireEvent.change(screen.getByLabelText("Edit quantity line 1"),{target:{value:"3"}});
     fireEvent.click(screen.getByRole("button",{name:/Save/}));
     await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",{quantity:"3",cargo_owner_customer_id:null,version:1}));
+  });
+
+  it("uses explicit Persian quantity allocation and preserves remaining cargo", async () => {
+    api.getCanonicalShipmentTransportUnits.mockResolvedValue({units:[{public_id:"truck-1",unit_code:"U-0001",unit_type:"truck",display_name:"کامیون ۱",vehicle_reference:null,version:1},{public_id:"truck-2",unit_code:"U-0002",unit_type:"truck",display_name:"کامیون ۲",vehicle_reference:null,version:1}]});
+    api.listShipmentCargoItems.mockResolvedValue({items:[{...shipmentItem,quantity:"1000",allocated_quantity:"600",remaining_quantity:"400"}]});
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1"/>);
+    const selects = await screen.findAllByRole("combobox");
+    fireEvent.change(selects.find((element) => element.getAttribute("aria-label") === "وسیله حمل برای تخصیص")!, {target:{value:"truck-2"}});
+    fireEvent.change(screen.getByLabelText("کالا برای تخصیص"), {target:{value:"line-1"}});
+    fireEvent.change(screen.getByLabelText("مقدار تخصیص"), {target:{value:"400"}});
+    fireEvent.click(screen.getByRole("button",{name:"تخصیص کالا"}));
+    await waitFor(()=>expect(api.createCanonicalCargoAllocation).toHaveBeenCalledWith("shipment-1",{execution_unit_public_id:"truck-2",cargo_item_public_id:"line-1",allocated_quantity:"400"}));
   });
 
   it("renders and persists Cargo Owners by unique Customer identity", async () => {

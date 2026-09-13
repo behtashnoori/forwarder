@@ -16,7 +16,9 @@ from backend.cargo_models import (
 from backend.extensions import db
 from backend.security import require_auth
 from backend.services import cargo_service as svc
+from backend.services import execution_unit_service as execution_svc
 from backend.services import multi_unit_tracking_service as tracking_svc
+from backend.services import shared_transport_service as shared_transport_svc
 from backend.services.admin_authorization_service import (
     AdminAuthorizationError,
     ORGANIZATION_ADMIN,
@@ -25,7 +27,7 @@ from backend.services.admin_authorization_service import (
     require_organization_admin_context,
 )
 from backend.models import ExpertUser
-from backend.operational_models import Project
+from backend.operational_models import ExecutionUnit, Project
 
 cargo_bp = Blueprint("cargo", __name__, url_prefix="/api/internal")
 
@@ -460,6 +462,94 @@ def allocation_transport_create(shipment_id):
         row = svc.create_transport_unit(_user(), shipment, request.get_json(silent=True) or {})
         return jsonify({"transport_unit": {"id": row.id, "unit_code": row.unit_code, "unit_type": row.unit_type}}), 201
     except svc.CargoError as exc: return _error(exc)
+
+
+def _shipment_unit(shipment, public_id):
+    row = db.session.scalar(select(ExecutionUnit).where(
+        ExecutionUnit.public_id == public_id,
+        ExecutionUnit.organization_id == shipment.organization_id,
+        ExecutionUnit.operational_shipment_id == shipment.id,
+    ))
+    if not row:
+        raise svc.CargoError("transport unit not found", 404)
+    return row
+
+
+@cargo_bp.route("/operational-shipments/<shipment_id>/canonical-transport-units", methods=["GET", "POST"])
+@require_auth
+def canonical_transport_units(shipment_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        if request.method == "POST":
+            unit = execution_svc.create_shipment_unit(shipment, request.get_json(silent=True) or {}, _user())
+            db.session.commit()
+            return jsonify({"unit": execution_svc.unit_projection(unit)}), 201
+        units = db.session.scalars(select(ExecutionUnit).where(
+            ExecutionUnit.organization_id == shipment.organization_id,
+            ExecutionUnit.operational_shipment_id == shipment.id,
+            ExecutionUnit.is_active.is_(True),
+        ).order_by(ExecutionUnit.unit_code)).all()
+        return jsonify({"units": [execution_svc.unit_projection(unit) for unit in units]})
+    except Exception as exc:
+        return _error(exc)
+
+
+@cargo_bp.route("/operational-shipments/<shipment_id>/canonical-transport-allocations", methods=["GET", "POST"])
+@require_auth
+def canonical_transport_allocations(shipment_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        if request.method == "GET":
+            rows = db.session.scalars(select(shared_transport_svc.ExecutionUnitCargoAllocation).where(
+                shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id
+            )).all()
+            return jsonify({"allocations": [shared_transport_svc.canonical_allocation_dict(row) for row in rows], "items": [svc.shipment_item_dict(item) for item in db.session.scalars(select(ShipmentCargoItem).where(ShipmentCargoItem.operational_shipment_id == shipment.id)).all()]})
+        payload = request.get_json(silent=True) or {}
+        unit = _shipment_unit(shipment, str(payload.get("execution_unit_public_id", "")))
+        row = shared_transport_svc.allocate(execution_public_id=unit.public_id, cargo_public_id=str(payload.get("cargo_item_public_id", "")), allocated_quantity=payload.get("allocated_quantity"), user=_user())
+        db.session.commit()
+        return jsonify({"allocation": shared_transport_svc.canonical_allocation_dict(row)}), 201
+    except Exception as exc:
+        return _error(exc)
+
+
+@cargo_bp.patch("/operational-shipments/<shipment_id>/canonical-transport-allocations/<allocation_id>")
+@require_auth
+def canonical_transport_allocation_update(shipment_id, allocation_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        row = db.session.scalar(select(shared_transport_svc.ExecutionUnitCargoAllocation).where(
+            shared_transport_svc.ExecutionUnitCargoAllocation.public_id == allocation_id,
+            shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id,
+        ))
+        if not row:
+            raise svc.CargoError("allocation not found", 404)
+        unit = _shipment_unit(shipment, row.execution_unit.public_id)
+        payload = request.get_json(silent=True) or {}
+        updated = shared_transport_svc.allocate(execution_public_id=unit.public_id, cargo_public_id=row.cargo_item.public_id, allocated_quantity=payload.get("allocated_quantity"), user=_user())
+        db.session.commit()
+        return jsonify({"allocation": shared_transport_svc.canonical_allocation_dict(updated)})
+    except Exception as exc:
+        return _error(exc)
+
+
+@cargo_bp.delete("/operational-shipments/<shipment_id>/canonical-transport-allocations/<allocation_id>")
+@require_auth
+def canonical_transport_allocation_delete(shipment_id, allocation_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        row = db.session.scalar(select(shared_transport_svc.ExecutionUnitCargoAllocation).where(
+            shared_transport_svc.ExecutionUnitCargoAllocation.public_id == allocation_id,
+            shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id,
+        ))
+        if not row:
+            raise svc.CargoError("allocation not found", 404)
+        _shipment_unit(shipment, row.execution_unit.public_id)
+        shared_transport_svc.release(execution_public_id=row.execution_unit.public_id, allocation_public_id=row.public_id, user=_user())
+        db.session.commit()
+        return "", 204
+    except Exception as exc:
+        return _error(exc)
 
 
 @cargo_bp.get("/operational-shipments/<shipment_id>/transport-tracking")

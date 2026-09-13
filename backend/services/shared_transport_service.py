@@ -1,28 +1,25 @@
 """Canonical tenant-scoped shared transport allocation commands (ADR-046)."""
 from decimal import Decimal, InvalidOperation
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from backend.cargo_models import ExecutionUnitCargoAllocation, ShipmentCargoItem
 from backend.extensions import db
 from backend.models import Customer, CustomerRoleAssignment
 from backend.operational_models import ExecutionUnit, OperationalShipment, Project
 from backend.services.operational_service import OperationalError, organization_for_user, require_permission
-from backend.services.project_access_authorization import authorized_project_scope
+from backend.services.assigned_work_authorization import authorize_work_action
 
 
 def _authorized_shipment(cargo: ShipmentCargoItem, user: dict) -> OperationalShipment:
     shipment = db.session.get(OperationalShipment, cargo.operational_shipment_id)
     if not shipment or shipment.organization_id != organization_for_user(int(user["id"])):
         raise OperationalError("NOT_FOUND", "Cargo not found.", 404)
-    # Direct shipments have no project and are intentionally unavailable to
-    # this Project-assignment-based Expert command until an explicit direct
-    # shipment authority is introduced.
-    if shipment.project_id is None or not db.session.scalar(
-        select(OperationalShipment.id).join(Project, Project.id == OperationalShipment.project_id).where(
-            OperationalShipment.id == shipment.id, authorized_project_scope(user)
-        )
-    ):
+    # Allocation follows the shipment's canonical current-work scope.  A
+    # project may supply business visibility, but direct shipments are rooted
+    # in their responsible Expert and must not be excluded merely for lacking
+    # a project.
+    if not authorize_work_action(user, shipment, "shipment.read").allowed:
         raise OperationalError("NOT_FOUND", "Cargo not found.", 404)
     return shipment
 
@@ -93,7 +90,14 @@ def allocate(*, execution_public_id: str, cargo_public_id: str, allocated_quanti
     require_permission(user, "execution_unit.update")
     organization_id = organization_for_user(int(user["id"]))
     unit = _unit(execution_public_id, user)
-    cargo = db.session.scalar(select(ShipmentCargoItem).where(ShipmentCargoItem.public_id == cargo_public_id))
+    # The cargo row is the aggregate lock for every allocation of this line.
+    # It serializes concurrent writes even when the target execution rows do
+    # not exist yet, which a cross-row database constraint cannot express.
+    cargo = db.session.scalar(
+        select(ShipmentCargoItem)
+        .where(ShipmentCargoItem.public_id == cargo_public_id)
+        .with_for_update()
+    )
     if not unit or not cargo:
         raise OperationalError("NOT_FOUND", "Execution or cargo not found.", 404)
     shipment = _authorized_shipment(cargo, user)
@@ -108,9 +112,15 @@ def allocate(*, execution_public_id: str, cargo_public_id: str, allocated_quanti
         quantity = Decimal(str(allocated_quantity))
     except (InvalidOperation, TypeError):
         raise OperationalError("VALIDATION_FAILED", "allocated_quantity must be positive.", 422)
-    if quantity <= 0 or quantity > cargo.quantity:
-        raise OperationalError("VALIDATION_FAILED", "allocated_quantity exceeds cargo quantity.", 422)
     row = db.session.scalar(select(ExecutionUnitCargoAllocation).where(ExecutionUnitCargoAllocation.execution_unit_id == unit.id, ExecutionUnitCargoAllocation.shipment_cargo_item_id == cargo.id))
+    allocated_total = db.session.scalar(
+        select(func.coalesce(func.sum(ExecutionUnitCargoAllocation.allocated_quantity), 0)).where(
+            ExecutionUnitCargoAllocation.shipment_cargo_item_id == cargo.id
+        )
+    ) or Decimal("0")
+    current_quantity = row.allocated_quantity if row else Decimal("0")
+    if quantity <= 0 or allocated_total - current_quantity + quantity > cargo.quantity:
+        raise OperationalError("ALLOCATION_QUANTITY_EXCEEDS_REMAINING", "allocated_quantity exceeds the cargo remaining quantity.", 422)
     if row:
         row.allocated_quantity = quantity; row.updated_by = int(user["id"])
         return row
