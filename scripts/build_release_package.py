@@ -159,6 +159,17 @@ def canonical(payload):
     )
 
 
+def normalize_alembic_heads(output):
+    """Accept exactly one normal Alembic ``heads`` record, fail closed otherwise."""
+    lines = [line.strip() for line in output.splitlines() if line.strip()]
+    if len(lines) != 1:
+        raise BuildError(f"unexpected Alembic heads: {lines}")
+    match = re.fullmatch(r"([A-Za-z0-9_]+)\s+\(head\)", lines[0])
+    if not match:
+        raise BuildError(f"unexpected Alembic heads: {lines}")
+    return match.group(1)
+
+
 def validate_source(source, commit):
     if run(["git", "rev-parse", "HEAD"], source) != commit:
         raise BuildError("source HEAD does not equal authorized commit")
@@ -174,9 +185,9 @@ def validate_source(source, commit):
             "heads",
         ],
         source,
-    ).splitlines()
-    if heads != [EXPECTED_HEAD + " (head)"]:
-        raise BuildError(f"unexpected Alembic heads: {heads}")
+    )
+    if normalize_alembic_heads(heads) != EXPECTED_HEAD:
+        raise BuildError(f"unexpected Alembic heads: {heads.splitlines()}")
     try:
         package = json.loads((source / BASELINE).read_text(encoding="utf-8"))
     except Exception as exc:

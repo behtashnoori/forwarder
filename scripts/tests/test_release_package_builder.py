@@ -33,6 +33,22 @@ def test_builder_rejects_non_full_or_unavailable_authorized_commit(tmp_path):
         builder.build(ROOT, "052a63d", tmp_path, "test", skip_gates=True)
 
 
+@pytest.mark.parametrize("raw", [
+    "20260920_legal_customer_nullable_contact_names (head)",
+    "  20260920_legal_customer_nullable_contact_names (head)  \n",
+])
+def test_normalize_alembic_head_accepts_one_decorated_head(raw):
+    assert builder.normalize_alembic_heads(raw) == "20260920_legal_customer_nullable_contact_names"
+
+
+@pytest.mark.parametrize("raw", [
+    "a (head)\nb (head)", "", "not an alembic head",
+])
+def test_normalize_alembic_head_fails_closed(raw):
+    with pytest.raises(builder.BuildError, match="unexpected Alembic heads"):
+        builder.normalize_alembic_heads(raw)
+
+
 def test_external_release_commands_are_bounded_and_timeout_is_diagnostic(tmp_path):
     with pytest.raises(builder.BuildError, match="TIMEOUT") as failure:
         builder.run(
