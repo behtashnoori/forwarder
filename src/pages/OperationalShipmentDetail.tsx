@@ -135,22 +135,40 @@ export default function OperationalShipmentDetail() {
             <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
               <p><span className="text-slate-500">مشتری</span><br /><strong>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</strong></p>
               <p><span className="text-slate-500">پروژه</span><br />{data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id}</Link> : "—"}</p>
-              <p><span className="text-slate-500">مسیر</span><br /><strong>{data.route_leg?.origin.display_name || "-"} → {data.route_leg?.destination.display_name || "-"}</strong></p>
+              <p><span className="text-slate-500">مبدأ ← مقصد</span><br /><strong>{data.route_leg?.origin.display_name || "ثبت نشده"} → {data.route_leg?.destination.display_name || "ثبت نشده"}</strong></p>
               <p><span className="text-slate-500">روش حمل</span><br /><strong>{data.route_leg?.transport_mode || "-"}</strong></p>
-              <p><span className="text-slate-500">وضعیت فعلی</span><br /><strong>{data.status}</strong></p>
+              <p><span className="text-slate-500">وضعیت محموله</span><br /><strong>{data.status === "planned" ? "برنامه‌ریزی‌شده" : data.status}</strong></p>
               <p><span className="text-slate-500">حرکت برنامه‌ریزی‌شده</span><br />{when(data.route_leg?.planned_departure, locale)}</p>
               <p><span className="text-slate-500">رسیدن برنامه‌ریزی‌شده</span><br />{when(data.route_leg?.planned_arrival, locale)}</p>
               <p><span className="text-slate-500">منبع محموله</span><br />{data.source.type === "direct" ? "عملیات مستقیم" : "پیش‌فاکتور پذیرفته‌شده"}</p>
             </CardContent>
           </Card>
 
-          <ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} />
+          <Card>
+            <CardHeader><CardTitle>وضعیت و اقدامات قابل انجام</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <p>وضعیت فعلی محموله: <strong>{data.status === "planned" ? "برنامه‌ریزی‌شده" : data.status}</strong></p>
+              {data.recent_events[0] ? <p>آخرین رویداد ثبت‌شده: {data.recent_events[0].event_type} · {when(data.recent_events[0].occurred_at, locale)}</p> : <p>هنوز رویداد عملیاتی ثبت نشده است.</p>}
+              {data.open_work_items.length > 0 ? <p className="rounded bg-amber-50 p-2 text-amber-900">{data.open_work_items.length} مورد نیازمند رسیدگی در مسیر ثبت شده است.</p> : <p className="text-slate-600">در حال حاضر اقدام عملیاتی مشخصی برای این بخش ثبت نشده است.</p>}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>مسیر و نقاط عملیاتی</CardTitle></CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {!displayedLegs.length ? <p className="text-slate-600">برنامه مسیر هنوز آماده نشده است.</p> : displayedLegs.map((leg, index) => <article key={leg.id} className="rounded border p-3"><strong>بخش مسیر {index + 1}</strong><p>{leg.origin.display_name || "ثبت نشده"} → {leg.destination.display_name || "ثبت نشده"} · {leg.transport_mode}</p><p>برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>{"projected_departure" in leg && <p>برآورد فعلی: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}{"actual_departure" in leg && <p>زمان واقعی: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}</article>)}
+            </CardContent>
+          </Card>
+
+          <details className="rounded border bg-white">
+            <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات کالا، وسیله حمل و پیگیری</summary>
+            <div className="border-t p-3 sm:p-4"><ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} /></div>
+          </details>
 
           <details className="rounded border bg-white" open={false}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات و سوابق بیشتر</summary>
             <div className="space-y-5 border-t p-3 sm:p-4">
               <div className="grid gap-4 lg:grid-cols-2">
-                <Card><CardHeader><CardTitle>مسیر حمل</CardTitle></CardHeader><CardContent className="space-y-3 text-sm"><p>{data.route_leg?.origin.display_name || "—"} ← مسیر تا ← {data.route_leg?.destination.display_name || "—"}</p><p>روش حمل: {data.route_leg?.transport_mode || "—"}</p>{displayedLegs.map((leg, index) => <div key={leg.id} className="rounded bg-slate-50 p-3">بخش {index + 1}: {leg.origin.display_name || "—"} ← {leg.destination.display_name || "—"}<br />{leg.transport_mode} · {when(leg.actual_departure || leg.planned_departure, locale)} تا {when(leg.actual_arrival || leg.planned_arrival, locale)}</div>)}</CardContent></Card>
                 <Card><CardHeader><CardTitle>اسناد و شماره‌های مرجع</CardTitle></CardHeader><CardContent className="space-y-2 text-sm"><p>شماره محموله: {data.public_id}</p><p>مرجع مشتری: {data.source.request_public_id || "ثبت نشده"}</p><p>مرجع تجاری: {data.source.accepted_quote_id || "ثبت نشده"}</p><p className="text-slate-600">اسناد حمل و شماره‌های CMR، AWB، BL یا گمرکی در صورت ثبت در همین محموله نمایش داده می‌شوند.</p></CardContent></Card>
                 <Card><CardHeader><CardTitle>تأخیرها و موارد خاص</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{(timeline?.delays?.length || exceptions.length) ? <>{timeline?.delays?.map((delay) => <p key={delay.checkpoint_id}>تأخیر ثبت‌شده: {Math.ceil(delay.seconds / 60)} دقیقه</p>)}{exceptions.map((item) => <p key={item.id}>{item.type} · {item.status === "open" ? "نیازمند رسیدگی" : "بررسی‌شده"}{item.reason ? ` · ${item.reason}` : ""}</p>)}</> : <p className="text-slate-600">مورد مهم یا تأخیر ثبت‌شده‌ای وجود ندارد.</p>}</CardContent></Card>
                 <Card><CardHeader><CardTitle>رویدادهای مسیر جاری و سوابق اقدامات</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{data.recent_events.length || data.audit_summary.length ? <>{data.recent_events.map((event) => <p key={event.id}>{when(event.occurred_at, locale)} · {event.event_type}{event.reason ? ` · ${event.reason}` : ""}</p>)}{data.audit_summary.map((item) => <p key={item.id}>{when(item.recorded_at, locale)} · {item.action}</p>)}</> : <p className="text-slate-600">هنوز رویداد مهمی ثبت نشده است.</p>}</CardContent></Card>

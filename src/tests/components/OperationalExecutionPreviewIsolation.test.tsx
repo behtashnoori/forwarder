@@ -33,8 +33,8 @@ beforeEach(() => {
 describe("operational execution initialization preview", () => {
   it("retains the successful preview when an auxiliary read fails", async () => {
     render(<OperationalExecutionSection shipmentPublicId="11111111-1111-4111-8111-111111111110" shipmentVersion={1} />);
-    expect(await screen.findByText("1 expected milestones")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Confirm initialization" })).toBeEnabled();
+    expect(await screen.findByText("1 مرحله مورد انتظار")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "تأیید آماده‌سازی" })).toBeEnabled();
     expect(screen.getByRole("alert")).toHaveTextContent("secondary read failed");
   });
 });
