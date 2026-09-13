@@ -3176,7 +3176,7 @@ paths:
     get:
       tags: [Logistics Network]
       summary: Select active organization-scoped points
-      description: Requires authentication and logistics point read permission. Results are active-only and tenant-scoped; this endpoint cannot create free-text masters.
+      description: Requires authentication and either logistics point read or operational shipment creation permission (direct, accepted quote, or legacy create). Results are active-only, tenant-scoped organization LogisticsPoints, including private and adopted reference-network points; unadopted global points are excluded. This endpoint cannot create free-text masters.
       security: [{ bearerAuth: [] }]
       parameters: [{ $ref: '#/components/parameters/Page' }, { $ref: '#/components/parameters/PerPage' }, { name: q, in: query, description: Code or bilingual name search; bounded to 160 characters., schema: { type: string, maxLength: 160 } }, { name: type, in: query, description: Active point type public UUID., schema: { type: string, format: uuid } }, { name: country, in: query, description: Country code., schema: { type: string } }]
       responses: { '200': { $ref: '#/components/responses/LogisticsPointList' }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' } }

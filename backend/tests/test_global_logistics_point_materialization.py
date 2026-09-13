@@ -5,9 +5,9 @@ import pytest
 
 from backend.extensions import db
 from backend.global_logistics_point_models import GlobalLogisticsPoint
-from backend.logistics_network_models import LogisticsPoint, ProjectLogisticsPoint
+from backend.logistics_network_models import LogisticsPoint, LogisticsPointType, ProjectLogisticsPoint
 from backend.models import Customer, ShipmentRequest, TrackingLocationReference
-from backend.operational_models import ExecutionUnit, OperationalShipment, Project
+from backend.operational_models import ExecutionUnit, OperationalMembership, OperationalShipment, Project
 from backend.services.operational_service import OperationalError
 from backend.services.tracking_projection_service import project_execution_units
 from backend.tests.canonical_tracking_fixture import append_event, execution_unit
@@ -94,6 +94,78 @@ def test_add_from_reference_is_atomic_idempotent_and_preserves_provenance(adopti
             row = db.session.query(LogisticsPoint).filter_by(public_id=item["logistics_point_public_id"]).one()
             assert row.global_adoption_id and row.global_logistics_point_id
             assert row.immutable_code == "XZ-ACTIVE-PORT"
+
+
+def test_operational_selector_converges_private_and_adopted_tenant_points(adoption_app):
+    app, c = adoption_app
+    endpoint = "/api/internal/logistics-points?active=true&per_page=100"
+    with app.app_context():
+        membership = OperationalMembership.query.filter_by(user_id=c["expert_id"]).one()
+        membership.permissions = ["operational_shipment.create_direct"]
+        type_id = db.session.get(LogisticsPointType, c["point_type_id"]).public_id
+        db.session.commit()
+    with app.test_client() as client:
+        # A global reference is not an organization facility until it is added.
+        empty = client.get(endpoint, headers=c["expert"])
+        assert empty.status_code == 200 and empty.get_json()["items"] == []
+        added = client.post(
+            f"/api/admin/global-logistics-points/{c['active']}/add-to-organization-network",
+            headers=c["a"], json={"display_label": "Adopted Port"},
+        )
+        assert added.status_code == 201
+        adopted_id = added.get_json()["item"]["logistics_point_public_id"]
+        foreign = client.post(
+            f"/api/admin/global-logistics-points/{c['active']}/add-to-organization-network",
+            headers=c["b"], json={"display_label": "Foreign Port"},
+        )
+        assert foreign.status_code == 201
+        foreign_id = foreign.get_json()["item"]["logistics_point_public_id"]
+        private = client.post("/api/admin/logistics-points", headers=c["a"], json={
+            "immutable_code": "A-PRIVATE-PORT", "point_type_public_id": type_id,
+            "fa_name": "Private Port", "country_code": "XZ",
+        })
+        assert private.status_code == 201
+        private_item = private.get_json()["item"]
+        with app.app_context():
+            inactive_type = LogisticsPointType(
+                immutable_code="INACTIVE-TEST", fa_name="نوع غیرفعال", en_name="Inactive",
+                is_active=False, created_by=c["admin_a_id"], updated_by=c["admin_a_id"],
+            )
+            db.session.add(inactive_type)
+            db.session.flush()
+            rows = [
+                LogisticsPoint(organization_id=c["org_a"], immutable_code="A-INACTIVE-POINT",
+                    logistics_point_type_id=c["point_type_id"], fa_name="Inactive Point",
+                    normalized_name="inactive point", country_id=c["country_id"],
+                    geography_key="XZ:inactive-point", is_active=False,
+                    created_by=c["admin_a_id"], updated_by=c["admin_a_id"]),
+                LogisticsPoint(organization_id=c["org_a"], immutable_code="A-INACTIVE-TYPE",
+                    logistics_point_type_id=inactive_type.id, fa_name="Inactive Type Point",
+                    normalized_name="inactive type point", country_id=c["country_id"],
+                    geography_key="XZ:inactive-type",
+                    created_by=c["admin_a_id"], updated_by=c["admin_a_id"]),
+            ]
+            db.session.add_all(rows)
+            db.session.commit()
+            hidden_ids = {row.public_id for row in rows}
+        selected = client.get(endpoint, headers=c["expert"])
+        assert selected.status_code == 200
+        items = selected.get_json()["items"]
+        assert {item["public_id"] for item in items} == {adopted_id, private_item["public_id"]}
+        assert adopted_id != foreign_id and foreign_id not in {item["public_id"] for item in items}
+        assert not hidden_ids.intersection(item["public_id"] for item in items)
+        assert {bool(item["global_source"]) for item in items} == {False, True}
+        assert client.post("/api/admin/logistics-points", headers=c["expert"], json={}).status_code == 403
+        assert client.patch(f"/api/admin/logistics-points/{private_item['public_id']}", headers=c["expert"], json={}).status_code == 403
+        for action in ("activate", "deactivate"):
+            assert client.post(f"/api/admin/logistics-points/{private_item['public_id']}/{action}", headers=c["expert"], json={}).status_code == 403
+        assert client.get(endpoint, headers=c["platform"]).status_code == 403
+        for permission in ("operational_shipment.create_from_quote", "operational_shipment.create", "logistics_point.read"):
+            with app.app_context():
+                membership = OperationalMembership.query.filter_by(user_id=c["expert_id"]).one()
+                membership.permissions = [permission]
+                db.session.commit()
+            assert client.get(endpoint, headers=c["expert"]).status_code == 200
 
 
 def test_add_from_reference_refuses_inactive_adoption_and_deprecated_global(adoption_app):

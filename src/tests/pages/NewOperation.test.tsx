@@ -280,6 +280,48 @@ describe("Slice 5 governed creation", () => {
     expect(screen.getByLabelText("Destination روش تعیین مکان")).toHaveValue("facility");
   });
 
+  it("uses one facility selector for private and adopted organization points", async () => {
+    vi.mocked(api.getOperationalContext).mockResolvedValue({
+      data: { organization_id: 1, permissions: ["operational_shipment.create_direct"] },
+    });
+    const adopted = {
+      ...preferredPoint,
+      global_source: {
+        global_point_public_id: "global-point",
+        adoption_public_id: "adoption",
+        fa_name: "Reference depot",
+        en_name: "Reference depot",
+        platform_lifecycle_status: "ACTIVE",
+        adoption_status: "ACTIVE",
+      },
+    };
+    vi.mocked(api.listLogisticsPoints).mockResolvedValue({
+      items: [organizationPoint, adopted], page: 1, pages: 1, total: 2,
+    });
+    renderPage("/operations/shipments/new?source=direct");
+    await waitFor(() => expect(api.listLogisticsPoints).toHaveBeenCalledWith({ active: "true", per_page: 100 }));
+    const origin = await screen.findByLabelText("Origin operational facility");
+    await waitFor(() => expect(origin).not.toBeDisabled());
+    expect(origin).toHaveTextContent("Organization depot");
+    expect(origin).toHaveTextContent("Preferred depot");
+    expect(screen.getAllByLabelText(/operational facility/)).toHaveLength(2);
+  });
+
+  it.each([
+    new api.ApiError(403, "FORBIDDEN_OPERATION", "You are not allowed to perform this operation."),
+    new Error("Network unavailable"),
+  ])("shows a contextual Persian facility error for %s", async (failure) => {
+    vi.mocked(api.getOperationalContext).mockResolvedValue({
+      data: { organization_id: 1, permissions: ["operational_shipment.create_direct"] },
+    });
+    vi.mocked(api.listLogisticsPoints).mockRejectedValue(failure);
+    renderPage("/operations/shipments/new?source=direct");
+    expect(await screen.findAllByText("امکان دریافت نقاط عملیاتی وجود ندارد.")).toHaveLength(2);
+    expect(screen.getAllByRole("option", { name: "دریافت نقاط عملیاتی ناموفق بود." })).toHaveLength(2);
+    expect(screen.queryByText("You do not have permission to create this operation.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Network unavailable")).not.toBeInTheDocument();
+  });
+
   it.each([
     [["operational_shipment.create_direct"], true, false],
     [["operational_shipment.create_from_quote"], false, true],

@@ -294,9 +294,9 @@ export default function NewOperation() {
     searchIranDestinations()
       .then((response) => setIran(response.data))
       .catch((caught) => setSelectorError(errorText(caught)));
-    listLogisticsPoints({ active: 1, per_page: 100 })
+    listLogisticsPoints({ active: "true", per_page: 100 })
       .then((response) => setLogisticsPoints(response.items.filter((point) => point.is_active)))
-      .catch((caught) => setFacilityError(errorText(caught)))
+      .catch(() => setFacilityError("امکان دریافت نقاط عملیاتی وجود ندارد."))
       .finally(() => setFacilityLoading(false));
   }, []);
   useEffect(() => {

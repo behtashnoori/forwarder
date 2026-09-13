@@ -21,6 +21,7 @@ from backend.operational_models import OperationalAudit, Project, utcnow
 from backend.services.operational_service import (
     OperationalError,
     organization_for_user,
+    require_any_permission,
     require_permission,
 )
 
@@ -348,16 +349,28 @@ def scoped_point(
 
 
 def list_points(args, user, *, admin=False):
-    require_permission(user, "logistics_point.read")
+    if admin:
+        require_permission(user, "logistics_point.read")
+    else:
+        require_any_permission(user, {
+            "logistics_point.read",
+            "operational_shipment.create_direct",
+            "operational_shipment.create_from_quote",
+            "operational_shipment.create",
+        })
     org = organization_for_user(user["id"])
     q = select(LogisticsPoint).options(
         joinedload(LogisticsPoint.global_point), joinedload(LogisticsPoint.global_adoption)
     ).where(LogisticsPoint.organization_id == org)
-    active = str(args.get("active", "all" if admin else "true"))
-    if active in {"true", "false"}:
-        q = q.where(LogisticsPoint.is_active.is_(active == "true"))
-    if not admin and active == "true":
-        q = q.join(LogisticsPointType).where(LogisticsPointType.is_active.is_(True))
+    if admin:
+        active = str(args.get("active", "all"))
+        if active in {"true", "false"}:
+            q = q.where(LogisticsPoint.is_active.is_(active == "true"))
+    else:
+        q = q.join(LogisticsPointType).where(
+            LogisticsPoint.is_active.is_(True),
+            LogisticsPointType.is_active.is_(True),
+        )
     if args.get("type"):
         q = q.join(LogisticsPointType).where(
             LogisticsPointType.public_id == args["type"]
