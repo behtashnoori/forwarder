@@ -33,6 +33,7 @@ import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
 import ShipmentExternalReferences from "@/components/ShipmentExternalReferences";
 import OperationsNav from "@/components/OperationsNav";
 import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
+import RouteAuthoringSection from "@/components/RouteAuthoringSection";
 
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
@@ -68,6 +69,8 @@ export default function OperationalShipmentDetail() {
   const [data, setData] = useState<OperationalShipmentSummary>();
   const [plans, setPlans] = useState<RoutePlanSummary[]>([]);
   const [plan, setPlan] = useState<RoutePlanDetail>();
+  const [draftPlan, setDraftPlan] = useState<RoutePlanDetail>();
+  const [routePlansLoaded, setRoutePlansLoaded] = useState(false);
   const [timeline, setTimeline] = useState<RouteTimeline>();
   const [exceptions, setExceptions] = useState<RouteException[]>([]);
   const [error, setError] = useState("");
@@ -80,17 +83,18 @@ export default function OperationalShipmentDetail() {
   // The API represents that state as a null current route leg.
   const displayedLegs = plan?.legs || data?.route_legs || (data?.route_leg ? [data.route_leg] : []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<boolean> => {
     if (!shipmentPublicId) {
       setError(invalidIdentityMessage);
-      return;
+      return false;
     }
     try {
+      setRoutePlansLoaded(false);
       setError("");
       const shipment = await getOperationalShipment(shipmentPublicId);
       if (!UUID_PATTERN.test(shipment.data.public_id) || shipment.data.public_id.toLowerCase() !== shipmentPublicId.toLowerCase()) {
         setError(inconsistentIdentityMessage);
-        return;
+        return false;
       }
       const [revisions, routeTimeline, routeExceptions] = await Promise.all([
         listRoutePlans(shipmentPublicId),
@@ -103,8 +107,13 @@ export default function OperationalShipmentDetail() {
       setExceptions(routeExceptions.data);
       const active = revisions.data.find((item) => item.is_active);
       setPlan(active ? (await getRoutePlan(shipmentPublicId, active.id)).data : undefined);
+      const draft = !active && revisions.data.find((item) => item.status === "draft");
+      setDraftPlan(draft ? (await getRoutePlan(shipmentPublicId, draft.id)).data : undefined);
+      setRoutePlansLoaded(true);
+      return true;
     } catch (caught) {
       setError(safeError(caught));
+      return false;
     }
   }, [shipmentPublicId]);
 
@@ -148,6 +157,7 @@ export default function OperationalShipmentDetail() {
           </header>
 
           <OperationsNav />
+          {routePlansLoaded && !activePlan && <RouteAuthoringSection shipmentId={shipmentPublicId} draft={draftPlan} hasDraft={plans.some((item) => item.status === "draft")} reload={load} />}
           <Card>
             <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
               <p><span className="text-slate-500">مشتری</span><br /><strong>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</strong></p>
@@ -199,7 +209,7 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <p>{activePlan ? <>نسخه مسیر {activePlan.revision_number} · {businessLabel(activePlan.status)}</> : data.source.type === "direct" ? "برای این محموله هنوز برنامه مسیر ثبت نشده است." : t("operations.noActiveRoute")}</p>
+              <p>{activePlan ? <>نسخه مسیر {activePlan.revision_number} · {businessLabel(activePlan.status)}</> : draftPlan ? "برنامه مسیر در حال آماده‌سازی است." : "برای این محموله هنوز برنامه مسیر فعالی ثبت نشده است."}</p>
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="Multi-leg route">
                 {displayedLegs.map((leg, index) => (
                   <article key={leg.id} className="min-w-0 rounded border p-3">

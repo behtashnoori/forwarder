@@ -26,7 +26,7 @@ vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
   return {
     ...actual,
-    getOperationalShipment: vi.fn(), listRoutePlans: vi.fn(), getRoutePlan: vi.fn(),
+    getOperationalShipment: vi.fn(), listRoutePlans: vi.fn(), getRoutePlan: vi.fn(), createRoutePlan: vi.fn(),
     getRouteTimeline: vi.fn(), listRouteExceptions: vi.fn(),
     reconcileRouteTimeline: vi.fn(), replanRoute: vi.fn(), commandRouteCheckpoint: vi.fn(), recordOperationalEvent: vi.fn(),
     verifyRouteMilestone: vi.fn(), correctRouteMilestone: vi.fn(),
@@ -185,6 +185,14 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.queryByText("اجرای عملیاتی")).not.toBeInTheDocument();
   });
 
+  it("keeps initial authoring controls out of an active route and leaves replan separate", async () => {
+    renderDetail();
+    expect(await screen.findByText("Active route plan")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "ایجاد مسیر عملیات" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "افزودن بخش مسیر" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Replan future segments" })).toBeInTheDocument();
+  });
+
   it("renders a direct shipment that has not been route-planned yet", async () => {
     vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, source: { type: "direct", accepted_quote_id: null, shipment_request_id: null }, route_leg: null, route_legs: [] } });
     vi.mocked(api.listRoutePlans).mockResolvedValue({ data: [] });
@@ -193,6 +201,19 @@ describe("Phase 1B shipment detail behavior", () => {
     renderDetail();
     expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
     expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
+  });
+
+  it.each(["direct", "accepted_quote"] as const)("offers initial route creation for authorized %s shipments", async (type) => {
+    controls.permissions.add("route_plan.create");
+    vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, source: { ...shipment.source, type }, route_leg: null, route_legs: [] } });
+    vi.mocked(api.listRoutePlans).mockResolvedValue({ data: [] });
+    vi.mocked(api.getRouteTimeline).mockResolvedValue({ data: { ...timeline, planned: [], projected: [], actual: [], effective: [], delays: [] } });
+    vi.mocked(api.listRouteExceptions).mockResolvedValue({ data: [] });
+    vi.mocked(api.createRoutePlan).mockResolvedValue({ data: plan });
+    renderDetail();
+    fireEvent.click(await screen.findByRole("button", { name: "ایجاد مسیر عملیات" }));
+    await waitFor(() => expect(api.createRoutePlan).toHaveBeenCalledWith(shipment.public_id));
+    expect(api.getOperationalShipment).toHaveBeenCalledTimes(2);
   });
 
   it("uses the route UUID for every detail subrequest when the response has no numeric id", async () => {

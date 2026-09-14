@@ -1784,6 +1784,7 @@ export interface RouteMilestone {
 export interface RouteCheckpoint {
   id: number;
   route_leg_id: number;
+  canonical_location_id: number;
   sequence_number: number;
   checkpoint_type: string;
   status: string;
@@ -1803,8 +1804,12 @@ export interface RouteCheckpoint {
 export interface RouteLeg {
   id: number;
   sequence_number: number;
-  origin: { display_name?: string };
-  destination: { display_name?: string };
+  origin: { display_name?: string; canonical_reference?: OperationalLocationRef; facility?: { logistics_point_public_id: string } };
+  destination: { display_name?: string; canonical_reference?: OperationalLocationRef; facility?: { logistics_point_public_id: string } };
+  origin_location_id?: number;
+  destination_location_id?: number;
+  origin_logistics_point_id?: number | null;
+  destination_logistics_point_id?: number | null;
   transport_mode: string;
   carrier_reference?: string | null;
   planned_departure: string;
@@ -1887,6 +1892,16 @@ export function getRoutePlan(
     `/api/operational-shipments/${shipmentId}/route-plans/${planId}`,
   );
 }
+export const createRoutePlan = (shipmentId: string) =>
+  request<{ data: RoutePlanDetail }>(`/api/operational-shipments/${shipmentId}/route-plans`, { method: "POST", body: JSON.stringify({}) });
+export const addRouteLeg = (shipmentId: string, planId: number, payload: RouteLegDraft) =>
+  request<{ data: RouteLeg }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/legs`, { method: "POST", body: JSON.stringify(payload) });
+export const updateRouteLeg = (shipmentId: string, planId: number, legId: number, payload: { expected_version: number; sequence_number?: number; origin?: OperationalLocationRef; destination?: OperationalLocationRef; carrier_reference?: string | null }) =>
+  request<{ data: RouteLeg }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/legs/${legId}`, { method: "PATCH", body: JSON.stringify(payload) });
+export const addRouteCheckpoint = (shipmentId: string, planId: number, payload: RouteCheckpointDraft) =>
+  request<{ data: RouteCheckpoint }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/checkpoints`, { method: "POST", body: JSON.stringify(payload) });
+export const updateRouteCheckpoint = (shipmentId: string, planId: number, checkpointId: number, payload: { expected_version: number; responsible_party?: string | null; notes?: string | null }) =>
+  request<{ data: RouteCheckpoint }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/checkpoints/${checkpointId}`, { method: "PATCH", body: JSON.stringify(payload) });
 export function getRouteTimeline(
   shipmentId: string,
 ): Promise<{ data: RouteTimeline }> {
@@ -1918,7 +1933,7 @@ export function reconcileRouteTimeline(
     },
   );
 }
-export function validateRoutePlan(shipmentId: string, planId: number) {
+export function validateRoutePlan(shipmentId: string, planId: number): Promise<{ data: RouteValidationResult }> {
   return request(
     `/api/operational-shipments/${shipmentId}/route-plans/${planId}/validate`,
     { method: "POST" },
@@ -3411,6 +3426,29 @@ export interface ProjectConfigurationItem {
   cargo_catalog_item_public_id?: string;
   cargo_catalog_item_code?: string;
   cargo_catalog_item_name?: string;
+}
+export interface RouteValidationResult {
+  valid: boolean;
+  errors: Array<{ code: string; field: string; severity: string }>;
+}
+export interface RouteLegDraft {
+  sequence_number: number;
+  origin: OperationalLocationRef;
+  destination: OperationalLocationRef;
+  transport_mode: string;
+  planned_departure: string;
+  planned_arrival: string;
+  carrier_reference?: string | null;
+}
+export interface RouteCheckpointDraft {
+  sequence_number: number;
+  checkpoint_type: string;
+  location: OperationalLocationRef;
+  route_leg_id?: number | null;
+  planned_arrival_at?: string | null;
+  planned_departure_at?: string | null;
+  responsible_party?: string | null;
+  notes?: string | null;
 }
 
 /** Business-facing operational eligibility; the API deliberately hides role codes. */
