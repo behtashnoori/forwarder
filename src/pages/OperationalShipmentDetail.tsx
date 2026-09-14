@@ -146,55 +146,53 @@ export default function OperationalShipmentDetail() {
     void run(name, () => action(reason), success);
   };
 
-  if (!data && !error) return <p className="p-8">{t("operations.loading")}</p>;
+  if (!data && !error) return <p className="p-8" role="status">{t("operations.loading")}</p>;
+  const openExceptions = exceptions.filter((item) => item.status === "open");
+  const routeSummary = displayedLegs.length
+    ? `${displayedLegs[0].origin.display_name || "مبدأ ثبت‌نشده"} ← ${displayedLegs.at(-1)?.destination.display_name || "مقصد ثبت‌نشده"}`
+    : "هنوز مسیر عملیاتی ثبت نشده است";
+  const routeConnector = direction === "rtl" ? "←" : "→";
   return (
     <main className="min-h-screen overflow-x-hidden bg-slate-50 p-3 sm:p-4 md:p-8" dir={direction}>
-      <div className="mx-auto max-w-6xl space-y-5">
-        <Link className="inline-flex min-h-11 items-center" to="/operations/shipments">← {t("operations.back")}</Link>
+      <div className="mx-auto max-w-7xl space-y-6">
+        <Link className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" to="/operations/shipments">→ {t("operations.back")}</Link>
         {error && <div role="alert" className="rounded bg-red-50 p-3 text-red-700">{error} <Button variant="link" onClick={() => void load()}>{t("operations.retry")}</Button></div>}
         {notice && <div role="status" className="rounded bg-emerald-50 p-3 text-emerald-800">{notice}</div>}
         {data && <>
-          <header>
-            <h1 className="text-2xl font-bold">خلاصه محموله</h1>
-            <p className="text-sm text-slate-600">شناسه محموله: <span dir="ltr">{data.public_id}</span></p>
+          <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-4 bg-slate-900 px-4 py-5 text-white sm:flex-row sm:items-start sm:justify-between sm:px-6">
+              <div className="min-w-0"><p className="text-sm text-slate-300">فضای کار عملیاتی محموله</p><h1 className="text-2xl font-bold sm:text-3xl">خلاصه محموله</h1><p className="mt-2 break-all text-xs text-slate-300">شناسه محموله: <bdi dir="ltr">{data.public_id}</bdi></p></div>
+              <span className="w-fit rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold ring-1 ring-white/20">{businessLabel(data.status)}</span>
+            </div>
+            <div className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="bg-white p-4"><p className="text-xs text-slate-500">مشتری و پروژه</p><p className="mt-1 font-semibold">{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</p>{data.project_public_id ? <Link className="mt-1 inline-block text-xs text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>مشاهده پروژه مرتبط</Link> : <p className="mt-1 text-xs text-slate-500">محموله مستقیم؛ بدون پروژه</p>}</div>
+              <div className="bg-white p-4"><p className="text-xs text-slate-500">مسیر فعال</p><p className="mt-1 font-semibold">{routeSummary}</p>{activePlan && <p className="mt-1 text-xs text-slate-500">نسخه {activePlan.revision_number}</p>}</div>
+              <div className="bg-white p-4"><p className="text-xs text-slate-500">آخرین رخداد عملیاتی</p><p className="mt-1 font-semibold">{data.recent_events[0] ? businessLabel(data.recent_events[0].event_type) : "هنوز رخدادی ثبت نشده"}</p>{data.recent_events[0] && <p className="mt-1 text-xs text-slate-500">{when(data.recent_events[0].occurred_at, locale)}</p>}</div>
+              <div className="bg-white p-4"><p className="text-xs text-slate-500">موارد باز</p><p className="mt-1 font-semibold">{data.open_work_items.length} مورد پیگیری · {openExceptions.length} استثنا</p><p className="mt-1 text-xs text-slate-500">{data.source.type === "direct" ? "عملیات مستقیم" : "درخواست و پیشنهاد پذیرفته‌شده"}</p></div>
+            </div>
           </header>
 
           <OperationsNav />
-          {routePlansLoaded && !activePlan && <RouteAuthoringSection shipmentId={shipmentPublicId} draft={draftPlan} hasDraft={plans.some((item) => item.status === "draft")} reload={load} />}
-          <Card>
-            <CardContent className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
-              <p><span className="text-slate-500">مشتری</span><br /><strong>{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</strong></p>
-              <p><span className="text-slate-500">پروژه</span><br />{data.project_public_id ? <Link className="text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>{data.project_public_id}</Link> : data.source.type === "direct" ? "محموله مستقیم؛ بدون پروژه" : "ثبت نشده"}</p>
-              <p><span className="text-slate-500">مبدأ ← مقصد</span><br /><strong>{data.route_leg?.origin.display_name || "ثبت نشده"} → {data.route_leg?.destination.display_name || "ثبت نشده"}</strong></p>
-              <p><span className="text-slate-500">روش حمل</span><br /><strong>{data.route_leg?.transport_mode ? transportLabel(data.route_leg.transport_mode) : "ثبت نشده"}</strong></p>
-              <p><span className="text-slate-500">وضعیت محموله</span><br /><strong>{businessLabel(data.status)}</strong></p>
-              <p><span className="text-slate-500">حرکت برنامه‌ریزی‌شده</span><br />{when(data.route_leg?.planned_departure, locale)}</p>
-              <p><span className="text-slate-500">رسیدن برنامه‌ریزی‌شده</span><br />{when(data.route_leg?.planned_arrival, locale)}</p>
-              <p><span className="text-slate-500">منبع محموله</span><br />{data.source.type === "direct" ? "عملیات مستقیم" : "پیش‌فاکتور پذیرفته‌شده"}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>وضعیت و اقدامات قابل انجام</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p>وضعیت فعلی محموله: <strong>{businessLabel(data.status)}</strong></p>
-              {data.recent_events[0] ? <p>آخرین رخداد عملیاتی: {businessLabel(data.recent_events[0].event_type)} · {when(data.recent_events[0].occurred_at, locale)}</p> : <p>هنوز رخداد عملیاتی ثبت نشده است.</p>}
-              {data.open_work_items.length > 0 ? <p className="rounded bg-amber-50 p-2 text-amber-900">{data.open_work_items.length} مورد نیازمند رسیدگی در مسیر ثبت شده است.</p> : <p className="text-slate-600">در حال حاضر اقدام عملیاتی مشخصی برای این بخش ثبت نشده است.</p>}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader><CardTitle>مسیر و نقاط عملیاتی</CardTitle></CardHeader>
+          <section aria-labelledby="next-action-heading" className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5">
+            <div><p className="text-xs font-semibold text-blue-700">اقدام جاری</p><h2 id="next-action-heading" className="text-xl font-bold">اقدامات مجاز بعدی</h2><p className="mt-1 text-sm text-slate-600">اقدامات این بخش فقط بر پایه وضعیت و مجوزهای ثبت‌شده در سامانه نمایش داده می‌شوند.</p></div>
+            {routePlansLoaded && !activePlan && <RouteAuthoringSection shipmentId={shipmentPublicId} draft={draftPlan} hasDraft={plans.some((item) => item.status === "draft")} reload={load} />}
+            {activePlan && <div className="grid gap-3 lg:grid-cols-2">{displayedLegs.map((leg, index) => {
+              const actionable = !["blocked", "cancelled", "completed"].includes(leg.status);
+              const action = actionable && !leg.actual_departure && leg.departure_milestone_id ? { label: "ثبت حرکت", id: leg.departure_milestone_id } : actionable && leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id ? { label: "ثبت رسیدن", id: leg.arrival_milestone_id } : null;
+              return action ? <OperationalPermission key={leg.id} permission="milestone_event.create"><div className="rounded-xl border border-blue-200 bg-white p-4"><p className="mb-2 text-sm text-slate-600">بخش مسیر {index + 1}: {leg.origin.display_name} {routeConnector} {leg.destination.display_name}</p><OccurrenceTimeAction id={`leg-${leg.id}-time`} action={action.label} pending={!!pending} onSubmit={(occurredAt) => void run(`leg-${leg.id}`, () => recordOperationalEvent(shipmentPublicId, action.id, occurredAt, key()), "رخداد بخش مسیر ثبت شد.")} /></div></OperationalPermission> : null;
+            })}</div>}
+          </section>
+          <section aria-labelledby="route-workspace-heading" className="space-y-3">
+          <div><p className="text-xs font-semibold text-slate-500">اجرای حمل</p><h2 id="route-workspace-heading" className="text-xl font-bold">مسیر و اجرای عملیاتی</h2></div>
+          <Card className="border-slate-200 shadow-sm">
+            <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle><p className="text-sm text-slate-500">مسیر فعال و وضعیت بخش‌های عملیاتی</p></CardHeader>
             <CardContent className="space-y-3 text-sm">
               {!displayedLegs.length ? <p className="text-slate-600">برنامه مسیر هنوز آماده نشده است.</p> : displayedLegs.map((leg, index) => {
-                const actionable = !!activePlan && !["blocked", "cancelled", "completed"].includes(leg.status);
-                const action = actionable && !leg.actual_departure && leg.departure_milestone_id ? { label: "ثبت حرکت", id: leg.departure_milestone_id } : actionable && leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id ? { label: "ثبت رسیدن", id: leg.arrival_milestone_id } : null;
-                return <article key={leg.id} className="min-w-0 rounded border p-3"><strong>بخش مسیر {index + 1}</strong><p>{leg.origin.display_name || "ثبت نشده"} → {leg.destination.display_name || "ثبت نشده"} · {leg.transport_mode}</p><p>برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>{"projected_departure" in leg && <p>برآورد فعلی: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}{"actual_departure" in leg && <p>زمان واقعی: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}{action && <OperationalPermission permission="milestone_event.create"><div className="mt-3"><OccurrenceTimeAction id={`leg-${leg.id}-time`} action={action.label} pending={!!pending} onSubmit={(occurredAt) => void run(`leg-${leg.id}`, () => recordOperationalEvent(shipmentPublicId, action.id, occurredAt, key()), "رخداد بخش مسیر ثبت شد.")} /></div></OperationalPermission>}</article>;
+                return <article key={leg.id} className="min-w-0 rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><strong>بخش مسیر {index + 1}</strong><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{businessLabel(leg.status || "planned")}</span></div><p className="mt-2 break-words font-medium">{leg.origin.display_name || "ثبت نشده"} {routeConnector} {leg.destination.display_name || "ثبت نشده"}</p><p className="text-slate-600">{transportLabel(leg.transport_mode)}</p><p className="mt-2 text-xs text-slate-600">برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} {routeConnector} {when(leg.planned_arrival, locale)}</p>{"projected_departure" in leg && <p className="text-xs text-slate-600">برآورد فعلی: {when(leg.projected_departure, locale)} {routeConnector} {when(leg.projected_arrival, locale)}</p>}{"actual_departure" in leg && <p className="text-xs text-slate-600">زمان واقعی: {when(leg.actual_departure, locale)} {routeConnector} {when(leg.actual_arrival, locale)}</p>}</article>;
               })}
             </CardContent>
           </Card>
-
-          <UnifiedShipmentHistory shipmentPublicId={data.public_id} />
+          </section>
 
           <details className="rounded border bg-white">
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات کالا، وسیله حمل و پیگیری</summary>
@@ -210,32 +208,20 @@ export default function OperationalShipmentDetail() {
               <div className="space-y-5">
               <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? "عملیات مستقیم" : "درخواست"}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ? "پیشنهاد پذیرفته‌شده مرتبط" : t("operations.notApplicable")}</p></CardContent></Card>
 
-          <Card>
-            <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <p>{activePlan ? <>نسخه مسیر {activePlan.revision_number} · {businessLabel(activePlan.status)}</> : draftPlan ? "برنامه مسیر در حال آماده‌سازی است." : "برای این محموله هنوز برنامه مسیر فعالی ثبت نشده است."}</p>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" aria-label="Multi-leg route">
-                {displayedLegs.map((leg, index) => (
-                  <article key={leg.id} className="min-w-0 rounded border p-3">
-                    <strong>بخش مسیر {index + 1}</strong>
-                    <p className="break-words">{leg.origin.display_name || "ثبت نشده"} → {leg.destination.display_name || "ثبت نشده"}</p>
-                    <p>{transportLabel(leg.transport_mode)} · {businessLabel(leg.status || "planned")} · نسخه {leg.version}</p>
-                    <p>برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} → {when(leg.planned_arrival, locale)}</p>
-                    {"projected_departure" in leg && <p>برآورد فعلی: {when(leg.projected_departure, locale)} → {when(leg.projected_arrival, locale)}</p>}
-                    {"actual_departure" in leg && <p>زمان واقعی: {when(leg.actual_departure, locale)} → {when(leg.actual_arrival, locale)}</p>}
-                    {"source_route_leg_id" in leg && leg.source_route_leg_id && <p>از بازنگری قبلی مسیر منتقل شده است.</p>}
-                  </article>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <section aria-labelledby="issues-heading" className="space-y-3">
+            <div><p className="text-xs font-semibold text-slate-500">کنترل جاری</p><h2 id="issues-heading" className="text-xl font-bold">مسائل عملیاتی</h2><p className="mt-1 text-sm text-slate-600">انحراف زمانی، تأخیر، استثنا و موارد پیگیری در کنار هم دیده می‌شوند اما ماهیت مستقل خود را حفظ می‌کنند.</p></div>
+            <OperationalConditionsSection shipmentPublicId={data.public_id} />
+          </section>
 
-          <OperationalConditionsSection shipmentPublicId={data.public_id} />
-          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>مراحل اجرای عملیات</CardTitle></CardHeader><CardContent><p>مراحل وابسته به پروژه برای عملیات مستقیم کاربرد ندارد.</p></CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
-          {data.source.type === "direct" ? <Card><CardHeader><CardTitle>اسناد پروژه</CardTitle></CardHeader><CardContent>برای محموله مستقیم، مراحل و اسناد وابسته به پروژه کاربرد ندارد.</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
-          <ShipmentDocuments shipmentPublicId={data.public_id}/>
-          <ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/>
-          {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
+          {data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <section aria-labelledby="project-execution-heading" className="space-y-3"><h2 id="project-execution-heading" className="text-xl font-bold">اجرای پروژه</h2><OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} /></section>}
+
+          <section aria-labelledby="documents-heading" className="space-y-3">
+            <div><p className="text-xs font-semibold text-slate-500">اسناد و شواهد</p><h2 id="documents-heading" className="text-xl font-bold">مدارک و مراجع حمل</h2><p className="mt-1 text-sm text-slate-600">فایل‌ها، شماره‌های مرجع و آمادگی اسناد مستقل از یکدیگر و در یک فضای عملیاتی قابل دسترس‌اند.</p></div>
+            {data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
+            <div className="grid items-start gap-4 xl:grid-cols-2"><ShipmentDocuments shipmentPublicId={data.public_id}/><ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/></div>
+          </section>
+
+          <details className="rounded-xl border bg-white"><summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات مالی محموله</summary><div className="border-t p-3 sm:p-4">{/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}</div></details>
 
           <Card>
             <CardHeader><CardTitle>{t("operations.timelineReconciliation")}</CardTitle></CardHeader>
@@ -328,6 +314,10 @@ export default function OperationalShipmentDetail() {
               </div>
             </div>
           </details>
+          <section aria-labelledby="history-heading" className="space-y-3">
+            <div><p className="text-xs font-semibold text-slate-500">روایت کامل و تغییرناپذیر</p><h2 id="history-heading" className="text-xl font-bold">تاریخچه یکپارچه محموله</h2></div>
+            <UnifiedShipmentHistory shipmentPublicId={data.public_id} />
+          </section>
         </>}
       </div>
     </main>

@@ -54,7 +54,7 @@ const plan = {
   ],
   checkpoints: [{
     id: 30, route_leg_id: 21, sequence_number: 1, checkpoint_type: "origin", status: "planned",
-    verification_state: "reported", version: 7, planned_arrival_at: "2026-01-01T00:00:00Z",
+    canonical_location_id: null, verification_state: "reported", version: 7, planned_arrival_at: "2026-01-01T00:00:00Z",
     planned_departure_at: "2026-01-01T01:00:00Z", projected_arrival_at: "2026-01-01T00:30:00Z",
     actual_arrival_at: "2026-01-01T00:25:00Z",
     milestones: [
@@ -167,10 +167,10 @@ describe("Phase 1B shipment detail behavior", () => {
   it("puts the shipment story first and keeps specialist work in more details", async () => {
     renderDetail();
     expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
-    expect(screen.getByText("UAT Customer")).toBeInTheDocument();
+    expect(screen.getAllByText("UAT Customer").length).toBeGreaterThan(0);
     expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
     expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
-    expect(screen.getByText("جزئیات عملیاتی بیشتر")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "مسیر و اجرای عملیاتی" })).toBeInTheDocument();
     expect(screen.getByText("Active route plan")).toBeInTheDocument();
     expect(screen.getByText("اجرای عملیاتی")).toBeInTheDocument();
   });
@@ -179,10 +179,10 @@ describe("Phase 1B shipment detail behavior", () => {
     vi.mocked(api.getOperationalShipment).mockResolvedValue({ data: { ...shipment, source: { type: "direct", accepted_quote_id: null, shipment_request_id: null } } });
     renderDetail();
     expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
-    expect(screen.getByText("عملیات مستقیم")).toBeInTheDocument();
+    expect(screen.getAllByText("عملیات مستقیم").length).toBeGreaterThan(0);
     expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
     expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
-    expect(screen.getByText("مراحل وابسته به پروژه برای عملیات مستقیم کاربرد ندارد.")).toBeInTheDocument();
+    expect(screen.queryByText("مراحل وابسته به پروژه برای عملیات مستقیم کاربرد ندارد.")).not.toBeInTheDocument();
     expect(screen.queryByText("Shipment is not assigned to a Project")).not.toBeInTheDocument();
     expect(screen.queryByText("Project has no active milestone definitions")).not.toBeInTheDocument();
     expect(screen.queryByText("اجرای عملیاتی")).not.toBeInTheDocument();
