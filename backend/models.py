@@ -2025,6 +2025,12 @@ class CaseDocumentFile(db.Model):
     __tablename__ = "case_document_file"
     __table_args__ = (
         db.CheckConstraint("status IN ('active', 'superseded', 'deleted')", name="ck_case_document_file_status"),
+        db.CheckConstraint("owner_type IN ('REQUEST', 'SHIPMENT')", name="ck_case_document_file_owner_type"),
+        db.CheckConstraint(
+            "(owner_type = 'REQUEST' AND shipment_request_id IS NOT NULL AND operational_shipment_id IS NULL) OR "
+            "(owner_type = 'SHIPMENT' AND operational_shipment_id IS NOT NULL)",
+            name="ck_case_document_file_owner",
+        ),
         db.CheckConstraint(
             "(is_miscellaneous AND case_requirement_id IS NULL AND custom_title IS NOT NULL) OR "
             "((NOT is_miscellaneous) AND case_requirement_id IS NOT NULL)",
@@ -2036,7 +2042,9 @@ class CaseDocumentFile(db.Model):
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
-    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_type = db.Column(db.String(16), nullable=False, default="REQUEST", server_default="REQUEST", index=True)
+    shipment_request_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id", ondelete="CASCADE"), nullable=True, index=True)
+    operational_shipment_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"), nullable=True, index=True)
     case_requirement_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("case_document_requirement.id", ondelete="RESTRICT"), nullable=True, index=True)
     is_miscellaneous = db.Column(db.Boolean, nullable=False, default=False, index=True)
     custom_title = db.Column(db.String(200), nullable=True)

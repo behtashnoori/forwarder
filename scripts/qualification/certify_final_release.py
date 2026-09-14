@@ -19,7 +19,7 @@ import zipfile
 from pathlib import Path
 
 APP_COMMIT = "b4294fcf4657fbb39b1895ef32e282c92ff9a244"
-REVISION = "20260920_legal_customer_nullable_contact_names"
+REVISION = "20260921_shipment_evidence_ownership"
 INTERNAL_HEALTH = "http://127.0.0.1:5101/api/health"
 PUBLIC_HEALTH = "https://samand.forwarderet.ir/api/health"
 REQUIRED_TIMEOUTS = {

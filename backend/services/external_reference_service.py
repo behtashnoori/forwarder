@@ -7,7 +7,7 @@ import json
 import re
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from backend.extensions import db
 from backend.external_reference_models import (
@@ -141,24 +141,24 @@ def _evidence(
     public_id = payload.get("evidence_document_public_id")
     if not public_id:
         return None, None
-    if shipment.shipment_request_id is None:
-        raise OperationalError(
-            "EVIDENCE_LINEAGE_MISMATCH", "Evidence is unavailable for this owner.", 422
-        )
     file = db.session.scalar(
         select(CaseDocumentFile).where(
             CaseDocumentFile.public_id == str(public_id),
             CaseDocumentFile.operational_organization_id == shipment.organization_id,
-            CaseDocumentFile.shipment_request_id == shipment.shipment_request_id,
+            or_(
+                (CaseDocumentFile.owner_type == "SHIPMENT") & (CaseDocumentFile.operational_shipment_id == shipment.id),
+                (CaseDocumentFile.owner_type == "REQUEST") & (CaseDocumentFile.shipment_request_id == shipment.shipment_request_id),
+            ),
+            CaseDocumentFile.status != "deleted",
         )
     )
-    if file is None or file.case_requirement_id is None:
+    if file is None:
         raise OperationalError("EVIDENCE_NOT_FOUND", "Evidence is unavailable.", 404)
     definition_code = db.session.scalar(
         select(CaseDocumentRequirement.source_definition_code).where(
             CaseDocumentRequirement.id == file.case_requirement_id
         )
-    )
+    ) if file.case_requirement_id else (file.custom_title or "").upper()
     if definition_code not in TYPE_DOCUMENT_CODES[type_row.code]:
         raise OperationalError(
             "EVIDENCE_TYPE_MISMATCH", "Evidence document type is incompatible.", 422

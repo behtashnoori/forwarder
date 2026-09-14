@@ -33,6 +33,7 @@ import UnifiedShipmentHistory from "@/components/UnifiedShipmentHistory";
 import DocumentReadinessSection from "@/components/DocumentReadinessSection";
 import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
 import ShipmentExternalReferences from "@/components/ShipmentExternalReferences";
+import ShipmentDocuments from "@/components/ShipmentDocuments";
 import OperationsNav from "@/components/OperationsNav";
 import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 import RouteAuthoringSection from "@/components/RouteAuthoringSection";
@@ -232,6 +233,7 @@ export default function OperationalShipmentDetail() {
           <OperationalConditionsSection shipmentPublicId={data.public_id} />
           {data.source.type === "direct" ? <Card><CardHeader><CardTitle>مراحل اجرای عملیات</CardTitle></CardHeader><CardContent><p>مراحل وابسته به پروژه برای عملیات مستقیم کاربرد ندارد.</p></CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
           {data.source.type === "direct" ? <Card><CardHeader><CardTitle>اسناد پروژه</CardTitle></CardHeader><CardContent>برای محموله مستقیم، مراحل و اسناد وابسته به پروژه کاربرد ندارد.</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
+          <ShipmentDocuments shipmentPublicId={data.public_id}/>
           <ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/>
           {/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalPermission permission="economics.revenue.view"><ShipmentEconomicsSection shipmentPublicId={data.public_id} sourceType={data.source.type} /></OperationalPermission>}
 

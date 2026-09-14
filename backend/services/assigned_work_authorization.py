@@ -22,7 +22,7 @@ _shadow_logger = logging.getLogger("authorization.shadow")
 
 INTRINSIC_REQUEST_ACTIONS = frozenset({"request.read", "request.message", "request.quote", "request.status", "tracking.read"})
 INTRINSIC_SHIPMENT_ACTIONS = frozenset({
-    "shipment.read", "route.read", "tracking.read", "document.read",
+    "shipment.read", "route.read", "tracking.read", "document.read", "document.manage",
     "document_readiness.read", "execution.read",
 })
 
@@ -69,7 +69,7 @@ def _membership(user_id: int) -> OperationalMembership | None:
 
 def _has_capability(membership: OperationalMembership, action: str) -> bool:
     # Action names are semantic; governed actions retain an explicit membership grant.
-    aliases = {"shipment.read": "operational_shipment.read", "request.read": "request.read"}
+    aliases = {"shipment.read": "operational_shipment.read", "request.read": "request.read", "document.read": "operational_shipment.read", "document.manage": "operational_shipment.create"}
     return aliases.get(action, action) in set(membership.permissions or [])
 
 

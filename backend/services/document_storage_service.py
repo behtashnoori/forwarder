@@ -42,8 +42,8 @@ class PrivateDocumentStorage:
         configured = root or current_app.config["DOCUMENT_STORAGE_ROOT"]
         self.root = Path(configured).resolve()
 
-    def write(self, case_id: int, extension: str, stream, maximum: int) -> tuple[str, int, str]:
-        partition = Path(str(case_id)) / uuid4().hex[:2]
+    def write(self, owner_key: int | str, extension: str, stream, maximum: int) -> tuple[str, int, str]:
+        partition = Path(str(owner_key)) / uuid4().hex[:2]
         # Both components are generated internally.  Resolving the child before
         # it exists is unnecessary and races on Windows when independent uploads
         # create sibling partitions concurrently.
@@ -95,6 +95,18 @@ class PrivateDocumentStorage:
             raise QuarantinedResource("resource not found")
         parts = Path(document.storage_key).parts
         if not parts or parts[0] != str(case.id):
+            raise QuarantinedResource("resource not found")
+        return self._resolve_key(document.storage_key)
+
+    def resolve_for_shipment_download(self, document, *, shipment) -> Path:
+        assert_instance_current(shipment, purpose="document-download")
+        assert_instance_current(document, purpose="document-download")
+        owns_shipment = document.owner_type == "SHIPMENT" and document.operational_shipment_id == shipment.id
+        owns_request = document.owner_type == "REQUEST" and document.shipment_request_id == shipment.shipment_request_id
+        if not (owns_shipment or owns_request) or document.status == "deleted" or not document.storage_key:
+            raise QuarantinedResource("resource not found")
+        expected = f"shipment-{shipment.id}" if owns_shipment else str(shipment.shipment_request_id)
+        if Path(document.storage_key).parts[0] != expected:
             raise QuarantinedResource("resource not found")
         return self._resolve_key(document.storage_key)
 

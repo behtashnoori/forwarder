@@ -22,7 +22,7 @@ verifier = module("release_verifier", ROOT / "scripts/verify_release_artifact.py
 
 
 def test_builder_pins_current_head_and_approved_baseline():
-    assert builder.EXPECTED_HEAD == "20260920_legal_customer_nullable_contact_names"
+    assert builder.EXPECTED_HEAD == "20260921_shipment_evidence_ownership"
     payload = json.loads((ROOT / builder.BASELINE).read_text(encoding="utf-8"))
     assert builder.canonical(payload) == builder.BASELINE_CHECKSUM
     assert len(payload["approved_global_logistics_points"]) == 9
@@ -34,11 +34,11 @@ def test_builder_rejects_non_full_or_unavailable_authorized_commit(tmp_path):
 
 
 @pytest.mark.parametrize("raw", [
-    "20260920_legal_customer_nullable_contact_names (head)",
-    "  20260920_legal_customer_nullable_contact_names (head)  \n",
+    "20260921_shipment_evidence_ownership (head)",
+    "  20260921_shipment_evidence_ownership (head)  \n",
 ])
 def test_normalize_alembic_head_accepts_one_decorated_head(raw):
-    assert builder.normalize_alembic_heads(raw) == "20260920_legal_customer_nullable_contact_names"
+    assert builder.normalize_alembic_heads(raw) == "20260921_shipment_evidence_ownership"
 
 
 @pytest.mark.parametrize("raw", [

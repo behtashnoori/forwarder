@@ -463,7 +463,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260920_legal_customer_nullable_contact_names"
+            "20260921_shipment_evidence_ownership"
     ]
 
 

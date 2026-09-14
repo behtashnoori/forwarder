@@ -4,6 +4,7 @@ from backend.extensions import db
 from backend.operational_models import (Milestone, MilestoneEvent, RoutePlan, RouteLeg,
     OperationalCheckpoint, OperationalAudit, OperationalWorkItem)
 from backend.external_reference_models import OperationalShipmentExternalReference
+from backend.models import CaseDocumentFile
 from backend.services import occurrence_projection_service as authority
 
 VERSION = "route-occurrence-v1"
@@ -113,7 +114,11 @@ def audit_query(shipment):
             OperationalWorkItem.organization_id == shipment.organization_id),
         "shipment_external_reference": select(OperationalShipmentExternalReference.id).where(
             OperationalShipmentExternalReference.operational_shipment_id == shipment.id,
-            OperationalShipmentExternalReference.organization_id == shipment.organization_id)}
+            OperationalShipmentExternalReference.organization_id == shipment.organization_id),
+        "CaseDocumentFile": select(CaseDocumentFile.id).where(
+            CaseDocumentFile.operational_organization_id == shipment.organization_id,
+            or_(CaseDocumentFile.operational_shipment_id == shipment.id,
+                CaseDocumentFile.shipment_request_id == shipment.shipment_request_id))}
     return select(OperationalAudit).where(OperationalAudit.organization_id == shipment.organization_id,
         or_(*(and_(OperationalAudit.entity_type == kind, OperationalAudit.entity_id.in_(ids)) for kind, ids in targets.items())))
 

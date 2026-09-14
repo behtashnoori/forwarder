@@ -16,7 +16,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 
 $ApplicationCommit='b4294fcf4657fbb39b1895ef32e282c92ff9a244'
-$RequiredRevision='20260920_legal_customer_nullable_contact_names'
+$RequiredRevision='20260921_shipment_evidence_ownership'
 $RuntimeArchiveName='Forwarder-Windows-Runtime-S7-RC-a257669-r4.zip'
 $Timeouts=@{DB_GATE=15;TASK_STOP=30;TASK_START=30;BACKEND_STOP=30;BACKEND_START=30;PORT_RELEASE=30;LISTENER_START=30;LISTENER_IDENTITY=30;LISTENER_VERIFY=30;IIS_VERIFY=15;INTERNAL_HEALTH=15;PUBLIC_HEALTH=20;ROLLBACK_RECOVERY=45}
 $ArtifactRoot=Join-Path $PackageRoot 'artifact'

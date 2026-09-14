@@ -6,7 +6,7 @@ from pathlib import Path
 
 COMMIT = "b4294fcf4657fbb39b1895ef32e282c92ff9a244"
 CANDIDATE = "Forwarder-Production-Final-CERTIFIED"
-REVISION = "20260920_legal_customer_nullable_contact_names"
+REVISION = "20260921_shipment_evidence_ownership"
 RUNTIME_ID = "Forwarder-Windows-Runtime-S7-RC-a257669-r4"
 RUNTIME_SHA = "f4a8f108aa89a78d7986f01fb8f6aa8af5e2d35e00617a8453eb1f15df945070"
 

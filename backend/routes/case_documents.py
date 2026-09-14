@@ -20,6 +20,9 @@ from backend.quarantine import QuarantinedResource, is_quarantined
 from backend.services.admin_authorization_service import require_organization_admin_context, require_platform_admin
 from backend.services import organization_document_policy_service as organization_policy
 from backend.services import document_catalog_service as catalog_service
+from backend.services import shipment_document_service as shipment_documents
+from backend.services.assigned_work_authorization import authorize_work_action
+from backend.operational_models import OperationalShipment
 
 document_bp = Blueprint("case_documents", __name__)
 
@@ -51,6 +54,75 @@ def _case_or_error(case_id: int):
     if not can_access_request_detail(case, _current()):
         return None, (jsonify({"error": "شما به این پرونده دسترسی ندارید"}), 403)
     return case, None
+
+
+def _shipment_or_error(public_id: str, action: str = "document.read"):
+    row = OperationalShipment.query.filter_by(public_id=public_id).one_or_none()
+    if row is None or not authorize_work_action(_current(), row, action).allowed:
+        return None, (jsonify({"error": "محموله یا دسترسی سند یافت نشد"}), 404)
+    return row, None
+
+
+@document_bp.get("/api/internal/operational-shipments/<shipment_id>/documents")
+@require_auth
+def shipment_document_list(shipment_id: str):
+    shipment, error = _shipment_or_error(shipment_id)
+    return error if error else jsonify({"data": shipment_documents.documents(shipment)})
+
+
+@document_bp.post("/api/internal/operational-shipments/<shipment_id>/documents")
+@require_auth
+def shipment_document_upload(shipment_id: str):
+    shipment, error = _shipment_or_error(shipment_id, "document.manage")
+    if error:
+        return error
+    upload_file = request.files.get("file")
+    if not upload_file:
+        return jsonify({"error": "انتخاب فایل الزامی است"}), 400
+    try:
+        replacement_id = request.form.get("replaces_document_public_id", "").strip()
+        replacement = CaseDocumentFile.query.filter_by(public_id=replacement_id).one_or_none() if replacement_id else None
+        row = shipment_documents.upload(shipment, _current()["id"], upload_file,
+            request.form.get("title", ""), request.form.get("description"),
+            request.headers.get("Idempotency-Key", "").strip(), replacement)
+        item = next(item for item in shipment_documents.documents(shipment) if item["public_id"] == row.public_id)
+        return jsonify({"data": item}), 201
+    except service.DocumentError as exc:
+        return jsonify({"error": exc.message}), exc.status
+
+
+@document_bp.get("/api/internal/operational-shipments/<shipment_id>/documents/<document_id>/download")
+@require_auth
+def shipment_document_download(shipment_id: str, document_id: str):
+    shipment, error = _shipment_or_error(shipment_id)
+    if error:
+        return error
+    row = CaseDocumentFile.query.filter_by(public_id=document_id, operational_organization_id=shipment.organization_id).one_or_none()
+    if row is None:
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    try:
+        path = PrivateDocumentStorage().resolve_for_shipment_download(row, shipment=shipment)
+    except (DocumentStorageError, QuarantinedResource):
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    return send_file(path, as_attachment=True, download_name=row.safe_download_filename, mimetype=row.detected_mime_type)
+
+
+@document_bp.delete("/api/internal/operational-shipments/<shipment_id>/documents/<document_id>")
+@require_auth
+def shipment_document_delete(shipment_id: str, document_id: str):
+    shipment, error = _shipment_or_error(shipment_id, "document.manage")
+    if error:
+        return error
+    row = CaseDocumentFile.query.filter_by(public_id=document_id, operational_organization_id=shipment.organization_id).one_or_none()
+    owns = row and ((row.owner_type == "SHIPMENT" and row.operational_shipment_id == shipment.id) or
+                    (row.owner_type == "REQUEST" and row.shipment_request_id == shipment.shipment_request_id))
+    if not owns:
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    try:
+        shipment_documents.remove(shipment, row, _current()["id"], (request.get_json(silent=True) or {}).get("reason"))
+        return jsonify({"data": {"public_id": row.public_id, "lifecycle_state": row.status}})
+    except service.DocumentError as exc:
+        return jsonify({"error": exc.message}), exc.status
 
 
 @document_bp.get("/api/admin/document-definitions")

@@ -132,7 +132,7 @@ def _item(shipment, kind, ident, phase):
             previous = db.session.get(OperationalShipmentExternalReference, ref.supersedes_reference_id)
             item["supersedes_reference_public_id"] = previous.public_id if previous else None
         return item
-    item = _base(kind, audit, phase, "WORK_ITEM" if audit.entity_type == "OperationalWorkItem" else "ROUTE" if audit.entity_type == "RoutePlan" else "AUDIT",
+    item = _base(kind, audit, phase, "DOCUMENT" if audit.entity_type == "CaseDocumentFile" else "WORK_ITEM" if audit.entity_type == "OperationalWorkItem" else "ROUTE" if audit.entity_type == "RoutePlan" else "AUDIT",
                  audit.action, None, audit.recorded_at, audit.actor_user_id)
     if audit.entity_type == "RoutePlan":
         plan = db.session.get(RoutePlan, audit.entity_id)

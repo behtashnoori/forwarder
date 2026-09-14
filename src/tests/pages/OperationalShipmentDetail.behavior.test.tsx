@@ -24,6 +24,7 @@ vi.mock("../../components/UnifiedShipmentHistory", () => ({ default: () => <p>ت
 vi.mock("../../components/DocumentReadinessSection", () => ({ default: () => <p>آمادگی اسناد</p> }));
 vi.mock("../../components/ShipmentEconomicsSection", () => ({ default: () => null }));
 vi.mock("../../components/ShipmentExternalReferences", () => ({ default: () => null }));
+vi.mock("../../components/ShipmentDocuments", () => ({ default: () => null }));
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
   return {
