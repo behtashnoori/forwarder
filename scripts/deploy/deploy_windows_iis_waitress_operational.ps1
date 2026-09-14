@@ -11,10 +11,28 @@ function SamePath([string]$A,[string]$B){return [string]::Equals((NPath $A),(NPa
 function TaskRuntime([string]$Xml){[xml]$doc=$Xml;$exec=@($doc.SelectNodes("//*[local-name()='Exec']"));Need ($exec.Count -eq 1) 'one task action required';$command=NPath ([string]$exec[0].Command);$work=NPath ([string]$exec[0].WorkingDirectory);if([IO.Path]::GetFileName($command) -ieq 'python.exe'){$path=$command}else{Need ([IO.Path]::GetFileName($command) -ieq 'cmd.exe') 'cmd.exe or python.exe required';$found=@([regex]::Matches([string]$exec[0].Arguments,'(?i)[a-z]:[\\/][^"&\r\n]*?[\\/]runtime[\\/]python\.exe'));Need ($found.Count -eq 1) 'one release-local runtime required';$path=NPath $found[0].Value};Need ($path.StartsWith($work+'\',[StringComparison]::OrdinalIgnoreCase)) 'runtime outside task working directory';return $path}
 function Fail([string]$Stage){if($FailAt -eq $Stage){throw "RELEASE_STOP: injected $Stage"}}
 function Save(){if($FixtureStatePath){$script:state|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $FixtureStatePath -Encoding UTF8}}
+function Get-RealServerDiscoveryState{
+    # This function is deliberately read-only.  It is the non-fixture path used
+    # by ValidateOnly; Execute remains explicitly gated below.
+    Import-Module WebAdministration -ErrorAction Stop
+    $site=Get-Website -Name 'forwarder' -ErrorAction Stop
+    $task=Get-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop
+    $xml=Export-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop
+    $rows=@(Get-NetTCPConnection -State Listen -LocalPort 5101 -ErrorAction SilentlyContinue | Where-Object {$_.LocalAddress -eq '127.0.0.1'})
+    $owners=@($rows | Select-Object -ExpandProperty OwningProcess -Unique)
+    Need ($owners.Count -le 1) 'multiple listener owners on port 5101'
+    $runtime=$null
+    if($owners.Count -eq 1){$process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop;Need (-not [string]::IsNullOrWhiteSpace([string]$process.ExecutablePath)) 'listener executable path unavailable';$runtime=[string]$process.ExecutablePath}
+    $migration=& (Join-Path $PackageRoot 'artifact\runtime\python.exe') -m backend.migration_cli current 2>&1
+    if($LASTEXITCODE -ne 0){throw 'RELEASE_STOP: database revision discovery failed'}
+    $revision=([string]($migration | Where-Object {$_ -match '^current='} | Select-Object -Last 1)).Substring(8)
+    Need (-not [string]::IsNullOrWhiteSpace($revision)) 'database revision unavailable'
+    return [pscustomobject]@{iis_path=[string]$site.PhysicalPath;task_xml=[string]$xml;enabled=([string]$task.State -ne 'Disabled');listener_runtime=$runtime;listener_up=($owners.Count -eq 1);health=$true;db_revision=$revision}
+}
 function Rollback(){try{$script:state.iis_path=$script:before.iis_path;$script:state.task_xml=$script:before.task_xml;$script:state.enabled=$script:before.enabled;$script:state.listener_runtime=$script:before.listener_runtime;$script:state.listener_up=$true;$script:state.health=$true;Save;Write-Output 'ROLLBACK_RESULT=PASS'}catch{Write-Output 'ROLLBACK_RESULT=FAIL';throw}}
 Need (-not($ValidateOnly -and $Execute)) 'one deployment mode';if(-not $ValidateOnly -and -not $Execute){$ValidateOnly=$true};if($Execute){Need $ConfirmDeployment 'confirmation required'}
 Need (Test-Path -LiteralPath $PackageRoot -PathType Container) 'absolute package root required';$PackageRoot=(Resolve-Path -LiteralPath $PackageRoot).Path
-if($FixtureStatePath){$script:state=Get-Content -Raw -LiteralPath $FixtureStatePath|ConvertFrom-Json}
+if($FixtureStatePath){$script:state=Get-Content -Raw -LiteralPath $FixtureStatePath|ConvertFrom-Json}else{$script:state=Get-RealServerDiscoveryState}
 Fail 'PACKAGE_VERIFY';& (Join-Path $PackageRoot 'VERIFY-PACKAGE.ps1') -PackageRoot $PackageRoot
 Fail 'BASELINE_CAPTURE';$script:before=[pscustomobject]@{iis_path=$script:state.iis_path;task_xml=$script:state.task_xml;enabled=$script:state.enabled;listener_runtime=$script:state.listener_runtime};$oldPython=TaskRuntime $before.task_xml;Need (SamePath $oldPython $before.listener_runtime) 'pre-cutover runtime mismatch'
 Fail 'DB_GATE';Need ($state.db_revision -in @($RequiredBefore,$RequiredTarget)) 'unknown database lineage';if($state.db_revision -eq $RequiredBefore){$migrationNeeded=$true}else{$migrationNeeded=$false};if($ValidateOnly){Write-Output 'FULL_VALIDATEONLY_SIMULATION=PASS';exit 0}
