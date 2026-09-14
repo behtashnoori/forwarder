@@ -52,15 +52,16 @@ os.chdir(a.repo)
 Path(a.log).write_text(json.dumps({'pid':os.getpid(),'parent':os.getppid(),'runtime':sys.executable,'repo':os.getcwd()}))
 os.execv(sys.executable,[sys.executable,'-m','waitress','--listen='+a.host+':'+a.port,'backend.wsgi:app'])
 ''')
-    approved = r'C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py'
+    approved = r'C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py'
     old = str(tmp_path / 'previous-release')
     document = ET.Element('Task')
     action = ET.SubElement(ET.SubElement(document, 'Actions'), 'Exec')
     ET.SubElement(action, 'Command').text = r'C:\Windows\System32\cmd.exe'
-    ET.SubElement(action, 'Arguments').text = (
-        f'/d /c set PYTHONPATH={old} && cd /d "{old}" && "{old}\\runtime\\python.exe" "{approved}" serve '
+    payload = (
+        f'set PYTHONPATH={old}&& cd /d "{old}"&& "{old}\\runtime\\python.exe" "{approved}" serve '
         f'--repo "{old}" --env "{tmp_path / "unused-local.env"}" '
         f'--host 127.0.0.1 --port 5101 --log "{evidence}"')
+    ET.SubElement(action, 'Arguments').text = '/d /c "' + payload.replace('"', '""') + '"'
     ET.SubElement(action, 'WorkingDirectory').text = old
     task_xml = tmp_path / 'task.xml'
     ET.ElementTree(document).write(task_xml, encoding='unicode')

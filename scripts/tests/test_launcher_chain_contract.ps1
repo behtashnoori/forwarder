@@ -18,21 +18,22 @@ $old='C:\local qualification\release-old'
 $py=Join-Path $old 'runtime\python.exe'
 $target='C:\local qualification\release-new'
 $targetPy=Join-Path $target 'runtime\python.exe'
-$launcher='C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py'
+$launcher='C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py'
 $xml='<Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task"><RegistrationInfo><Description>'+ $old +'</Description></RegistrationInfo><Settings><Enabled>true</Enabled></Settings><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c set PYTHONPATH='+$old+' &amp;&amp; cd /d &quot;'+$old+'&quot; &amp;&amp; &quot;'+$py+'&quot; &quot;'+$launcher+'&quot; serve --log &quot;'+$old+'\old.log&quot; --port 5101 --repo &quot;'+$old+'&quot; --env &quot;C:\local qualification\production.env&quot; --host 127.0.0.1</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
+    [xml]$taskDoc=$xml; $taskArgs=[string]$taskDoc.Task.Actions.Exec.Arguments; $taskDoc.Task.Actions.Exec.Arguments='/d /c "'+$taskArgs.Substring(6).Replace('"','""')+'"'; $xml=$taskDoc.OuterXml
 Need (SamePath (TaskRuntime $xml) $py) 'launcher runtime parse failed'
 $next=New-TaskLaunchXml $xml $target
 $parsed=Get-TaskLaunch $next
 Need (SamePath $parsed.Runtime $targetPy) 'candidate launcher runtime parse failed'
 Need ((SamePath $parsed.PythonPath $target) -and (SamePath $parsed.CdPath $target) -and (SamePath ([string]$parsed.Action.WorkingDirectory) $target)) 'target wrapper paths were not transformed'
-Need ([string]$parsed.Action.Arguments -match '^/d /c set PYTHONPATH=.* && cd /d ".*" && ') 'target wrapper shape changed'
+Need ([string]$parsed.Action.Arguments -match '^/d /c "set PYTHONPATH=.*&& cd /d "".*""&& ') 'target wrapper shape changed'
 Need ($parsed.Tokens -contains ($old+'\old.log')) 'external log option was rewritten'
 Need ($parsed.Tokens -contains 'C:\local qualification\production.env') 'external env option was rewritten'
 Need ($parsed.Tokens -contains $launcher) 'approved launcher was rewritten'
 Need ($parsed.Document.Task.RegistrationInfo.Description -eq $old) 'task metadata was rewritten'
 Need (SamePath (TaskRuntime $xml) $py) 'rollback XML changed'
 Need (SamePath (Get-TaskLaunch $xml).PythonPath $old) 'rollback baseline wrapper did not reparse'
-Need (-not (Get-TaskLaunch ($xml.Replace(' --log &quot;'+$old+'\old.log&quot;',''))).Tokens.Contains('--log')) 'optional log absent did not parse'
+Need (-not (Get-TaskLaunch ($xml.Replace(' --log ""'+$old+'\old.log""',''))).Tokens.Contains('--log')) 'optional log absent did not parse'
 $captured=$xml.Replace($old,'C:\1-webapp\forwarder-production\release-current')
 Need (SamePath (TaskRuntime $captured) 'C:\1-webapp\forwarder-production\release-current\runtime\python.exe') 'captured Production wrapper did not parse'
 Need (SamePath (TaskRuntime ($xml.Replace($old,$old.ToUpperInvariant().Replace('\','/')))) $py) 'case/slash runtime normalization failed'
@@ -41,15 +42,15 @@ function Refuses([scriptblock]$Code,[string]$Expected){
     Need ($message -eq ('RELEASE_STOP: '+$Expected)) ('unexpected refusal: '+$message)
 }
 # Old direct actions must not satisfy the approved launcher contract.
-$direct=$xml.Replace('&quot;'+$launcher+'&quot; serve','-m waitress backend.wsgi:app')
+$direct=$xml.Replace('""'+$launcher+'"" serve','-m waitress backend.wsgi:app')
 Refuses {TaskRuntime $direct} 'approved runtime launcher required'
-Refuses {TaskRuntime ($xml.Replace(' &amp;&amp; &quot;'+$py,' &amp;&amp; echo unexpected &amp;&amp; &quot;'+$py))} 'unsupported shell syntax in launcher arguments'
+Refuses {TaskRuntime ($xml.Replace(' &amp;&amp; ""'+$py,' &amp;&amp; echo unexpected &amp;&amp; ""'+$py))} 'unsupported shell syntax in launcher arguments'
 Refuses {TaskRuntime ($xml.Replace(' serve --log',' serve | more --log'))} 'unsupported shell syntax in launcher arguments'
 Refuses {TaskRuntime ($xml.Replace(' serve --log',' serve &gt; file --log'))} 'unsupported shell syntax in launcher arguments'
 Refuses {TaskRuntime ($xml.Replace('PYTHONPATH='+$old,'PYTHONPATH=C:\wrong'))} 'PYTHONPATH/--repo mismatch'
-Refuses {TaskRuntime ($xml.Replace('cd /d &quot;'+$old,'cd /d &quot;C:\wrong'))} 'cd/--repo mismatch'
-Refuses {TaskRuntime ($xml.Replace($py+'&quot;',$old+'\wrong.exe&quot;'))} 'runtime/--repo mismatch'
-Refuses {TaskRuntime ($xml.Replace('--repo &quot;'+$old,'--repo &quot;C:\wrong'))} 'PYTHONPATH/--repo mismatch'
+Refuses {TaskRuntime ($xml.Replace('cd /d ""'+$old,'cd /d ""C:\wrong'))} 'cd/--repo mismatch'
+Refuses {TaskRuntime ($xml.Replace($py+'""',$old+'\wrong.exe""'))} 'runtime/--repo mismatch'
+Refuses {TaskRuntime ($xml.Replace('--repo ""'+$old,'--repo ""C:\wrong'))} 'PYTHONPATH/--repo mismatch'
 Refuses {TaskRuntime ($xml.Replace('<WorkingDirectory>'+$old,'<WorkingDirectory>C:\wrong'))} 'runtime/WorkingDirectory mismatch'
 $observed=[pscustomobject]@{Xml=$next;Enabled=$true;State='Ready';Runtime=$targetPy;Command=('"'+$targetPy+'" -m waitress --listen=127.0.0.1:5101 backend.wsgi:app');Owners=@(31415,31415);Stops=0;HealthCalls=0}
 function Get-NetTCPConnection {param([string]$State,[int]$LocalPort) foreach($owner in $observed.Owners){[pscustomobject]@{LocalAddress='127.0.0.1';OwningProcess=$owner}}}

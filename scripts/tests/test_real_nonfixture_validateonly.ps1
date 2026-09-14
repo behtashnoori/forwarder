@@ -22,7 +22,8 @@ $previousLocation=Get-Location
 Set-Location ([IO.Path]::GetTempPath())
 $release='C:\1-webapp\forwarder-production\release-forwarder-systemic-workflow-b4294fc-20260913222754'
 $python=Join-Path $release 'runtime\python.exe'
-$xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c set PYTHONPATH='+$release+' &amp;&amp; cd /d &quot;'+$release+'&quot; &amp;&amp; &quot;'+$python+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$release+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;</Arguments><WorkingDirectory>'+$release+'</WorkingDirectory></Exec></Actions></Task>'
+$xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c set PYTHONPATH='+$release+' &amp;&amp; cd /d &quot;'+$release+'&quot; &amp;&amp; &quot;'+$python+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$release+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;</Arguments><WorkingDirectory>'+$release+'</WorkingDirectory></Exec></Actions></Task>'
+    [xml]$taskDoc=$xml; $taskArgs=[string]$taskDoc.Task.Actions.Exec.Arguments; $taskDoc.Task.Actions.Exec.Arguments='/d /c "'+$taskArgs.Substring(6).Replace('"','""')+'"'; $xml=$taskDoc.OuterXml
 $temporary=Join-Path ([IO.Path]::GetTempPath()) ('forwarder-db-gate-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temporary|Out-Null
 $previousDatabaseUrl=$env:DATABASE_URL
@@ -118,12 +119,12 @@ connection.close()
     Reset-Topology;$topology.Runtime='';Assert-Topology 'Unknown_executable' 'listener executable path unavailable'
     Reset-Topology;$topology.CommandLine=$python+' unrelated.py';Assert-Topology 'Non_backend_process' 'orphan/mismatched listener: process is not the configured Waitress backend'
     Reset-Topology;$topology.Xml=$xml.Replace('cmd.exe','powershell.exe');Assert-Topology 'Wrong_task_execute' 'system cmd.exe required'
-    Reset-Topology;$topology.Xml=$xml.Replace('_cutover\_runtime.py','_cutover\unapproved.py');Assert-Topology 'Wrong_task_launcher' 'approved runtime launcher required'
+    Reset-Topology;$topology.Xml=$xml.Replace('_cutover_runtime.py','_cutover_unapproved.py');Assert-Topology 'Wrong_task_launcher' 'approved runtime launcher required'
     Reset-Topology;$topology.Xml=$xml.Replace('<WorkingDirectory>'+ $release,'<WorkingDirectory>C:\other-release');Assert-Topology 'Wrong_task_working_directory' 'runtime/WorkingDirectory mismatch'
     Reset-Topology;$topology.Xml=$xml.Replace('serve --env','migrate --env');Assert-Topology 'Wrong_launcher_mode' 'runtime launcher serve command required'
-    Reset-Topology;$topology.Xml=$xml.Replace('--repo &quot;'+$release+'&quot;','');Assert-Topology 'Missing_repo' 'launcher --repo required'
-    Reset-Topology;$topology.Xml=$xml.Replace('--repo &quot;'+$release+'&quot;','--repo &quot;C:\another-release&quot;');Assert-Topology 'Wrong_repo' 'PYTHONPATH/--repo mismatch'
-    Reset-Topology;$topology.Xml=$xml.Replace('--host','--repo &quot;'+$release+'&quot; --host');Assert-Topology 'Duplicate_repo' 'duplicate runtime launcher option'
+    Reset-Topology;$topology.Xml=$xml.Replace('--repo ""'+$release+'""','');Assert-Topology 'Missing_repo' 'launcher --repo required'
+    Reset-Topology;$topology.Xml=$xml.Replace('--repo ""'+$release+'""','--repo ""C:\another-release""');Assert-Topology 'Wrong_repo' 'PYTHONPATH/--repo mismatch'
+    Reset-Topology;$topology.Xml=$xml.Replace('--host','--repo ""'+$release+'"" --host');Assert-Topology 'Duplicate_repo' 'duplicate runtime launcher option'
     Reset-Topology;$topology.Xml=$xml.Replace('runtime\python.exe','runtime\other.exe');Assert-Topology 'Wrong_launcher_runtime' 'runtime/--repo mismatch'
     Reset-Topology;$topology.Xml=$xml.Replace('--port 5101','--port 5102');Assert-Topology 'Wrong_launcher_port' 'launcher endpoint must be 127.0.0.1:5101'
     Reset-Topology;$topology.Xml=$xml.Replace('--host 127.0.0.1','--host 0.0.0.0');Assert-Topology 'Wrong_launcher_host' 'launcher endpoint must be 127.0.0.1:5101'
@@ -147,8 +148,8 @@ connection.close()
     # Quoted paths, XML namespaces, slash/case normalization, and optional log.
     Reset-Topology;$topology.Xml=$xml.Replace('<Task>','<Task xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">');Assert-Topology 'Task_XML_namespace'
     Reset-Topology;$topology.Xml=$xml.Replace('release-forwarder-systemic-workflow','release with spaces-forwarder-systemic-workflow');$topology.Runtime=$python.Replace('release-forwarder-systemic-workflow','release with spaces-forwarder-systemic-workflow');$topology.Iis=$topology.Iis.Replace('release-forwarder-systemic-workflow','release with spaces-forwarder-systemic-workflow');$topology.CommandLine='"'+$topology.Runtime+'" -m waitress --listen=127.0.0.1:5101 backend.wsgi:app';Assert-Topology 'Launcher_release_path_spaces'
-    Reset-Topology;$topology.Xml=$xml.Replace('/d /c set PYTHONPATH=','/d /c echo wrong &amp;&amp; set PYTHONPATH=');Assert-Topology 'Extra_shell_command' 'unsupported shell syntax in launcher arguments'
-    Reset-Topology;$topology.Xml=$xml.Replace(' --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;','');Assert-Topology 'Launcher_optional_log_absent'
+    Reset-Topology;$topology.Xml=$xml.Replace('&amp;&amp; cd /d','&amp;&amp; echo wrong &amp;&amp; cd /d');Assert-Topology 'Extra_shell_command' 'unsupported shell syntax in launcher arguments'
+    Reset-Topology;$topology.Xml=$xml.Replace(' --log ""C:\1-webapp\forwarder-runtime\waitress.log""','');Assert-Topology 'Launcher_optional_log_absent'
     foreach($field in @('Execute','Arguments','WorkingDirectory')){Reset-Topology;$topology.ActionMismatch=$field;Assert-Topology ('Task_export_snapshot_'+$field) 'task action/export configuration mismatch'}
     Reset-Topology;$topology.Xml=$xml.Replace('C:\Windows\System32\cmd.exe',$python);Assert-Topology 'Direct_python_action_refused' 'system cmd.exe required'
     Reset-Topology;$topology.Runtime=$python.ToUpperInvariant().Replace('\','/');Assert-Topology 'Windows_path_normalization'

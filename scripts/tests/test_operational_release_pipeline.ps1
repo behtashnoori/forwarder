@@ -7,7 +7,8 @@ Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 if(-not $DeployScript){$DeployScript=Join-Path $PackageRoot 'deploy_windows_iis_waitress.ps1'}
 $old='C:\1-webapp\forwarder-production\release-old'
 $py=Join-Path $old 'runtime\python.exe'
-$xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c set PYTHONPATH='+$old+' &amp;&amp; cd /d &quot;'+$old+'&quot; &amp;&amp; &quot;'+$py+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$old+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
+$xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c set PYTHONPATH='+$old+' &amp;&amp; cd /d &quot;'+$old+'&quot; &amp;&amp; &quot;'+$py+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$old+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
+    [xml]$taskDoc=$xml; $taskArgs=[string]$taskDoc.Task.Actions.Exec.Arguments; $taskDoc.Task.Actions.Exec.Arguments='/d /c "'+$taskArgs.Substring(6).Replace('"','""')+'"'; $xml=$taskDoc.OuterXml
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('fw-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp|Out-Null
 try{

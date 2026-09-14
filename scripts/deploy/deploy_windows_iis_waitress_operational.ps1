@@ -22,6 +22,13 @@ function Split-LaunchArguments([string]$Text){
     }
     return $values.ToArray()
 }
+function Decode-CmdPayload([string]$Text){
+    Need ($Text.Length -ge 2 -and $Text[0] -ceq '"' -and $Text[$Text.Length-1] -ceq '"') 'quoted cmd.exe /c payload required'
+    $inner=$Text.Substring(1,$Text.Length-2)
+    Need ($inner -notmatch '(?<!")"(?!")|(?<!")"""|"""(?!")') 'malformed doubled cmd.exe quotes'
+    Need ($inner -notmatch '"{3,}') 'malformed doubled cmd.exe quotes'
+    return $inner.Replace('""','"')
+}
 function Get-TaskLaunch([string]$Xml){
     [xml]$doc=$Xml
     $actions=@($doc.SelectNodes("/*[local-name()='Task']/*[local-name()='Actions']/*"))
@@ -30,7 +37,7 @@ function Get-TaskLaunch([string]$Xml){
     Need (SamePath ([string]$action.Command) 'C:\Windows\System32\cmd.exe') 'system cmd.exe required'
     $arguments=[string]$action.Arguments
     Need ($arguments -match '(?i)^\s*/d\s+/c\s+(.+)$') 'cmd.exe /d /c required'
-    $body=$Matches[1].Trim()
+    $body=Decode-CmdPayload $Matches[1].Trim()
     # Parse the only approved shell program before tokenizing its final command.
     # In particular, Split-LaunchArguments must never receive a cmd.exe body.
     Need ($body -notmatch '[|<>^%!\r\n]' -and $body -notmatch '&&.*&&.*&&') 'unsupported shell syntax in launcher arguments'
@@ -42,7 +49,7 @@ function Get-TaskLaunch([string]$Xml){
     Need ($pythonPath -notmatch '[&|<>^%!"\r\n]' -and $cdPath -notmatch '[&|<>^%!\r\n]') 'unsupported shell syntax in launcher arguments'
     $tokens=@(Split-LaunchArguments $invocation)
     Need ($tokens.Count -ge 3) 'runtime launcher invocation required'
-    Need (SamePath $tokens[1] 'C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py') 'approved runtime launcher required'
+    Need (SamePath $tokens[1] 'C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py') 'approved runtime launcher required'
     Need ($tokens[2] -ceq 'serve') 'runtime launcher serve command required'
     $options=@{};$repoIndex=-1
     for($index=3;$index -lt $tokens.Count;$index+=2){
@@ -68,7 +75,8 @@ function New-TaskLaunchXml([string]$Xml,[string]$Release){
     $launch.Tokens[0]=Join-Path $Release 'runtime\python.exe'
     $launch.Tokens[$launch.RepoIndex]=$Release
     $invocation=(($launch.Tokens|ForEach-Object {'"'+$_+'"'}) -join ' ')
-    $launch.Action.Arguments='/d /c set PYTHONPATH='+$Release+' && cd /d "'+$Release+'" && '+$invocation
+    $body='set PYTHONPATH='+$Release+'&& cd /d "'+$Release+'"&& '+$invocation
+    $launch.Action.Arguments='/d /c "'+$body.Replace('"','""')+'"'
     $launch.Action.WorkingDirectory=$Release
     $result=$launch.Document.OuterXml
     Need (SamePath (TaskRuntime $result) (Join-Path $Release 'runtime\python.exe')) 'target task/runtime mismatch'
