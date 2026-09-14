@@ -5,8 +5,9 @@ from pathlib import Path
 APP='e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4'; BEFORE='20260920_legal_customer_nullable_contact_names'; TARGET='20260921_shipment_evidence_ownership'; NAME='Forwarder-Operational-Workspace-Production-CERTIFIED'; RUNTIME_PACKAGE='Forwarder-Windows-Runtime.zip'; RHASH='f4a8f108aa89a78d7986f01fb8f6aa8af5e2d35e00617a8453eb1f15df945070'
 STALE=('S7-RC','S8-RC','a9ed9ae','20260908_governed_international_geography','NO Alembic upgrade in S8')
 STATE_REQUIRED=('ALL_RELEASE_STATE_VARIABLES_AUDITED=YES','UNINITIALIZED_GLOBAL_READS=0','UNINITIALIZED_SCRIPT_READS=0','STATE_LIFECYCLE_AUDIT=PASS','FRESH_PROCESS_VALIDATEONLY=PASS','STRICTMODE_FRESH_PROCESS=PASS','ARBITRARY_CWD_VALIDATEONLY=PASS','AMBIENT_GLOBAL_STATE_INDEPENDENCE=PASS','REPEATED_INVOCATION_MATRIX=PASS','ROLLBACK_FAILURE_REPORTING=PASS','QUALIFICATION_ESCAPE_ROOT_CAUSE_CLOSED=YES','REGRESSION_TEST_ADDED=YES','REAL_EXECUTE_CODEPATH=PASS')
-PROVENANCE_REQUIRED=('TASK_READY_WITH_MATCHING_LISTENER_SUPPORTED=YES','TASK_STATE_NOT_USED_AS_SOLE_OWNERSHIP_AUTHORITY=YES','LISTENER_PROVENANCE_MODEL=PASS','ORPHAN_CLASSIFICATION_MATRIX=PASS','REAL_PRODUCTION_READY_TASK_TOPOLOGY=PASS','BASELINE_CAPTURE_MATRIX=PASS','ONE_PASS_OPERATOR_SIMULATION=PASS')
-INVALIDATED_ZIP_SHA256='cbfb13da4bd71c15b592751f47fdb26043efa558870580476f2f637d53640153'
+PROVENANCE_REQUIRED=('TASK_READY_WITH_MATCHING_LISTENER_SUPPORTED=YES','TASK_STATE_NOT_USED_AS_SOLE_OWNERSHIP_AUTHORITY=YES','LISTENER_PROVENANCE_MODEL=PASS','ORPHAN_CLASSIFICATION_MATRIX=PASS','REAL_PRODUCTION_READY_TASK_TOPOLOGY=PASS','BASELINE_CAPTURE_MATRIX=PASS','ONE_PASS_OPERATOR_SIMULATION=PASS','LAUNCHER_CHAIN_MODEL=PASS','DIRECT_WAITRESS_TASK_ASSUMPTIONS=0','REAL_PRODUCTION_LAUNCHER_TOPOLOGY=PASS','TASK_TRANSFORMATION_PRESERVES_LAUNCHER=PASS','EXECUTE_ROLLBACK_LISTENER_COMMAND_GATES=PASS')
+INVALIDATED_ZIP_SHA256='81388fcff81b2471137a18cd3fde99c5dc0aa09734adb5f01f7a8378febe82ad'
+INVALIDATION_REASON='Direct Waitress task assertion rejects the approved cmd.exe -> release-local Python -> phase1b runtime launcher serve -> Waitress child chain.'
 def sha(p):
  h=hashlib.sha256()
  with p.open('rb') as f:
@@ -67,6 +68,7 @@ def main():
   subprocess.run(['git','diff','--exit-code',APP,'HEAD','--','backend','src','contracts','public','package.json','package-lock.json'],cwd=repo,check=True,stdout=subprocess.DEVNULL)
  if '--finalize' in sys.argv:
   if (out/'CERTIFICATION-PASS.json').exists():raise RuntimeError('certified candidate is immutable')
+  if (out/(NAME+'.zip')).exists():raise RuntimeError('canonical ZIP already exists; refusing a second freeze')
   current=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
   active_lineage_gate(out,current)
   files=sorted(p for p in out.rglob('*') if p.is_file() and p.name not in {'SHA256SUMS.txt',NAME+'.zip',NAME+'.zip.sha256','FINAL-CERTIFIED.json'})
@@ -89,9 +91,9 @@ def main():
    checks=subprocess.run([ps,'-NoProfile','-ExecutionPolicy','Bypass','-File',str(extracted/'CERTIFY-RELEASE.ps1'),'-PackageRoot',str(extracted)],capture_output=True,text=True,timeout=1800)
    required=('PACKAGE_LAYOUT=PASS','PACKAGE_CHECKSUMS=PASS','FULL_EXECUTE_SIMULATION=PASS','FAILURE_INJECTION_MATRIX=PASS','ROLLBACK_MATRIX=PASS','REAL_NONFIXTURE_VALIDATEONLY=PASS','VALIDATEONLY_ZERO_MUTATION=PASS')
    if checks.returncode or any(mark not in checks.stdout for mark in required+STATE_REQUIRED+PROVENANCE_REQUIRED):raise RuntimeError('extracted certification failed: '+checks.stdout+' '+checks.stderr)
-   (repo/'qualification'/'listener-provenance-final-certification.log').write_text(checks.stdout+'\n'+checks.stderr)
+   (repo/'qualification'/'launcher-chain-final-certification.log').write_text(checks.stdout+'\n'+checks.stderr)
    corruption_matrix(extracted,ps)
-  certificate={'zip_sha256':sha(zp),'application_commit':APP,'tooling_commit':metadata['tooling_commit'],'certified_extracted_zip':zp.name,'state_lifecycle_audit':'PASS','listener_provenance_model':'PASS','invalidated_zip_sha256':INVALIDATED_ZIP_SHA256,'qualification_markers':list(required+STATE_REQUIRED+PROVENANCE_REQUIRED),'package_corruption_matrix':'PASS'}
+  certificate={'zip_sha256':sha(zp),'application_commit':APP,'tooling_commit':metadata['tooling_commit'],'certified_extracted_zip':zp.name,'state_lifecycle_audit':'PASS','listener_provenance_model':'PASS','launcher_chain_model':'PASS','direct_waitress_task_assumptions':0,'invalidated_zip_sha256':INVALIDATED_ZIP_SHA256,'qualification_markers':list(required+STATE_REQUIRED+PROVENANCE_REQUIRED),'package_corruption_matrix':'PASS','qualification_scope':'Local reproduction of captured Windows server boundaries; exact non-fixture entry point and real packaged migration CLI on disposable SQLite. No Production access.'}
   (out/'CERTIFICATION-PASS.json').write_text(json.dumps(certificate,indent=2)+'\n')
   print('FINAL_PACKAGE_CERTIFICATION=PASS');print(zp);return
  if out.exists():
@@ -105,7 +107,7 @@ def main():
    invalidated=out.with_name(NAME+'-INVALIDATED-'+sha(previous_zip)[:12])
    if invalidated.exists():raise RuntimeError('invalidated archive already exists')
    out.rename(invalidated)
-   (invalidated/'INVALIDATED.json').write_text(json.dumps({'status':'DO_NOT_EXECUTE','zip_sha256':INVALIDATED_ZIP_SHA256,'reason':'False orphan classification rejects an enabled Ready launcher with matching healthy child listener.'},indent=2)+'\n')
+   (invalidated/'INVALIDATED.json').write_text(json.dumps({'status':'DO_NOT_EXECUTE','zip_sha256':INVALIDATED_ZIP_SHA256,'reason':INVALIDATION_REASON},indent=2)+'\n')
   else:shutil.rmtree(out) # only interrupted, uncertified local assembly
  if subprocess.run(['git','diff','--quiet','--','backend','src','contracts','public','package.json','package-lock.json'],cwd=repo).returncode:raise RuntimeError('tracked product worktree is dirty')
  if not qualification:subprocess.run([('npm.cmd' if os.name=='nt' else 'npm'),'run','build'],cwd=repo,check=True)
@@ -130,10 +132,11 @@ def main():
   shutil.copy2(repo/'scripts/tests/test_operational_release_pipeline.ps1',root/'CERTIFY-RELEASE.ps1')
   shutil.copy2(repo/'scripts/tests/test_real_nonfixture_validateonly.ps1',root/'QUALIFY-REAL-VALIDATEONLY.ps1')
   shutil.copy2(repo/'scripts/tests/test_real_execute_simulation.ps1',root/'QUALIFY-REAL-EXECUTE.ps1')
+  shutil.copy2(repo/'scripts/tests/test_launcher_chain_contract.ps1',root/'QUALIFY-LAUNCHER-CHAIN.ps1')
   shutil.copy2(repo/'scripts/tests/audit_release_state_lifecycle.ps1',root/'AUDIT-STATE-LIFECYCLE.ps1')
   shutil.copy2(repo/'scripts/tests/STATE-LIFECYCLE-AUDIT.md',root/'STATE-LIFECYCLE-AUDIT.md')
   shutil.copy2(repo/'scripts/tests/LISTENER-PROVENANCE.md',root/'LISTENER-PROVENANCE.md')
-  (root/'INVALIDATED-ARTIFACTS.json').write_text(json.dumps({'do_not_execute_zip_sha256':[INVALIDATED_ZIP_SHA256],'reason':'Superseded: false orphan classification for Ready launcher tasks.'},indent=2)+'\n')
+  (root/'INVALIDATED-ARTIFACTS.json').write_text(json.dumps({'do_not_execute_zip_sha256':[INVALIDATED_ZIP_SHA256,'cbfb13da4bd71c15b592751f47fdb26043efa558870580476f2f637d53640153'],'reason':INVALIDATION_REASON},indent=2)+'\n')
   verify = """#requires -Version 5.1
 param([Parameter(Mandatory=$true)][string]$PackageRoot)
 Set-StrictMode -Version Latest
@@ -155,7 +158,7 @@ Write-Output 'PACKAGE_LAYOUT=PASS';Write-Output 'PACKAGE_CHECKSUMS=PASS';Write-O
 
 Use an elevated Windows PowerShell 5.1 session. All commands are absolute and independent of the current directory. Do not run Execute unless every prior gate passes.
 
-The previous server ZIP with SHA256 `cbfb13da4bd71c15b592751f47fdb26043efa558870580476f2f637d53640153` is INVALIDATED / DO NOT EXECUTE. Replace the ZIP and extracted package together. Preserve any old extraction outside the new package directory; never overlay an old extraction. Use only the new supplied SHA256. See `INVALIDATED-ARTIFACTS.json` and `LISTENER-PROVENANCE.md`.
+The previous server ZIP with SHA256 `81388fcff81b2471137a18cd3fde99c5dc0aa09734adb5f01f7a8378febe82ad` is INVALIDATED / DO NOT EXECUTE. Replace the ZIP and extracted package together. Preserve any old extraction outside the new package directory; never overlay an old extraction. Use only the new supplied SHA256. See `INVALIDATED-ARTIFACTS.json` and `LISTENER-PROVENANCE.md`.
 
 1. Copy `Forwarder-Operational-Workspace-Production-CERTIFIED.zip` and its `.zip.sha256` sidecar to `C:\1-webapp\forwarder-production\incoming`.
 2. Verify ZIP SHA-256 against the supplied sidecar:

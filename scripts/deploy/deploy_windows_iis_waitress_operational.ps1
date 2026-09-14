@@ -9,7 +9,85 @@ function Need([bool]$Ok,[string]$Message){if(-not $Ok){throw "RELEASE_STOP: $Mes
 function Import-ReleaseEnvironment {if(-not $env:DATABASE_URL){Need (Test-Path -LiteralPath $EnvironmentFile -PathType Leaf) 'production environment file unavailable';foreach($line in Get-Content -LiteralPath $EnvironmentFile){if($line -match '^DATABASE_URL=(.+)$'){$env:DATABASE_URL=$Matches[1].Trim().Trim('"').Trim("'");break}}};Need (-not [string]::IsNullOrWhiteSpace($env:DATABASE_URL)) 'DATABASE_URL unavailable'}
 function NPath([string]$Value){Need (-not [string]::IsNullOrWhiteSpace($Value)) 'empty path';$normalized=($Value.Trim().Trim('"').Trim("'") -replace '/','\');return [IO.Path]::GetFullPath($normalized).TrimEnd('\')}
 function SamePath([string]$A,[string]$B){return [string]::Equals((NPath $A),(NPath $B),[StringComparison]::OrdinalIgnoreCase)}
-function TaskRuntime([string]$Xml){[xml]$doc=$Xml;$exec=@($doc.SelectNodes("//*[local-name()='Exec']"));Need ($exec.Count -eq 1) 'one task action required';$command=NPath ([string]$exec[0].Command);$work=NPath ([string]$exec[0].WorkingDirectory);$arguments=[string]$exec[0].Arguments;Need ($arguments -match '(?i)-m\s+waitress\b' -and $arguments -match '(?i)backend\.wsgi:app') 'task must launch the Waitress backend';if([IO.Path]::GetFileName($command) -ieq 'python.exe'){$path=$command}else{Need ([IO.Path]::GetFileName($command) -ieq 'cmd.exe') 'cmd.exe or python.exe required';Need ($arguments -match '(?i)^\s*/d\s+/c\s+') 'cmd.exe /d /c required';$found=@([regex]::Matches($arguments,'(?i)[a-z]:[\\/][^"&\r\n]*?[\\/]runtime[\\/]python\.exe'));Need ($found.Count -eq 1) 'one release-local runtime required';$path=NPath $found[0].Value};Need (SamePath $work (Split-Path -Parent (Split-Path -Parent $path))) 'runtime/WorkingDirectory mismatch';return $path}
+function Split-LaunchArguments([string]$Text){
+    # A single Windows command with quoted path tokens, never a shell program.
+    Need ($Text -notmatch '[&|<>^%!\r\n]') 'unsupported shell syntax in launcher arguments'
+    $values=New-Object 'System.Collections.Generic.List[string]'
+    $rest=$Text.Trim()
+    while($rest.Length){
+        $part=[regex]::Match($rest,'^(?:"([^"]+)"|([^\s"]+))(?:\s+|$)')
+        Need $part.Success 'invalid launcher argument quoting'
+        $value=if($part.Groups[1].Success){$part.Groups[1].Value}else{$part.Groups[2].Value}
+        $values.Add($value);$rest=$rest.Substring($part.Length)
+    }
+    return $values.ToArray()
+}
+function Get-TaskLaunch([string]$Xml){
+    [xml]$doc=$Xml
+    $actions=@($doc.SelectNodes("/*[local-name()='Task']/*[local-name()='Actions']/*"))
+    Need ($actions.Count -eq 1 -and $actions[0].LocalName -eq 'Exec') 'one task action required'
+    $action=$actions[0]
+    Need (SamePath ([string]$action.Command) 'C:\Windows\System32\cmd.exe') 'system cmd.exe required'
+    $arguments=[string]$action.Arguments
+    Need ($arguments -match '(?i)^\s*/d\s+/c\s+(.+)$') 'cmd.exe /d /c required'
+    $body=$Matches[1].Trim()
+    # cmd's enclosing pair is distinct from the quotes around python.exe.
+    if($body.StartsWith('""') -and $body.EndsWith('"')){$body=$body.Substring(1,$body.Length-2)}
+    $tokens=@(Split-LaunchArguments $body)
+    Need ($tokens.Count -ge 3) 'runtime launcher invocation required'
+    Need (SamePath $tokens[1] 'C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py') 'approved runtime launcher required'
+    Need ($tokens[2] -ceq 'serve') 'runtime launcher serve command required'
+    $options=@{};$repoIndex=-1
+    for($index=3;$index -lt $tokens.Count;$index+=2){
+        $key=$tokens[$index]
+        Need ($key -cin @('--repo','--env','--host','--port','--log') -and $index+1 -lt $tokens.Count) 'unsupported runtime launcher option'
+        Need (-not $options.ContainsKey($key)) 'duplicate runtime launcher option'
+        $options[$key]=$tokens[$index+1]
+        if($key -ceq '--repo'){$repoIndex=$index+1}
+    }
+    Need ($options.ContainsKey('--repo')) 'launcher --repo required'
+    $release=NPath $options['--repo'];$runtime=NPath $tokens[0]
+    Need (SamePath $runtime (Join-Path $release 'runtime\python.exe')) 'runtime/--repo mismatch'
+    Need (SamePath ([string]$action.WorkingDirectory) $release) 'runtime/WorkingDirectory mismatch'
+    Need ($options.ContainsKey('--env')) 'launcher --env required'
+    Need ($options.ContainsKey('--host') -and $options['--host'] -ceq '127.0.0.1' -and $options.ContainsKey('--port') -and $options['--port'] -ceq '5101') 'launcher endpoint must be 127.0.0.1:5101'
+    return [pscustomobject]@{Document=$doc;Action=$action;Tokens=$tokens;RepoIndex=$repoIndex;Runtime=$runtime;Release=$release}
+}
+function TaskRuntime([string]$Xml){return (Get-TaskLaunch $Xml).Runtime}
+function New-TaskLaunchXml([string]$Xml,[string]$Release){
+    $launch=Get-TaskLaunch $Xml
+    $launch.Tokens[0]=Join-Path $Release 'runtime\python.exe'
+    $launch.Tokens[$launch.RepoIndex]=$Release
+    $launch.Action.Arguments='/d /c "'+(($launch.Tokens|ForEach-Object {'"'+$_+'"'}) -join ' ')+'"'
+    $launch.Action.WorkingDirectory=$Release
+    $result=$launch.Document.OuterXml
+    Need (SamePath (TaskRuntime $result) (Join-Path $Release 'runtime\python.exe')) 'target task/runtime mismatch'
+    return $result
+}
+function Assert-ListenerProcess($Process,[string]$Expected){
+    Need (-not [string]::IsNullOrWhiteSpace([string]$Process.ExecutablePath)) 'listener executable path unavailable'
+    Need (SamePath ([string]$Process.ExecutablePath) $Expected) 'orphan/mismatched listener: executable differs from task-configured runtime'
+    $valid=$false
+    try{
+        $tokens=@(Split-LaunchArguments ([string]$Process.CommandLine))
+        $valid=$tokens.Count -eq 5 -and (SamePath $tokens[0] $Expected) -and $tokens[1] -ceq '-m' -and $tokens[2] -ceq 'waitress' -and $tokens[3] -ceq '--listen=127.0.0.1:5101' -and $tokens[4] -ceq 'backend.wsgi:app'
+    }catch{$valid=$false}
+    Need $valid 'orphan/mismatched listener: process is not the configured Waitress backend'
+}
+function Get-ConfiguredTask {
+    $tasks=@(Get-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction SilentlyContinue)
+    Need ($tasks.Count -eq 1) 'production scheduled task missing or ambiguous'
+    $task=$tasks[0]
+    Need ($task.Settings.Enabled -is [bool] -and $task.Settings.Enabled) 'production scheduled task must be enabled'
+    $xml=Export-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop
+    $launch=Get-TaskLaunch $xml
+    $actions=@($task.Actions)
+    Need ($actions.Count -eq 1) 'one task action required'
+    Need ((SamePath ([string]$actions[0].Execute) ([string]$launch.Action.Command)) -and
+          [string]::Equals([string]$actions[0].Arguments,[string]$launch.Action.Arguments,[StringComparison]::Ordinal) -and
+          (SamePath ([string]$actions[0].WorkingDirectory) ([string]$launch.Action.WorkingDirectory))) 'task action/export configuration mismatch'
+    return [pscustomobject]@{Task=$task;Xml=$xml;Runtime=$launch.Runtime;Release=$launch.Release}
+}
 function Fail([string]$Stage){if($FailAt -eq $Stage){throw "RELEASE_STOP: injected $Stage"}}
 function Save($state){if($FixtureStatePath){$state|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $FixtureStatePath -Encoding UTF8}}
 function Get-RealServerDiscoveryState{
@@ -35,24 +113,14 @@ function Get-RealServerDiscoveryState{
         if($owners.Count){throw 'RELEASE_STOP: stale/orphan listener: production scheduled task is disabled'}
         throw 'RELEASE_STOP: backend unavailable: production scheduled task is disabled'
     }
-    $xml=Export-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop
-    $expectedRuntime=TaskRuntime $xml
-    [xml]$taskDocument=$xml
-    $exec=$taskDocument.SelectSingleNode("//*[local-name()='Exec']")
-    $actions=@($task.Actions)
-    Need ($actions.Count -eq 1) 'one task action required'
-    Need ((SamePath ([string]$actions[0].Execute) ([string]$exec.Command)) -and
-          [string]::Equals([string]$actions[0].Arguments,[string]$exec.Arguments,[StringComparison]::Ordinal) -and
-          (SamePath ([string]$actions[0].WorkingDirectory) ([string]$exec.WorkingDirectory))) 'task action/export configuration mismatch'
-    $expectedRoot=Split-Path -Parent (Split-Path -Parent $expectedRuntime)
-    Need (SamePath $expectedRuntime (Join-Path $expectedRoot 'runtime\python.exe')) 'task must identify a release-local runtime/python.exe'
+    $configured=Get-ConfiguredTask
+    $task=$configured.Task;$xml=$configured.Xml
+    $expectedRuntime=$configured.Runtime;$expectedRoot=$configured.Release
     Need (SamePath ([string]$site.PhysicalPath) (Join-Path $expectedRoot 'dist')) 'IIS/task release mismatch'
     Need ($owners.Count -eq 1) 'backend unavailable: no listener on 127.0.0.1:5101'
     $process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop
-    Need (-not [string]::IsNullOrWhiteSpace([string]$process.ExecutablePath)) 'listener executable path unavailable'
+    Assert-ListenerProcess $process $expectedRuntime
     $runtime=[string]$process.ExecutablePath
-    Need (SamePath $runtime $expectedRuntime) 'orphan/mismatched listener: executable differs from task-configured runtime'
-    Need ([string]$process.CommandLine -match '(?i)-m\s+waitress\b' -and [string]$process.CommandLine -match '(?i)backend\.wsgi:app') 'orphan/mismatched listener: process is not the configured Waitress backend'
     try{$healthResponse=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5101/api/health' -TimeoutSec 10 -ErrorAction Stop}
     catch{throw 'RELEASE_STOP: unhealthy backend: internal health request failed; listener provenance matches configured task'}
     Need ($healthResponse.StatusCode -eq 200) 'unhealthy backend: internal health is not HTTP 200; listener provenance matches configured task'
@@ -97,8 +165,9 @@ function Wait-Listener([string]$Expected,[int]$Seconds){
         Need ($owners.Count -le 1) 'multiple listener owners'
         if($owners.Count -eq 1){
             $process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop
-            if(SamePath ([string]$process.ExecutablePath) $Expected){return}
-            Need $false 'unrecognized Waitress listener'
+            Assert-ListenerProcess $process $Expected
+            Need (SamePath (Get-ConfiguredTask).Runtime $Expected) 'listener/task runtime mismatch'
+            return
         }
         Start-Sleep -Milliseconds 250
     }while([datetime]::UtcNow -lt $deadline)
@@ -127,13 +196,19 @@ function Set-IisPhysicalPath([string]$Path){
 }
 function Rollback($state,$before,[string]$targetPython){
     try{
+        Need (SamePath (TaskRuntime $before.task_xml) $before.listener_runtime) 'rollback baseline task/runtime mismatch'
         if($FixtureStatePath){$state.iis_path=$before.iis_path;$state.task_xml=$before.task_xml;$state.enabled=$before.enabled;$state.listener_runtime=$before.listener_runtime;$state.listener_up=$true;$state.health=$true;Save $state}
         else{
             Disable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null
             $rows=@(Get-NetTCPConnection -State Listen -LocalPort 5101 -ErrorAction SilentlyContinue | Where-Object {$_.LocalAddress -eq '127.0.0.1'})
             $owners=@($rows | Select-Object -ExpandProperty OwningProcess -Unique)
             Need ($owners.Count -le 1) 'ambiguous rollback listener'
-            if($owners.Count -eq 1){$process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop;Need ((SamePath ([string]$process.ExecutablePath) $targetPython) -or (SamePath ([string]$process.ExecutablePath) $before.listener_runtime)) 'unrecognized rollback listener';Stop-Process -Id ([int]$owners[0]) -Force -ErrorAction Stop}
+            if($owners.Count -eq 1){
+                $process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop
+                Need ((SamePath ([string]$process.ExecutablePath) $targetPython) -or (SamePath ([string]$process.ExecutablePath) $before.listener_runtime)) 'unrecognized rollback listener'
+                Assert-ListenerProcess $process ([string]$process.ExecutablePath)
+                Stop-Process -Id ([int]$owners[0]) -Force -ErrorAction Stop
+            }
             Wait-PortFree $Timeouts.PORT_RELEASE
             Set-IisPhysicalPath $before.iis_path
             Register-ScheduledTask -TaskName 'Forwarder Backend Production' -Xml $before.task_xml -Force -ErrorAction Stop|Out-Null
@@ -161,7 +236,7 @@ if(-not $FixtureStatePath){Write-Output ('TASK_STATE='+$state.task_state);Write-
 Fail 'DB_GATE';Need ($state.db_revision -in @($RequiredBefore,$RequiredTarget)) 'unknown database lineage';if($state.db_revision -eq $RequiredBefore){$migrationNeeded=$true}else{$migrationNeeded=$false};if($ValidateOnly){Write-Output 'DB_GATE_MATRIX=PASS';Write-Output 'VALIDATEONLY_COMPLETE=YES';return}
 $target=Join-Path (NPath $ReleaseRoot) ('release-'+(Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss')+'-'+$RequiredTarget)
 $targetPython=Join-Path $target 'runtime\python.exe'
-Need ($before.task_xml.Contains($oldRoot)) 'task XML does not identify current release'
+$nextXml=New-TaskLaunchXml $before.task_xml $target
 Need (-not (Test-Path -LiteralPath $target)) 'target already exists'
 $mutationStarted=$false
 try{
@@ -170,9 +245,9 @@ try{
     if($migrationNeeded){Fail 'MIGRATION';if($FixtureStatePath){$state.db_revision=$RequiredTarget;Save $state}else{Invoke-MigrationCli @('upgrade',$RequiredTarget,'--confirm')|Out-Null;$afterMigration=@(Invoke-MigrationCli @('current')|Where-Object {$_ -match '^current='});Need ($afterMigration.Count -eq 1 -and $afterMigration[0] -eq ('current='+$RequiredTarget)) 'migration postcondition mismatch';$state.db_revision=$RequiredTarget}}
     $mutationStarted=$true
     Fail 'TASK_DISABLE';if($FixtureStatePath){$state.enabled=$false;Save $state}else{Disable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null}
-    Fail 'BACKEND_STOP';if($FixtureStatePath){$state.listener_up=$false;Save $state}else{Stop-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop;$remaining=Get-Process -Id ([int]$state.listener_pid) -ErrorAction SilentlyContinue;if($null -ne $remaining){$identity=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$state.listener_pid) -ErrorAction Stop;Need (SamePath ([string]$identity.ExecutablePath) $oldPython) 'listener PID was reused by an unrelated process';Stop-Process -Id ([int]$state.listener_pid) -Force -ErrorAction Stop}}
+    Fail 'BACKEND_STOP';if($FixtureStatePath){$state.listener_up=$false;Save $state}else{Stop-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop;$remaining=Get-Process -Id ([int]$state.listener_pid) -ErrorAction SilentlyContinue;if($null -ne $remaining){$identity=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$state.listener_pid) -ErrorAction Stop;Assert-ListenerProcess $identity $oldPython;Stop-Process -Id ([int]$state.listener_pid) -Force -ErrorAction Stop}}
     Fail 'PORT_RELEASE';if($FixtureStatePath){Need (-not $state.listener_up) 'port not released'}else{Wait-PortFree $Timeouts.PORT_RELEASE}
-    Fail 'TASK_SWITCH';$nextXml=$before.task_xml.Replace($oldRoot,$target);Need ($nextXml -ne $before.task_xml) 'task target not replaced';Need (SamePath (TaskRuntime $nextXml) $targetPython) 'target task/runtime mismatch';if($FixtureStatePath){$state.task_xml=$nextXml;Save $state}else{Register-ScheduledTask -TaskName 'Forwarder Backend Production' -Xml $nextXml -Force -ErrorAction Stop|Out-Null}
+    Fail 'TASK_SWITCH';Need (SamePath (TaskRuntime $nextXml) $targetPython) 'target task/runtime mismatch';if($FixtureStatePath){$state.task_xml=$nextXml;Save $state}else{Register-ScheduledTask -TaskName 'Forwarder Backend Production' -Xml $nextXml -Force -ErrorAction Stop|Out-Null}
     Fail 'BACKEND_START';if($FixtureStatePath){$state.enabled=$true;$state.listener_up=$true;$state.listener_runtime=$targetPython;Save $state}else{Enable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null;Start-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop}
     Fail 'LISTENER_VERIFY';if($FixtureStatePath){Need (SamePath $state.listener_runtime $targetPython) 'target runtime mismatch'}else{Wait-Listener $targetPython $Timeouts.LISTENER_VERIFY}
     Fail 'INTERNAL_HEALTH';if($FixtureStatePath){Need $state.health 'internal health failure'}else{Assert-Health 'http://127.0.0.1:5101/api/health' $Timeouts.INTERNAL_HEALTH}

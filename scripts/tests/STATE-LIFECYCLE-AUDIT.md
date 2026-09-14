@@ -26,7 +26,7 @@ post-qualification dirty shell. The new suite covers both paths explicitly.
 
 Every root PowerShell file shipped by the builder is parsed by
 `AUDIT-STATE-LIFECYCLE.ps1`: deployment, package verifier, certification driver,
-real ValidateOnly test, real Execute test, and the auditor itself. It records
+real ValidateOnly test, real Execute test, launcher chain contract, and the auditor itself. It records
 every variable's declaration/reference, initializers, first read, writers,
 readers, and enclosing function/conditional/try/catch contexts. `-ReportPath`
 writes the full per-variable JSON. The audit rejects global/script variable
@@ -49,6 +49,8 @@ are distinguished from mutable deployment state by their native lifetimes.
 | migration process/info/stdout/stderr/result/limit | Process allocated before try; streams/limit assigned after successful start | Bounded wait, exit check, output parsing | Finally disposes only the already-allocated process; output tasks read only after initialization |
 | listener/health deadlines, response, rows/owners/process | Each helper initializes per call/per iteration | Bounded loops; counts guard owner indexing | No retained state across invocations; error path exits or retries without reading an unset response |
 | path/XML/regex temporaries | Function parameters or assignments before use | Match/count checks guard captures and array access | Function scope; no cross-mode state |
+| launch/tokens/options/repoIndex/nextXml/configured | Parser-local assignments; required token/option/count checks before indexing; nextXml built only after ValidateOnly returns | Baseline, candidate transformation, task rediscovery and rollback share validated parser output | No ambient state; original XML immutable; task edits limited to action fields |
+| listener valid flag | False before parsing child command; set only after all identity tokens match; catch resets false | Shared listener assertion in discovery, wait and stop paths | Malformed command refuses deterministically without reading uninitialized tokens |
 | fixture stateFile/temp/reset state/result/rejected | Certification driver initializes before test calls; rejected reset per case | Fixture matrix checks both revisions, unknown revision and every failure stage | Own temporary directory removed in finally; fixture objects never reach real discovery |
 | simulation | Local object initialized before adapter functions are invoked | Read-only adapters observe it; mutating adapters update object fields; matrix asserts real Execute/rollback results | Child process and script scope; no global mocks, no dangling readers |
 | mutations | Local hashtable allocated before ValidateOnly adapters | Every write-capable adapter increments Count and throws; count checked after exact invocation | Object avoids scalar child-scope increment shadowing; DB SHA independently detects writes |

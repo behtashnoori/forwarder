@@ -84,7 +84,7 @@ def test_unset_state_cannot_escape_qualification(tmp_path, defect):
     'throw "unexpected state lifecycle failure"',
 ])
 def test_failure_matrix_rejects_unrelated_state_error(tmp_path, wrong_failure):
-    for name in ('VERIFY-PACKAGE.ps1', 'AUDIT-STATE-LIFECYCLE.ps1'):
+    for name in ('VERIFY-PACKAGE.ps1', 'AUDIT-STATE-LIFECYCLE.ps1', 'QUALIFY-LAUNCHER-CHAIN.ps1'):
         (tmp_path / name).write_text('return\n')
     original = (ROOT / 'scripts/deploy/deploy_windows_iis_waitress_operational.ps1').read_text()
     expected = 'throw "RELEASE_STOP: injected $Stage"'

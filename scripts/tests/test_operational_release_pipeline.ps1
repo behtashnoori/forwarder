@@ -7,12 +7,13 @@ Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 if(-not $DeployScript){$DeployScript=Join-Path $PackageRoot 'deploy_windows_iis_waitress.ps1'}
 $old='C:\1-webapp\forwarder-production\release-old'
 $py=Join-Path $old 'runtime\python.exe'
-$xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c &quot;'+$py+'&quot; -m waitress --listen=127.0.0.1:5101 backend.wsgi:app</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
+$xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c &quot;&quot;'+$py+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$old+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;&quot;</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('fw-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp|Out-Null
 try{
     & (Join-Path $PackageRoot 'AUDIT-STATE-LIFECYCLE.ps1') -PackageRoot $PackageRoot
     & (Join-Path $PackageRoot 'VERIFY-PACKAGE.ps1') -PackageRoot $PackageRoot
+    & (Join-Path $PackageRoot 'QUALIFY-LAUNCHER-CHAIN.ps1') -PackageRoot $PackageRoot
     $fixturePackage=Join-Path $temp 'fixture-package'
     New-Item -ItemType Directory -Path $fixturePackage|Out-Null
     Set-Content -LiteralPath (Join-Path $fixturePackage 'VERIFY-PACKAGE.ps1') -Value 'Write-Output "FIXTURE_PACKAGE_VERIFIED=YES"' -Encoding UTF8

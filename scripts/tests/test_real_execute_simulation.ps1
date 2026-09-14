@@ -35,7 +35,7 @@ connection.close()
     if($LASTEXITCODE -ne 0){throw 'disposable DB setup failed'}
     $env:DATABASE_URL='sqlite:///'+$database.Replace('\','/')
     $env:APP_ENV='production'
-    $xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c &quot;'+$oldPython+'&quot; -m waitress --listen=127.0.0.1:5101 backend.wsgi:app</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
+    $xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c &quot;&quot;'+$oldPython+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$old+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;&quot;</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
     $simulation=[pscustomobject]@{Iis=(Join-Path $old 'dist');Xml=$xml;Enabled=$true;Running=$false;Listener=$oldPython;Mutations=0;Events=@()}
     function Import-Module { param([string]$Name) }
     function Get-Website { param([string]$Name) [pscustomobject]@{PhysicalPath=$simulation.Iis} }
@@ -43,7 +43,7 @@ connection.close()
     function Get-ScheduledTaskInfo { param($InputObject) [pscustomobject]@{LastTaskResult=0} }
     function Export-ScheduledTask { param([string]$TaskName) $simulation.Xml }
     function Get-NetTCPConnection { param([string]$State,[int]$LocalPort) if($simulation.Listener){[pscustomobject]@{LocalAddress='127.0.0.1';OwningProcess=4242}} }
-    function Get-CimInstance { param([string]$ClassName,[string]$Filter) [pscustomobject]@{ExecutablePath=$simulation.Listener;CommandLine=($simulation.Listener+' -m waitress backend.wsgi:app')} }
+    function Get-CimInstance { param([string]$ClassName,[string]$Filter) [pscustomobject]@{ExecutablePath=$simulation.Listener;CommandLine=('"'+$simulation.Listener+'" -m waitress --listen=127.0.0.1:5101 backend.wsgi:app')} }
     function Invoke-WebRequest { param([string]$Uri,[int]$TimeoutSec) [pscustomobject]@{StatusCode=200} }
     function Disable-ScheduledTask { param([string]$TaskName) $simulation.Enabled=$false;$simulation.Mutations++;$simulation.Events+=,'disable' }
     function Stop-ScheduledTask { param([string]$TaskName) $simulation.Running=$false;$simulation.Mutations++;$simulation.Events+=,'stop' }
