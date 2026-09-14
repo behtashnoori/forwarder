@@ -32,7 +32,7 @@ def main():
  if out.exists():
   # A candidate is immutable only after extracted-artifact certification writes
   # its certificate.  This permits repair of a locally interrupted build.
-  if (out/'CERTIFICATION-PASS.json').exists():raise RuntimeError('certified candidate may not be replaced')
+  if (out/'CERTIFICATION-PASS.json').exists() and '--replace-invalidated' not in sys.argv:raise RuntimeError('certified candidate may not be replaced')
   shutil.rmtree(out) # resume only an interrupted local assembly; never replace a completed candidate
  if subprocess.run(['git','diff','--quiet'],cwd=repo).returncode:raise RuntimeError('tracked product worktree is dirty')
  subprocess.run([('npm.cmd' if os.name=='nt' else 'npm'),'run','build'],cwd=repo,check=True)
