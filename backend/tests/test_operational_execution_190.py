@@ -15,6 +15,8 @@ from backend.operational_models import (
     Milestone,
     MilestoneEvent,
     OperationalMembership,
+    OperationalDelay,
+    OperationalAudit,
     OperationalOrganization,
     OperationalShipment,
     Project,
@@ -278,14 +280,32 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
             actor(execution_app),
             {"immutable_code": "DAMAGE", "fa_name": "آسیب", "en_name": "Damage"},
         )
+        assert OperationalAudit.query.filter_by(action="delay_reason.created").count() == 1
+        assert OperationalAudit.query.filter_by(action="exception_reason.created").count() == 1
+        updated_reason = svc.update_reason("delay", delays[0]["public_id"], {"version": 1, "is_active": False}, actor(execution_app))
+        assert not updated_reason["is_active"]
+        assert OperationalAudit.query.filter_by(action="delay_reason.updated").count() == 1
+        svc.update_reason("delay", delays[0]["public_id"], {"version": 2, "is_active": True}, actor(execution_app))
         now = datetime.now(timezone.utc) - timedelta(minutes=5)
         created = svc.condition_collection(
             "delay",
             shipment.public_id,
             actor(execution_app),
-            {"reason_public_id": delays[0]["public_id"], "started_at": now.isoformat()},
+            {"reason_public_id": delays[0]["public_id"], "started_at": now.isoformat(), "idempotency_key": "delay-command-1"},
         )
         assert created[0]["active"]
+        replayed = svc.condition_collection(
+            "delay", shipment.public_id, actor(execution_app),
+            {"reason_public_id": delays[0]["public_id"], "started_at": now.isoformat(), "idempotency_key": "delay-command-1"},
+        )
+        assert replayed[0]["public_id"] == created[0]["public_id"]
+        assert OperationalDelay.query.count() == 1
+        with pytest.raises(svc.OperationalError) as reused:
+            svc.condition_collection(
+                "delay", shipment.public_id, actor(execution_app),
+                {"reason_public_id": delays[0]["public_id"], "started_at": (now + timedelta(minutes=1)).isoformat(), "idempotency_key": "delay-command-1"},
+            )
+        assert reused.value.status == 409
         resolved = svc.resolve_condition(
             "delay",
             shipment.public_id,
@@ -294,6 +314,10 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
             actor(execution_app),
         )
         assert not resolved["active"] and resolved["duration_seconds"] >= 300
+        svc.update_reason("delay", delays[0]["public_id"], {"version": 3, "is_active": False}, actor(execution_app))
+        historical = svc.condition_collection("delay", shipment.public_id, actor(execution_app))
+        assert historical[0]["reason"]["immutable_code"] == "PORT_HOLD"
+        assert not historical[0]["reason"]["is_active"]
         exc = svc.condition_collection(
             "exception",
             shipment.public_id,
@@ -301,6 +325,7 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
             {
                 "reason_public_id": exceptions[0]["public_id"],
                 "occurred_at": now.isoformat(),
+                "idempotency_key": "exception-command-1",
             },
         )
         assert (
@@ -310,6 +335,11 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
             ]
             == 1
         )
+        exception_replay = svc.condition_collection(
+            "exception", shipment.public_id, actor(execution_app),
+            {"reason_public_id": exceptions[0]["public_id"], "occurred_at": now.isoformat(), "idempotency_key": "exception-command-1"},
+        )
+        assert exception_replay[0]["public_id"] == exc[0]["public_id"]
         with pytest.raises(svc.OperationalError) as hidden:
             svc.progress(shipment.public_id, actor(execution_app, "outsider"))
         assert (

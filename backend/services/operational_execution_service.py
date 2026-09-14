@@ -17,6 +17,7 @@ from backend.operational_models import (
     OperationalAudit,
     OperationalDelay,
     OperationalException,
+    OperationalIdempotency,
     OperationalShipment,
     Project,
     utcnow,
@@ -30,6 +31,7 @@ from backend.services.operational_service import (
     _parse_utc,
     _occurrence_time,
     _reject_recorded_at,
+    _lock_idempotency_scope,
 )
 
 STATUSES = (
@@ -806,6 +808,12 @@ def reason_collection(kind, user, payload=None):
         )
         db.session.add(row)
         try:
+            db.session.flush()
+            db.session.add(OperationalAudit(
+                organization_id=org, actor_user_id=user["id"],
+                action=f"{kind}_reason.created", entity_type=model.__name__, entity_id=row.id,
+                metadata_json={"immutable_code": code},
+            ))
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
@@ -855,6 +863,11 @@ def update_reason(kind, public_id, payload, user):
             setattr(row, field, payload[field])
     row.updated_by_user_id = user["id"]
     row.version += 1
+    db.session.add(OperationalAudit(
+        organization_id=org, actor_user_id=user["id"],
+        action=f"{kind}_reason.updated", entity_type=model.__name__, entity_id=row.id,
+        metadata_json={"immutable_code": row.immutable_code, "version": row.version},
+    ))
     db.session.commit()
     return _reason_view(row)
 
@@ -871,6 +884,29 @@ def condition_collection(kind, shipment_id, user, payload=None):
     reason_model = DelayReason if kind == "delay" else ExceptionReason
     instant = "started_at" if kind == "delay" else "occurred_at"
     if payload is not None:
+        key = payload.get("idempotency_key")
+        if key is not None:
+            if not isinstance(key, str) or not key or len(key) > 100:
+                raise OperationalError("VALIDATION_FAILED", "Invalid idempotency key.", 422)
+            canonical = {field: value for field, value in payload.items() if field != "idempotency_key"}
+            request_hash = hashlib.sha256(json.dumps(canonical, sort_keys=True).encode()).hexdigest()
+            operation = f"create_operational_{kind}"
+            _lock_idempotency_scope(shipment.organization_id, operation, "shipment", shipment.id, key)
+            replay = db.session.scalar(select(OperationalIdempotency).where(
+                OperationalIdempotency.organization_id == shipment.organization_id,
+                OperationalIdempotency.operation == operation,
+                OperationalIdempotency.resource_type == "shipment",
+                OperationalIdempotency.command_resource_id == shipment.id,
+                OperationalIdempotency.idempotency_key == key,
+            ))
+            if replay is not None:
+                if replay.request_hash != request_hash:
+                    raise OperationalError("IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD", "Idempotency key was reused.", 409)
+                return [_condition_view(r, reason_model, instant) for r in db.session.scalars(
+                    select(model).where(model.organization_id == shipment.organization_id,
+                                        model.operational_shipment_id == shipment.id)
+                    .order_by(getattr(model, instant).desc())
+                ).all()]
         reason = db.session.scalar(
             select(reason_model).where(
                 reason_model.public_id == payload.get("reason_public_id"),
@@ -896,6 +932,12 @@ def condition_collection(kind, shipment_id, user, payload=None):
         )
         db.session.add(row)
         db.session.flush()
+        if key is not None:
+            db.session.add(OperationalIdempotency(
+                organization_id=shipment.organization_id, operation=operation,
+                resource_type="shipment", command_resource_id=shipment.id,
+                idempotency_key=key, request_hash=request_hash, result_resource_id=row.id,
+            ))
         _audit(shipment, user, f"operational_{kind}.created", model.__name__, row.id)
         db.session.commit()
     rows = db.session.scalars(

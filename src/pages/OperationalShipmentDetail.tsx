@@ -28,6 +28,7 @@ import {
 import { useI18n } from "@/i18n";
 import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
+import OperationalConditionsSection from "@/components/OperationalConditionsSection";
 import DocumentReadinessSection from "@/components/DocumentReadinessSection";
 import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
 import ShipmentExternalReferences from "@/components/ShipmentExternalReferences";
@@ -226,6 +227,7 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
 
+          <OperationalConditionsSection shipmentPublicId={data.public_id} />
           {data.source.type === "direct" ? <Card><CardHeader><CardTitle>مراحل اجرای عملیات</CardTitle></CardHeader><CardContent><p>مراحل وابسته به پروژه برای عملیات مستقیم کاربرد ندارد.</p></CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} />}
           {data.source.type === "direct" ? <Card><CardHeader><CardTitle>اسناد پروژه</CardTitle></CardHeader><CardContent>برای محموله مستقیم، مراحل و اسناد وابسته به پروژه کاربرد ندارد.</CardContent></Card> : /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <DocumentReadinessSection shipmentPublicId={data.public_id} shipmentVersion={data.version} projectReference={data.project_public_id} sourceRequestId={data.source.request_public_id} />}
           <ShipmentExternalReferences shipmentPublicId={data.public_id} requestId={data.source.request_public_id}/>
@@ -306,7 +308,7 @@ export default function OperationalShipmentDetail() {
               {exceptions.map((exception) => {
                 const reasonKey = `exception-${exception.id}`;
                 return <article key={exception.id} className="rounded border p-3">
-                  <strong>استثنای عملیاتی ثبت‌شده</strong> · {businessLabel(exception.status)} · شدت {businessLabel(exception.severity)} · نسخه {exception.version}
+                  <strong>مورد استثنای مسیر</strong> · {businessLabel(exception.status)} · شدت {businessLabel(exception.severity)} · نسخه {exception.version}
                   <p>{exception.checkpoint_id == null ? "در سطح محموله" : "مرتبط با نقطه کنترل"}</p>
                   <p>شناسایی {when(exception.detected_at, locale)} · مهلت رسیدگی {when(exception.due_at, locale)} · رفع {when(exception.resolved_at, locale)}</p>
                   <p>منبع رفع: {exception.resolution_source ? businessLabel(exception.resolution_source) : "رفع نشده"} · دلیل: {exception.resolution_reason || exception.reason || "ثبت نشده"}</p>

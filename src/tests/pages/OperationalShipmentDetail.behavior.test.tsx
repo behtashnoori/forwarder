@@ -19,6 +19,7 @@ vi.mock("../../components/OperationalPermission", () => ({
 }));
 vi.mock("../../components/ShipmentCargoItems", () => ({ default: () => <><h2>کالا و وسایل حمل</h2><h2>وضعیت و پیگیری حمل</h2></> }));
 vi.mock("../../components/OperationalExecutionSection", () => ({ default: () => <p>اجرای عملیاتی</p> }));
+vi.mock("../../components/OperationalConditionsSection", () => ({ default: () => <p>تأخیرها و استثناهای عملیاتی</p> }));
 vi.mock("../../components/DocumentReadinessSection", () => ({ default: () => <p>آمادگی اسناد</p> }));
 vi.mock("../../components/ShipmentEconomicsSection", () => ({ default: () => null }));
 vi.mock("../../components/ShipmentExternalReferences", () => ({ default: () => null }));
