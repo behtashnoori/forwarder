@@ -25,8 +25,12 @@ function Get-RealServerDiscoveryState{
     if($owners.Count -eq 1){$process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop;Need (-not [string]::IsNullOrWhiteSpace([string]$process.ExecutablePath)) 'listener executable path unavailable';$runtime=[string]$process.ExecutablePath}
     $migration=& (Join-Path $PackageRoot 'artifact\runtime\python.exe') -m backend.migration_cli current 2>&1
     if($LASTEXITCODE -ne 0){throw 'RELEASE_STOP: database revision discovery failed'}
-    $revision=([string]($migration | Where-Object {$_ -match '^current='} | Select-Object -Last 1)).Substring(8)
+    $revisionLine=@($migration | ForEach-Object {[string]$_} | Where-Object {$_ -match '^current='} | Select-Object -Last 1)
+    Need ($revisionLine.Count -eq 1) 'database revision output is ambiguous'
+    $revision=$revisionLine[0].Substring(8)
     Need (-not [string]::IsNullOrWhiteSpace($revision)) 'database revision unavailable'
+    $healthResponse=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5101/api/health' -TimeoutSec 10 -ErrorAction Stop
+    Need ($healthResponse.StatusCode -eq 200) 'internal health is not HTTP 200'
     return [pscustomobject]@{iis_path=[string]$site.PhysicalPath;task_xml=[string]$xml;enabled=([string]$task.State -ne 'Disabled');listener_runtime=$runtime;listener_up=($owners.Count -eq 1);health=$true;db_revision=$revision}
 }
 function Rollback(){try{$script:state.iis_path=$script:before.iis_path;$script:state.task_xml=$script:before.task_xml;$script:state.enabled=$script:before.enabled;$script:state.listener_runtime=$script:before.listener_runtime;$script:state.listener_up=$true;$script:state.health=$true;Save;Write-Output 'ROLLBACK_RESULT=PASS'}catch{Write-Output 'ROLLBACK_RESULT=FAIL';throw}}
