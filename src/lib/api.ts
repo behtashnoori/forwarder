@@ -1673,6 +1673,49 @@ export interface ExternalOperationalReference {
   evidence?: { document_public_id: string; version: number } | null;
   revision: number; created_at: string;
 }
+
+export interface ShipmentHistoryItem {
+  history_id: string;
+  category: string;
+  business_type: string;
+  occurred_at: string | null;
+  recorded_at: string | null;
+  actor: string | null;
+  reason_label?: string | null;
+  note?: string | null;
+  status?: string | null;
+  route_revision?: number | null;
+  source_route_revision?: number | null;
+  source_milestone_public_id?: string | null;
+  source_type?: string;
+  request_public_id?: string | null;
+  source_entity_id?: string | null;
+  milestone_type?: string;
+  related_event_public_id?: string | null;
+  supersedes_event_public_id?: string | null;
+  relationship_status?: string | null;
+  document_label?: string | null;
+  reference_type_label?: string | null;
+  reference_value?: string | null;
+  supersedes_reference_public_id?: string | null;
+  evidence_attached?: boolean;
+  work_type?: string | null;
+  source_is_projection?: boolean;
+}
+
+export interface ShipmentHistoryPage {
+  items: ShipmentHistoryItem[];
+  page: number;
+  per_page: number;
+  total: number;
+  has_more: boolean;
+  ordering: string;
+}
+
+export const getShipmentHistory = (shipmentId: string, page = 1, perPage = 25) =>
+  request<{ data: ShipmentHistoryPage }>(
+    `/api/v2/operational-shipments/${shipmentId}/history?page=${page}&per_page=${perPage}`,
+  );
 export interface ShipmentEligibleExternalReferenceType { code:string; name_fa:string; name_en:string; }
 export const listShipmentEligibleExternalReferenceTypes = () => request<{data:ShipmentEligibleExternalReferenceType[]}>("/api/internal/external-reference-types/shipment-eligible");
 export const listShipmentExternalReferences = (shipmentId: string) => request<{ data: ExternalOperationalReference[] }>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/external-references`);

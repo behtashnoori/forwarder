@@ -20,6 +20,7 @@ vi.mock("../../components/OperationalPermission", () => ({
 vi.mock("../../components/ShipmentCargoItems", () => ({ default: () => <><h2>کالا و وسایل حمل</h2><h2>وضعیت و پیگیری حمل</h2></> }));
 vi.mock("../../components/OperationalExecutionSection", () => ({ default: () => <p>اجرای عملیاتی</p> }));
 vi.mock("../../components/OperationalConditionsSection", () => ({ default: () => <p>تأخیرها و استثناهای عملیاتی</p> }));
+vi.mock("../../components/UnifiedShipmentHistory", () => ({ default: () => <p>تاریخچه عملیات حمل</p> }));
 vi.mock("../../components/DocumentReadinessSection", () => ({ default: () => <p>آمادگی اسناد</p> }));
 vi.mock("../../components/ShipmentEconomicsSection", () => ({ default: () => null }));
 vi.mock("../../components/ShipmentExternalReferences", () => ({ default: () => null }));
@@ -168,7 +169,7 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.getByText("UAT Customer")).toBeInTheDocument();
     expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
     expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
-    expect(screen.getByText("جزئیات و سوابق بیشتر")).toBeInTheDocument();
+    expect(screen.getByText("جزئیات عملیاتی بیشتر")).toBeInTheDocument();
     expect(screen.getByText("Active route plan")).toBeInTheDocument();
     expect(screen.getByText("اجرای عملیاتی")).toBeInTheDocument();
   });

@@ -17,6 +17,7 @@ from backend.operational_models import (
     OperationalMembership,
     OperationalDelay,
     OperationalAudit,
+    OperationalWorkItem,
     OperationalOrganization,
     OperationalShipment,
     Project,
@@ -27,6 +28,9 @@ from backend.project_configuration_models import (
     ProjectMilestoneDefinition,
 )
 from backend.services import operational_execution_service as svc
+from backend.services import operational_read_service as reads
+from backend.external_reference_models import ExternalReferenceType, OperationalShipmentExternalReference
+from backend.mdpm_models import DocumentReadinessAudit
 
 
 @pytest.fixture()
@@ -347,6 +351,94 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
             and DelayReason.query.count() == 1
             and ExceptionReason.query.count() == 1
         )
+
+
+def test_unified_history_composes_distinct_facts_and_preserves_document_scope(execution_app):
+    with execution_app.app_context():
+        shipment = OperationalShipment.query.one()
+        user = actor(execution_app)
+        svc.initialize(shipment.public_id, {"expected_shipment_version": 1}, user)
+        delay_reason = svc.reason_collection("delay", user, {
+            "immutable_code": "PORT_HOLD", "fa_name": "توقف بندر", "en_name": "Port hold"})[0]
+        exception_reason = svc.reason_collection("exception", user, {
+            "immutable_code": "DAMAGE", "fa_name": "آسیب", "en_name": "Damage"})[0]
+        instant = datetime.now(timezone.utc) - timedelta(minutes=5)
+        delay = svc.condition_collection("delay", shipment.public_id, user, {
+            "reason_public_id": delay_reason["public_id"], "started_at": instant.isoformat()})[0]
+        svc.resolve_condition("delay", shipment.public_id, delay["public_id"], {"expected_version": 1}, user)
+        exception = svc.condition_collection("exception", shipment.public_id, user, {
+            "reason_public_id": exception_reason["public_id"], "occurred_at": instant.isoformat()})[0]
+        svc.resolve_condition("exception", shipment.public_id, exception["public_id"], {"expected_version": 1}, user)
+        work = OperationalWorkItem(organization_id=shipment.organization_id,
+            operational_shipment_id=shipment.id, milestone_id=Milestone.query.first().id,
+            due_at=instant, reason="Needs review")
+        first_plan = RoutePlan(operational_shipment_id=shipment.id, revision_number=1,
+            status="superseded", is_active=False, created_by_user_id=user["id"])
+        ref_type = ExternalReferenceType(code="CMR_NUMBER", name_fa="بارنامه زمینی",
+            name_en="CMR", lifecycle_status="DRAFT", created_by_user_id=user["id"],
+            updated_by_user_id=user["id"])
+        db.session.add_all([work, ref_type, first_plan]); db.session.flush()
+        next_plan = RoutePlan(operational_shipment_id=shipment.id, revision_number=2,
+            status="active", is_active=True, created_from_plan_id=first_plan.id,
+            replan_reason="Changed schedule", created_by_user_id=user["id"])
+        db.session.add(next_plan); db.session.flush()
+        ref = OperationalShipmentExternalReference(organization_id=shipment.organization_id,
+            operational_shipment_id=shipment.id, external_reference_type_id=ref_type.id,
+            raw_value="CMR-42", normalized_value="CMR-42", created_by_user_id=user["id"],
+            updated_by_user_id=user["id"])
+        db.session.add(ref); db.session.flush()
+        successor = OperationalShipmentExternalReference(organization_id=shipment.organization_id,
+            operational_shipment_id=shipment.id, external_reference_type_id=ref_type.id,
+            raw_value="CMR-43", normalized_value="CMR-43", supersedes_reference_id=ref.id,
+            lifecycle_status="CANCELLED", reason="Replaced document", created_by_user_id=user["id"],
+            updated_by_user_id=user["id"])
+        db.session.add(successor); db.session.flush()
+        db.session.add_all([
+            OperationalAudit(organization_id=shipment.organization_id, actor_user_id=user["id"],
+                action="work_item.opened", entity_type="OperationalWorkItem", entity_id=work.id),
+            OperationalAudit(organization_id=shipment.organization_id, actor_user_id=user["id"],
+                action="route_plan.activated", entity_type="RoutePlan", entity_id=next_plan.id),
+            OperationalAudit(organization_id=shipment.organization_id, actor_user_id=user["id"],
+                action="external_reference.created", entity_type="shipment_external_reference", entity_id=ref.id),
+            OperationalAudit(organization_id=shipment.organization_id, actor_user_id=user["id"],
+                action="external_reference.superseded", entity_type="shipment_external_reference", entity_id=successor.id),
+            OperationalAudit(organization_id=shipment.organization_id, actor_user_id=user["id"],
+                action="external_reference.cancelled", entity_type="shipment_external_reference", entity_id=successor.id),
+            DocumentReadinessAudit(organization_id=shipment.organization_id,
+                operational_shipment_id=shipment.id, event_type="RequirementMaterialized", actor_user_id=user["id"]),
+        ])
+        db.session.commit()
+        history = reads.history(shipment, 1, 100)
+        order = [datetime.fromisoformat(item["occurred_at"] or item["recorded_at"]) for item in history["items"]]
+        assert order == sorted(order, reverse=True)
+        types = [item["business_type"] for item in history["items"]]
+        assert types.count("operational_shipment.created") == 1
+        assert types.count("operational_delay.created") == types.count("operational_delay.resolved") == 1
+        assert types.count("operational_exception.created") == types.count("operational_exception.resolved") == 1
+        assert "work_item.opened" in types and "external_reference.created" in types
+        assert "route_plan.created" in types and "route_plan.replanned" in types
+        assert "route_plan.activated" in types
+        assert next(item for item in history["items"] if item["business_type"] == "route_plan.replanned")["source_route_revision"] == 1
+        assert "external_reference.superseded" in types and "external_reference.cancelled" in types
+        assert "RequirementMaterialized" not in types
+        assert {item["reference_value"] for item in history["items"] if item["category"] == "REFERENCE"} == {"CMR-42", "CMR-43"}
+        assert next(item for item in history["items"] if item["category"] == "DELAY")["reason_label"] == "توقف بندر"
+        scoped = reads.history(shipment, 1, 100, user)
+        assert "RequirementMaterialized" not in [item["business_type"] for item in scoped["items"]]
+        membership = OperationalMembership.query.filter_by(user_id=user["id"]).one()
+        membership.permissions = [*membership.permissions, "document_readiness.read"]
+        db.session.commit()
+        permitted = reads.history(shipment, 1, 100, user)
+        assert "RequirementMaterialized" in [item["business_type"] for item in permitted["items"]]
+        assert [item["history_id"] for item in reads.history(shipment, 1, 2)["items"]] != [
+            item["history_id"] for item in reads.history(shipment, 2, 2)["items"]]
+        direct = OperationalShipment(organization_id=shipment.organization_id,
+            source_type="direct", customer_id=Customer.query.one().id,
+            created_by_user_id=user["id"])
+        db.session.add(direct); db.session.commit()
+        direct_items = reads.history(direct, 1, 100, user)["items"]
+        assert len(direct_items) == 1 and direct_items[0]["source_type"] == "direct"
+        assert direct_items[0]["business_type"] == "operational_shipment.created"
 
 
 def test_verification_separation_and_one_migration_head(execution_app):

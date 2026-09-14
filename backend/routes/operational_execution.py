@@ -131,7 +131,7 @@ def shipment_history(shipment_id):
         actor = user()
         require_permission(actor, "operational_shipment.read")
         shipment = scoped_shipment(shipment_id, actor)
-        return jsonify({"data": reads.history(shipment, request.args.get("page", 1), request.args.get("per_page", 50))})
+        return jsonify({"data": reads.history(shipment, request.args.get("page", 1), request.args.get("per_page", 50), actor)})
     except OperationalError as exc:
         return error(exc)
 

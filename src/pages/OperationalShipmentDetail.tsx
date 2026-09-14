@@ -29,6 +29,7 @@ import { useI18n } from "@/i18n";
 import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
 import OperationalConditionsSection from "@/components/OperationalConditionsSection";
+import UnifiedShipmentHistory from "@/components/UnifiedShipmentHistory";
 import DocumentReadinessSection from "@/components/DocumentReadinessSection";
 import ShipmentEconomicsSection from "@/components/ShipmentEconomicsSection";
 import ShipmentExternalReferences from "@/components/ShipmentExternalReferences";
@@ -192,17 +193,18 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
 
+          <UnifiedShipmentHistory shipmentPublicId={data.public_id} />
+
           <details className="rounded border bg-white">
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات کالا، وسیله حمل و پیگیری</summary>
             <div className="border-t p-3 sm:p-4"><ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} /></div>
           </details>
 
           <details className="rounded border bg-white" open={false}>
-            <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات و سوابق بیشتر</summary>
+            <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات عملیاتی بیشتر</summary>
             <div className="space-y-5 border-t p-3 sm:p-4">
               <div className="grid gap-4 lg:grid-cols-2">
                 <Card><CardHeader><CardTitle>انحراف زمانی مسیر و استثناهای عملیاتی</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{(timeline?.delays?.length || exceptions.length) ? <>{timeline?.delays?.map((delay) => <p key={delay.checkpoint_id}>انحراف زمانی محاسبه‌شده مسیر: {Math.ceil(delay.seconds / 60)} دقیقه</p>)}{exceptions.map((item) => <p key={item.id}>استثنای عملیاتی ثبت‌شده · {businessLabel(item.status)}{item.reason ? ` · ${item.reason}` : ""}</p>)}</> : <p className="text-slate-600">انحراف زمانی یا استثنای عملیاتی ثبت‌شده‌ای وجود ندارد.</p>}</CardContent></Card>
-                <Card><CardHeader><CardTitle>رخدادهای کسب‌وکار و سابقه اقدامات سیستمی</CardTitle></CardHeader><CardContent className="space-y-2 text-sm">{data.recent_events.length || data.audit_summary.length ? <>{data.recent_events.map((event) => <p key={event.id}>رخداد کسب‌وکار · {when(event.occurred_at, locale)} · {businessLabel(event.event_type)}{event.reason ? ` · ${event.reason}` : ""}</p>)}{data.audit_summary.map((item) => <p key={item.id}>اقدام سیستمی · {when(item.recorded_at, locale)} · {businessLabel(item.action)}</p>)}</> : <p className="text-slate-600">هنوز سابقه‌ای ثبت نشده است.</p>}</CardContent></Card>
               </div>
               <div className="space-y-5">
               <Card><CardHeader><CardTitle>{t("operations.sourceCard")}</CardTitle></CardHeader><CardContent className="grid gap-2 sm:grid-cols-2"><p>{t("operations.source")}: {data.source.type === "direct" ? "عملیات مستقیم" : "درخواست"}</p><p>{t("operations.requestLabel")}: {data.source.request_public_id ? <Link className="text-blue-700 underline" to={`/expert/requests/${data.source.request_public_id}`}>{t("common.request")}</Link> : t("operations.notApplicable")}</p><p>{t("operations.quoteLabel")}: {data.source.accepted_quote_id ? "پیشنهاد پذیرفته‌شده مرتبط" : t("operations.notApplicable")}</p></CardContent></Card>
@@ -293,7 +295,7 @@ export default function OperationalShipmentDetail() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>{direction === "rtl" ? "بازبرنامه‌ریزی و تاریخچه بازبینی" : "Replan and revision history"}</CardTitle></CardHeader>
+            <CardHeader><CardTitle>{direction === "rtl" ? "بازبرنامه‌ریزی و نسخه‌های مسیر" : "Replan and route versions"}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>نسخه مسیر {item.revision_number}</strong> · {item.is_active ? "نسخه فعال" : businessLabel(item.status)} · نسخه رکورد {item.version}{item.created_from_plan_id ? " · جایگزین نسخه پیشین" : ""}<br />{item.replan_reason && `دلیل بازبرنامه‌ریزی: ${item.replan_reason}`}</div>)}
               {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Replan reason" placeholder="Replan reason (required)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "A new active revision was created.")}>Replan future segments</Button></div><p className="text-sm text-slate-600">Completed segments remain read-only; only future segments are copied into the new revision.</p></OperationalPermission>}
@@ -321,8 +323,6 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
 
-          <Card><CardHeader><CardTitle>{t("operations.eventHistory")}</CardTitle></CardHeader><CardContent>{!data.recent_events.length ? <p>رخداد عملیاتی ثبت نشده است.</p> : data.recent_events.map((event) => <div key={event.id}>رخداد کسب‌وکار · {businessLabel(event.event_type)} · {when(event.occurred_at, locale)} {event.reason && `· ${event.reason}`}</div>)}</CardContent></Card>
-          <Card><CardHeader><CardTitle>سوابق ثبت‌شده (فقط خواندنی)</CardTitle></CardHeader><CardContent>{!data.audit_summary.length ? <p>سابقه‌ای ثبت نشده است.</p> : data.audit_summary.map((item) => <div key={item.id}>اقدام سیستمی · {businessLabel(item.action)} · {when(item.recorded_at, locale)}</div>)}</CardContent></Card>
               </div>
             </div>
           </details>

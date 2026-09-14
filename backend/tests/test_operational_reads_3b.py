@@ -141,6 +141,9 @@ def test_legacy_unresolved_and_bounded_history(operational_app):
     client = operational_app.test_client()
     result = client.get(f"/api/v2/operational-shipments/{public_id}/history?per_page=1", headers=_auth(operational_app))
     assert result.status_code == 200 and result.json["data"]["scope"] == "shipment_history"
+    assert result.json["data"]["per_page"] == 1
+    assert result.json["data"]["items"][0]["history_id"]
+    assert result.json["data"]["items"][0]["category"]
 
 
 def test_activation_rejects_occurrence_without_cached_actual(operational_app):

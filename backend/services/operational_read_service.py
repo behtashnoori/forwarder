@@ -1,8 +1,9 @@
 """Read-only route evidence, scoped history and audit contracts."""
-from sqlalchemy import select, and_, or_, literal, union_all, func
+from sqlalchemy import select, and_, or_
 from backend.extensions import db
 from backend.operational_models import (Milestone, MilestoneEvent, RoutePlan, RouteLeg,
     OperationalCheckpoint, OperationalAudit, OperationalWorkItem)
+from backend.external_reference_models import OperationalShipmentExternalReference
 from backend.services import occurrence_projection_service as authority
 
 VERSION = "route-occurrence-v1"
@@ -109,7 +110,10 @@ def audit_query(shipment):
         "MilestoneEvent": select(MilestoneEvent.id).where(MilestoneEvent.milestone_id.in_(milestones),
             MilestoneEvent.organization_id == shipment.organization_id),
         "OperationalWorkItem": select(OperationalWorkItem.id).where(OperationalWorkItem.operational_shipment_id == shipment.id,
-            OperationalWorkItem.organization_id == shipment.organization_id)}
+            OperationalWorkItem.organization_id == shipment.organization_id),
+        "shipment_external_reference": select(OperationalShipmentExternalReference.id).where(
+            OperationalShipmentExternalReference.operational_shipment_id == shipment.id,
+            OperationalShipmentExternalReference.organization_id == shipment.organization_id)}
     return select(OperationalAudit).where(OperationalAudit.organization_id == shipment.organization_id,
         or_(*(and_(OperationalAudit.entity_type == kind, OperationalAudit.entity_id.in_(ids)) for kind, ids in targets.items())))
 
@@ -145,40 +149,9 @@ def event_view(event, shipment):
         "diagnostics": {"raw_event_type": event.event_type}, **scope(plan)}
 
 
-def history(shipment, page=1, per_page=50):
-    from backend.services.operational_service import OperationalError
-    try:
-        page, per_page = int(page), int(per_page)
-    except (ValueError, TypeError):
-        raise OperationalError("INVALID_PAGINATION", "Pagination must be numeric.", 422)
-    if page < 1 or not 1 <= per_page <= 100:
-        raise OperationalError("INVALID_PAGINATION", "Page must be positive; per_page must be 1–100.", 422)
-    milestones = select(Milestone.id).where(Milestone.operational_shipment_id == shipment.id,
-                                            Milestone.organization_id == shipment.organization_id)
-    events = select(literal("event").label("kind"), MilestoneEvent.id.label("id"),
-        MilestoneEvent.recorded_at.label("time")).where(MilestoneEvent.milestone_id.in_(milestones),
-            MilestoneEvent.organization_id == shipment.organization_id)
-    # Each retained revision is included once even if it has no event/audit rows.
-    plans = select(literal("revision").label("kind"), RoutePlan.id.label("id"), RoutePlan.created_at.label("time"))\
-        .where(RoutePlan.operational_shipment_id == shipment.id)
-    feed = union_all(events, plans).subquery()
-    total = db.session.scalar(select(func.count()).select_from(feed))
-    rows = db.session.execute(select(feed).order_by(feed.c.time.desc(), feed.c.kind, feed.c.id.desc())
-        .offset((page-1)*per_page).limit(per_page)).all()
-    items = []
-    for row in rows:
-        if row.kind == "event":
-            items.append(event_view(db.session.get(MilestoneEvent, row.id), shipment))
-        else:
-            plan = db.session.get(RoutePlan, row.id)
-            items.append({"id": plan.id, "classification": "REPLAN_REVISION",
-                "business_label": "Route changed" if plan.created_from_plan_id else "Route prepared",
-                "source_route_plan_id": plan.created_from_plan_id, "reason": plan.replan_reason,
-                "actor_user_id": plan.created_by_user_id, "occurred_at": iso(plan.effective_at),
-                "recorded_at": iso(plan.created_at), "status": plan.status, **scope(plan)})
-    return {"scope": "shipment_history", "current_route": scope(authority.active_plan(shipment)),
-        "ordering": "recorded_at_desc_kind_id; occurred_at_is_business_time", "items": items,
-        "page": page, "per_page": per_page, "total": total, "has_more": page*per_page < total}
+def history(shipment, page=1, per_page=50, user=None):
+    from backend.services.unified_shipment_history import history as unified_history
+    return unified_history(shipment, page, per_page, user)
 
 
 def plan_has_execution(plan):
