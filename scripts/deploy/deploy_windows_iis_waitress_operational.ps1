@@ -11,7 +11,7 @@ function NPath([string]$Value){Need (-not [string]::IsNullOrWhiteSpace($Value)) 
 function SamePath([string]$A,[string]$B){return [string]::Equals((NPath $A),(NPath $B),[StringComparison]::OrdinalIgnoreCase)}
 function TaskRuntime([string]$Xml){[xml]$doc=$Xml;$exec=@($doc.SelectNodes("//*[local-name()='Exec']"));Need ($exec.Count -eq 1) 'one task action required';$command=NPath ([string]$exec[0].Command);$work=NPath ([string]$exec[0].WorkingDirectory);$arguments=[string]$exec[0].Arguments;Need ($arguments -match '(?i)-m\s+waitress\b' -and $arguments -match '(?i)backend\.wsgi:app') 'task must launch the Waitress backend';if([IO.Path]::GetFileName($command) -ieq 'python.exe'){$path=$command}else{Need ([IO.Path]::GetFileName($command) -ieq 'cmd.exe') 'cmd.exe or python.exe required';Need ($arguments -match '(?i)^\s*/d\s+/c\s+') 'cmd.exe /d /c required';$found=@([regex]::Matches($arguments,'(?i)[a-z]:[\\/][^"&\r\n]*?[\\/]runtime[\\/]python\.exe'));Need ($found.Count -eq 1) 'one release-local runtime required';$path=NPath $found[0].Value};Need (SamePath $work (Split-Path -Parent (Split-Path -Parent $path))) 'runtime/WorkingDirectory mismatch';return $path}
 function Fail([string]$Stage){if($FailAt -eq $Stage){throw "RELEASE_STOP: injected $Stage"}}
-function Save(){if($FixtureStatePath){$script:state|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $FixtureStatePath -Encoding UTF8}}
+function Save($state){if($FixtureStatePath){$state|ConvertTo-Json -Depth 8|Set-Content -LiteralPath $FixtureStatePath -Encoding UTF8}}
 function Get-RealServerDiscoveryState{
     # This function is deliberately read-only.  It is the non-fixture path used
     # by ValidateOnly; Execute remains explicitly gated below.
@@ -94,31 +94,31 @@ function Set-IisPhysicalPath([string]$Path){
     Set-WebConfigurationProperty -PSPath 'MACHINE/WEBROOT/APPHOST' -Filter "system.applicationHost/sites/site[@name='forwarder']/application[@path='/']/virtualDirectory[@path='/']" -Name physicalPath -Value $Path -ErrorAction Stop
     Need (SamePath ([string](Get-Website -Name 'forwarder' -ErrorAction Stop).PhysicalPath) $Path) 'IIS physical path mismatch'
 }
-function Rollback(){
+function Rollback($state,$before,[string]$targetPython){
     try{
-        if($FixtureStatePath){$script:state.iis_path=$script:before.iis_path;$script:state.task_xml=$script:before.task_xml;$script:state.enabled=$script:before.enabled;$script:state.listener_runtime=$script:before.listener_runtime;$script:state.listener_up=$true;$script:state.health=$true;Save}
+        if($FixtureStatePath){$state.iis_path=$before.iis_path;$state.task_xml=$before.task_xml;$state.enabled=$before.enabled;$state.listener_runtime=$before.listener_runtime;$state.listener_up=$true;$state.health=$true;Save $state}
         else{
             Disable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null
             $rows=@(Get-NetTCPConnection -State Listen -LocalPort 5101 -ErrorAction SilentlyContinue | Where-Object {$_.LocalAddress -eq '127.0.0.1'})
             $owners=@($rows | Select-Object -ExpandProperty OwningProcess -Unique)
             Need ($owners.Count -le 1) 'ambiguous rollback listener'
-            if($owners.Count -eq 1){$process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop;Need ((SamePath ([string]$process.ExecutablePath) $script:targetPython) -or (SamePath ([string]$process.ExecutablePath) $script:before.listener_runtime)) 'unrecognized rollback listener';Stop-Process -Id ([int]$owners[0]) -Force -ErrorAction Stop}
+            if($owners.Count -eq 1){$process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop;Need ((SamePath ([string]$process.ExecutablePath) $targetPython) -or (SamePath ([string]$process.ExecutablePath) $before.listener_runtime)) 'unrecognized rollback listener';Stop-Process -Id ([int]$owners[0]) -Force -ErrorAction Stop}
             Wait-PortFree $Timeouts.PORT_RELEASE
-            Set-IisPhysicalPath $script:before.iis_path
-            Register-ScheduledTask -TaskName 'Forwarder Backend Production' -Xml $script:before.task_xml -Force -ErrorAction Stop|Out-Null
-            if($script:before.enabled){Enable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null;Start-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop;Wait-Listener $script:before.listener_runtime $Timeouts.ROLLBACK_RECOVERY;Assert-Health 'http://127.0.0.1:5101/api/health' $Timeouts.ROLLBACK_RECOVERY}
+            Set-IisPhysicalPath $before.iis_path
+            Register-ScheduledTask -TaskName 'Forwarder Backend Production' -Xml $before.task_xml -Force -ErrorAction Stop|Out-Null
+            if($before.enabled){Enable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null;Start-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop;Wait-Listener $before.listener_runtime $Timeouts.ROLLBACK_RECOVERY;Assert-Health 'http://127.0.0.1:5101/api/health' $Timeouts.ROLLBACK_RECOVERY}
         }
         Write-Output 'ROLLBACK_RESULT=PASS'
     }catch{Write-Output 'ROLLBACK_RESULT=FAIL';throw}
 }
 Need (-not($ValidateOnly -and $Execute)) 'one deployment mode';if(-not $ValidateOnly -and -not $Execute){$ValidateOnly=$true};if($Execute){Need $ConfirmDeployment 'confirmation required'}
 Need (Test-Path -LiteralPath $PackageRoot -PathType Container) 'absolute package root required';$PackageRoot=(Resolve-Path -LiteralPath $PackageRoot).Path
-if($FixtureStatePath){$script:state=Get-Content -Raw -LiteralPath $FixtureStatePath|ConvertFrom-Json}else{$script:state=Get-RealServerDiscoveryState}
+if($FixtureStatePath){$state=Get-Content -Raw -LiteralPath $FixtureStatePath|ConvertFrom-Json}else{$state=Get-RealServerDiscoveryState}
 Fail 'PACKAGE_VERIFY';& (Join-Path $PackageRoot 'VERIFY-PACKAGE.ps1') -PackageRoot $PackageRoot
-Fail 'BASELINE_CAPTURE';$script:before=[pscustomobject]@{iis_path=$script:state.iis_path;task_xml=$script:state.task_xml;enabled=$script:state.enabled;listener_runtime=$script:state.listener_runtime};$oldPython=TaskRuntime $before.task_xml;Need (SamePath $oldPython $before.listener_runtime) 'pre-cutover runtime mismatch'
-Fail 'DB_GATE';Need ($state.db_revision -in @($RequiredBefore,$RequiredTarget)) 'unknown database lineage';if($state.db_revision -eq $RequiredBefore){$migrationNeeded=$true}else{$migrationNeeded=$false};if($ValidateOnly){Write-Output 'DB_GATE_MATRIX=PASS';Write-Output 'REAL_NONFIXTURE_VALIDATEONLY=PASS';Write-Output 'VALIDATEONLY_ZERO_MUTATION=PASS';exit 0}
+Fail 'BASELINE_CAPTURE';$before=[pscustomobject]@{iis_path=$state.iis_path;task_xml=$state.task_xml;enabled=$state.enabled;listener_runtime=$state.listener_runtime};$oldPython=TaskRuntime $before.task_xml;Need (SamePath $oldPython $before.listener_runtime) 'pre-cutover runtime mismatch'
+Fail 'DB_GATE';Need ($state.db_revision -in @($RequiredBefore,$RequiredTarget)) 'unknown database lineage';if($state.db_revision -eq $RequiredBefore){$migrationNeeded=$true}else{$migrationNeeded=$false};if($ValidateOnly){Write-Output 'DB_GATE_MATRIX=PASS';Write-Output 'VALIDATEONLY_COMPLETE=YES';return}
 $target=Join-Path (NPath $ReleaseRoot) ('release-'+(Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss')+'-'+$RequiredTarget)
-$script:targetPython=Join-Path $target 'runtime\python.exe'
+$targetPython=Join-Path $target 'runtime\python.exe'
 $oldRoot=Split-Path -Parent (Split-Path -Parent $oldPython)
 Need ((SamePath $before.iis_path (Join-Path $oldRoot 'dist')) -and $before.enabled -and $state.listener_up) 'incoherent production baseline'
 Need ($before.task_xml.Contains($oldRoot)) 'task XML does not identify current release'
@@ -126,18 +126,18 @@ Need (-not (Test-Path -LiteralPath $target)) 'target already exists'
 $mutationStarted=$false
 try{
     Fail 'TARGET_MATERIALIZE'
-    if(-not $FixtureStatePath){New-Item -ItemType Directory -Path $target -ErrorAction Stop|Out-Null;Get-ChildItem -LiteralPath (Join-Path $PackageRoot 'artifact') -Force|Copy-Item -Destination $target -Recurse -Force -ErrorAction Stop;Need (Test-Path -LiteralPath $script:targetPython -PathType Leaf) 'target runtime missing'}
-    if($migrationNeeded){Fail 'MIGRATION';if($FixtureStatePath){$state.db_revision=$RequiredTarget;Save}else{Invoke-MigrationCli @('upgrade',$RequiredTarget,'--confirm')|Out-Null;$afterMigration=@(Invoke-MigrationCli @('current')|Where-Object {$_ -match '^current='});Need ($afterMigration.Count -eq 1 -and $afterMigration[0] -eq ('current='+$RequiredTarget)) 'migration postcondition mismatch';$state.db_revision=$RequiredTarget}}
+    if(-not $FixtureStatePath){New-Item -ItemType Directory -Path $target -ErrorAction Stop|Out-Null;Get-ChildItem -LiteralPath (Join-Path $PackageRoot 'artifact') -Force|Copy-Item -Destination $target -Recurse -Force -ErrorAction Stop;Need (Test-Path -LiteralPath $targetPython -PathType Leaf) 'target runtime missing'}
+    if($migrationNeeded){Fail 'MIGRATION';if($FixtureStatePath){$state.db_revision=$RequiredTarget;Save $state}else{Invoke-MigrationCli @('upgrade',$RequiredTarget,'--confirm')|Out-Null;$afterMigration=@(Invoke-MigrationCli @('current')|Where-Object {$_ -match '^current='});Need ($afterMigration.Count -eq 1 -and $afterMigration[0] -eq ('current='+$RequiredTarget)) 'migration postcondition mismatch';$state.db_revision=$RequiredTarget}}
     $mutationStarted=$true
-    Fail 'TASK_DISABLE';if($FixtureStatePath){$state.enabled=$false;Save}else{Disable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null}
-    Fail 'BACKEND_STOP';if($FixtureStatePath){$state.listener_up=$false;Save}else{Stop-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop;$remaining=Get-Process -Id ([int]$state.listener_pid) -ErrorAction SilentlyContinue;if($null -ne $remaining){$identity=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$state.listener_pid) -ErrorAction Stop;Need (SamePath ([string]$identity.ExecutablePath) $oldPython) 'listener PID was reused by an unrelated process';Stop-Process -Id ([int]$state.listener_pid) -Force -ErrorAction Stop}}
+    Fail 'TASK_DISABLE';if($FixtureStatePath){$state.enabled=$false;Save $state}else{Disable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null}
+    Fail 'BACKEND_STOP';if($FixtureStatePath){$state.listener_up=$false;Save $state}else{Stop-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop;$remaining=Get-Process -Id ([int]$state.listener_pid) -ErrorAction SilentlyContinue;if($null -ne $remaining){$identity=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$state.listener_pid) -ErrorAction Stop;Need (SamePath ([string]$identity.ExecutablePath) $oldPython) 'listener PID was reused by an unrelated process';Stop-Process -Id ([int]$state.listener_pid) -Force -ErrorAction Stop}}
     Fail 'PORT_RELEASE';if($FixtureStatePath){Need (-not $state.listener_up) 'port not released'}else{Wait-PortFree $Timeouts.PORT_RELEASE}
-    Fail 'TASK_SWITCH';$nextXml=$before.task_xml.Replace($oldRoot,$target);Need ($nextXml -ne $before.task_xml) 'task target not replaced';Need (SamePath (TaskRuntime $nextXml) $script:targetPython) 'target task/runtime mismatch';if($FixtureStatePath){$state.task_xml=$nextXml;Save}else{Register-ScheduledTask -TaskName 'Forwarder Backend Production' -Xml $nextXml -Force -ErrorAction Stop|Out-Null}
-    Fail 'BACKEND_START';if($FixtureStatePath){$state.enabled=$true;$state.listener_up=$true;$state.listener_runtime=$script:targetPython;Save}else{Enable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null;Start-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop}
-    Fail 'LISTENER_VERIFY';if($FixtureStatePath){Need (SamePath $state.listener_runtime $script:targetPython) 'target runtime mismatch'}else{Wait-Listener $script:targetPython $Timeouts.LISTENER_VERIFY}
+    Fail 'TASK_SWITCH';$nextXml=$before.task_xml.Replace($oldRoot,$target);Need ($nextXml -ne $before.task_xml) 'task target not replaced';Need (SamePath (TaskRuntime $nextXml) $targetPython) 'target task/runtime mismatch';if($FixtureStatePath){$state.task_xml=$nextXml;Save $state}else{Register-ScheduledTask -TaskName 'Forwarder Backend Production' -Xml $nextXml -Force -ErrorAction Stop|Out-Null}
+    Fail 'BACKEND_START';if($FixtureStatePath){$state.enabled=$true;$state.listener_up=$true;$state.listener_runtime=$targetPython;Save $state}else{Enable-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop|Out-Null;Start-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop}
+    Fail 'LISTENER_VERIFY';if($FixtureStatePath){Need (SamePath $state.listener_runtime $targetPython) 'target runtime mismatch'}else{Wait-Listener $targetPython $Timeouts.LISTENER_VERIFY}
     Fail 'INTERNAL_HEALTH';if($FixtureStatePath){Need $state.health 'internal health failure'}else{Assert-Health 'http://127.0.0.1:5101/api/health' $Timeouts.INTERNAL_HEALTH}
-    Fail 'IIS_SWITCH';if($FixtureStatePath){$state.iis_path=Join-Path $target 'dist';Save}else{Set-IisPhysicalPath (Join-Path $target 'dist')}
+    Fail 'IIS_SWITCH';if($FixtureStatePath){$state.iis_path=Join-Path $target 'dist';Save $state}else{Set-IisPhysicalPath (Join-Path $target 'dist')}
     Fail 'IIS_VERIFY';if($FixtureStatePath){Need (SamePath $state.iis_path (Join-Path $target 'dist')) 'IIS target mismatch'}else{Need (SamePath ([string](Get-Website -Name 'forwarder').PhysicalPath) (Join-Path $target 'dist')) 'IIS target mismatch'}
     Fail 'PUBLIC_HEALTH';if($FixtureStatePath){Need $state.health 'public health failure'}else{Assert-Health 'https://samand.forwarderet.ir/api/health' $Timeouts.PUBLIC_HEALTH}
     Fail 'POST_DEPLOY_VERIFY';Write-Output 'FULL_EXECUTE_SIMULATION=PASS'
-}catch{$primary=$_;if($mutationStarted){try{Rollback}catch{throw ('RELEASE_STOP: cutover and rollback failed; primary='+$primary.Exception.Message+'; rollback='+$_.Exception.Message)}};throw $primary}
+}catch{$primary=$_;if($mutationStarted){try{Rollback $state $before $targetPython}catch{throw ('RELEASE_STOP: cutover and rollback failed; primary='+$primary.Exception.Message+'; rollback='+$_.Exception.Message)}};throw $primary}

@@ -1,6 +1,7 @@
 """Canonical active-release lineage gate regression tests."""
 import importlib.util
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -57,3 +58,45 @@ def test_manifest_disagreement_fails_closed(tmp_path, key, value):
     (tmp_path / "artifact/release-manifest.json").write_text(json.dumps(metadata), encoding="utf-8")
     with pytest.raises(RuntimeError, match="release metadata mismatch"):
         builder.active_lineage_gate(tmp_path, "b" * 40)
+
+
+@pytest.mark.parametrize('defect', [
+    '$global:ForwarderExecuteState.Iis',
+    'if($false){$script:state.iis_path}',
+    'try {throw "failure"} finally {$script:cleanup}',
+    'function global:Get-Website {$global:ForwarderExecuteState.Iis}',
+    'function Save {$script:state | ConvertTo-Json}',
+])
+def test_unset_state_cannot_escape_qualification(tmp_path, defect):
+    (tmp_path / 'deploy_windows_iis_waitress.ps1').write_text(
+        'Set-StrictMode -Version Latest\n' + defect, encoding='utf-8')
+    result = subprocess.run([
+        'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', str(ROOT / 'scripts/tests/audit_release_state_lifecycle.ps1'),
+        '-PackageRoot', str(tmp_path),
+    ], capture_output=True, text=True, timeout=30)
+    assert result.returncode != 0
+    assert 'ambient mutable variable reference' in result.stderr
+
+
+@pytest.mark.parametrize('wrong_failure', [
+    '$null=$global:ForwarderExecuteState',
+    'throw "unexpected state lifecycle failure"',
+])
+def test_failure_matrix_rejects_unrelated_state_error(tmp_path, wrong_failure):
+    for name in ('VERIFY-PACKAGE.ps1', 'AUDIT-STATE-LIFECYCLE.ps1'):
+        (tmp_path / name).write_text('return\n')
+    original = (ROOT / 'scripts/deploy/deploy_windows_iis_waitress_operational.ps1').read_text()
+    expected = 'throw "RELEASE_STOP: injected $Stage"'
+    assert original.count(expected) == 1
+    mutant = tmp_path / 'deploy-mutant.ps1'
+    mutant.write_text(original.replace(expected, wrong_failure))
+    result = subprocess.run([
+        'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', str(ROOT / 'scripts/tests/test_operational_release_pipeline.ps1'),
+        '-PackageRoot', str(tmp_path), '-DeployScript', str(mutant),
+    ], capture_output=True, text=True, timeout=60)
+    assert result.returncode != 0
+    assert 'FAILURE_INJECTION_MATRIX=PASS' not in result.stdout
+    assert ('ForwarderExecuteState' in result.stderr or
+            'unexpected state lifecycle failure' in result.stderr)

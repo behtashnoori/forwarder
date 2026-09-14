@@ -11,6 +11,7 @@ $xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Argume
 $temp=Join-Path ([IO.Path]::GetTempPath()) ('fw-'+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $temp|Out-Null
 try{
+    & (Join-Path $PackageRoot 'AUDIT-STATE-LIFECYCLE.ps1') -PackageRoot $PackageRoot
     & (Join-Path $PackageRoot 'VERIFY-PACKAGE.ps1') -PackageRoot $PackageRoot|Out-Null
     $fixturePackage=Join-Path $temp 'fixture-package'
     New-Item -ItemType Directory -Path $fixturePackage|Out-Null
@@ -27,7 +28,7 @@ try{
     }
     Reset-State '20260908_invalid_lineage'
     $rejected=$false
-    try{& $DeployScript -PackageRoot $fixturePackage -ValidateOnly -FixtureStatePath $stateFile|Out-Null}catch{$rejected=$true}
+    try{& $DeployScript -PackageRoot $fixturePackage -ValidateOnly -FixtureStatePath $stateFile|Out-Null}catch{if($_.Exception.Message -ne 'RELEASE_STOP: unknown database lineage'){throw};$rejected=$true}
     if(-not $rejected){throw 'unknown DB lineage was accepted'}
     Reset-State '20260920_legal_customer_nullable_contact_names'
     & $DeployScript -PackageRoot $fixturePackage -Execute -ConfirmDeployment -FixtureStatePath $stateFile|Out-Null
@@ -36,7 +37,7 @@ try{
     foreach($stage in @('PACKAGE_VERIFY','BASELINE_CAPTURE','DB_GATE','MIGRATION','TARGET_MATERIALIZE','TASK_DISABLE','BACKEND_STOP','PORT_RELEASE','TASK_SWITCH','BACKEND_START','LISTENER_VERIFY','INTERNAL_HEALTH','IIS_SWITCH','IIS_VERIFY','PUBLIC_HEALTH','POST_DEPLOY_VERIFY')){
         Reset-State '20260920_legal_customer_nullable_contact_names'
         $rejected=$false
-        try{& $DeployScript -PackageRoot $fixturePackage -Execute -ConfirmDeployment -FixtureStatePath $stateFile -FailAt $stage|Out-Null}catch{$rejected=$true}
+        try{& $DeployScript -PackageRoot $fixturePackage -Execute -ConfirmDeployment -FixtureStatePath $stateFile -FailAt $stage|Out-Null}catch{if($_.Exception.Message -ne ('RELEASE_STOP: injected '+$stage)){throw};$rejected=$true}
         if(-not $rejected){throw "failure injection accepted at $stage"}
         $after=Get-Content -Raw -LiteralPath $stateFile|ConvertFrom-Json
         if($after.listener_runtime -ne $py -or $after.iis_path -ne (Join-Path $old 'dist') -or -not $after.enabled -or -not $after.listener_up){throw "rollback invariant failed at $stage"}
@@ -57,4 +58,10 @@ try{
     if(-not (Test-Path -LiteralPath $executeTest -PathType Leaf) -and $DeployScript -ne (Join-Path $PackageRoot 'deploy_windows_iis_waitress.ps1')){$executeTest=Join-Path $PSScriptRoot 'test_real_execute_simulation.ps1'}
     if(-not (Test-Path -LiteralPath $executeTest -PathType Leaf)){throw 'real Execute qualification is absent'}
     & $executeTest -PackageRoot $PackageRoot -DeployScript $DeployScript
+    # This call follows Execute qualification in the same operator shell. Before
+    # repair its leaked Get-Website function referenced a removed global variable.
+    if(@(Get-ChildItem Function: | Where-Object {$_.Definition -match '\$global:ForwarderExecuteState'}).Count){throw 'qualification leaked a function reading removed state'}
+    & $realTest -PackageRoot $PackageRoot -DeployScript $DeployScript
+    Write-Output 'QUALIFICATION_ESCAPE_ROOT_CAUSE_CLOSED=YES'
+    Write-Output 'REGRESSION_TEST_ADDED=YES'
 }finally{Remove-Item -LiteralPath $temp -Recurse -Force}

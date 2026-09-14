@@ -145,7 +145,9 @@ if (Test-Path $envFile) {
     }
     foreach ($key in @('DATABASE_URL','SECRET_KEY','JWT_SECRET_KEY')) { Write-Output "$key=$(Present $envMap $key)" }
     foreach ($key in @('APP_ENV','FLASK_ENV','PORT','BACKEND_PORT','CORS_ORIGINS','CORS_ORIGIN')) { if ($envMap.ContainsKey($key)) { Write-Output "$key=$($envMap[$key])" } }
-    Write-Output "DB_HOST=$dbHost"; Write-Output "DB_PORT=$dbPort"; Write-Output "DB_NAME=$dbName"; Write-Output "DB_USER=$dbUser"
+    if ($dbUrl) {
+        Write-Output "DB_HOST=$dbHost"; Write-Output "DB_PORT=$dbPort"; Write-Output "DB_NAME=$dbName"; Write-Output "DB_USER=$dbUser"
+    } else { Add-CollectionError 'DATABASE_URL_NOT_FOUND'; Write-Warning 'database identity unavailable: DATABASE_URL is absent' }
 } else { Add-CollectionError 'PRODUCTION_ENV_NOT_FOUND'; Write-Warning 'production.env not found' }
 
 Section 'DATABASE READ-ONLY INSPECTION'

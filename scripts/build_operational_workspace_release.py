@@ -4,6 +4,7 @@ import ast,hashlib,json,shutil,subprocess,sys,tempfile,zipfile,os
 from pathlib import Path
 APP='e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4'; BEFORE='20260920_legal_customer_nullable_contact_names'; TARGET='20260921_shipment_evidence_ownership'; NAME='Forwarder-Operational-Workspace-Production-CERTIFIED'; RUNTIME_PACKAGE='Forwarder-Windows-Runtime.zip'; RHASH='f4a8f108aa89a78d7986f01fb8f6aa8af5e2d35e00617a8453eb1f15df945070'
 STALE=('S7-RC','S8-RC','a9ed9ae','20260908_governed_international_geography','NO Alembic upgrade in S8')
+STATE_REQUIRED=('ALL_RELEASE_STATE_VARIABLES_AUDITED=YES','UNINITIALIZED_GLOBAL_READS=0','UNINITIALIZED_SCRIPT_READS=0','STATE_LIFECYCLE_AUDIT=PASS','FRESH_PROCESS_VALIDATEONLY=PASS','STRICTMODE_FRESH_PROCESS=PASS','ARBITRARY_CWD_VALIDATEONLY=PASS','AMBIENT_GLOBAL_STATE_INDEPENDENCE=PASS','REPEATED_INVOCATION_MATRIX=PASS','ROLLBACK_FAILURE_REPORTING=PASS','QUALIFICATION_ESCAPE_ROOT_CAUSE_CLOSED=YES','REGRESSION_TEST_ADDED=YES','REAL_EXECUTE_CODEPATH=PASS')
 def sha(p):
  h=hashlib.sha256()
  with p.open('rb') as f:
@@ -59,6 +60,9 @@ def main():
  repo=Path(__file__).resolve().parents[1]; out=repo/'release-candidates'/NAME
  qualification=tempfile.TemporaryDirectory(prefix='forwarder-tooling-preview-') if '--preview' in sys.argv else None
  if qualification:out=Path(qualification.name)/NAME
+ if not qualification:
+  subprocess.run(['git','diff','--exit-code','HEAD','--','scripts/build_operational_workspace_release.py','scripts/deploy/deploy_windows_iis_waitress_operational.ps1','scripts/tests','ops/adr043-production-readonly-preflight.ps1'],cwd=repo,check=True,stdout=subprocess.DEVNULL)
+  subprocess.run(['git','diff','--exit-code',APP,'HEAD','--','backend','src','contracts','public','package.json','package-lock.json'],cwd=repo,check=True,stdout=subprocess.DEVNULL)
  if '--finalize' in sys.argv:
   if (out/'CERTIFICATION-PASS.json').exists():raise RuntimeError('certified candidate is immutable')
   current=subprocess.check_output(['git','rev-parse','HEAD'],cwd=repo,text=True).strip()
@@ -80,18 +84,25 @@ def main():
    if metadata != active_lineage_gate(extracted,current):raise RuntimeError('extracted package metadata verification failed')
    migration_inventory_gate(extracted,repo)
    ps='powershell.exe' if os.name=='nt' else 'pwsh'
-   checks=subprocess.run([ps,'-NoProfile','-ExecutionPolicy','Bypass','-File',str(extracted/'CERTIFY-RELEASE.ps1'),'-PackageRoot',str(extracted)],capture_output=True,text=True,timeout=240)
+   checks=subprocess.run([ps,'-NoProfile','-ExecutionPolicy','Bypass','-File',str(extracted/'CERTIFY-RELEASE.ps1'),'-PackageRoot',str(extracted)],capture_output=True,text=True,timeout=1800)
    required=('PACKAGE_LAYOUT=PASS','PACKAGE_CHECKSUMS=PASS','FULL_EXECUTE_SIMULATION=PASS','FAILURE_INJECTION_MATRIX=PASS','ROLLBACK_MATRIX=PASS','REAL_NONFIXTURE_VALIDATEONLY=PASS','VALIDATEONLY_ZERO_MUTATION=PASS')
-   if checks.returncode or any(mark not in checks.stdout for mark in required):raise RuntimeError('extracted certification failed: '+checks.stdout+' '+checks.stderr)
+   if checks.returncode or any(mark not in checks.stdout for mark in required+STATE_REQUIRED):raise RuntimeError('extracted certification failed: '+checks.stdout+' '+checks.stderr)
+   (repo/'qualification'/'state-lifecycle-final-certification.log').write_text(checks.stdout+'\n'+checks.stderr)
    corruption_matrix(extracted,ps)
-  certificate={'zip_sha256':sha(zp),'application_commit':APP,'tooling_commit':metadata['tooling_commit'],'certified_extracted_zip':zp.name}
+  certificate={'zip_sha256':sha(zp),'application_commit':APP,'tooling_commit':metadata['tooling_commit'],'certified_extracted_zip':zp.name,'state_lifecycle_audit':'PASS','qualification_markers':list(required+STATE_REQUIRED),'package_corruption_matrix':'PASS'}
   (out/'CERTIFICATION-PASS.json').write_text(json.dumps(certificate,indent=2)+'\n')
-  print(zp);return
+  print('FINAL_PACKAGE_CERTIFICATION=PASS');print(zp);return
  if out.exists():
   # A candidate is immutable only after extracted-artifact certification writes
   # its certificate.  This permits repair of a locally interrupted build.
   if (out/'CERTIFICATION-PASS.json').exists() and '--replace-invalidated' not in sys.argv:raise RuntimeError('certified candidate may not be replaced')
-  shutil.rmtree(out) # resume only an interrupted local assembly; never replace a completed candidate
+  if out.resolve().parent != (repo/'release-candidates').resolve():raise RuntimeError('candidate path escaped release-candidates')
+  if '--replace-invalidated' in sys.argv:
+   previous_zip=out/(NAME+'.zip')
+   invalidated=out.with_name(NAME+'-INVALIDATED-'+sha(previous_zip)[:12])
+   if invalidated.exists():raise RuntimeError('invalidated archive already exists')
+   out.rename(invalidated)
+  else:shutil.rmtree(out) # only interrupted, uncertified local assembly
  if subprocess.run(['git','diff','--quiet','--','backend','src','contracts','public','package.json','package-lock.json'],cwd=repo).returncode:raise RuntimeError('tracked product worktree is dirty')
  if not qualification:subprocess.run([('npm.cmd' if os.name=='nt' else 'npm'),'run','build'],cwd=repo,check=True)
  runtime=next((p for p in (repo/'release-candidates').glob('*Runtime*.zip') if sha(p)==RHASH),None)
@@ -115,6 +126,8 @@ def main():
   shutil.copy2(repo/'scripts/tests/test_operational_release_pipeline.ps1',root/'CERTIFY-RELEASE.ps1')
   shutil.copy2(repo/'scripts/tests/test_real_nonfixture_validateonly.ps1',root/'QUALIFY-REAL-VALIDATEONLY.ps1')
   shutil.copy2(repo/'scripts/tests/test_real_execute_simulation.ps1',root/'QUALIFY-REAL-EXECUTE.ps1')
+  shutil.copy2(repo/'scripts/tests/audit_release_state_lifecycle.ps1',root/'AUDIT-STATE-LIFECYCLE.ps1')
+  shutil.copy2(repo/'scripts/tests/STATE-LIFECYCLE-AUDIT.md',root/'STATE-LIFECYCLE-AUDIT.md')
   verify = """#requires -Version 5.1
 param([Parameter(Mandatory=$true)][string]$PackageRoot)
 Set-StrictMode -Version Latest
@@ -168,9 +181,9 @@ An applied database migration is never silently downgraded. The pre-release appl
   files=sorted(p for p in root.rglob('*') if p.is_file());(root/'SHA256SUMS.txt').write_text('\n'.join(f'{sha(p)}  {p.relative_to(root).as_posix()}' for p in files)+'\n')
   if qualification:
    ps='powershell.exe' if os.name=='nt' else 'pwsh'
-   result=subprocess.run([ps,'-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'CERTIFY-RELEASE.ps1'),'-PackageRoot',str(root)],capture_output=True,text=True,timeout=240)
+   result=subprocess.run([ps,'-NoProfile','-ExecutionPolicy','Bypass','-File',str(root/'CERTIFY-RELEASE.ps1'),'-PackageRoot',str(root)],capture_output=True,text=True,timeout=1800)
    required=('PACKAGE_LAYOUT=PASS','PACKAGE_CHECKSUMS=PASS','FULL_EXECUTE_SIMULATION=PASS','FAILURE_INJECTION_MATRIX=PASS','ROLLBACK_MATRIX=PASS','REAL_NONFIXTURE_VALIDATEONLY=PASS','VALIDATEONLY_ZERO_MUTATION=PASS','REAL_EXECUTE_CODEPATH=PASS')
-   if result.returncode or any(marker not in result.stdout for marker in required):raise RuntimeError('tooling preview certification failed: '+result.stdout+' '+result.stderr)
+   if result.returncode or any(marker not in result.stdout for marker in required+STATE_REQUIRED):raise RuntimeError('tooling preview certification failed: '+result.stdout+' '+result.stderr)
    corruption_matrix(root,ps)
    print(result.stdout)
    print('PACKAGE_CORRUPTION_MATRIX=PASS')
