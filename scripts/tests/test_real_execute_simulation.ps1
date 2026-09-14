@@ -35,7 +35,7 @@ connection.close()
     if($LASTEXITCODE -ne 0){throw 'disposable DB setup failed'}
     $env:DATABASE_URL='sqlite:///'+$database.Replace('\','/')
     $env:APP_ENV='production'
-    $xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c &quot;&quot;'+$oldPython+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$old+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;&quot;</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
+    $xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c set PYTHONPATH='+$old+' &amp;&amp; cd /d &quot;'+$old+'&quot; &amp;&amp; &quot;'+$oldPython+'&quot; &quot;C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py&quot; serve --env &quot;C:\1-webapp\forwarder-runtime\production.env&quot; --repo &quot;'+$old+'&quot; --host 127.0.0.1 --port 5101 --log &quot;C:\1-webapp\forwarder-runtime\waitress.log&quot;</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
     $simulation=[pscustomobject]@{Iis=(Join-Path $old 'dist');Xml=$xml;Enabled=$true;Running=$false;Listener=$oldPython;Mutations=0;Events=@()}
     function Import-Module { param([string]$Name) }
     function Get-Website { param([string]$Name) [pscustomobject]@{PhysicalPath=$simulation.Iis} }

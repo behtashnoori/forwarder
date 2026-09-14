@@ -6,8 +6,8 @@ APP='e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4'; BEFORE='20260920_legal_customer_
 STALE=('S7-RC','S8-RC','a9ed9ae','20260908_governed_international_geography','NO Alembic upgrade in S8')
 STATE_REQUIRED=('ALL_RELEASE_STATE_VARIABLES_AUDITED=YES','UNINITIALIZED_GLOBAL_READS=0','UNINITIALIZED_SCRIPT_READS=0','STATE_LIFECYCLE_AUDIT=PASS','FRESH_PROCESS_VALIDATEONLY=PASS','STRICTMODE_FRESH_PROCESS=PASS','ARBITRARY_CWD_VALIDATEONLY=PASS','AMBIENT_GLOBAL_STATE_INDEPENDENCE=PASS','REPEATED_INVOCATION_MATRIX=PASS','ROLLBACK_FAILURE_REPORTING=PASS','QUALIFICATION_ESCAPE_ROOT_CAUSE_CLOSED=YES','REGRESSION_TEST_ADDED=YES','REAL_EXECUTE_CODEPATH=PASS')
 PROVENANCE_REQUIRED=('TASK_READY_WITH_MATCHING_LISTENER_SUPPORTED=YES','TASK_STATE_NOT_USED_AS_SOLE_OWNERSHIP_AUTHORITY=YES','LISTENER_PROVENANCE_MODEL=PASS','ORPHAN_CLASSIFICATION_MATRIX=PASS','REAL_PRODUCTION_READY_TASK_TOPOLOGY=PASS','BASELINE_CAPTURE_MATRIX=PASS','ONE_PASS_OPERATOR_SIMULATION=PASS','LAUNCHER_CHAIN_MODEL=PASS','DIRECT_WAITRESS_TASK_ASSUMPTIONS=0','REAL_PRODUCTION_LAUNCHER_TOPOLOGY=PASS','TASK_TRANSFORMATION_PRESERVES_LAUNCHER=PASS','EXECUTE_ROLLBACK_LISTENER_COMMAND_GATES=PASS')
-INVALIDATED_ZIP_SHA256='81388fcff81b2471137a18cd3fde99c5dc0aa09734adb5f01f7a8378febe82ad'
-INVALIDATION_REASON='Direct Waitress task assertion rejects the approved cmd.exe -> release-local Python -> phase1b runtime launcher serve -> Waitress child chain.'
+INVALIDATED_ZIP_SHA256='ee2c22205da80eb7601aa3c12657ee46ad470eacdb57d1fbee4eb5ab2c4a18ac'
+INVALIDATION_REASON='ValidateOnly rejected the Production cmd.exe set PYTHONPATH && cd /d && runtime launcher serve wrapper before parsing its approved command.'
 def sha(p):
  h=hashlib.sha256()
  with p.open('rb') as f:
@@ -136,7 +136,7 @@ def main():
   shutil.copy2(repo/'scripts/tests/audit_release_state_lifecycle.ps1',root/'AUDIT-STATE-LIFECYCLE.ps1')
   shutil.copy2(repo/'scripts/tests/STATE-LIFECYCLE-AUDIT.md',root/'STATE-LIFECYCLE-AUDIT.md')
   shutil.copy2(repo/'scripts/tests/LISTENER-PROVENANCE.md',root/'LISTENER-PROVENANCE.md')
-  (root/'INVALIDATED-ARTIFACTS.json').write_text(json.dumps({'do_not_execute_zip_sha256':[INVALIDATED_ZIP_SHA256,'cbfb13da4bd71c15b592751f47fdb26043efa558870580476f2f637d53640153'],'reason':INVALIDATION_REASON},indent=2)+'\n')
+  (root/'INVALIDATED-ARTIFACTS.json').write_text(json.dumps({'do_not_execute_zip_sha256':[INVALIDATED_ZIP_SHA256,'81388fcff81b2471137a18cd3fde99c5dc0aa09734adb5f01f7a8378febe82ad','cbfb13da4bd71c15b592751f47fdb26043efa558870580476f2f637d53640153'],'reason':INVALIDATION_REASON},indent=2)+'\n')
   verify = """#requires -Version 5.1
 param([Parameter(Mandatory=$true)][string]$PackageRoot)
 Set-StrictMode -Version Latest
@@ -158,7 +158,7 @@ Write-Output 'PACKAGE_LAYOUT=PASS';Write-Output 'PACKAGE_CHECKSUMS=PASS';Write-O
 
 Use an elevated Windows PowerShell 5.1 session. All commands are absolute and independent of the current directory. Do not run Execute unless every prior gate passes.
 
-The previous server ZIP with SHA256 `81388fcff81b2471137a18cd3fde99c5dc0aa09734adb5f01f7a8378febe82ad` is INVALIDATED / DO NOT EXECUTE. Replace the ZIP and extracted package together. Preserve any old extraction outside the new package directory; never overlay an old extraction. Use only the new supplied SHA256. See `INVALIDATED-ARTIFACTS.json` and `LISTENER-PROVENANCE.md`.
+The previous server ZIP with SHA256 `ee2c22205da80eb7601aa3c12657ee46ad470eacdb57d1fbee4eb5ab2c4a18ac` is INVALIDATED / DO NOT EXECUTE. Replace the ZIP and extracted package together. Preserve any old extraction outside the new package directory; never overlay an old extraction. Use only the new supplied SHA256. See `INVALIDATED-ARTIFACTS.json` and `LISTENER-PROVENANCE.md`.
 
 1. Copy `Forwarder-Operational-Workspace-Production-CERTIFIED.zip` and its `.zip.sha256` sidecar to `C:\1-webapp\forwarder-production\incoming`.
 2. Verify ZIP SHA-256 against the supplied sidecar:

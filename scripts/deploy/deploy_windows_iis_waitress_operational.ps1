@@ -31,11 +31,18 @@ function Get-TaskLaunch([string]$Xml){
     $arguments=[string]$action.Arguments
     Need ($arguments -match '(?i)^\s*/d\s+/c\s+(.+)$') 'cmd.exe /d /c required'
     $body=$Matches[1].Trim()
-    # cmd's enclosing pair is distinct from the quotes around python.exe.
-    if($body.StartsWith('""') -and $body.EndsWith('"')){$body=$body.Substring(1,$body.Length-2)}
-    $tokens=@(Split-LaunchArguments $body)
+    # Parse the only approved shell program before tokenizing its final command.
+    # In particular, Split-LaunchArguments must never receive a cmd.exe body.
+    Need ($body -notmatch '[|<>^%!\r\n]' -and $body -notmatch '&&.*&&.*&&') 'unsupported shell syntax in launcher arguments'
+    $wrapper=[regex]::Match($body,'(?is)^set\s+PYTHONPATH=(.+?)\s*&&\s*cd\s+/d\s+"([^"]+)"\s*&&\s*(.+)$')
+    Need $wrapper.Success 'approved task launcher wrapper required'
+    $pythonPath=$wrapper.Groups[1].Value.Trim()
+    $cdPath=$wrapper.Groups[2].Value
+    $invocation=$wrapper.Groups[3].Value.Trim()
+    Need ($pythonPath -notmatch '[&|<>^%!"\r\n]' -and $cdPath -notmatch '[&|<>^%!\r\n]') 'unsupported shell syntax in launcher arguments'
+    $tokens=@(Split-LaunchArguments $invocation)
     Need ($tokens.Count -ge 3) 'runtime launcher invocation required'
-    Need (SamePath $tokens[1] 'C:\1-webapp\forwarder-runtime\phase1b_production_cutover_runtime.py') 'approved runtime launcher required'
+    Need (SamePath $tokens[1] 'C:\1-webapp\forwarder-runtime\phase1b\_production\_cutover\_runtime.py') 'approved runtime launcher required'
     Need ($tokens[2] -ceq 'serve') 'runtime launcher serve command required'
     $options=@{};$repoIndex=-1
     for($index=3;$index -lt $tokens.Count;$index+=2){
@@ -47,18 +54,21 @@ function Get-TaskLaunch([string]$Xml){
     }
     Need ($options.ContainsKey('--repo')) 'launcher --repo required'
     $release=NPath $options['--repo'];$runtime=NPath $tokens[0]
+    Need (SamePath $pythonPath $release) 'PYTHONPATH/--repo mismatch'
+    Need (SamePath $cdPath $release) 'cd/--repo mismatch'
     Need (SamePath $runtime (Join-Path $release 'runtime\python.exe')) 'runtime/--repo mismatch'
     Need (SamePath ([string]$action.WorkingDirectory) $release) 'runtime/WorkingDirectory mismatch'
     Need ($options.ContainsKey('--env')) 'launcher --env required'
     Need ($options.ContainsKey('--host') -and $options['--host'] -ceq '127.0.0.1' -and $options.ContainsKey('--port') -and $options['--port'] -ceq '5101') 'launcher endpoint must be 127.0.0.1:5101'
-    return [pscustomobject]@{Document=$doc;Action=$action;Tokens=$tokens;RepoIndex=$repoIndex;Runtime=$runtime;Release=$release}
+    return [pscustomobject]@{Document=$doc;Action=$action;Tokens=$tokens;RepoIndex=$repoIndex;Runtime=$runtime;Release=$release;PythonPath=$pythonPath;CdPath=$cdPath}
 }
 function TaskRuntime([string]$Xml){return (Get-TaskLaunch $Xml).Runtime}
 function New-TaskLaunchXml([string]$Xml,[string]$Release){
     $launch=Get-TaskLaunch $Xml
     $launch.Tokens[0]=Join-Path $Release 'runtime\python.exe'
     $launch.Tokens[$launch.RepoIndex]=$Release
-    $launch.Action.Arguments='/d /c "'+(($launch.Tokens|ForEach-Object {'"'+$_+'"'}) -join ' ')+'"'
+    $invocation=(($launch.Tokens|ForEach-Object {'"'+$_+'"'}) -join ' ')
+    $launch.Action.Arguments='/d /c set PYTHONPATH='+$Release+' && cd /d "'+$Release+'" && '+$invocation
     $launch.Action.WorkingDirectory=$Release
     $result=$launch.Document.OuterXml
     Need (SamePath (TaskRuntime $result) (Join-Path $Release 'runtime\python.exe')) 'target task/runtime mismatch'
