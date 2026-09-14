@@ -12,7 +12,7 @@ $temp=Join-Path ([IO.Path]::GetTempPath()) ('fw-'+[guid]::NewGuid().ToString('N'
 New-Item -ItemType Directory -Path $temp|Out-Null
 try{
     & (Join-Path $PackageRoot 'AUDIT-STATE-LIFECYCLE.ps1') -PackageRoot $PackageRoot
-    & (Join-Path $PackageRoot 'VERIFY-PACKAGE.ps1') -PackageRoot $PackageRoot|Out-Null
+    & (Join-Path $PackageRoot 'VERIFY-PACKAGE.ps1') -PackageRoot $PackageRoot
     $fixturePackage=Join-Path $temp 'fixture-package'
     New-Item -ItemType Directory -Path $fixturePackage|Out-Null
     Set-Content -LiteralPath (Join-Path $fixturePackage 'VERIFY-PACKAGE.ps1') -Value 'Write-Output "FIXTURE_PACKAGE_VERIFIED=YES"' -Encoding UTF8
@@ -49,7 +49,6 @@ try{
     Write-Output 'FULL_EXECUTE_SIMULATION=PASS'
     Write-Output 'FAILURE_INJECTION_MATRIX=PASS'
     Write-Output 'ROLLBACK_MATRIX=PASS'
-    Write-Output 'ONE_PASS_OPERATOR_SIMULATION=PASS'
     $realTest=Join-Path $PackageRoot 'QUALIFY-REAL-VALIDATEONLY.ps1'
     if(-not (Test-Path -LiteralPath $realTest -PathType Leaf) -and $DeployScript -ne (Join-Path $PackageRoot 'deploy_windows_iis_waitress.ps1')){$realTest=Join-Path $PSScriptRoot 'test_real_nonfixture_validateonly.ps1'}
     if(-not (Test-Path -LiteralPath $realTest -PathType Leaf)){throw 'nonfixture ValidateOnly qualification is absent'}
@@ -61,7 +60,8 @@ try{
     # This call follows Execute qualification in the same operator shell. Before
     # repair its leaked Get-Website function referenced a removed global variable.
     if(@(Get-ChildItem Function: | Where-Object {$_.Definition -match '\$global:ForwarderExecuteState'}).Count){throw 'qualification leaked a function reading removed state'}
-    & $realTest -PackageRoot $PackageRoot -DeployScript $DeployScript
+    & $realTest -PackageRoot $PackageRoot -DeployScript $DeployScript -Matrix Captured
     Write-Output 'QUALIFICATION_ESCAPE_ROOT_CAUSE_CLOSED=YES'
     Write-Output 'REGRESSION_TEST_ADDED=YES'
+    Write-Output 'ONE_PASS_OPERATOR_SIMULATION=PASS'
 }finally{Remove-Item -LiteralPath $temp -Recurse -Force}

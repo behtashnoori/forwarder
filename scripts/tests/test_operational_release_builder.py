@@ -100,3 +100,17 @@ def test_failure_matrix_rejects_unrelated_state_error(tmp_path, wrong_failure):
     assert 'FAILURE_INJECTION_MATRIX=PASS' not in result.stdout
     assert ('ForwarderExecuteState' in result.stderr or
             'unexpected state lifecycle failure' in result.stderr)
+
+
+def test_package_refusal_precedes_discovery_and_packaged_runtime(tmp_path):
+    # This package deliberately has no runtime and must never reach Windows
+    # server discovery or execute database commands before its verifier refuses.
+    (tmp_path / 'VERIFY-PACKAGE.ps1').write_text("throw 'VERIFY_FAIL test checksum refusal'\n")
+    result = subprocess.run([
+        'powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', str(ROOT / 'scripts/deploy/deploy_windows_iis_waitress_operational.ps1'),
+        '-PackageRoot', str(tmp_path), '-ValidateOnly',
+    ], capture_output=True, text=True, timeout=30)
+    assert result.returncode != 0
+    assert 'VERIFY_FAIL test checksum refusal' in result.stderr
+    assert 'WebAdministration' not in result.stderr

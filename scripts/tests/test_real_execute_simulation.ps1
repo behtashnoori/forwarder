@@ -5,12 +5,14 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 if(-not $DeployScript){$DeployScript=Join-Path $PackageRoot 'deploy_windows_iis_waitress.ps1'}
 if(-not $DirtyChild){
-    $output=@(& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $PSCommandPath -PackageRoot $PackageRoot -DeployScript $DeployScript -DirtyChild 2>&1)
-    if($LASTEXITCODE -ne 0 -or $output -notcontains 'REPEATED_INVOCATION_MATRIX=PASS'){throw ($output -join "`n")}
+    try{$ErrorActionPreference='Continue';$output=@(& "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $PSCommandPath -PackageRoot $PackageRoot -DeployScript $DeployScript -DirtyChild 2>&1);$childExit=$LASTEXITCODE}
+    finally{$ErrorActionPreference='Stop'}
+    if($childExit -ne 0 -or $output -notcontains 'REPEATED_INVOCATION_MATRIX=PASS'){throw ($output -join "`n")}
     $output
     return
 }
 if($PSVersionTable.PSVersion.ToString() -notlike '5.1.*'){throw 'Windows PowerShell 5.1 required'}
+Microsoft.PowerShell.Core\Import-Module Microsoft.PowerShell.Utility -ErrorAction Stop
 $temporary=Join-Path ([IO.Path]::GetTempPath()) ('fx-'+[guid]::NewGuid().ToString('N').Substring(0,8))
 New-Item -ItemType Directory -Path $temporary|Out-Null
 $previousUrl=$env:DATABASE_URL
@@ -34,21 +36,22 @@ connection.close()
     $env:DATABASE_URL='sqlite:///'+$database.Replace('\','/')
     $env:APP_ENV='production'
     $xml='<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c &quot;'+$oldPython+'&quot; -m waitress --listen=127.0.0.1:5101 backend.wsgi:app</Arguments><WorkingDirectory>'+$old+'</WorkingDirectory></Exec></Actions></Task>'
-    $simulation=[pscustomobject]@{Iis=(Join-Path $old 'dist');Xml=$xml;Enabled=$true;Running=$true;Listener=$oldPython;Mutations=0;Events=@()}
+    $simulation=[pscustomobject]@{Iis=(Join-Path $old 'dist');Xml=$xml;Enabled=$true;Running=$false;Listener=$oldPython;Mutations=0;Events=@()}
     function Import-Module { param([string]$Name) }
     function Get-Website { param([string]$Name) [pscustomobject]@{PhysicalPath=$simulation.Iis} }
-    function Get-ScheduledTask { param([string]$TaskName) [pscustomobject]@{State=if($simulation.Running){'Running'}else{'Ready'}} }
+    function Get-ScheduledTask { param([string]$TaskName) [xml]$document=$simulation.Xml;[pscustomobject]@{State=if($simulation.Running){'Running'}else{'Ready'};Settings=[pscustomobject]@{Enabled=$simulation.Enabled};Actions=@([pscustomobject]@{Execute=[string]$document.Task.Actions.Exec.Command;Arguments=[string]$document.Task.Actions.Exec.Arguments;WorkingDirectory=[string]$document.Task.Actions.Exec.WorkingDirectory})} }
+    function Get-ScheduledTaskInfo { param($InputObject) [pscustomobject]@{LastTaskResult=0} }
     function Export-ScheduledTask { param([string]$TaskName) $simulation.Xml }
     function Get-NetTCPConnection { param([string]$State,[int]$LocalPort) if($simulation.Listener){[pscustomobject]@{LocalAddress='127.0.0.1';OwningProcess=4242}} }
     function Get-CimInstance { param([string]$ClassName,[string]$Filter) [pscustomobject]@{ExecutablePath=$simulation.Listener;CommandLine=($simulation.Listener+' -m waitress backend.wsgi:app')} }
     function Invoke-WebRequest { param([string]$Uri,[int]$TimeoutSec) [pscustomobject]@{StatusCode=200} }
     function Disable-ScheduledTask { param([string]$TaskName) $simulation.Enabled=$false;$simulation.Mutations++;$simulation.Events+=,'disable' }
-    function Stop-ScheduledTask { param([string]$TaskName) $simulation.Running=$false;$simulation.Listener=$null;$simulation.Mutations++;$simulation.Events+=,'stop' }
-    function Get-Process { param([int]$Id) $null }
-    function Stop-Process { param([int]$Id) $simulation.Listener=$null;$simulation.Mutations++ }
+    function Stop-ScheduledTask { param([string]$TaskName) $simulation.Running=$false;$simulation.Mutations++;$simulation.Events+=,'stop' }
+    function Get-Process { param([int]$Id) if($simulation.Listener){[pscustomobject]@{Id=$Id}} }
+    function Stop-Process { param([int]$Id) if($Id -ne 4242){throw 'wrong listener PID stopped'};$simulation.Listener=$null;$simulation.Mutations++;$simulation.Events+=,'stop-listener' }
     function Register-ScheduledTask { param([string]$TaskName,[string]$Xml) if($simulation.FailRollback){throw 'simulated rollback task restore failure'};$simulation.Xml=$Xml;$simulation.Mutations++;$simulation.Events+=,'register' }
     function Enable-ScheduledTask { param([string]$TaskName) $simulation.Enabled=$true;$simulation.Mutations++ }
-    function Start-ScheduledTask { param([string]$TaskName) [xml]$task=$simulation.Xml;$simulation.Listener=Join-Path ([string]$task.Task.Actions.Exec.WorkingDirectory) 'runtime\python.exe';$simulation.Running=$true;$simulation.Mutations++ }
+    function Start-ScheduledTask { param([string]$TaskName) [xml]$task=$simulation.Xml;$simulation.Listener=Join-Path ([string]$task.Task.Actions.Exec.WorkingDirectory) 'runtime\python.exe';$simulation.Running=$false;$simulation.Mutations++ }
     function Set-WebConfigurationProperty { param([string]$PSPath,[string]$Filter,[string]$Name,[string]$Value) $simulation.Iis=$Value;$simulation.Mutations++ }
     $simulation | Add-Member NoteProperty FailRollback $false
     # A, B, C: unset global, deliberately stale global, repeated validation.
@@ -64,13 +67,14 @@ connection.close()
     if($simulation.Mutations -lt 6 -or $simulation.Listener -eq $oldPython -or $simulation.Iis -eq (Join-Path $old 'dist')){throw 'real execute operations did not complete'}
     $events=$simulation.Events
     if([array]::IndexOf($events,'disable') -ge [array]::IndexOf($events,'stop') -or [array]::IndexOf($events,'stop') -ge [array]::IndexOf($events,'register')){throw 'Scheduled Task stop/restart ordering is unsafe'}
+    if([array]::IndexOf($events,'stop-listener') -le [array]::IndexOf($events,'stop') -or [array]::IndexOf($events,'stop-listener') -ge [array]::IndexOf($events,'register')){throw 'launcher child was not stopped before task replacement'}
     if(-not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $simulation.Listener) 'python.exe'))){throw 'target runtime missing'}
     $failureIndex=0
     foreach($failure in @('PACKAGE_VERIFY','BASELINE_CAPTURE','DB_GATE','TARGET_MATERIALIZE','TASK_DISABLE','BACKEND_STOP','PORT_RELEASE','TASK_SWITCH','BACKEND_START','LISTENER_VERIFY','INTERNAL_HEALTH','IIS_SWITCH','IIS_VERIFY','PUBLIC_HEALTH','POST_DEPLOY_VERIFY')){
         $simulation.Iis=Join-Path $old 'dist'
         $simulation.Xml=$xml
         $simulation.Enabled=$true
-        $simulation.Running=$true
+        $simulation.Running=$false
         $simulation.Listener=$oldPython
         $failureIndex++
         $failureRoot=Join-Path $temporary ('f'+$failureIndex)

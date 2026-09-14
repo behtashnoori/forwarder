@@ -17,22 +17,53 @@ function Get-RealServerDiscoveryState{
     # by ValidateOnly; Execute remains explicitly gated below.
     Import-Module WebAdministration -ErrorAction Stop
     $site=Get-Website -Name 'forwarder' -ErrorAction Stop
-    $task=Get-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop
-    $xml=Export-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop
     $rows=@(Get-NetTCPConnection -State Listen -LocalPort 5101 -ErrorAction SilentlyContinue | Where-Object {$_.LocalAddress -eq '127.0.0.1'})
     $owners=@($rows | Select-Object -ExpandProperty OwningProcess -Unique)
     Need ($owners.Count -le 1) 'multiple listener owners on port 5101'
-    $runtime=$null
-    if($owners.Count -eq 1){$process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop;Need (-not [string]::IsNullOrWhiteSpace([string]$process.ExecutablePath)) 'listener executable path unavailable';Need ([string]$process.CommandLine -match '(?i)-m\s+waitress\b' -and [string]$process.CommandLine -match '(?i)backend\.wsgi:app') 'listener is not the Waitress backend';$runtime=[string]$process.ExecutablePath;Need ([string]$task.State -eq 'Running') 'orphan Waitress listener: scheduled task is not running'}
+    $tasks=@(Get-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction SilentlyContinue)
+    if($tasks.Count -eq 0){
+        if($owners.Count){throw 'RELEASE_STOP: orphan listener: production scheduled task missing or unavailable'}
+        throw 'RELEASE_STOP: backend unavailable: production scheduled task missing or unavailable'
+    }
+    Need ($tasks.Count -eq 1) 'ambiguous production scheduled task'
+    $task=$tasks[0]
+    # A launcher may finish successfully and return to Ready while its child
+    # continues serving. State and LastTaskResult are diagnostics, not ownership.
+    Need ($task.Settings.Enabled -is [bool]) 'task enabled state unavailable'
+    $enabled=[bool]$task.Settings.Enabled
+    if(-not $enabled){
+        if($owners.Count){throw 'RELEASE_STOP: stale/orphan listener: production scheduled task is disabled'}
+        throw 'RELEASE_STOP: backend unavailable: production scheduled task is disabled'
+    }
+    $xml=Export-ScheduledTask -TaskName 'Forwarder Backend Production' -ErrorAction Stop
+    $expectedRuntime=TaskRuntime $xml
+    [xml]$taskDocument=$xml
+    $exec=$taskDocument.SelectSingleNode("//*[local-name()='Exec']")
+    $actions=@($task.Actions)
+    Need ($actions.Count -eq 1) 'one task action required'
+    Need ((SamePath ([string]$actions[0].Execute) ([string]$exec.Command)) -and
+          [string]::Equals([string]$actions[0].Arguments,[string]$exec.Arguments,[StringComparison]::Ordinal) -and
+          (SamePath ([string]$actions[0].WorkingDirectory) ([string]$exec.WorkingDirectory))) 'task action/export configuration mismatch'
+    $expectedRoot=Split-Path -Parent (Split-Path -Parent $expectedRuntime)
+    Need (SamePath $expectedRuntime (Join-Path $expectedRoot 'runtime\python.exe')) 'task must identify a release-local runtime/python.exe'
+    Need (SamePath ([string]$site.PhysicalPath) (Join-Path $expectedRoot 'dist')) 'IIS/task release mismatch'
+    Need ($owners.Count -eq 1) 'backend unavailable: no listener on 127.0.0.1:5101'
+    $process=Get-CimInstance Win32_Process -Filter ('ProcessId='+[int]$owners[0]) -ErrorAction Stop
+    Need (-not [string]::IsNullOrWhiteSpace([string]$process.ExecutablePath)) 'listener executable path unavailable'
+    $runtime=[string]$process.ExecutablePath
+    Need (SamePath $runtime $expectedRuntime) 'orphan/mismatched listener: executable differs from task-configured runtime'
+    Need ([string]$process.CommandLine -match '(?i)-m\s+waitress\b' -and [string]$process.CommandLine -match '(?i)backend\.wsgi:app') 'orphan/mismatched listener: process is not the configured Waitress backend'
+    try{$healthResponse=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5101/api/health' -TimeoutSec 10 -ErrorAction Stop}
+    catch{throw 'RELEASE_STOP: unhealthy backend: internal health request failed; listener provenance matches configured task'}
+    Need ($healthResponse.StatusCode -eq 200) 'unhealthy backend: internal health is not HTTP 200; listener provenance matches configured task'
+    $taskInfo=Get-ScheduledTaskInfo -InputObject $task -ErrorAction Stop
     Import-ReleaseEnvironment
     $migration=Invoke-MigrationCli @('current')
     $revisionLine=@($migration | ForEach-Object {[string]$_} | Where-Object {$_ -match '^current='} | Select-Object -Last 1)
     Need ($revisionLine.Count -eq 1) 'database revision output is ambiguous'
     $revision=$revisionLine[0].Substring(8)
     Need (-not [string]::IsNullOrWhiteSpace($revision)) 'database revision unavailable'
-    $healthResponse=Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:5101/api/health' -TimeoutSec 10 -ErrorAction Stop
-    Need ($healthResponse.StatusCode -eq 200) 'internal health is not HTTP 200'
-    return [pscustomobject]@{iis_path=[string]$site.PhysicalPath;task_xml=[string]$xml;enabled=([string]$task.State -ne 'Disabled');listener_runtime=$runtime;listener_pid=if($owners.Count -eq 1){[int]$owners[0]}else{0};listener_up=($owners.Count -eq 1);health=$true;db_revision=$revision}
+    return [pscustomobject]@{iis_path=[string]$site.PhysicalPath;task_xml=[string]$xml;enabled=$enabled;task_state=[string]$task.State;last_task_result=$taskInfo.LastTaskResult;listener_runtime=$runtime;listener_pid=[int]$owners[0];listener_up=$true;health=$true;db_revision=$revision}
 }
 function Invoke-MigrationCli([string[]]$Arguments){
     $info=New-Object System.Diagnostics.ProcessStartInfo
@@ -113,14 +144,23 @@ function Rollback($state,$before,[string]$targetPython){
 }
 Need (-not($ValidateOnly -and $Execute)) 'one deployment mode';if(-not $ValidateOnly -and -not $Execute){$ValidateOnly=$true};if($Execute){Need $ConfirmDeployment 'confirmation required'}
 Need (Test-Path -LiteralPath $PackageRoot -PathType Container) 'absolute package root required';$PackageRoot=(Resolve-Path -LiteralPath $PackageRoot).Path
-if($FixtureStatePath){$state=Get-Content -Raw -LiteralPath $FixtureStatePath|ConvertFrom-Json}else{$state=Get-RealServerDiscoveryState}
+# Verify bytes before discovery can launch the packaged migration runtime.
 Fail 'PACKAGE_VERIFY';& (Join-Path $PackageRoot 'VERIFY-PACKAGE.ps1') -PackageRoot $PackageRoot
-Fail 'BASELINE_CAPTURE';$before=[pscustomobject]@{iis_path=$state.iis_path;task_xml=$state.task_xml;enabled=$state.enabled;listener_runtime=$state.listener_runtime};$oldPython=TaskRuntime $before.task_xml;Need (SamePath $oldPython $before.listener_runtime) 'pre-cutover runtime mismatch'
+if($FixtureStatePath){$state=Get-Content -Raw -LiteralPath $FixtureStatePath|ConvertFrom-Json}else{$state=Get-RealServerDiscoveryState}
+Fail 'BASELINE_CAPTURE';$before=[pscustomobject]@{iis_path=$state.iis_path;task_xml=$state.task_xml;enabled=$state.enabled;listener_runtime=$state.listener_runtime};$oldPython=TaskRuntime $before.task_xml
+$oldRoot=Split-Path -Parent (Split-Path -Parent $oldPython)
+Need $before.enabled 'stale/orphan listener: production scheduled task is disabled'
+Need $state.listener_up 'backend unavailable: no listener on 127.0.0.1:5101'
+Need (SamePath $oldPython $before.listener_runtime) 'pre-cutover runtime mismatch'
+Need (SamePath $before.iis_path (Join-Path $oldRoot 'dist')) 'IIS/task release mismatch'
+Need $state.health 'unhealthy backend: listener provenance matches configured task'
+Write-Output 'LISTENER_PROVENANCE=MATCH'
+Write-Output 'OFFICIAL_BACKEND=YES'
+Write-Output 'ORPHAN_OR_MISMATCH=NO'
+if(-not $FixtureStatePath){Write-Output ('TASK_STATE='+$state.task_state);Write-Output ('LAST_TASK_RESULT='+$state.last_task_result)}
 Fail 'DB_GATE';Need ($state.db_revision -in @($RequiredBefore,$RequiredTarget)) 'unknown database lineage';if($state.db_revision -eq $RequiredBefore){$migrationNeeded=$true}else{$migrationNeeded=$false};if($ValidateOnly){Write-Output 'DB_GATE_MATRIX=PASS';Write-Output 'VALIDATEONLY_COMPLETE=YES';return}
 $target=Join-Path (NPath $ReleaseRoot) ('release-'+(Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss')+'-'+$RequiredTarget)
 $targetPython=Join-Path $target 'runtime\python.exe'
-$oldRoot=Split-Path -Parent (Split-Path -Parent $oldPython)
-Need ((SamePath $before.iis_path (Join-Path $oldRoot 'dist')) -and $before.enabled -and $state.listener_up) 'incoherent production baseline'
 Need ($before.task_xml.Contains($oldRoot)) 'task XML does not identify current release'
 Need (-not (Test-Path -LiteralPath $target)) 'target already exists'
 $mutationStarted=$false
