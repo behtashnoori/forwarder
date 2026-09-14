@@ -16,7 +16,19 @@ def main():
   zp=out/(NAME+'.zip')
   with zipfile.ZipFile(zp,'w',zipfile.ZIP_DEFLATED) as z:
    for p in sorted(x for x in out.rglob('*') if x.is_file() and x!=zp and x.name not in {'FINAL-CERTIFIED.json'}):z.write(p,p.relative_to(out))
- (Path(str(zp)+'.sha256')).write_text(sha(zp)+'  '+zp.name+'\n');(out/'FINAL-CERTIFIED.json').write_text(json.dumps({'zip_sha256':sha(zp),'application_commit':APP})+'\n');print(zp);return
+  (Path(str(zp)+'.sha256')).write_text(sha(zp)+'  '+zp.name+'\n')
+  # Certify the bytes that will be transferred, never the build directory.
+  with tempfile.TemporaryDirectory() as extraction:
+   extracted=Path(extraction)/NAME
+   with zipfile.ZipFile(zp) as z:z.extractall(extracted)
+   for line in (extracted/'SHA256SUMS.txt').read_text().splitlines():
+    expected,relative=line.split('  ',1); actual=extracted/relative
+    if not actual.is_file() or sha(actual)!=expected:raise RuntimeError('extracted package checksum verification failed: '+relative)
+   metadata=json.loads((extracted/'RELEASE-METADATA.json').read_text())
+   if metadata != {'candidate':NAME,'application_source_commit':APP,'tooling_commit':metadata['tooling_commit'],'production_before_revision':BEFORE,'required_db_revision':TARGET,'migration_required':True,'runtime_sha256':RHASH}:raise RuntimeError('extracted package metadata verification failed')
+  certificate={'zip_sha256':sha(zp),'application_commit':APP,'tooling_commit':metadata['tooling_commit'],'certified_extracted_zip':zp.name}
+  (out/'CERTIFICATION-PASS.json').write_text(json.dumps(certificate,indent=2)+'\n')
+  print(zp);return
  if out.exists():
   # A candidate is immutable only after extracted-artifact certification writes
   # its certificate.  This permits repair of a locally interrupted build.
@@ -60,5 +72,5 @@ Write-Output 'PACKAGE_LAYOUT=PASS';Write-Output 'PACKAGE_CHECKSUMS=PASS';Write-O
   with zipfile.ZipFile(zp,'x',zipfile.ZIP_DEFLATED) as z:
    for p in sorted(x for x in root.rglob('*') if x.is_file() and x!=zp):z.write(p,p.relative_to(root))
   (Path(str(zp)+'.sha256')).write_text(sha(zp)+'  '+zp.name+'\n');print(zp)
-  (root/'FINAL-CERTIFIED.json').write_text(json.dumps({'zip_sha256':sha(zp),'application_commit':APP,'tooling_commit':tool})+'\n')
+  # Final certification is deliberately a separate, post-freeze operation.
 if __name__=='__main__':main()
