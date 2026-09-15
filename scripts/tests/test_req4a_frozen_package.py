@@ -13,12 +13,14 @@ from scripts.tests.test_req1_release_engineering_qualification import fixture, p
 from scripts.tests.test_req3_database_identity_forensics import ALEMBIC, DB, fake_psql
 
 PS51 = Path(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
-PACKAGE = Path(os.environ.get("REQ4A_PACKAGE", ""))
+PACKAGE = Path(os.environ["REQ4A_PACKAGE"]) if os.environ.get("REQ4A_PACKAGE") else None
 
 
 def require_package() -> Path:
-    if not PACKAGE.is_dir():
+    if PACKAGE is None:
         pytest.skip("REQ4A_PACKAGE must name the extracted frozen R7 package")
+    if not PACKAGE.is_dir():
+        pytest.fail("REQ4A_PACKAGE does not name an extracted frozen R7 package")
     return PACKAGE
 
 

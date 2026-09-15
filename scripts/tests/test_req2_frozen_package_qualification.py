@@ -14,8 +14,8 @@ from scripts.tests.test_req1_release_engineering_qualification import fixture, p
 
 ROOT = Path(__file__).resolve().parents[2]
 PS51 = Path(r"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe")
-PACKAGE = Path(os.environ.get("REQ2_PACKAGE", ""))
-ZIP = Path(os.environ.get("REQ2_PACKAGE_ZIP", ""))
+PACKAGE = Path(os.environ["REQ2_PACKAGE"]) if os.environ.get("REQ2_PACKAGE") else None
+ZIP = Path(os.environ["REQ2_PACKAGE_ZIP"]) if os.environ.get("REQ2_PACKAGE_ZIP") else None
 EXPECTED_ZIP_SHA256 = os.environ.get("REQ2_PACKAGE_SHA256", "")
 PACKAGE_ID = os.environ.get("REQ2_PACKAGE_ID", "D2-VALIDATION-S7-RC-f11f2ab-req12-listener-fix-final")
 
@@ -25,9 +25,19 @@ def digest(path: Path) -> str:
 
 
 def require_package() -> Path:
-    if not PACKAGE.is_dir():
+    if PACKAGE is None:
         pytest.skip("set REQ2_PACKAGE to the extracted frozen R5 package")
+    if not PACKAGE.is_dir():
+        pytest.fail("REQ2_PACKAGE does not name an extracted frozen R5 package")
     return PACKAGE
+
+
+def require_zip() -> Path:
+    if ZIP is None or not EXPECTED_ZIP_SHA256:
+        pytest.skip("set REQ2_PACKAGE_ZIP and REQ2_PACKAGE_SHA256 to the frozen R5 package")
+    if not ZIP.is_file():
+        pytest.fail("REQ2_PACKAGE_ZIP does not name a frozen R5 package archive")
+    return ZIP
 
 
 def run_wrapper(package: Path, simulation: Path, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
@@ -55,14 +65,25 @@ def update_manifest_record(package: Path, name: str) -> None:
 
 def test_frozen_zip_identity_and_packaged_source_identity() -> None:
     package = require_package()
-    assert ZIP.is_file() and digest(ZIP) == EXPECTED_ZIP_SHA256
+    archive = require_zip()
+    assert digest(archive) == EXPECTED_ZIP_SHA256
+    manifest = json.loads((package / "D2-package-manifest.json").read_text(encoding="utf-8"))
+    source_commit = manifest["application_source_commit"]
+    assert subprocess.run(
+        ["git", "cat-file", "-e", f"{source_commit}^{{commit}}"],
+        cwd=ROOT,
+        capture_output=True,
+        check=False,
+    ).returncode == 0
+    declared = {record["name"]: record["sha256"] for record in manifest["files"]}
     for name in ("deploy_s7_rc_f11f2ab.ps1", "validate_forwarder_s7_rc_f11f2ab.ps1"):
-        assert digest(package / name) == digest(ROOT / "scripts/deploy" / name)
+        assert digest(package / name) == declared[name]
 
 
 def test_exact_package_ten_consecutive_go_zero_mutation_and_complete_map(tmp_path: Path) -> None:
     package = require_package()
-    initial_zip_hash = digest(ZIP)
+    archive = require_zip()
+    initial_zip_hash = digest(archive)
     expected_map = None
     for index in range(10):
         simulation = tmp_path / f"go-{index:02d}"
@@ -79,7 +100,7 @@ def test_exact_package_ten_consecutive_go_zero_mutation_and_complete_map(tmp_pat
         assert len(mapping) == 47
         expected_map = mapping if expected_map is None else expected_map
         assert mapping == expected_map
-    assert digest(ZIP) == initial_zip_hash == EXPECTED_ZIP_SHA256
+    assert digest(archive) == initial_zip_hash == EXPECTED_ZIP_SHA256
 
 
 MUTATIONS = {
@@ -148,8 +169,9 @@ def test_failure_injection_31_packaged_script_differs_from_source(tmp_path: Path
 
 
 def test_failure_injection_32_package_rebuilt_after_qualification(tmp_path: Path) -> None:
+    archive = require_zip()
     changed = tmp_path / "rebuilt.zip"
-    shutil.copy2(ZIP, changed)
+    shutil.copy2(archive, changed)
     with changed.open("ab") as stream:
         stream.write(b"rebuilt")
     assert digest(changed) != EXPECTED_ZIP_SHA256
