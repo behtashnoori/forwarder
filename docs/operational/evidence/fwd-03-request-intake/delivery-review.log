@@ -1,0 +1,4 @@
+Scoped staged manifest reviewed: application, focused tests, ADR/baseline and FWD-03 evidence only.
+No generated dist, local database, test runtime, private credential or unrelated file staged.
+Synthetic tokens redacted; log line endings and terminal colors normalized.
+git diff --cached --check: PASS

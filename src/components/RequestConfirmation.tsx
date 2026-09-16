@@ -1,3 +1,4 @@
+import type { TransportSummary } from "@/lib/api";
 import React, { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ interface RequestConfirmationFormData {
 }
 
 interface RequestConfirmationProps {
+  transportSummary?: TransportSummary;
   formData: RequestConfirmationFormData;
   shippingType: "domestic" | "international";
   onBack: () => void;
@@ -49,6 +51,7 @@ interface RequestConfirmationProps {
 
 const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
   formData,
+  transportSummary,
   shippingType,
   onBack,
   onSubmit,
@@ -170,9 +173,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{t("requestFlow.selectedMethod")}:</span>
                   <span className="font-medium">
-                    {shippingType === "domestic" 
-                      ? formData.domesticTransportMethodName 
-                      : formData.internationalTransportMethodName}
+                    {transportSummary?.display || (shippingType === "domestic" ? formData.domesticTransportMethodName : formData.internationalTransportMethodName)}
                   </span>
                 </div>
               )}

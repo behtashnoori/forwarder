@@ -1,0 +1,114 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- banner:
+  - link "فورواردرت":
+    - /url: /
+    - generic: فورواردرت
+  - navigation "ناوبری اصلی":
+    - link "قابلیت‌ها":
+      - /url: "#capabilities"
+    - link "راهکارها":
+      - /url: "#solutions"
+    - link "درباره ما":
+      - /url: "#about"
+    - link "تماس با ما":
+      - /url: "#contact"
+    - button "تغییر زبان به انگلیسی":
+      - text: English
+    - button "ورود به سامانه":
+      - text: ورود به سامانه
+- main:
+  - button "بازگشت":
+    - text: بازگشت
+  - heading "انتخاب مبدا و مقصد داخلی" [level=3]:
+    - text: انتخاب مبدا و مقصد داخلی
+  - paragraph: برای ارسال مرسوله خود، مبدا و مقصد را انتخاب کنید
+  - generic: مبدا ارسال
+  - text: استان مبدا
+  - generic: "*"
+  - combobox:
+    - generic: تهران
+  - button "+ جزئیات بیشتر مبدا (شهرستان و شهر، اختیاری)"
+  - generic: مقصد ارسال
+  - text: استان مقصد
+  - generic: "*"
+  - combobox:
+    - generic: اصفهان
+  - button "+ جزئیات بیشتر مقصد (شهرستان و شهر، اختیاری)"
+  - text: اطلاعات مشتری (اختیاری)
+  - text: نام
+  - textbox "نام":
+    - /placeholder: نام خود را وارد کنید
+  - text: نام خانوادگی
+  - textbox "نام خانوادگی":
+    - /placeholder: نام خانوادگی خود را وارد کنید
+  - paragraph: برای خدمات بهتر، نام خود را وارد کنید (اختیاری)
+  - text: شماره تماس
+  - generic: "*"
+  - textbox "شماره تماس":
+    - /placeholder: "09123456789"
+  - paragraph: شماره موبایل خود را وارد کنید تا کارشناس با شما تماس بگیرد
+  - text: روش حمل
+  - text: انتخاب روش حمل
+  - combobox:
+    - generic: انتخاب مشتری
+    - generic: مشتری روش حمل را انتخاب می‌کند
+  - group "توالی خواسته حمل":
+    - generic: توالی خواسته حمل
+    - paragraph: این انتخاب خواسته اولیه شماست و تأیید مسیر اجرایی یا امکان حمل نیست.
+    - text: نوع حمل
+    - combobox "نوع حمل":
+      - option "تک‌روش"
+      - option "ترکیبی" [selected]
+    - list:
+      - generic: "1."
+      - combobox "روش مرحله 1":
+        - option "جاده‌ای" [selected]
+        - option "ریلی"
+        - option "دریایی"
+        - option "هوایی"
+      - button "حذف مرحله 1": حذف
+      - generic: "2."
+      - combobox "روش مرحله 2":
+        - option "جاده‌ای"
+        - option "ریلی"
+        - option "دریایی" [selected]
+        - option "هوایی"
+      - button "حذف مرحله 2": حذف
+      - generic: "3."
+      - combobox "روش مرحله 3":
+        - option "جاده‌ای" [selected]
+        - option "ریلی"
+        - option "دریایی"
+        - option "هوایی"
+      - button "حذف مرحله 3": حذف
+    - button "افزودن مرحله حمل"
+  - button "شرح کالا و جزئیات اختیاری":
+    - generic: شرح کالا و جزئیات اختیاری
+  - paragraph: برای اطلاعات دقیق‌تر در مورد کالای خود، مشخصات را وارد کنید
+  - paragraph: شرح کالا الزامی است؛ وزن، حجم و ارزش اختیاری هستند.
+  - text: جزئیات کالا
+  - text: توضیحات کالا
+  - generic: "*"
+  - textbox "توضیحات کالا":
+    - /placeholder: "مثال: لوازم الکترونیکی، پوشاک، مواد غذایی..."
+  - alert: شرح کالا را وارد کنید.
+  - text: وزن (کیلوگرم)
+  - spinbutton "وزن (کیلوگرم)"
+  - text: حجم (متر مکعب)
+  - spinbutton "حجم (متر مکعب)"
+  - text: ارزش کالا (تومان)
+  - spinbutton "ارزش کالا (تومان)"
+  - text: دستورالعمل‌های خاص
+  - textbox "دستورالعمل‌های خاص":
+    - /placeholder: "مثال: مراقبت ویژه، دمای خاص، و..."
+  - text: تاریخ تحویل
+  - button "تاریخ تحویل":
+    - generic: انتخاب تاریخ شمسی
+  - text: تاریخ تحویل
+  - button "تاریخ تحویل":
+    - generic: انتخاب تاریخ شمسی
+  - paragraph: تاریخ‌ها اختیاری هستند و برای درخواست داخلی با تقویم شمسی انتخاب می‌شوند.
+  - button "ثبت درخواست حمل":
+    - text: ثبت درخواست حمل

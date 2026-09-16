@@ -6,6 +6,7 @@ from typing import Any, Mapping
 
 from sqlalchemy import desc, or_
 
+from backend.services.commercial_transport_service import project_transport
 from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
@@ -105,6 +106,7 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
             "phone": req.contact_phone,
         },
         "route": build_route_payload(req),
+        **project_transport(req),
         "transport_method": req.transport_method,
         "international_transport_method": req.international_transport_method,
         "domestic_transport_method": req.domestic_transport_method,

@@ -1,0 +1,68 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- button "بازگشت":
+  - text: بازگشت
+- link "خانه":
+  - /url: /
+  - text: خانه
+- button "خروج":
+  - text: خروج
+- region "اطلاعات سامانه":
+  - paragraph: Forwarder 1.9.5.1
+- heading "کنسول کارشناس" [level=1]
+- paragraph: مدیریت حرفه‌ای درخواست‌های حمل و نقل
+- button "به‌روزرسانی":
+  - text: به‌روزرسانی
+- button "کارشناس آزمایشی FWD03":
+  - text: کارشناس آزمایشی FWD03
+- paragraph: خلاصه وضعیت درخواست‌ها
+- heading "نمای عملیاتی امروز" [level=2]
+- paragraph: کل درخواست‌های قابل مشاهده
+- paragraph: "0"
+- generic: درخواست‌های جدید
+- paragraph: "0"
+- generic: در حال پیگیری
+- paragraph: "0"
+- generic: در انتظار مشتری
+- paragraph: "0"
+- generic: مختومه امروز
+- paragraph: "0"
+- text: جستجو و فیلتر درخواست‌ها
+- textbox "جستجو در کد، مشتری یا مسیر..."
+- combobox:
+  - generic: وضعیت
+- button "پاک کردن فیلترها"
+- tablist:
+  - tab "همه"
+  - tab "ثبت شده"
+  - tab "در انتظار بررسی" [active] [selected]
+  - tab "در حال پیگیری"
+  - tab "در انتظار مشتری"
+  - tab "تکمیل شده"
+- tabpanel "در انتظار بررسی":
+  - heading "درخواست‌های حمل" [level=2]
+  - paragraph: نمایش 1 درخواست در فهرست فعلی
+  - generic: "مرتب‌سازی: جدیدترین درخواست‌ها"
+  - generic: SR-ERZ7D7
+  - generic: در انتظار بررسی
+  - generic: خوانده نشده
+  - text: نام مشتری
+  - paragraph: نامشخص
+  - paragraph: "09000000000"
+  - text: مبدا
+  - paragraph: نامشخص، نامشخص، تهران
+  - text: مقصد
+  - paragraph: نامشخص، نامشخص، اصفهان
+  - text: روش حمل
+  - paragraph: جاده‌ای ← دریایی ← جاده‌ای
+  - text: "ثبت: ۱۴۰۵/۶/۲۵"
+  - generic: کالای آزمایشی FWD03
+  - button "مشاهده جزئیات":
+    - text: مشاهده جزئیات
+  - button "شروع پیگیری":
+    - text: شروع پیگیری
+  - generic: نمایش 1 مورد از صفحه فعلی
+  - button "قبلی" [disabled]
+  - generic: صفحه ۱
+  - button "بعدی" [disabled]

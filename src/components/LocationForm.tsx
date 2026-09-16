@@ -1,3 +1,5 @@
+import { TransportIntentInput } from "./TransportIntentInput";
+import { fetchTransportIntentOptions, prepareShipmentRequest, ApiError, type TransportIntent, type TransportIntentOption, type TransportSummary } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -412,6 +414,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [iranDestCounties, setIranDestCounties] = useState<County[]>([]);
   const [iranDestCities, setIranDestCities] = useState<City[]>([]);
   const [recommendedPorts, setRecommendedPorts] = useState<RecommendedPort[]>([]);
+  const [intent, setIntent] = useState<TransportIntent | null>(null);
+  const [intentOptions, setIntentOptions] = useState<TransportIntentOption[]>([]);
+  const [classification, setClassification] = useState("single-mode");
+  const [transportSummary, setTransportSummary] = useState<TransportSummary | undefined>();
+  const [fieldError, setFieldError] = useState<{field: string; message: string} | null>(null);
   const [transportMethodOptions, setTransportMethodOptions] = useState<TransportMethodOptions | null>(null);
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingOriginCounties, setIsLoadingOriginCounties] = useState(false);
@@ -465,7 +472,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showCargoDetails, setShowCargoDetails] = useState(false);
+  const [showCargoDetails, setShowCargoDetails] = useState(true);
   const [showOriginLocationDetails, setShowOriginLocationDetails] = useState(false);
   const [showDestinationLocationDetails, setShowDestinationLocationDetails] = useState(false);
   const [submittedTrackingCode, setSubmittedTrackingCode] = useState<string | null>(null);
@@ -475,6 +482,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     const fetchTransportOptions = async () => {
       try {
         const options = await fetchTransportMethodOptions();
+        const intentCatalog = await fetchTransportIntentOptions();
+        setIntentOptions(intentCatalog.items);
         setTransportMethodOptions(options);
       } catch (error) {
         console.error("Error fetching transport method options:", error);
@@ -1049,15 +1058,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     if (!formData.phoneNumber) {
       isValid = false;
       errorMessage = t("requestForm.validation.phoneRequired");
-    } else if (formData.transportMethodPreference === "customer_choice") {
-      // If customer wants to choose, validate that they've selected methods
-      if (shippingType === "international" && !formData.internationalTransportMethod) {
-        isValid = false;
-        errorMessage = t("requestForm.validation.internationalMethodRequired");
-      } else if (shippingType === "domestic" && !formData.domesticTransportMethod) {
-        isValid = false;
-        errorMessage = t("requestForm.validation.domesticMethodRequired");
-      }
     }
     
     if (isValid && shippingType === "domestic") {
@@ -1105,9 +1105,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       const payload: ShipmentRequestPayload = {
         shipping_type: shippingType,
         contact_phone: formData.phoneNumber,
-        transport_method: formData.transportMethod,  // Legacy field
-        international_transport_method: formData.internationalTransportMethod,
-        domestic_transport_method: formData.domesticTransportMethod,
+        transport_intent: formData.transportMethodPreference === "customer_choice" ? intent : null,
+        ...(formData.transportMethodPreference === "customer_choice" && intent ? { transport_classification: classification } : {}),
         transport_method_preference: formData.transportMethodPreference,
       };
 
@@ -1174,9 +1173,14 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.delivery_date = formData.deliveryDate;
       }
 
-      // Show confirmation page instead of submitting directly
+      const prepared = await prepareShipmentRequest(payload);
+      setTransportSummary(prepared.transport_summary);
+      setFieldError(null);
       setShowConfirmation(true);
     } catch (error) {
+      setFieldError({ field: error instanceof ApiError ? String(error.fields[0] || "form") : "form", message: error instanceof Error ? error.message : t("requestForm.submitError") });
+      setShowCargoDetails(true);
+      setShowConfirmation(false);
       toast({
         title: t("requestForm.submitErrorTitle"),
         description: error instanceof Error ? error.message : t("requestForm.submitError"),
@@ -1194,9 +1198,8 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       const payload: ShipmentRequestPayload = {
         shipping_type: shippingType,
         contact_phone: formData.phoneNumber,
-        transport_method: formData.transportMethod,  // Legacy field
-        international_transport_method: formData.internationalTransportMethod,
-        domestic_transport_method: formData.domesticTransportMethod,
+        transport_intent: formData.transportMethodPreference === "customer_choice" ? intent : null,
+        ...(formData.transportMethodPreference === "customer_choice" && intent ? { transport_classification: classification } : {}),
         transport_method_preference: formData.transportMethodPreference,
       };
 
@@ -1273,6 +1276,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         description: tf("requestForm.submitSuccessDescription", { trackingCode }),
       });
     } catch (error) {
+      setFieldError({ field: error instanceof ApiError ? String(error.fields[0] || "form") : "form", message: error instanceof Error ? error.message : t("requestForm.submitError") });
+      setShowCargoDetails(true);
+      setShowConfirmation(false);
       toast({
         title: t("requestForm.submitErrorTitle"),
         description: error instanceof Error ? error.message : t("requestForm.submitError"),
@@ -1284,6 +1290,9 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   };
 
   const resetForm = () => {
+    setIntent(null);
+    setFieldError(null);
+    setTransportSummary(undefined);
     setFormData({
       // Domestic shipping fields
       originProvince: "",
@@ -1404,6 +1413,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     return (
       <RequestConfirmation
         formData={formData}
+        transportSummary={transportSummary}
         shippingType={shippingType}
         onBack={() => setShowConfirmation(false)}
         onSubmit={handleFinalSubmit}
@@ -2286,81 +2296,10 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             </Select>
           </div>
 
-          {/* Customer Choice Transport Methods */}
           {formData.transportMethodPreference === "customer_choice" && (
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-              <p className={helperTextClass}>
-                {t("requestForm.transportChoiceHelp")}
-              </p>
-              {shippingType === "international" && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1 text-sm font-medium">
-                    {t("requestForm.internationalMethod")}
-                    <RequiredAsterisk />
-                  </Label>
-                  <Select
-                    value={formData.internationalTransportMethod}
-                    onValueChange={(value) => {
-                      setFormData({
-                        ...formData,
-                        internationalTransportMethod: value,
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("requestForm.selectInternationalMethod")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {transportMethodOptions?.international_methods.map((method) => (
-                        <SelectItem key={method.id} value={method.name}>
-                          <div className="space-y-1 text-right">
-                            <div className="font-medium">{getTransportLabel(method, language)}</div>
-                            {method.description && (
-                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.internationalMethodFallback"))}</div>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              
-              {shippingType === "domestic" && (
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-1 text-sm font-medium">
-                    {t("requestForm.domesticMethod")}
-                    <RequiredAsterisk />
-                  </Label>
-                  <Select
-                    value={formData.domesticTransportMethod}
-                    onValueChange={(value) => {
-                      setFormData({
-                        ...formData,
-                        domesticTransportMethod: value,
-                      });
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("requestForm.selectDomesticMethod")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {transportMethodOptions?.domestic_methods.map((method) => (
-                        <SelectItem key={method.id} value={method.name}>
-                          <div className="space-y-1 text-right">
-                            <div className="font-medium">{getTransportLabel(method, language)}</div>
-                            {method.description && (
-                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.domesticMethodFallback"))}</div>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
+            <TransportIntentInput value={intent} onChange={setIntent} options={intentOptions} classification={classification} onClassificationChange={setClassification} />
           )}
+          {fieldError && fieldError.field !== "cargo_description" && <p role="alert" className="text-sm text-red-600">{fieldError.message}</p>}
 
           {/* Forwarder Suggestion Message */}
           {formData.transportMethodPreference === "forwarder_suggestion" && (
@@ -2390,7 +2329,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           >
             <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-primary" />
-              <span>{t("requestForm.cargoOptional")}</span>
+              <span>شرح کالا و جزئیات اختیاری</span>
             </div>
             {showCargoDetails ? (
               <ChevronUp className="w-4 h-4" />
@@ -2402,7 +2341,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             {t("requestForm.cargoHelp")}
           </p>
           <p className={helperTextClass}>
-            {t("requestForm.cargoOptionalHelp")}
+            شرح کالا الزامی است؛ وزن، حجم و ارزش اختیاری هستند.
           </p>
         </div>
 
@@ -2418,10 +2357,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <div className="space-y-2">
               <Label htmlFor="cargoDescription" className="flex items-center gap-2 text-sm font-medium">
                 <FileText className="w-4 h-4 text-muted-foreground" />
-                {t("requestForm.cargoDescription")}
+                {t("requestForm.cargoDescription")} <RequiredAsterisk />
               </Label>
               <Input
                 id="cargoDescription"
+                aria-required="true"
+                aria-invalid={fieldError?.field === "cargo_description"}
                 placeholder={t("requestForm.cargoDescriptionPlaceholder")}
                 value={formData.cargoDescription}
                 onChange={(e) => {
@@ -2433,6 +2374,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               />
             </div>
 
+            {fieldError?.field === "cargo_description" && <p role="alert" className="text-sm text-red-600">{fieldError.message}</p>}
             {/* Weight and Volume Row */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

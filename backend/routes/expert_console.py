@@ -373,6 +373,12 @@ def update_request_status(request_id: int):
         if not _can_access_request(req, current_user):
             return jsonify({"error": "شما به این درخواست دسترسی ندارید"}), 403
         
+        from backend.services.commercial_transport_service import reject_transport_update, ShipmentValidationError
+        try:
+            reject_transport_update(data)
+        except ShipmentValidationError as exc:
+            return jsonify({"error": {"code": exc.code, "message": exc.message}}), exc.status_code
+
         old_status = req.status
         
         # Update request
@@ -682,10 +688,11 @@ def get_dashboard_kpis():
         if not current_user:
             return jsonify({"error": "احراز هویت نشده"}), 401
         
-        query = db.session.query(ShipmentRequest)
-        if current_user.get("role") != "admin":
-            query = query.filter(ShipmentRequest.assigned_to == current_user["id"])
-        
+        filters = expert_request_list_service.normalize_request_list_filters(request.args)
+        filters["status"] = None  # each status tab gets a count with the same other filters
+        query = expert_request_list_service.apply_request_list_visibility(db.session.query(ShipmentRequest), current_user, filters)
+        query = expert_request_list_service.apply_request_list_filters(query, filters).order_by(None)
+
         # Today's date
         today = datetime.utcnow().date()
         
@@ -718,6 +725,7 @@ def get_dashboard_kpis():
         
         return jsonify({
             "counts": {
+                "total_visible": query.count(),
                 "new": new_count,
                 "in_progress": in_progress_count,
                 "waiting_for_customer": waiting_count,

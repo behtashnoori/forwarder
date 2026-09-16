@@ -221,6 +221,8 @@ def test_public_tracking_response_contract_keys_and_public_not_found(app_with_ta
         "customer_first_name",
         "customer_last_name",
         "route",
+        "transport_intent",
+        "transport_summary",
         "transport_method",
         "domestic_transport_method",
         "international_transport_method",

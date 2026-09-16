@@ -88,7 +88,7 @@ def test_selector_and_canonical_request_persistence_for_turkmenistan(app):
     locations = client.get(f"/api/international-cities?country_id={tm_id}").get_json()
     ashkhabad = next(row for row in locations if row["name_en"] == "Ashkhabad")
     response = client.post("/api/shipment-request", json={
-        "shipping_type": "international", "contact_phone": "09123456789",
+        "shipping_type": "international", "contact_phone": "09123456789", "cargo_description": "Synthetic cargo",
         "origin_country_id": tm_id, "origin_international_city_id": ashkhabad["id"],
         "dest_country_id": tm_id, "dest_international_city_id": ashkhabad["id"],
     })
@@ -110,7 +110,7 @@ def test_iran_is_consumable_in_both_public_selector_flows(app):
     }
     tehran = next(row for row in locations if row["name_en"] == "Tehran")
     response = client.post("/api/shipment-request", json={
-        "shipping_type": "international", "contact_phone": "09123456789",
+        "shipping_type": "international", "contact_phone": "09123456789", "cargo_description": "Synthetic cargo",
         "origin_country_id": iran_id, "origin_international_city_id": tehran["id"],
         "dest_country_id": iran_id, "dest_international_city_id": tehran["id"],
     })

@@ -1,0 +1,296 @@
+....F...........FFsssssss                                                [100%]
+================================== FAILURES ===================================
+_ test_create_international_shipment_request_preserves_location_and_transport_behavior _
+
+shipment_app = <Flask 'backend'>, client = <FlaskClient <Flask 'backend'>>
+
+    def test_create_international_shipment_request_preserves_location_and_transport_behavior(shipment_app, client):
+        """International POST /api/shipment-request keeps location trimming and transport behavior."""
+        response = client.post("/api/shipment-request", json=_international_payload())
+
+>       assert response.status_code == 201
+E       assert 400 == 201
+E        +  where 400 = <WrapperTestResponse streamed [400 BAD REQUEST]>.status_code
+
+backend\tests\test_shipment_request_contract.py:190: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+______ test_public_tracking_response_contract_keys_and_public_not_found _______
+
+app_with_tables = <Flask 'backend'>
+
+    def test_public_tracking_response_contract_keys_and_public_not_found(app_with_tables):
+        """Public tracking endpoint preserves current response keys and public not-found contract."""
+        app = app_with_tables
+        created_at = datetime.utcnow()
+        req = _make_request(app, status="new", created_at=created_at)
+        with app.app_context():
+            rid = req.id
+        client = app.test_client()
+
+        missing = client.get("/api/public/track/999999")
+        assert missing.status_code == 404
+        assert json.loads(missing.data) == {"message": "\u062f\u0631\u062e\u0648\u0627\u0633\u062a \u06cc\u0627\u0641\u062a \u0646\u0634\u062f"}
+
+        response = client.get(f"/api/public/track/{rid}")
+        assert response.status_code == 200
+        data = json.loads(response.data)
+>       assert set(data.keys()) == {
+            "id",
+            "tracking_number",
+            "status",
+            "created_at",
+            "shipping_type",
+            "contact_phone",
+            "customer_first_name",
+            "customer_last_name",
+            "route",
+            "transport_method",
+            "domestic_transport_method",
+            "international_transport_method",
+            "transport_method_preference",
+            "cargo_description",
+            "cargo_weight",
+            "cargo_volume",
+            "cargo_value",
+            "special_instructions",
+            "pickup_date",
+            "delivery_date",
+            "assigned_expert",
+            "assigned_at",
+            "last_customer_touch_at",
+            "latest_quote",
+            "workflow_steps",
+            "workflow_steps_simple",
+        }
+E       AssertionError: assert {'assigned_at..._weight', ...} == {'assigned_at..._weight', ...}
+E
+E         Extra items in the left set:
+E         'transport_intent'
+E         'transport_summary'
+E         Use -v to get more diff
+
+backend\tests\test_public_tracking_timeline.py:214: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+____________ test_admin_shipment_request_detail_and_list_contract _____________
+
+admin_panel_app = {'app': <Flask 'backend'>, 'admin_token': '[REDACTED_TEST_TOKEN]...IjdiZmY1YmI2LTE2OWMtNDA5OC1hZDNkLWFiNTVjZjE0MGNhYyJ9.6ybENmvbL6hFHtLXqj3gQuVCmPOpXrxYZfnBmVUPt0E', 'expert_id': 2, ...}
+
+    def test_admin_shipment_request_detail_and_list_contract(admin_panel_app):
+        """Admin request detail/list keep auth, filters, date errors, pagination, and location shape."""
+        client = admin_panel_app["app"].test_client()
+        admin_headers = _auth_headers(admin_panel_app["admin_token"])
+        expert_headers = _auth_headers(admin_panel_app["expert_token"])
+        expected_forbidden_payload = {
+            "error": "\u062f\u0633\u062a\u0631\u0633\u06cc \u063a\u06cc\u0631\u0645\u062c\u0627\u0632",
+            "required_roles": ["admin"],
+            "user_role": "expert",
+        }
+
+        unauthenticated_detail = client.get(
+            f"/api/admin/shipment-requests/{admin_panel_app['assigned_request_id']}"
+        )
+        assert unauthenticated_detail.status_code == 401
+        assert unauthenticated_detail.get_json() == {"error": "Token is missing"}
+
+        forbidden_detail = client.get(
+            f"/api/admin/shipment-requests/{admin_panel_app['assigned_request_id']}",
+            headers=expert_headers,
+        )
+        assert forbidden_detail.status_code == 403
+        assert forbidden_detail.get_json() == expected_forbidden_payload
+
+        unauthenticated_list = client.get("/api/admin/shipment-requests")
+        assert unauthenticated_list.status_code == 401
+        assert unauthenticated_list.get_json() == {"error": "Token is missing"}
+
+        forbidden_list = client.get("/api/admin/shipment-requests", headers=expert_headers)
+        assert forbidden_list.status_code == 403
+        assert forbidden_list.get_json() == expected_forbidden_payload
+
+        missing_detail = client.get("/api/admin/shipment-requests/999999", headers=admin_headers)
+        assert missing_detail.status_code == 404
+        assert missing_detail.get_json() == {"error": "\u062f\u0631\u062e\u0648\u0627\u0633\u062a \u0645\u0648\u0631\u062f\u0646\u0638\u0631 \u06cc\u0627\u0641\u062a \u0646\u0634\u062f"}
+
+        detail = client.get(f"/api/admin/shipment-requests/{admin_panel_app['assigned_request_id']}", headers=admin_headers)
+>       assert detail.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <WrapperTestResponse streamed [500 INTERNAL SERVER ERROR]>.status_code
+
+backend\tests\test_admin_panel_read_contract.py:253: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+------------------------------ Captured log call ------------------------------
+ERROR    backend:__init__.py:279 Unhandled 500: path=/api/admin/shipment-requests/1 method=GET
+Traceback:
+Traceback (most recent call last):
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 867, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\flask\app.py", line 852, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "D:\1-webapp\forwarder-dev\backend\security.py", line 185, in decorated_function
+    return f(*args, **kwargs)
+  File "D:\1-webapp\forwarder-dev\backend\services\admin_authorization_service.py", line 72, in wrapped
+    return fn(*args, **kwargs)
+  File "D:\1-webapp\forwarder-dev\backend\routes\admin_panel.py", line 40, in get_shipment_request_detail
+    payload = admin_shipment_request_service.get_admin_shipment_request_detail(request_id, getattr(g, "organization_context", None))
+  File "D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py", line 52, in get_admin_shipment_request_detail
+    return build_admin_request_detail_payload(shipment_request)
+  File "D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py", line 203, in build_admin_request_detail_payload
+    **project_transport(shipment_request),
+      ^^^^^^^^^^^^^^^^^
+NameError: name 'project_transport' is not defined
+
+Request body (safe): <empty>
+============================== warnings summary ===============================
+backend\monitoring.py:30
+  D:\1-webapp\forwarder-dev\backend\monitoring.py:30: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.start_time = datetime.utcnow()
+
+backend/tests/test_shipment_request_contract.py: 4 warnings
+backend/tests/test_public_tracking_timeline.py: 10 warnings
+backend/tests/test_admin_panel_read_contract.py: 5 warnings
+  C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\sql\schema.py:3596: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+backend/tests/test_shipment_request_contract.py::test_create_domestic_shipment_request_preserves_response_defaults_and_commit
+backend/tests/test_shipment_request_contract.py::test_public_create_cannot_choose_shipment_request_public_id
+backend/tests/test_shipment_request_contract.py::test_create_domestic_shipment_request_accepts_province_only_locations
+  D:\1-webapp\forwarder-dev\backend\services\shipment_service.py:107: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    timestamp = datetime.utcnow()
+
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_in_progress
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_won
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_lost
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_closed_without_decision
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_closed_with_prior_won
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_closed_with_prior_lost
+backend/tests/test_public_tracking_timeline.py::test_get_final_decision_from_logs_returns_none_when_empty
+backend/tests/test_public_tracking_timeline.py::test_get_final_decision_from_logs_returns_most_recent
+backend/tests/test_public_tracking_timeline.py::test_public_tracking_response_includes_workflow_steps_simple
+  D:\1-webapp\forwarder-dev\backend\tests\test_public_tracking_timeline.py:37: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at = datetime.utcnow()
+
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_closed_with_prior_won
+backend/tests/test_public_tracking_timeline.py::test_workflow_steps_simple_4_closed_with_prior_lost
+  D:\1-webapp\forwarder-dev\backend\tests\test_public_tracking_timeline.py:54: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at = datetime.utcnow()
+
+backend/tests/test_public_tracking_timeline.py::test_get_final_decision_from_logs_returns_most_recent
+  D:\1-webapp\forwarder-dev\backend\tests\test_public_tracking_timeline.py:170: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    base = datetime.utcnow()
+
+backend/tests/test_public_tracking_timeline.py::test_public_tracking_response_contract_keys_and_public_not_found
+  D:\1-webapp\forwarder-dev\backend\tests\test_public_tracking_timeline.py:201: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at = datetime.utcnow()
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\tests\test_admin_panel_read_contract.py:68: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\auth_session_service.py:48: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\security.py:103: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'iat': datetime.utcnow(),
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\security.py:105: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'exp': datetime.utcnow() + (
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\auth_session_service.py:67: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py:159: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Province.query.get(shipment_request.origin_province_id)
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py:164: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    County.query.get(shipment_request.origin_county_id)
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py:169: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    City.query.get(shipment_request.origin_city_id)
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py:175: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Province.query.get(shipment_request.dest_province_id)
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py:180: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    County.query.get(shipment_request.dest_county_id)
+
+backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+  D:\1-webapp\forwarder-dev\backend\services\admin_shipment_request_service.py:185: LegacyAPIWarning: The Query.get() method is considered legacy as of the 1.x series of SQLAlchemy and becomes a legacy construct in 2.0. The method is now available as Session.get() (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    City.query.get(shipment_request.dest_city_id)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED backend/tests/test_shipment_request_contract.py::test_create_international_shipment_request_preserves_location_and_transport_behavior
+FAILED backend/tests/test_public_tracking_timeline.py::test_public_tracking_response_contract_keys_and_public_not_found
+FAILED backend/tests/test_admin_panel_read_contract.py::test_admin_shipment_request_detail_and_list_contract
+3 failed, 15 passed, 7 skipped, 57 warnings in 9.94s

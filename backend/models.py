@@ -443,6 +443,7 @@ class ShipmentRequest(db.Model):
     # Customer details (optional)
     customer_first_name = db.Column(db.String(100), nullable=True)
     customer_last_name = db.Column(db.String(100), nullable=True)
+    transport_intent = db.Column(db.JSON(none_as_null=True), nullable=True)
     transport_method = db.Column(db.String(32), nullable=True)  # Legacy field, kept for backward compatibility
     # Separate transport methods for international and domestic shipping
     international_transport_method = db.Column(db.String(32), nullable=True)

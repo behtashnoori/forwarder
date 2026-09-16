@@ -110,6 +110,7 @@ interface RequestDetail {
     } | null;
   };
   transport_method?: string;
+  transport_summary?: {display: string};
   international_transport_method?: string;
   domestic_transport_method?: string;
   transport_method_preference?: string;
@@ -522,6 +523,7 @@ const RequestDetail = () => {
 
   const transportLabel = useMemo(() => {
     if (!request) return missingValue;
+    if (request.transport_summary) return request.transport_summary.display;
     if (request.international_transport_method) return `${t("shipping.type.international")}: ${request.international_transport_method}`;
     if (request.domestic_transport_method) return `${t("shipping.type.domestic")}: ${request.domestic_transport_method}`;
     if (request.transport_method) return request.transport_method;

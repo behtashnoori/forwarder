@@ -56,7 +56,7 @@ def _base_payload(**overrides):
         "origin_city_international": "Hamburg",
         "dest_country": "ایران",
         "dest_city_international": "Tehran",
-        "contact_phone": "09121234567",
+        "contact_phone": "09121234567", "cargo_description": "Synthetic cargo",
         "international_transport_method": "sea",
     }
     payload.update(overrides)

@@ -62,6 +62,12 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [044](../operational/adr/ADR-044-reporting-oversight.md) | Reporting oversight companion | ACCEPTED | Reporting authorization | complements ADR-042/043 / none | tenant-fenced Organization Admin and approved Platform Admin reporting | Yes; bounded S4 implementation only |
 | [045](../operational/adr/ADR-045-notification-action-foundation.md) | Durable notification and governed action foundation | ACCEPTED | Commercial events / notification actions / integrations | none / none | FWD-01 explicit Owner acceptance 2026-09-16; implemented and qualified with fake EMAIL only | Yes; FWD-01 only |
 
+## Bounded FWD-03 decision
+
+| ADR | Title | Status | Domain | Implementation authority |
+| --- | --- | --- | --- | --- |
+| [046](../operational/adr/ADR-046-commercial-request-transport-intent.md) | Ordered commercial request transport intent | ACCEPTED | Commercial intake / transport intent | Explicit named mission-issuer acceptance 2026-09-16; FWD-03 only |
+
 ## Usage rules
 
 1. Read this index and the baseline before design or implementation.

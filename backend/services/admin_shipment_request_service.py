@@ -1,5 +1,6 @@
 """Service helpers for admin shipment request read endpoints."""
 from __future__ import annotations
+from backend.services.commercial_transport_service import project_transport
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -200,6 +201,7 @@ def build_admin_request_detail_payload(shipment_request: ShipmentRequest) -> dic
         "contact_phone": shipment_request.contact_phone,
         "customer_first_name": shipment_request.customer_first_name,
         "customer_last_name": shipment_request.customer_last_name,
+        **project_transport(shipment_request),
         "transport_method": shipment_request.transport_method,
         "status": shipment_request.status,
         "priority": shipment_request.priority,
@@ -286,6 +288,7 @@ def build_admin_request_list_item_payload(
         "contact_phone": req.contact_phone,
         "customer_first_name": req.customer_first_name,
         "customer_last_name": req.customer_last_name,
+        **project_transport(req),
         "transport_method": req.transport_method,
         "status": req.status,
         "priority": req.priority,

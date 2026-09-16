@@ -82,7 +82,7 @@ def test_countries_locations_roundtrip_country_fence_and_read_old_select_new(app
               for code in ("IT", "NO", "IR")}
     assert len(places["IR"]) > 3
     for origin in ("IT", "NO"):
-        payload = {"shipping_type": "international", "contact_phone": "09123456789",
+        payload = {"shipping_type": "international", "contact_phone": "09123456789", "cargo_description": "Synthetic cargo",
                    "origin_country_id": countries[origin]["id"], "origin_international_city_id": places[origin][0]["id"],
                    "dest_country_id": countries["IR"]["id"], "dest_international_city_id": places["IR"][0]["id"]}
         response = client.post("/api/shipment-request", json=payload)

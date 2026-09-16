@@ -257,6 +257,8 @@ def test_admin_shipment_request_detail_and_list_contract(admin_panel_app):
         "contact_phone",
         "customer_first_name",
         "customer_last_name",
+        "transport_intent",
+        "transport_summary",
         "transport_method",
         "status",
         "priority",

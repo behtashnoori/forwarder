@@ -1,0 +1,401 @@
+> vite_react_shadcn_ts@1.9.5.1 test:frontend
+> vitest run --reporter=dot
+
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev
+
+stdout | src/tests/pages/OperationalShipmentDetail.behavior.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stdout | src/tests/pages/NewOperation.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stdout | src/tests/components/LocationFormGeography.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stdout | src/tests/components/DocumentDefinitionsTab.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+·····stdout | src/tests/pages/CommandCenter.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stderr | src/tests/components/LocationFormGeography.test.tsx > loads Iran destination and submits stable country/location IDs through confirmation
+Error fetching transport method options: TypeError: Failed to parse URL from /api/v2/transport-intent-options
+    at node:internal/deps/undici/undici:15845:13
+    at processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at request (D:/1-webapp/forwarder-dev/src/lib/api.ts:326:20)
+    at fetchTransportOptions (D:/1-webapp/forwarder-dev/src/components/LocationForm.tsx:485:31) {
+  [cause]: TypeError: Invalid URL
+      at new URL (node:internal/url:828:25)
+      at new URL (file:///D:/1-webapp/forwarder-dev/node_modules/vitest/dist/chunks/index.DC7d2Pf8.js:557:2)
+      at new Request (node:internal/deps/undici/undici:10413:25)
+      at fetch (node:internal/deps/undici/undici:11325:25)
+      at fetch (node:internal/deps/undici/undici:15843:10)
+      at fetch (node:internal/bootstrap/web/exposed-window-or-worker:83:12)
+      at request (D:/1-webapp/forwarder-dev/src/lib/api.ts:326:26)
+      at fetchTransportIntentOptions (D:/1-webapp/forwarder-dev/src/lib/api.ts:253:41)
+      at fetchTransportOptions (D:/1-webapp/forwarder-dev/src/components/LocationForm.tsx:485:37)
+      at processTicksAndRejections (node:internal/process/task_queues:105:5) {
+    code: 'ERR_INVALID_URL',
+    input: '/api/v2/transport-intent-options'
+  }
+}
+
+········································x···············stdout | src/tests/components/GlobalLogisticsNetworkGovernance.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+··········stdout | src/tests/pages/UserManagement.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+·············stdout | src/tests/pages/OperationalPages.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+·stdout | src/tests/components/OperationalExecutionSection.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stdout | src/tests/components/OperationalExecutionPreviewIsolation.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+···stdout | src/tests/components/DocumentReadinessSection.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+·stdout | src/tests/components/OrganizationDocumentPolicyTab.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+···············stdout | src/tests/components/ShipmentEconomicsSection.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stdout | src/tests/components/ReleaseIdentity.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stdout | src/tests/components/CaseDocumentsTab.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+·········································stdout | src/lib/apiAuth.test.ts
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stdout | src/tests/internationalDestination.test.ts
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+·························
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/tests/components/LocationFormGeography.test.tsx > loads Iran destination and submits stable country/location IDs through confirmation
+TestingLibraryElementError: Unable to find role="button" and name "requestFlow.confirmAndSend"
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-lg text-card-foreground w-full max-w-md bg-gradient-card shadow-lg border-0"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6 text-center pb-4"
+      >
+        <div
+          class="flex items-center justify-between mb-4"
+        >
+          <button
+            class="justify-center whitespace-nowrap font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs flex items-center gap-2"
+          >
+            <svg
+              class="lucide lucide-arrow-left w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+            common.back
+          </button>
+          <div
+            class="flex-1"
+          />
+        </div>
+        <h3
+          class="tracking-tight text-xl font-bold flex items-center justify-center gap-2"
+        >
+          <svg
+            class="lucide lucide-map-pin w-5 h-5 text-primary"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+            />
+            <circle
+              cx="12"
+              cy="10"
+              r="3"
+            />
+          </svg>
+          requestForm.internationalRouteTitle
+        </h3>
+        <p
+          class="text-muted-foreground text-sm"
+        >
+          requestForm.internationalRouteDescription
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0 space-y-6"
+      >
+        <div
+          class="space-y-4"
+        >
+          <div
+            class="flex items-center gap-2 text-sm font-semibold text-primary"
+          >
+            <div
+              class="w-3 h-3 bg-primary rounded-full"
+            />
+            requestForm.originInternationalSection
+          </div>
+          <div
+            class="space-y-3 pr-5"
+          >
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 text-sm font-medium"
+            >
+              requestForm.originCountry
+              <span
+                aria-hidden="true"
+                class="text-red-600"
+              >
+                *
+              </span>
+            </label>
+            <input
+              aria-label="جست‌وجوی کشور مبدأ"
+              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm transition-colors"
+              placeholder="جست‌وجوی کشور / Country"
+              value="Norway"
+            />
+            <select>
+              <option
+                value=""
+              />
+              <option
+                value="1"
+              >
+                ITALY
+              </option>
+              <option
+                value="3"
+              >
+                NORWAY
+              </option>
+            </select>
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 text-sm font-medium"
+            >
+              requestForm.originCityPort
+              <span
+                aria-hidden="true"
+                class="text-red-600"
+              >
+                *
+              </span>
+            </label>
+            <div
+              class="space-y-2"
+            >
+              <input
+                aria-label="جست‌وجوی مکان مبدأ"
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm transition-colors"
+                maxlength="160"
+                placeholder="نام یا کد مکان / UNLOCO...
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <div
+      class="rounded-lg text-card-foreground w-full max-w-md bg-gradient-card shadow-lg border-0"
+    >
+      <div
+        class="flex flex-col space-y-1.5 p-6 text-center pb-4"
+      >
+        <div
+          class="flex items-center justify-between mb-4"
+        >
+          <button
+            class="justify-center whitespace-nowrap font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent hover:text-accent-foreground h-8 rounded-md px-3 text-xs flex items-center gap-2"
+          >
+            <svg
+              class="lucide lucide-arrow-left w-4 h-4"
+              fill="none"
+              height="24"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              viewBox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="m12 19-7-7 7-7"
+              />
+              <path
+                d="M19 12H5"
+              />
+            </svg>
+            common.back
+          </button>
+          <div
+            class="flex-1"
+          />
+        </div>
+        <h3
+          class="tracking-tight text-xl font-bold flex items-center justify-center gap-2"
+        >
+          <svg
+            class="lucide lucide-map-pin w-5 h-5 text-primary"
+            fill="none"
+            height="24"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            viewBox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"
+            />
+            <circle
+              cx="12"
+              cy="10"
+              r="3"
+            />
+          </svg>
+          requestForm.internationalRouteTitle
+        </h3>
+        <p
+          class="text-muted-foreground text-sm"
+        >
+          requestForm.internationalRouteDescription
+        </p>
+      </div>
+      <div
+        class="p-6 pt-0 space-y-6"
+      >
+        <div
+          class="space-y-4"
+        >
+          <div
+            class="flex items-center gap-2 text-sm font-semibold text-primary"
+          >
+            <div
+              class="w-3 h-3 bg-primary rounded-full"
+            />
+            requestForm.originInternationalSection
+          </div>
+          <div
+            class="space-y-3 pr-5"
+          >
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 text-sm font-medium"
+            >
+              requestForm.originCountry
+              <span
+                aria-hidden="true"
+                class="text-red-600"
+              >
+                *
+              </span>
+            </label>
+            <input
+              aria-label="جست‌وجوی کشور مبدأ"
+              class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm transition-colors"
+              placeholder="جست‌وجوی کشور / Country"
+              value="Norway"
+            />
+            <select>
+              <option
+                value=""
+              />
+              <option
+                value="1"
+              >
+                ITALY
+              </option>
+              <option
+                value="3"
+              >
+                NORWAY
+              </option>
+            </select>
+            <label
+              class="peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-1 text-sm font-medium"
+            >
+              requestForm.originCityPort
+              <span
+                aria-hidden="true"
+                class="text-red-600"
+              >
+                *
+              </span>
+            </label>
+            <div
+              class="space-y-2"
+            >
+              <input
+                aria-label="جست‌وجوی مکان مبدأ"
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm transition-colors"
+                maxlength="160"
+                placeholder="نام یا کد مکان / UNLOCO...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ findByRole node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/tests/components/LocationFormGeography.test.tsx:56:16
+     54|   fireEvent.change(selects[selects.length - 2], { target: { value: "fo…
+     55|   fireEvent.click(screen.getByRole("button", { name: "shipping.submit"…
+     56|   await screen.findByRole("button", { name: "requestFlow.confirmAndSen…
+       |                ^
+     57|   fireEvent.click(screen.getByRole("button", { name: "requestFlow.conf…
+     58|   await waitFor(() => expect(api.submitShipmentRequest).toHaveBeenCall…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 36 passed (37)
+      Tests  1 failed | 169 passed (170)
+   Start at  10:45:20
+   Duration  42.73s (transform 6.31s, setup 23.39s, import 19.51s, tests 65.28s, environment 138.66s)

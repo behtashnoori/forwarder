@@ -1,4 +1,5 @@
 """Read helpers for public tracking response assembly."""
+from backend.services.commercial_transport_service import project_transport
 from backend.extensions import db
 from backend.models import City, County, ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.services import timeline_service
@@ -129,6 +130,7 @@ def build_tracking_response(req, *, include_unit_tracking: bool = False):
         "customer_first_name": req.customer_first_name,
         "customer_last_name": req.customer_last_name,
         "route": build_route_summary(req),
+        **project_transport(req),
         "transport_method": req.transport_method,
         "domestic_transport_method": req.domestic_transport_method,
         "international_transport_method": req.international_transport_method,

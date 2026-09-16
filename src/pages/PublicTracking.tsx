@@ -221,6 +221,7 @@ const PublicTracking: React.FC = () => {
     requestData.delivery_date;
 
   const transportLabel =
+    requestData.transport_summary?.display ||
     requestData.domestic_transport_method ||
     requestData.international_transport_method ||
     requestData.transport_method ||

@@ -58,6 +58,7 @@ def _domestic_payload(**overrides):
 def _international_payload(**overrides):
     payload = {
         "shipping_type": "international",
+        "cargo_description": "Test cargo",
         "origin_country": " Germany ",
         "origin_city_international": " Hamburg ",
         "origin_address_international": " Origin address ",

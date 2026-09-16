@@ -1,0 +1,6 @@
+> vite_react_shadcn_ts@1.9.5.1 check:structure
+> node scripts/check-structure.js
+
+✅ Canonical migrations directory exists: backend/migrations
+✅ backend/migrations/alembic.ini exists
+✅ Structure check passed

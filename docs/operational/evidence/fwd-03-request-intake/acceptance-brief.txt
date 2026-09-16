@@ -1,0 +1,402 @@
+MISSION CONTINUATION:
+FWD-03 — ADR-046 Acceptance and Autonomous Completion
+
+OWNER DECISION:
+
+ADR-046 — Ordered commercial request transport intent
+برای اجرای محدود FWD-03 پذیرفته می‌شود.
+
+هویت نسخه پیشنهادی مورد پذیرش:
+
+ADR:
+docs/operational/adr/ADR-046-commercial-request-transport-intent.md
+
+PROPOSED_DOCUMENT_SHA256:
+17511D21BB275EBB6D4B9088B3608141AB842ECD2E154883D4B798E7198E71F3
+
+پذیرش شامل تصمیم‌های همین نسخه، همراه با قیود اجرایی
+این پیام است. تصمیم خارج از این حدود پذیرفته نشده است.
+
+این پیام پذیرش صریح ADR نام‌دار است؛
+پیاده‌سازی یا PASS آزمون جای این پذیرش نیست.
+
+────────────────────────────────
+1. RESUME CURRENT MISSION
+────────────────────────────────
+
+SHELL:
+Windows PowerShell
+
+WORKSPACE:
+D:\1-webapp\forwarder-dev
+
+EXPECTED_BRANCH:
+feature/fwd-03-request-intake
+
+EXPECTED_START_HEAD:
+1714118340943f1dbbf99e4b25edc9ef41f817e6
+
+REMOTE:
+origin
+
+هویت workspace، branch، HEAD و تغییرات موجود را بررسی کن.
+تغییرات ADR و گزارش همین مأموریت را حفظ کن.
+آنها را با تغییر نامرتبط کاربر یکی نکن.
+
+قبل از ثبت پذیرش، Hash نسخه پیشنهادی ADR را تطبیق بده.
+اگر اختلافی وجود دارد، Diff را بررسی کن؛ پذیرش را به نسخه
+متفاوت و بررسی‌نشده منتقل نکن.
+
+پذیرش، تاریخ واقعی، دامنه و منشأ همین پیام را طبق lifecycle
+پروژه ثبت کن. نام یا سمت انسانی اعلام‌نشده نساز.
+
+Hash قبل از پذیرش را در سابقه نگه دار؛ تغییر مجاز وضعیت ADR
+طبیعتاً Hash جدیدی ایجاد می‌کند.
+
+Discovery انجام‌شده را استفاده کن و وارد پیاده‌سازی شو.
+شاخه جدید، ADR موازی یا چرخه برنامه‌ریزی تازه ایجاد نکن.
+
+────────────────────────────────
+2. FIXED LPAF AND PROJECT CONTRACT
+────────────────────────────────
+
+ARCHITECTURE_ROOT:
+D:\1-webapp\29-lpaf\29-lpaf (1)\29-lpaf
+
+ENTRY:
+lpaf\README.md
+
+GLOBAL_ACTIVE:
+LPAF v2.2
+
+V2.4:
+OWNER_APPROVED / PILOT_ADOPTION_ALLOWED / NOT_GLOBAL_ACTIVE
+
+EXPECTED_V24_CURRENT_SHA256:
+217BDB9DFF2B4FE42A127B4F15831DB17439A703CA4D4702D299B804CD7C0397
+
+دستورهای محلی، قرارداد معماری Forwarder، ADR-002/004
+در بخش‌های مرتبط و قواعد قابل اعمال FWD-03 حفظ شوند.
+
+از بررسی LPAF موجود استفاده کن؛ منابع بزرگ ثابت را
+بی‌دلیل دوباره نخوان.
+
+اثر بر مرجع مادر و معماری پروژه جدا ثبت شود.
+مرجع متأثر پروژه را تکمیل کن؛ LPAF مادر تغییر نکند.
+
+────────────────────────────────
+3. ACCEPTED ARCHITECTURE
+────────────────────────────────
+
+Commercial مالک transport_intent در ShipmentRequest است.
+
+ساختار پذیرفته‌شده:
+{"version":1,"steps":[{"mode":"road"},{"mode":"sea"},{"mode":"road"}]}
+
+- ترتیب آرایه معتبر است.
+- تکرار روش‌ها، حتی تکرار مجاور، حذف نمی‌شود.
+- یک روش متمایز = single-mode.
+- حداقل دو روش متمایز = combined.
+- طبقه‌بندی، داده ذخیره‌شده را deduplicate نمی‌کند.
+- انتخاب combined با کمتر از دو روش متمایز خطای فیلدی دارد.
+- null یعنی توالی ثبت‌شده نداریم؛ نه مسیر عملیاتی خالی.
+
+این داده خواسته اولیه مشتری است.
+RouteLeg، مسیر اجرایی، وسیله، ترمینال، زمان‌بندی،
+تعهد سرویس یا تأیید امکان حمل از آن ساخته نشود.
+
+road / rail / air / sea مطابق ADR پشتیبانی می‌شوند؛
+کاتالوگ موجود، مرجع انتخاب‌های معتبر باقی می‌ماند.
+
+چرخه تجاری، Aggregate جدید، Workflow عمومی یا موتور
+کریدور ایجاد نکن.
+
+────────────────────────────────
+4. COMPLETE THE INPUT/READ/UPDATE CONTRACT
+────────────────────────────────
+
+قبل از کدنویسی اعتبارسنجی، جدول مختصر و قابل آزمون زیر
+را در مستند مناسب همین مأموریت تکمیل کن:
+
+INPUT CASE
+→ NORMALIZATION
+→ VALIDATION
+→ PERSISTED VALUE
+→ READ PROJECTION
+→ ERROR/COMPATIBILITY RESULT
+
+حداقل موارد:
+
+الف) ورودی جدید:
+
+transport_intent نام قرارداد پیشنهادی پذیرفته‌شده است.
+transport_sequence در شاهد قبلی ورودی آزمایشی بوده است.
+آن را بدون شاهد قرارداد قبلی، API پشتیبانی‌شده یا alias
+رسمی فرض نکن.
+
+هر alias واقعاً لازم، صریح و آزموده باشد؛
+ورودی جدید را بی‌صدا حذف نکن.
+
+ب) customer_choice و forwarder_suggestion:
+
+در قرارداد جدید customer_choice، intent صریح و غیرخالی
+الزامی است؛ forwarder_suggestion می‌تواند null بماند.
+
+الزام فقط در frontend نباشد.
+مسیر یا نسخه قرارداد جدید و سازگاری Client قدیمی روشن باشد؛
+به یک flag دلخواه client برای دورزدن اعتبارسنجی اعتماد نکن.
+
+ج) فیلدهای قدیمی:
+
+ورودی scalar قدیمی معتبر طبق ADR پذیرفته شود.
+از دو فیلد داخلی/بین‌المللی، ترتیب حدسی نساز.
+
+وجود هم‌زمان intent و scalar به‌تنهایی تناقض نیست؛
+معنای scope واقعی هر فیلد را بررسی کن.
+ترکیب واقعاً ناسازگار را با خطای مشخص رد کن.
+
+خواندن intent غیرnull اولویت دارد.
+برای رکورد بدون intent، فیلدهای تاریخی با scope خودشان
+نمایش داده شوند.
+
+combined را به اولین/آخرین روش یا یک روش ساختگی تقلیل نده.
+
+د) ویرایش، فقط اگر مسیر آن از قبل وجود دارد:
+
+omitted، null و مقدار صریح جدید یکسان فرض نشوند.
+
+Client قدیمی با نفرستادن transport_intent نباید توالی
+ثبت‌شده را پاک کند. تغییر scalar نباید intent موجود را
+بی‌صدا ناسازگار یا جایگزین کند.
+
+قواعد و مجوزهای فعلی ویرایش حفظ شوند.
+ویرایش در وضعیت ممنوع، صرفاً برای این قابلیت مجاز نشود.
+
+تغییر ناسازگارِ Client قدیمی را با نتیجه سازگاری قابل فهم
+مدیریت کن؛ موفقیت ظاهری با از دست رفتن داده ممنوع است.
+
+کنترل هم‌زمانی موجود را رعایت و lost update مرتبط با
+intent را بررسی کن. چارچوب عمومی ویرایش جدید نساز.
+
+هـ) Client قدیمی:
+
+محدودیت نمایش ترکیبی را در قرارداد پاسخ و UIهای تحت کنترل
+صریح کن؛ ادعا نکن Client قدیمیِ تغییرنیافته حتماً توالی را
+نمایش می‌دهد.
+
+هر سازگاری ادعاشده باید آزمون داشته باشد.
+
+────────────────────────────────
+5. CATALOG AND DUPLICATE RAIL OPTIONS
+────────────────────────────────
+
+جدول نگاشت کد/alias به mode را از قرارداد و کاتالوگ واقعی
+استخراج کن؛ شباهت نام یا ترجمه، اثبات یکسانی معنایی نیست.
+
+اگر دو گزینه واقعاً معادل‌اند، نمایش تکراری انتخاب جدید
+را با نگاشت روشن اصلاح کن؛ شناسه‌های تاریخی حفظ شوند.
+
+اگر دو گزینه معنای متفاوت دارند، آنها را ادغام نکن.
+معنای ناشناخته را به rail یا mode دیگری حدس نزن.
+
+رکورد کاتالوگ حذف، renumber یا بازتفسیر نشود.
+متن تاریخی ناشناخته همچنان قابل خواندن بماند.
+
+ابهام واقعی تجاری که از منابع قابل حل نیست، فقط همان
+قسمت را BLOCKED می‌کند؛ برای راحتی تصمیم تازه نساز.
+
+────────────────────────────────
+6. CARGO VALIDATION
+────────────────────────────────
+
+شرح کالای خالی یا فقط whitespace در ارسال نهایی درخواست
+جدید از UI و command/API رد شود.
+
+این الزام به خواندن رکورد تاریخی تسری پیدا نکند.
+وزن، حجم، واحد یا بسته‌بندی حدسی تولید نکن.
+فیلدهای بیشتری را بدون مبنای تجاری اجباری نکن.
+
+اگر مسیر Draft موجود است، رفتار آن را از قرارداد واقعی
+بگیر و آزمون کن. Draft جدید اختراع نکن.
+
+خطای فرم باید اطلاعات واردشده کاربر را حفظ کند و
+دلیل فیلدی قابل فهم نشان دهد.
+
+────────────────────────────────
+7. MODULARITY, AGENT AND SECURITY
+────────────────────────────────
+
+Commercial مالک validation، normalization و read projection
+خواسته حمل است؛ UI و Agent قواعد مستقل نسازند.
+
+فرمان مشترک باید بدون UI قابل آزمون باشد.
+آماده‌کردن درخواست، مجوز ارسال نیست.
+
+نسخه/shape/mode نامعتبر، مرجع نامعتبر یا اختیار نامعتبر
+با reason code و خطای ساختاریافته رد شوند.
+
+مرز public intake موجود حفظ شود:
+tenant از مرجع معتبر سرور حل شود؛ body organization_id
+اختیار مالکیت ایجاد نمی‌کند.
+
+tracking capability مشتری را با authenticated customer
+ownership یکی نکن و امنیتی قوی‌تر از آنچه آزموده‌ای ادعا نکن.
+
+مجوزهای واقعی کارشناس/ادمین، assignment و tenant scope
+در command/read مربوط بررسی شوند.
+
+هیچ نقش جدید، مدل مجوز جدید، دسترسی مستقیم Agent به DB،
+SDK هوش مصنوعی یا API مدل اضافه نکن.
+
+────────────────────────────────
+8. SUMMARY, COUNTER AND PRIOR SLICES
+────────────────────────────────
+
+خلاصه مشتری و نمای کارشناس از projection مشترک مالک
+استفاده کنند؛ mode و توالی پس از خروج/بازگشایی حفظ شوند.
+
+شمارنده status=new با فهرست، scope مجاز، filters و زمان
+مرجع سازگار باشد. چند step یا quote یک درخواست را چند
+درخواست نکند.
+
+هویت‌های Geography و کنترل‌های FWD-02 حفظ شوند.
+
+ایجاد/خواندن درخواست نباید
+commercial.quote.available.v1
+یا اعلان پیشنهاد قیمت تولید کند.
+
+transition، ownership و dedup مصوب FWD-01 تغییر نکنند.
+
+────────────────────────────────
+9. MIGRATION AND HISTORY
+────────────────────────────────
+
+یک ستون nullable JSON طبق ADR و مکانیزم واقعی پروژه
+اضافه کن. head فعلی را قبل از ایجاد migration دوباره احراز کن.
+
+head مورد انتظار ADR:
+20260916_fwd01_notifications
+
+اگر متفاوت است، علت را بررسی کن؛ head موازی یا migration
+از predecessor نادرست نساز.
+
+Migration تاریخی تغییر نکند.
+backfill حدسی، enum deletion یا بازنویسی تاریخچه ممنوع است.
+startup migration یا geography import خودکار اضافه نکن.
+
+روی PostgreSQL disposable:
+- upgrade؛
+- حفظ رکوردهای قدیمی با intent ثبت‌نشده؛
+- round-trip داده جدید؛
+- downgrade در نبود intent؛
+- امتناع امن downgrade هنگام وجود intent؛
+- re-upgrade؛
+را طبق قرارداد پذیرفته‌شده احراز کن.
+
+امتناع downgrade نباید قبل از توقف، بخشی از داده یا schema
+را حذف کند.
+
+بازگشت برنامه با حفظ ستون و داده، از حذف intent جداست.
+هیچ DB واقعی مشتری یا Production را تغییر نده.
+
+────────────────────────────────
+10. QUALIFICATION AND AUTONOMY
+────────────────────────────────
+
+در محدوده این پذیرش مستقل ادامه بده:
+
+IMPLEMENT
+→ TARGETED TEST
+→ ROOT CAUSE / IN-SCOPE REPAIR
+→ RETEST
+→ MIGRATION / REGRESSION
+→ ROLE-REALISTIC BROWSER UAT
+→ DOCUMENT
+→ COMMIT
+→ PUSH
+→ REMOTE VERIFY
+
+موارد NOT_DEFINED اجرایی را طبق همین قیود و شواهد Repository
+تکمیل کن؛ برای نام کلاس، فایل، قالب خطای سازگار یا انتخاب
+الگوی داخلی پذیرفته‌شده دوباره تأیید نخواه.
+
+تغییر واقعی مالکیت، semantics تجاری، authority یا دامنه
+Migration خارج از پذیرش، نیازمند توقف همان بخش است.
+
+حداقل سناریوهای پذیرش:
+- road/sea/road و حفظ تکرار مجاور؛
+- single-mode و combined معتبر/نامعتبر؛
+- customer_choice / forwarder_suggestion؛
+- ورودی جدید، قدیمی، متناقض، malformed و نسخه نامعتبر؛
+- حفظ intent در ویرایش Client قدیمی؛
+- شرح کالای خالی از API و UI؛
+- خواندن تاریخی ناقص و کد ناشناخته؛
+- انتخاب/ذخیره/خروج/بازگشایی مشتری و خواندن کارشناس؛
+- موبایل/دسکتاپ RTL؛
+- count/list برابر و یک‌بار شمردن هر درخواست؛
+- مجوز، tenant، revoke و ویرایش هم‌زمان مرتبط؛
+- سازگاری FWD-01/FWD-02؛
+- Migration و recovery بالا.
+
+شاهد normalizer قبلی را API/DB/Browser PASS معرفی نکن.
+همه Gateهای mandatory مرتبط پروژه رعایت شوند.
+
+یک Agent اصلی؛ جست‌وجوی محدود و لاگ کامل در evidence.
+آزمون را بدون فرضیه تازه بی‌هدف تکرار نکن.
+با Plan یا پیشنهاد «مأموریت بعدی برای همین اصلاح» متوقف نشو.
+
+────────────────────────────────
+11. GAPS, GIT AND FINAL OUTPUT
+────────────────────────────────
+
+شکاف‌های قبلی:
+FORWARDER-HISTORICAL-REPLAY-001 =
+BLOCKED_MISSING_EXTERNAL_EVIDENCE
+
+PRODUCTION_IDENTITY = UNKNOWN
+
+اینها باز می‌مانند؛ معافیت شکست تازه FWD-03 نیستند.
+
+پس از PASS شدن Gateهای لازم:
+- diff و اسرار و generated files را بررسی کن؛
+- git diff --check؛
+- فقط فایل‌های همین مأموریت را stage کن؛
+- commitهای منطقی بساز؛
+- فقط feature/fwd-03-request-intake را بدون force push کن؛
+- fetch و Remote ref واقعی را بررسی کن.
+
+موفقیت Git:
+LOCAL_HEAD == REMOTE_HEAD
+AHEAD = 0
+BEHIND = 0
+
+روی main/baseline merge نکن و release tag نساز.
+مشکل authentication فقط Push را BLOCKED کند؛ commit سالم
+را حفظ کن و Source را برای رفع مشکل ورود تغییر نده.
+
+گزارش نهایی:
+MISSION_RESULT:
+ADR_046_STATUS:
+ACCEPTED_PROPOSAL_SHA256:
+TRANSPORT_INTENT_CONTRACT:
+INPUT_READ_UPDATE_COMPATIBILITY:
+DUPLICATE_RAIL_HANDLING:
+CARGO_VALIDATION:
+SUMMARY_AND_COUNTER:
+AUTHORIZATION_AND_AGENT_BOUNDARY:
+MIGRATION_AND_HISTORY:
+BROWSER_UAT:
+REGRESSION:
+KNOWN_GAPS:
+COMMITS:
+LOCAL_HEAD:
+REMOTE_HEAD:
+LOCAL_REMOTE_SYNC:
+EVIDENCE_PATH:
+READY_FOR_NEXT_SLICE:
+
+REAL_MESSAGES_SENT: NO
+LLM_APIS_CALLED: NO
+PRODUCTION_CHANGED: NO
+
+COMPLETE فقط پس از پیاده‌سازی، احراز و Push تأییدشده.

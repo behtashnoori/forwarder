@@ -47,6 +47,7 @@ import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
 
 type ShipmentRequest = ExpertRequest & {
+  transport_summary?: {display: string};
   international_transport_method?: string;
   domestic_transport_method?: string;
   transport_method_preference?: string;
@@ -104,12 +105,12 @@ const ExpertConsole = () => {
 
   const loadKPIs = useCallback(async () => {
     try {
-      const data = await fetchKPIs();
+      const data = await fetchKPIs(undefined, searchTerm);
       setKpis(data);
     } catch (error) {
       console.error("Error loading KPIs:", error);
     }
-  }, []);
+  }, [searchTerm]);
 
   const loadCurrentExpert = useCallback(async () => {
     try {
@@ -217,7 +218,7 @@ const ExpertConsole = () => {
 
   const totalKpiCount = useMemo(() => {
     if (!kpis) return 0;
-    return kpis.counts.new + kpis.counts.in_progress + kpis.counts.waiting_for_customer + kpis.counts.closed_today;
+    return kpis.counts.total_visible ?? 0;
   }, [kpis]);
 
   const clearFilters = () => {
@@ -249,6 +250,7 @@ const ExpertConsole = () => {
   };
 
   const formatTransport = (request: ShipmentRequest) => {
+    if (request.transport_summary) return request.transport_summary.display;
     if (request.international_transport_method) return `${t("shipping.type.international")}: ${request.international_transport_method}`;
     if (request.domestic_transport_method) return `${t("shipping.type.domestic")}: ${request.domestic_transport_method}`;
     if (request.transport_method) return request.transport_method;

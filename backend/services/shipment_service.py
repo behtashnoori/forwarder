@@ -20,6 +20,8 @@ from backend.models import (
 from backend.referral_engine import referral_engine
 from backend.services.location_resolver import LocationResolutionError, resolve_location
 
+from backend.services.commercial_transport_service import ShipmentValidationError, normalize_transport, project_transport
+
 INTERNATIONAL_METHOD_NAMES = ["sea freight", "air freight", "land transport", "rail transport"]
 DOMESTIC_METHOD_NAMES = ["road transport", "rail transport", "air transport"]
 PREFERENCE_OPTIONS = [
@@ -43,16 +45,6 @@ IRAN_DEST_KEYS = (
     "iran_dest_customs_office_id",
     "iran_dest_city_id",
 )
-
-
-class ShipmentValidationError(ValueError):
-    """Raised when shipment request payload validation should return a 400 response."""
-
-    def __init__(self, message: str, status_code: int = 400, code: str = "VALIDATION_FAILED"):
-        super().__init__(message)
-        self.message = message
-        self.status_code = status_code
-        self.code = code
 
 
 def get_transport_methods_payload() -> dict:
@@ -88,6 +80,7 @@ def create_shipment_request(
     payload: dict[str, Any],
     remote_addr: str | None = None,
     request_host: str | None = None,
+    *, new_contract: bool = False,
 ) -> ShipmentRequest:
     """Create and optionally auto-assign one request in one census-bound UoW."""
     from backend.census_context import census_unit_of_work
@@ -97,7 +90,7 @@ def create_shipment_request(
             from backend.services.organization_hostname_service import resolve_organization_for_host
 
             organization = resolve_organization_for_host(request_host)
-            shipment_request = _stage_shipment_request(payload, remote_addr, organization)
+            shipment_request = _stage_shipment_request(payload, remote_addr, organization, new_contract=new_contract)
             assign_request_with_referral(shipment_request)
             db.session.commit()
             return shipment_request
@@ -107,10 +100,10 @@ def create_shipment_request(
 
 
 def _stage_shipment_request(
-    payload: dict[str, Any], remote_addr: str | None = None, organization=None
+    payload: dict[str, Any], remote_addr: str | None = None, organization=None, *, new_contract=False
 ) -> ShipmentRequest:
     """Stage request creation without finalizing the caller's transaction."""
-    normalized = normalize_shipment_payload(payload)
+    normalized = normalize_shipment_payload(payload, new_contract=new_contract)
     timestamp = datetime.utcnow()
 
     organization_id = organization.id if organization is not None else None
@@ -143,8 +136,8 @@ def _stage_shipment_request(
     return shipment_request
 
 
-def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
-    """Validate and normalize the public shipment request payload without changing current behavior."""
+def normalize_shipment_payload(payload: dict[str, Any], *, new_contract=False) -> dict[str, Any]:
+    """Validate final intake under the selected server contract and legacy location scopes."""
     shipping_type = payload.get("shipping_type", "domestic")
     if shipping_type not in VALID_SHIPPING_TYPES:
         raise ShipmentValidationError("نوع ارسال نامعتبر است.")
@@ -174,27 +167,18 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
     if not is_valid_phone(contact_phone):
         raise ShipmentValidationError("شماره تماس نامعتبر است. لطفاً شماره‌ای با پیش‌شماره 09 و ۱۱ رقم وارد کنید.")
 
-    transport_method_raw = payload.get("transport_method") or payload.get("shipment_mode")
-    transport_method = None
-    if isinstance(transport_method_raw, str):
-        sanitized = transport_method_raw.strip()
-        if sanitized:
-            transport_method = sanitized.lower()
-
-    transport_method_preference = payload.get("transport_method_preference", "customer_choice")
-    if transport_method_preference not in VALID_TRANSPORT_PREFERENCES:
-        transport_method_preference = "customer_choice"
+    transport = normalize_transport(payload, new_contract=new_contract)
+    cargo = payload.get("cargo_description")
+    if not isinstance(cargo, str) or not cargo.strip():
+        raise ShipmentValidationError("شرح کالا را وارد کنید.", code="CARGO_DESCRIPTION_REQUIRED", field="cargo_description")
 
     normalized.update({
         "contact_phone": contact_phone,
         "customer_first_name": payload.get("customer_first_name", "").strip() or None,
         "customer_last_name": payload.get("customer_last_name", "").strip() or None,
         "gamification_customer_id": payload.get("gamification_customer_id"),
-        "transport_method": transport_method,
-        "international_transport_method": payload.get("international_transport_method"),
-        "domestic_transport_method": payload.get("domestic_transport_method"),
-        "transport_method_preference": transport_method_preference,
-        "cargo_description": payload.get("cargo_description", "").strip() or None,
+        **transport,
+        "cargo_description": cargo.strip(),
         "cargo_weight": parse_float_or_none(payload.get("cargo_weight")),
         "cargo_volume": parse_float_or_none(payload.get("cargo_volume")),
         "cargo_value": parse_float_or_none(payload.get("cargo_value")),
@@ -450,6 +434,7 @@ def _parse_ref_id(value):
 def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime) -> dict[str, Any]:
     """Build ShipmentRequest constructor data from a normalized payload."""
     shipment_request_data = {
+        "transport_intent": normalized["transport_intent"],
         "shipping_type": normalized["shipping_type"],
         "contact_phone": normalized["contact_phone"],
         "customer_first_name": normalized["customer_first_name"],

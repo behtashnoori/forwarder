@@ -1,0 +1,120 @@
+RUN  v4.1.10 D:/1-webapp/forwarder-dev
+
+stdout | src/tests/components/LocationFormGeography.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+stderr | src/tests/components/LocationFormGeography.test.tsx > loads Iran destination and submits stable country/location IDs through confirmation
+In HTML, <div> cannot be a child of <option>.
+This will cause a hydration error.
+
+  ...
+    <Router basename={undefined} location={{pathname:"/", ...}} navigationType="POP" navigator={{index:0, ...}} ...>
+      <LocationForm shippingType="international" onBack={function Mock}>
+        <Card className="w-full max...">
+          <div ref={null} className="rounded-lg...">
+            <CardHeader>
+            <CardContent className="space-y-6">
+              <div ref={null} className="p-6 pt-0 s...">
+                <div>
+                <div>
+                <div>
+                <div>
+                <div>
+                <div className="space-y-4">
+                  <Label>
+                  <div className="space-y-2">
+                    <Label>
+                    <Select value="customer_c..." onValueChange={function onValueChange}>
+                      <select value="customer_c..." disabled={undefined} onChange={function onChange}>
+                        <option>
+                        <SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="forwarder_...">
+>                           <option value="forwarder_suggestion" disabled={undefined}>
+>                             <div className="space-y-1 text-right">
+                  ...
+                ...
+
+<option> cannot contain a nested <div>.
+See this log for the ancestor stack trace.
+
+stdout | src/tests/components/LocationFormGeography.test.tsx > loads Iran destination and submits stable country/location IDs through confirmation
+[RequestConfirmation] formData received: {
+  originProvince: '',
+  originCounty: '',
+  originCity: '',
+  destinationProvince: '',
+  destinationCounty: '',
+  destinationCity: '',
+  originCountry: '1',
+  originCityInternational: '10',
+  originAddressInternational: '',
+  destCountry: '2',
+  destCityInternational: '20',
+  destAddressInternational: '',
+  iranDestType: 'city',
+  iranEntryPort: '',
+  iranDestCustomsOffice: '',
+  iranDestCounty: '',
+  iranDestCity: '',
+  iranEntryProvince: '',
+  phoneNumber: '09123456789',
+  customerFirstName: '',
+  customerLastName: '',
+  transportMethod: '',
+  internationalTransportMethod: '',
+  domesticTransportMethod: '',
+  transportMethodPreference: 'forwarder_suggestion',
+  cargoDescription: 'Synthetic cargo',
+  cargoWeight: '',
+  cargoVolume: '',
+  cargoValue: '',
+  specialInstructions: '',
+  pickupDate: '',
+  deliveryDate: ''
+}
+
+ ✓ src/tests/components/LocationFormGeography.test.tsx > loads Iran destination and submits stable country/location IDs through confirmation 2352ms
+stdout | src/tests/components/LocationFormGeography.test.tsx > keeps ordered repeated intent and input values through owner field errors and final submission
+[RequestConfirmation] formData received: {
+  originProvince: '1',
+  originCounty: '',
+  originCity: '',
+  destinationProvince: '2',
+  destinationCounty: '',
+  destinationCity: '',
+  originCountry: '',
+  originCityInternational: '',
+  originAddressInternational: '',
+  destCountry: '',
+  destCityInternational: '',
+  destAddressInternational: '',
+  iranDestType: 'city',
+  iranEntryPort: '',
+  iranDestCustomsOffice: '',
+  iranDestCounty: '',
+  iranDestCity: '',
+  iranEntryProvince: '',
+  phoneNumber: '09000000000',
+  customerFirstName: '',
+  customerLastName: '',
+  transportMethod: '',
+  internationalTransportMethod: '',
+  domesticTransportMethod: '',
+  transportMethodPreference: 'customer_choice',
+  cargoDescription: 'Synthetic cargo',
+  cargoWeight: '',
+  cargoVolume: '',
+  cargoValue: '',
+  specialInstructions: '',
+  pickupDate: '',
+  deliveryDate: ''
+}
+
+ ✓ src/tests/components/LocationFormGeography.test.tsx > keeps ordered repeated intent and input values through owner field errors and final submission 1966ms
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  10:57:17
+   Duration  9.47s (transform 783ms, setup 458ms, import 1.32s, tests 4.32s, environment 2.75s)

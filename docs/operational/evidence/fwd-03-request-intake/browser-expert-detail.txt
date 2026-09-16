@@ -1,0 +1,89 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- generic: در انتظار بررسی
+- heading "SR-ERZ7D7" [level=1]
+- paragraph: جزئیات درخواست حمل و نقل
+- button "بازگشت به کنسول":
+  - text: بازگشت به کنسول
+- link "خانه":
+  - /url: /
+  - text: خانه
+- button "خروج":
+  - text: خروج
+- region "اطلاعات سامانه":
+  - paragraph: Forwarder 1.9.5.1
+- heading "محموله‌های عملیاتی این درخواست" [level=3]
+- paragraph: هنوز محموله عملیاتی از این درخواست ایجاد نشده است.
+- tablist:
+  - tab "جزئیات" [selected]
+  - tab "یادداشت‌ها"
+  - tab "مدیریت رهگیری محموله"
+  - tab "مستندات پرونده"
+- tabpanel "جزئیات":
+  - main:
+    - heading "اطلاعات مشتری" [level=3]:
+      - text: اطلاعات مشتری
+    - text: نام مشتری
+    - paragraph: نامشخص
+    - text: شماره تماس
+    - paragraph: "09000000000"
+    - heading "مسیر حمل" [level=3]:
+      - text: مسیر حمل
+    - heading "مبدا" [level=3]
+    - generic: استان
+    - generic: تهران
+    - generic: شهرستان
+    - generic: نامشخص
+    - generic: شهر
+    - generic: نامشخص
+    - heading "مقصد" [level=3]
+    - generic: استان
+    - generic: اصفهان
+    - generic: شهرستان
+    - generic: نامشخص
+    - generic: شهر
+    - generic: نامشخص
+    - paragraph: روش حمل
+    - paragraph: جاده‌ای ← دریایی ← جاده‌ای
+    - heading "اطلاعات کالا" [level=3]:
+      - text: اطلاعات کالا
+    - paragraph: توضیحات
+    - paragraph: کالای آزمایشی FWD03
+    - text: وزن
+    - paragraph: ثبت نشده
+    - text: حجم
+    - paragraph: ثبت نشده
+    - text: ارزش
+    - paragraph: ثبت نشده
+    - paragraph: دستورالعمل‌های ویژه
+    - paragraph: ثبت نشده
+    - heading "پیشنهاد قیمت" [level=3]:
+      - text: پیشنهاد قیمت
+    - button "ثبت قیمت":
+      - text: ثبت قیمت
+    - paragraph: هنوز قیمتی برای این درخواست ثبت نشده است
+  - complementary:
+    - heading "لینک مشتری CRM" [level=3]:
+      - text: لینک مشتری CRM
+    - generic: دسترسی لینک CRM برای نقش فعلی فعال نیست.
+    - heading "عملیات" [level=3]:
+      - text: عملیات
+    - paragraph: وضعیت را فقط زمانی تغییر دهید که مرحله عملیاتی درخواست واقعاً تغییر کرده باشد.
+    - combobox:
+      - generic: تغییر وضعیت
+    - heading "تایم‌لاین" [level=3]:
+      - text: تایم‌لاین
+    - generic: تخصیص
+    - generic: ثبت شده ← در انتظار بررسی
+    - paragraph: ارجاع خودکار (round_robin)
+    - generic: ۱۴۰۵/۶/۲۵
+    - generic: •
+    - generic: کارشناس آزمایشی FWD03
+    - heading "اطلاعات درخواست" [level=3]
+    - generic: شماره رهگیری
+    - generic: SR-ERZ7D7
+    - generic: تاریخ ثبت
+    - generic: ۱۴۰۵/۶/۲۵
+    - generic: مسئول
+    - generic: کارشناس آزمایشی FWD03

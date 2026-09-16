@@ -201,7 +201,7 @@ def _payload(app, **changes):
     ids = app.config["geo"]
     payload = {
         "shipping_type": "international",
-        "contact_phone": "09123456789",
+        "contact_phone": "09123456789", "cargo_description": "Synthetic cargo",
         "origin_country_id": ids["DE"],
         "origin_international_city_id": ids["hamburg"],
         "dest_country_id": ids["IR"],
@@ -292,7 +292,7 @@ def test_iran_origin_requires_province_and_rejects_lower_mismatch(app):
             **base,
             "origin_province_id": ids["province"],
             "origin_location": {"type": "city", "id": ids["duplicate_city"]},
-            "contact_phone": "09123456788",
+            "contact_phone": "09123456788", "cargo_description": "Synthetic cargo",
         },
     )
     assert (
@@ -304,7 +304,7 @@ def test_iran_origin_requires_province_and_rejects_lower_mismatch(app):
         json={
             **_payload(app),
             "iran_entry_province_id": ids["province"],
-            "contact_phone": "09123456787",
+            "contact_phone": "09123456787", "cargo_description": "Synthetic cargo",
         },
     )
     assert (

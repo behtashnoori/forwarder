@@ -1,0 +1,11 @@
+> vite_react_shadcn_ts@1.9.5.1 test:frontend
+> vitest run --maxWorkers=2
+
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev
+
+
+ Test Files  37 passed (37)
+      Tests  171 passed (171)
+   Start at  11:16:35
+   Duration  37.67s (transform 1.44s, setup 6.43s, import 4.80s, tests 19.52s, environment 35.95s)

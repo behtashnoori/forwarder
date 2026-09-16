@@ -95,6 +95,12 @@ export interface TransportMethodOptions {
   }[];
 }
 
+export interface TransportIntent { version: 1; steps: { mode: string }[] }
+export interface TransportIntentOption { mode: string; label: string; catalog_ids: number[] }
+export interface TransportSummary { display: string; classification: string | null; legacy_display_limited: boolean; steps: {mode: string; label: string}[] }
+export const fetchTransportIntentOptions = () => request<{items: TransportIntentOption[]}>("/api/v2/transport-intent-options");
+export const prepareShipmentRequest = (payload: ShipmentRequestPayload) => request<{transport_summary: TransportSummary}>("/api/v2/shipment-request/prepare", {method: "POST", body: JSON.stringify(payload)});
+
 export interface ShipmentRequestPayload {
   shipping_type: "domestic" | "international";
   // Existing governed backend contract; retain IDs through save/reopen.
@@ -129,6 +135,8 @@ export interface ShipmentRequestPayload {
   // Customer details (optional)
   customer_first_name?: string;
   customer_last_name?: string;
+  transport_intent?: TransportIntent | null;
+  transport_classification?: string;
   transport_method?: string; // Legacy field
   international_transport_method?: string;
   domestic_transport_method?: string;
@@ -300,7 +308,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
           response.status,
           body.error.code || "API_ERROR",
           body.error.message,
-          body.error.fields || [],
+          body.error.fields || Object.keys(body.field_errors || {}),
           body.error.details,
         );
       } else if (body && typeof body.message === "string") {
@@ -382,7 +390,7 @@ export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
 ): Promise<{ message: string; id: number; tracking_code: string }> {
   return request<{ message: string; id: number; tracking_code: string }>(
-    "/api/shipment-request",
+    "/api/v2/shipment-request",
     {
       method: "POST",
       body: JSON.stringify(payload),
@@ -809,6 +817,7 @@ export interface PublicTrackingData {
       address?: string;
     };
   };
+  transport_summary?: TransportSummary;
   transport_method?: string;
   domestic_transport_method?: string;
   international_transport_method?: string;
@@ -1191,6 +1200,7 @@ export interface ExpertRequest {
       province?: string | null;
     } | null;
   };
+  transport_summary?: TransportSummary;
   transport_method?: string;
   cargo: {
     description?: string;
@@ -1231,6 +1241,7 @@ export interface ExpertNotification {
 
 export interface KPIs {
   counts: {
+    total_visible?: number;
     new: number;
     in_progress: number;
     waiting_for_customer: number;
@@ -2175,10 +2186,10 @@ export function fetchNotifications(
   return request(path);
 }
 
-export function fetchKPIs(expertId?: number): Promise<KPIs> {
+export function fetchKPIs(expertId?: number, search?: string): Promise<KPIs> {
   const path = withQuery(
     "/api/expert/dashboard/kpis",
-    expertId ? { expert_id: expertId } : undefined,
+    { expert_id: expertId, search },
   );
   return request(path);
 }

@@ -1,0 +1,62 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- main:
+  - button "بازگشت":
+    - text: بازگشت
+  - button "صفحه اصلی":
+    - text: صفحه اصلی
+  - generic: در انتظار بررسی
+  - generic: داخلی
+  - generic: "وضعیت فعلی: در انتظار بررسی"
+  - heading "SR-ERZ7D7" [level=1]
+  - paragraph: آخرین وضعیت ثبت‌شده برای درخواست شما در این صفحه نمایش داده می‌شود. برای اطلاع از وضعیت جدیدتر، همین کد پیگیری را دوباره در بخش پیگیری درخواست وارد کنید.
+  - paragraph: تاریخ ثبت
+  - generic: ۲۵ شهریور ۱۴۰۵
+  - paragraph: تاریخ اختصاص کارشناس
+  - generic: ۲۵ شهریور ۱۴۰۵ ساعت ۱۰:۵۲
+  - paragraph: شماره رهگیری
+  - paragraph: SR-ERZ7D7
+  - paragraph: وضعیت فعلی
+  - generic: در انتظار بررسی
+  - paragraph: روش حمل
+  - paragraph: جاده‌ای ← دریایی ← جاده‌ای
+  - heading "اطلاعات درخواست" [level=2]
+  - paragraph: تاریخ ثبت
+  - generic: ۱۴۰۵/۶/۲۵
+  - paragraph: نوع ارسال
+  - generic: داخلی
+  - heading "مسیر ارسال" [level=2]
+  - generic: مبدا
+  - paragraph: تهران
+  - generic: مقصد
+  - paragraph: اصفهان
+  - generic: "روش حمل:"
+  - generic: جاده‌ای ← دریایی ← جاده‌ای
+  - heading "اطلاعات تماس" [level=2]
+  - paragraph: شماره تماس
+  - text: "09000000000"
+  - heading "جزئیات مرسوله" [level=2]
+  - paragraph: توضیحات
+  - generic: کالای آزمایشی FWD03
+  - complementary:
+    - heading "کارشناس مربوطه" [level=2]
+    - paragraph: کارشناس
+    - generic: کارشناس آزمایشی FWD03
+    - paragraph: تاریخ اختصاص کارشناس
+    - generic: ۲۵ شهریور ۱۴۰۵، ۱۰:۵۲
+    - paragraph: شماره تماس
+    - link:
+      - /url: "tel:"
+    - heading "مراحل گردش کار" [level=2]
+    - generic: "وضعیت فعلی: در انتظار بررسی"
+    - paragraph: ارسال درخواست
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: اختصاص کارشناس
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: در حال پیگیری
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: پذیرش / عدم پذیرش
+    - paragraph: در انتظار
+    - button "درخواست جدید":
+      - text: درخواست جدید

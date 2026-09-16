@@ -2,6 +2,7 @@
 from datetime import datetime, timedelta
 from typing import Any, Optional
 
+from backend.services.commercial_transport_service import project_transport
 from backend.extensions import db
 from backend.models import (
     ExpertConsoleLog,
@@ -73,6 +74,7 @@ def build_request_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
         "assigned_to": build_assignment_detail_payload(req),
         "customer": build_customer_detail_payload(req),
         "route": build_route_detail_payload(req),
+        **project_transport(req),
         "transport_method": req.transport_method,
         "cargo": build_cargo_detail_payload(req),
         "dates": build_dates_detail_payload(req),

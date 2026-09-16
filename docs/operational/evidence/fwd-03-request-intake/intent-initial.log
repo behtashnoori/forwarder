@@ -1,0 +1,49 @@
+....................F                                                    [100%]
+================================== FAILURES ===================================
+_ test_authorized_reads_revoke_count_filters_and_legacy_status_preserve_intent _
+
+app = <Flask 'backend'>
+
+    def test_authorized_reads_revoke_count_filters_and_legacy_status_preserve_intent(app):
+        ids = seed()
+        row = db.session.get(ShipmentRequest, ids['request'])
+        row.status = 'new'; row.cargo_description = 'needle'; row.transport_intent = payload()['transport_intent']
+        db.session.commit()
+        actor = {'id': ids['actor'], 'role': 'expert'}
+        expected = deepcopy(row.transport_intent)
+        detail = get_expert_request_detail(row.id, actor)
+        assert detail['transport_summary'] == project_transport(row)['transport_summary']
+        with pytest.raises(RequestDetailAccessError):
+            get_expert_request_detail(row.id, {'id': ids['foreign'], 'role': 'expert'})
+        token = security.generate_token(ids['actor'])
+        headers = {'Authorization': 'Bearer ' + token}
+        client = app.test_client()
+        for search, expected_count in [('needle', 1), ('absent', 0)]:
+            listing = client.get('/api/expert/requests?status=new&search=' + search, headers=headers)
+            counter = client.get('/api/expert/dashboard/kpis?search=' + search, headers=headers)
+>           assert listing.status_code == counter.status_code == 200
+E           assert 401 == 200
+E            +  where 401 = <WrapperTestResponse streamed [401 UNAUTHORIZED]>.status_code
+
+backend\tests\test_fwd03_transport_intent.py:145: AssertionError
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+=========================== short test summary info ===========================
+FAILED backend/tests/test_fwd03_transport_intent.py::test_authorized_reads_revoke_count_filters_and_legacy_status_preserve_intent
+1 failed, 20 passed, 143 warnings in 14.39s

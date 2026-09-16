@@ -230,3 +230,39 @@ real provider, Production activation or new customer journey is authorized.
 
 See [ADR-045](../operational/adr/ADR-045-notification-action-foundation.md) for
 ownership, dispatch ordering, compatibility, migration and recovery contracts.
+
+## 16. Commercial request transport intent (ADR-046, bounded FWD-03)
+
+`ShipmentRequest.transport_intent` is a nullable versioned JSON value owned by
+Commercial. Version 1 stores ordered `steps` containing road/rail/air/sea modes;
+repetition, including adjacent repetition, is meaningful and retained. One
+distinct mode is single-mode; two or more is combined. This preliminary customer
+wish creates no RouteLeg, execution plan, feasibility approval or service promise.
+
+The public v2 request endpoint uses server-selected validation: customer_choice
+requires nonempty intent; forwarder_suggestion may remain null. The legacy endpoint
+retains scalar compatibility without inferring order across historical scopes.
+Both final-create paths reject blank cargo. The read-only prepare endpoint uses
+the same Commercial normalization/projection and grants no submission authority;
+submission repeats validation and trusted-host tenant resolution. Body organization
+IDs do not convey ownership. Existing tracking capability is unchanged and does
+not become authenticated customer ownership.
+
+Commercial's shared projection is used by customer tracking, expert list/detail
+and admin reads. Intent takes precedence; scoped legacy values remain readable.
+Combined intent is never synthesized into a scalar, and the response explicitly
+marks its display limitation for old clients. Known catalog aliases produce one
+new selectable mode with retained catalog IDs. Unknown historical strings are
+displayed verbatim; unknown catalog semantics are not inferred.
+
+There is no request cargo/transport editor in this baseline. Narrow existing
+mutations preserve intent; attempted transport changes through the status endpoint
+are rejected explicitly. No new edit authority/state transition is granted.
+Expert KPI counts use the list's assigned-work scope and common non-status filters.
+
+Additive revision `20260916_fwd03_transport_intent` follows the verified sole head
+`20260916_fwd01_notifications`. No backfill, startup migration or catalog import is
+introduced. PostgreSQL downgrade locks the request table and refuses before DDL
+when any non-null intent exists. Application rollback retains schema and intent.
+Mother LPAF reference impact: NONE; global v2.2 and limited v2.4 pilot status stay
+unchanged. See ADR-046 and its FWD-03 evidence for compatibility and qualification.

@@ -1,0 +1,52 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- button "بازگشت":
+  - text: بازگشت
+- link "خانه":
+  - /url: /
+  - text: خانه
+- button "خروج":
+  - text: خروج
+- region "اطلاعات سامانه":
+  - paragraph: Forwarder 1.9.5.1
+- heading "کنسول کارشناس" [level=1]
+- paragraph: مدیریت حرفه‌ای درخواست‌های حمل و نقل
+- button "به‌روزرسانی":
+  - text: به‌روزرسانی
+- button "کارشناس آزمایشی FWD03":
+  - text: کارشناس آزمایشی FWD03
+- paragraph: خلاصه وضعیت درخواست‌ها
+- heading "نمای عملیاتی امروز" [level=2]
+- paragraph: کل درخواست‌های قابل مشاهده
+- paragraph: "1"
+- generic: درخواست‌های جدید
+- paragraph: "0"
+- generic: در حال پیگیری
+- paragraph: "0"
+- generic: در انتظار مشتری
+- paragraph: "0"
+- generic: مختومه امروز
+- paragraph: "0"
+- text: جستجو و فیلتر درخواست‌ها
+- textbox "جستجو در کد، مشتری یا مسیر..."
+- combobox:
+  - generic: وضعیت
+- button "پاک کردن فیلترها"
+- tablist:
+  - tab "همه"
+  - tab "ثبت شده" [selected]
+  - tab "در انتظار بررسی"
+  - tab "در حال پیگیری"
+  - tab "در انتظار مشتری"
+  - tab "تکمیل شده"
+- tabpanel "ثبت شده":
+  - heading "درخواست‌های حمل" [level=2]
+  - paragraph: نمایش 0 درخواست در فهرست فعلی
+  - generic: "مرتب‌سازی: جدیدترین درخواست‌ها"
+  - paragraph: درخواستی یافت نشد
+  - paragraph: فیلترها را تغییر دهید یا فهرست را به‌روزرسانی کنید.
+  - generic: نمایش 0 مورد از صفحه فعلی
+  - button "قبلی" [disabled]
+  - generic: صفحه ۱
+  - button "بعدی" [disabled]
