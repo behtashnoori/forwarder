@@ -147,3 +147,7 @@ ADR-048 is now ACCEPTED_FOR_BOUNDED_FWD06 by explicit Owner acceptance of propos
 ## FWD-07 bounded request-document continuation — 2026-09-16
 
 FWD-07 reuses the accepted request-document ownership and existing `CaseDocumentRequirement` to `CaseDocumentFile` cardinality. It does not activate proposed ADR-020, extend the FWD-06-only ADR-048 permission, or introduce canonical/cross-scope attachment ownership. The Owner-provided bounded deferral of the missing 28-AI-Rules reference continues only for local FWD-07 development and qualification: `REFERENCE_MAPPING=NOT_PROVEN`; review is required at FWD-07 end or before actual release. This is not a mapping, security waiver, or production authorization. See [FWD-07 evidence](evidence/fwd-07-document-attachments/README.md).
+
+## FWD-07 recovery proposal — 2026-09-16
+
+[ADR-049](adr/ADR-049-request-document-upload-operation-recovery.md): PROPOSED — OWNER ACCEPTANCE REQUIRED; NO RECOVERY IMPLEMENTATION AUTHORITY. Linked successor to preserved original proposal; no Accepted record superseded, no runtime/schema implementation.
