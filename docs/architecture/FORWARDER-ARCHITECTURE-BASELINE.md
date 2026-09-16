@@ -304,3 +304,29 @@ Mother LPAF impact NONE: v2.2 globally ACTIVE, v2.4 OWNER_APPROVED /
 PILOT_ADOPTION_ALLOWED / NOT_GLOBAL_ACTIVE; mother unchanged. Project impact
 UPDATE_REQUIRED: reconciled ADR/PDR and indexes/baseline updated here. Protected
 runtime, migration, PostgreSQL, Browser UAT and regression remain unqualified.
+
+## 18. FWD-06 pre-build tracking decision checkpoint (2026-09-16)
+
+The current RequestDetail intake targets the compatibility chain
+ShipmentRequest/ShipmentTracking/ShipmentTransportUnit/ShipmentTransportUnitUpdate,
+not canonical ExecutionUnit/OperationalEvent. Its operator-entered unit_code is
+not the canonical system-generated U-code. Current canonical owners and the
+ADR-040 public cohort/lineage gates are unchanged.
+
+[ADR-048](../operational/adr/ADR-048-bounded-legacy-tracking-timeline.md) is PROPOSED,
+not Accepted: it requests bounded legacy feature authority, internal timeline,
+explicit recorded-time customer allowlist and governed command receipt reuse.
+No proposed runtime change is implemented. Ordinary existing label/validation/
+error fixes do not themselves require a parallel ADR; this pending gate concerns
+the additional legacy capability, receipt contract and public visibility scope.
+
+The explicit FWD-06 mission continues the missing-reference deferral only for
+local FWD-06 development/qualification. See the new
+[disposition](../operational/evidence/fwd-06-tracking-timeline/REFERENCE-28-DISPOSITION.md).
+The exact path28 is unavailable; mapping NOT_PROVEN. This neither rewrites the
+FWD-05 record nor waives this independent architecture gate. Review remains due
+at FWD-06 end or before actual release, whichever earlier.
+
+Mother LPAF unchanged: v2.2 GLOBAL_ACTIVE; v2.4 limited owner-approved pilot only,
+expected current SHA256/re-attestation verified. Engineering/Product completion
+and FWD-06 runtime/UAT gates are NOT_COMPLETE, not inherited from FWD-05 PASS.

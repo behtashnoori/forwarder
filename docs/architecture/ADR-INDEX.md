@@ -74,6 +74,12 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | --- | --- | --- | --- | --- |
 | [047](../operational/adr/ADR-047-governed-quote-customer-response.md) | Governed quote currency, revision and customer response | ACCEPTED | Commercial / customer action / notification | Explicit amended Owner acceptance 2026-09-16; FWD-05 only; qualification pending |
 
+## FWD-06 pending decision
+
+| ADR | Title | Status | Domain | Implementation authority |
+| --- | --- | --- | --- | --- |
+| [048](../operational/adr/ADR-048-bounded-legacy-tracking-timeline.md) | Bounded legacy tracking timeline | PROPOSED | Compatibility tracking / presentation / visibility / receipts | NONE; explicit Owner acceptance required before proposed Build |
+
 ## Usage rules
 
 1. Read this index and the baseline before design or implementation.

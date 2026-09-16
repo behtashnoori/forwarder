@@ -125,3 +125,15 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 
 FWD-05: PDR-019 and ADR-047 ACCEPTED_AS_EXPLICITLY_AMENDED by explicit Owner
 continuation 2026-09-16; bounded development/qualification only, not product PASS.
+
+## FWD-06 pre-build mission decisions — 2026-09-16
+
+- ADR-048 [bounded legacy tracking timeline](adr/ADR-048-bounded-legacy-tracking-timeline.md):
+  PROPOSED, not accepted. No new legacy feature/visibility/receipt implementation
+  authority. Ordinary fixes within existing contracts need no parallel ADR.
+- Owner-authorized continuation of the exact missing-reference access deferral
+  only for FWD-06 local development/qualification:
+  [disposition](evidence/fwd-06-tracking-timeline/REFERENCE-28-DISPOSITION.md).
+  REFERENCE_MAPPING=NOT_PROVEN; review at FWD-06 end/before actual release;
+  no unread-rule compliance, independent MUST waiver or Production permission.
+- FWD-05 history unchanged. FWD-06 full mission qualification pending, not PASS.
