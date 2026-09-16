@@ -1,1 +1,5 @@
 backend/reference_data/international-geography-v2-fwd02.json text eol=lf
+
+# Preserve ADR-048 accepted/proposed byte identities across Windows checkouts.
+docs/operational/adr/ADR-048-bounded-legacy-tracking-timeline.md text eol=lf
+docs/operational/evidence/fwd-06-tracking-timeline/ADR-048-PROPOSED.md text eol=lf

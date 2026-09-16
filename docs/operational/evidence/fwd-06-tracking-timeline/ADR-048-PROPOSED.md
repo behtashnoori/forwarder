@@ -1,6 +1,6 @@
 # ADR-048: رهگیری سازگاری و Timeline محدود FWD-06
 
-- Status: ACCEPTED — ACCEPTED_FOR_BOUNDED_FWD06; explicit Owner acceptance; local development and qualification only
+- Status: PROPOSED — فاقد اختیار پیاده‌سازی تا پذیرش صریح Owner
 - Date: 2026-09-16 (Asia/Tehran)
 - Owners: نقش‌های Architecture / Operations / Product / Security / Data؛ شخصی تعیین نشده است.
 - Affected domain: legacy tracking، Presentation، customer visibility و command receipts
@@ -161,14 +161,3 @@ static/architecture/secret gates و commit/push/fetched-ref verification لاز�
 - Superseded by: none.
 - 2026-09-16: PROPOSED — legacy feature authorization، receipt و public visibility
   پیش از Build نیازمند تصمیم صریح هستند. Owner acceptance: NOT_RECEIVED.
-
-## Bounded acceptance — 2026-09-16 (Asia/Tehran)
-
-Explicit Owner continuation accepted the unchanged eight-point decision for FWD-06 only. No human name or title was supplied. Acceptance is not implementation verification, canonical designation, ownership transfer, cutover, dual write, historical migration, Production, GPS, map, provider or real Agent authority.
-
-- Accepted proposal SHA256: `A3FFFEAA2C364B5073410B67ACD1943DC22139CB1895809F9E2F4A5956875FD3`.
-- Exact proposed bytes preserved in [proposal history](../evidence/fwd-06-tracking-timeline/ADR-048-PROPOSED.md).
-- Review due at FWD-06 end or before real release, whichever earlier. Further mission authority is not automatically extended. End of authority does not delete data or automatically disable the delivered capability.
-- Implementation and qualification: pending; prior BLOCKED checkpoint remains historical evidence.
-
-- 2026-09-16: ACCEPTED_FOR_BOUNDED_FWD06 — explicit Owner acceptance bound to the exact preserved proposal hash above; no additional decision accepted.

@@ -78,7 +78,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 
 | ADR | Title | Status | Domain | Implementation authority |
 | --- | --- | --- | --- | --- |
-| [048](../operational/adr/ADR-048-bounded-legacy-tracking-timeline.md) | Bounded legacy tracking timeline | PROPOSED | Compatibility tracking / presentation / visibility / receipts | NONE; explicit Owner acceptance required before proposed Build |
+| [048](../operational/adr/ADR-048-bounded-legacy-tracking-timeline.md) | Bounded legacy tracking timeline | ACCEPTED | Compatibility tracking / presentation / visibility / receipts | Owner accepted unchanged proposal; local development/qualification only |
 
 ## Usage rules
 
@@ -87,3 +87,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 3. Proposed ADRs are constraints and context only; they do not authorize implementation.
 4. A later ADR supersedes an earlier one only when it explicitly names it and reconciles compatibility, migration, security, rollback, and validation.
 5. If an ADR body and this index disagree, stop and resolve the governance conflict before implementation.
+
+## FWD-06 bounded acceptance continuation — 2026-09-16
+
+ADR-048 is now ACCEPTED_FOR_BOUNDED_FWD06 by explicit Owner acceptance of proposal SHA256 A3FFFEAA2C364B5073410B67ACD1943DC22139CB1895809F9E2F4A5956875FD3. Earlier PROPOSED/pre-build entries above are historical checkpoints. The unchanged eight-point decision authorizes only the bounded compatibility tracking slice and local qualification. Implementation PASS remains pending. Current owner: multi_unit_tracking_service; subject: ShipmentTransportUnit; permitted contracts: existing assigned expert read/write, public visible snapshot allowlist plus recorded times, limited OperationalIdempotency command receipts. Canonical ownership/cutover, schema/history migration, correction, real release and Production are excluded. Review at FWD-06 end/before actual release; no next-mission extension. Future canonical lineage/cohort migration remains a dependency. Mother LPAF impact NONE; project contract impact UPDATE_REQUIRED within this slice. Reference28 mapping NOT_PROVEN; existing bounded deferral retained without security waiver.
