@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { formatLocalDate } from "@/lib/localDate";
+import { formatDualCalendarInstant, formatInstant, formatMoney, formatQuantity } from "@/lib/presentation";
 
 const showLatestQuoteCard: boolean = false;
 
@@ -51,15 +52,8 @@ const getStatusBadge = (status: string): StatusInfo => {
   return statusMap[status] || { variant: "secondary", color: "bg-gray-100 text-gray-800" };
 };
 
-const formatDate = (
-  value?: string | null,
-  options?: Intl.DateTimeFormatOptions,
-  fallback = "—",
-  locale = "fa-IR",
-) => {
-  if (!value) return fallback;
-  return new Intl.DateTimeFormat(locale, options).format(new Date(value));
-};
+const formatDate = (value?: string | null, options?: Intl.DateTimeFormatOptions, fallback = "—", locale = "fa-IR") =>
+  formatInstant(value, locale, options, fallback);
 
 const getLocationDisplay = (
   location: PublicTrackingData["route"]["origin"],
@@ -267,21 +261,11 @@ const PublicTracking: React.FC = () => {
               <div className="grid gap-3 text-sm sm:grid-cols-2 lg:min-w-[360px]">
                 <Field
                   label={t("common.createdAt")}
-                  value={formatDate(requestData.created_at, {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  }, "—", locale)}
+                  value={formatDualCalendarInstant(requestData.created_at).primary}
                 />
                 <Field
                   label={t("publicTracking.assignedAt")}
-                  value={formatDate(requestData.assigned_at, {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }, "—", locale)}
+                  value={requestData.assigned_at ? <><span>{formatDualCalendarInstant(requestData.assigned_at).primary}</span><span className="block text-xs font-normal text-muted-foreground" dir="ltr">{formatDualCalendarInstant(requestData.assigned_at).secondary} · Asia/Tehran</span></> : "—"}
                 />
               </div>
             </div>
@@ -312,7 +296,7 @@ const PublicTracking: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label={t("common.amount")}
-                value={`${requestData.latest_quote.amount?.toLocaleString(locale)} ${requestData.latest_quote.currency}`}
+                value={formatMoney(requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
               />
               {requestData.latest_quote.valid_until && (
                 <Field
@@ -343,14 +327,14 @@ const PublicTracking: React.FC = () => {
           <Section icon={Truck} title={t("multiTracking.customerTitle")} className="mb-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label={t("multiTracking.aggregateStatus")} value={t(`multiTracking.status.${unitTracking.aggregate_status}`)} />
-              <Field label={t("multiTracking.unitCount")} value={unitTracking.summary.total_units.toLocaleString(locale)} />
-              <Field label={t("multiTracking.deliveredCount")} value={unitTracking.summary.delivered.toLocaleString(locale)} />
+              <Field label={t("multiTracking.unitCount")} value={formatQuantity(unitTracking.summary.total_units, locale)} />
+              <Field label={t("multiTracking.deliveredCount")} value={formatQuantity(unitTracking.summary.delivered, locale)} />
               <Field label={t("multiTracking.latestUpdate")} value={formatDate(unitTracking.last_updated_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
             </div>
             <div className="mt-5">
               <div className="mb-2 flex items-center justify-between text-sm font-medium">
                 <span>{t("multiTracking.overallProgress")}</span>
-                <span>{unitTracking.progress_percent.toLocaleString(locale)}%</span>
+                <span>{formatQuantity(unitTracking.progress_percent, locale)}%</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={unitTracking.progress_percent} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${unitTracking.progress_percent}%` }} />

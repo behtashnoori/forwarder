@@ -131,7 +131,6 @@ def build_workflow_steps_simple_4(req, assigned_at=None):
     assigned_at_iso = (
         assigned_at.isoformat() if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
     )
-    step2_at = assigned_at_iso if assigned_at_iso else created_iso
 
     steps = []
     # Step 1: request_submitted — always completed at created_at
@@ -142,13 +141,15 @@ def build_workflow_steps_simple_4(req, assigned_at=None):
         "is_completed": True,
         "completed_at": created_iso,
     })
-    # Step 2: expert_assigned — always completed at assigned_at or created_at
+    # Step 2 is an assignment fact, not a surrogate for request creation.  Older
+    # rows without an assignment record stay visibly unresolved rather than
+    # acquiring a fabricated timestamp.
     steps.append({
         "name": WORKFLOW_STEP_DEFS_SIMPLE_4[1]["name"],
         "order": WORKFLOW_STEP_DEFS_SIMPLE_4[1]["order"],
         "title": WORKFLOW_STEP_DEFS_SIMPLE_4[1]["title"],
-        "is_completed": True,
-        "completed_at": step2_at,
+        "is_completed": bool(assigned_at_iso),
+        "completed_at": assigned_at_iso,
     })
     # Step 3: in_progress — always completed at created_at (simplified UX)
     steps.append({

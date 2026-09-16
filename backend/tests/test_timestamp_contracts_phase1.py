@@ -41,6 +41,15 @@ def test_timeline_assignment_timestamp_remains_outside_legacy_helper(monkeypatch
     assert steps[1]["completed_at"] == "2026-07-25T20:02:03"
 
 
+def test_timeline_does_not_substitute_request_creation_for_assignment(monkeypatch):
+    request_row = SimpleNamespace(id=1, status="new", created_at=datetime(2026, 7, 25, 19, 1, 58))
+    monkeypatch.setattr("backend.services.timeline_service.get_assigned_at", lambda _req: None)
+    monkeypatch.setattr("backend.services.timeline_service.get_final_decision_from_logs", lambda _id: None)
+    assignment = build_workflow_steps_simple_4(request_row, assigned_at=None)[1]
+    assert assignment["is_completed"] is False
+    assert assignment["completed_at"] is None
+
+
 def test_ephemeral_timestamp_is_explicit_parseable_utc():
     value = current_utc_timestamp()
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))

@@ -85,7 +85,8 @@ def test_workflow_steps_simple_4_in_progress(app_with_tables):
     assert len(steps) == 4
     assert steps[0]["is_completed"] is True
     assert steps[0]["name"] == "request_submitted"
-    assert steps[1]["is_completed"] is True
+    assert steps[1]["is_completed"] is False
+    assert steps[1]["completed_at"] is None
     assert steps[2]["is_completed"] is True
     assert steps[3]["is_completed"] is False
     assert steps[3]["title"] == "پذیرش / عدم پذیرش"

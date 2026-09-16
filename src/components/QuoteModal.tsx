@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { submitQuote, type SubmitQuotePayload } from "@/lib/api";
+import { formatQuantity, parseQuantityInput } from "@/lib/presentation";
 
 interface QuoteModalProps {
   open: boolean;
@@ -36,15 +37,17 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const amountNum = amount.trim() ? Number(amount.replace(/,/g, "")) : NaN;
-    if (!Number.isFinite(amountNum) || amountNum < 0) {
+    const parsedAmount = parseQuantityInput(amount);
+    // The existing API/DB quote contract is an integer amount. Do not round a
+    // decimal entered by the user into a different commercial value.
+    if (!parsedAmount || !/^\d+$/.test(parsedAmount.canonical)) {
       setError("مبلغ را به عدد وارد کنید");
       return;
     }
     setLoading(true);
     try {
       const payload: SubmitQuotePayload = {
-        amount: Math.round(amountNum),
+        amount: parsedAmount.canonical,
         currency: currency || "IRR",
         note: note.trim() || undefined,
         valid_until: validUntil.trim() || undefined,
@@ -85,9 +88,13 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
               id="quote-amount"
               type="text"
               inputMode="numeric"
-              placeholder="مثال: 1500000"
+              placeholder="مثال: 1,500,000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
+              onBlur={() => {
+                const parsed = parseQuantityInput(amount);
+                if (parsed && /^\d+$/.test(parsed.canonical)) setAmount(formatQuantity(parsed.canonical, "en-US"));
+              }}
               disabled={loading}
             />
           </div>

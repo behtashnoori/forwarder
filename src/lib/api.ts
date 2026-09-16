@@ -1382,7 +1382,7 @@ export const addTrackingUnitUpdate = (
   );
 
 export interface SubmitQuotePayload {
-  amount: number;
+  amount: number | string;
   currency?: string;
   note?: string;
   valid_until?: string;

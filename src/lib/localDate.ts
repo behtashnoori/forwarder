@@ -19,9 +19,9 @@ export function formatLocalDate(value: string | null | undefined, locale: string
   const parts = parseLocalDate(value);
   if (!parts) return fallback;
   // Local calendar fields only; the API value is never parsed or serialized as an instant.
-  const calendarValue = new Date(parts.year, parts.month - 1, parts.day, 12);
+  const calendarValue = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12));
   return new Intl.DateTimeFormat(locale, {
-    year: "numeric", month: "short", day: "numeric",
+    year: "numeric", month: "short", day: "numeric", timeZone: "UTC",
   }).format(calendarValue);
 }
 

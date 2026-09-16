@@ -174,10 +174,16 @@ def normalize_quote_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
     if amount is None:
         raise QuoteValidationError("مبلغ الزامی است")
+    # Quote amounts are canonically integral in the existing API/DB contract.
+    # Reject fractional values instead of truncating them with int().
+    if isinstance(amount, bool) or (isinstance(amount, float) and not amount.is_integer()):
+        raise QuoteValidationError("مبلغ باید عدد صحیح باشد")
     try:
         amount_int = int(amount)
     except (TypeError, ValueError):
         raise QuoteValidationError("مبلغ باید عدد باشد") from None
+    if isinstance(amount, str) and not amount.strip().lstrip("+-").isdigit():
+        raise QuoteValidationError("مبلغ باید عدد صحیح باشد")
     if amount_int < 0:
         raise QuoteValidationError("مبلغ نامعتبر است")
 

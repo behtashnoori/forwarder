@@ -65,6 +65,7 @@ import {
 import { useI18n } from "@/i18n";
 import { localDateTimeInputToUtc, toLocalDateTimeInputValue } from "@/lib/localDateTime";
 import { formatLocalDate } from "@/lib/localDate";
+import { formatMoney as formatCurrency } from "@/lib/presentation";
 
 interface RequestDetail {
   id: number;
@@ -779,7 +780,7 @@ const RequestDetail = () => {
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-xs text-slate-500">{t("common.amount")}</span>
                             <span className="text-lg font-bold text-slate-900">
-                              {request.latest_quote.amount?.toLocaleString(locale)} {request.latest_quote.currency}
+                              {formatCurrency(request.latest_quote.amount, request.latest_quote.currency, locale)}
                             </span>
                           </div>
                           {request.latest_quote.valid_until && (
