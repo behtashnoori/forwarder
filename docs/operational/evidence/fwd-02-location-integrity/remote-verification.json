@@ -1,0 +1,14 @@
+{
+  "verified_at_utc": "2026-09-16T06:36:41.942564+00:00",
+  "scope": "implementation commit after push and fresh fetch",
+  "branch": "feature/fwd-02-location-integrity",
+  "start_head": "d7cbedf9ec7416b83aeb6313aa095462a20e441d",
+  "local_head": "4b06ed039d72c15f10d2f114fed07fc2fdef457b",
+  "remote_head": "4b06ed039d72c15f10d2f114fed07fc2fdef457b",
+  "ahead": 0,
+  "behind": 0,
+  "worktree_clean": true,
+  "force_push": false,
+  "merge_performed": false,
+  "note": "This record is committed as a subsequent evidence-only commit; its final remote equality is checked separately at delivery."
+}
