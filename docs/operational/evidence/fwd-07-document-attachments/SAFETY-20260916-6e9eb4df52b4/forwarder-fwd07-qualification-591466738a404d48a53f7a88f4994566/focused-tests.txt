@@ -1,0 +1,32 @@
+....                                                                     [100%]
+============================== warnings summary ===============================
+backend\monitoring.py:30
+  D:\1-webapp\forwarder-dev\backend\monitoring.py:30: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.start_time = datetime.utcnow()
+
+backend/tests/test_case_documents.py: 57 warnings
+  C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\sql\schema.py:3596: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+backend/tests/test_case_documents.py: 12 warnings
+  D:\1-webapp\forwarder-dev\backend\services\auth_session_service.py:48: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+backend/tests/test_case_documents.py: 24 warnings
+  D:\1-webapp\forwarder-dev\backend\security.py:114: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'iat': datetime.utcnow(),
+
+backend/tests/test_case_documents.py: 24 warnings
+  D:\1-webapp\forwarder-dev\backend\security.py:116: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'exp': datetime.utcnow() + (
+
+backend/tests/test_case_documents.py: 21 warnings
+  D:\1-webapp\forwarder-dev\backend\services\auth_session_service.py:67: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+backend/tests/test_case_documents.py::test_revoked_assignment_denies_previously_authorized_direct_download
+  D:\1-webapp\forwarder-dev\backend\services\case_document_service.py:256: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    previous.superseded_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+4 passed, 140 warnings in 1.96s

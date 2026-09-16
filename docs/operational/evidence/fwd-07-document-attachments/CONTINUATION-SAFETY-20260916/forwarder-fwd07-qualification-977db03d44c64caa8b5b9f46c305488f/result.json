@@ -1,0 +1,369 @@
+{
+  "missionResult": "ZERO_REQUIREMENT_PASS",
+  "steps": [
+    {
+      "name": "S1",
+      "elapsedMs": 5720
+    },
+    {
+      "name": "S2",
+      "elapsedMs": 1224
+    },
+    {
+      "name": "S3",
+      "elapsedMs": 397
+    },
+    {
+      "name": "S4",
+      "elapsedMs": 125
+    },
+    {
+      "name": "S1",
+      "elapsedMs": 363
+    },
+    {
+      "name": "S2",
+      "elapsedMs": 1080
+    },
+    {
+      "name": "S3",
+      "elapsedMs": 374
+    },
+    {
+      "name": "S4",
+      "elapsedMs": 115
+    }
+  ],
+  "checks": [
+    {
+      "name": "external-resource-blocked",
+      "origin": "https://fonts.googleapis.com"
+    },
+    {
+      "name": "external-resource-blocked",
+      "origin": "https://fonts.googleapis.com"
+    },
+    {
+      "name": "zero-requirement-1280",
+      "requirements": 0,
+      "miscellaneous": 1,
+      "reopened": true,
+      "downloadBytes": true,
+      "dir": "rtl",
+      "scrollWidth": 1280,
+      "clientWidth": 1280
+    },
+    {
+      "name": "external-resource-blocked",
+      "origin": "https://fonts.googleapis.com"
+    },
+    {
+      "name": "external-resource-blocked",
+      "origin": "https://fonts.googleapis.com"
+    },
+    {
+      "name": "zero-requirement-390",
+      "requirements": 0,
+      "miscellaneous": 1,
+      "reopened": true,
+      "downloadBytes": true,
+      "dir": "rtl",
+      "scrollWidth": 390,
+      "clientWidth": 390
+    }
+  ],
+  "errors": [],
+  "api": [
+    {
+      "path": "/api/health",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/site-settings",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/auth/login",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-context",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/dashboard/kpis",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3cbf03ed-0479-40c7-973d-dde970e15628",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-shipments",
+      "status": 403,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3cbf03ed-0479-40c7-973d-dde970e15628/documents",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3cbf03ed-0479-40c7-973d-dde970e15628/documents/miscellaneous",
+      "status": 201,
+      "method": "POST"
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/site-settings",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-context",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/dashboard/kpis",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/auth/logout",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/expert/auth/login",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-context",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/dashboard/kpis",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3cbf03ed-0479-40c7-973d-dde970e15628",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-shipments",
+      "status": 403,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3cbf03ed-0479-40c7-973d-dde970e15628/documents",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3cbf03ed-0479-40c7-973d-dde970e15628/documents/1/download",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/site-settings",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/auth/login",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-context",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/dashboard/kpis",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3a4cc2b3-c7c8-48b7-9a6e-60876986edc8",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-shipments",
+      "status": 403,
+      "method": "GET"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3a4cc2b3-c7c8-48b7-9a6e-60876986edc8/documents",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3a4cc2b3-c7c8-48b7-9a6e-60876986edc8/documents/miscellaneous",
+      "status": 201,
+      "method": "POST"
+    },
+    {
+      "path": "/api/health",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/site-settings",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-context",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/dashboard/kpis",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/auth/logout",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/expert/auth/login",
+      "status": 200,
+      "method": "POST"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-context",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/dashboard/kpis",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3a4cc2b3-c7c8-48b7-9a6e-60876986edc8",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/system/release-identity",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/operational-shipments",
+      "status": 403,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3a4cc2b3-c7c8-48b7-9a6e-60876986edc8/documents",
+      "status": 200,
+      "method": "GET"
+    },
+    {
+      "path": "/api/expert/requests/3a4cc2b3-c7c8-48b7-9a6e-60876986edc8/documents/2/download",
+      "status": 200,
+      "method": "GET"
+    }
+  ],
+  "elapsedMs": 25736
+}

@@ -1,0 +1,14 @@
+NEGATIVE_PRECONNECTION_PASS; sentinel calls=0; no PostgreSQL connection performed
+test_direct_pytest_rejected (__main__.NegativeBoundaryTests.test_direct_pytest_rejected) ... ok
+test_driver_config_mutation_and_child (__main__.NegativeBoundaryTests.test_driver_config_mutation_and_child) ... ok
+test_host_port_database_mismatch (__main__.NegativeBoundaryTests.test_host_port_database_mismatch) ... ok
+test_inherited_configuration (__main__.NegativeBoundaryTests.test_inherited_configuration) ... ok
+test_missing_manifest (__main__.NegativeBoundaryTests.test_missing_manifest) ... ok
+test_secondary_bind (__main__.NegativeBoundaryTests.test_secondary_bind) ... ok
+test_test_name_is_not_ownership (__main__.NegativeBoundaryTests.test_test_name_is_not_ownership) ... ok
+test_unowned_manifest_provenance (__main__.NegativeBoundaryTests.test_unowned_manifest_provenance) ... ok
+
+----------------------------------------------------------------------
+Ran 8 tests in 2.148s
+
+OK

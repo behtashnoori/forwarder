@@ -1,0 +1,3 @@
+✅ Canonical migrations directory exists: backend/migrations
+✅ backend/migrations/alembic.ini exists
+✅ Structure check passed

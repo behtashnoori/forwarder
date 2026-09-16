@@ -1,0 +1,12 @@
+{
+  "run_id": "forwarder-fwd07-qualification-9225813ae852491ba5b5229e879ad42b",
+  "root": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-9225813ae852491ba5b5229e879ad42b",
+  "data": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-9225813ae852491ba5b5229e879ad42b\\data",
+  "storage": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-9225813ae852491ba5b5229e879ad42b\\private-storage",
+  "host": "127.0.0.1",
+  "port": 54870,
+  "database": "dms_fwd07_12a9a41dc8904e0eb470f5e899f519be",
+  "role": "fwd07_qualification",
+  "postmaster_pid": 16396,
+  "origin": "runner-created-initdb"
+}

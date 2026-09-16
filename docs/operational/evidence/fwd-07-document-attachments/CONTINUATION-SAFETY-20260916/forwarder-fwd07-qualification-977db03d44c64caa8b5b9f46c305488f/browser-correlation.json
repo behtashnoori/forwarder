@@ -1,0 +1,21 @@
+{
+  "run_id": "forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f",
+  "manifest": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f\\manifest.json",
+  "database": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f\\browser.sqlite",
+  "storage": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f\\private-storage",
+  "endpoints": [
+    [
+      "127.0.0.1",
+      64417
+    ],
+    [
+      "127.0.0.1",
+      64418
+    ]
+  ],
+  "processes": {
+    "backend": 15124,
+    "frontend": 23340,
+    "browser": 27960
+  }
+}

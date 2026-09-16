@@ -1,0 +1,50 @@
+[
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/CONTINUATION-SAFETY-20260916/candidate-final.diff",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\CONTINUATION-SAFETY-20260916\\candidate-final.diff.raw.json",
+    "sha256": "9E3BA90CE4797E0E91C20E191F85A150E77A2D31E6445EFF06ED0FC6770A47D8",
+    "original_preserved_untracked": true
+  },
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/CONTINUATION-SAFETY-20260916/candidate-start.diff",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\CONTINUATION-SAFETY-20260916\\candidate-start.diff.raw.json",
+    "sha256": "15AD1D15BB0E67C6C360F8CC479C36EED126E5EE843A2C830ADDAE0FC679E28C",
+    "original_preserved_untracked": true
+  },
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/CONTINUATION-SAFETY-20260916/forwarder-fwd07-qualification-e493e1f34f4045cdbb7cb42ee3bc9dae/postgres-tests.txt",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\CONTINUATION-SAFETY-20260916\\forwarder-fwd07-qualification-e493e1f34f4045cdbb7cb42ee3bc9dae\\postgres-tests.txt.raw.json",
+    "sha256": "F445C6C18433EB25B78F10E79A0E6F83A1A9A7F05337BB0AB73544FE7BC92CF4",
+    "original_preserved_untracked": true
+  },
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/CONTINUATION-SAFETY-20260916/frontend-lint.txt",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\CONTINUATION-SAFETY-20260916\\frontend-lint.txt.raw.json",
+    "sha256": "471979FB0EACE5E7D5BA466A7B9EC4EC0DF999BC492064FA6AC40FCD2023EC92",
+    "original_preserved_untracked": true
+  },
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/SAFETY-20260916-6e9eb4df52b4/FINAL-REPORT.md",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\SAFETY-20260916-6e9eb4df52b4\\FINAL-REPORT.md.raw.json",
+    "sha256": "124147BA64F032E0742FE27592427347CD4FA4D43847D2764FB842A52C2F0597",
+    "original_preserved_untracked": true
+  },
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/SAFETY-20260916-6e9eb4df52b4/forwarder-fwd07-qualification-591466738a404d48a53f7a88f4994566/four-gates.txt",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\SAFETY-20260916-6e9eb4df52b4\\forwarder-fwd07-qualification-591466738a404d48a53f7a88f4994566\\four-gates.txt.raw.json",
+    "sha256": "2113239AEA71050E8BF25801688C1712C8EDF7DA63DA4BA7230347E1597CECD8",
+    "original_preserved_untracked": true
+  },
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/SAFETY-20260916-6e9eb4df52b4/forwarder-fwd07-qualification-9225813ae852491ba5b5229e879ad42b/four-gates.txt",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\SAFETY-20260916-6e9eb4df52b4\\forwarder-fwd07-qualification-9225813ae852491ba5b5229e879ad42b\\four-gates.txt.raw.json",
+    "sha256": "E237A2C36A9F7EC4B0FC3B22B7234F2504524F52521332C2CB66AF4CB9A42A38",
+    "original_preserved_untracked": true
+  },
+  {
+    "original_path": "docs/operational/evidence/fwd-07-document-attachments/SAFETY-20260916-6e9eb4df52b4/forwarder-fwd07-qualification-ba5f0a28e9294bae8365a925aa78b1a8/four-gates.txt",
+    "transport_path": "docs\\operational\\evidence\\fwd-07-document-attachments\\SAFETY-20260916-6e9eb4df52b4\\forwarder-fwd07-qualification-ba5f0a28e9294bae8365a925aa78b1a8\\four-gates.txt.raw.json",
+    "sha256": "D585FE0C051FCCD28DA24DD757F04D8FD87C403A97F5F3338157477272C96DE0",
+    "original_preserved_untracked": true
+  }
+]

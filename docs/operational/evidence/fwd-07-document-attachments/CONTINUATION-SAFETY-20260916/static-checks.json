@@ -1,0 +1,32 @@
+{
+  "npm run lint": {
+    "exit": 0,
+    "errors": 0,
+    "existing_warnings": 12
+  },
+  "npm run check:structure": {
+    "exit": 0
+  },
+  "npm run build": {
+    "exit": 0,
+    "duration_seconds": 12.96,
+    "warnings": [
+      "outdated browsers data",
+      "large chunk"
+    ]
+  },
+  "git diff --check": {
+    "exit": 0
+  },
+  "python scripts/scan_repository_secrets.py current": {
+    "exit": 0,
+    "findings": 0
+  },
+  "python scripts/verify_credential_policy.py": {
+    "exit": 0,
+    "findings": 0
+  },
+  "workflow_source": "quality-gates.yml and secret-scan.yml; push/pull_request, no deploy step",
+  "postgres18_install_source": "https://www.postgresql.org/download/linux/ubuntu/",
+  "linux_workflow_execution": "NOT_RUN"
+}

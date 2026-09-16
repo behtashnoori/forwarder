@@ -1,0 +1,25 @@
+{
+  "run_id": "forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f",
+  "root": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f",
+  "data": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f\\data",
+  "storage": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f\\private-storage",
+  "host": "127.0.0.1",
+  "port": 64415,
+  "database": "dms_fwd07_8b893be59421426b905a5c958fa388fb",
+  "role": "fwd07_qualification",
+  "postmaster_pid": 20716,
+  "origin": "runner-created-initdb",
+  "local_endpoints": [
+    [
+      "127.0.0.1",
+      64417
+    ],
+    [
+      "127.0.0.1",
+      64418
+    ]
+  ],
+  "browser_database": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-fwd07-qualification-977db03d44c64caa8b5b9f46c305488f\\browser.sqlite",
+  "tracked_inventory_count": 1679,
+  "tracked_inventory_sha256": "d49038099e44988b17d4270ab1454a593f4b28ec54623cc9423213e4c5b9e010"
+}

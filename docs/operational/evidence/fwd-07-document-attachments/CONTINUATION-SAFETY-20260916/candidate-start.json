@@ -1,0 +1,16 @@
+{
+  "head": "d61e7bcf1780765b2c91e6796150eb3aa7c630dc",
+  "hashes": {
+    "backend/__init__.py": "de37061038d396229c084018b75c46f87b9b04ebfc4b3f1e04a7b22331423ccc",
+    "backend/config.py": "65f4c39c1279b9d9b1eb21fcd2198821f738439ad686306c8da6c0ac573bed44",
+    "backend/services/document_storage_service.py": "33c0828bcce09eeee67c248da536265d11a80c8da3241fdc1db308eb15216cdf",
+    "backend/tests/conftest.py": "710b9d3ba204af86f8ee92cf9203ba79c18e46da1b4832a36f3e69c509ff4aa3",
+    "backend/tests/test_case_documents.py": "94104428f82d929b111a703059f652f9c83b2ff3865b07f87b8b3a7b507f329a",
+    "pytest.ini": "da0dc2d402edd910f8f169f29a6bd3be91820ebcdd08688cd09da76caf354ef6",
+    "scripts/uat/run_fwd07_disposable_postgres.py": "8c2b87982f6f342f46f2ec50bfabd60cd32fad81d5ed6ba26a04b549b15c3183",
+    "scripts/uat/boundary_bootstrap/sitecustomize.py": "5e33b399ff55a657d080be39814f15d050daeb67fe2d4016c849c8c6c626778b",
+    "scripts/uat/pytest_boundary.py": "7900e3d34615bcd3c748f6bb9fd3c65498282d7374a742e70a1824b2e46d1dec",
+    "scripts/uat/test_boundary.py": "63d001310b841f163e28c1fff54bd3b9cbb9d47f9dd3417fe838c3d0d3eed6fe",
+    "scripts/uat/test_boundary_proof.py": "0bfb671ac5cb2bc707180951fc7271b324b7bc8b8ef728614ea2eaf4d1d38ae1"
+  }
+}
