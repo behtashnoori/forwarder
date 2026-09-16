@@ -40,3 +40,7 @@ Focused results: backend `40 passed`; UI `3 passed`; production build passed. Th
 ## Intentionally deferred
 
 ADR-020’s proposed cross-scope `DocumentArtifact`/`DocumentAttachment` model remains proposed and is not activated. Canonical shipment/unit/event ownership, customer visibility, scanner/quarantine certification, PostgreSQL concurrency, historical migration, production identity/security, Reference 28 mapping, recipient onboarding and real customer delivery remain open.
+
+## Continuation evidence, 2026-09-16
+
+The historical results above remain unchanged. [Continuation report](CONTINUATION-20260916.md) records the exact selector defect, mobile reachability repair, completed two-viewport browser journey, five executed PostgreSQL race tests, gate failures and a broad-run test-database setup caveat. Final mission status is **BLOCKED_RECOVERY_CONTRACT**: a real saved upload with lost response is labeled failed, and following the retry guidance creates a duplicate attachment. See [bounded proposed decision](PROPOSED-UPLOAD-RECOVERY-ADR.md). It is not an accepted contract or ADR-020 activation. Raw traces, sessions and downloads remain outside Git.

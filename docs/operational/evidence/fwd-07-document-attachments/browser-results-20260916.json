@@ -1,0 +1,188 @@
+{
+  "steps": [
+    {
+      "name": "S1",
+      "elapsedMs": 13288
+    },
+    {
+      "name": "S2",
+      "elapsedMs": 975
+    },
+    {
+      "name": "S3",
+      "elapsedMs": 1111
+    },
+    {
+      "name": "S4",
+      "elapsedMs": 311
+    },
+    {
+      "name": "S5",
+      "elapsedMs": 141
+    },
+    {
+      "name": "S6",
+      "elapsedMs": 170
+    },
+    {
+      "name": "S7",
+      "elapsedMs": 33
+    },
+    {
+      "name": "S1",
+      "elapsedMs": 2399
+    },
+    {
+      "name": "S2",
+      "elapsedMs": 933
+    },
+    {
+      "name": "S3",
+      "elapsedMs": 669
+    },
+    {
+      "name": "S4",
+      "elapsedMs": 259
+    },
+    {
+      "name": "S5",
+      "elapsedMs": 134
+    },
+    {
+      "name": "S6",
+      "elapsedMs": 120
+    },
+    {
+      "name": "S7",
+      "elapsedMs": 34
+    }
+  ],
+  "browserJavaScriptErrors": [],
+  "scenarioElapsedMs": 86489,
+  "checks": [
+    {
+      "name": "loading-state-1280"
+    },
+    {
+      "name": "empty-file-state-1280"
+    },
+    {
+      "name": "independent-results-1280"
+    },
+    {
+      "name": "ui-download-bytes-1280-3"
+    },
+    {
+      "name": "ui-download-bytes-1280-4"
+    },
+    {
+      "name": "append-preserves-originals-1280"
+    },
+    {
+      "name": "ui-download-bytes-1280-5"
+    },
+    {
+      "name": "ui-download-bytes-1280-6"
+    },
+    {
+      "name": "partial-failure-retry-only-failed-1280"
+    },
+    {
+      "name": "rtl-layout-1280",
+      "dir": "rtl",
+      "scrollWidth": 1280,
+      "clientWidth": 1280
+    },
+    {
+      "name": "ui-download-bytes-1280-7"
+    },
+    {
+      "name": "ui-download-bytes-1280-8"
+    },
+    {
+      "name": "lost-response-unsafe-retry-reproduced-1280",
+      "serverStatus": 201,
+      "duplicateSameOperation": true,
+      "attachmentsAfterRetry": 8
+    },
+    {
+      "name": "list-error-state-1280"
+    },
+    {
+      "name": "ui-download-bytes-1280-8"
+    },
+    {
+      "name": "list-error-ui-recovery-1280"
+    },
+    {
+      "name": "loading-state-390"
+    },
+    {
+      "name": "empty-file-state-390"
+    },
+    {
+      "name": "independent-results-390"
+    },
+    {
+      "name": "ui-download-bytes-390-3"
+    },
+    {
+      "name": "ui-download-bytes-390-4"
+    },
+    {
+      "name": "append-preserves-originals-390"
+    },
+    {
+      "name": "ui-download-bytes-390-5"
+    },
+    {
+      "name": "ui-download-bytes-390-6"
+    },
+    {
+      "name": "partial-failure-retry-only-failed-390"
+    },
+    {
+      "name": "rtl-layout-390",
+      "dir": "rtl",
+      "scrollWidth": 390,
+      "clientWidth": 390
+    },
+    {
+      "name": "ui-download-bytes-390-7"
+    },
+    {
+      "name": "ui-download-bytes-390-8"
+    },
+    {
+      "name": "lost-response-unsafe-retry-reproduced-390",
+      "serverStatus": 201,
+      "duplicateSameOperation": true,
+      "attachmentsAfterRetry": 8
+    },
+    {
+      "name": "list-error-state-390"
+    },
+    {
+      "name": "ui-download-bytes-390-8"
+    },
+    {
+      "name": "list-error-ui-recovery-390"
+    }
+  ],
+  "run": {
+    "runnerPid": 10776,
+    "startupSeconds": 14.1946833,
+    "backendPid": 24812,
+    "runId": "forwarder-fwd07-final-browser-v2-20260916",
+    "launcherPid": 6592,
+    "frontendPid": 29804
+  },
+  "launcher": {
+    "ownedRuntimesStopped": true,
+    "phase": "completed",
+    "elapsedSeconds": 102.2332806,
+    "exitCode": 0
+  },
+  "rawTracePolicy": "Private outside Git; synthetic loopback data only",
+  "missionResult": "BLOCKED_RECOVERY_CONTRACT"
+}
