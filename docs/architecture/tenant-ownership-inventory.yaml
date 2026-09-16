@@ -69,6 +69,8 @@
     "ExecutionUnitExternalReference": {"kind":"persisted_model","table":"execution_unit_external_reference","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","integrity_risks":["ExecutionUnit has no direct tenant key; writes must lock and validate its canonical Project/Shipment hierarchy"]},
     "OperationalWorkItem": {"kind":"persisted_model","table":"operational_work_item","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "OperationalAudit": {"kind":"persisted_model","table":"operational_audit","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
+    "NotificationAction": {"kind":"persisted_model","table":"notification_action","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"ADR-045 action has same-tenant request and event foreign keys."},
+    "NotificationAttempt": {"kind":"persisted_model","table":"notification_attempt","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"ADR-045 attempt has a same-tenant action foreign key."},
     "OperationalOutbox": {"kind":"persisted_model","table":"operational_outbox","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "OperationalIdempotency": {"kind":"persisted_model","table":"operational_idempotency","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "Milestone": {"kind":"persisted_model","table":"operational_milestone","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},

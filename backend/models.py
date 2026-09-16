@@ -2089,6 +2089,8 @@ from backend.external_reference_models import (  # noqa: E402,F401
 )
 
 
+from backend.notification_models import NotificationAction, NotificationAttempt  # noqa: E402,F401
+
 __all__ = [
     "CargoCatalogItem",
     "CargoItemAlias",

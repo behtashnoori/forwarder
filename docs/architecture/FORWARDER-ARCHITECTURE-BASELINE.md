@@ -162,3 +162,27 @@ CRM is an internal, database-backed, organization-scoped subsystem. It is not an
 ## 14. Enforcement
 
 Every Codex implementation task follows `CODEX-DEVELOPMENT-GATE.md`. Reviews use `ARCHITECTURE-REVIEW-CHECKLIST.md`. Automated checks enforce only reliable structural invariants; all other decisions remain explicit manual review gates.
+
+## 15. Notification and controlled action foundation (ADR-045)
+
+Commercial owns valid quote/request transitions. `commercial.quote.available.v1`
+is recorded through the public outbox service in the same local transaction;
+an event uniqueness constraint is scoped to this event family. Existing outbox
+families retain their semantics. The single quote consumer marks only this
+event family published, atomically with its durable notification action.
+
+Notification/Action owns intent, fixed versioned policy, short dispatch claims,
+attempts, results, bounded retries and reconciliation. Provider adapters own
+communication. An integration failure never rolls back committed Commercial
+state. UNKNOWN requires reconciliation and old attempts cannot overwrite newer
+ones. No exactly-once delivery guarantee is made.
+
+ADR-045 authorizes only EMAIL simulation on explicit qualification configuration
+and synthetic destinations. Public command adapters derive authenticated actor
+context; the background worker uses the originating event's limited policy
+delegation, revalidated against current authority, membership, assignment,
+quote state and certified recipient linkage. No generic agent/workflow engine,
+real provider, Production activation or new customer journey is authorized.
+
+See [ADR-045](../operational/adr/ADR-045-notification-action-foundation.md) for
+ownership, dispatch ordering, compatibility, migration and recovery contracts.

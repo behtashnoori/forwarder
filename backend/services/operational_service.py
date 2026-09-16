@@ -364,22 +364,8 @@ def _outbox(
     aggregate_id: int,
     payload: dict | None = None,
 ) -> None:
-    context = ensure_census_context(db.session)
-    event_payload = dict(payload or {})
-    event_payload["_ownership_census"] = {
-        "census_id": context.census_id,
-        "cache_version": context.cache_version,
-        "cache_token": context.cache_token,
-    }
-    db.session.add(
-        OperationalOutbox(
-            organization_id=org,
-            event_type=event_type,
-            aggregate_type=aggregate_type,
-            aggregate_id=aggregate_id,
-            payload=event_payload,
-        )
-    )
+    from backend.services.outbox_service import record_event
+    record_event(org, event_type, aggregate_type, aggregate_id, payload)
 
 
 def resolve_location(reference: dict[str, Any]) -> ResolvedLocation:

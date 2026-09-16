@@ -54,6 +54,8 @@ CERTIFIED_ENTITIES = frozenset(
 CANONICAL_RESOURCE_TYPES = frozenset({*CERTIFIED_ENTITIES, "project_party_relationship"})
 SIDE_EFFECT_ENTITIES = frozenset(
     {
+        "NotificationAction",
+        "NotificationAttempt",
         "AssignmentLog",
         "DocumentAuditEvent",
         "ExpertConsoleLog",
@@ -65,6 +67,8 @@ SIDE_EFFECT_ENTITIES = frozenset(
 )
 SIDE_EFFECT_TABLES = frozenset(
     {
+        "notification_action",
+        "notification_attempt",
         "assignment_log",
         "document_audit_event",
         "expert_console_log",

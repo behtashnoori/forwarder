@@ -1,0 +1,183 @@
+{
+  "mission": "FWD-01",
+  "baseline": "38431da96c4f36ceaa07c550e594bf2d08d34e38",
+  "branch": "feature/fwd-01-notification-foundation",
+  "migration_head": "20260916_fwd01_notifications",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13.9",
+    "postgresql": "18.0",
+    "postgres_port": 55461,
+    "flask": "3.0.0",
+    "sqlalchemy": "2.0.36",
+    "alembic": "1.17.2",
+    "pytest": "9.1.1",
+    "node": "24.11.0",
+    "npm": "11.6.1"
+  },
+  "policy": "quote-available.v1",
+  "provider": "fake-email.v1",
+  "simulated": true,
+  "files": [
+    {
+      "path": "backend/migrations/versions/20260916_fwd01_notifications.py",
+      "worktree_sha256": "ab08e2f67408cff9d93aed08fb066465ce13650c2f7147c73048cd9d4dffb7a7",
+      "git_blob_id": "76e3561983ba4096ab51984528c37610ed300cb8"
+    },
+    {
+      "path": "backend/models.py",
+      "worktree_sha256": "56d3086e3ed8f56b4d6d3342dbe6d5c1dda6e22e16b2f284779599e6fc41969e",
+      "git_blob_id": "1fd5048bc1b4b6656b1fe838c9ac48fd1174fbea"
+    },
+    {
+      "path": "backend/notification_cli.py",
+      "worktree_sha256": "67a8999b166b6632ae0176d1d3d9ba969c2e398cbac53910380ce56b3d757ba5",
+      "git_blob_id": "91e39e44c06c4190a862c60fe2191cf9fea21ee1"
+    },
+    {
+      "path": "backend/notification_models.py",
+      "worktree_sha256": "6a0e5472d66c9310414c5d91836c52bf3af15a8d3b8ef7e64cd08bd048148e4f",
+      "git_blob_id": "9f627795a7fb87c8992f7a0afc56e1b0dbe8b111"
+    },
+    {
+      "path": "backend/notification_provider.py",
+      "worktree_sha256": "6a63e7933b0d44e7bf23afc000f0b62c74f823583f5c521f60cc0c6ec645d82e",
+      "git_blob_id": "73ebbc9ffbd29b23aa592ba6a163d8988a8a819e"
+    },
+    {
+      "path": "backend/operational_models.py",
+      "worktree_sha256": "99a51f4d33e4db267e02bf7aac841f08412bf375384ccdae9b5e02a55b8a4f88",
+      "git_blob_id": "50765d4a68c7f35a549ab88997d1a3eb75b8a4cf"
+    },
+    {
+      "path": "backend/quarantine.py",
+      "worktree_sha256": "bf469a88b32008a14804033e38a8c92ad63fab71aefa3f7701948dd9ab73b17a",
+      "git_blob_id": "445540bcb10c6ff3912b41056033ae829e1830ad"
+    },
+    {
+      "path": "backend/services/notification_action_service.py",
+      "worktree_sha256": "d58b5010d3987a6ac92233284f46d2a940683744b005ec01a5ac8f3777e05a98",
+      "git_blob_id": "43e94afc92dd0022e3a6d573de8f786f42917553"
+    },
+    {
+      "path": "backend/services/operational_service.py",
+      "worktree_sha256": "5e358032c96d3ed2ddffb0fa2e7b4180e736b247f8f266a04ba85059a8f5a0da",
+      "git_blob_id": "9f1f9a3fbe79d3024370b1205b5248c0f178cf9f"
+    },
+    {
+      "path": "backend/services/outbox_service.py",
+      "worktree_sha256": "0d8e469f8ae76a2f278ea06b6111ade8e002cb7aacee08d7697364de2ce54aeb",
+      "git_blob_id": "f42fccdf3f2896717631835c9f71f726aa374b97"
+    },
+    {
+      "path": "backend/services/quote_notification_contract.py",
+      "worktree_sha256": "048f730805710a5a040dcca5c30d2211bb9d973dfd8ed1263c3b0e2b01a47203",
+      "git_blob_id": "5948406838cde03e19d3cb35f3190a31cb66b2ec"
+    },
+    {
+      "path": "backend/services/quote_service.py",
+      "worktree_sha256": "6062d31ac3482ddf9f05cf0c51b3433e6f1c978a3b5f48cbb5b3832c338b0f82",
+      "git_blob_id": "cb3257cdf421f6df6223de38fd6a30f94e37e08e"
+    },
+    {
+      "path": "backend/tests/test_alembic_version_table.py",
+      "worktree_sha256": "9934a4916242b17f89867de0aae7e0b4b42e14a40e50382915ad54bea3a2c7b6",
+      "git_blob_id": "a805ac313ccf4fc8451350ac927d75bf1dfacd39"
+    },
+    {
+      "path": "backend/tests/test_case_documents_migration.py",
+      "worktree_sha256": "2916a0607e0e9384ded3a372ee2cdb927d4180caf9e76bdaed5c7e35d61f552b",
+      "git_blob_id": "5b01ce8e21c344230210cefa273b38725c1e1e8a"
+    },
+    {
+      "path": "backend/tests/test_execution_units.py",
+      "worktree_sha256": "458de4bb0e9731405f0844e71df96778830786fa0caa852b6eba3f7e376f6c58",
+      "git_blob_id": "e1a93bf221447b0eb145ed92ec46282aeb550ea1"
+    },
+    {
+      "path": "backend/tests/test_expert_sla_migration.py",
+      "worktree_sha256": "20742ca698b0f1782ce94f3f8817a6edfcb50d2c7bf5f9dea6d5fdf94f39fb69",
+      "git_blob_id": "72c987c5005961491bcc45a6096d67945d424f71"
+    },
+    {
+      "path": "backend/tests/test_fwd01_migration_postgresql.py",
+      "worktree_sha256": "e5323ef4248c6fbc5a868e99b929a93fcc72168741a926ad65aeaa40d8436de6",
+      "git_blob_id": "7f764cb0fcf3321a7c2e805c570ec477d1ab3407"
+    },
+    {
+      "path": "backend/tests/test_fwd01_notifications.py",
+      "worktree_sha256": "e148dc40b48787550d9380c12313e7029a317a94397fb739ef23b33a388c283c",
+      "git_blob_id": "75bd34675a8e32759d12613d6a7ddbbf5da1dae7"
+    },
+    {
+      "path": "backend/tests/test_global_logistics_point_adoption_migration.py",
+      "worktree_sha256": "4bc74cfe51f348e3c4fe906495a27e5342ab4bedf29a1d577a7d301547aaaa9f",
+      "git_blob_id": "e96ee2d56142dbeebc2e968e12ef2a213788bcf9"
+    },
+    {
+      "path": "backend/tests/test_global_logistics_point_materialization_migration.py",
+      "worktree_sha256": "56700c5264fd7d6b71cd3e21af5afe7efc56666787c019e020a99b14f1bea4f8",
+      "git_blob_id": "812921586d5d8ae4ac911af4fb36c171840047f9"
+    },
+    {
+      "path": "backend/tests/test_logistics_network.py",
+      "worktree_sha256": "e56c8c6f9f269d6eb76761f6a912b3caef895c1a3c081bb78cd758bdd884e6d4",
+      "git_blob_id": "1260047cdeb88e5421abb9e5c73e504389fd9b9c"
+    },
+    {
+      "path": "backend/tests/test_master_data_migration.py",
+      "worktree_sha256": "c29529aee38ac0e7f50f6444a5a14546621a418f4d048f915bd886dbe5c5d802",
+      "git_blob_id": "c5d594337ef5a7275e192f65b9955f621a3a7a41"
+    },
+    {
+      "path": "backend/tests/test_operational_execution_190.py",
+      "worktree_sha256": "d778b8a20fad21126215f46eb2cd318af05794517b1e5b6f84ab6d599976d16e",
+      "git_blob_id": "6eabfb00d0e337c68293f0ff4fb2c4bc9917e5fe"
+    },
+    {
+      "path": "backend/tests/test_operational_vertical_slice_postgresql.py",
+      "worktree_sha256": "1c70656720156d1f3fffb648eaff78c6ba2c7bfd9d7081a7312ada1e8b8ce49d",
+      "git_blob_id": "e91de19bec69ae0e80c8d81b47f129a965124583"
+    },
+    {
+      "path": "backend/tests/test_project_aggregate_foundation.py",
+      "worktree_sha256": "428600f87be53d0396eec6e2e77d246749ad1d26bd2ee7cba2e25485b76b6440",
+      "git_blob_id": "6cd09efd0f2da0f40bbe981636fb1ea19e9d7f00"
+    },
+    {
+      "path": "backend/tests/test_project_configuration.py",
+      "worktree_sha256": "8352f688a4c13e79c8bb3d3b64616f1d4a9ca2d0dd6271c01b20004864ea905d",
+      "git_blob_id": "e79de21ab446685224695c4651a975277895bea7"
+    },
+    {
+      "path": "backend/tests/test_reference_data_seed_migration.py",
+      "worktree_sha256": "867c6ff364e8d2bae0d5ee966e9de79c040fe448c43580a18b233782ba000760",
+      "git_blob_id": "14a8913e9e7ea23d153b8b4190184e22a4aec52d"
+    },
+    {
+      "path": "backend/tests/test_release_publication_contract.py",
+      "worktree_sha256": "127a2aee0c7bda12ec9e2d14d7599fe5aaca93210f3941344d7faa66c952b6b3",
+      "git_blob_id": "c77229f6d93fb4b4a0d0da57120e03052a03cd2f"
+    },
+    {
+      "path": "backend/tests/test_shipment_request_update_trigger_migration.py",
+      "worktree_sha256": "a134739d7e48c9cafe1240e0c6f08e34c12804153fe68c821334716f0a635f72",
+      "git_blob_id": "c489c442c39f77f711151eab3a1f730edf299b8b"
+    },
+    {
+      "path": "scripts/build_release_package.py",
+      "worktree_sha256": "baf86c07cbe02199c1afb0ad26d03b3a431e32bb1ddae98dbc2c40c284436280",
+      "git_blob_id": "387281735b74f1b808119a37140903c3efbaa48d"
+    },
+    {
+      "path": "scripts/check_architecture_governance.py",
+      "worktree_sha256": "3ed2a1c9c478248aaa4444df75f0496678e564dcbe6f14df10e66332115cc51d",
+      "git_blob_id": "04745fdc3f381c76ae4f3d829e2904e3ec598b3b"
+    },
+    {
+      "path": "scripts/tests/test_release_package_builder.py",
+      "worktree_sha256": "45832dc42b05f7368b3dec1bb15c207baed9682f75f72a4be5adc7c392f5f7fd",
+      "git_blob_id": "261b600ec7fb040fb1445b1cfc6001dff77b1d81"
+    }
+  ]
+}

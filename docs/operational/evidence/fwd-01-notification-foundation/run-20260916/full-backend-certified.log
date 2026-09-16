@@ -1,0 +1,127 @@
+...........sssssss...................................................... [  7%]
+........................................................................ [ 14%]
+.....ssssss.............................................s............... [ 21%]
+........ss...............................................sssssssssssssss [ 28%]
+.s.s.s.s.s.............sssssssssssss.s.s.s.s.s...sss.s.sssss.sssssssss.. [ 35%]
+....................s................s.................s................ [ 42%]
+................................................................ssssssss [ 49%]
+sssss..............ssss.........ssssssss.....................ss......... [ 56%]
+.........s...............................................s.............. [ 63%]
+..ssssssssssssss...........................s............................ [ 70%]
+..sssss..............ss................................................. [ 77%]
+................................s..sss......................s........... [ 84%]
+...............................................................s........ [ 91%]
+..................................x...............s..................... [ 98%]
+................s.                                                       [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] backend\tests\test_admin_panel_read_contract.py:303: ADR-043: reporting/export remains fail-closed pending a companion decision
+SKIPPED [1] backend\tests\test_admin_panel_read_contract.py:389: ADR-043: reporting/export remains fail-closed pending a companion decision
+SKIPPED [1] backend\tests\test_admin_panel_read_contract.py:433: ADR-043: reporting/export remains fail-closed pending a companion decision
+SKIPPED [1] backend\tests\test_admin_panel_read_contract.py:537: ADR-043: reporting/export remains fail-closed pending a companion decision
+SKIPPED [1] backend\tests\test_admin_panel_read_contract.py:568: ADR-043: reporting/export remains fail-closed pending a companion decision
+SKIPPED [1] backend\tests\test_admin_panel_read_contract.py:600: ADR-043: reporting/export remains fail-closed pending a companion decision
+SKIPPED [1] backend\tests\test_admin_panel_read_contract.py:662: ADR-043: reporting/export remains fail-closed pending a companion decision
+SKIPPED [1] backend\tests\test_case_documents_postgresql.py:127: requires explicit DMS_DISPOSABLE_POSTGRES_URL and DMS_DISPOSABLE_STORAGE_ROOT
+SKIPPED [1] backend\tests\test_case_documents_postgresql.py:181: requires explicit DMS_DISPOSABLE_POSTGRES_URL and DMS_DISPOSABLE_STORAGE_ROOT
+SKIPPED [1] backend\tests\test_case_documents_postgresql.py:201: requires explicit DMS_DISPOSABLE_POSTGRES_URL and DMS_DISPOSABLE_STORAGE_ROOT
+SKIPPED [1] backend\tests\test_case_documents_postgresql.py:222: requires explicit DMS_DISPOSABLE_POSTGRES_URL and DMS_DISPOSABLE_STORAGE_ROOT
+SKIPPED [1] backend\tests\test_case_documents_postgresql.py:240: requires explicit DMS_DISPOSABLE_POSTGRES_URL and DMS_DISPOSABLE_STORAGE_ROOT
+SKIPPED [1] backend\tests\test_case_documents_schema_parity.py:52: requires explicit DMS_DISPOSABLE_POSTGRES_URL
+SKIPPED [1] backend\tests\test_dms_current_head_compatibility_postgresql.py:34: explicit disposable Integrated RC PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_exception_reconciliation_races_postgresql.py:255: explicit Phase 1B disposable PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_exception_reconciliation_races_postgresql.py:419: explicit Phase 1B disposable PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:116: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:124: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:130: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:136: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:142: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:147: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:155: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:162: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:174: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:186: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:197: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:206: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:213: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fe2_races_postgresql.py:219: explicit disposable FE-2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_fwd01_migration_postgresql.py:28: Separate FWD-01 disposable PostgreSQL migration database required
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:85: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:107: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:122: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:142: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:151: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [13] backend\tests\test_fwd01_notifications.py:161: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:198: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:208: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:223: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:241: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:255: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [3] backend\tests\test_fwd01_notifications.py:267: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:279: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:287: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:300: PostgreSQL skip-locked consumer proof only
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:298: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:315: PostgreSQL physical FK proof only
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:312: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:326: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:343: Row-lock proof requires PostgreSQL; SQLite companion behavior covered separately
+SKIPPED [1] backend\tests\test_fwd01_notifications.py:341: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [3] backend\tests\test_fwd01_notifications.py:373: Real PostgreSQL ordering proof only
+SKIPPED [3] backend\tests\test_fwd01_notifications.py:370: FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof
+SKIPPED [1] backend\tests\test_global_logistics_point_adoptions_postgresql.py:17: requires explicit disposable PostgreSQL URL
+SKIPPED [1] backend\tests\test_global_logistics_point_catalog_v1.py:60: requires explicit Catalog V1 disposable PostgreSQL URL
+SKIPPED [1] backend\tests\test_global_logistics_points_postgresql.py:17: requires explicit disposable PostgreSQL URL
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:131: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:139: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:148: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:154: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:159: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:167: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:175: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:186: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:193: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:200: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:207: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:217: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mdpm_races_postgresql.py:226: explicit disposable MDPM PostgreSQL URL not provided
+SKIPPED [4] backend\tests\test_mt1_ownership_postgresql.py:12: explicit disposable MT-1 ownership PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c1_census_postgresql.py:43: explicit disposable MT-1C.1 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c2_full_surface_postgresql.py:177: explicit disposable MT-1C.2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c2_full_surface_postgresql.py:330: explicit disposable MT-1C.2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c2_full_surface_postgresql.py:466: explicit disposable MT-1C.2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c2_full_surface_postgresql.py:576: explicit disposable MT-1C.2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c2_full_surface_postgresql.py:775: explicit disposable MT-1C.2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c2_full_surface_postgresql.py:929: explicit disposable MT-1C.2 PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_mt1c_quarantine_postgresql.py:31: explicit disposable MT-1C PostgreSQL URL not provided
+SKIPPED [2] backend\tests\test_mt1d_census_postgresql.py:81: explicit disposable MT-1D PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_multi_unit_tracking_postgresql.py:25: explicit disposable PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_multileg_route_orchestration_postgresql.py:26: explicit Phase 1B disposable PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:75: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:79: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:83: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:87: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:91: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:96: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:100: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:104: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:110: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:114: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:118: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:122: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_races_postgresql.py:126: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_oip_rebuild_recovery_postgresql.py:10: explicit disposable OIP PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_operational_vertical_slice_postgresql.py:35: explicit Phase 1A disposable PostgreSQL URL not provided
+SKIPPED [2] backend\tests\test_phase0_2_current_head_compatibility_postgresql.py:26: explicit disposable Integrated RC PostgreSQL URL not provided
+SKIPPED [3] backend\tests\test_phase0_2_postgresql_gate.py:21: explicit Phase 0.2 disposable PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_phase1b_safe_downgrade_postgresql.py:19: explicit disposable PostgreSQL URL not provided: FORWARDER_PHASE1B_SAFE_DOWNGRADE_HEAD_URL
+SKIPPED [1] backend\tests\test_phase1b_safe_downgrade_postgresql.py:19: explicit disposable PostgreSQL URL not provided: FORWARDER_PHASE1B_SAFE_DOWNGRADE_PHASE1B_URL
+SKIPPED [1] backend\tests\test_reference_schema_postgresql.py:15: explicit disposable reference-schema PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_referral_auto_assign_state_compatibility.py:94: V1951_POSTGRES_URL is required
+SKIPPED [1] backend\tests\test_referral_auto_assign_state_compatibility.py:163: V1951_POSTGRES_URL is required
+SKIPPED [1] backend\tests\test_referral_auto_assign_state_compatibility.py:184: V1951_POSTGRES_URL is required
+SKIPPED [1] backend\tests\test_reporter_permission_postgresql.py:24: explicit disposable Phase 1B PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_shipment_list_deduplication_postgresql.py:18: explicit disposable Phase 1B PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_tracking_locations_postgresql.py:26: explicit disposable tracking-location PostgreSQL URL not provided
+SKIPPED [1] backend\tests\test_v191_persistence_postgresql.py:25: explicit disposable v1.9.1 PostgreSQL URL not provided
+XFAIL backend/tests/test_tenant_architecture_contract.py::test_public_tracking_rejects_numeric_ids_characterization - MT-3 defect: public tracking still accepts global numeric database IDs
+891 passed, 134 skipped, 1 xfailed, 10063 warnings in 535.77s (0:08:55)

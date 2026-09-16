@@ -115,6 +115,9 @@ def create_quote_for_request(
         )
         db.session.add(notification)
 
+    from backend.services.outbox_service import record_event
+    from backend.services.quote_notification_contract import EVENT, availability_payload
+    record_event(request_organization_id, EVENT, "ExpertQuote", quote.id, availability_payload(quote))
     db.session.commit()
 
     return {

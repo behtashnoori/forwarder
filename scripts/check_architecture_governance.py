@@ -25,6 +25,7 @@ REQUIRED_DOCUMENTS = (
 )
 
 CANONICAL_MODEL_FILES = (
+    ROOT / "backend" / "notification_models.py",
     ROOT / "backend" / "operational_models.py",
     ROOT / "backend" / "cargo_models.py",
     ROOT / "backend" / "logistics_network_models.py",

@@ -76,6 +76,9 @@ def test_phase1a_postgresql_constraints_concurrency_and_triggers(monkeypatch):
             password_hash="unused",
             full_name="PG Verifier",
             role="manager",
+            # Legacy role is not tenant oversight authority. This verifier has
+            # explicit organization authority plus the scoped permissions below.
+            authority="ORGANIZATION_ADMIN",
             is_active=True,
         )
         db.session.add_all([org, reporter, verifier])
