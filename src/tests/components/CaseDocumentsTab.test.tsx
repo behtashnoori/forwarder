@@ -18,6 +18,7 @@ const multiPayload = {...payload, requirements: [{...payload.requirements[0], ma
 
 describe("CaseDocumentsTab", () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     vi.mocked(api.fetchCaseDocuments).mockResolvedValue(payload as never);
     vi.mocked(api.uploadCaseDocument).mockResolvedValue({} as never);
   });
@@ -52,5 +53,15 @@ describe("CaseDocumentsTab", () => {
     expect(screen.getByText(/صفحه-۲.pdf: ثبت نشد/)).toBeInTheDocument();
     expect(api.uploadCaseDocument).toHaveBeenNthCalledWith(1, "00000000-0000-4000-8000-000000000010", 5, expect.any(FormData), false);
     expect(api.uploadCaseDocument).toHaveBeenNthCalledWith(2, "00000000-0000-4000-8000-000000000010", 5, expect.any(FormData), false);
+  });
+
+  it("keeps separately selected same-name files as separate visible outcomes", async () => {
+    vi.mocked(api.fetchCaseDocuments).mockResolvedValue(multiPayload as never);
+    vi.mocked(api.uploadCaseDocument).mockResolvedValueOnce({} as never).mockRejectedValueOnce(new Error("خطا"));
+    render(<CaseDocumentsTab caseId="00000000-0000-4000-8000-000000000010"/>);
+    const input = await screen.findByLabelText("افزودن فایل به فاکتور");
+    fireEvent.change(input, {target:{files:[new File(["one"], "مدرک.pdf"), new File(["two"], "مدرک.pdf")]}});
+    await waitFor(() => expect(api.uploadCaseDocument).toHaveBeenCalledTimes(2));
+    expect(screen.getAllByText(/مدرک\.pdf:/)).toHaveLength(2);
   });
 });

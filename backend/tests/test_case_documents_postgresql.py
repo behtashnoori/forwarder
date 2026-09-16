@@ -38,7 +38,7 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture(scope="module")
 def postgres_app():
     assert POSTGRES_URL.startswith(("postgresql://", "postgresql+psycopg"))
-    assert "dms1a_" in POSTGRES_URL
+    assert "dms_fwd07_" in POSTGRES_URL
     root = (Path(POSTGRES_ROOT).resolve() / f"run-{uuid4().hex}").resolve()
     root.mkdir(parents=True, exist_ok=False)
     app = create_app({
@@ -52,8 +52,8 @@ def postgres_app():
         database = db.session.execute(text("select current_database()")).scalar_one()
         revision = db.session.execute(text("select version_num from alembic_version")).scalar_one()
         assert version.startswith("18.")
-        assert database.startswith("dms1a_")
-        assert revision == "20260824_mt1_graph"
+        assert database.startswith("dms_fwd07_")
+        assert revision == "20260916_fwd06_tracking_time"
         db.session.rollback()
     yield app, root
     with app.app_context():
