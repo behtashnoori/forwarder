@@ -2,7 +2,7 @@
 import traceback
 
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import text
+from sqlalchemy import text, or_
 
 from backend.extensions import db
 from backend.models import City, County, Province, Country, InternationalCity, IranPort, PortProvinceMapping, CustomsOffice
@@ -169,24 +169,37 @@ def list_international_cities():
             400,
         )
 
-    cities = InternationalCity.query.filter_by(
-        country_id=country_id, 
-        is_active=True
-    ).order_by(InternationalCity.name_fa).all()
-    
-    return jsonify(
-        [
-            {
-                "id": city.id,
-                "name": city.name_fa,
-                "name_en": city.name_en,
-                "city_type": city.city_type,
-                "is_major_port": city.is_major_port,
-                "is_major_airport": city.is_major_airport,
-            }
-            for city in cities
-        ]
-    )
+    query = InternationalCity.query.join(Country).filter(
+        InternationalCity.country_id == country_id,
+        InternationalCity.is_active.is_(True), Country.is_active.is_(True))
+    q = request.args.get("q", "").strip()
+    if len(q) > 160:
+        return jsonify({"message": "Search is too long"}), 400
+    if q:
+        literal = q.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        pattern = f"%{literal}%"
+        query = query.filter(or_(InternationalCity.name_fa.ilike(pattern, escape="!"),
+                                 InternationalCity.name_en.ilike(pattern, escape="!"),
+                                 InternationalCity.un_locode.ilike(pattern, escape="!")))
+    query = query.order_by(InternationalCity.name_fa, InternationalCity.id)
+    paged = request.args.get("paged") == "1"
+    if paged:
+        limit = request.args.get("limit", default=50, type=int)
+        offset = request.args.get("offset", default=0, type=int)
+        if limit is None or offset is None or not 1 <= limit <= 100 or offset < 0:
+            return jsonify({"message": "Invalid pagination"}), 400
+        cities = query.offset(offset).limit(limit + 1).all()
+        has_more = len(cities) > limit
+        cities = cities[:limit]
+    else:
+        cities = query.all()  # compatibility for existing non-form consumers
+    items = [{"id": city.id, "name": city.name_fa, "name_en": city.name_en,
+              "city_type": city.city_type, "un_locode": city.un_locode,
+              "is_major_port": city.is_major_port,
+              "is_major_airport": city.is_major_airport} for city in cities]
+    return jsonify({"items": items, "offset": offset, "limit": limit, "has_more": has_more}
+                   if paged else items)
+
 
 
 @location_bp.get("/iran-ports")

@@ -1,0 +1,66 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- generic: پذیرفته شد
+- heading "FWD02-SYNTHETIC-TRACK" [level=1]
+- paragraph: جزئیات درخواست حمل و نقل
+- button "بازگشت به کنسول":
+  - text: بازگشت به کنسول
+- link "خانه":
+  - /url: /
+  - text: خانه
+- button "خروج":
+  - text: خروج
+- region "اطلاعات سامانه":
+  - paragraph: Forwarder 1.9.5.1
+- heading "محموله‌های عملیاتی این درخواست" [level=3]
+- paragraph: هنوز محموله عملیاتی از این درخواست ایجاد نشده است.
+- tablist:
+  - tab "جزئیات"
+  - tab "یادداشت‌ها"
+  - tab "مدیریت رهگیری محموله" [selected]
+  - tab "مستندات پرونده"
+- tabpanel "مدیریت رهگیری محموله":
+  - heading "مدیریت رهگیری محموله" [level=3]
+  - generic: فعال
+  - generic: FWD02-SYNTHETIC-TRACK
+  - heading "افزودن بخش قابل رهگیری" [level=3]
+  - paragraph: هر وسیله، کانتینر، واگن یا بخش دیگری از حمل که وضعیت و موقعیت آن جداگانه ثبت می‌شود.
+  - textbox "کد بخش"
+  - combobox:
+    - generic: کامیون
+  - textbox "عنوان نمایشی (اختیاری)"
+  - textbox "مانند پلاک، شماره کانتینر یا شماره واگن":
+    - /placeholder: شناسه وسیله یا محفظه حمل
+  - button "افزودن بخش قابل رهگیری" [disabled]:
+    - text: افزودن بخش قابل رهگیری
+  - heading "ویرایش بخش قابل رهگیری" [level=3]
+  - combobox:
+    - generic: انتخاب بخش قابل رهگیری
+  - textbox "عنوان نمایشی (اختیاری)"
+  - textbox "مانند پلاک، شماره کانتینر یا شماره واگن":
+    - /placeholder: شناسه وسیله یا محفظه حمل
+  - button "ذخیره" [disabled]
+  - heading "ثبت به‌روزرسانی" [level=3]
+  - combobox:
+    - generic: انتخاب بخش قابل رهگیری
+  - combobox:
+    - generic: در مسیر
+  - text: مکان لجستیکی
+  - paragraph: مکان‌های فعال و مجاز سازمان را با نام فارسی، لاتین یا کد جست‌وجو کنید.
+  - textbox "مکان لجستیکی" [active]:
+    - /placeholder: جست‌وجوی مکان
+    - text: Other private
+  - combobox "انتخاب مکان لجستیکی":
+    - option "محل در فهرست نیست (ورود دستی)" [selected]
+  - status: مکان فعال و مجازی برای این جست‌وجو پیدا نشد.
+  - textbox "ثبت مکان خارج از فهرست"
+  - textbox: 2026-09-16T09:31
+  - textbox "پیام برای مشتری"
+  - textbox "یادداشت داخلی"
+  - checkbox "نمایش به مشتری" [checked]:
+  - text: نمایش به مشتری
+  - button "ثبت به‌روزرسانی" [disabled]
+  - paragraph: FWD02-TRUCK
+  - paragraph: در مسیر · انبار آزمایشی 24
+  - paragraph: ۱۴۰۵/۶/۲۵, ۹:۲۹:۰۰

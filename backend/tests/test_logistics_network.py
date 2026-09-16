@@ -361,3 +361,26 @@ def test_logistics_migration_is_the_single_head():
         script.get_revision("20260810_logistics_network").down_revision
         == "20260809_cargo_catalog_items"
     )
+
+
+def test_tracking_pagination_covers_all_eligible_points_without_cross_tenant_leak(network_app):
+    app, ctx = network_app
+    with app.test_client() as client:
+        expected = set()
+        for index in range(23):
+            result = _point(client, ctx, f"PAGE-{index:02}", f"مکان آزمایشی {index:02}", en_name=f"Page Warehouse {index:02}")
+            assert result.status_code == 201
+            expected.add(result.get_json()["item"]["public_id"])
+        endpoint = "/api/internal/logistics-points/tracking-selector"
+        first = client.get(endpoint, headers=ctx["auth"]).get_json()
+        second = client.get(endpoint + "?offset=20", headers=ctx["auth"]).get_json()
+        assert len(first["items"]) == 20 and first["has_more"] is True
+        assert len(second["items"]) == 3 and second["has_more"] is False
+        assert {x["public_id"] for x in first["items"] + second["items"]} == expected
+        assert not ({x["public_id"] for x in first["items"]} & {x["public_id"] for x in second["items"]})
+        assert client.get(endpoint + "?q=PAGE-22", headers=ctx["auth"]).get_json()["items"]
+        assert client.get(endpoint + "?q=PAGE", headers=ctx["other_auth"]).get_json()["items"] == []
+        assert client.get(endpoint + "?country_code=NO", headers=ctx["auth"]).get_json()["items"] == []
+        assert client.get(endpoint + "?type_code=PORT", headers=ctx["auth"]).get_json()["items"] == []
+        assert client.get(endpoint + "?offset=invalid", headers=ctx["auth"]).status_code == 400
+        assert client.get(endpoint).status_code == 401

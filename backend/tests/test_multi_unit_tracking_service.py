@@ -6,7 +6,7 @@ from backend import create_app
 from backend.extensions import db
 from backend.models import Country, ExpertUser, ShipmentRequest, TrackingLocationReference
 from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
-from backend.operational_models import OperationalOrganization
+from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
     add_unit,
@@ -72,6 +72,7 @@ def test_enablement_requires_accepted_request_and_tracking_code(app):
 def test_canonical_logistics_point_snapshots_are_tenant_safe_and_immutable(app):
     with app.app_context():
         actor, req = _seed_request()
+        db.session.add(OperationalMembership(organization_id=req.operational_organization_id, user_id=actor.id, permissions=["logistics_point.read"]))
         country = Country(code="IR", name_en="Iran", name_fa="ایران")
         point_type = LogisticsPointType(
             immutable_code="WAREHOUSE", fa_name="انبار", en_name="Warehouse",

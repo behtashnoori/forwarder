@@ -85,6 +85,48 @@ def _headers(token):
     return {"Authorization": f"Bearer {token}"}
 
 
+def test_private_location_selection_rechecks_expert_permission_at_write(tracking_api_app):
+    from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
+    from backend.models import Country
+
+    app = tracking_api_app["app"]
+    with app.app_context():
+        actor = ExpertUser.query.filter_by(username="tracking-assignee").one()
+        membership = OperationalMembership.query.filter_by(user_id=actor.id).one()
+        membership.permissions = ["logistics_point.read"]
+        country = Country(code="IR", name_en="Iran", name_fa="ایران")
+        kind = LogisticsPointType(immutable_code="WAREHOUSE", fa_name="انبار", en_name="Warehouse", created_by=actor.id, updated_by=actor.id)
+        db.session.add_all([country, kind])
+        db.session.flush()
+        point = LogisticsPoint(organization_id=membership.organization_id, immutable_code="FWD02-PRIVATE",
+            logistics_point_type_id=kind.id, fa_name="مکان خصوصی مجاز", normalized_name="fwd02 private",
+            country_id=country.id, geography_key="IR|-|-", created_by=actor.id, updated_by=actor.id)
+        db.session.add(point)
+        db.session.commit()
+        point_id, membership_id = point.public_id, membership.id
+    client = app.test_client()
+    headers = _headers(tracking_api_app["assignee_token"])
+    selector = "/api/internal/logistics-points/tracking-selector"
+    assert client.get(selector, headers=headers).get_json()["items"][0]["public_id"] == point_id
+    path = f"/api/expert/requests/{tracking_api_app['request_public_id']}/tracking"
+    assert client.post(path + "/enable", headers=headers).status_code == 200
+    created = client.post(path + "/units", headers=headers, json={"unit_code": "PRIVATE", "unit_type": "truck"})
+    unit_id = created.get_json()["unit_tracking"]["units"][0]["id"]
+    payload = {"status": "in_transit", "logistics_point_public_id": point_id,
+               "occurred_at": "2026-01-01T12:00:00Z", "is_customer_visible": True}
+    assert client.post(f"{path}/units/{unit_id}/updates", headers=headers, json=payload).status_code == 201
+    with app.app_context():
+        membership = db.session.get(OperationalMembership, membership_id)
+        membership.permissions = []
+        db.session.commit()
+    assert client.get(selector, headers=headers).status_code == 403
+    denied = client.post(f"{path}/units/{unit_id}/updates", headers=headers, json=payload)
+    assert denied.status_code == 400 and "not permitted" in denied.get_json()["error"]
+    public = client.get(f"/api/public/track/{tracking_api_app['tracking_code']}").get_json()
+    assert "مکان خصوصی مجاز" in str(public)
+    assert point_id not in str(public) and "FWD02-PRIVATE" not in str(public)
+
+
 def test_tracking_management_is_authenticated_and_assignment_scoped(tracking_api_app):
     client = tracking_api_app["app"].test_client()
     path = f"/api/expert/requests/{tracking_api_app['request_id']}/tracking"

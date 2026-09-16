@@ -134,9 +134,53 @@ CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment
 
 `LogisticsPoint` is the future governed organization location master and `ProjectLogisticsPoint` is project configuration. `CanonicalLocation` remains the accepted route-facing bridge/snapshot abstraction from ADR-005. These roles are complementary.
 
-`TrackingLocationReference` is a legacy platform tracking selector. It is not an alias of `LogisticsPoint`; new runtime dependence on it requires explicit authorization. Convergence needs an Accepted ADR covering tenant ownership, mapping, historical snapshots, free text, API compatibility, and rollback.
+`TrackingLocationReference` remains a legacy compatibility authority and is not
+an alias of `LogisticsPoint`. Accepted ADR-035 governs the implemented expert
+tracking selector and immutable tenant-point snapshots. New selection uses the
+existing `logistics_point.read` permission and active authenticated organization
+membership; the write rechecks that permission and unit/point tenant equality
+through Logistics Network's `resolve_tracking_point` query contract. Public
+tracking consumes only allowlisted historical snapshots, not the private catalog.
 
-ADR-041 accepts a platform-owned `GlobalLogisticsPoint` and tenant-owned adoption boundary without changing current tenant master ownership. Phase 1 implements only the empty platform schema, normalized support structures, and Platform-Admin-only list/detail API. Organizations will approve global points through future `OrganizationGlobalLogisticsPoint`; current `LogisticsPoint` remains non-null tenant-owned and may later represent an adoption or remain an organization-only facility. Expert, project and tracking selectors are unchanged. The 64 legacy tracking rows are not a seed and require reviewed many-capable mapping; adoption, population and reconciliation remain pending separate goals.
+FWD-02 makes the bounded selector's pagination visible (`q`, `country_code`,
+`type_code`, `limit` 1–100, `offset`; response `items`, `limit`, `offset`,
+`has_more`). Errors remain explicit; client organization overrides are forbidden.
+Geography request selectors retain Country/InternationalCity identity, show
+UN/LOCODE and untranslated fallback names, and persist IDs through the existing
+Commercial contract. An inactive country cannot offer newly selectable places;
+old request and tracking references remain readable. No schema, map coordinates,
+canonical tracking cutover or authority change is introduced.
+
+General Geography imports remain optional under ADR-028. FWD-02's checksummed
+UN/LOCODE 2025-1 profile covers all 249 published countries/territories and 115,208
+unique locations worldwide (including 154 IR, 5,799 IT and 1,142 NO); it has no
+country or transport-function shortlist. Approved/recognized and credible national
+legacy statuses are preserved with source metadata; deletion and unverified or
+unrecognized statuses are excluded. This is trade-location coverage, not a census
+of every settlement or a service guarantee. New names retain untranslated source
+spelling. Multi-function locations remain one identity, not fabricated facilities.
+
+The public request form uses an opt-in paged projection of the existing geography
+endpoint (`paged=1`, `q`, `country_id`, `limit` 1–100, `offset`; `items`, `has_more`,
+`limit`, `offset`). Country is mandatory. Name/code search and 50-row pages avoid
+loading entire national directories; the legacy array response remains compatible.
+Selected identities survive search/pages and reset on country changes.
+
+`international_geography_catalog` plans and applies only missing stable identities
+into the existing tables, records `ReferenceDataSeedRun` evidence, refuses ambiguous
+unbound historical same-name mappings and cross-country codes, and never
+reactivates, renames or deletes existing records. Different source codes may share
+a name; a name is not identity. Historical unbound seed rows require explicit
+identity review before an optional import, not silent auto-binding. Existing v1
+input and historical migrations remain unchanged. See FWD-02 evidence for exact
+source eligibility, reproducibility, import procedures and recovery.
+
+ADR-041 accepts a platform-owned `GlobalLogisticsPoint` and tenant-owned adoption
+boundary without changing current tenant master ownership. Its implementation
+status is tracked in ADR-INDEX; FWD-02 does not extend adoption or operational
+consumption. `LogisticsPoint` remains non-null tenant-owned, whether materialized
+under approved adoption or an organization-only facility. The legacy tracking
+rows and China–Iran atlas are not geography seeds for this slice.
 
 ## 11. CRM architecture
 

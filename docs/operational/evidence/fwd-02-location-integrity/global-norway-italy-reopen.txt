@@ -1,0 +1,67 @@
+Browser tab: 2, Title: "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل", URL: "http://127.0.0.1:5182/customer/track/SR-3KOHM4".
+1 AXWebArea فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل, URL: 127.0.0.1:5182/customer/track/SR-3KOHM4
+	2 container root
+		3 container Notifications (F8)
+			4 content list
+		5 container Notifications alt+T
+		6 container
+			7 button بازگشت
+				8 image
+				9 text بازگشت
+			10 button صفحه اصلی
+				11 image
+				12 text صفحه اصلی
+			13 text ثبت شده بین‌المللی وضعیت فعلی :  ثبت شده
+			14 heading SR-3KOHM4, Value: 1
+				15 text SR-3KOHM4
+			16 text آخرین وضعیت ثبت‌شده برای درخواست شما در این صفحه نمایش داده می‌شود. برای اطلاع از وضعیت جدیدتر، همین کد پیگیری را دوباره در بخش پیگیری درخواست وارد کنید.
+			17 text تاریخ ثبت
+			18 text ۲۵ شهریور ۱۴۰۵
+			19 text تاریخ اختصاص کارشناس
+			20 text —
+			21 text شماره رهگیری
+			22 text SR-3KOHM4
+			23 text وضعیت فعلی
+			24 text ثبت شده
+			25 text روش حمل
+			26 text —
+			27 image
+			28 heading اطلاعات درخواست, Value: 2
+				29 text اطلاعات درخواست
+			30 text تاریخ ثبت ۱۴۰۵/۶/۲۵ نوع ارسال بین‌المللی
+			31 image
+			32 heading مسیر ارسال, Value: 2
+				33 text مسیر ارسال
+			34 text مبدا
+			35 image
+			36 text Oslo، NORWAY مقصد
+			37 image
+			38 text Genova، ITALY
+			39 image
+			40 heading اطلاعات تماس, Value: 2
+				41 text اطلاعات تماس
+			42 text شماره تماس
+			43 image
+			44 text 09120000000
+			45 image
+			46 heading مراحل گردش کار, Value: 2
+				47 text مراحل گردش کار
+			48 container
+				49 text وضعیت فعلی :  ثبت شده
+			50 image
+			51 text ارسال درخواست
+			52 text ۱۴۰۵/۶/۲۵
+			53 image
+			54 text اختصاص کارشناس
+			55 text ۱۴۰۵/۶/۲۵
+			56 image
+			57 text در حال پیگیری
+			58 text ۱۴۰۵/۶/۲۵
+			59 image
+			60 text پذیرش / عدم پذیرش
+			61 text در انتظار
+			62 button درخواست جدید
+				63 image
+				64 text درخواست جدید
+
+The focused UI element is 1 AXWebArea فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل, URL: 127.0.0.1:5182/customer/track/SR-3KOHM4

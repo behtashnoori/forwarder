@@ -4,7 +4,6 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from backend.extensions import db
-from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
 from backend.models import (
     ShipmentRequest,
     ShipmentTracking,
@@ -226,19 +225,13 @@ def add_update(
         if reference is None or not reference.is_active:
             raise TrackingValidationError("active tracking location reference not found")
     if point_public_id:
-        point = db.session.scalar(
-            db.select(LogisticsPoint)
-            .join(LogisticsPointType)
-            .where(
-                LogisticsPoint.public_id == point_public_id,
-                LogisticsPoint.organization_id == unit.operational_organization_id,
-                LogisticsPoint.is_active.is_(True),
-                LogisticsPointType.is_active.is_(True),
-            )
-            .with_for_update()
-        )
-        if point is None:
-            raise TrackingValidationError("active logistics point not found")
+        from backend.services.logistics_network_service import resolve_tracking_point
+        from backend.services.operational_service import OperationalError
+
+        try:
+            point = resolve_tracking_point(point_public_id, {"id": actor_id}, unit.operational_organization_id)
+        except OperationalError as exc:
+            raise TrackingValidationError("active logistics point not found or not permitted") from exc
     authorities = sum(bool(value) for value in (point, reference, clean_location_text))
     if authorities > 1:
         raise TrackingValidationError("supply exactly one location authority")

@@ -1,0 +1,58 @@
+Browser tab: 2, Title: "فورواردر | ثبت درخواست و رهگیری عملیات حمل", URL: "http://127.0.0.1:5182/".
+The following is a diff from the previous accessibility tree with ~ and + representing changed and added elements, respectively. Removed elements are summarized by ID range.
+Removed element IDs: 82
+~			32 pop up button (collapsed, settable) Description: انتخاب مکان مبدأ, Value: انتخاب مکان, Secondary Actions: Expand
+~					34 (selected) انتخاب مکان
++					84 Acton · UST5C
++					85 Acton · USTZO
++					86 Acton · USUAH
++					87 Acushnet · USKUS
++					88 Acworth · US6WT
++					89 Acworth · USAWR
++					90 Ada · USADT
++					91 Ada · USADZ
++					92 Ada · USAJJ
++					93 Ada · USDD2
++					94 Adair · US2AR
++					95 Adair · USA59
++					96 Adairsville · USADV
++					97 Adairville · USAD3
++					98 Adak · USAXK
++					99 Adak Island/Adak Apt · USADK
++					100 Adams · USAKM
++					101 Adams · USAZM
++					102 Adams · USUAN
++					103 Adams · USUAT
++					104 Adams Center · USADH
++					105 Adams City · USYP2
++					106 Adams Run · USUAJ
++					107 Adamston · USDST
++					108 Adamstown · USAEJ
++					109 Adamstown · USAN6
++					110 Adamsville · US6LA
++					111 Adamsville · USUAM
++					112 Addis · USADD
++					113 Addison · USADS
++					114 Addison · USADX
++					115 Addison · USDDX
++					116 Addison · USIAB
++					117 Addison · USQDS
++					118 Addison · USUAP
++					119 Addison · USXDS
++					120 Addison · USYAI
++					121 Addyston · USUAS
++					122 Adel · USADE
++					123 Adel · USZAE
++					124 Adelanto · USADU
++					125 Adell · USAJD
++					126 Adelphi · USA9D
++					127 Adelphia · USAHP
++					128 Adger · USAGE
++					129 Adkins · USRZU
++					130 Adrian · US5AN
++					131 Adrian · USAD9
++					132 Adrian · USADG
++					133 Adrian · USAI4
+~			83 button صفحه قبل
++			134 button مکان‌های بیشتر
+The focused UI element is 0 AXWebArea فورواردر | ثبت درخواست و رهگیری عملیات حمل, URL: 127.0.0.1:5182/

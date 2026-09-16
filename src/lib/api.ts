@@ -22,6 +22,7 @@ export interface Country {
 }
 
 export interface InternationalCity {
+  un_locode?: string | null;
   id: number;
   name: string;
   name_en: string;
@@ -96,6 +97,11 @@ export interface TransportMethodOptions {
 
 export interface ShipmentRequestPayload {
   shipping_type: "domestic" | "international";
+  // Existing governed backend contract; retain IDs through save/reopen.
+  origin_country_id?: number;
+  origin_international_city_id?: number;
+  dest_country_id?: number;
+  dest_international_city_id?: number;
   // Domestic shipping fields
   origin_province_id?: number;
   origin_county_id?: number | null;
@@ -366,6 +372,12 @@ export function fetchInternationalCities(
   return request<InternationalCity[]>(path);
 }
 
+export function fetchInternationalCityPage(countryId: number, q = "", offset = 0): Promise<{
+  items: InternationalCity[]; offset: number; limit: number; has_more: boolean;
+}> {
+  return request(withQuery("/api/international-cities", { country_id: countryId, paged: 1, q, offset, limit: 50 }));
+}
+
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
 ): Promise<{ message: string; id: number; tracking_code: string }> {
@@ -443,8 +455,9 @@ export interface TrackingLogisticsPoint {
 
 export const fetchTrackingLogisticsPoints = (
   q = "",
-): Promise<{ items: TrackingLogisticsPoint[]; limit: number; offset: number }> =>
-  request(`/api/internal/logistics-points/tracking-selector${q ? `?q=${encodeURIComponent(q)}` : ""}`);
+  offset = 0,
+): Promise<{ items: TrackingLogisticsPoint[]; limit: number; offset: number; has_more: boolean }> =>
+  request(`/api/internal/logistics-points/tracking-selector?${new URLSearchParams({ q, offset: String(offset) })}`);
 export const fetchAdminTrackingLocations = (
   q = "",
 ): Promise<{ items: TrackingLocationReference[] }> =>

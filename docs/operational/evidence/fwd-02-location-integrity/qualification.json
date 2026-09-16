@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-16",
+  "branch": "feature/fwd-02-location-integrity",
+  "start_head": "d7cbedf9ec7416b83aeb6313aa095462a20e441d",
+  "backend": {
+    "passed": 901,
+    "skipped": 136,
+    "xfailed": 1,
+    "seconds": 533.26,
+    "scope": "backend/tests; TEST_DATABASE_URL and DATABASE_URL explicitly sqlite:///:memory:",
+    "limits": "PostgreSQL/external-fixture tests skipped; no production qualification claimed"
+  },
+  "frontend": {
+    "files": 37,
+    "passed": 170
+  },
+  "worldwide_geography": {
+    "passed": 6,
+    "countries": 249,
+    "locations": 115208,
+    "reproduction_sha256": "b3e71f12f7c9cc8a9c5061a9df0ed67f085636bc84bd7120400694adab2d48ca"
+  },
+  "typescript_app": "PASS",
+  "build": "PASS; existing bundle-size warning",
+  "lint": "PASS; 0 errors, 12 existing warnings",
+  "ruff_changed_backend": "PASS",
+  "architecture": "PASS",
+  "secret_scan": "PASS; 0 findings",
+  "browser": "PASS; actual public customer and ordinary authorized expert, RTL mobile and desktop, synthetic databases only",
+  "migration": "NOT_APPLICABLE; no schema change",
+  "FWD01": "PASS within full suite; existing external fixture skips remain",
+  "PRODUCTION_IDENTITY": "UNKNOWN",
+  "FORWARDER-HISTORICAL-REPLAY-001": "BLOCKED_MISSING_EXTERNAL_EVIDENCE",
+  "REAL_MESSAGES_SENT": false,
+  "LLM_APIS_CALLED": false,
+  "PRODUCTION_CHANGED": false,
+  "log_directory": "instance/fwd02-qualification (ignored; not committed)",
+  "logs": {
+    "backend-worldwide.log": {
+      "sha256": "415cfa7f2050441e296c14b71e385a7f654238abb303bc463bd09a72757537f9",
+      "bytes": 1289
+    },
+    "frontend-global.log": {
+      "sha256": "b2758fbb074840031cb9016de921b7e6a9a06e777216bccd3d54e80041a2dca8",
+      "bytes": 235
+    },
+    "typescript-global.log": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    "build-global.log": {
+      "sha256": "6efd419221f84505bc94b1e07785173b20a657b52586952ea6d0c0236e937992",
+      "bytes": 937
+    },
+    "lint-global.log": {
+      "sha256": "1d924963df372e2c79f04cb3a1ac4ea8068bd9dd595ca79a4be8d25da2116860",
+      "bytes": 2928
+    },
+    "geography-global2.log": {
+      "sha256": "82a62b97786dd00ce3069de6e013b1659dc6ea936b574ffc51b2633d841212fa",
+      "bytes": 128
+    },
+    "architecture-global.log": {
+      "sha256": "47109b0c724cf0a14aaa0e6570abf8b39f00411150f99d0705ed657852b2d4e4",
+      "bytes": 50
+    },
+    "secrets-global.log": {
+      "sha256": "43a2d537fc322f01becbbc8fc865e4cb6a2c89cf846b056355ecfbe8a1b54455",
+      "bytes": 48
+    }
+  }
+}

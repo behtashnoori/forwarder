@@ -1,0 +1,19 @@
+{
+  "environment": "disposable synthetic SQLite only",
+  "requests": [
+    [
+      "SR-3KOHM4",
+      "NO",
+      "NOOSL",
+      "IT",
+      "ITGOA"
+    ],
+    [
+      "SR-H1IZ3E",
+      "US",
+      "USNYC",
+      "IR",
+      "IRTBZ"
+    ]
+  ]
+}

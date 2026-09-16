@@ -433,7 +433,7 @@ def tracking_selector(args, user):
     except (TypeError, ValueError) as exc:
         raise OperationalError("VALIDATION_FAILED", "pagination is invalid.", 400) from exc
     rows = db.session.scalars(
-        q.order_by(LogisticsPoint.fa_name, LogisticsPoint.id).offset(offset).limit(limit)
+        q.order_by(LogisticsPoint.fa_name, LogisticsPoint.id).offset(offset).limit(limit + 1)
     ).all()
     return {
         "items": [
@@ -453,11 +453,35 @@ def tracking_selector(args, user):
                 "province": row.province.name_fa if row.province else None,
                 "city": row.city.name_fa if row.city else None,
             }
-            for row in rows
+            for row in rows[:limit]
         ],
         "limit": limit,
         "offset": offset,
+        "has_more": len(rows) > limit,
     }
+
+
+def resolve_tracking_point(public_id, user, organization_id):
+    """Reauthorize a new tracking selection against the already-authorized unit.
+
+    Read-only owner contract. The caller snapshots the returned point in its
+    transaction; it cannot modify the master or override membership ownership.
+    """
+    require_permission(user, "logistics_point.read")
+    org = organization_for_user(user["id"])
+    if org != organization_id:
+        raise OperationalError("NOT_FOUND", "Active logistics point not found.", 404)
+    point = db.session.scalar(
+        select(LogisticsPoint).join(LogisticsPointType).where(
+            LogisticsPoint.public_id == public_id,
+            LogisticsPoint.organization_id == org,
+            LogisticsPoint.is_active.is_(True),
+            LogisticsPointType.is_active.is_(True),
+        ).with_for_update()
+    )
+    if point is None:
+        raise OperationalError("NOT_FOUND", "Active logistics point not found.", 404)
+    return point
 
 
 def update_point(row, payload, user):

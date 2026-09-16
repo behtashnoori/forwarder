@@ -1,0 +1,93 @@
+Browser tab: 2, Title: "فورواردرت | پلتفرم یکپارچه عملیات حمل", URL: "http://127.0.0.1:5182/expert/requests/efe7ccec-15f0-4d57-9d7d-148af76f7263".
+0 AXWebArea فورواردرت | پلتفرم یکپارچه عملیات حمل, URL: 127.0.0.1:5182/expert/requests/efe7ccec-15f0-4d57-9d7d-148af76f7263
+	1 container root
+		2 container Notifications (F8)
+			3 content list
+		4 container Notifications alt+T
+		5 container
+			6 image
+			7 text پذیرفته شد
+			8 heading SR-FWD02X, Value: 1
+				9 text SR-FWD02X
+			10 text جزئیات درخواست حمل و نقل
+			11 button بازگشت به کنسول
+				12 image
+				13 text بازگشت به کنسول
+			14 link Description: خانه, Value: 127.0.0.1:5182/
+			15 button خروج
+				16 image
+				17 text خروج
+			18 container اطلاعات سامانه
+				19 container
+					20 text Forwarder  1.9.5.1
+		21 heading محموله‌های عملیاتی این درخواست, Value: 3
+			22 text محموله‌های عملیاتی این درخواست
+		23 text هنوز محموله عملیاتی از این درخواست ایجاد نشده است.
+		24 tab group
+			25 tab (selectable, settable, boolean) جزئیات, Value: 0, ID: radix-_r_qj_-trigger-details
+			26 tab (selectable, settable, boolean) یادداشت‌ها, Value: 0, ID: radix-_r_qj_-trigger-notes
+			27 tab (selected, settable, boolean) مدیریت رهگیری محموله, Value: 1, ID: radix-_r_qj_-trigger-tracking
+			28 tab (selectable, settable, boolean) مستندات پرونده, Value: 0, ID: radix-_r_qj_-trigger-documents
+		29 container Description: مدیریت رهگیری محموله, ID: radix-_r_qj_-content-tracking
+			30 heading مدیریت رهگیری محموله, Value: 3
+				31 text مدیریت رهگیری محموله
+			32 text فعال
+			33 text SR-FWD02X
+			34 heading افزودن بخش قابل رهگیری, Value: 3
+				35 text افزودن بخش قابل رهگیری
+			36 text هر وسیله، کانتینر، واگن یا بخش دیگری از حمل که وضعیت و موقعیت آن جداگانه ثبت می‌شود.
+			37 text field (settable)
+			38 combo box (collapsed) Value: کامیون, Secondary Actions: Expand
+				39 text کامیون
+			40 text field (settable)
+			41 text field (settable) مانند پلاک، شماره کانتینر یا شماره واگن
+			42 button (disabled) افزودن بخش قابل رهگیری
+				43 image
+				44 text افزودن بخش قابل رهگیری
+			45 heading ویرایش بخش قابل رهگیری, Value: 3
+				46 text ویرایش بخش قابل رهگیری
+			47 combo box (collapsed) Value: انتخاب بخش قابل رهگیری, Secondary Actions: Expand
+				48 text انتخاب بخش قابل رهگیری
+			49 text field (settable)
+			50 text field (settable) مانند پلاک، شماره کانتینر یا شماره واگن
+			51 button (disabled) ذخیره
+			52 heading ثبت به‌روزرسانی, Value: 3
+				53 text ثبت به‌روزرسانی
+			54 combo box (collapsed) Value: FWD02-TRUCK, Secondary Actions: Expand
+				55 text FWD02-TRUCK
+			56 combo box (collapsed) Value: در مسیر, Secondary Actions: Expand
+				57 text در مسیر
+			58 text مکان لجستیکی
+			59 text مکان‌های فعال و مجاز سازمان را با نام فارسی، لاتین یا کد جست‌وجو کنید.
+			60 text field (settable) مکان لجستیکی, ID: tracking-location-search
+			61 pop up button (collapsed, settable) Description: انتخاب مکان لجستیکی, Value: انبار آزمایشی 24 · انبار · ایران, Secondary Actions: Expand
+				62 menu
+					63 محل در فهرست نیست (ورود دستی)
+					64 انبار آزمایشی 20 · انبار · ایران
+					65 انبار آزمایشی 21 · انبار · ایران
+					66 انبار آزمایشی 22 · انبار · ایران
+					67 انبار آزمایشی 23 · انبار · ایران
+					68 (selected) انبار آزمایشی 24 · انبار · ایران
+			69 button صفحه اول
+			70 date field (settable) 2026-09-16T10:00
+				71 container
+					72 stepper
+					73 stepper
+					74 stepper
+					75 stepper
+					76 stepper
+					77 stepper
+				78 pop up button Show local date and time picker
+			79 text entry area (settable)
+			80 text entry area (settable)
+			81 container
+				82 checkbox Description: نمایش به مشتری, Value: 1
+					83 image
+				84 text نمایش به مشتری
+			85 button ثبت به‌روزرسانی
+			86 text FWD02-TRUCK
+			87 container
+				88 text در مسیر  ·  انبار آزمایشی 24
+			89 text ۱۴۰۵/۶/۲۵, ۱۰:۰۰:۰۰
+
+The focused UI element is 0 AXWebArea فورواردرت | پلتفرم یکپارچه عملیات حمل, URL: 127.0.0.1:5182/expert/requests/efe7ccec-15f0-4d57-9d7d-148af76f7263

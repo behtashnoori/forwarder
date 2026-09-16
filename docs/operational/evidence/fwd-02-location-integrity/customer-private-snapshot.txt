@@ -1,0 +1,81 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- main:
+  - button "بازگشت":
+    - text: بازگشت
+  - button "صفحه اصلی":
+    - text: صفحه اصلی
+  - generic: پذیرفته شد
+  - generic: بین‌المللی
+  - generic: "وضعیت فعلی: پذیرفته شد"
+  - heading "SR-FWD02X" [level=1]
+  - paragraph: آخرین وضعیت ثبت‌شده برای درخواست شما در این صفحه نمایش داده می‌شود. برای اطلاع از وضعیت جدیدتر، همین کد پیگیری را دوباره در بخش پیگیری درخواست وارد کنید.
+  - paragraph: تاریخ ثبت
+  - generic: ۲۵ شهریور ۱۴۰۵
+  - paragraph: تاریخ اختصاص کارشناس
+  - generic: —
+  - paragraph: شماره رهگیری
+  - paragraph: SR-FWD02X
+  - paragraph: وضعیت فعلی
+  - generic: پذیرفته شد
+  - paragraph: روش حمل
+  - paragraph: —
+  - heading "رهگیری بخش‌های حمل" [level=2]
+  - paragraph: وضعیت کل محموله
+  - generic: در حال انجام
+  - paragraph: تعداد بخش‌های قابل رهگیری
+  - generic: ۱
+  - paragraph: بخش‌های تحویل‌شده
+  - generic: ۰
+  - paragraph: آخرین به‌روزرسانی
+  - generic: ۲۵ شهریور ۱۴۰۵، ۹:۲۹
+  - generic: پیشرفت کل
+  - generic: ۵۵%
+  - progressbar
+  - paragraph: FWD02-TRUCK
+  - paragraph: FWD02-TRUCK · truck
+  - generic: در مسیر
+  - paragraph: آخرین موقعیت
+  - generic: انبار آزمایشی 24
+  - paragraph: آخرین به‌روزرسانی
+  - generic: ۲۵ شهریور ۱۴۰۵، ۹:۲۹
+  - paragraph: تاریخچه قابل مشاهده برای مشتری
+  - list:
+    - paragraph: در مسیر
+    - paragraph: انبار آزمایشی 24
+    - time: ۲۵ شهریور ۱۴۰۵، ۹:۲۹
+  - heading "اطلاعات درخواست" [level=2]
+  - paragraph: تاریخ ثبت
+  - generic: ۱۴۰۵/۶/۲۵
+  - paragraph: نوع ارسال
+  - generic: بین‌المللی
+  - heading "مسیر ارسال" [level=2]
+  - generic: مبدا
+  - paragraph: ثبت نشده
+  - generic: مقصد
+  - paragraph: ثبت نشده
+  - heading "اطلاعات تماس" [level=2]
+  - paragraph: شماره تماس
+  - text: "09120000000"
+  - paragraph: نام مشتری
+  - generic: آزمون مکان
+  - complementary:
+    - heading "کارشناس مربوطه" [level=2]
+    - paragraph: کارشناس
+    - generic: کارشناس آزمایشی مکان
+    - paragraph: شماره تماس
+    - link:
+      - /url: "tel:"
+    - heading "مراحل گردش کار" [level=2]
+    - generic: "وضعیت فعلی: پذیرفته شد"
+    - paragraph: ارسال درخواست
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: اختصاص کارشناس
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: در حال پیگیری
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: پذیرش مشتری
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - button "درخواست جدید":
+      - text: درخواست جدید

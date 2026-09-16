@@ -1,0 +1,49 @@
+- region "Notifications (F8)":
+  - list
+- region "Notifications alt+T"
+- main:
+  - button "بازگشت":
+    - text: بازگشت
+  - button "صفحه اصلی":
+    - text: صفحه اصلی
+  - generic: ثبت شده
+  - generic: بین‌المللی
+  - generic: "وضعیت فعلی: ثبت شده"
+  - heading "SR-693GLX" [level=1]
+  - paragraph: آخرین وضعیت ثبت‌شده برای درخواست شما در این صفحه نمایش داده می‌شود. برای اطلاع از وضعیت جدیدتر، همین کد پیگیری را دوباره در بخش پیگیری درخواست وارد کنید.
+  - paragraph: تاریخ ثبت
+  - generic: ۲۵ شهریور ۱۴۰۵
+  - paragraph: تاریخ اختصاص کارشناس
+  - generic: —
+  - paragraph: شماره رهگیری
+  - paragraph: SR-693GLX
+  - paragraph: وضعیت فعلی
+  - generic: ثبت شده
+  - paragraph: روش حمل
+  - paragraph: —
+  - heading "اطلاعات درخواست" [level=2]
+  - paragraph: تاریخ ثبت
+  - generic: ۱۴۰۵/۶/۲۵
+  - paragraph: نوع ارسال
+  - generic: بین‌المللی
+  - heading "مسیر ارسال" [level=2]
+  - generic: مبدا
+  - paragraph: Fertilia Apt/Alghero، ITALY
+  - generic: مقصد
+  - paragraph: Sahand، ایران
+  - heading "اطلاعات تماس" [level=2]
+  - paragraph: شماره تماس
+  - text: "09120000000"
+  - complementary:
+    - heading "مراحل گردش کار" [level=2]
+    - generic: "وضعیت فعلی: ثبت شده"
+    - paragraph: ارسال درخواست
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: اختصاص کارشناس
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: در حال پیگیری
+    - paragraph: ۱۴۰۵/۶/۲۵
+    - paragraph: پذیرش / عدم پذیرش
+    - paragraph: در انتظار
+    - button "درخواست جدید":
+      - text: درخواست جدید

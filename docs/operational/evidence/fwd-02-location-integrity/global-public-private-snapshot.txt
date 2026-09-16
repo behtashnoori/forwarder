@@ -1,0 +1,83 @@
+Browser tab: 2, Title: "فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل", URL: "http://127.0.0.1:5182/customer/track/SR-FWD02X".
+1 AXWebArea فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل, URL: 127.0.0.1:5182/customer/track/SR-FWD02X
+	2 container root
+		3 container Notifications (F8)
+			4 content list
+		5 container Notifications alt+T
+		6 container
+			7 button بازگشت
+				8 image
+				9 text بازگشت
+			10 button صفحه اصلی
+				11 image
+				12 text صفحه اصلی
+			13 text پذیرفته شد بین‌المللی وضعیت فعلی :  پذیرفته شد
+			14 heading SR-FWD02X, Value: 1
+				15 text SR-FWD02X
+			16 text آخرین وضعیت ثبت‌شده برای درخواست شما در این صفحه نمایش داده می‌شود. برای اطلاع از وضعیت جدیدتر، همین کد پیگیری را دوباره در بخش پیگیری درخواست وارد کنید.
+			17 text تاریخ ثبت
+			18 text ۲۵ شهریور ۱۴۰۵
+			19 text تاریخ اختصاص کارشناس
+			20 text —
+			21 text شماره رهگیری
+			22 text SR-FWD02X
+			23 text وضعیت فعلی
+			24 text پذیرفته شد
+			25 text روش حمل
+			26 text —
+			27 image
+			28 heading رهگیری بخش‌های حمل, Value: 2
+				29 text رهگیری بخش‌های حمل
+			30 text وضعیت کل محموله در حال انجام تعداد بخش‌های قابل رهگیری ۱ بخش‌های تحویل‌شده ۰ آخرین به‌روزرسانی ۲۵ شهریور ۱۴۰۵، ۱۰:۰۰ پیشرفت کل ۵۵ %
+			31 progress indicator 55
+			32 text FWD02-TRUCK FWD02-TRUCK  ·  truck در مسیر آخرین موقعیت انبار آزمایشی 24 آخرین به‌روزرسانی ۲۵ شهریور ۱۴۰۵، ۱۰:۰۰ تاریخچه قابل مشاهده برای مشتری
+			33 content list
+				34 container
+					35 text در مسیر انبار آزمایشی 24 ۲۵ شهریور ۱۴۰۵، ۱۰:۰۰
+			36 image
+			37 heading اطلاعات درخواست, Value: 2
+				38 text اطلاعات درخواست
+			39 text تاریخ ثبت ۱۴۰۵/۶/۲۵ نوع ارسال بین‌المللی
+			40 image
+			41 heading مسیر ارسال, Value: 2
+				42 text مسیر ارسال
+			43 text مبدا
+			44 image
+			45 text ثبت نشده مقصد
+			46 image
+			47 text ثبت نشده
+			48 image
+			49 heading اطلاعات تماس, Value: 2
+				50 text اطلاعات تماس
+			51 text شماره تماس
+			52 image
+			53 text 09120000000 نام مشتری آزمون مکان
+			54 image
+			55 heading کارشناس مربوطه, Value: 2
+				56 text کارشناس مربوطه
+			57 text کارشناس
+			58 text کارشناس آزمایشی مکان
+			59 text شماره تماس
+			60 link tel:
+			61 image
+			62 heading مراحل گردش کار, Value: 2
+				63 text مراحل گردش کار
+			64 container
+				65 text وضعیت فعلی :  پذیرفته شد
+			66 image
+			67 text ارسال درخواست
+			68 text ۱۴۰۵/۶/۲۵
+			69 image
+			70 text اختصاص کارشناس
+			71 text ۱۴۰۵/۶/۲۵
+			72 image
+			73 text در حال پیگیری
+			74 text ۱۴۰۵/۶/۲۵
+			75 image
+			76 text پذیرش مشتری
+			77 text ۱۴۰۵/۶/۲۵
+			78 button درخواست جدید
+				79 image
+				80 text درخواست جدید
+
+The focused UI element is 1 AXWebArea فورواردرت | پلتفرم مدیریت درخواست‌ها و عملیات حمل, URL: 127.0.0.1:5182/customer/track/SR-FWD02X

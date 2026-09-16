@@ -1,3 +1,4 @@
+import { TrackingLocationSelector } from "@/components/TrackingLocationSelector";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
@@ -48,8 +49,6 @@ import {
   fetchTrackingManagement,
   enableTrackingManagement,
   updateTrackingUnitMetadata,
-  fetchTrackingLogisticsPoints,
-  type TrackingLogisticsPoint,
   fetchShipmentRequestCustomerLink,
   fetchShipmentRequestCustomerCreatePreview,
   listOperationalShipments,
@@ -1303,18 +1302,13 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
   const [editUnit, setEditUnit] = useState({ display_name: "", vehicle_reference: "" });
   const [updateUnitId, setUpdateUnitId] = useState("");
   const [update, setUpdate] = useState({ status: "in_transit", logistics_point_public_id: "", location_text: "", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: toLocalDateTimeInputValue(new Date()) });
-  const [locationQuery, setLocationQuery] = useState("");
-  const [locations, setLocations] = useState<TrackingLogisticsPoint[]>([]);
 
   const load = useCallback(async () => {
     try { setData(await fetchTrackingManagement(requestId)); }
     catch { toast({ title: t("common.error"), description: t("multiTracking.fetchError"), variant: "destructive" }); }
   }, [requestId, t, toast]);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    const timer=window.setTimeout(() => { fetchTrackingLogisticsPoints(locationQuery).then(x=>setLocations(x.items)).catch(()=>setLocations([])); },250);
-    return () => window.clearTimeout(timer);
-  },[locationQuery]);
+
 
   const run = async (operation: () => Promise<TrackingManagementData>, success: string) => {
     try {
@@ -1377,15 +1371,8 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
           <CardContent className="grid gap-3 md:grid-cols-2">
             <Select value={updateUnitId} onValueChange={setUpdateUnitId}><SelectTrigger><SelectValue placeholder={t("multiTracking.selectUnit")} /></SelectTrigger><SelectContent>{data.unit_tracking?.units.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.display_name || u.unit_code}</SelectItem>)}</SelectContent></Select>
             <Select value={update.status} onValueChange={(status) => setUpdate({ ...update, status })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["not_started","loading","departed","in_transit","at_checkpoint","delayed","arrived_destination","delivered","cancelled"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.status.${v}`)}</SelectItem>)}</SelectContent></Select>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">مکان لجستیکی</p>
-              <p className="text-xs text-muted-foreground">مکان‌های استاندارد مانند بندر، گمرک، مرز، انبار، فرودگاه و پایانه توسط سازمان تعریف می‌شوند و هنگام ثبت وضعیت محموله قابل انتخاب هستند.</p>
-              <Input value={locationQuery} onChange={(e)=>setLocationQuery(e.target.value)} placeholder={t("multiTracking.searchLocation")} />
-              <Select value={update.logistics_point_public_id || "manual"} onValueChange={(value)=>setUpdate({...update,logistics_point_public_id:value==="manual"?"":value,location_text:value==="manual"?update.location_text:""})}>
-                <SelectTrigger><SelectValue placeholder={t("multiTracking.selectLocation")} /></SelectTrigger>
-                <SelectContent><SelectItem value="manual">{t("multiTracking.locationNotListed")}</SelectItem>{locations.map(x=><SelectItem key={x.public_id} value={x.public_id}>{x.fa_name}{x.en_name?` / ${x.en_name}`:""} · {x.type.label} · {x.city?`${x.city}، `:""}{x.country.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+            <TrackingLocationSelector value={update.logistics_point_public_id} locale={locale}
+              onChange={value => setUpdate({ ...update, logistics_point_public_id: value, location_text: value ? "" : update.location_text })} />
             {!update.logistics_point_public_id && <Input value={update.location_text} onChange={(e) => setUpdate({ ...update, location_text: e.target.value })} placeholder={t("multiTracking.freeTextLocation")} />}
             <Input type="datetime-local" value={update.occurred_at} onChange={(e) => setUpdate({ ...update, occurred_at: e.target.value })} />
             <Textarea value={update.customer_message} onChange={(e) => setUpdate({ ...update, customer_message: e.target.value })} placeholder={t("multiTracking.customerMessage")} />

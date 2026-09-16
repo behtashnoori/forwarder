@@ -1,0 +1,80 @@
+Browser tab: 2, Title: "فورواردرت | پلتفرم یکپارچه عملیات حمل", URL: "http://127.0.0.1:5182/".
+0 AXWebArea فورواردرت | پلتفرم یکپارچه عملیات حمل, URL: 127.0.0.1:5182/
+	1 container root
+		2 container Notifications (F8)
+			3 content list
+		4 container Notifications alt+T
+		5 container
+			6 link Description: فورواردرت, Value: 127.0.0.1:5182/
+			7 button (collapsed) Description: منوی سامانه, Secondary Actions: Expand
+				8 image
+		9 container
+			10 button بازگشت
+				11 image
+				12 text بازگشت
+			13 heading انتخاب مبدا و مقصد بین‌المللی, Value: 3
+				14 image
+				15 text انتخاب مبدا و مقصد بین‌المللی
+			16 text برای ارسال بین‌المللی، کشور و شهر مبدا و مقصد را وارد کنید مبدا ارسال (بین‌المللی) کشور مبدا
+			17 text field (settable) Description: جست‌وجوی کشور مبدأ, Value: Germany
+			18 combo box (collapsed) Value: GERMANY, Secondary Actions: Expand
+				19 text GERMANY
+			20 text شهر/بندر مبدا
+			21 text field (settable) Description: جست‌وجوی مکان مبدأ, Value: DEBER
+			22 text مکان‌های فعال مرجع جهانی؛ هر صفحه ۵۰ نتیجه. برای یافتن مکان، نام لاتین، نام فارسیِ موجود یا کد را جست‌وجو کنید. وجود مکان تضمین ارائه خدمت نیست.
+			23 pop up button (collapsed, settable) Description: انتخاب مکان مبدأ, Value: Berlin · DEBER, Secondary Actions: Expand
+				24 menu
+					25 انتخاب مکان
+					73 Bad Schmiedeberg · DEBMD
+					74 (selected) Berlin · DEBER
+					75 Radeberg · DERAG
+					76 Rodeberg · DERB2
+					77 Schmiedeberg · DEZBR
+			27 image
+			28 text آدرس مبدا (اختیاری)
+			29 text field (settable) آدرس مبدا (اختیاری), ID: originAddressInternational
+			30 image
+			31 text مقصد ارسال (بین‌المللی) کشور مقصد
+			32 text field (settable) جست‌وجوی کشور مقصد
+			33 combo box (collapsed) Value: انتخاب کشور مقصد, Secondary Actions: Expand
+				34 text انتخاب کشور مقصد
+			35 text شهر/بندر مقصد
+			36 text field (disabled) جست‌وجوی مکان مقصد
+			37 text مکان‌های فعال مرجع جهانی؛ هر صفحه ۵۰ نتیجه. برای یافتن مکان، نام لاتین، نام فارسیِ موجود یا کد را جست‌وجو کنید. وجود مکان تضمین ارائه خدمت نیست.
+			38 pop up button (disabled, collapsed, settable) Description: انتخاب مکان مقصد, Value: ابتدا کشور را انتخاب کنید, Secondary Actions: Expand
+				39 menu
+					40 (disabled) ابتدا کشور را انتخاب کنید
+			41 image
+			42 text آدرس مقصد (اختیاری)
+			43 text field (settable) آدرس مقصد (اختیاری), ID: destAddressInternational
+			44 image
+			45 text اطلاعات مشتری (اختیاری)
+			46 image
+			47 text نام
+			48 text field (settable) نام, ID: customerFirstName
+			49 image
+			50 text نام خانوادگی
+			51 text field (settable) نام خانوادگی, ID: customerLastName
+			52 text برای خدمات بهتر، نام خود را وارد کنید (اختیاری)
+			53 image
+			54 text شماره تماس
+			55 text field (settable) شماره تماس
+			56 text شماره موبایل خود را وارد کنید تا کارشناس با شما تماس بگیرد
+			57 image
+			58 text روش حمل انتخاب روش حمل
+			59 combo box (collapsed) Value: انتخاب مشتری مشتری روش حمل را انتخاب می‌کند, Secondary Actions: Expand
+				60 container
+					61 text انتخاب مشتری مشتری روش حمل را انتخاب می‌کند
+			62 text فقط روش‌های مناسب همین نوع درخواست نمایش داده می‌شود و مقدار ارسالی به سیستم تغییر نمی‌کند. روش حمل برای مسیر بین‌المللی
+			63 combo box (collapsed) Value: انتخاب روش حمل بین‌المللی, Secondary Actions: Expand
+				64 text انتخاب روش حمل بین‌المللی
+			65 button مشخصات کالا (اختیاری)
+				66 image
+				67 text مشخصات کالا (اختیاری)
+				68 image
+			69 text برای اطلاعات دقیق‌تر در مورد کالای خود، مشخصات را وارد کنید این بخش اختیاری است؛ اگر وزن، حجم، ارزش یا زمان دقیق را نمی‌دانید می‌توانید خالی بگذارید.
+			70 button ثبت درخواست حمل
+				71 image
+				72 text ثبت درخواست حمل
+
+The focused UI element is 21 text field (settable) Description: جست‌وجوی مکان مبدأ, Value: DEBER
