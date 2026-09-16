@@ -14,3 +14,6 @@ docs/operational/evidence/fwd-06-tracking-timeline/README.md text eol=lf
 docs/operational/decision-index.md text eol=lf
 docs/architecture/ADR-INDEX.md text eol=lf
 docs/architecture/time/time-business-decision-register.md text eol=lf
+
+# Keep the already governed historical migration at its exact reviewed CRLF hash.
+backend/migrations/versions/20240926_add_password_to_expert_user.py text eol=crlf
