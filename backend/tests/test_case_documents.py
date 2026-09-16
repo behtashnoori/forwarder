@@ -290,6 +290,44 @@ def _assert_denied_without_side_effect(cross_case_documents, method, path, **kwa
     assert _document_state(app, state["root"]) == before
 
 
+def test_intentional_identical_appends_remain_independent_attachments(document_app):
+    app, state = document_app
+    client = app.test_client()
+    created = client.post("/api/admin/document-definitions", headers=headers(state["admin"]),
+                          json=definition_payload(max_active_file_count=2))
+    assert created.status_code == 201
+    auth = headers(state["expert"])
+    list_path = f"/api/expert/requests/{state['case_id']}/documents"
+    requirement = client.get(list_path, headers=auth).get_json()["requirements"][0]
+    path = f"/api/expert/requests/{state['case_id']}/document-requirements/{requirement['id']}/files"
+    responses = [client.post(path, headers=auth,
+                            data={"file": (io.BytesIO(pdf_bytes()), "مدرک.pdf")}) for _ in range(2)]
+    assert [response.status_code for response in responses] == [201, 201]
+    rows = [response.get_json() for response in responses]
+    assert rows[0]["id"] != rows[1]["id"]
+    assert rows[0]["sha256_hash"] == rows[1]["sha256_hash"]
+    reopened = client.get(list_path, headers=auth).get_json()
+    assert len(reopened["requirements"]) == 1
+    assert len(reopened["requirements"][0]["active_files"]) == 2
+    for row in rows:
+        download = client.get(f"{list_path}/{row['id']}/download", headers=auth)
+        assert download.status_code == 200 and download.data == pdf_bytes()
+
+
+def test_revoked_assignment_denies_previously_authorized_direct_download(cross_case_documents):
+    app, state = cross_case_documents
+    client = app.test_client()
+    path = f"/api/expert/requests/{state['case_id']}/documents/{state['active_a']}/download"
+    assert client.get(path, headers=headers(state["expert"])).status_code == 200
+    with app.app_context():
+        db.session.get(ShipmentRequest, state["case_id"]).assigned_to = None
+        db.session.commit()
+    before = _document_state(app, state["root"])
+    denied = client.get(path, headers=headers(state["expert"]))
+    assert denied.status_code in {403, 404}
+    assert _document_state(app, state["root"]) == before
+
+
 def test_expert_a_cannot_upload_using_case_b_requirement_id(cross_case_documents):
     _, state = cross_case_documents
     _assert_denied_without_side_effect(

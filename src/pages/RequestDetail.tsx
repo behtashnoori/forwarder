@@ -656,7 +656,7 @@ const RequestDetail = () => {
 
         <Card><CardHeader><CardTitle>محموله‌های عملیاتی این درخواست</CardTitle></CardHeader><CardContent className="space-y-2">{operationalShipments.length===0?<p className="text-sm text-muted-foreground">هنوز محموله عملیاتی از این درخواست ایجاد نشده است.</p>:operationalShipments.map((shipment)=><Link key={shipment.public_id} className="block rounded border p-3 hover:bg-slate-50" to={`/operations/shipments/${shipment.public_id}`}><strong>{shipment.route_leg.origin.display_name} → {shipment.route_leg.destination.display_name}</strong><p className="text-sm">{shipment.status} · {shipment.project_public_id||"بدون پروژه"}</p></Link>)}</CardContent></Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
-          <TabsList className="flex h-auto w-full justify-start gap-2 rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
+          <TabsList className="flex h-auto w-full flex-wrap justify-start gap-2 rounded-3xl border border-slate-200 bg-white p-2 shadow-sm">
             <TabsTrigger
               value="details"
               className="rounded-2xl px-5 py-2 text-slate-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white"
