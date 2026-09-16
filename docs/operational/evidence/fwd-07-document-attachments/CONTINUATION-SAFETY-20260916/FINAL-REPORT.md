@@ -35,7 +35,7 @@ EXISTING_DB_EXPOSURE: REPORTED. No new connection/introspection/count/dump/migra
 
 RECOVERY_ADR_ID: ADR-049 — Request document upload operation recovery.
 RECOVERY_ADR_STATUS: PROPOSED — OWNER ACCEPTANCE REQUIRED; NO RECOVERY IMPLEMENTATION AUTHORITY.
-RECOVERY_ADR_SHA256: 14B4B114BE9D4ACB9CC22DC4F30DF42EBD6375083F99D86FBB98DDE738016AD2.
+RECOVERY_ADR_SHA256: CD482089D0C9AE53E74132D11C99FF03CAACAA8BAD088C9CCDB34B0993424F34.
 ORIGINAL_PROPOSAL_PRESERVED: YES; SHA256 A88834429A659F7ED6A4959C5DA940D42D5D8A644C596333F138140590D72F53, matches supplied original. ADR-049 is a linked successor, no Accepted records superseded.
 OPEN_OWNER_DECISIONS: named acceptance/revision of ADR-049 including its 90-day discovery/durable non-reuse retention and initiating-actor privacy choice, plus separate local implementation authority. Historical incident investigation is separately unauthorized. No safety/gate waiver requested.
 
@@ -76,3 +76,5 @@ Raw-evidence delivery: Git whitespace checks exposed original raw pytest/diff wh
 ## Remote CI portability continuation
 
 At delivery HEAD 8f5e9a9c38100eb44571dd3c6e115f31e6a1109d, actual GitHub Quality Gates run 35139342768 FAILED at owned PostgreSQL start after negative proof/initdb; frontend/structure passed. Secret run 35139342744 PASSED. These are observed remote results, not local inference. Default Linux Unix-socket directory permission is the likely startup cause; original server.log was not exposed in that run, so this cause is initially INFERRED, not proven. Corrective runner change places Unix sockets in its unique owned root; no broad loopback/network authorization or existing DB change. Startup failures now expose owned diagnostics, failed wait cleans only a positively matched owned postmaster, and no-start is not printed as stopped. Bounded Windows proof/gates/config/credential/focused recheck 416364bc54774935984457bc9a501980 PASSED. Next exact-head Linux workflow result is tracked in final delivery. Existing GitHub credentials were reused only in memory for the authorized read, without token/redirect URL output or settings modification. A lossless remote diagnostic excerpt transport is committed; its raw original remains local untracked, in addition to the eight earlier raw originals.
+
+ADR-049 proposed edition 2 clarifies that the real requirement table has no public UUID: use the existing unique request/source-definition/frozen-revision selector in the proposed authorized owner projection; no speculative requirement-identity migration. Miscellaneous remains APPEND only. Original proposal unchanged; prior named edition preserved in Git. Runtime implementation still NO.

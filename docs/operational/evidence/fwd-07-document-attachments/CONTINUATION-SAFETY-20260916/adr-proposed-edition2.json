@@ -1,0 +1,8 @@
+{
+  "status": "PROPOSED",
+  "runtime_implemented": false,
+  "base_head": "3b92f4d004aebc2638c918e04b618418eb083b76",
+  "named_adr_sha256": "CD482089D0C9AE53E74132D11C99FF03CAACAA8BAD088C9CCDB34B0993424F34",
+  "original_proposal_sha256": "A88834429A659F7ED6A4959C5DA940D42D5D8A644C596333F138140590D72F53",
+  "clarification": "actual request/source-definition/frozen-revision uniqueness; no requirement public UUID assumption; miscellaneous APPEND only"
+}
