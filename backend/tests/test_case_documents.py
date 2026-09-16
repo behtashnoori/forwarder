@@ -187,6 +187,38 @@ def test_replacement_retains_binary_and_versions(document_app):
         assert (state["root"] / old.storage_key).exists()
 
 
+def test_multi_file_requirement_round_trip_append_and_same_name_safety(document_app):
+    app, state = document_app
+    client = app.test_client()
+    client.post("/api/admin/document-definitions", headers=headers(state["admin"]), json=definition_payload(
+        allowed_formats=["pdf", "jpeg"], max_active_file_count=4,
+    ))
+    requirement = client.get(f"/api/expert/requests/{state['case_id']}/documents", headers=headers(state["expert"])).get_json()["requirements"][0]
+    path = f"/api/expert/requests/{state['case_id']}/document-requirements/{requirement['id']}/files"
+    def variant(label): return b"%PDF-1.4\n" + label + b"\n%%EOF"
+    first = variant(b"first")
+    second = variant(b"second")
+    image = b"\xff\xd8\xffsynthetic-image\xff\xd9"
+    uploaded = [
+        client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(first), "مدرک.pdf")}),
+        client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(second), "مدرک.pdf")}),
+        client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(image), "image.jpg")}),
+    ]
+    assert [response.status_code for response in uploaded] == [201, 201, 201]
+    rows = [response.get_json() for response in uploaded]
+    assert len({row["id"] for row in rows}) == 3
+    assert len({row["sha256_hash"] for row in rows}) == 3
+    reopened = client.get(f"/api/expert/requests/{state['case_id']}/documents", headers=headers(state["expert"])).get_json()
+    assert len(reopened["requirements"][0]["active_files"]) == 3
+    for row, expected in zip(rows, [first, second, image]):
+        response = client.get(f"/api/expert/requests/{state['case_id']}/documents/{row['id']}/download", headers=headers(state["expert"]))
+        assert response.status_code == 200 and response.data == expected
+    appended = client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(variant(b"append")), "later.pdf")})
+    assert appended.status_code == 201
+    reopened = client.get(f"/api/expert/requests/{state['case_id']}/documents", headers=headers(state["expert"])).get_json()
+    assert len(reopened["requirements"][0]["active_files"]) == 4
+
+
 @pytest.fixture()
 def cross_case_documents(document_app):
     app, state = document_app

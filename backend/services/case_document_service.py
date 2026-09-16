@@ -5,8 +5,8 @@ import json
 import re
 import io
 import zipfile
+import unicodedata
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
 from sqlalchemy import func
@@ -183,11 +183,16 @@ def detect_format(data: bytes) -> tuple[str, str] | None:
 
 
 def _safe_original(name: str) -> tuple[str, str]:
-    normalized = secure_filename(Path(name or "").name)
-    parts = normalized.lower().split(".")
-    if len(parts) != 2 or not parts[0] or parts[1] not in {e for v in FORMAT_CATALOG.values() for e in v[0]}:
+    # Preserve a safe Unicode display name (including Persian) without ever
+    # using it for the filesystem key. Both separators are handled explicitly
+    # because browser uploads can originate on either platform.
+    normalized = unicodedata.normalize("NFC", str(name or "").replace("\\", "/").split("/")[-1]).strip()
+    if not normalized or normalized in {".", ".."} or any(ord(char) < 32 for char in normalized):
         raise DocumentError("نام فایل یا پسوند آن امن نیست")
-    return normalized[:255], parts[1]
+    stem, separator, extension = normalized.rpartition(".")
+    if not separator or not stem or extension.lower() not in {e for v in FORMAT_CATALOG.values() for e in v[0]}:
+        raise DocumentError("نام فایل یا پسوند آن امن نیست")
+    return normalized[:255], extension.lower()
 
 
 def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, requirement=None, miscellaneous=False, custom_title=None, description=None, replacement=None):
