@@ -192,3 +192,6 @@ Historical replay BLOCKED_MISSING_EXTERNAL_EVIDENCE; Production identity UNKNOWN
 Reference28 mapping NOT_PROVEN; recipient onboarding OPEN; real customer delivery
 NOT_READY; Production security NOT_RUN. No gap automatically closed. Product
 scope is BLOCKED_OWNER_ADR_DECISION, not PASS_CONTROLLED_LOCAL_FWD06.
+# Final delivery
+
+The [2026-09-16 final delivery report](FINAL-DELIVERY-2026-09-16.md) records exact committed C2 qualification, fetched product sync, limits and repeat commands. Earlier evidence remains historical.
