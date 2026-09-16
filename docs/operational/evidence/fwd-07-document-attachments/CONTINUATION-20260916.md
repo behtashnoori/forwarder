@@ -145,4 +145,3 @@ No production database, session, file, notification, LLM endpoint or deployment 
 
 TESTED_CODE_COMMIT: 2f8f11d2e03860bc82d3509770684e00abe396b7
 Product, harness and regression changes are committed together. The following evidence commit changes only reviewed evidence/decision documents and synthetic screenshots. Final LOCAL_HEAD/REMOTE_HEAD/sync are verified after push and provided in the delivery receipt.
-
