@@ -28,8 +28,19 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pytest
 
-      - name: Run backend tests
-        run: python -m pytest -q
+      - name: Install owned-cluster tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl ca-certificates postgresql-common
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl --fail -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y postgresql-18
+
+      - name: Run backend tests through the owned boundary
+        run: python -B -m scripts.uat.run_fwd07_disposable_postgres --ci
 
   frontend-lint-build:
     name: frontend-lint-build

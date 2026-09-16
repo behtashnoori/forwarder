@@ -75,6 +75,13 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     if config is not None:
         app.config.from_mapping(config)
 
+    if os.environ.get("FWD_TEST_GUARD_ACTIVE") == "1":
+        from scripts.uat.test_boundary import MANIFEST, validate_storage, validate_url
+        validate_url(app.config["SQLALCHEMY_DATABASE_URI"], MANIFEST)
+        for bind in (app.config.get("SQLALCHEMY_BINDS") or {}).values():
+            validate_url(bind["url"] if isinstance(bind, dict) else bind, MANIFEST)
+        validate_storage(app.config.get("DOCUMENT_STORAGE_ROOT"))
+
     from backend.services.document_storage_service import validate_storage_root
     production = str(app.config["APP_ENV"]).lower() in {"production", "prod"}
     if not app.config.get("DOCUMENT_STORAGE_ROOT") and not production:

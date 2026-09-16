@@ -3,6 +3,9 @@ from __future__ import annotations
 import os, tempfile
 from pathlib import Path
 from uuid import uuid4
+from scripts.uat.test_boundary import INSTALLED, deny
+if not INSTALLED:
+    deny("browser fixture requires approved bootstrap before app import")
 import bcrypt
 os.environ.setdefault("APP_ENV", "test")
 from backend import create_app
@@ -12,8 +15,12 @@ from backend.operational_models import OperationalMembership, OperationalOrganiz
 
 def main():
     password = os.environ["FWD07_UAT_PASSWORD"]
-    root = Path(tempfile.gettempdir()) / "forwarder-fwd07-browser"; root.mkdir(exist_ok=True)
-    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///" + (root / f"{uuid4().hex}.sqlite").as_posix(), "DOCUMENT_STORAGE_ROOT": str(root / uuid4().hex)}, skip_startup=True)
+    from scripts.uat.test_boundary import MANIFEST, load_manifest
+    manifest = load_manifest()
+    root = Path(manifest["root"])
+    if ["127.0.0.1", int(os.environ["FWD07_UAT_API_PORT"])] not in manifest["local_endpoints"]:
+        raise RuntimeError("browser API endpoint does not match owned manifest")
+    app = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///" + Path(manifest["browser_database"]).as_posix(), "DOCUMENT_STORAGE_ROOT": manifest["storage"]}, skip_startup=True)
     with app.app_context():
         db.create_all(); hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
         org = OperationalOrganization(name="FWD07 synthetic tenant")
@@ -23,6 +30,6 @@ def main():
         db.session.add_all([org, expert]); db.session.flush(); expert_membership = OperationalMembership(organization_id=org.id, user_id=expert.id, is_active=True, permissions=[]); case.operational_organization_id=org.id; case.assigned_to=expert.id
         case.tracking_code = "SR-FWD07-BROWSER-1280"
         mobile_case = ShipmentRequest(ownership_scope="TENANT", operational_organization_id=org.id, assigned_to=expert.id, contact_phone="09070000002", tracking_code="SR-FWD07-BROWSER-390", shipping_type="domestic", status="new", status_request_status="new")
-        db.session.add_all([expert_membership, case, mobile_case, definition]); db.session.commit()
+        db.session.add_all([expert_membership, case, mobile_case] + ([] if os.environ.get("FWD07_UAT_ZERO") == "1" else [definition])); db.session.commit()
     app.run(host="127.0.0.1", port=int(os.getenv("FWD07_UAT_API_PORT", "5057")), use_reloader=False)
 if __name__ == "__main__": main()

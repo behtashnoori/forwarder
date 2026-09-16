@@ -91,8 +91,11 @@ def test_historical_long_revision_ids_are_detected_and_graph_has_one_feature_hea
 
     config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
-    heads = ScriptDirectory.from_config(config).get_heads()
-    assert heads == ["20260916_fwd05_quote_response"]
+    graph = ScriptDirectory.from_config(config)
+    heads = graph.get_heads()
+    assert heads == ["20260916_fwd06_tracking_time"]
+    assert graph.get_revision(heads[0]).down_revision == "20260916_fwd05_quote_response"
+    assert "security_credential_remediation" in {revision.revision for revision in graph.walk_revisions()}
 
 
 def test_empty_postgresql_creates_only_a_wide_empty_version_table():

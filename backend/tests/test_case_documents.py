@@ -57,6 +57,17 @@ def document_app(tmp_path):
 def headers(token): return {"Authorization": f"Bearer {token}"}
 
 
+def test_zero_configured_requirements_existing_list_route(document_app):
+    app, state = document_app
+    client = app.test_client()
+    response = client.get(
+        f"/api/expert/requests/{state['case_id']}/documents",
+        headers=headers(state["expert"]),
+    )
+    assert response.status_code == 200
+    assert response.get_json()["requirements"] == []
+
+
 def definition_payload(**changes):
     value = {
         "code": "bill_of_lading", "title": "بارنامه", "description": "نسخه خوانا",

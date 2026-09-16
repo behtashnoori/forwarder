@@ -41,7 +41,7 @@ def test_env_loader_respects_process_database_url(monkeypatch: pytest.MonkeyPatc
         "DATABASE_URL=postgresql://test_user:change_me@localhost:5432/forwarder_test",
         encoding="utf-8",
     )
-    process_url = "postgresql://test_user:change_me@localhost:5432/forwarder_test"
+    process_url = os.environ["FWD07_DISPOSABLE_POSTGRES_URL"]
     monkeypatch.setenv("DATABASE_URL", process_url)
 
     loaded = runtime_config.load_env_files(
@@ -59,7 +59,7 @@ def test_env_loader_supports_backend_env(monkeypatch: pytest.MonkeyPatch, tmp_pa
     project_root = tmp_path / "project"
     backend_dir = project_root / "backend"
     backend_dir.mkdir(parents=True)
-    backend_url = "postgresql://test_user:change_me@localhost:5432/forwarder_test"
+    backend_url = os.environ["FWD07_DISPOSABLE_POSTGRES_URL"]
     (backend_dir / ".env").write_text(f"DATABASE_URL={backend_url}\n", encoding="utf-8")
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
@@ -99,7 +99,7 @@ def test_production_rejects_placeholder_secret(monkeypatch: pytest.MonkeyPatch):
     """Production must not accept documented/dev placeholder secrets."""
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
+    monkeypatch.setenv("DATABASE_URL", os.environ["FWD07_DISPOSABLE_POSTGRES_URL"])
     monkeypatch.setenv("SECRET_KEY", "development-secret-key")
     monkeypatch.setenv("JWT_SECRET_KEY", "deployment-specific-jwt-secret")
     monkeypatch.setenv("CORS_ORIGINS", "https://app.forwarder.test")
@@ -112,7 +112,7 @@ def test_production_rejects_open_cors(monkeypatch: pytest.MonkeyPatch, tmp_path)
     """Production must not allow wildcard/allow-all CORS."""
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
+    monkeypatch.setenv("DATABASE_URL", os.environ["FWD07_DISPOSABLE_POSTGRES_URL"])
     monkeypatch.setenv("SECRET_KEY", "deployment-specific-secret")
     monkeypatch.setenv("JWT_SECRET_KEY", "deployment-specific-jwt-secret")
     monkeypatch.setenv("CORS_ORIGINS", "*")
@@ -125,7 +125,7 @@ def test_production_rejects_open_cors(monkeypatch: pytest.MonkeyPatch, tmp_path)
 def _production_cors_environment(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
+    monkeypatch.setenv("DATABASE_URL", os.environ["FWD07_DISPOSABLE_POSTGRES_URL"])
     monkeypatch.setenv("SECRET_KEY", "deployment-specific-secret")
     monkeypatch.setenv("JWT_SECRET_KEY", "deployment-specific-jwt-secret")
     monkeypatch.setenv("DOCUMENT_STORAGE_ROOT", str(tmp_path / "durable-documents"))
@@ -178,7 +178,7 @@ def test_testing_mode_uses_isolated_database_even_with_production_env(monkeypatc
     """Testing mode must remain isolated from production DATABASE_URL."""
     _clear_runtime_env(monkeypatch)
     monkeypatch.setenv("FLASK_ENV", "production")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://test_user:change_me@localhost:5432/forwarder_test")
+    monkeypatch.setenv("DATABASE_URL", os.environ["FWD07_DISPOSABLE_POSTGRES_URL"])
     monkeypatch.setenv("TEST_DATABASE_URL", "sqlite:///:memory:")
 
     app = create_app({"TESTING": True}, skip_startup=True)
@@ -250,3 +250,17 @@ def test_monitoring_metrics_rejects_expert_role():
     response = client.get("/api/monitoring/metrics", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == 403
+
+
+def test_guarded_dotenv_cannot_supply_an_unowned_fallback(monkeypatch, tmp_path):
+    project = tmp_path / "fallback"; backend = project / "backend"
+    backend.mkdir(parents=True)
+    (project / ".env").write_text("DATABASE_URL=postgresql://synthetic@127.0.0.1:5432/unowned_test", encoding="utf-8")
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    with pytest.raises(RuntimeError, match="TEST_BOUNDARY_REJECTED"):
+        runtime_config.load_env_files(project_root=str(project), backend_dir=str(backend), emit_log=False)
+    assert "DATABASE_URL" not in os.environ
+
+
+def test_guarded_default_dotenv_is_not_loaded():
+    assert runtime_config.load_env_files(emit_log=False) == ()

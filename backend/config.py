@@ -76,6 +76,30 @@ def load_env_files(
     """
     global _LOADED_ENV_FILES
 
+    if os.environ.get("FWD_TEST_GUARD_ACTIVE") == "1":
+        if project_root is None or backend_dir is None:
+            return ()  # never load repository/collaborator dotenv in owned children
+        from pathlib import Path
+        from scripts.uat.test_boundary import MANIFEST, validate_environment, deny
+        owned = Path(MANIFEST["root"]).resolve()
+        for directory in (project_root, backend_dir):
+            if not Path(directory).resolve().is_relative_to(owned):
+                deny("dotenv outside owned synthetic fixture")
+        from dotenv import dotenv_values
+        loaded = []
+        candidate = dict(os.environ)
+        for env_path in (Path(project_root) / ".env", Path(backend_dir) / ".env", Path(project_root) / ".env.backend"):
+            if env_path.is_file():
+                if not env_path.resolve().is_relative_to(owned):
+                    deny("dotenv file outside owned synthetic fixture")
+                for key, value in dotenv_values(env_path, interpolate=False).items():
+                    if value is not None:
+                        candidate.setdefault(key, value)
+                loaded.append(str(env_path))
+        validate_environment(candidate, MANIFEST)
+        os.environ.update(candidate)
+        return tuple(loaded)
+
     resolved_project_root = os.path.abspath(project_root or _PROJECT_ROOT)
     resolved_backend_dir = os.path.abspath(backend_dir or _BACKEND_DIR)
     dotenv_spec = importlib.util.find_spec("dotenv")

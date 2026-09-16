@@ -1,5 +1,6 @@
 """ADR-041 explicit materialization and Phase 4B consumption contracts."""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from backend.services import tracking_time
 
 import pytest
 
@@ -186,7 +187,8 @@ def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
                             unit_code="P4B-U", unit_type="truck")
             update = add_update(
                 unit, c["expert_id"], status="in_transit",
-                occurred_at=datetime.utcnow() - timedelta(minutes=1),
+                occurred_at=(snapshot := tracking_time.offset((datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat()))[0],
+                time_snapshot=snapshot,
                 logistics_point_public_id=materialized_a["logistics_point_public_id"],
             )
             db.session.commit()
@@ -219,10 +221,12 @@ def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
             unit = db.session.get(ShipmentTransportUnit, unit_id)
             with pytest.raises(TrackingValidationError, match="active logistics point"):
                 add_update(unit, c["expert_id"], status="in_transit",
-                           occurred_at=datetime.utcnow() - timedelta(seconds=1),
+                           occurred_at=(snapshot := tracking_time.offset((datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()))[0],
+                           time_snapshot=snapshot,
                            logistics_point_public_id=tenant_point.public_id)
             assert db.session.query(ProjectLogisticsPoint).count() == 2
             assert unit.updates[0].location_name_snapshot == "Tenant Port"
             add_update(unit, c["expert_id"], status="in_transit",
-                       occurred_at=datetime.utcnow() - timedelta(seconds=1),
+                       occurred_at=(snapshot := tracking_time.offset((datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat()))[0],
+                           time_snapshot=snapshot,
                        location_reference_id=legacy_id)

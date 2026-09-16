@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import os
 import subprocess
 from pathlib import Path
 
@@ -24,6 +25,13 @@ PLACEHOLDER_MARKERS = ("your-", "change_me", "operator-supplied", "<password>")
 
 
 def tracked_files() -> list[Path]:
+    if os.environ.get("FWD_TEST_GUARD_ACTIVE") == "1":
+        from scripts.uat.test_boundary import load_manifest
+        inventory = load_manifest()["tracked_files"]
+        paths = [Path(item) for item in inventory]
+        if not paths or any(item.is_absolute() or ".." in item.parts for item in paths):
+            raise RuntimeError("invalid owned-run tracked inventory")
+        return paths
     output = subprocess.check_output(
         ["git", "ls-files", "-z"], cwd=ROOT
     ).split(b"\0")

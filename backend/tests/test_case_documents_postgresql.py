@@ -26,12 +26,12 @@ from backend.services import case_document_service as document_service
 
 
 PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF"
-POSTGRES_URL = os.environ.get("DMS_DISPOSABLE_POSTGRES_URL")
-POSTGRES_ROOT = os.environ.get("DMS_DISPOSABLE_STORAGE_ROOT")
+POSTGRES_URL = os.environ.get("FWD07_DISPOSABLE_POSTGRES_URL")
+POSTGRES_ROOT = os.environ.get("FWD07_DISPOSABLE_STORAGE_ROOT")
 
 pytestmark = pytest.mark.skipif(
     not POSTGRES_URL or not POSTGRES_ROOT,
-    reason="requires explicit DMS_DISPOSABLE_POSTGRES_URL and DMS_DISPOSABLE_STORAGE_ROOT",
+    reason="requires explicit FWD07_DISPOSABLE_POSTGRES_URL and FWD07_DISPOSABLE_STORAGE_ROOT",
 )
 
 

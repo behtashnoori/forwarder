@@ -17,6 +17,9 @@ class DocumentStorageError(Exception):
 
 
 def validate_storage_root(configured: str | Path | None, *, production: bool, repository_root: str | Path) -> Path:
+    if os.environ.get("FWD_TEST_GUARD_ACTIVE") == "1":
+        from scripts.uat.test_boundary import validate_storage
+        validate_storage(configured)
     if not configured:
         raise RuntimeError("DOCUMENT_STORAGE_ROOT is required" + (" in Production" if production else ""))
     candidate = Path(configured).expanduser()
@@ -40,6 +43,9 @@ def validate_storage_root(configured: str | Path | None, *, production: bool, re
 class PrivateDocumentStorage:
     def __init__(self, root: str | Path | None = None):
         configured = root or current_app.config["DOCUMENT_STORAGE_ROOT"]
+        if os.environ.get("FWD_TEST_GUARD_ACTIVE") == "1":
+            from scripts.uat.test_boundary import validate_storage
+            validate_storage(configured)
         self.root = Path(configured).resolve()
 
     def write(self, case_id: int, extension: str, stream, maximum: int) -> tuple[str, int, str]:
