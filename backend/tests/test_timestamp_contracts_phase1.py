@@ -29,7 +29,7 @@ def test_timeline_request_created_at_none_is_preserved(monkeypatch):
     assert build_workflow_steps_from_status("new", None)[0]["completed_at"] is None
 
 
-def test_timeline_assignment_timestamp_remains_outside_legacy_helper(monkeypatch):
+def test_timeline_assignment_timestamp_is_explicit_utc_for_browser_presentation(monkeypatch):
     request_row = SimpleNamespace(
         id=1,
         status="new",
@@ -38,7 +38,7 @@ def test_timeline_assignment_timestamp_remains_outside_legacy_helper(monkeypatch
     assignment = datetime(2026, 7, 25, 20, 2, 3)
     monkeypatch.setattr("backend.services.timeline_service.get_final_decision_from_logs", lambda _id: None)
     steps = build_workflow_steps_simple_4(request_row, assigned_at=assignment)
-    assert steps[1]["completed_at"] == "2026-07-25T20:02:03"
+    assert steps[1]["completed_at"] == "2026-07-25T20:02:03Z"
 
 
 def test_timeline_does_not_substitute_request_creation_for_assignment(monkeypatch):

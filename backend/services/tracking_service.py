@@ -116,7 +116,7 @@ def build_tracking_response(req, *, include_unit_tracking: bool = False):
     created_iso = serialize_legacy_utc_datetime(created_at)
 
     assigned_at = timeline_service.get_assigned_at(req)
-    assigned_at_iso = assigned_at.isoformat() if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
+    assigned_at_iso = serialize_legacy_utc_datetime(assigned_at) if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
 
     latest_quote = get_latest_quote(req)
 

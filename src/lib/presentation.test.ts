@@ -17,6 +17,7 @@ describe("shared presentation", () => {
   it("formats explicit instants in the product timezone, not the host timezone", () => {
     expect(formatInstant("2026-03-20T20:45:00Z", "en-GB")).toContain("00:15");
     expect(formatInstant("2026-03-20T20:45:00", "en-GB")).toBe("—");
+    expect(formatInstant("2026-03-20T20:45:00Z", "en-GB", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })).toContain("21 Mar");
   });
 
   it("renders two calendars from the same instant", () => {

@@ -40,8 +40,10 @@ function parseInstant(value: string | null | undefined): Date | null {
 export function formatInstant(value: string | null | undefined, locale: string, options: Intl.DateTimeFormatOptions = {}, fallback = "—"): string {
   const instant = parseInstant(value);
   if (!instant) return fallback;
+  const hasExplicitFields = Object.keys(options).length > 0;
   return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium", timeStyle: "short", timeZone: PRODUCT_DISPLAY_TIME_ZONE, ...options,
+    ...(hasExplicitFields ? options : { dateStyle: "medium", timeStyle: "short" }),
+    timeZone: PRODUCT_DISPLAY_TIME_ZONE,
   }).format(instant);
 }
 

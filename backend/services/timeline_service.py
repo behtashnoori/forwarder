@@ -51,7 +51,7 @@ def build_workflow_steps_from_status(status: str, created_at, assigned_at=None, 
             if i == 0:
                 completed_at = created_iso
             elif i == 1 and assigned_at:
-                completed_at = assigned_at.isoformat() if hasattr(assigned_at, "isoformat") else str(assigned_at)
+                completed_at = serialize_legacy_utc_datetime(assigned_at) if hasattr(assigned_at, "isoformat") else str(assigned_at)
             elif i == 3 and quote_created_at:
                 completed_at = quote_created_at.isoformat() if hasattr(quote_created_at, "isoformat") else str(quote_created_at)
             else:
@@ -128,9 +128,7 @@ def build_workflow_steps_simple_4(req, assigned_at=None):
     created_iso = serialize_legacy_utc_datetime(created_at)
     if assigned_at is None:
         assigned_at = get_assigned_at(req)
-    assigned_at_iso = (
-        assigned_at.isoformat() if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
-    )
+    assigned_at_iso = serialize_legacy_utc_datetime(assigned_at) if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
 
     steps = []
     # Step 1: request_submitted — always completed at created_at
