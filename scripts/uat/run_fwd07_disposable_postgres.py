@@ -10,6 +10,7 @@ import tempfile
 import json
 import argparse
 import shutil
+import shlex
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -62,18 +63,26 @@ def main() -> None:
             label = "migration" if "backend.migration_cli" in command else "postgres-tests"
             (root / (label + ".txt")).write_text(result.stdout + result.stderr, encoding="utf-8")
             print(result.stdout)
+        if result.returncode and "start" in command and (root / "server.log").is_file():
+            print((root / "server.log").read_text(encoding="utf-8", errors="replace")[-4000:])
         result.check_returncode()
 
     negative_command = [sys.executable, "-B", "-m", "scripts.uat.test_boundary_proof"]
     negative = subprocess.run(negative_command, env=environment, capture_output=True, text=True, timeout=60)
     (root / "negative-tests.txt").write_text(negative.stdout + negative.stderr, encoding="utf-8")
     if negative.returncode:
+        print(negative.stdout + negative.stderr)
         raise RuntimeError("negative boundary proof failed; no cluster started")
     (root / "negative-result.json").write_text(json.dumps(dict(command=negative_command, exit_code=0, completed_at=datetime.now(timezone.utc).isoformat())), encoding="utf-8")
     run([binary / ("initdb" + suffix), "-D", data, "-U", "fwd07_qualification", "-A", "trust", "--no-locale", "-E", "UTF8"], stdout=subprocess.DEVNULL)
     started = False
     try:
-        run([binary / ("pg_ctl" + suffix), "-D", data, "-l", root / "server.log", "-o", f"-h 127.0.0.1 -p {port}", "-w", "start"], stdout=subprocess.DEVNULL)
+        server_options = f"-h 127.0.0.1 -p {port}"
+        if os.name != "nt":
+            sockets = root / "sockets"
+            sockets.mkdir(mode=0o700)
+            server_options += " -k " + shlex.quote(str(sockets))
+        run([binary / ("pg_ctl" + suffix), "-D", data, "-l", root / "server.log", "-o", server_options, "-w", "start"], stdout=subprocess.DEVNULL)
         started = True
         lines = (data / "postmaster.pid").read_text().splitlines()
         assert Path(lines[1]).resolve() == data and int(lines[3]) == port
@@ -125,6 +134,12 @@ def main() -> None:
                 environment.update(APP_ENV="test", DATABASE_URL="sqlite:///:memory:", TEST_DATABASE_URL="sqlite:///:memory:")
             run([sys.executable, "-B", "-m", "pytest", "-q", "--tb=short", "--disable-warnings", "-p", "no:cacheprovider", "--basetemp", str(temporary / "pytest"), "backend/tests" if options.ci else "backend/tests/test_case_documents_postgresql.py"])
     finally:
+        # A failed pg_ctl wait can leave this newly created cluster alive.
+        if not started and (data / "postmaster.pid").is_file():
+            lines = (data / "postmaster.pid").read_text().splitlines()
+            if Path(lines[1]).resolve() != data or int(lines[3]) != port:
+                raise RuntimeError("failed-start ownership mismatch; diagnostics retained")
+            started = True
         if started:
             assert data.resolve().is_relative_to(root)
             # Parent owns these native resources; child guards never grant cleanup authority.
@@ -135,7 +150,7 @@ def main() -> None:
                 raise RuntimeError("cleanup ownership mismatch; cluster retained")
             run([binary / ("pg_ctl" + suffix), "-D", data, "-m", "fast", "-w", "stop"], stdout=subprocess.DEVNULL)
             (root / "teardown.json").write_text(json.dumps(dict(owned_cluster_stopped=True, retained=True)), encoding="utf-8")
-        print(f"FWD07_DISPOSABLE_CLUSTER_STOPPED; retained diagnostics: {root}")
+        print(f"{'FWD07_DISPOSABLE_CLUSTER_STOPPED' if started else 'NO_SUCCESSFUL_CLUSTER_START'}; retained diagnostics: {root}")
 
 
 def browser_uat(root, manifest, manifest_path, environment, repository):

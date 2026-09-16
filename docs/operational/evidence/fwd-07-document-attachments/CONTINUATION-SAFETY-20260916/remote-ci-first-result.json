@@ -1,0 +1,12 @@
+{
+  "head": "8f5e9a9c38100eb44571dd3c6e115f31e6a1109d",
+  "quality_run": 35139342768,
+  "quality_result": "failure",
+  "backend_result": "failure at owned PostgreSQL start",
+  "frontend_result": "success",
+  "structure_result": "success",
+  "secret_run": 35139342744,
+  "secret_result": "success",
+  "cause_status": "INFERRED_DEFAULT_UNIX_SOCKET_DIRECTORY; next Linux execution verifies fix",
+  "log_read": "existing GitHub credential reused in memory for authorized read; no account/settings/secrets changed; credential and signed redirect URL never persisted"
+}

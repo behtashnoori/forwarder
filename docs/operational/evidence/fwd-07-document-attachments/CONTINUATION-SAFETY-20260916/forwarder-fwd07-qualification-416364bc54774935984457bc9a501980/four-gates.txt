@@ -1,0 +1,48 @@
+.....................                                                    [100%]
+============================== warnings summary ===============================
+backend\monitoring.py:30
+  D:\1-webapp\forwarder-dev\backend\monitoring.py:30: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    self.start_time = datetime.utcnow()
+
+backend/tests/test_operational_execution_190.py: 7 warnings
+backend/tests/test_project_configuration.py: 12 warnings
+backend/tests/test_global_logistics_point_materialization.py: 15 warnings
+backend/tests/test_security_config.py: 2 warnings
+  C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\sqlalchemy\sql\schema.py:3596: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    return util.wrap_callable(lambda ctx: fn(), fn)  # type: ignore
+
+backend/tests/test_project_configuration.py: 6 warnings
+backend/tests/test_global_logistics_point_materialization.py: 4 warnings
+backend/tests/test_security_config.py: 2 warnings
+  D:\1-webapp\forwarder-dev\backend\services\auth_session_service.py:48: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+backend/tests/test_project_configuration.py: 12 warnings
+backend/tests/test_global_logistics_point_materialization.py: 8 warnings
+backend/tests/test_security_config.py: 4 warnings
+  D:\1-webapp\forwarder-dev\backend\security.py:114: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'iat': datetime.utcnow(),
+
+backend/tests/test_project_configuration.py: 12 warnings
+backend/tests/test_global_logistics_point_materialization.py: 8 warnings
+backend/tests/test_security_config.py: 4 warnings
+  D:\1-webapp\forwarder-dev\backend\security.py:116: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'exp': datetime.utcnow() + (
+
+backend/tests/test_global_logistics_point_materialization.py: 9 warnings
+backend/tests/test_security_config.py: 2 warnings
+  D:\1-webapp\forwarder-dev\backend\services\auth_session_service.py:67: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = datetime.utcnow()
+
+backend/tests/test_global_logistics_point_materialization.py::test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
+  D:\1-webapp\forwarder-dev\backend\services\multi_unit_tracking_service.py:104: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    now = _utc_naive(now or datetime.utcnow())
+
+backend/tests/test_global_logistics_point_materialization.py::test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
+backend/tests/test_global_logistics_point_materialization.py::test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
+backend/tests/test_global_logistics_point_materialization.py::test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
+  D:\1-webapp\forwarder-dev\backend\services\multi_unit_tracking_service.py:233: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    created_at = _utc_naive(now or datetime.utcnow())
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+21 passed, 112 warnings in 4.03s
