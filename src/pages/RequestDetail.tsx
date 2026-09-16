@@ -148,13 +148,20 @@ interface RequestDetail {
   has_unread: boolean;
   latest_quote?: {
     id: number;
-    amount: number;
+    amount: number | null;
+    amount_exact?: string | null;
+    money_contract?: string;
+    public_id?: string | null;
+    currency_unit?: string;
+    expires_at?: string | null;
+    validity_timezone?: string | null;
+    delivery_readiness?: { state: string; reason: string; follow_up_assignee_id: number | null; dependency: string; real_delivery_proven: boolean };
     currency: string;
     note?: string | null;
     valid_until?: string | null;
     created_at: string;
     created_by?: string | null;
-    customer_response?: "accepted" | "declined" | null;
+    customer_response?: "accepted" | "declined" | "negotiation_requested" | null;
     responded_at?: string | null;
   } | null;
 }
@@ -636,7 +643,7 @@ const RequestDetail = () => {
               <div className="min-w-0">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
-                    {statusLabel(request.status)}
+                    {request.status === "waiting_for_customer" && request.latest_quote?.customer_response ? ({ accepted: "پیشنهاد پذیرفته شد", declined: "پیشنهاد رد شد", negotiation_requested: "درخواست مذاکره" } as Record<string,string>)[request.latest_quote.customer_response] : statusLabel(request.status)}
                   </Badge>
                 </div>
                 <h1 className="break-words text-2xl font-bold text-slate-950 sm:text-3xl">{request.tracking_number}</h1>
@@ -767,9 +774,9 @@ const RequestDetail = () => {
                         </span>
                         {t("requestDetail.quoteSectionTitle")}
                       </CardTitle>
-                      <Button size="sm" variant="outline" className="gap-2" onClick={() => setQuoteModalOpen(true)}>
+                      <Button size="sm" variant="outline" className="gap-2" disabled={request.latest_quote?.customer_response === "accepted"} onClick={() => setQuoteModalOpen(true)}>
                         <Plus className="h-4 w-4" />
-                        {request.latest_quote ? t("requestDetail.editQuote") : t("requestDetail.setQuote")}
+                        {request.latest_quote?.public_id ? "انتشار پیشنهاد جایگزین" : t("requestDetail.setQuote")}
                       </Button>
                     </div>
                   </CardHeader>
@@ -780,9 +787,14 @@ const RequestDetail = () => {
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-xs text-slate-500">{t("common.amount")}</span>
                             <span className="text-lg font-bold text-slate-900">
-                              {formatCurrency(request.latest_quote.amount, request.latest_quote.currency, locale)}
+                              {formatCurrency(request.latest_quote.amount_exact ?? request.latest_quote.amount, request.latest_quote.currency, locale)}
                             </span>
                           </div>
+                          {request.latest_quote.money_contract === "legacy-unspecified" && <p className="text-sm">مبلغ تاریخی؛ واحد و مقیاس ثبت‌شده نامشخص است.</p>}
+                          {request.latest_quote.delivery_readiness && <div className="mt-2 rounded-lg border p-3 text-sm" aria-label="آمادگی گیرنده">
+                            <p>{request.latest_quote.delivery_readiness.state === "RECIPIENT_READY" ? "گیرندهٔ دقیق پیوند آماده است؛ تحویل واقعی تأیید نشده است." : "پیوند خصوصی آماده نیست؛ گیرندهٔ تأییدشده و زیرساخت مجاز این محیط باید بررسی شوند."}</p>
+                            <p>مسئول پیگیری: {request.latest_quote.delivery_readiness.follow_up_assignee_id === request.assigned_to?.id ? request.assigned_to?.name || "کارشناس فعلی" : "کارشناس فعلی درخواست"}. وابستگی تحویل و آماده‌سازی گیرنده باز است.</p>
+                          </div>}
                           {request.latest_quote.valid_until && (
                             <p className="mt-2 text-xs text-slate-500">
                               {t("requestDetail.quoteValidUntil")}: {formatLocalDate(request.latest_quote.valid_until, locale)}
@@ -946,6 +958,7 @@ const RequestDetail = () => {
           open={quoteModalOpen}
           onOpenChange={setQuoteModalOpen}
           requestId={request.public_id}
+          predecessorPublicId={request.latest_quote?.public_id ?? undefined}
           onSuccess={loadRequestDetail}
         />
       </div>

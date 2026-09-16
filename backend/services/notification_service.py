@@ -7,6 +7,43 @@ from backend.extensions import db
 from backend.models import ExpertConsoleNotification
 
 
+def _visible_query(expert_id):
+    """Keep legacy inbox semantics; new response attention follows live authority."""
+    from sqlalchemy import select, or_
+    from backend.models import ShipmentRequest, ExpertUser
+    from backend.operational_models import OperationalMembership, OperationalOrganization
+    from backend.quote_response_models import QuoteResponseFact
+    from backend.services.assigned_work_authorization import assigned_request_scope
+    db.session.scalar(select(ExpertUser).where(ExpertUser.id == expert_id).execution_options(populate_existing=True))
+    owner_scope = assigned_request_scope({'id':expert_id}, 'request.read')
+    active_member = select(func.min(OperationalMembership.id)).join(OperationalOrganization,
+        OperationalOrganization.id == OperationalMembership.organization_id).where(
+        OperationalMembership.user_id == expert_id, OperationalMembership.is_active.is_(True),
+        OperationalOrganization.is_active.is_(True)).correlate(None).scalar_subquery()
+    active_count = select(func.count(OperationalMembership.id)).join(OperationalOrganization,
+        OperationalOrganization.id == OperationalMembership.organization_id).where(
+        OperationalMembership.user_id == expert_id, OperationalMembership.is_active.is_(True),
+        OperationalOrganization.is_active.is_(True)).correlate(None).scalar_subquery()
+    # Correlated exact root/fact plus current membership prevents retained inbox
+    # IDs and old cached expert assignment from remaining disclosure authority.
+    response_visible = select(ShipmentRequest.id).join(QuoteResponseFact,
+        QuoteResponseFact.request_id == ShipmentRequest.id).join(ExpertUser,
+        ExpertUser.id == ShipmentRequest.assigned_to).join(OperationalMembership,
+        and_(OperationalMembership.user_id == ExpertUser.id,
+             OperationalMembership.organization_id == ShipmentRequest.operational_organization_id)).where(
+        ShipmentRequest.id == ExpertConsoleNotification.shipment_request_id,
+        ShipmentRequest.ownership_scope == 'TENANT', ShipmentRequest.assigned_to == expert_id,
+        ShipmentRequest.operational_organization_id == ExpertConsoleNotification.operational_organization_id,
+        QuoteResponseFact.id == ExpertConsoleNotification.quote_response_fact_id,
+        QuoteResponseFact.organization_id == ShipmentRequest.operational_organization_id,
+        ExpertUser.is_active.is_(True), ExpertUser.authority.in_(['EXPERT','ORGANIZATION_ADMIN']), owner_scope,
+        OperationalMembership.is_active.is_(True), active_count == 1,
+        OperationalMembership.id == active_member).exists()
+    return db.session.query(ExpertConsoleNotification).filter(
+        ExpertConsoleNotification.expert_user_id == expert_id,
+        or_(ExpertConsoleNotification.quote_response_fact_id.is_(None), response_visible))
+
+
 def list_notifications_for_expert(
     expert_id: int,
     filters: Optional[dict[str, Any]] = None,
@@ -16,9 +53,7 @@ def list_notifications_for_expert(
     unread_only = bool(filters.get("unread_only", False))
     limit = min(int(filters.get("limit", 50)), 200)
 
-    query = db.session.query(ExpertConsoleNotification).filter(
-        ExpertConsoleNotification.expert_user_id == expert_id
-    )
+    query = _visible_query(expert_id)
 
     if unread_only:
         query = query.filter(ExpertConsoleNotification.is_read.is_(False))
@@ -46,7 +81,10 @@ def build_notifications_response_payload(
 
 def build_notification_payload(notification: ExpertConsoleNotification) -> dict[str, Any]:
     """Build the current single-notification JSON payload."""
-    return {
+    if notification.quote_response_fact_id is not None and not _visible_query(notification.expert_user_id).filter(
+            ExpertConsoleNotification.id == notification.id).first():
+        raise ValueError('QUOTE_RESPONSE_ATTENTION_UNAVAILABLE')
+    payload = {
         "id": notification.id,
         "type": notification.notification_type,
         "title": notification.title,
@@ -55,11 +93,19 @@ def build_notification_payload(notification: ExpertConsoleNotification) -> dict[
         "created_at": notification.created_at.isoformat(),
         "shipment_request_id": notification.shipment_request_id,
     }
+    if notification.quote_response_fact_id is not None:
+        from backend.quote_response_models import QuoteResponseFact
+        from backend.services.quote_response_authorization import aware
+        fact = db.session.get(QuoteResponseFact, notification.quote_response_fact_id)
+        payload.update(fact_id=fact.id, response_received_at=aware(fact.response_received_at).isoformat(),
+            created_at=aware(fact.recorded_at).isoformat(),
+            message=f'{fact.response}; quote={fact.snapshot["quote_public_id"]}; sequence={fact.sequence}')
+    return payload
 
 
 def get_unread_count(expert_id: int) -> int:
     """Return the current unread count for an expert."""
-    return db.session.query(func.count(ExpertConsoleNotification.id)).filter(
+    return _visible_query(expert_id).with_entities(func.count(ExpertConsoleNotification.id)).filter(
         and_(
             ExpertConsoleNotification.expert_user_id == expert_id,
             ExpertConsoleNotification.is_read.is_(False),
@@ -77,14 +123,14 @@ def mark_notifications_read(
     mark_all = payload.get("mark_all", False)
 
     if mark_all:
-        notifications = db.session.query(ExpertConsoleNotification).filter(
+        notifications = _visible_query(expert_id).filter(
             and_(
                 ExpertConsoleNotification.expert_user_id == expert_id,
                 ExpertConsoleNotification.is_read.is_(False),
             )
         ).all()
     elif notification_ids:
-        notifications = db.session.query(ExpertConsoleNotification).filter(
+        notifications = _visible_query(expert_id).filter(
             and_(
                 ExpertConsoleNotification.id.in_(notification_ids),
                 ExpertConsoleNotification.expert_user_id == expert_id,

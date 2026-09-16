@@ -45,6 +45,9 @@ def apply_request_list_filters(query, filters: dict[str, Any]):
             query = query.filter(ShipmentRequest.status.in_(status_list))
         else:
             query = query.filter(ShipmentRequest.status == status)
+        if status == 'waiting_for_customer':
+            from backend.services.governed_quote_service import has_governed_response_expression
+            query = query.filter(~has_governed_response_expression(ShipmentRequest))
 
     priority = filters.get("priority")
     if priority:
@@ -80,6 +83,8 @@ def apply_request_list_filters(query, filters: dict[str, Any]):
 def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
     """Build the current request list item payload."""
     assigned_expert = db.session.query(ExpertUser).get(req.assigned_to) if req.assigned_to else None
+    from backend.services.governed_quote_service import effective_quote_for_root
+    effective_quote = effective_quote_for_root(req.id)
 
     sla_status = "on_time"
     if req.sla_due_at:
@@ -93,6 +98,7 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
         "public_id": req.public_id,
         "tracking_number": req.tracking_code if getattr(req, "tracking_code", None) else f"SR{req.id:06d}",
         "status": req.status,
+        "quote_response": effective_quote.customer_response if effective_quote and effective_quote.money_contract == 'quote-major.v1' else None,
         "priority": req.priority,
         "created_at": serialize_legacy_utc_datetime(req.created_at),
         "sla_due_at": req.sla_due_at.isoformat() if req.sla_due_at else None,

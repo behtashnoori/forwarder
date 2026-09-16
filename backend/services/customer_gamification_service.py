@@ -31,7 +31,6 @@ def send_registration_verification_email(
         verification_url = f"{frontend_url}/verify-email?token={token}"
 
         current_app.logger.info(f"Verification email would be sent to {email}")
-        current_app.logger.info(f"Verification URL: {verification_url}")
 
         return True
     except Exception as e:
@@ -479,74 +478,8 @@ VALID_QUOTE_RESPONSES = {"accepted", "declined"}
 def record_quote_response(
     tracking_code: str, response: Any, remote_addr: str | None = None
 ) -> tuple[dict[str, Any], int]:
-    """Record a customer's accept/decline on the latest quote for their own request."""
-    if response not in VALID_QUOTE_RESPONSES:
-        return {"message": "پاسخ نامعتبر است"}, 400
-
-    try:
-        resolved_request_id = str(tracking_code).strip()
-        if not resolved_request_id or resolved_request_id.isdigit():
-            raise ValueError
-    except (TypeError, ValueError):
-        return {"message": "Not found"}, 404
-        return {"message": "شناسه درخواست نامعتبر است"}, 400
-
-    shipment_request = (
-        db.session.query(ShipmentRequest)
-        .filter(ShipmentRequest.tracking_code == resolved_request_id)
-        .with_for_update()
-        .first()
-    )
-    if shipment_request is None:
-        return {"message": "Not found"}, 404
-        return {"message": "درخواست یافت نشد یا به این مشتری تعلق ندارد"}, 404
-
-    quote_row = (
-        db.session.query(ExpertQuote)
-        .filter(ExpertQuote.shipment_request_id == shipment_request.id)
-        .order_by(ExpertQuote.created_at.desc())
-        .with_for_update()
-        .first()
-    )
-    if quote_row is None:
-        return {"message": "پیشنهاد قیمتی برای این درخواست ثبت نشده است"}, 404
-
-    if quote_row.customer_response == response:
-        return {
-            "message": "Response recorded",
-            "latest_quote": build_latest_quote_payload(shipment_request),
-        }, 200
-    if quote_row.customer_response is not None:
-        return {"message": "شما قبلاً به این پیشنهاد پاسخ داده‌اید"}, 409
-
-    if quote_row.valid_until is not None and quote_row.valid_until < date.today():
-        return {"message": "مهلت این پیشنهاد به پایان رسیده است"}, 400
-
-    try:
-        quote_row.customer_response = response
-        quote_row.responded_at = datetime.utcnow()
-        # Surface the decision to the assigned expert on their next console visit.
-        shipment_request.has_unread_for_assignee = True
-        db.session.add(ExpertConsoleLog(
-            shipment_request_id=shipment_request.id,
-            expert_user_id=None,
-            action="customer_quote_response",
-            old_status=shipment_request.status,
-            new_status=shipment_request.status,
-            note=f"response={response}; quote_id={quote_row.id}; capability=tracking_code",
-            ip_address=remote_addr,
-            created_at=datetime.utcnow(),
-        ))
-        db.session.commit()
-    except SQLAlchemyError as exc:  # pragma: no cover - defensive
-        db.session.rollback()
-        current_app.logger.error("Failed to record quote response: %s", exc)
-        return {"message": "خطا در ثبت پاسخ"}, 500
-
-    return {
-        "message": "پاسخ شما ثبت شد",
-        "latest_quote": build_latest_quote_payload(shipment_request),
-    }, 200
+    """ADR-047: tracking is read-only; deny at the command boundary too."""
+    return {"message": "امکان پاسخ از این مسیر وجود ندارد", "reason": "CUSTOMER_ACTION_UNAVAILABLE"}, 403
 
 
 def list_customer_workflow_step_definitions() -> list[dict[str, Any]]:
@@ -598,29 +531,16 @@ def build_assigned_expert_payload(shipment_request: ShipmentRequest) -> dict[str
 
 
 def build_latest_quote_payload(shipment_request: ShipmentRequest) -> dict[str, Any] | None:
-    """Build the latest quote object used by the workflow response."""
-    quote_row = (
-        db.session.query(ExpertQuote)
-        .filter(ExpertQuote.shipment_request_id == shipment_request.id)
-        .order_by(ExpertQuote.created_at.desc())
-        .first()
-    )
-    if not quote_row:
+    """Consume Commercial's effective quote query and projection."""
+    from backend.services.governed_quote_service import effective_quote_for_root
+    from backend.services.quote_service import build_quote_payload
+    quote = effective_quote_for_root(shipment_request.id)
+    if not quote:
         return None
-
-    return {
-        "amount": int(quote_row.amount) if quote_row.amount is not None else None,
-        "currency": quote_row.currency or "IRR",
-        "note": quote_row.note,
-        "valid_until": quote_row.valid_until.isoformat() if quote_row.valid_until else None,
-        "created_at": (
-            quote_row.created_at.isoformat()
-            if hasattr(quote_row.created_at, "isoformat")
-            else str(quote_row.created_at)
-        ),
-        "customer_response": quote_row.customer_response,
-        "responded_at": quote_row.responded_at.isoformat() if quote_row.responded_at else None,
-    }
+    payload = build_quote_payload(quote)
+    # The legacy customer panel is a read projection, never a quote authority.
+    payload.pop('id', None)
+    return payload
 
 
 def build_customer_workflow_payload(

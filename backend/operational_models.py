@@ -22,6 +22,7 @@ class OperationalOrganization(db.Model):
         db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
     )
     name = db.Column(db.String(160), nullable=False)
+    quotation_validity_timezone = db.Column(db.String(64), nullable=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 

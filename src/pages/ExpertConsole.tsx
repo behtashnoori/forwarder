@@ -506,7 +506,9 @@ const ExpertConsole = () => {
                                 {request.tracking_number}
                               </div>
                               <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
-                                {statusLabel(request.status)}
+                                {request.status === "waiting_for_customer" && request.quote_response
+                                  ? ({ accepted: "پیشنهاد پذیرفته شد", declined: "پیشنهاد رد شد", negotiation_requested: "درخواست مذاکره" })[request.quote_response]
+                                  : statusLabel(request.status)}
                               </Badge>
                               {request.has_unread && <Badge className="rounded-full bg-blue-600 text-white">{t("common.unread")}</Badge>}
                             </div>

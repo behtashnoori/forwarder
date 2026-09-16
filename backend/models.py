@@ -284,6 +284,7 @@ class CustomerGamification(db.Model):
     __tablename__ = "customer_gamification"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    quote_recipient_generation = db.Column(SQLITE_COMPAT_BIGINT, nullable=False, default=0, server_default='0')
     email = db.Column(db.String(100), unique=True, nullable=False)
     phone = db.Column(db.String(20), nullable=False)
     first_name = db.Column(db.String(100), nullable=True)
@@ -348,6 +349,7 @@ class ShipmentRequest(db.Model):
     """Represents a shipment request submitted by a user."""
 
     __tablename__ = "shipment_request"
+    quote_recipient_generation = db.Column(SQLITE_COMPAT_BIGINT, nullable=False, default=0, server_default='0')
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_shipment_request_public_id"),
         db.UniqueConstraint("id", "operational_organization_id", name="uq_shipment_request_id_operational_org"),
@@ -852,8 +854,16 @@ class ExpertConsoleNotification(db.Model):
     """Notifications for expert console."""
     
     __tablename__ = "expert_console_notification"
+    __table_args__ = (
+        db.UniqueConstraint('quote_response_fact_id', 'expert_user_id', name='uq_quote_response_attention_recipient'),
+        db.ForeignKeyConstraint(['quote_response_fact_id', 'operational_organization_id'],
+            ['quote_response_fact.id', 'quote_response_fact.organization_id'],
+            name='fk_quote_response_attention_fact_tenant', ondelete='RESTRICT'),
+        db.CheckConstraint("quote_response_fact_id IS NULL OR (notification_type = 'customer_quote_response' AND operational_organization_id IS NOT NULL)", name='ck_quote_response_attention_fact'),
+    )
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    quote_response_fact_id = db.Column(db.String(36), nullable=True)
     operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     expert_user_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id"), nullable=False
@@ -879,7 +889,20 @@ class ExpertQuote(db.Model):
     shipment_request_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
     )
-    amount = db.Column(SQLITE_COMPAT_BIGINT, nullable=False)  # integer amount (e.g. IRR)
+    amount = db.Column(SQLITE_COMPAT_BIGINT, nullable=True)  # historical value preserved
+    amount_exact = db.Column(db.Numeric(21, 2), nullable=True)
+    money_contract = db.Column(db.String(24), nullable=True)
+    public_id = db.Column(db.String(36), nullable=True, unique=True)
+    content_revision = db.Column(db.Integer, nullable=True)
+    content_digest = db.Column(db.String(64), nullable=True)
+    published_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    validity_timezone = db.Column(db.String(64), nullable=True)
+    validity_policy = db.Column(db.String(32), nullable=True)
+    predecessor_id = db.Column(SQLITE_COMPAT_BIGINT, nullable=True, unique=True)
+    superseded_by_id = db.Column(SQLITE_COMPAT_BIGINT, nullable=True, unique=True)
+    response_version = db.Column(db.Integer, nullable=True)
+    response_received_at = db.Column(db.DateTime(timezone=True), nullable=True)
     currency = db.Column(db.String(10), nullable=False, default="IRR")
     note = db.Column(db.Text, nullable=True)
     valid_until = db.Column(db.Date, nullable=True)
@@ -889,7 +912,7 @@ class ExpertQuote(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Customer response to the quote: NULL (no response yet), 'accepted', or 'declined'.
-    customer_response = db.Column(db.String(10), nullable=True)
+    customer_response = db.Column(db.String(24), nullable=True)
     responded_at = db.Column(db.DateTime, nullable=True)
     operational_organization_id = db.Column(
         SQLITE_COMPAT_BIGINT,
@@ -899,13 +922,20 @@ class ExpertQuote(db.Model):
     )
 
     __table_args__ = (
+        db.UniqueConstraint('id', 'operational_organization_id', name='uq_expert_quote_tenant'),
+        db.ForeignKeyConstraint(['shipment_request_id', 'operational_organization_id'], ['shipment_request.id', 'shipment_request.operational_organization_id'], name='fk_quote_root_tenant', ondelete='RESTRICT'),
+        db.ForeignKeyConstraint(['predecessor_id', 'operational_organization_id'], ['expert_quote.id', 'expert_quote.operational_organization_id'], name='fk_quote_predecessor_tenant', ondelete='RESTRICT'),
+        db.ForeignKeyConstraint(['superseded_by_id', 'operational_organization_id'], ['expert_quote.id', 'expert_quote.operational_organization_id'], name='fk_quote_successor_tenant', ondelete='RESTRICT'),
+        db.CheckConstraint("(money_contract IS NULL AND amount IS NOT NULL) OR (money_contract = 'quote-major.v1' AND amount_exact IS NOT NULL AND amount_exact >= 0 AND amount_exact <= 9223372036854775807 AND currency IN ('IRR','USD','EUR') AND (currency <> 'IRR' OR amount_exact = floor(amount_exact)))", name='ck_quote_exact_money'),
+        db.CheckConstraint('content_revision IS NULL OR (content_revision = 1 AND response_version >= 0)', name='ck_quote_governed_version'),
         db.CheckConstraint(
-            "customer_response IS NULL OR customer_response IN ('accepted', 'declined')",
+            "customer_response IS NULL OR customer_response IN ('accepted', 'negotiation_requested', 'declined')",
             name="ck_expert_quote_customer_response",
         ),
     )
 
-    shipment_request = db.relationship("ShipmentRequest", backref=db.backref("quotes", lazy="dynamic"))
+    shipment_request = db.relationship("ShipmentRequest", foreign_keys=[shipment_request_id],
+        primaryjoin="ExpertQuote.shipment_request_id == ShipmentRequest.id", backref=db.backref("quotes", lazy="dynamic"))
     created_by_expert = db.relationship("ExpertUser", backref="created_quotes")
 
     def __repr__(self) -> str:
@@ -925,6 +955,7 @@ class Customer(db.Model):
     )
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    quote_recipient_generation = db.Column(SQLITE_COMPAT_BIGINT, nullable=False, default=0, server_default='0')
     operational_organization_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=True, index=True)
     ownership_scope = db.Column(db.String(24), nullable=True)
     company_name = db.Column(db.String(200), nullable=True)
@@ -2091,6 +2122,33 @@ from backend.external_reference_models import (  # noqa: E402,F401
 
 
 from backend.notification_models import NotificationAction, NotificationAttempt  # noqa: E402,F401
+from backend.quote_response_models import QuoteKeyPolicy, QuoteKeyPolicyAudit, QuoteResponseGrant, QuoteResponseFact, QuoteResponseReceipt  # noqa: E402,F401
+
+
+@event.listens_for(ShipmentRequest, 'before_update')
+@event.listens_for(Customer, 'before_update')
+@event.listens_for(CustomerGamification, 'before_update')
+def _sqlite_quote_recipient_generation(_mapper, connection, target):
+    """SQLite ORM unit semantics only; PostgreSQL uses authoritative DB triggers."""
+    if connection.dialect.name != 'sqlite':
+        return
+    fields = ('customer_id', 'gamification_customer_id') if isinstance(target, ShipmentRequest) else (
+        ('email', 'status') if isinstance(target, Customer) else ('email', 'is_email_verified'))
+    table = target.__table__
+    previous = connection.execute(select(table.c.quote_recipient_generation, *(table.c[name] for name in fields))
+        .where(table.c.id == target.id)).mappings().one()
+    if target.quote_recipient_generation != previous['quote_recipient_generation']:
+        raise ValueError('QUOTE_RECIPIENT_GENERATION_OWNER_CONTROLLED')
+    changed = False
+    for name in fields:
+        old, new = previous[name], getattr(target, name)
+        if name == 'email':
+            old, new = (old or '').strip().lower(), (new or '').strip().lower()
+        changed = changed or old != new
+    if changed:
+        if previous['quote_recipient_generation'] >= 9223372036854775807:
+            raise ValueError('QUOTE_RECIPIENT_GENERATION_OVERFLOW')
+        target.quote_recipient_generation = previous['quote_recipient_generation'] + 1
 
 __all__ = [
     "CargoCatalogItem",

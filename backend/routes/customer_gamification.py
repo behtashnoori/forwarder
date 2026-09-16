@@ -64,7 +64,7 @@ def get_customer_workflow(customer_id: int):
 
 @customer_gamification_bp.post("/quote-response/<tracking_code>")
 def respond_to_quote(tracking_code: str):
-    """Record a customer's accept/decline on the latest quote for one of their requests."""
+    """Retired tracking writer: deny uniformly without resolving any identifier."""
     data: Dict[str, Any] = request.get_json(silent=True) or {}
     payload, status_code = customer_gamification_service.record_quote_response(
         tracking_code, data.get("response"), request.remote_addr

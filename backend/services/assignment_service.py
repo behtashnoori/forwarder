@@ -7,6 +7,7 @@ from backend.models import ExpertConsoleLog, ExpertConsoleNotification, ExpertUs
 from backend.services.expert_scope_service import can_handle_request
 from backend.services.sla_service import set_initial_assignment_sla
 from backend.services.ownership_service import tenant_organization_for_user
+from backend.services.quote_response_authorization import serialized_recipient_write, lock_quote_scope
 
 
 class AssignmentServiceError(Exception):
@@ -33,6 +34,7 @@ class AssignmentAccessError(AssignmentServiceError):
     """Raised when the current actor cannot assign the target request."""
 
 
+@serialized_recipient_write
 def assign_request_to_expert(
     request_id: int,
     expert_id: Any = None,
@@ -48,9 +50,30 @@ def assign_request_to_expert(
     elif not target_expert_id:
         raise AssignmentValidationError("شناسه کارشناس الزامی است")
 
-    req = get_assignment_target_request_or_none(request_id)
+    try:
+        target_expert_id = int(target_expert_id)
+    except (TypeError, ValueError):
+        raise AssignmentValidationError('شناسه کارشناس نامعتبر است') from None
+    from backend.services.quote_capability_crypto import CapabilityDenied
+    try:
+        scope = lock_quote_scope(request_id, actor_id=(actor or {}).get('id'),
+            extra_actor_ids=(target_expert_id,), allow_legacy_uncertified=True)
+    except CapabilityDenied as exc:
+        if str(exc) == 'TARGET_UNAVAILABLE':
+            raise AssignmentNotFoundError('درخواست یافت نشد', 404) from None
+        raise AssignmentAccessError('عضویت سازمانی معتبر الزامی است', 403) from None
+    req = scope['root']
     if not req:
         raise AssignmentNotFoundError("درخواست یافت نشد", 404)
+    if not scope.get('legacy_uncertified'):
+        current_actor = db.session.get(ExpertUser, (actor or {}).get('id'))
+        platform_assignment = bool(current_actor and current_actor.is_active and current_actor.authority == 'PLATFORM_ADMIN')
+        try:
+            current_org_id = req.operational_organization_id if platform_assignment else tenant_organization_for_user(actor)
+        except ValueError:
+            raise AssignmentAccessError('عضویت سازمانی معتبر الزامی است', 403) from None
+        if req.operational_organization_id != current_org_id:
+            raise AssignmentNotFoundError('Request not found', 404)
     if not can_assign_request(req, actor):
         raise AssignmentAccessError("شما به این درخواست دسترسی ندارید", 403)
 
@@ -60,12 +83,14 @@ def assign_request_to_expert(
     if not expert.is_active:
         raise AssignmentValidationError("کارشناس غیرفعال است")
 
-    if organization_context is not None:
+    if organization_context is not None or not scope.get("legacy_uncertified"):
+        organization_id = organization_context.organization_id if organization_context else (
+            req.operational_organization_id if platform_assignment else tenant_organization_for_user(actor))
         from backend.operational_models import OperationalMembership
-        if req.ownership_scope != "TENANT" or req.operational_organization_id != organization_context.organization_id:
+        if req.ownership_scope != "TENANT" or req.operational_organization_id != organization_id:
             raise AssignmentNotFoundError("Request not found", 404)
         memberships = db.session.query(OperationalMembership).filter(OperationalMembership.user_id == expert.id, OperationalMembership.is_active.is_(True)).all()
-        if len(memberships) != 1 or memberships[0].organization_id != organization_context.organization_id:
+        if len(memberships) != 1 or memberships[0].organization_id != organization_id:
             raise AssignmentNotFoundError("Expert not found", 404)
 
     if not can_handle_request(expert, req):
@@ -79,6 +104,8 @@ def assign_request_to_expert(
 
     create_assignment_log(request_id, target_expert_id, old_status, expert.full_name, remote_addr)
     create_assignment_notification_if_needed(request_id, target_expert_id)
+    from backend.services.quote_response_notification import reroute_response_attention
+    reroute_response_attention(scope)
 
     db.session.commit()
 
@@ -102,13 +129,15 @@ def manual_assign_request(
     )
 
 
+@serialized_recipient_write
 def assign_request_to_current_user(
     request_id: int, actor: Optional[dict[str, Any]], remote_addr: Optional[str] = None
 ) -> dict[str, Any]:
     """Assign an unassigned tenant request using only the trusted session identity."""
     if not actor or actor.get("id") is None:
         raise AssignmentAccessError("احراز هویت نشده", 401)
-    req = get_assignment_target_request_or_none(request_id)
+    scope = lock_quote_scope(request_id, actor_id=actor['id'])
+    req = scope['root']
     if not req:
         raise AssignmentNotFoundError("درخواست یافت نشد", 404)
     try:
@@ -131,6 +160,8 @@ def assign_request_to_current_user(
     set_initial_assignment_sla(req, expert)
     create_assignment_log(req.id, expert.id, old_status, expert.full_name, remote_addr)
     create_assignment_notification_if_needed(req.id, expert.id)
+    from backend.services.quote_response_notification import reroute_response_attention
+    reroute_response_attention(scope)
     db.session.commit()
     return build_assignment_response_payload(expert)
 
@@ -170,6 +201,22 @@ def can_assign_request(req: ShipmentRequest, actor: dict[str, Any] | None) -> bo
     """Preserve current assignment access behavior: admin or assigned expert only."""
     if not actor:
         return False
+    if req.ownership_scope == 'TENANT':
+        from sqlalchemy import select
+        user = db.session.scalar(select(ExpertUser).where(ExpertUser.id == actor.get('id')).execution_options(populate_existing=True))
+        if not user or not user.is_active or user.authority not in {'EXPERT','ORGANIZATION_ADMIN','PLATFORM_ADMIN'}:
+            return False
+        # Preserve the existing canonical platform administration assignment
+        # contract. This gives no request/quote read or customer decision power;
+        # both the target expert and root still share the locked organization.
+        if user.authority == 'PLATFORM_ADMIN':
+            return True
+        try:
+            if tenant_organization_for_user({'id':user.id}) != req.operational_organization_id:
+                return False
+        except ValueError:
+            return False
+        return user.authority == 'ORGANIZATION_ADMIN' or req.assigned_to == user.id
     if actor.get("role") == "admin" or actor.get("authority") in {"PLATFORM_ADMIN", "ORGANIZATION_ADMIN"}:
         return True
     return req.assigned_to == actor.get("id")

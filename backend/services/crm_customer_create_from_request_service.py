@@ -7,6 +7,7 @@ from sqlalchemy import or_
 
 from backend.extensions import db
 from backend.models import Customer, ShipmentRequest
+from backend.services.quote_response_authorization import serialized_recipient_write
 from backend.services.ownership_service import require_tenant_resource, tenant_organization_for_user
 from backend.services.crm_customer_link_service import (
     add_customer_link_audit_records,
@@ -249,6 +250,7 @@ def get_customer_create_preview(request_id: int) -> dict[str, Any]:
     }
 
 
+@serialized_recipient_write
 def create_customer_from_request(
     request_id: int,
     payload: dict[str, Any],
@@ -256,9 +258,8 @@ def create_customer_from_request(
     remote_addr: str | None = None,
 ) -> dict[str, Any]:
     """Create a CRM Customer from reviewed request data and optionally link it."""
-    shipment_request = db.session.get(ShipmentRequest, request_id)
-    if shipment_request is None:
-        raise CrmCustomerCreatePreviewNotFoundError("Shipment request not found", 404)
+    from backend.services.quote_response_authorization import lock_quote_scope
+    shipment_request = lock_quote_scope(request_id, actor_id=user['id'])['root']
     organization_id = tenant_organization_for_user(user)
     require_tenant_resource(shipment_request, expected_organization_id=organization_id)
 

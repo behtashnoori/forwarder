@@ -3,6 +3,8 @@ from flask import Blueprint, jsonify, request, current_app
 from backend.extensions import db
 from backend.auth import get_current_user
 from backend.security import require_role
+from backend.services.quote_capability_crypto import CapabilityDenied
+from backend.services.ownership_service import OwnershipContractError
 from backend.services import (
     crm_customer_create_from_request_service,
     crm_customer_link_service,
@@ -152,6 +154,10 @@ def create_customer_from_shipment_request(request_id: int):
     except crm_customer_create_from_request_service.CrmCustomerCreatePreviewError as e:
         db.session.rollback()
         return jsonify({"error": e.message}), e.status_code
+    except (CapabilityDenied, OwnershipContractError) as e:
+        db.session.rollback()
+        reason = str(e)
+        return jsonify({'error': 'Shipment request not found' if reason == 'TARGET_UNAVAILABLE' else 'CRM link target unavailable'}), (404 if reason == 'TARGET_UNAVAILABLE' else 409 if reason == 'SCOPE_CHANGED_RETRY' else 403)
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating CRM customer from request: {e}")
@@ -175,6 +181,10 @@ def link_shipment_request_customer(request_id: int):
     except crm_customer_link_service.CrmCustomerLinkError as e:
         db.session.rollback()
         return jsonify({"error": e.message}), e.status_code
+    except (CapabilityDenied, OwnershipContractError) as e:
+        db.session.rollback()
+        reason = str(e)
+        return jsonify({'error':'Shipment request not found' if reason=='TARGET_UNAVAILABLE' else 'CRM link target unavailable'}), (404 if reason=='TARGET_UNAVAILABLE' else 409 if reason=='SCOPE_CHANGED_RETRY' else 403)
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error linking CRM customer: {e}")
@@ -198,6 +208,10 @@ def unlink_shipment_request_customer(request_id: int):
     except crm_customer_link_service.CrmCustomerLinkError as e:
         db.session.rollback()
         return jsonify({"error": e.message}), e.status_code
+    except (CapabilityDenied, OwnershipContractError) as e:
+        db.session.rollback()
+        reason = str(e)
+        return jsonify({'error':'Shipment request not found' if reason=='TARGET_UNAVAILABLE' else 'CRM link target unavailable'}), (404 if reason=='TARGET_UNAVAILABLE' else 409 if reason=='SCOPE_CHANGED_RETRY' else 403)
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error unlinking CRM customer: {e}")

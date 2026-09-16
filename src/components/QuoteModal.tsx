@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,36 +11,35 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
-import { submitQuote, type SubmitQuotePayload } from "@/lib/api";
-import { formatQuantity, parseQuantityInput } from "@/lib/presentation";
+import { request, submitQuote, type SubmitQuotePayload } from "@/lib/api";
+import { parseQuantityInput } from "@/lib/presentation";
 
 interface QuoteModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   requestId: string;
+  predecessorPublicId?: string;
   onSuccess: () => void;
 }
 
-const CURRENCY_OPTIONS = [
-  { value: "IRR", label: "تومان (IRR)" },
-  { value: "USD", label: "دلار (USD)" },
-];
-
-export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteModalProps) {
+export function QuoteModal({ open, onOpenChange, requestId, predecessorPublicId, onSuccess }: QuoteModalProps) {
+  const [currencies, setCurrencies] = useState<{ code: string; label: string; scale: number }[]>([]);
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("IRR");
   const [note, setNote] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  useEffect(() => { if (open) void request<{items: typeof currencies}>("/api/commercial/quote-currencies")
+    .then(result => setCurrencies(result.items)).catch(() => setError("فهرست ارزها دریافت نشد؛ دوباره تلاش کنید.")); }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     const parsedAmount = parseQuantityInput(amount);
-    // The existing API/DB quote contract is an integer amount. Do not round a
-    // decimal entered by the user into a different commercial value.
-    if (!parsedAmount || !/^\d+$/.test(parsedAmount.canonical)) {
+    const scale = currencies.find(item => item.code === currency)?.scale;
+    const pattern = scale === 0 ? /^(?:0|[1-9]\d*)$/ : /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
+    if (!parsedAmount || scale === undefined || !pattern.test(parsedAmount.canonical)) {
       setError("مبلغ را به عدد وارد کنید");
       return;
     }
@@ -48,9 +47,10 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
     try {
       const payload: SubmitQuotePayload = {
         amount: parsedAmount.canonical,
-        currency: currency || "IRR",
+        currency,
         note: note.trim() || undefined,
-        valid_until: validUntil.trim() || undefined,
+        valid_until: validUntil.trim(),
+        ...(predecessorPublicId ? { predecessor_public_id: predecessorPublicId } : {}),
       };
       await submitQuote(requestId, payload);
       onSuccess();
@@ -76,7 +76,7 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>ارسال پیشنهاد</DialogTitle>
+          <DialogTitle>{predecessorPublicId ? "انتشار نسخه جایگزین پیشنهاد" : "ارسال پیشنهاد"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -87,14 +87,10 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
             <Input
               id="quote-amount"
               type="text"
-              inputMode="numeric"
+              inputMode="decimal"
               placeholder="مثال: 1,500,000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              onBlur={() => {
-                const parsed = parseQuantityInput(amount);
-                if (parsed && /^\d+$/.test(parsed.canonical)) setAmount(formatQuantity(parsed.canonical, "en-US"));
-              }}
               disabled={loading}
             />
           </div>
@@ -107,8 +103,8 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
               onChange={(e) => setCurrency(e.target.value)}
               disabled={loading}
             >
-              {CURRENCY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
+              {currencies.map((o) => (
+                <option key={o.code} value={o.code}>
                   {o.label}
                 </option>
               ))}
@@ -127,10 +123,11 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="quote-valid">تاریخ اعتبار (اختیاری)</Label>
+            <Label htmlFor="quote-valid">تاریخ اعتبار (الزامی)</Label>
             <Input
               id="quote-valid"
               type="date"
+              required
               value={validUntil}
               onChange={(e) => setValidUntil(e.target.value)}
               disabled={loading}

@@ -258,6 +258,8 @@ def accepted_quote_selector(
     ).all()
     items = []
     for quote in rows:
+        from backend.services.quote_service import build_quote_payload
+        commercial = build_quote_payload(quote)
         request_row = db.session.get(ShipmentRequest, quote.shipment_request_id)
         customer = db.session.get(Customer, request_row.customer_id)
         items.append(
@@ -274,10 +276,10 @@ def accepted_quote_selector(
                     if value
                 )
                 or None,
-                "quote_label": f"{quote.amount} {quote.currency}",
-                "accepted_at": quote.responded_at.isoformat()
+                "quote_label": f"{commercial['amount_exact']} {quote.currency}",
+                "accepted_at": commercial.get("response_received_at") or (quote.responded_at.isoformat()
                 if quote.responded_at
-                else None,
+                else None),
             }
         )
     return {"items": items, "meta": {"count": len(items), "limit": limit}}
@@ -822,6 +824,8 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
         if shipment.accepted_quote_id
         else None
     )
+    from backend.services.quote_service import build_quote_payload
+    commercial_quote = build_quote_payload(quote) if quote else None
     customer_row = (
         db.session.get(Customer, shipment.customer_id) if shipment.customer_id else None
     )
@@ -893,7 +897,11 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             )
             if shipment.shipment_request_id
             else None,
-            "quote_amount": quote.amount if quote else None,
+            "quote_amount": commercial_quote['amount'] if commercial_quote else None,
+            "quote_amount_exact": commercial_quote['amount_exact'] if commercial_quote else None,
+            "quote_money_contract": commercial_quote['money_contract'] if commercial_quote else None,
+            "quote_unit": commercial_quote['unit'] if commercial_quote else None,
+            "quote_compatibility_reason": ('CLIENT_UPGRADE_REQUIRED' if not commercial_quote['legacy_money_supported'] else None) if commercial_quote else None,
         },
         "route_plan": {
             "id": plan.id,

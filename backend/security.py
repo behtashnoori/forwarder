@@ -9,6 +9,9 @@ from flask import request, jsonify, current_app, g
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
 from uuid import uuid4
+from collections import deque
+from threading import Lock
+from time import monotonic
 
 
 class SecurityManager:
@@ -51,6 +54,14 @@ class SecurityManager:
         """Setup security headers middleware."""
         @app.after_request
         def add_security_headers(response):
+            from backend.routes.quote_capability import is_capability_path
+            if is_capability_path(request.path):
+                response.headers['Cache-Control'] = 'no-store'
+                response.headers['Referrer-Policy'] = 'no-referrer'
+                response.headers['X-Frame-Options'] = 'DENY'
+                response.headers['X-Content-Type-Options'] = 'nosniff'
+                response.headers['Content-Security-Policy'] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
+                return response
             # Prevent clickjacking
             response.headers['X-Frame-Options'] = 'DENY'
             
@@ -338,17 +349,31 @@ def sanitize_input(data: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def rate_limit(max_requests: int = 100, per: int = 3600):
-    """Simple rate limiting decorator."""
+    """Bounded process-local sliding window. No token/header/body in bucket keys."""
+    if type(max_requests) is not int or max_requests < 1 or type(per) is not int or per < 1:
+        raise ValueError('RATE_LIMIT_CONFIG_INVALID')
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Simple in-memory rate limiting
-            # In production, use Redis or similar
-            client_ip = request.remote_addr
-            current_time = datetime.utcnow()
-            
-            # This is a simplified implementation
-            # In production, use proper rate limiting library
+            state = current_app.extensions.setdefault('bounded_rate_limit', {'lock': Lock(), 'buckets': {}})
+            now = monotonic()
+            # Do not trust forwarded IP headers. Proxy-wide/distributed limits require
+            # separately qualified deployment controls before Production.
+            key = (f.__module__, f.__name__, request.remote_addr or 'unknown')
+            with state['lock']:
+                buckets = state['buckets']
+                for identity in list(buckets):
+                    queue = buckets[identity]
+                    while queue and queue[0] <= now - per:
+                        queue.popleft()
+                    if not queue:
+                        del buckets[identity]
+                if key not in buckets and len(buckets) >= 1024:
+                    return jsonify({'reason': 'RATE_LIMIT_CAPACITY'}), 429
+                queue = buckets.setdefault(key, deque())
+                if len(queue) >= max_requests:
+                    return jsonify({'reason': 'RATE_LIMITED'}), 429
+                queue.append(now)
             return f(*args, **kwargs)
         
         return decorated_function

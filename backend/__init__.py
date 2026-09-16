@@ -115,7 +115,11 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
 
     # Configure CORS with dynamic origins
     cors_config = get_cors_config(testing=bool(app.config.get("TESTING")))
-    CORS(app, **cors_config)
+    purpose_cors_config = dict(cors_config)
+    purpose_cors_config['resources'] = {
+        r'^(?!/api/quote-capability(?:/|$)).*': next(iter(cors_config['resources'].values()))
+    }
+    CORS(app, **purpose_cors_config)
     print("[startup] CORS configured.")
     log_cors_info(testing=bool(app.config.get("TESTING")))
     
@@ -129,6 +133,9 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
 
     def _add_cors_headers_to_response(response):
         """Add CORS headers to a response."""
+        from backend.routes.quote_capability import is_capability_path
+        if is_capability_path(request.path):
+            return
         origin = request.headers.get('Origin')
         if origin and _is_cors_origin_allowed(origin):
             if 'Access-Control-Allow-Origin' not in response.headers:
@@ -153,6 +160,9 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
     @app.before_request
     def handle_options():
         """Handle OPTIONS requests for CORS preflight."""
+        from backend.routes.quote_capability import is_capability_path
+        if is_capability_path(request.path):
+            return None
         if request.method == 'OPTIONS':
             origin = request.headers.get('Origin')
             # Always respond to OPTIONS with CORS headers when Origin is present
@@ -276,6 +286,10 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         return jsonify({"error": "Ownership census changed; retry"}), 409
 
     def _make_error_response(tb: str, path: str, method: str, body: str, err: Exception | None = None):
+        from backend.routes.quote_capability import is_capability_path
+        if is_capability_path(path):
+            app.logger.error('Quote capability failure; diagnostic input suppressed')
+            return jsonify({'reason': 'CUSTOMER_ACTION_FAILED'}), 500
         app.logger.error(
             "Unhandled 500: path=%s method=%s\nTraceback:\n%s\nRequest body (safe): %s",
             path,

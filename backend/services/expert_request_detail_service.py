@@ -159,14 +159,10 @@ def build_messages_payload(request_id: int) -> list[dict[str, Any]]:
 def build_latest_quote_payload(request_id: int) -> dict[str, Any] | None:
     """Build the current latest quote payload, preserving the safe failure behavior."""
     try:
-        latest_quote_row = (
-            db.session.query(ExpertQuote)
-            .filter(ExpertQuote.shipment_request_id == request_id)
-            .order_by(ExpertQuote.created_at.desc())
-            .first()
-        )
+        from backend.services.governed_quote_service import effective_quote_for_root
+        latest_quote_row = effective_quote_for_root(request_id)
         if latest_quote_row:
-            return quote_service.build_quote_payload(latest_quote_row, include_created_by=True)
+            return quote_service.build_quote_payload(latest_quote_row, include_created_by=True, include_delivery_readiness=True)
     except Exception:
         pass
     return None

@@ -151,7 +151,7 @@ const PublicTracking: React.FC = () => {
   }, [fetchRequestData, requestId]);
 
   const statusInfo = requestData ? getStatusBadge(requestData.status) : null;
-  const currentStatusLabel = requestData ? statusLabel(requestData.status) : "";
+  const currentStatusLabel = requestData ? (requestData.status === "waiting_for_customer" && requestData.latest_quote?.customer_response ? ({ accepted: "پیشنهاد پذیرفته شد", declined: "پیشنهاد رد شد", negotiation_requested: "درخواست مذاکره" } as Record<string,string>)[requestData.latest_quote.customer_response] : statusLabel(requestData.status)) : "";
   const isInternational = requestData?.shipping_type === "international";
   const workflowSteps = useMemo(() => {
     if (!requestData) return [];
@@ -242,7 +242,7 @@ const PublicTracking: React.FC = () => {
               <div className="min-w-0">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Badge variant={statusInfo.variant} className={statusInfo.color}>
-                    {statusLabel(requestData.status)}
+                    {currentStatusLabel}
                   </Badge>
                   <Badge variant="outline">
                     {shippingTypeLabel(requestData.shipping_type)}
@@ -280,7 +280,7 @@ const PublicTracking: React.FC = () => {
               <p className="text-xs font-medium text-muted-foreground">{t("common.currentStatus")}</p>
               <div className="mt-2">
                 <Badge variant={statusInfo.variant} className={statusInfo.color}>
-                  {statusLabel(requestData.status)}
+                  {currentStatusLabel}
                 </Badge>
               </div>
             </div>
@@ -296,8 +296,9 @@ const PublicTracking: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label={t("common.amount")}
-                value={formatMoney(requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
+                value={formatMoney(requestData.latest_quote.amount_exact ?? requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
               />
+              {requestData.latest_quote.money_contract === "legacy-unspecified" && <p className="text-sm">مبلغ تاریخی؛ واحد و مقیاس ثبت‌شده نامشخص است.</p>}
               {requestData.latest_quote.valid_until && (
                 <Field
                   label={t("customer.quoteValidUntil")}
@@ -514,9 +515,10 @@ const PublicTracking: React.FC = () => {
                 <div className="space-y-4">
                   <Field
                     label={t("common.amount")}
-                    value={`${requestData.latest_quote.amount?.toLocaleString(locale)} ${requestData.latest_quote.currency}`}
+                    value={formatMoney(requestData.latest_quote.amount_exact ?? requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
                   />
-                  {requestData.latest_quote.valid_until && (
+                  {requestData.latest_quote.money_contract === "legacy-unspecified" && <p className="text-sm">مبلغ تاریخی؛ واحد و مقیاس ثبت‌شده نامشخص است.</p>}
+              {requestData.latest_quote.valid_until && (
                     <Field
                       label={t("common.validUntil")}
                       value={formatLocalDate(requestData.latest_quote.valid_until, locale)}

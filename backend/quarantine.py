@@ -54,6 +54,9 @@ CERTIFIED_ENTITIES = frozenset(
 CANONICAL_RESOURCE_TYPES = frozenset({*CERTIFIED_ENTITIES, "project_party_relationship"})
 SIDE_EFFECT_ENTITIES = frozenset(
     {
+        "QuoteResponseGrant",
+        "QuoteResponseFact",
+        "QuoteResponseReceipt",
         "NotificationAction",
         "NotificationAttempt",
         "AssignmentLog",
@@ -67,6 +70,9 @@ SIDE_EFFECT_ENTITIES = frozenset(
 )
 SIDE_EFFECT_TABLES = frozenset(
     {
+        "quote_response_grant",
+        "quote_response_fact",
+        "quote_response_receipt",
         "notification_action",
         "notification_attempt",
         "assignment_log",
@@ -82,6 +88,9 @@ SIDE_EFFECT_TABLES = frozenset(
 # A newly materialized child must not point at a denied parent.  The analyzer
 # republishes all descendant decisions atomically when an existing root changes.
 PARENT_REFERENCES: dict[str, tuple[tuple[str, str], ...]] = {
+    "QuoteResponseGrant": (("request_id", "ShipmentRequest"), ("quote_id", "ExpertQuote"), ("customer_id", "Customer"), ("verified_customer_id", "CustomerGamification")),
+    "QuoteResponseFact": (("request_id", "ShipmentRequest"), ("quote_id", "ExpertQuote")),
+    "QuoteResponseReceipt": (("request_id", "ShipmentRequest"), ("quote_id", "ExpertQuote")),
     "Project": (("primary_customer_id", "Customer"),),
     "ShipmentRequest": (
         ("project_id", "Project"), ("customer_id", "Customer"),

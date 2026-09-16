@@ -825,6 +825,8 @@ def quote_preview(shipment_id, user):
         raise OperationalError(
             "ACCEPTED_COMMERCIAL_INTENT_REQUIRED", "An accepted quote is required.", 409
         )
+    from backend.services.quote_service import build_quote_payload
+    commercial = build_quote_payload(quote)
     source_identity = hashlib.sha256(
         f"accepted-quote|{shipment.public_id}|{quote.id}".encode()
     ).hexdigest()
@@ -838,11 +840,11 @@ def quote_preview(shipment_id, user):
     return {
         "shipment_public_id": shipment.public_id,
         "commercial_intent": {
-            "amount": str(quote.amount),
+            "amount": commercial['amount_exact'],
             "currency": quote.currency,
-            "accepted_at": quote.responded_at.isoformat()
+            "accepted_at": commercial.get('response_received_at') or (quote.responded_at.isoformat()
             if quote.responded_at
-            else None,
+            else None),
         },
         "already_materialized": bool(exists),
         "confirmation_allowed": not bool(exists),
@@ -867,15 +869,17 @@ def quote_confirm(shipment_id, payload, user):
         "side": "REVENUE",
         "stage": "COMMITMENT",
         "service_public_id": payload.get("service_public_id"),
-        "money": {"amount": str(quote.amount), "currency": quote.currency},
-        "effective_at": quote.responded_at.replace(tzinfo=timezone.utc).isoformat()
+        "money": {"amount": preview['commercial_intent']['amount'], "currency": quote.currency},
+        "effective_at": preview['commercial_intent']['accepted_at'] if quote.money_contract == 'quote-major.v1' else (quote.responded_at.replace(tzinfo=timezone.utc).isoformat()
         if quote.responded_at and quote.responded_at.tzinfo is None
-        else quote.responded_at.isoformat(),
+        else quote.responded_at.isoformat()),
         "authority": payload.get("authority"),
         "source_type": "ACCEPTED_QUOTE",
         "source_public_id": source_identity,
         "source_version": hashlib.sha256(
-            f"{quote.id}|{quote.amount}|{quote.currency}|{quote.responded_at}".encode()
+            (f"{quote.id}|{quote.content_digest}|{quote.response_version}|{preview['commercial_intent']['accepted_at']}"
+             if quote.money_contract == 'quote-major.v1' else
+             f"{quote.id}|{quote.amount}|{quote.currency}|{quote.responded_at}").encode()
         ).hexdigest(),
         "reason": payload.get("reason"),
         "idempotency_key": payload.get("idempotency_key"),

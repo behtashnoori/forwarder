@@ -15,7 +15,7 @@ from backend.notification_models import NotificationAction, NotificationAttempt,
 from backend.notification_provider import ProviderResult, configured_provider
 from backend.operational_models import OperationalOutbox
 from backend.services.quote_notification_contract import (
-    EVENT, POLICY, TEMPLATE, NotificationDenied, digest, quote_intent,
+    EVENT, POLICY, TEMPLATE, REISSUE_EVENT, REISSUE_POLICY, NotificationDenied, digest, quote_intent,
 )
 
 MAX_ATTEMPTS = 3
@@ -46,11 +46,11 @@ def _event(action):
     event = db.session.scalar(select(OperationalOutbox).where(
         OperationalOutbox.id == action.event_id,
         OperationalOutbox.organization_id == action.organization_id))
-    if not event or event.event_type != EVENT or event.aggregate_type != 'ExpertQuote':
+    if not event or event.event_type not in {EVENT, REISSUE_EVENT} or event.aggregate_type != 'ExpertQuote':
         raise NotificationDenied('EVENT_MISMATCH')
     body = event.payload
     if (body.get('actor_id') != action.actor_id or body.get('request_id') != action.request_id
-            or action.policy != POLICY or action.channel != 'EMAIL'
+            or action.policy != (REISSUE_POLICY if event.event_type == REISSUE_EVENT else POLICY) or action.channel != 'EMAIL'
             or body.get('intent_digest') != action.intent_digest
             or body.get('intent') is None or digest(body['intent']) != action.intent_digest):
         raise NotificationDenied('INTENT_MISMATCH')
@@ -59,7 +59,24 @@ def _event(action):
 
 def _validate(action, *, lock=False):
     event = _event(action)
-    intent, email = quote_intent(event.aggregate_id, action.actor_id, action.organization_id, lock=lock)
+    from backend.models import ExpertQuote
+    quote = db.session.get(ExpertQuote, event.aggregate_id)
+    governed = quote is not None and quote.money_contract == 'quote-major.v1'
+    if governed:
+        from backend.services.quote_response_authorization import lock_quote_scope, lock_grants, validate_live_grant, ScopeChanged
+        from backend.services.quote_capability_crypto import CapabilityDenied
+        try:
+            scope = lock_quote_scope(action.request_id, actor_id=action.actor_id)
+            grant = next((g for g in lock_grants(scope) if g.id == event.payload.get('grant_id')), None)
+            quote = next((q for q in scope['quotes'] if q.id == event.aggregate_id), None)
+            if grant is None or quote is None:
+                raise CapabilityDenied('GRANT_UNAVAILABLE')
+            validate_live_grant(grant, scope, quote, write=event.event_type != REISSUE_EVENT)
+        except CapabilityDenied as exc:
+            if isinstance(exc, ScopeChanged):
+                raise
+            raise NotificationDenied(str(exc)) from None
+    intent, email = quote_intent(event.aggregate_id, action.actor_id, action.organization_id, lock=lock and not governed, read_delivery=event.event_type == REISSUE_EVENT)
     if digest(intent) != action.intent_digest:
         raise NotificationDenied('PREPARED_INTENT_STALE')
     if action.approval != 'POLICY_DELEGATED':
@@ -77,20 +94,21 @@ def consume_one():
     """
     try:
         event = db.session.scalar(select(OperationalOutbox).where(
-            OperationalOutbox.event_type == EVENT,
+            OperationalOutbox.event_type.in_([EVENT, REISSUE_EVENT]),
             OperationalOutbox.published_at.is_(None),
         ).order_by(OperationalOutbox.id).with_for_update(skip_locked=True).limit(1))
         if event is None:
             db.session.rollback()
             return None
+        policy = REISSUE_POLICY if event.event_type == REISSUE_EVENT else POLICY
         action = db.session.scalar(select(NotificationAction).where(
-            NotificationAction.event_id == event.id, NotificationAction.policy == POLICY,
+            NotificationAction.event_id == event.id, NotificationAction.policy == policy,
             NotificationAction.channel == 'EMAIL'))
         if action is None:
             body = event.payload
             action = NotificationAction(organization_id=event.organization_id,
                 request_id=body['request_id'], event_id=event.id, actor_id=body['actor_id'],
-                policy=POLICY, channel='EMAIL', intent_digest=body['intent_digest'],
+                policy=policy, channel='EMAIL', intent_digest=body['intent_digest'],
                 state='PREPARED', reason='POLICY_DELEGATED', approval='POLICY_DELEGATED')
             db.session.add(action)
             try:
@@ -177,7 +195,7 @@ def execute(action_id):
 
 
 @_transaction_command
-def _claim(action_id):
+def _claim_once(action_id):
     provider = configured_provider()  # fail before claiming, no silent fallback
     try:
         action = db.session.scalar(select(NotificationAction).where(
@@ -205,7 +223,7 @@ def _claim(action_id):
         db.session.add(attempt)
         action.active_attempt_id, action.state = attempt_id, 'IN_FLIGHT'
         action.reason, action.updated_at = 'DISPATCH_AUTHORIZED', now()
-        token = (action.id, action.organization_id, attempt_id, reference, email)
+        token = (action.id, action.organization_id, attempt_id, reference, email, _event(action).payload.get('grant_id'), action.policy == REISSUE_POLICY)
         # Linearization point: commit decision while actor/member/root/recipient
         # locks still held. Revocation committed before this decision denies.
         db.session.commit()
@@ -213,6 +231,16 @@ def _claim(action_id):
     except Exception:
         db.session.rollback()
         raise
+
+
+def _claim(action_id):
+    from backend.services.quote_response_authorization import ScopeChanged
+    for _attempt in range(3):
+        try:
+            return _claim_once(action_id)
+        except ScopeChanged:
+            db.session.rollback()
+    return None  # still PREPARED; no grant/send on unstable hints
 
 
 @_transaction_command
@@ -235,7 +263,7 @@ def _apply_result(token, response, *, reconciliation=False):
         response = ProviderResult('UNKNOWN', reference, 'LEASE_EXPIRED')
     # Reason codes only. Never persist provider exceptions, bodies or destinations.
     safe_reasons = {'INVALID_PROVIDER_RESULT', 'LEASE_EXPIRED', 'PROVIDER_EXCEPTION',
-                   'RECONCILIATION_EXCEPTION', 'SYNTHETIC_RECIPIENT_REQUIRED'}
+                   'RECONCILIATION_EXCEPTION', 'SYNTHETIC_RECIPIENT_REQUIRED', 'CAPABILITY_UNAVAILABLE', 'PRIVATE_CAPTURE_REQUIRED'}
     safe_reason = response.reason if response.reason in safe_reasons or response.reason in {
         prefix + outcome for prefix in ('SIMULATED_', 'SIMULATED_RECONCILIATION_')
         for outcome in ('ACCEPTED', 'SENT', 'DELIVERED', 'FAILED', 'UNKNOWN')
@@ -255,7 +283,11 @@ def _dispatch(action_id):
     if not token:
         return False
     try:
-        response = configured_provider().send(reference=token[3], recipient=token[4], template=TEMPLATE)
+        provider = configured_provider()
+        if token[5]:
+            response = provider.send_quote(reference=token[3], recipient=token[4], template=TEMPLATE, grant_id=token[5], read_delivery=token[6])
+        else:
+            response = provider.send(reference=token[3], recipient=token[4], template=TEMPLATE)
     except Exception:
         response = ProviderResult('UNKNOWN', token[3], 'PROVIDER_EXCEPTION')
     return _apply_result(token, response)

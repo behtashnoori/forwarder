@@ -461,6 +461,23 @@ def create_quote(request_id: int):
         return jsonify({"error": err_msg}), 500
 
 
+@expert_console_bp.post('/requests/<request_id>/quotes/<quote_public_id>/capability')
+@require_auth
+@_resolve_opaque_request_route
+def manage_quote_capability(request_id, quote_public_id):
+    payload = request.get_json(silent=True)
+    if type(payload) is not dict or set(payload) != {'operation'} or payload['operation'] not in {'REISSUE', 'REVOKE'}:
+        return jsonify({'reason': 'GRANT_OPERATION_INVALID'}), 400
+    try:
+        return jsonify(quote_service.manage_quote_capability(request_id, quote_public_id,
+            get_current_user(), payload['operation']))
+    except quote_service.QuoteServiceError as exc:
+        return jsonify({'reason': exc.message}), exc.status_code
+    except Exception:
+        db.session.rollback()
+        return jsonify({'reason': 'GRANT_OPERATION_UNAVAILABLE'}), 500
+
+
 @expert_console_bp.get("/requests/<int:request_id>/quote/latest")
 @expert_console_bp.get("/requests/<request_id>/quote/latest")
 @require_auth
@@ -699,7 +716,9 @@ def get_dashboard_kpis():
         # ShipmentRequest.status is the canonical lifecycle field.
         new_count = query.filter(ShipmentRequest.status == "new").count()
         in_progress_count = query.filter(ShipmentRequest.status == "in_progress").count()
-        waiting_count = query.filter(ShipmentRequest.status == "waiting_for_customer").count()
+        from backend.services.governed_quote_service import has_governed_response_expression
+        waiting_count = query.filter(ShipmentRequest.status == "waiting_for_customer",
+            ~has_governed_response_expression(ShipmentRequest)).count()
         closed_today = query.filter(
             and_(
                 ShipmentRequest.status.in_(["won", "lost", "closed"]),

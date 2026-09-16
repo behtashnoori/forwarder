@@ -22,11 +22,10 @@ import { useToast } from "@/hooks/use-toast";
 import {
   CustomerWorkflowHttpError,
   fetchCustomerWorkflow,
-  submitQuoteResponse,
   type CustomerWorkflowData,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
-import { formatLocalDate, isLocalDateBeforeToday } from "@/lib/localDate";
+import { formatLocalDate } from "@/lib/localDate";
 import { formatMoney } from "@/lib/presentation";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
@@ -86,34 +85,6 @@ const CustomerRequestDetail: React.FC = () => {
   const handleRefresh = () => {
     setRefreshing(true);
     fetchRequestDetail();
-  };
-
-  const [respondingQuote, setRespondingQuote] = useState(false);
-
-  const handleQuoteResponse = async (response: "accepted" | "declined") => {
-    if (!customer || !requestId) {
-      return;
-    }
-    setRespondingQuote(true);
-    try {
-      if (!requestDetail?.tracking_code) {
-        throw new Error(t("customer.quoteResponseErrorTitle"));
-      }
-      await submitQuoteResponse(requestDetail.tracking_code, response);
-      toast({
-        title: t("customer.quoteResponseSuccessTitle"),
-        description: t("customer.quoteResponseSuccessDesc"),
-      });
-      await fetchRequestDetail();
-    } catch (error) {
-      toast({
-        title: t("customer.quoteResponseErrorTitle"),
-        description: error instanceof Error ? error.message : t("customer.quoteResponseErrorTitle"),
-        variant: "destructive",
-      });
-    } finally {
-      setRespondingQuote(false);
-    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -197,7 +168,7 @@ const CustomerRequestDetail: React.FC = () => {
   }
 
   const statusInfo = getStatusBadge(requestDetail.status);
-  const currentStatusLabel = statusLabel(requestDetail.status);
+  const currentStatusLabel = requestDetail.status === "waiting_for_customer" && requestDetail.latest_quote?.customer_response ? ({ accepted: "پیشنهاد پذیرفته شد", declined: "پیشنهاد رد شد", negotiation_requested: "درخواست مذاکره" } as Record<string,string>)[requestDetail.latest_quote.customer_response] : statusLabel(requestDetail.status);
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -212,7 +183,7 @@ const CustomerRequestDetail: React.FC = () => {
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <Badge variant={statusInfo.variant} className={statusInfo.color}>
-                    {statusLabel(requestDetail.status)}
+                    {currentStatusLabel}
                   </Badge>
                   <Badge variant="outline" className="bg-background/70">
                     {shippingTypeLabel(requestDetail.shipping_type, { full: true })}
@@ -385,11 +356,6 @@ const CustomerRequestDetail: React.FC = () => {
 
             {requestDetail.latest_quote && (() => {
               const quote = requestDetail.latest_quote;
-              const isExpired =
-                !quote.customer_response &&
-                !!quote.valid_until &&
-                isLocalDateBeforeToday(quote.valid_until);
-              const canRespond = !quote.customer_response && !isExpired;
               return (
                 <Card className="border-border/70 bg-card/95 shadow-sm">
                   <CardHeader>
@@ -402,9 +368,10 @@ const CustomerRequestDetail: React.FC = () => {
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-sm text-muted-foreground">{t("common.amount")}</span>
                       <span className="text-lg font-bold text-foreground">
-                        {formatMoney(quote.amount, quote.currency, locale)}
+                        {formatMoney(quote.amount_exact ?? quote.amount, quote.currency, locale)}
                       </span>
                     </div>
+                    {quote.money_contract === "legacy-unspecified" && <p className="text-sm text-muted-foreground">مبلغ تاریخی؛ واحد و مقیاس ثبت‌شده نامشخص است.</p>}
                     {quote.valid_until && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 shrink-0" />
@@ -429,34 +396,12 @@ const CustomerRequestDetail: React.FC = () => {
                         {t("customer.quoteDeclined")}
                       </div>
                     )}
-                    {isExpired && (
-                      <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
-                        <Clock className="h-4 w-4 shrink-0" />
-                        {t("customer.quoteExpired")}
-                      </div>
+                    {quote.customer_response === "negotiation_requested" && (
+                      <p className="rounded-lg bg-amber-50 p-3 text-sm">درخواست مذاکره ثبت شده است.</p>
                     )}
-
-                    {canRespond && (
-                      <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row">
-                        <Button
-                          className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
-                          disabled={respondingQuote}
-                          onClick={() => handleQuoteResponse("accepted")}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          {t("customer.quoteAccept")}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex-1 gap-2 border-red-200 text-red-700 hover:bg-red-50"
-                          disabled={respondingQuote}
-                          onClick={() => handleQuoteResponse("declined")}
-                        >
-                          <XCircle className="h-4 w-4" />
-                          {t("customer.quoteDecline")}
-                        </Button>
-                      </div>
-                    )}
+                    <p className="border-t pt-3 text-sm text-muted-foreground">
+                      ثبت پاسخ فقط از پیوند خصوصی ارسال‌شده به گیرنده تأییدشده امکان‌پذیر است.
+                    </p>
                   </CardContent>
                 </Card>
               );

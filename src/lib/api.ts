@@ -839,13 +839,19 @@ export interface PublicTrackingData {
   last_customer_touch_at?: string | null;
   latest_quote?: {
     id: number;
-    amount: number;
+    amount: number | null;
+    amount_exact?: string | null;
+    money_contract?: string;
+    public_id?: string | null;
+    currency_unit?: string;
+    expires_at?: string | null;
+    validity_timezone?: string | null;
     currency: string;
     note?: string | null;
     valid_until?: string | null;
     created_at: string;
     created_by?: string | null;
-    customer_response?: "accepted" | "declined" | null;
+    customer_response?: "accepted" | "declined" | "negotiation_requested" | null;
     responded_at?: string | null;
   } | null;
   workflow_steps?: PublicTrackingWorkflowStep[];
@@ -980,12 +986,18 @@ export interface CustomerWorkflowData {
   completed_steps: number;
   total_steps: number;
   latest_quote?: {
-    amount: number;
+    amount: number | null;
+    amount_exact?: string | null;
+    money_contract?: string;
+    public_id?: string | null;
+    currency_unit?: string;
+    expires_at?: string | null;
+    validity_timezone?: string | null;
     currency: string;
     note?: string | null;
     valid_until?: string | null;
     created_at: string;
-    customer_response?: "accepted" | "declined" | null;
+    customer_response?: "accepted" | "declined" | "negotiation_requested" | null;
     responded_at?: string | null;
   } | null;
 }
@@ -1160,6 +1172,7 @@ function getFilenameFromContentDisposition(
 
 // Expert Console Interfaces
 export interface ExpertRequest {
+  quote_response?: "accepted" | "declined" | "negotiation_requested" | null;
   id: number;
   public_id: string;
   tracking_number: string;
@@ -1302,7 +1315,13 @@ export function fetchExpertRequestDetail(requestId: string): Promise<
     messages: ExpertMessage[];
     latest_quote?: {
       id: number;
-      amount: number;
+      amount: number | null;
+    amount_exact?: string | null;
+    money_contract?: string;
+    public_id?: string | null;
+    currency_unit?: string;
+    expires_at?: string | null;
+    validity_timezone?: string | null;
       currency: string;
       note?: string | null;
       valid_until?: string | null;
@@ -1382,10 +1401,11 @@ export const addTrackingUnitUpdate = (
   );
 
 export interface SubmitQuotePayload {
-  amount: number | string;
-  currency?: string;
+  amount: string;
+  currency: string;
   note?: string;
-  valid_until?: string;
+  valid_until: string;
+  predecessor_public_id?: string;
 }
 
 export type DocumentFormat = "jpeg" | "png" | "webp" | "pdf" | "docx" | "xlsx";
@@ -1596,6 +1616,10 @@ export interface OperationalShipmentSummary {
     shipment_request_id: number | null;
     request_public_id?: string | null;
     quote_amount?: number | null;
+    quote_amount_exact?: string | null;
+    quote_money_contract?: "quote-major.v1" | "legacy-unspecified" | null;
+    quote_unit?: "major" | "unknown" | null;
+    quote_compatibility_reason?: string | null;
   };
   route_leg: {
     id: number;

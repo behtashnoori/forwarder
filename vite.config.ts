@@ -7,6 +7,7 @@ import packageMetadata from "./package.json";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  build: { rollupOptions: { input: { main: "index.html", quote: "quote-response.html" } } },
   define: {
     "import.meta.env.VITE_APP_VERSION": JSON.stringify(packageMetadata.version),
   },

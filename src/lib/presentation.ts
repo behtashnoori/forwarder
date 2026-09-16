@@ -27,6 +27,15 @@ export function formatQuantity(value: number | string | null | undefined, locale
 }
 
 export function formatMoney(value: number | string | null | undefined, currency: string | null | undefined, locale: string, fallback = "—"): string {
+  if (typeof value === "string" && /^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)) {
+    const [integer, fraction] = value.split(".");
+    const parts = new Intl.NumberFormat(locale, { minimumFractionDigits: 1 }).formatToParts(0);
+    const decimal = parts.find(part => part.type === "decimal")?.value || ".";
+    const digits = new Intl.NumberFormat(locale, { useGrouping: false });
+    const amount = new Intl.NumberFormat(locale).format(BigInt(integer)) + (fraction !== undefined
+      ? decimal + fraction.replace(/\d/g, digit => digits.format(Number(digit))) : "");
+    return `${amount} ${currency || ""}`.trim();
+  }
   const amount = formatQuantity(value, locale, fallback);
   return amount === fallback ? fallback : `${amount} ${currency || ""}`.trim();
 }

@@ -1,7 +1,7 @@
 """Read helpers for public tracking response assembly."""
 from backend.services.commercial_transport_service import project_transport
 from backend.extensions import db
-from backend.models import City, County, ExpertQuote, ExpertUser, Province, ShipmentRequest
+from backend.models import City, County, ExpertUser, Province, ShipmentRequest
 from backend.services import timeline_service
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.multi_unit_tracking_service import build_public_unit_tracking
@@ -20,28 +20,12 @@ def resolve_request(identifier: str):
 
 def get_latest_quote(req):
     """Return the latest quote for this request, or None."""
-    row = (
-        db.session.query(ExpertQuote)
-        .filter(ExpertQuote.shipment_request_id == req.id)
-        .order_by(ExpertQuote.created_at.desc())
-        .first()
-    )
+    from backend.services.governed_quote_service import effective_quote_for_root
+    from backend.services.quote_service import build_quote_payload
+    row = effective_quote_for_root(req.id)
     if not row:
         return None
-    created_by_name = None
-    if row.created_by_expert:
-        created_by_name = row.created_by_expert.full_name
-    return {
-        "id": row.id,
-        "amount": int(row.amount) if row.amount is not None else None,
-        "currency": row.currency or "IRR",
-        "note": row.note,
-        "valid_until": row.valid_until.isoformat() if row.valid_until else None,
-        "created_at": row.created_at.isoformat() if hasattr(row.created_at, "isoformat") else str(row.created_at),
-        "created_by": created_by_name,
-        "customer_response": row.customer_response,
-        "responded_at": row.responded_at.isoformat() if row.responded_at else None,
-    }
+    return build_quote_payload(row, include_created_by=True)
 
 
 def date_iso(value):

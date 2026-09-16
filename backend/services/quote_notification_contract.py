@@ -14,6 +14,8 @@ from backend.services.assigned_work_authorization import authorize_work_action
 EVENT = 'commercial.quote.available.v1'
 POLICY = 'quote-available.v1'
 TEMPLATE = 'quote-available-email.v1'
+REISSUE_EVENT = 'commercial.quote.capability-reissued.v1'
+REISSUE_POLICY = 'quote-capability-reissued.v1'
 
 
 class NotificationDenied(ValueError):
@@ -29,7 +31,7 @@ def _row(model, row_id, lock):
     return db.session.scalar(query.with_for_update() if lock else query)
 
 
-def quote_intent(quote_id, actor_id, organization_id, *, lock=False):
+def quote_intent(quote_id, actor_id, organization_id, *, lock=False, read_delivery=False):
     """Resolve current intent. Locks define the dispatch authorization point.
 
     Lock actor, all memberships/organizations, root, quote and both customer
@@ -54,15 +56,18 @@ def quote_intent(quote_id, actor_id, organization_id, *, lock=False):
     if (not req or req.ownership_scope != 'TENANT'
             or req.operational_organization_id != organization_id
             or quote.shipment_request_id != req.id
-            or quote.created_by_expert_id != actor_id):
+            or (not read_delivery and quote.created_by_expert_id != actor_id)):
         raise NotificationDenied('TARGET_SCOPE')
     if not authorize_work_action({'id': actor_id}, req, 'request.quote').allowed:
         raise NotificationDenied('AUTHORIZATION_REVOKED')
+    governed = quote.money_contract == 'quote-major.v1'
     latest = db.session.scalar(select(ExpertQuote.id).where(
-        ExpertQuote.shipment_request_id == req.id).order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc()).limit(1))
-    if (req.status != 'waiting_for_customer' or latest != quote.id
+        ExpertQuote.shipment_request_id == req.id).order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc()).limit(1)) if not governed else quote.id
+    if not read_delivery and (req.status != 'waiting_for_customer' or latest != quote.id
             or quote.customer_response is not None
-            or (quote.valid_until is not None and quote.valid_until < date.today())):
+            or (governed and (quote.superseded_by_id is not None or quote.expires_at is None
+                or datetime.now(timezone.utc) >= (quote.expires_at.replace(tzinfo=timezone.utc) if quote.expires_at.tzinfo is None else quote.expires_at)))
+            or (not governed and quote.valid_until is not None and quote.valid_until < date.today())):
         raise NotificationDenied('QUOTE_NOT_AVAILABLE')
     # Both exact parent references are required. No lookup by arbitrary email.
     customer = _row(Customer, req.customer_id, lock) if req.customer_id else None
@@ -78,8 +83,8 @@ def quote_intent(quote_id, actor_id, organization_id, *, lock=False):
               'authority': (actor.authority or 'EXPERT').upper(),
               'organization_id': organization_id, 'customer_id': customer.id,
               'verified_customer_id': verified.id, 'recipient_hash': digest(email),
-              'quote_hash': digest([quote.amount, quote.currency, quote.note, quote.valid_until]),
-              'policy': POLICY, 'template': TEMPLATE, 'tool_version': 'notification.v1', 'channel': 'EMAIL'}
+              'quote_hash': quote.content_digest if governed else digest([quote.amount, quote.currency, quote.note, quote.valid_until]),
+              'policy': REISSUE_POLICY if read_delivery else POLICY, 'template': TEMPLATE, 'tool_version': 'notification.v1', 'channel': 'EMAIL'}
     return intent, email
 
 

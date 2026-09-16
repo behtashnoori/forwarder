@@ -8,6 +8,7 @@ from sqlalchemy import or_
 
 from backend.extensions import db
 from backend.models import CRMCustomerLinkAudit, Customer, ExpertConsoleLog, ShipmentRequest
+from backend.services.quote_response_authorization import serialized_recipient_write
 
 
 class CrmCustomerLinkError(Exception):
@@ -110,6 +111,7 @@ def get_request_customer_link(request_id: int) -> dict[str, Any]:
     return build_request_link_payload(shipment_request)
 
 
+@serialized_recipient_write
 def link_customer_to_request(
     request_id: int,
     payload: dict[str, Any],
@@ -126,13 +128,17 @@ def link_customer_to_request(
     except (TypeError, ValueError) as exc:
         raise CrmCustomerLinkValidationError("customer_id must be an integer") from exc
 
-    shipment_request = db.session.get(ShipmentRequest, request_id)
-    if shipment_request is None:
-        raise CrmCustomerLinkNotFoundError("Shipment request not found", 404)
-
-    customer = db.session.get(Customer, customer_id)
+    from backend.services.quote_response_authorization import lock_quote_scope
+    from backend.services.ownership_service import require_tenant_resource, tenant_organization_for_user
+    scope = lock_quote_scope(request_id, actor_id=user['id'], extra_customer_ids=(customer_id,), allow_legacy_uncertified=True)
+    shipment_request = scope['root']
+    if not scope.get("legacy_uncertified"):
+        require_tenant_resource(shipment_request, expected_organization_id=tenant_organization_for_user(user))
+    customer = scope['customers'].get(customer_id)
     if customer is None:
         raise CrmCustomerLinkNotFoundError("CRM customer not found", 404)
+    if not scope.get("legacy_uncertified"):
+        require_tenant_resource(customer, expected_organization_id=shipment_request.operational_organization_id)
 
     old_customer_id = shipment_request.customer_id
     if old_customer_id == customer_id:
@@ -154,6 +160,7 @@ def link_customer_to_request(
     return build_request_link_payload(shipment_request, operation)
 
 
+@serialized_recipient_write
 def unlink_customer_from_request(
     request_id: int,
     payload: dict[str, Any],
@@ -161,9 +168,12 @@ def unlink_customer_from_request(
     remote_addr: str | None = None,
 ) -> dict[str, Any]:
     """Remove a manual CRM customer link from a shipment request."""
-    shipment_request = db.session.get(ShipmentRequest, request_id)
-    if shipment_request is None:
-        raise CrmCustomerLinkNotFoundError("Shipment request not found", 404)
+    from backend.services.quote_response_authorization import lock_quote_scope
+    from backend.services.ownership_service import require_tenant_resource, tenant_organization_for_user
+    scope = lock_quote_scope(request_id, actor_id=user['id'], allow_legacy_uncertified=True)
+    shipment_request = scope['root']
+    if not scope.get("legacy_uncertified"):
+        require_tenant_resource(shipment_request, expected_organization_id=tenant_organization_for_user(user))
 
     old_customer_id = shipment_request.customer_id
     if old_customer_id is None:

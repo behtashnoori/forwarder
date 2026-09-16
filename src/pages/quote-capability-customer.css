@@ -1,0 +1,9 @@
+:root{font-family:Tahoma,Arial,sans-serif;color:#183047;background:#f2f6fa;line-height:1.9}
+body{margin:0}.quote-customer{max-width:760px;margin:40px auto;padding:0 20px 40px}
+header p{color:#426c9c;margin-bottom:0}h1{font-size:1.8rem;margin-top:0}h2{font-size:1.2rem}
+section{background:white;border:1px solid #dce6ef;border-radius:16px;padding:24px;margin-top:20px}
+.amount{font-size:1.9rem;font-weight:bold;text-align:right;color:#164d80}.note{white-space:pre-wrap}
+.choices{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}button{font:inherit;cursor:pointer;background:#164d80;color:white;border:0;border-radius:8px;padding:10px 16px}
+button:disabled{opacity:.5;cursor:wait}.message{background:#e0edfa;border-radius:8px;padding:12px}
+.receipt{font-size:.75rem;overflow-wrap:anywhere;color:#627487}li{margin-bottom:14px}
+@media(max-width:480px){.quote-customer{margin-top:20px}section{padding:18px}.choices{flex-direction:column}.amount{font-size:1.5rem}}
