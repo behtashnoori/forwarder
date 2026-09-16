@@ -20,7 +20,7 @@ def builder():
 def test_builder_is_generalized_and_pins_current_release_inputs():
     module = builder()
     assert not hasattr(module, "VERSION") and not hasattr(module, "TAG")
-    assert module.EXPECTED_HEAD == "20260916_fwd03_transport_intent"
+    assert module.EXPECTED_HEAD == "20260916_fwd05_quote_response"
     assert (
         module.BASELINE_VERSION
         == "china-iran-global-logistics-points-1.0.0-approved-baseline"
@@ -78,7 +78,7 @@ def test_repository_has_one_expected_alembic_head():
     script = ScriptDirectory.from_config(
         Config(str(ROOT / "backend/migrations/alembic.ini"))
     )
-    assert script.get_heads() == ["20260916_fwd03_transport_intent"]
+    assert script.get_heads() == ["20260916_fwd05_quote_response"]
 
 
 def test_packaged_frontend_is_pinned_to_same_origin():

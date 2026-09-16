@@ -556,14 +556,13 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
     assert workflow_payload["total_points_earned"] == 20
     assert workflow_payload["total_steps"] == 8
     assert set(workflow_payload["latest_quote"].keys()) == {
-        "amount",
-        "currency",
-        "note",
-        "valid_until",
-        "created_at",
-        "customer_response",
-        "responded_at",
+        "amount", "amount_exact", "currency", "note", "valid_until", "created_at",
+        "customer_response", "responded_at", "public_id", "money_contract", "unit",
+        "legacy_evidence", "legacy_money_supported",
     }
+    assert workflow_payload["latest_quote"]["unit"] == "unknown"
+    assert workflow_payload["latest_quote"]["money_contract"] == "legacy-unspecified"
+    assert workflow_payload["latest_quote"]["amount_exact"] == "123456"
     assert workflow_payload["latest_quote"]["amount"] == 123456
     assert workflow_payload["latest_quote"]["currency"] == "IRR"
     assert workflow_payload["latest_quote"]["note"] == "Seed quote"

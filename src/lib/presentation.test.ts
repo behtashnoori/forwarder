@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { formatDualCalendarInstant, formatInstant, formatQuantity, parseQuantityInput } from "./presentation";
+import { formatDualCalendarInstant, formatInstant, formatMoney, formatQuantity, parseQuantityInput } from "./presentation";
 
 describe("shared presentation", () => {
+  it("preserves exact major-money digits beyond Number precision and fixed decimal scale", () => {
+    expect(formatMoney('9223372036854775806.99', 'EUR', 'en-US')).toContain('9,223,372,036,854,775,806.99');
+    expect(formatMoney('1234.50', 'USD', 'en-US')).toContain('1,234.50');
+    expect(formatMoney('0', 'IRR', 'en-US')).toContain('0');
+  });
   it("normalizes Persian and Arabic quantity input without accepting ambiguous grouping", () => {
     expect(parseQuantityInput("۱٬۲۳۴٫۵۰")).toEqual({ canonical: "1234.50" });
     expect(parseQuantityInput("١,٢٣٤.٥٠")).toEqual({ canonical: "1234.50" });

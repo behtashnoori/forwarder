@@ -131,7 +131,7 @@ def test_all_mandatory_surfaces_share_the_guard(quarantine_app, surface):
         elif surface == "notification":
             assert ExpertConsoleNotification.query.count() == 0
         elif surface == "joins/materialization":
-            assert ExpertQuote.query.join(ShipmentRequest).count() == 0
+            assert ExpertQuote.query.join(ExpertQuote.shipment_request).count() == 0
         else:
             hidden = ShipmentRequest.query.filter(
                 ShipmentRequest.contact_phone.contains("QUARANTINED")

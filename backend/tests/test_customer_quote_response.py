@@ -45,99 +45,43 @@ def _seed(valid_until=None):
     return customer.id, req.id, quote.id, req.tracking_code
 
 
-def test_customer_can_accept_quote(app, client):
+@pytest.mark.parametrize("identifier", ["tracking", "1", "SR-NOT-FOUND", "SR-FOREIGN-CAPABILITY"])
+@pytest.mark.parametrize("response", ["accepted", "declined", "negotiation_requested", "maybe", None])
+@pytest.mark.parametrize("expired", [False, True])
+def test_retired_tracking_writer_denies_without_resolving_or_mutating(app, client, identifier, response, expired):
     with app.app_context():
-        _customer_id, request_id, quote_id, tracking_code = _seed(valid_until=date.today() + timedelta(days=3))
-
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
-    assert resp.status_code == 200
-    assert resp.get_json()["latest_quote"]["customer_response"] == "accepted"
-
-    with app.app_context():
-        quote = db.session.get(ExpertQuote, quote_id)
-        assert quote.customer_response == "accepted"
-        assert quote.responded_at is not None
-        assert db.session.get(ShipmentRequest, request_id).has_unread_for_assignee is True
-
-
-def test_customer_can_decline_quote(app, client):
-    with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed()
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "declined"})
-    assert resp.status_code == 200
-    assert resp.get_json()["latest_quote"]["customer_response"] == "declined"
-
-
-def test_invalid_response_is_rejected(app, client):
-    with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed()
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "maybe"})
-    assert resp.status_code == 400
-
-
-def test_double_response_is_conflict(app, client):
-    with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed()
-    first = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
-    assert first.status_code == 200
-    replay = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
-    assert replay.status_code == 200
-    second = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "declined"})
-    assert second.status_code == 409
-
-
-def test_expired_quote_cannot_be_answered(app, client):
-    with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed(valid_until=date.today() - timedelta(days=1))
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
-    assert resp.status_code == 400
-
-
-def test_foreign_customer_cannot_answer(app, client):
-    with app.app_context():
-        _customer_id, _request_id, _, _tracking_code = _seed()
-        other = CustomerGamification(email="o@example.com", phone="09120000000")
-        db.session.add(other)
-        db.session.commit()
-        other_id = other.id
-    resp = client.post(f"/api/customer/quote-response/SR-FOREIGN-CAPABILITY", json={"response": "accepted"})
-    assert resp.status_code == 404
-
-
-def test_workflow_payload_exposes_quote_response(app, client):
-    with app.app_context():
-        customer_id, request_id, _, tracking_code = _seed()
-        client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
-
-    resp = client.get(f"/api/customer/workflow/{customer_id}?request_id={request_id}")
-    assert resp.status_code == 200
-    latest_quote = resp.get_json()["latest_quote"]
-    assert latest_quote["customer_response"] == "accepted"
-    assert "responded_at" in latest_quote
-    assert "id" not in latest_quote
-
-
-def test_numeric_and_invalid_capabilities_have_same_not_found_behavior(app, client):
-    with app.app_context():
-        _seed()
-    numeric = client.post("/api/customer/quote-response/1", json={"response": "accepted"})
-    invalid = client.post("/api/customer/quote-response/SR-NOT-FOUND", json={"response": "accepted"})
-    assert numeric.status_code == invalid.status_code == 404
-    assert numeric.get_json() == invalid.get_json()
-
-
-def test_response_is_audited(app, client):
-    with app.app_context():
-        _customer_id, request_id, _, tracking_code = _seed()
-    response = client.post(
-        f"/api/customer/quote-response/{tracking_code}",
-        json={"response": "accepted"},
-        environ_base={"REMOTE_ADDR": "203.0.113.9"},
-    )
-    assert response.status_code == 200
+        _, request_id, quote_id, tracking = _seed(
+            valid_until=date.today() + timedelta(days=-1 if expired else 3))
+        before = db.session.get(ShipmentRequest, request_id).has_unread_for_assignee
+    path = tracking if identifier == "tracking" else identifier
+    first = client.post(f"/api/customer/quote-response/{path}", json={"response": response})
+    replay = client.post(f"/api/customer/quote-response/{path}", json={"response": response})
+    assert first.status_code == replay.status_code == 403
+    assert first.get_json() == replay.get_json() == {
+        "message": "امکان پاسخ از این مسیر وجود ندارد", "reason": "CUSTOMER_ACTION_UNAVAILABLE"}
     with app.app_context():
         from backend.models import ExpertConsoleLog
-        audit = ExpertConsoleLog.query.filter_by(
-            shipment_request_id=request_id, action="customer_quote_response"
-        ).one()
-        assert audit.ip_address == "203.0.113.9"
+        from backend.quote_response_models import QuoteResponseFact, QuoteResponseReceipt
+        quote = db.session.get(ExpertQuote, quote_id)
+        assert quote.customer_response is None and quote.responded_at is None
+        assert db.session.get(ShipmentRequest, request_id).has_unread_for_assignee == before
+        assert ExpertConsoleLog.query.filter_by(shipment_request_id=request_id, action="customer_quote_response").count() == 0
+        assert QuoteResponseFact.query.count() == QuoteResponseReceipt.query.count() == 0
+
+
+def test_workflow_preserves_historical_response_as_read_only_evidence(app, client):
+    with app.app_context():
+        customer_id, request_id, quote_id, _ = _seed()
+        # Explicit legacy fixture; no new capability fact or invented backfill.
+        quote = db.session.get(ExpertQuote, quote_id)
+        quote.customer_response = "accepted"
+        quote.responded_at = datetime(2026, 8, 1, 12, 0)
+        db.session.commit()
+    result = client.get(f"/api/customer/workflow/{customer_id}?request_id={request_id}")
+    assert result.status_code == 200
+    latest = result.get_json()["latest_quote"]
+    assert latest["customer_response"] == "accepted"
+    assert latest["responded_at"] == "2026-08-01T12:00:00"
+    assert latest["money_contract"] == "legacy-unspecified" and latest["unit"] == "unknown"
+    assert latest["amount"] == 1000000 and latest["currency"] == "IRR"
+    assert "id" not in latest

@@ -1,9 +1,26 @@
 param(
-    [string]$EvidenceDirectory = (Join-Path $env:TEMP "forwarder-fwd04-uat-evidence")
+    [string]$EvidenceDirectory = (Join-Path $env:TEMP "forwarder-fwd04-uat-evidence"),
+    [switch]$Fwd05QuoteCapability
 )
 
 $ErrorActionPreference = "Stop"
 $repo = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+if ($Fwd05QuoteCapability) {
+    if ((git -C $repo branch --show-current) -ne 'feature/fwd-05-quote-response') {
+        throw 'FWD-05 qualification requires its authorized feature branch'
+    }
+    Push-Location $repo
+    try {
+        npm run build
+        if ($LASTEXITCODE -ne 0) { throw 'FWD-05 production bundle build failed' }
+        # The existing launcher delegates to actual native PG + Chromium tests.
+        # Synthetic credentials and links stay in private in-memory pipes; no
+        # operational env file, shared port/service or human password is used.
+        python -B scripts/uat/run_fwd05_disposable_postgres.py backend/tests/test_fwd05_browser.py -k postgresql --show-capture=no --disable-warnings
+        if ($LASTEXITCODE -ne 0) { throw 'FWD-05 browser qualification failed' }
+    } finally { Pop-Location }
+    return
+}
 $password = Read-Host "Synthetic FWD-04 UAT password" -AsSecureString
 $passwordText = [System.Net.NetworkCredential]::new("", $password).Password
 $apiPort = 5054

@@ -83,9 +83,14 @@ def test_manual_assignment_rejects_incompatible_expert(scope_app):
     with scope_app.app_context():
         request_row = _request("international", "SCOPE-M")
         domestic = ExpertUser.query.filter_by(username="dom").one()
+        admin=ExpertUser(username='scope-synthetic-admin',password_hash='synthetic-unusable',full_name='Scope admin',
+            role='admin',authority='ORGANIZATION_ADMIN',is_active=True)
+        db.session.add(admin);db.session.flush()
+        db.session.add(OperationalMembership(organization_id=scope_app.config['SCOPE_ORG_ID'],user_id=admin.id,is_active=True,permissions=[]))
+        db.session.commit()
         with pytest.raises(assignment_service.AssignmentValidationError):
             assignment_service.assign_request_to_expert(
-                request_row.id, domestic.id, actor={"id": 999, "role": "admin"}
+                request_row.id, domestic.id, actor={"id": admin.id}
             )
         assert request_row.assigned_to is None
 

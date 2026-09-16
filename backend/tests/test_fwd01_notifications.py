@@ -2,6 +2,10 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, timedelta
 import os
+import base64
+import secrets
+from uuid import uuid4
+from flask import current_app
 from threading import Event
 
 import pytest
@@ -22,10 +26,26 @@ from backend.services.quote_notification_contract import EVENT, NotificationDeni
 @pytest.fixture(params=['sqlite', 'postgresql'])
 def app(request):
     url = 'sqlite:///:memory:'
+    administrator = None
+    database = None
     if request.param == 'postgresql':
-        url = os.environ.get('FWD01_QUALIFICATION_DATABASE_URL')
-        if not url:
-            pytest.skip('FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof')
+        if os.environ.get('FWD05_DISPOSABLE_DATABASE_URL'):
+            from backend.tests.test_fwd05_postgresql import own_url
+            from sqlalchemy import create_engine
+            from alembic import command
+            from backend.migration_runtime import alembic_config, prepare_version_table_for_upgrade
+            own = own_url()  # Verify the owned data directory and live port first.
+            database = 'forwarder_fwd01_test_' + uuid4().hex
+            administrator = create_engine(own,isolation_level='AUTOCOMMIT')
+            with administrator.connect() as connection:
+                connection.exec_driver_sql('CREATE DATABASE ' + database)
+            url = make_url(own).set(database=database).render_as_string(hide_password=False)
+            config=alembic_config(url);prepare_version_table_for_upgrade(url,config)
+            command.upgrade(config,'20260916_fwd05_quote_response')
+        else:
+            url = os.environ.get('FWD01_QUALIFICATION_DATABASE_URL')
+            if not url:
+                pytest.skip('FWD-01 disposable PostgreSQL URL required; SQLite is not concurrency proof')
         parsed = make_url(url)
         assert parsed.host == '127.0.0.1' and parsed.database.startswith('forwarder_fwd01_test_')
     application = create_app({'TESTING': True, 'SQLALCHEMY_DATABASE_URI': url,
@@ -49,10 +69,27 @@ def app(request):
                 connection.close()
         yield application
         db.session.remove()
+        if administrator:
+            db.engine.dispose()
+            assert database.startswith('forwarder_fwd01_test_') and len(database)==len('forwarder_fwd01_test_')+32
+            with administrator.connect() as connection:
+                connection.exec_driver_sql('DROP DATABASE '+database)
+            administrator.dispose()
 
 
 def seed():
-    org = OperationalOrganization(name='Synthetic A')
+    from backend.notification_provider import PrivateQuoteCapture
+    from backend.quote_response_models import QuoteKeyPolicy
+    from backend.services.quote_response_authorization import qualification_key_policy
+    if not current_app.config.get('QUOTE_CAPABILITY_KEYRING'):
+        current_app.config.update(QUOTE_CAPABILITY_KEYRING={'fixture':{'material':base64.b64encode(secrets.token_bytes(64)).decode(),'state':'ACTIVE'}},
+            QUOTE_CAPABILITY_ACTIVE_KEY='fixture',QUOTE_CAPABILITY_POLICY_EPOCH=1,
+            QUOTE_CAPABILITY_PRIVATE_CAPTURE=PrivateQuoteCapture(),
+            QUOTE_CAPABILITY_CUSTOMER_ORIGIN='http://127.0.0.1:8085',
+            QUOTE_CAPABILITY_ALLOWED_ORIGINS=['http://127.0.0.1:8085'])
+    if db.session.get(QuoteKeyPolicy,1) is None:
+        qualification_key_policy();db.session.commit()
+    org = OperationalOrganization(name='Synthetic A',quotation_validity_timezone='America/New_York')
     other_org = OperationalOrganization(name='Synthetic B')
     actor = ExpertUser(username='fwd01', full_name='Synthetic Expert', password_hash='unused', role='expert', authority='EXPERT', is_active=True)
     foreign = ExpertUser(username='fwd01-other', full_name='Other Expert', password_hash='unused', role='expert', authority='EXPERT', is_active=True)
@@ -72,7 +109,11 @@ def seed():
 
 
 def quote(ids):
-    return quote_service.create_quote_for_request(ids['request'], {'amount': 125, 'valid_until': str(date.today() + timedelta(days=3))}, {'id': ids['actor'], 'role': 'expert'})['quote']['id']
+    from backend.services.governed_quote_service import effective_quote_for_root
+    prior = effective_quote_for_root(ids['request'])
+    payload = {'amount':'125','currency':'IRR','valid_until':str(date.today()+timedelta(days=3))}
+    if prior and prior.public_id: payload['predecessor_public_id']=prior.public_id
+    return quote_service.create_quote_for_request(ids['request'],payload,{'id':ids['actor']})['quote']['id']
 
 
 def prepared():
@@ -144,7 +185,7 @@ def test_distinct_quotes_and_old_quote_suppression(app):
     second_action = service.consume_one()
     assert second != ids['quote'] and second_action != ids['action']
     assert not service._dispatch(ids['action'])
-    assert db.session.get(NotificationAction, ids['action']).reason == 'QUOTE_NOT_AVAILABLE'
+    assert db.session.get(NotificationAction, ids['action']).reason == 'QUOTE_WRITE_UNAVAILABLE'
     assert service._dispatch(second_action)
 
 
@@ -158,7 +199,7 @@ def test_same_quote_cannot_emit_duplicate_logical_event(app):
     assert OperationalOutbox.query.filter_by(event_type=EVENT).count() == 1
 
 
-@pytest.mark.parametrize('change', ['membership', 'actor', 'authority', 'platform_authority', 'unknown_authority', 'assignment', 'recipient', 'verified', 'quote', 'response', 'status', 'approval', 'channel', 'policy', 'ambiguous_membership'])
+@pytest.mark.parametrize('change', ['membership', 'actor', 'authority', 'platform_authority', 'unknown_authority', 'assignment', 'recipient', 'verified', 'response', 'status', 'approval', 'channel', 'policy', 'ambiguous_membership'])
 def test_execution_revalidates_prepared_intent(app, change):
     ids = prepared()
     if change == 'membership':
@@ -179,8 +220,6 @@ def test_execution_revalidates_prepared_intent(app, change):
         db.session.get(CustomerGamification, ids['verified']).email = 'changed@example.test'
     elif change == 'verified':
         db.session.get(CustomerGamification, ids['verified']).is_email_verified = False
-    elif change == 'quote':
-        db.session.get(ExpertQuote, ids['quote']).amount = 999
     elif change == 'response':
         db.session.get(ExpertQuote, ids['quote']).customer_response = 'declined'
     elif change == 'status':
@@ -341,7 +380,7 @@ def test_real_api_quote_to_independent_worker(app):
     public_id = db.session.get(ShipmentRequest, ids['request']).public_id
     db.session.commit()
     response = app.test_client().post('/api/expert/requests/' + public_id + '/quote',
-        headers={'Authorization': 'Bearer ' + tokens['access_token']}, json={'amount': 999})
+        headers={'Authorization': 'Bearer ' + tokens['access_token']}, json={'amount':'999','currency':'IRR','valid_until':str(date.today()+timedelta(days=3))})
     assert response.status_code == 200
     db.session.remove()  # browser request/session has ended
     summary = service.run_batch()

@@ -22,7 +22,8 @@ def app():
     if url != 'sqlite:///:memory:':
         parsed = make_url(url)
         assert parsed.host == '127.0.0.1' and parsed.port == 55463 and parsed.database == 'forwarder_fwd03_test_commands'
-    application = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": url}, skip_startup=True)
+    application = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": url,
+        "NOTIFICATION_PROVIDER":"fake", "NOTIFICATION_ENVIRONMENT":"qualification"}, skip_startup=True)
     with application.app_context():
         if url == 'sqlite:///:memory:':
             db.create_all()

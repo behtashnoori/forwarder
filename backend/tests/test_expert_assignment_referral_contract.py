@@ -66,7 +66,7 @@ def expert_contract_app():
             role="business_expert",
             is_active=True,
         )
-        organization = OperationalOrganization(name="Expert Contract Organization")
+        organization = OperationalOrganization(name="Expert Contract Organization", quotation_validity_timezone="America/New_York")
         db.session.add_all([admin, expert, other_expert, organization])
         db.session.flush()
         db.session.add_all([
@@ -276,7 +276,9 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "transport_method_preference",
         "cargo",
         "has_unread",
+        "quote_response",
     }
+    assert list_data['requests'][0]['quote_response'] is None
 
     missing_detail = client.get("/api/expert/requests/999999", headers=expert_headers)
     assert missing_detail.status_code == 404
@@ -791,7 +793,7 @@ def test_expert_assignment_status_quote_message_notification_contracts(
     missing_quote_target = client.post(
         "/api/expert/requests/999999/quote",
         headers=other_headers,
-        json={"amount": "12345"},
+        json={"amount": "12345", "currency": "IRR", "valid_until": (datetime.now() + timedelta(days=3)).date().isoformat()},
     )
     assert missing_quote_target.status_code == 404
     assert missing_quote_target.get_json() == {"error": "درخواست یافت نشد"}
@@ -800,23 +802,23 @@ def test_expert_assignment_status_quote_message_notification_contracts(
         f"/api/expert/requests/{request_id}/quote", headers=other_headers, json={}
     )
     assert missing_amount.status_code == 400
-    assert missing_amount.get_json() == {"error": "مبلغ الزامی است"}
+    assert missing_amount.get_json() == {"error": "CURRENCY_UNSUPPORTED"}
 
     non_numeric_amount = client.post(
         f"/api/expert/requests/{request_id}/quote",
         headers=other_headers,
-        json={"amount": "not-a-number"},
+        json={"amount": "not-a-number", "currency": "IRR"},
     )
     assert non_numeric_amount.status_code == 400
-    assert non_numeric_amount.get_json() == {"error": "مبلغ باید عدد باشد"}
+    assert non_numeric_amount.get_json() == {"error": "AMOUNT_CANONICAL_STRING_REQUIRED"}
 
     negative_amount = client.post(
         f"/api/expert/requests/{request_id}/quote",
         headers=other_headers,
-        json={"amount": -1},
+        json={"amount": -1, "currency": "IRR"},
     )
     assert negative_amount.status_code == 400
-    assert negative_amount.get_json() == {"error": "مبلغ نامعتبر است"}
+    assert negative_amount.get_json() == {"error": "AMOUNT_CANONICAL_STRING_REQUIRED"}
 
     quote_response = client.post(
         f"/api/expert/requests/{request_id}/quote",
@@ -825,32 +827,29 @@ def test_expert_assignment_status_quote_message_notification_contracts(
             "amount": "12345",
             "currency": "IRR",
             "note": "Quote note",
-            "valid_until": "2026-08-01",
+            "valid_until": (datetime.now() + timedelta(days=3)).date().isoformat(),
         },
     )
     assert quote_response.status_code == 200
     quote_data = quote_response.get_json()
-    assert set(quote_data.keys()) == {"ok", "quote", "request"}
+    assert set(quote_data.keys()) == {"ok", "quote", "request", "delivery"}
+    assert quote_data["delivery"]["state"] == "BLOCKED"
+    assert quote_data["quote"]["amount_exact"] == "12345"
+    assert quote_data["quote"]["money_contract"] == "quote-major.v1"
     assert quote_data["ok"] is True
     assert quote_data["quote"]["amount"] == 12345
-    assert quote_data["quote"]["valid_until"] == "2026-08-01"
+    assert quote_data["quote"]["valid_until"] == (datetime.now() + timedelta(days=3)).date().isoformat()
     assert quote_data["request"] == {"id": request_id, "status": "waiting_for_customer"}
 
     latest_quote_response = client.get(
         f"/api/expert/requests/{request_id}/quote/latest", headers=other_headers
     )
     assert latest_quote_response.status_code == 200
-    assert set(latest_quote_response.get_json()["quote"].keys()) == {
-        "id",
-        "amount",
-        "currency",
-        "note",
-        "valid_until",
-        "created_at",
-        "customer_response",
-        "responded_at",
-        "created_by",
-    }
+    latest = latest_quote_response.get_json()["quote"]
+    assert set(latest) == set(quote_data["quote"]) | {"created_at", "responded_at", "created_by", "delivery_readiness"}
+    assert latest["amount_exact"] == "12345" and latest["unit"] == "major"
+    assert latest["validity_timezone"] == "America/New_York"
+    assert latest["content_digest"] == quote_data["quote"]["content_digest"]
 
     missing_content = client.post(
         f"/api/expert/requests/{request_id}/messages",
@@ -915,8 +914,14 @@ def test_expert_assignment_status_quote_message_notification_contracts(
             ExpertConsoleNotification.query.filter_by(
                 expert_user_id=other_expert_id
             ).count()
-            >= 3
+            == 2
         )
+        # Publication attention uses the governed outbox contract; missing
+        # verified recipient/key provisioning remains a blocked dependency.
+        from backend.operational_models import OperationalOutbox
+        from backend.services.quote_notification_contract import EVENT
+        published = OperationalOutbox.query.filter_by(event_type=EVENT).one()
+        assert published.payload['grant_id'] is None and published.payload['intent'] is None
 
 
 def test_expert_notification_contracts_scope_order_and_mark_read(expert_contract_app):
