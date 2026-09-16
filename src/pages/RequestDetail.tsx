@@ -1379,6 +1379,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
         </CardContent>
       </Card>
       {data.enabled && <>
+        <p className="text-sm text-muted-foreground">وضعیت و آخرین مکان این بخش‌ها از گزارش‌های قابل نمایش به مشتری است. تاریخچهٔ زیر گزارش‌های داخلی مجاز را نیز نشان می‌دهد.</p>
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader><CardTitle>{t("multiTracking.addUnit")}</CardTitle><p className="text-sm text-muted-foreground">{t("multiTracking.unitHelp")}</p></CardHeader>
           <p className="px-6 text-xs text-muted-foreground">کد بخش را کارشناس برای رهگیری داخلی انتخاب می‌کند و در همین رهگیری یکتا است. شناسه پایگاه داده را سیستم می‌سازد؛ پلاک، شماره کانتینر یا شماره واگن اختیاری است.</p>

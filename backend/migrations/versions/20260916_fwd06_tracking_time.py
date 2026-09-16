@@ -22,7 +22,7 @@ def upgrade():
         "(occurred_at_utc IS NULL AND time_input_wall IS NULL AND "
         "time_input_basis IS NULL AND time_input_source IS NULL AND time_input_policy IS NULL) "
         "OR (occurred_at_utc IS NOT NULL AND time_input_wall IS NOT NULL AND "
-        "time_input_basis = 'Asia/Tehran' AND time_input_source IS NOT NULL AND "
+        "time_input_basis IS NOT NULL AND time_input_basis = 'Asia/Tehran' AND time_input_source IS NOT NULL AND "
         "time_input_source = 'manual' AND time_input_policy IS NOT NULL AND "
         "time_input_policy = 'tracking.manual-iran.v1') "
         "OR (occurred_at_utc IS NOT NULL AND time_input_wall IS NOT NULL AND "
@@ -34,10 +34,13 @@ def upgrade():
         op.create_check_constraint(
             "ck_tracking_time_consistency", TABLE,
             "occurred_at_utc IS NULL OR ("
+            "time_input_wall ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2}(\\.[0-9]{1,6})?)?$' AND "
             "occurred_at = (occurred_at_utc AT TIME ZONE 'UTC') AND ("
             "(time_input_source = 'manual' AND occurred_at_utc = "
             "(time_input_wall::timestamp AT TIME ZONE 'Asia/Tehran')) OR "
-            "(time_input_source = 'offset' AND occurred_at_utc = "
+            "(time_input_source = 'offset' AND "
+            "time_input_wall ~ 'T[0-9]{2}:[0-9]{2}:[0-9]{2}' AND "
+            "time_input_basis ~ '^[+-](0[0-9]|1[0-3]):[0-5][0-9]$|^[+-]14:00$' AND occurred_at_utc = "
             "(time_input_wall || time_input_basis)::timestamptz)))",
         )
         op.execute(sa.text("""

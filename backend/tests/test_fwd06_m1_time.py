@@ -6,6 +6,7 @@ import pytest
 
 from backend.extensions import db
 from backend.models import ShipmentTransportUnitUpdate
+from backend.services.multi_unit_tracking_service import add_update, TrackingValidationError
 from backend.services.tracking_time import TrackingTimeError, manual, offset
 from backend.services import tracking_time
 from backend.tests.test_multi_unit_tracking_api import tracking_api_app  # noqa: F401
@@ -68,6 +69,11 @@ def test_manual_route_persists_all_five_and_replays_authorized_snapshot(tracking
         assert row.time_input_policy == "tracking.manual-iran.v1"
         assert row.occurred_at == datetime(2026, 7, 15, 8, 30)
         assert row.occurred_at_utc.replace(tzinfo=timezone.utc) == datetime(2026, 7, 15, 8, 30, tzinfo=timezone.utc)
+        row.unit.tracking.is_enabled = False
+        db.session.commit()
+    assert client.post(path, headers=keyed, json=payload).status_code == 400
+    assert client.post(base + "/units", headers={**headers, "Idempotency-Key": "subject-1"},
+                       json={"unit_code": "M1-TRUCK", "unit_type": "truck"}).status_code == 400
 
 
 def test_untrusted_source_and_invalid_time_fail_closed(tracking_api_app):  # noqa: F811
@@ -104,9 +110,14 @@ def test_offset_contract_and_historical_unknown_are_distinct(tracking_api_app): 
         assert row.time_input_basis == "+04:00"
         assert row.time_input_policy is None
         assert row.occurred_at == datetime(2026, 7, 15, 8, 0)
+        with pytest.raises(TrackingValidationError, match="inconsistent"):
+            add_update(row.unit, row.created_by_user_id,
+                       status="loading", occurred_at=datetime(2026, 7, 15, 8, tzinfo=timezone.utc),
+                       time_snapshot=(datetime(2026, 7, 15, 8, tzinfo=timezone.utc),
+                                      "2026-07-15T12:00:00", "+03:30", "offset", None))
         legacy = ShipmentTransportUnitUpdate(
             unit_id=unit["id"], operational_organization_id=row.operational_organization_id,
-            ownership_scope="TENANT", status="loading", occurred_at=datetime(2026, 7, 14, 8, 0),
+            ownership_scope="TENANT", status="loading", occurred_at=datetime(2026, 7, 16, 8, 0),
             created_at=datetime(2026, 7, 14, 8, 1), is_customer_visible=True,
         )
         db.session.add(legacy)
@@ -114,6 +125,8 @@ def test_offset_contract_and_historical_unknown_are_distinct(tracking_api_app): 
     history = client.get(base, headers=headers).get_json()["unit_tracking"]["units"][0]["timeline"]
     assert history[1]["event_at"] is None
     assert history[1]["recorded_at"].endswith("Z")
+    public = client.get(f"/api/public/track/{tracking_api_app['tracking_code']}").get_json()["unit_tracking"]
+    assert public["units"][0]["timeline"][1]["event_at"] is None
 
 
 def test_visible_last_recorded_and_late_event_scope(tracking_api_app):  # noqa: F811

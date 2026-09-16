@@ -361,7 +361,7 @@ const PublicTracking: React.FC = () => {
                     </div>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
                       <Field label={t("multiTracking.latestLocation")} value={unit.latest_location || "—"} />
-                      <Field label={t("multiTracking.latestUpdate")} value={formatDate(unit.latest_event_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
+                      <Field label={t("multiTracking.latestUpdate")} value={formatDate(unit.latest_event_at, { dateStyle: "medium", timeStyle: "short" }, unit.timeline.length ? "نامعلوم" : t("multiTracking.noUpdates"), locale)} />
                     </div>
                     <div className="mt-4">
                       <p className="mb-3 text-sm font-bold">{t("multiTracking.customerHistory")}</p>

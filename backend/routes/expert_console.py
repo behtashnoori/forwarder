@@ -123,6 +123,15 @@ def _tracking_management_payload(req: ShipmentRequest) -> Dict[str, Any]:
     }
 
 
+def _validate_tracking_write(req, unit=None):
+    if req.status not in multi_unit_tracking_service.TRACKING_ELIGIBLE_REQUEST_STATUSES or not req.tracking_code:
+        raise multi_unit_tracking_service.TrackingValidationError("shipment is not eligible for tracking")
+    if not req.shipment_tracking or not req.shipment_tracking.is_enabled:
+        raise multi_unit_tracking_service.TrackingValidationError("tracking is not enabled")
+    if unit is not None and not unit.is_active:
+        raise multi_unit_tracking_service.TrackingValidationError("unit is inactive")
+
+
 def _can_access_request(req: ShipmentRequest, current_user: Optional[Dict]) -> bool:
     """Authorize tracking from the persisted request root at operation time."""
     canonical = authorize_work_action(current_user or {}, req, "tracking.read")
@@ -237,9 +246,12 @@ def create_tracking_unit(request_id: int):
             req.shipment_tracking, "tracking.unit.create", req.shipment_tracking.id,
             request.headers.get("Idempotency-Key"), data,
         )
+        db.session.refresh(req)
+        db.session.refresh(req.shipment_tracking)
         if not _can_access_request(req, current_user):
             db.session.rollback()
             return jsonify({"error": "access denied"}), 403
+        _validate_tracking_write(req)
         if replay is not None:
             db.session.commit()
             return jsonify(replay), 200
@@ -330,9 +342,13 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
             req.shipment_tracking, "tracking.update.append", unit.id,
             request.headers.get("Idempotency-Key"), data,
         )
+        db.session.refresh(req)
+        db.session.refresh(req.shipment_tracking)
+        db.session.refresh(unit)
         if not _can_access_request(req, current_user):
             db.session.rollback()
             return jsonify({"error": "access denied"}), 403
+        _validate_tracking_write(req, unit)
         if replay is not None:
             db.session.commit()
             return jsonify(replay), 200

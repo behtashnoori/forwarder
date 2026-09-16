@@ -4,6 +4,10 @@ from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 import os
 from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import zipfile
 
 import pytest
 from alembic import command
@@ -118,6 +122,25 @@ def test_owned_postgres_upgrade_roundtrip_and_safe_downgrade():
             db.session.execute(text("UPDATE shipment_transport_unit_update SET time_input_policy = NULL WHERE id = :id"), {"id": row_id})
             db.session.commit()
         db.session.rollback()
+        for wall, basis, source, policy in (
+            ("2026-07-15T12:00", None, "manual", "tracking.manual-iran.v1"),
+            ("2026-07-15 12:00", "Asia/Tehran", "manual", "tracking.manual-iran.v1"),
+            ("2026-07-15T12:00:00.1234567", "+03:30", "offset", None),
+            ("2026-07-15T12:00:00", "Asia/Tehran", "offset", None),
+        ):
+            with pytest.raises(Exception):
+                db.session.execute(text("""
+                    INSERT INTO shipment_transport_unit_update
+                    (unit_id, operational_organization_id, ownership_scope, status,
+                     occurred_at, occurred_at_utc, time_input_wall, time_input_basis,
+                     time_input_source, time_input_policy, is_customer_visible, created_at)
+                    VALUES (:unit, :org, 'TENANT', 'loading',
+                     '2026-07-15 08:30:00', '2026-07-15 08:30:00+00',
+                     :wall, :basis, :source, :policy, true, now())
+                """), {"unit": unit.id, "org": org.id, "wall": wall,
+                       "basis": basis, "source": source, "policy": policy})
+                db.session.commit()
+            db.session.rollback()
         with pytest.raises(Exception):
             db.session.execute(text("""
                 INSERT INTO shipment_transport_unit_update
@@ -144,6 +167,14 @@ def test_owned_postgres_upgrade_roundtrip_and_safe_downgrade():
     with ThreadPoolExecutor(max_workers=2) as workers:
         responses = list(workers.map(lambda _: post_once(), range(2)))
     assert sorted(response.status_code for response in responses) == [200, 201]
+    assert app.test_client().post(path, headers=headers, json={**payload, "status": "loading"}).status_code == 409
+    restarted = create_app({"TESTING": True, "SQLALCHEMY_DATABASE_URI": url,
+                            "SECRET_KEY": "synthetic-fwd06"}, skip_startup=True)
+    assert restarted.test_client().post(path, headers=headers, json=payload).status_code == 200
+    with restarted.app_context():
+        persisted = db.session.get(ShipmentTransportUnitUpdate, row_id)
+        assert persisted.occurred_at == datetime(2026, 7, 15, 8, 30)
+        assert persisted.time_input_wall == "2026-07-15T12:00"
     with app.app_context():
         assert db.session.query(ShipmentTransportUnitUpdate).count() == 4
         member = db.session.get(OperationalMembership, membership_id)
@@ -158,4 +189,40 @@ def test_owned_postgres_upgrade_roundtrip_and_safe_downgrade():
         assert db.session.query(OperationalIdempotency).filter_by(operation="tracking.update.append", idempotency_key="m1-race").count() == 1
         db.session.get(OperationalMembership, membership_id).is_active = True
         db.session.commit()
+    assert app.test_client().post(path, headers=headers, json=payload).status_code == 200
+    # Exercise the actual pre-M1 application against retained schema. Rollback
+    # mode is database read-only: old writes cannot create provenance-free events.
+    with tempfile.TemporaryDirectory(prefix="forwarder-fwd06-old-app-") as previous:
+        archive = Path(previous) / "baseline.zip"
+        subprocess.run(["git", "archive", "--format=zip", "--output", str(archive),
+                        "0e14d3df7d8d2b704eb7f37138dd09850d9fc9a9", "backend"], check=True)
+        with zipfile.ZipFile(archive) as packaged:
+            packaged.extractall(previous)
+        script = """
+import os
+from sqlalchemy import text
+from backend import create_app
+from backend.extensions import db
+from backend.models import ShipmentRequest, ShipmentTransportUnitUpdate
+from backend.services.multi_unit_tracking_service import build_internal_unit_tracking
+from backend.operational_models import OperationalIdempotency
+app = create_app({'TESTING': True, 'SECRET_KEY': 'synthetic-fwd06',
+    'SQLALCHEMY_DATABASE_URI': os.environ['FWD05_DISPOSABLE_DATABASE_URL'],
+    'SQLALCHEMY_ENGINE_OPTIONS': {'connect_args': {'options': '-c default_transaction_read_only=on'}}}, skip_startup=True)
+with app.app_context():
+    request = db.session.query(ShipmentRequest).filter_by(tracking_code='SYNTHETIC-M1-TRACK').one()
+    assert build_internal_unit_tracking(request)['units']
+    assert db.session.query(ShipmentTransportUnitUpdate).count() == 4
+    assert db.session.query(OperationalIdempotency).filter_by(idempotency_key='m1-race').count() == 1
+    assert db.session.execute(text('SHOW transaction_read_only')).scalar_one() == 'on'
+    try:
+        db.session.execute(text("UPDATE shipment_transport_unit_update SET status='loading'"))
+    except Exception:
+        db.session.rollback()
+    else:
+        raise AssertionError('old application writes must be stopped')
+"""
+        result = subprocess.run([sys.executable, "-B", "-c", script], cwd=previous,
+                                capture_output=True, text=True, timeout=45)
+        assert result.returncode == 0, result.stderr[-2000:]
     assert app.test_client().post(path, headers=headers, json=payload).status_code == 200

@@ -59,7 +59,7 @@ try {
       check('browser-subject-created',management.status===200&&management.body.unit_tracking.units.length===1);
       await page.getByPlaceholder('کد بخش').fill('M1-BROWSER-TRUCK');
       await page.getByRole('button',{name:'افزودن بخش قابل رهگیری'}).click();
-      await page.getByText('این کد بخش قبلاً در همین رهگیری ثبت شده است. کد دیگری وارد کنید.').waitFor();
+      await page.getByText('این کد بخش قبلاً در همین رهگیری ثبت شده است. کد دیگری وارد کنید.', {exact:true}).waitFor();
       check('duplicate-input-retained',await page.getByPlaceholder('کد بخش').inputValue()==='M1-BROWSER-TRUCK');
     }
     const updateCard=page.locator('div.rounded-3xl').filter({has:page.getByRole('heading',{name:'ثبت به‌روزرسانی'})}).first();

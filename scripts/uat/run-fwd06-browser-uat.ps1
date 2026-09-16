@@ -5,6 +5,10 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 if ((git -C $repo branch --show-current) -ne 'feature/fwd-06-tracking-timeline') { throw 'Wrong FWD-06 branch' }
 $apiPort = 5056
 $uiPort = 8086
+foreach ($port in @($apiPort, $uiPort)) {
+    $probe = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, $port)
+    try { $probe.Start() } catch { throw "FWD-06 fixture port $port is already in use" } finally { $probe.Stop() }
+}
 $passwordText = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
 $variables = @{
     APP_ENV = 'test'

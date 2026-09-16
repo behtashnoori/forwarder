@@ -12,6 +12,7 @@ from backend.models import (
     TrackingLocationReference,
 )
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
+from backend.services import tracking_time
 
 
 TRACKING_ELIGIBLE_REQUEST_STATUSES = frozenset({"won"})
@@ -220,6 +221,14 @@ def add_update(
         raise TrackingValidationError("invalid time provenance")
     if (time_input_source == "manual") != (time_input_policy == "tracking.manual-iran.v1"):
         raise TrackingValidationError("invalid time policy")
+    try:
+        validated = (tracking_time.manual(time_input_wall, time_input_policy)
+                     if time_input_source == "manual"
+                     else tracking_time.offset(time_input_wall + time_input_basis))
+    except tracking_time.TrackingTimeError as exc:
+        raise TrackingValidationError(str(exc)) from exc
+    if tuple(time_snapshot) != validated:
+        raise TrackingValidationError("time provenance is inconsistent")
     occurred_at = occurred_at_utc.replace(tzinfo=None)
     created_at = _utc_naive(now or datetime.utcnow())
     if occurred_at > created_at:
@@ -355,6 +364,11 @@ def _latest_location_row(history):
     )
 
 
+def _presentation_history(history):
+    # Keep owner status selection unchanged; unknown occurrences follow valid ones.
+    return sorted(history, key=lambda row: (row.occurred_at_utc is not None, row.occurred_at, row.id or 0), reverse=True)
+
+
 def _latest_visible_updates(tracking: ShipmentTracking):
     rows = []
     for unit in tracking.units:
@@ -445,7 +459,7 @@ def build_internal_unit_tracking(req: ShipmentRequest):
                         "time_input_source": row.time_input_source,
                         "time_input_policy": row.time_input_policy,
                     }
-                    for row in sorted(unit.updates, key=lambda item: (item.occurred_at, item.id or 0), reverse=True)
+                    for row in _presentation_history(unit.updates)
                 ],
             }
             for unit, _history, latest in latest_rows
@@ -490,7 +504,7 @@ def build_public_unit_tracking(req: ShipmentRequest):
                         "event_at": _occurrence_iso(row),
                         "recorded_at": _recorded_iso(row),
                     }
-                    for row in history_rows
+                    for row in _presentation_history(history_rows)
                 ],
             }
         )
