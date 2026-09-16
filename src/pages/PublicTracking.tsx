@@ -331,6 +331,7 @@ const PublicTracking: React.FC = () => {
               <Field label={t("multiTracking.unitCount")} value={formatQuantity(unitTracking.summary.total_units, locale)} />
               <Field label={t("multiTracking.deliveredCount")} value={formatQuantity(unitTracking.summary.delivered, locale)} />
               <Field label={t("multiTracking.latestUpdate")} value={formatDate(unitTracking.last_updated_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
+              <Field label="آخرین گزارش ثبت‌شده" value={formatDate(unitTracking.last_recorded_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
             </div>
             <div className="mt-5">
               <div className="mb-2 flex items-center justify-between text-sm font-medium">
@@ -370,7 +371,8 @@ const PublicTracking: React.FC = () => {
                             <li key={`${update.event_at}-${index}`} className="text-sm">
                               <p className="font-semibold">{t(`multiTracking.status.${update.status}`)}</p>
                               <p className="text-muted-foreground">{[update.location, update.customer_note].filter(Boolean).join(" · ") || "—"}</p>
-                              <time className="text-xs text-muted-foreground">{formatDate(update.event_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)}</time>
+                              <time className="block text-xs text-muted-foreground">وقوع: {formatDate(update.event_at, { dateStyle: "medium", timeStyle: "short" }, "نامعلوم", locale)}</time>
+                              <time className="block text-xs text-muted-foreground">ثبت: {formatDate(update.recorded_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)}</time>
                             </li>
                           ))}
                         </ol>

@@ -1,5 +1,6 @@
 import { TrackingLocationSelector } from "@/components/TrackingLocationSelector";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { JalaliDateInput } from "@/components/LocationForm";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import {
   AlertCircle,
@@ -63,9 +64,8 @@ import {
   type OperationalShipmentSummary,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
-import { localDateTimeInputToUtc, toLocalDateTimeInputValue } from "@/lib/localDateTime";
 import { formatLocalDate } from "@/lib/localDate";
-import { formatMoney as formatCurrency } from "@/lib/presentation";
+import { formatInstant, formatMoney as formatCurrency } from "@/lib/presentation";
 
 interface RequestDetail {
   id: number;
@@ -1317,7 +1317,17 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
   const [editUnitId, setEditUnitId] = useState("");
   const [editUnit, setEditUnit] = useState({ display_name: "", vehicle_reference: "" });
   const [updateUnitId, setUpdateUnitId] = useState("");
-  const [update, setUpdate] = useState({ status: "in_transit", logistics_point_public_id: "", location_text: "", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: toLocalDateTimeInputValue(new Date()) });
+  const [update, setUpdate] = useState({ status: "in_transit", logistics_point_public_id: "", location_text: "", customer_message: "", internal_note: "", is_customer_visible: true });
+  const [occurrenceDate, setOccurrenceDate] = useState("");
+  const [occurrenceTime, setOccurrenceTime] = useState("");
+  const [calendarMode, setCalendarMode] = useState<"gregorian" | "persian">("persian");
+  const pendingUnit = useRef({ payload: "", key: "" });
+  const pendingUpdate = useRef({ payload: "", key: "" });
+  const retryKey = (pending: typeof pendingUnit, payload: unknown) => {
+    const serialized = JSON.stringify(payload);
+    if (pending.current.payload !== serialized) pending.current = { payload: serialized, key: crypto.randomUUID() };
+    return pending.current.key;
+  };
 
   const load = useCallback(async () => {
     try { setData(await fetchTrackingManagement(requestId)); }
@@ -1326,26 +1336,32 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
   useEffect(() => { load(); }, [load]);
 
 
-  const run = async (operation: () => Promise<TrackingManagementData>, success: string) => {
+  const run = async (operation: () => Promise<TrackingManagementData>, success: string, afterSuccess?: () => void) => {
     try {
       setBusy(true);
       setData(await operation());
+      afterSuccess?.();
       toast({ title: success });
-    } catch { toast({ title: t("common.error"), description: t("multiTracking.saveError"), variant: "destructive" }); }
+    } catch (error) { const message = error instanceof Error ? error.message : t("multiTracking.saveError"); toast({ title: t("common.error"), description: message.includes("unit_code is already used") ? "این کد بخش قبلاً در همین رهگیری ثبت شده است. کد دیگری وارد کنید." : message, variant: "destructive" }); }
     finally { setBusy(false); }
   };
   const submitUpdate = () => {
-    const occurredAtUtc = localDateTimeInputToUtc(update.occurred_at);
-    if (!occurredAtUtc) {
+    if (!occurrenceDate || !occurrenceTime) {
       toast({ title: t("common.error"), description: t("multiTracking.saveError"), variant: "destructive" });
       return;
     }
-    void run(() => addTrackingUnitUpdate(requestId, Number(updateUnitId), {
-      ...update,
+    const payload = {
+      status: update.status,
+      customer_message: update.customer_message,
+      internal_note: update.internal_note,
+      is_customer_visible: update.is_customer_visible,
       logistics_point_public_id: update.logistics_point_public_id || undefined,
       location_text: update.location_text || undefined,
-      occurred_at: occurredAtUtc,
-    }), t("multiTracking.updateAdded"));
+      time_input_wall: `${occurrenceDate}T${occurrenceTime}`,
+      time_input_policy: "tracking.manual-iran.v1" as const,
+    };
+    const key = retryKey(pendingUpdate, { unit: updateUnitId, ...payload });
+    void run(() => addTrackingUnitUpdate(requestId, Number(updateUnitId), payload, key), t("multiTracking.updateAdded"), () => { pendingUpdate.current = { payload: "", key: "" }; });
   };
 
   if (!data) return <Card><CardContent className="p-8 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></CardContent></Card>;
@@ -1365,12 +1381,13 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
       {data.enabled && <>
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader><CardTitle>{t("multiTracking.addUnit")}</CardTitle><p className="text-sm text-muted-foreground">{t("multiTracking.unitHelp")}</p></CardHeader>
+          <p className="px-6 text-xs text-muted-foreground">کد بخش را کارشناس برای رهگیری داخلی انتخاب می‌کند و در همین رهگیری یکتا است. شناسه پایگاه داده را سیستم می‌سازد؛ پلاک، شماره کانتینر یا شماره واگن اختیاری است.</p>
           <CardContent className="grid gap-3 md:grid-cols-5">
-            <Input value={unit.unit_code} onChange={(e) => setUnit({ ...unit, unit_code: e.target.value })} placeholder={t("multiTracking.unitCode")} />
+            <label className="space-y-1 text-sm"><span>کد داخلی بخش رهگیری</span><Input value={unit.unit_code} onChange={(e) => setUnit({ ...unit, unit_code: e.target.value })} placeholder={t("multiTracking.unitCode")} /></label>
             <Select value={unit.unit_type} onValueChange={(value) => setUnit({ ...unit, unit_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["truck","container","wagon","other"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.type.${v}`)}</SelectItem>)}</SelectContent></Select>
             <Input value={unit.display_name} onChange={(e) => setUnit({ ...unit, display_name: e.target.value })} placeholder={t("multiTracking.displayName")} />
-            <Input value={unit.vehicle_reference} onChange={(e) => setUnit({ ...unit, vehicle_reference: e.target.value })} placeholder={t("multiTracking.vehicleReference")} title={t("multiTracking.vehicleReferenceHelp")} />
-            <Button disabled={busy || !unit.unit_code.trim()} onClick={() => run(() => addTrackingUnit(requestId, unit), t("multiTracking.unitAdded"))}><Plus className="h-4 w-4" />{t("multiTracking.addUnit")}</Button>
+            <label className="space-y-1 text-sm"><span>شناسه فیزیکی (اختیاری)</span><Input value={unit.vehicle_reference} onChange={(e) => setUnit({ ...unit, vehicle_reference: e.target.value })} placeholder={unit.unit_type === "truck" ? "پلاک کامیون" : unit.unit_type === "container" ? "شماره کانتینر" : unit.unit_type === "wagon" ? "شماره واگن" : "شناسه وسیله یا محفظه"} title={t("multiTracking.vehicleReferenceHelp")} /></label>
+            <Button disabled={busy || !unit.unit_code.trim()} onClick={() => { const key = retryKey(pendingUnit, unit); void run(() => addTrackingUnit(requestId, unit, key), t("multiTracking.unitAdded"), () => { pendingUnit.current = { payload: "", key: "" }; setUnit({ unit_code: "", unit_type: "truck", display_name: "", vehicle_reference: "" }); }); }}><Plus className="h-4 w-4" />{t("multiTracking.addUnit")}</Button>
           </CardContent>
         </Card>
         <Card className="rounded-3xl border-slate-200 shadow-sm">
@@ -1390,15 +1407,15 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
             <TrackingLocationSelector value={update.logistics_point_public_id} locale={locale}
               onChange={value => setUpdate({ ...update, logistics_point_public_id: value, location_text: value ? "" : update.location_text })} />
             {!update.logistics_point_public_id && <Input value={update.location_text} onChange={(e) => setUpdate({ ...update, location_text: e.target.value })} placeholder={t("multiTracking.freeTextLocation")} />}
-            <Input type="datetime-local" value={update.occurred_at} onChange={(e) => setUpdate({ ...update, occurred_at: e.target.value })} />
+            <div className="space-y-2"><label className="block text-sm">زمان ورود به وقت ایران — تهران</label><Select value={calendarMode} onValueChange={value => setCalendarMode(value as "gregorian" | "persian")}><SelectTrigger aria-label="شیوه ورود تاریخ"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="persian">شمسی</SelectItem><SelectItem value="gregorian">میلادی</SelectItem></SelectContent></Select>{calendarMode === "persian" ? <JalaliDateInput id="tracking-occurrence-date" label="تاریخ شمسی وقوع" selectLabel="انتخاب تاریخ" nextMonthLabel="ماه بعد" previousMonthLabel="ماه قبل" clearLabel="پاک کردن تاریخ" value={occurrenceDate} onChange={setOccurrenceDate} /> : <Input type="date" aria-label="تاریخ میلادی وقوع" value={occurrenceDate} onChange={event => setOccurrenceDate(event.target.value)} />}<Input type="time" aria-label="ساعت وقوع به وقت تهران" value={occurrenceTime} onChange={event => setOccurrenceTime(event.target.value)} /></div>
             <Textarea value={update.customer_message} onChange={(e) => setUpdate({ ...update, customer_message: e.target.value })} placeholder={t("multiTracking.customerMessage")} />
             <Textarea value={update.internal_note} onChange={(e) => setUpdate({ ...update, internal_note: e.target.value })} placeholder={t("multiTracking.internalNote")} />
             <label className="flex items-center gap-2 text-sm"><Checkbox checked={update.is_customer_visible} onCheckedChange={(checked) => setUpdate({ ...update, is_customer_visible: checked === true })} />{t("multiTracking.customerVisible")}</label>
-            <Button disabled={busy || !updateUnitId || !update.occurred_at} onClick={submitUpdate}>{t("multiTracking.addUpdate")}</Button>
+            <Button disabled={busy || !updateUnitId || !occurrenceDate || !occurrenceTime} onClick={submitUpdate}>{t("multiTracking.addUpdate")}</Button>
           </CardContent>
         </Card>
         {!data.unit_tracking?.units.length && <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">{t("multiTracking.emptyUnits")}</p>}
-        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: <span dir="ltr">{u.vehicle_reference}</span></p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
+        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="space-y-3 p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: <span dir="ltr">{u.vehicle_reference}</span></p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p><p className="text-xs text-slate-500">{u.latest_event_at ? formatInstant(u.latest_event_at, locale) : t("multiTracking.noUpdates")}</p><ol className="space-y-2">{u.timeline.map((event, index) => <li key={`${event.recorded_at}-${index}`} className="rounded border p-2 text-sm"><b>{t(`multiTracking.status.${event.status}`)}</b><p>{event.location || "—"} · {event.customer_note || event.internal_note || "—"}</p><p>وقوع: {formatInstant(event.event_at, locale, {}, "نامعلوم")}</p><p>ثبت: {formatInstant(event.recorded_at, locale)}</p></li>)}</ol></CardContent></Card>)}</div>
       </>}
     </div>
   );

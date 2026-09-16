@@ -192,6 +192,7 @@ def add_update(
     internal_note: str | None = None,
     is_customer_visible: bool = True,
     now: datetime | None = None,
+    time_snapshot: tuple | None = None,
 ):
     """Append a manual unit update; existing updates are intentionally immutable."""
     if not unit.tracking.is_enabled:
@@ -205,9 +206,21 @@ def add_update(
     normalized_status = _clean_required(status, "status", 32).lower()
     if normalized_status not in UNIT_STATUSES:
         raise TrackingValidationError("unsupported status")
-    if not isinstance(occurred_at, datetime):
-        raise TrackingValidationError("occurred_at must be a datetime")
-    occurred_at = _utc_naive(occurred_at)
+    if not isinstance(occurred_at, datetime) or occurred_at.tzinfo is None or occurred_at.utcoffset() is None:
+        raise TrackingValidationError("occurred_at must be an offset-aware datetime")
+    occurred_at_utc = occurred_at.astimezone(timezone.utc)
+    if time_snapshot is None:
+        raise TrackingValidationError("validated time provenance is required")
+    if len(time_snapshot) != 5 or time_snapshot[0] != occurred_at_utc:
+        raise TrackingValidationError("time provenance conflicts with occurred_at")
+    _, time_input_wall, time_input_basis, time_input_source, time_input_policy = time_snapshot
+    if (not isinstance(time_input_wall, str) or len(time_input_wall) > 29
+            or not isinstance(time_input_basis, str) or len(time_input_basis) > 64
+            or time_input_source not in {"manual", "offset"}):
+        raise TrackingValidationError("invalid time provenance")
+    if (time_input_source == "manual") != (time_input_policy == "tracking.manual-iran.v1"):
+        raise TrackingValidationError("invalid time policy")
+    occurred_at = occurred_at_utc.replace(tzinfo=None)
     created_at = _utc_naive(now or datetime.utcnow())
     if occurred_at > created_at:
         raise TrackingValidationError("occurred_at cannot be in the future")
@@ -262,6 +275,11 @@ def add_update(
         internal_note=clean_internal_note,
         is_customer_visible=is_customer_visible,
         occurred_at=occurred_at,
+        occurred_at_utc=occurred_at_utc,
+        time_input_wall=time_input_wall,
+        time_input_basis=time_input_basis,
+        time_input_source=time_input_source,
+        time_input_policy=time_input_policy,
         created_by_user_id=actor_id,
         created_at=created_at,
     )
@@ -273,6 +291,32 @@ def _iso(value):
     # Values reaching this serializer are written by this service using the
     # legacy schema's proven UTC-naive convention.
     return serialize_legacy_utc_datetime(value)
+
+
+def _occurrence_iso(row):
+    """Historical occurred_at has no proven UTC meaning under M1."""
+    if row is None:
+        return None
+    value = row.occurred_at_utc
+    if value is None:
+        return None
+    if value.tzinfo is None:
+        # SQLite's test adapter strips timezone metadata from aware columns.
+        value = value.replace(tzinfo=timezone.utc)
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _recorded_iso(row):
+    return _iso(row.created_at)
+
+
+def _last_valid_occurrence(latest_rows):
+    rows = (row for _, history, _ in latest_rows for row in history if row.occurred_at_utc is not None)
+    def sort_instant(row):
+        value = row.occurred_at_utc
+        return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value
+
+    return _occurrence_iso(max(rows, key=sort_instant, default=None))
 
 
 def _location_payload(row):
@@ -361,13 +405,14 @@ def build_internal_unit_tracking(req: ShipmentRequest):
     if tracking is None or not tracking.is_enabled:
         return None
     latest_rows = _latest_visible_updates(tracking)
-    aggregate_status, summary, last_updated = _aggregate(latest_rows)
+    aggregate_status, summary, _last_updated = _aggregate(latest_rows)
     return {
         "enabled": True,
         "enabled_at": _iso(tracking.enabled_at),
         "aggregate_status": aggregate_status,
         "summary": summary,
-        "last_updated_at": _iso(last_updated),
+        "last_updated_at": _last_valid_occurrence(latest_rows),
+        "last_recorded_at": _iso(max((row.created_at for unit in tracking.units if unit.is_active for row in unit.updates), default=None)),
         "units": [
             {
                 "id": unit.id,
@@ -387,7 +432,21 @@ def build_internal_unit_tracking(req: ShipmentRequest):
                     if _latest_location_row(_history)
                     else None
                 ),
-                "latest_event_at": _iso(latest.occurred_at) if latest else None,
+                "latest_event_at": _occurrence_iso(latest) if latest else None,
+                "timeline": [
+                    {
+                        "status": row.status,
+                        "location": row.location,
+                        "customer_note": row.customer_message,
+                        "internal_note": row.internal_note,
+                        "event_at": _occurrence_iso(row),
+                        "recorded_at": _recorded_iso(row),
+                        "time_input_basis": row.time_input_basis,
+                        "time_input_source": row.time_input_source,
+                        "time_input_policy": row.time_input_policy,
+                    }
+                    for row in sorted(unit.updates, key=lambda item: (item.occurred_at, item.id or 0), reverse=True)
+                ],
             }
             for unit, _history, latest in latest_rows
         ],
@@ -403,7 +462,7 @@ def build_public_unit_tracking(req: ShipmentRequest):
     public_units = []
     progress_values = []
     latest_rows = _latest_visible_updates(tracking)
-    aggregate_status, summary, last_updated = _aggregate(latest_rows)
+    aggregate_status, summary, _last_updated = _aggregate(latest_rows)
     for unit, history_rows, latest in latest_rows:
         latest_location_row = _latest_location_row(history_rows)
         latest_status = latest.status if latest else "not_started"
@@ -421,14 +480,15 @@ def build_public_unit_tracking(req: ShipmentRequest):
                     else None
                 ),
                 "latest_location_detail": _public_location_payload(latest_location_row) if latest_location_row else None,
-                "latest_event_at": _iso(latest.occurred_at) if latest else None,
+                "latest_event_at": _occurrence_iso(latest) if latest else None,
                 "timeline": [
                     {
                         "status": row.status,
                         "location": row.location,
                         **_public_location_payload(row),
                         "customer_note": row.customer_message,
-                        "event_at": _iso(row.occurred_at),
+                        "event_at": _occurrence_iso(row),
+                        "recorded_at": _recorded_iso(row),
                     }
                     for row in history_rows
                 ],
@@ -442,6 +502,7 @@ def build_public_unit_tracking(req: ShipmentRequest):
         "aggregate_status": aggregate_status,
         "progress_percent": round(sum(progress_values) / total) if total else 0,
         "summary": summary,
-        "last_updated_at": _iso(last_updated),
+        "last_updated_at": _last_valid_occurrence(latest_rows),
+        "last_recorded_at": _iso(max((row.created_at for _, history, _ in latest_rows for row in history), default=None)),
         "units": public_units,
     }

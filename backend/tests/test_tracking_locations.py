@@ -8,9 +8,14 @@ from sqlalchemy.exc import IntegrityError
 from backend.models import ExpertUser,ShipmentRequest,TrackingLocationReference,ShipmentTransportUnitUpdate
 from backend.operational_models import OperationalMembership,OperationalOrganization
 from backend.services.auth_session_service import create_session_tokens
-from backend.services.multi_unit_tracking_service import TrackingValidationError,add_unit,add_update,build_internal_unit_tracking,build_public_unit_tracking,enable_tracking
+from backend.services.multi_unit_tracking_service import TrackingValidationError,add_unit,add_update as write_update,build_internal_unit_tracking,build_public_unit_tracking,enable_tracking
+from backend.services.tracking_time import offset
 from backend.services.tracking_location_bootstrap_service import ROWS,bootstrap
 from backend.services import tracking_location_service
+
+def add_update(unit, actor_id, *, occurred_at, **kwargs):
+ snapshot=offset(occurred_at.isoformat(timespec="microseconds")+"Z")
+ return write_update(unit, actor_id, occurred_at=snapshot[0], time_snapshot=snapshot, **kwargs)
 
 def _app(): return create_app({"TESTING":True,"SQLALCHEMY_DATABASE_URI":"sqlite:///:memory:","SECRET_KEY":"tracking-location"},skip_startup=True)
 

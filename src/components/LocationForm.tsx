@@ -264,7 +264,7 @@ const getJalaliFromGregorianValue = (value: string) => {
   return gregorianToJalali(parsedValue.year, parsedValue.month, parsedValue.day);
 };
 
-const JalaliDateInput = ({
+export const JalaliDateInput = ({
   clearLabel,
   id,
   label,

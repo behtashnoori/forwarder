@@ -1,5 +1,7 @@
 # FWD-06 pre-build decision checkpoint
 
+The text below preserves the pre-build checkpoint. The subsequent Owner M1 decision and current local implementation run are recorded in [M1 acceptance](ADR-048-AMENDMENT-M1-ACCEPTANCE-2026-09-16.md) and [implementation evidence](IMPLEMENTATION-2026-09-16.md). The unchanged [M1 proposed bytes](ADR-048-AMENDMENT-M1-MANUAL-TIME-PROPOSED.md) remain the hash-bound decision source.
+
 Recorded: 2026-09-16, Asia/Tehran. This is an ADR gate, not completion of the
 requested product slice. Runtime files, historical migrations and mother LPAF
 are unchanged. New test/evidence files do not constitute product implementation.

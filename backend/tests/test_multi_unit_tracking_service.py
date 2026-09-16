@@ -10,12 +10,20 @@ from backend.operational_models import OperationalMembership, OperationalOrganiz
 from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
     add_unit,
-    add_update,
+    add_update as write_update,
     build_internal_unit_tracking,
     build_public_unit_tracking,
     disable_tracking,
     enable_tracking,
 )
+from backend.services.tracking_time import offset
+
+
+def add_update(unit, actor_id, *, occurred_at, **kwargs):
+    """Existing fixture dates were UTC; send them through the new explicit contract."""
+    value = occurred_at.isoformat(timespec="seconds") + "Z"
+    snapshot = offset(value)
+    return write_update(unit, actor_id, occurred_at=snapshot[0], time_snapshot=snapshot, **kwargs)
 
 
 @pytest.fixture()

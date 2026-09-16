@@ -714,6 +714,11 @@ class ShipmentTransportUnitUpdate(db.Model):
     internal_note = db.Column(db.Text, nullable=True)
     is_customer_visible = db.Column(db.Boolean, nullable=False, default=True)
     occurred_at = db.Column(db.DateTime, nullable=False)
+    occurred_at_utc = db.Column(db.DateTime(timezone=True), nullable=True)
+    time_input_wall = db.Column(db.String(29), nullable=True)
+    time_input_basis = db.Column(db.String(64), nullable=True)
+    time_input_source = db.Column(db.String(32), nullable=True)
+    time_input_policy = db.Column(db.String(64), nullable=True)
     created_by_user_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
     )

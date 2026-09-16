@@ -412,7 +412,8 @@ export interface TransportUnitUpdate {
   status: TrackingUnitStatus;
   location: string | null;
   customer_note: string | null;
-  event_at: string;
+  event_at: string | null;
+  recorded_at: string;
   location_reference_id?: number | null;
   location_name?: string | null;
   location_text?: string | null;
@@ -767,6 +768,7 @@ export interface MultiUnitTracking {
   progress_percent: number;
   summary: TrackingSummary;
   last_updated_at: string | null;
+  last_recorded_at: string | null;
   units: PublicTransportUnitTracking[];
 }
 
@@ -780,6 +782,17 @@ export interface InternalTransportUnitTracking {
   latest_status: TrackingUnitStatus;
   latest_location: string | null;
   latest_event_at: string | null;
+  timeline: Array<{
+    status: TrackingUnitStatus;
+    location: string | null;
+    customer_note: string | null;
+    internal_note: string | null;
+    event_at: string | null;
+    recorded_at: string;
+    time_input_basis: string | null;
+    time_input_source: string | null;
+    time_input_policy: string | null;
+  }>;
 }
 export interface InternalMultiUnitTracking {
   enabled: true;
@@ -787,6 +800,7 @@ export interface InternalMultiUnitTracking {
   aggregate_status: TrackingAggregateStatus;
   summary: TrackingSummary;
   last_updated_at: string | null;
+  last_recorded_at: string | null;
   units: InternalTransportUnitTracking[];
 }
 
@@ -1361,9 +1375,11 @@ export const addTrackingUnit = (
     display_name?: string;
     vehicle_reference?: string;
   },
+  key?: string,
 ): Promise<TrackingManagementData> =>
   request(`/api/expert/requests/${requestId}/tracking/units`, {
     method: "POST",
+    headers: key ? { "Idempotency-Key": key } : undefined,
     body: JSON.stringify(payload),
   });
 
@@ -1389,13 +1405,16 @@ export const addTrackingUnitUpdate = (
     customer_message?: string;
     internal_note?: string;
     is_customer_visible: boolean;
-    occurred_at: string;
+    time_input_wall: string;
+    time_input_policy: "tracking.manual-iran.v1";
   },
+  key?: string,
 ): Promise<TrackingManagementData> =>
   request(
     `/api/expert/requests/${requestId}/tracking/units/${unitId}/updates`,
     {
       method: "POST",
+      headers: key ? { "Idempotency-Key": key } : undefined,
       body: JSON.stringify(payload),
     },
   );

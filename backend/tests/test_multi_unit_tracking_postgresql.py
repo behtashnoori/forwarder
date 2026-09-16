@@ -13,10 +13,16 @@ from backend.operational_models import OperationalMembership, OperationalOrganiz
 from backend.services.multi_unit_tracking_service import (
     TrackingValidationError,
     add_unit,
-    add_update,
+    add_update as write_update,
     build_public_unit_tracking,
     enable_tracking,
 )
+from backend.services.tracking_time import offset
+
+
+def add_update(unit, actor_id, *, occurred_at, **kwargs):
+    snapshot = offset(occurred_at.isoformat(timespec="seconds") + "Z")
+    return write_update(unit, actor_id, occurred_at=snapshot[0], time_snapshot=snapshot, **kwargs)
 
 
 def test_disposable_postgresql_tracking_contract():

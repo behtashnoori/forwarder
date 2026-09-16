@@ -5,7 +5,7 @@ from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request, current_app, g
 from sqlalchemy import and_, func
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from backend.extensions import db
 from backend.models import (
@@ -31,6 +31,8 @@ from backend.services import (
     quote_service,
     multi_unit_tracking_service,
 )
+from backend.services import tracking_time
+from backend.services import tracking_receipt
 
 expert_console_bp = Blueprint("expert_console", __name__, url_prefix="/api/expert")
 
@@ -226,10 +228,22 @@ def create_tracking_unit(request_id: int):
     if error:
         return error
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"error": "tracking command must be a JSON object"}), 400
     try:
         if not req.shipment_tracking:
             raise multi_unit_tracking_service.TrackingValidationError("tracking is not enabled")
-        multi_unit_tracking_service.add_unit(
+        receipt, replay = tracking_receipt.begin(
+            req.shipment_tracking, "tracking.unit.create", req.shipment_tracking.id,
+            request.headers.get("Idempotency-Key"), data,
+        )
+        if not _can_access_request(req, current_user):
+            db.session.rollback()
+            return jsonify({"error": "access denied"}), 403
+        if replay is not None:
+            db.session.commit()
+            return jsonify(replay), 200
+        unit = multi_unit_tracking_service.add_unit(
             req.shipment_tracking,
             current_user["id"],
             unit_code=data.get("unit_code"),
@@ -238,15 +252,28 @@ def create_tracking_unit(request_id: int):
             vehicle_reference=data.get("vehicle_reference"),
             sort_order=data.get("sort_order", 0),
         )
+        db.session.flush()
+        response = _tracking_management_payload(req)
+        tracking_receipt.complete(receipt, unit.id, response)
         db.session.commit()
-        return jsonify(_tracking_management_payload(req)), 201
+        return jsonify(response), 201
     except multi_unit_tracking_service.TrackingValidationError as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 400
+    except tracking_receipt.ReceiptConflict as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc), "code": "IDEMPOTENCY_CONFLICT"}), 409
+    except IntegrityError as exc:
+        db.session.rollback()
+        detail = str(exc.orig)
+        if "uq_tracking_unit_code" in detail or "shipment_transport_unit.tracking_id, shipment_transport_unit.unit_code" in detail:
+            return jsonify({"error": "unit_code is already used in this tracking", "code": "DUPLICATE_UNIT_CODE", "field": "unit_code"}), 409
+        current_app.logger.exception("Failed to create tracking unit")
+        return jsonify({"error": "tracking unit could not be created"}), 500
     except SQLAlchemyError:
         db.session.rollback()
         current_app.logger.exception("Failed to create tracking unit")
-        return jsonify({"error": "tracking unit could not be created"}), 409
+        return jsonify({"error": "tracking unit could not be created"}), 500
 
 
 @expert_console_bp.patch("/requests/<int:request_id>/tracking/units/<int:unit_id>")
@@ -289,13 +316,34 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
     if error:
         return error
     data = request.get_json(silent=True) or {}
+    if not isinstance(data, dict):
+        return jsonify({"error": "tracking command must be a JSON object"}), 400
     if any(key in data for key in ("organization_id", "operational_organization_id")):
         return jsonify({"error": "organization override is not allowed"}), 403
+    if any(key in data for key in ("source", "time_input_source", "time_input_basis", "occurred_at_utc")):
+        return jsonify({"error": "time source or basis cannot be selected by the client"}), 403
     unit = db.session.get(multi_unit_tracking_service.ShipmentTransportUnit, unit_id)
     if not unit or not req.shipment_tracking or unit.tracking_id != req.shipment_tracking.id:
         return jsonify({"error": "tracking unit not found"}), 404
     try:
-        multi_unit_tracking_service.add_update(
+        receipt, replay = tracking_receipt.begin(
+            req.shipment_tracking, "tracking.update.append", unit.id,
+            request.headers.get("Idempotency-Key"), data,
+        )
+        if not _can_access_request(req, current_user):
+            db.session.rollback()
+            return jsonify({"error": "access denied"}), 403
+        if replay is not None:
+            db.session.commit()
+            return jsonify(replay), 200
+        if "time_input_wall" in data or "time_input_policy" in data:
+            if "occurred_at" in data:
+                raise multi_unit_tracking_service.TrackingValidationError("conflicting time inputs")
+            snapshot = tracking_time.manual(data.get("time_input_wall"), data.get("time_input_policy"))
+        else:
+            # The existing offset-bearing contract has no client-selected source.
+            snapshot = tracking_time.offset(data.get("occurred_at"))
+        update_row = multi_unit_tracking_service.add_update(
             unit,
             current_user["id"],
             status=data.get("status"),
@@ -306,13 +354,23 @@ def create_tracking_unit_update(request_id: int, unit_id: int):
             customer_message=data.get("customer_message"),
             internal_note=data.get("internal_note"),
             is_customer_visible=data.get("is_customer_visible", True),
-            occurred_at=_parse_tracking_datetime(data.get("occurred_at"), "occurred_at"),
+            occurred_at=snapshot[0],
+            time_snapshot=snapshot,
         )
+        db.session.flush()
+        response = _tracking_management_payload(req)
+        tracking_receipt.complete(receipt, update_row.id, response)
         db.session.commit()
-        return jsonify(_tracking_management_payload(req)), 201
+        return jsonify(response), 201
     except multi_unit_tracking_service.TrackingValidationError as exc:
         db.session.rollback()
         return jsonify({"error": str(exc)}), 400
+    except tracking_time.TrackingTimeError as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc)}), 400
+    except tracking_receipt.ReceiptConflict as exc:
+        db.session.rollback()
+        return jsonify({"error": str(exc), "code": "IDEMPOTENCY_CONFLICT"}), 409
     except SQLAlchemyError:
         db.session.rollback()
         current_app.logger.exception("Failed to append tracking update")

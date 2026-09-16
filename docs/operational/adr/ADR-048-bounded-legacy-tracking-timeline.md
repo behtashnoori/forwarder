@@ -172,3 +172,7 @@ Explicit Owner continuation accepted the unchanged eight-point decision for FWD-
 - Implementation and qualification: pending; prior BLOCKED checkpoint remains historical evidence.
 
 - 2026-09-16: ACCEPTED_FOR_BOUNDED_FWD06 — explicit Owner acceptance bound to the exact preserved proposal hash above; no additional decision accepted.
+
+## Amendment M1 — 2026-09-16
+
+The Owner accepted the [unchanged M1 proposal](../evidence/fwd-06-tracking-timeline/ADR-048-AMENDMENT-M1-MANUAL-TIME-PROPOSED.md), SHA256 `6792ADD2CC064A73977386D62263EDA13A0C534CE5A7E118679A1422CD55673A`, for local FWD-06 development and qualification. [Acceptance record](../evidence/fwd-06-tracking-timeline/ADR-048-AMENDMENT-M1-ACCEPTANCE-2026-09-16.md). M1 makes a bounded manual Asia/Tehran exception to TIME-BIZ-007/011 and authorizes one five-column additive migration. The historical proposed text and prior acceptance are preserved above; all other ADR-048 decisions remain in force. This is a decision record, not a runtime PASS.

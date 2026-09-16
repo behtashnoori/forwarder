@@ -13,10 +13,16 @@ from backend.models import ExpertUser, ShipmentRequest, TrackingLocationReferenc
 from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services.multi_unit_tracking_service import (
     add_unit,
-    add_update,
+    add_update as write_update,
     build_internal_unit_tracking,
     enable_tracking,
 )
+from backend.services.tracking_time import offset
+
+
+def add_update(unit, actor_id, *, occurred_at, **kwargs):
+    snapshot = offset(occurred_at.isoformat(timespec="microseconds") + "Z")
+    return write_update(unit, actor_id, occurred_at=snapshot[0], time_snapshot=snapshot, **kwargs)
 from backend.services.tracking_location_bootstrap_service import ROWS, bootstrap
 
 

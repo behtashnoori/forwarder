@@ -42,3 +42,7 @@ These policies are confirmed, but no new synthetic decision ID was introduced:
   actual instants will be separate.
 
 No schema change or historical backfill is authorized by this record.
+
+## Bounded FWD-06 amendment — 2026-09-16
+
+The Owner accepted [ADR-048 Amendment M1](../../operational/evidence/fwd-06-tracking-timeline/ADR-048-AMENDMENT-M1-MANUAL-TIME-PROPOSED.md) with proposal SHA256 `6792ADD2CC064A73977386D62263EDA13A0C534CE5A7E118679A1422CD55673A` for local FWD-06 development and qualification. For authorized manual compatibility tracking entry only, `tracking.manual-iran.v1` interprets the explicit local clock in `Asia/Tehran` without claiming that the event Location has that zone. This is the limited exception to TIME-BIZ-007 and TIME-BIZ-011; it supplies a declared basis when Location or its timezone is unknown and grants no manual foreign-zone override. M1 separately authorizes five nullable event fields and an additive migration, without backfill. The original register decisions above remain historically intact; all other applications of TIME-BIZ-007/011 remain governed by their recorded policies. The original no-schema sentence above describes authority from this register alone, before the separate accepted M1.
