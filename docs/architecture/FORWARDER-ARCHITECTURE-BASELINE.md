@@ -266,3 +266,41 @@ introduced. PostgreSQL downgrade locks the request table and refuses before DDL
 when any non-null intent exists. Application rollback retains schema and intent.
 Mother LPAF reference impact: NONE; global v2.2 and limited v2.4 pilot status stay
 unchanged. See ADR-046 and its FWD-03 evidence for compatibility and qualification.
+
+## 17. Governed quotation response (ADR-047/PDR-019 amended FWD-05)
+
+ADR-047/PDR-019 are ACCEPTED as explicitly amended by the named Owner continuation
+2026-09-16. The original proposal/discovery remains preserved in FWD-05 evidence;
+acceptance is development authority, not implementation/qualification evidence.
+Commercial extends ExpertQuote with quote-major.v1 money strings (EUR/USD major
+units <=2 decimals, IRR integral rial), immutable identity/content, explicit effective
+replacement chain and append-only response facts/receipts. Historical money values/
+codes remain uninterpreted legacy evidence. Request status and quote response are
+independent; no automatic operational/financial effects follow acceptance.
+
+Authorization owns exact recipient/tenant/request/quote/content bounded possession
+grants; tracking GET stays read-only and tracking POST loses write authority. The
+retained Security review/technical feasibility gate precedes protected Build.
+Accepted predecessor cannot be ordinarily replaced; declined/negotiating predecessor
+replacement is explicit and serialized with response. Organization Admin configures
+an audited issuer-validity IANA zone through existing settings. Missing source
+blocks publication. Policy/Local Date/zone/resolved UTC deadline are immutable
+quote snapshots; receipt time is system authority. Grant reads end at later
+publication/expiry+30 days; reissue revokes prior grant without extending horizon.
+
+Existing outbox/inbox/Notification contracts are reused; Commercial response event
+is separate from quote.available. Adapter owns private fake payload transport;
+worker has no commercial/customer authority. Current expert sees truthful readiness/
+BLOCKED reason and owns follow-up. No manufactured verification, staff capability
+fetch, arbitrary recipient or invented onboarding remediation route is allowed.
+
+The external D:\1-webapp\28-AI-Rules reference remains unavailable. Owner explicitly
+defers access only for FWD-05 pilot; REFERENCE_MAPPING=NOT_PROVEN. Unknown content
+and alternate-folder mapping are unapproved. Recovery/review is required at FWD-05
+end or before actual release, whichever earlier. See limited reference disposition
+in FWD-05 evidence. No folder 28/29 rename/rewrite or unread-rule compliance claim.
+
+Mother LPAF impact NONE: v2.2 globally ACTIVE, v2.4 OWNER_APPROVED /
+PILOT_ADOPTION_ALLOWED / NOT_GLOBAL_ACTIVE; mother unchanged. Project impact
+UPDATE_REQUIRED: reconciled ADR/PDR and indexes/baseline updated here. Protected
+runtime, migration, PostgreSQL, Browser UAT and regression remain unqualified.

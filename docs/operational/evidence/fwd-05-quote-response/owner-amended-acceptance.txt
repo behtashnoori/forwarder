@@ -1,0 +1,476 @@
+MISSION CONTINUATION:
+FWD-05 — Explicit Product Decisions, Amended ADR Acceptance
+and Autonomous Implementation
+
+OWNER DECISION:
+
+ADR-047 و PDR-019 بر مبنای نسخه‌های زیر، با اصلاحات صریح
+این پیام، برای توسعه و احراز محدود FWD-05 پذیرفته می‌شوند.
+
+DECISION_TYPE:
+ACCEPT_AS_EXPLICITLY_AMENDED
+
+PROPOSED_ADR_047_SHA256:
+229A22FEC79C5556BB349348A54EC0A60A2BA3DEC8C4BB1613E7393AAC174AFC
+
+PROPOSED_PDR_019_SHA256:
+FFD2FDAEF602A99FA8269B4037618807DA1596F47E32871D2F9429004A8B4A4A
+
+این پذیرش شامل متن پیشنهادی به‌علاوه اصلاحات همین پیام است.
+معنای متفاوت یا تصمیم اضافه، خودکار پذیرفته نشده است.
+
+هدف:
+بستن تصمیم‌های باز و ادامه همان FWD-05 تا پیاده‌سازی،
+احراز، Commit، Push و Remote Verification.
+
+معماری عمومی Identity، OTP، حسابداری، Workflow و Agent
+خودمختار در این پذیرش نیستند.
+
+────────────────────────────────
+1. IDENTITY AND PRESERVATION
+────────────────────────────────
+
+SHELL:
+Windows PowerShell
+
+WORKSPACE:
+D:\1-webapp\forwarder-dev
+
+EXPECTED_BRANCH:
+feature/fwd-05-quote-response
+
+EXPECTED_START_HEAD:
+98a0364a6b6f97daf70152c7d3a5cefbb242cac0
+
+REMOTE:
+origin
+
+هویت واقعی و تغییرات موجود را بررسی کن.
+سه سند index/baseline و فایل‌های FWD-05 موجود را حفظ کن.
+تغییرات نامرتبط را وارد این مأموریت نکن.
+
+قبل از ثبت پذیرش، Hash دو نسخه پیشنهادی را احراز کن.
+اگر متفاوت‌اند، اختلاف را گزارش کن؛ نسخه بررسی‌نشده را
+پذیرفته‌شده فرض نکن.
+
+اصل نسخه پیشنهادی و Hash آن را در شواهد همین تصمیم حفظ کن.
+سپس ADR/PDR را با اصلاحات زیر و سابقه پذیرش هماهنگ کن.
+Hash نهایی اسناد اصلاح‌شده و ماتریس تغییر را ثبت کن.
+
+متن پیشنهادی قدیمی را به‌عنوان نسخه از ابتدا مصوب بازنویسی
+تاریخی نکن. نام یا سمت انسانی اعلام‌نشده نساز.
+
+برای اصلاحات دقیق این پیام، دور تازه پذیرش لازم نیست.
+اگر تصمیم تازه‌ای خارج از آنها ضروری شد، فقط همان مورد
+به Owner برگردد.
+
+────────────────────────────────
+2. FIXED LPAF AND REFERENCE DISPOSITION
+────────────────────────────────
+
+ARCHITECTURE_ROOT:
+D:\1-webapp\29-lpaf\29-lpaf (1)\29-lpaf
+
+ENTRY:
+lpaf\README.md
+
+GLOBAL_ACTIVE:
+LPAF v2.2
+
+V2.4:
+OWNER_APPROVED / PILOT_ADOPTION_ALLOWED / NOT_GLOBAL_ACTIVE
+
+EXPECTED_V24_SHA256:
+217BDB9DFF2B4FE42A127B4F15831DB17439A703CA4D4702D299B804CD7C0397
+
+دستورهای محلی قابل اعمال و قراردادهای Accepted پروژه
+همچنان برقرارند. هویت v2.4 و Re-attestation احراز شود.
+
+تصمیم محدود درباره:
+D:\1-webapp\28-AI-Rules
+
+REFERENCE_MAPPING = NOT_PROVEN
+
+Owner فقط برای توسعه آزمایشی FWD-05، الزام دسترسی به
+این مرجع مفقودِ ارجاع‌شده از سند Proposed را به تعویق
+می‌اندازد؛ نه محتوای ناشناخته آن را تأیید می‌کند و نه آن
+را با پوشه دیگری جایگزین می‌داند.
+
+این تصمیم در یک record محدود پروژه ثبت شود:
+- مرجع مفقود و منشأ ارجاع؛
+- دامنه FWD-05؛
+- مراجع معتبر فعلی که واقعاً خوانده شده‌اند؛
+- ریسک و مسئول تصمیم؛
+- بازبینی در پایان FWD-05 یا پیش از انتشار واقعی،
+  هرکدام زودتر لازم شود؛
+- وضعیت NOT_PROVEN و کار بازیابی مرجع.
+
+سند Proposed و ارجاع تاریخی آن حذف نشوند.
+فولدر 28 یا 29 rename/rewrite نشود.
+هیچ ادعای انطباق با قواعد ناخوانده ایجاد نشود.
+
+اگر مرجع ACTIVE دیگری الزام مستقل و غیرقابل‌معافیت دارد،
+این تصمیم آن را دور نمی‌زند؛ بند دقیق را برای تصمیم گزارش کن.
+
+LPAF مادر تغییر نکند.
+اثر بر مرجع مادر و مرجع پروژه جدا ثبت شود.
+
+────────────────────────────────
+3. D01 — CUSTOMER AUTHORITY
+────────────────────────────────
+
+مدل bounded quote bearer برای همین قابلیت پذیرفته است:
+لینک محرمانه محدود به tenant/request/quote/content و
+گیرنده دقیق معتبر؛ نه کد رهگیری عمومی.
+
+این اختیار ناشی از possession است.
+خطر انتقال/سرقت لینک باقی می‌ماند.
+هویت شخص پاسخ‌دهنده، امضای دیجیتال و عدم انکار ادعا نشوند.
+
+tracking GET در حدود قرارداد فعلی حفظ شود.
+tracking-code POST حق قبول/مذاکره/رد نداشته باشد.
+هیچ مسیر قدیمی، staff JWT یا cookie-only request نباید
+نویسنده جایگزین و دورزننده کنترل جدید باقی بماند.
+
+GET، preview لینک و callback Provider هیچ تصمیمی ثبت نکنند.
+
+پیش از ثبت پاسخ، مشتری اطلاعات مؤثر همان پیشنهاد را ببیند.
+سمت سرور، همان هدف/نسخه/مبلغ/ارز/اعتبار و اختیار دوباره
+احراز شود؛ پاسخ هرگز به latest quote دیگری منتقل نشود.
+
+تمام حفاظ‌های ADR مربوط به revocation، recipient linkage،
+scope، token purpose، issuer/audience/type، محرمانگی،
+CORS، replay و کنترل نهایی حفظ شوند.
+
+رمزنگاری دست‌ساز و سرویس عمومی Identity نساز.
+امکان استفاده امن از امکانات موجود یک Gate فنی واقعی است.
+
+────────────────────────────────
+4. D02/D03 — RESPONSE, REPLACEMENT AND DISPLAY
+────────────────────────────────
+
+پذیرفته:
+none → negotiation_requested / accepted / declined
+negotiation_requested → accepted / declined
+
+فقط روی همان پیشنهاد جاری و معتبر، با نسخه و اختیار صحیح.
+
+accepted/declined روی همان پیشنهاد نهایی‌اند.
+بازنویسی پاسخ نهایی یا بازگشایی همان ردیف مجاز نیست.
+replay و no-op مطابق قرارداد، اثر تجاری جدید ایجاد نکنند.
+
+تصمیم صریح درباره replacement:
+
+- بعد از accepted:
+  انتشار جایگزین عادی که پیشنهاد پذیرفته‌شده را supersede
+  کند در این Slice مجاز نیست.
+  اصلاح/لغو توافق پذیرفته‌شده scope بعدی است.
+
+- بعد از declined:
+  کارشناس فعلیِ مجاز می‌تواند، در وضعیت مجاز درخواست،
+  پیشنهاد تازه با پیوند صریح به پیشنهاد ردشده منتشر کند.
+  پاسخ قبلی باقی بماند و پاسخ پیشنهاد تازه خالی شروع شود.
+
+- در negotiation_requested:
+  نهایی‌شدن روی همان پیشنهاد معتبر مجاز است؛
+  اصلاح شرایط نیز فقط با پیشنهاد جدید و پیوند replacement،
+  نه ویرایش محتوای منتشرشده قبلی.
+
+انتشار جایگزین باید predecessor/effective quote را صریح
+بررسی و با رقابت پاسخ مشتری serialize کند.
+مرتب‌سازی created_at به‌تنهایی اختیار supersession نسازد.
+
+ShipmentRequest.status خودکار به won/lost/Shipment تبدیل نشود.
+اما نمایش پاسخ پیشنهاد در پنل مشتری و کارشناس مستقل و روشن
+باشد؛ بعد از پاسخ، UI همچنان «منتظر پاسخ مشتری» القا نکند.
+
+state داخلی درخواست و پاسخ پیشنهاد دو محور مستقل‌اند.
+یک SOR جدید برای status نمایشی نساز.
+query، شمارنده مرتبط و inbox از قرارداد مالک مصرف کنند.
+
+قبول پیشنهاد خودکار پرداخت، رزرو، حمل یا اقدام عملیاتی
+دیگری ایجاد نمی‌کند.
+
+────────────────────────────────
+5. D04 AMENDMENT — EXPLICIT MONEY UNIT AND FRACTIONS
+────────────────────────────────
+
+محدودیت integral-only پیشنهاد اولیه برای داده جدید
+به شکل زیر اصلاح می‌شود:
+
+مبلغ بر حسب واحد اصلی ارز است:
+- EUR: یورو، تا دو رقم اعشار؛
+- USD: دلار، تا دو رقم اعشار؛
+- IRR: ریال صحیح، بدون تبدیل تومان.
+
+مثال قرارداد جدید:
+"1250.50" + EUR = 1250.50 یورو
+"1250.50" + USD = 1250.50 دلار
+"1250" + IRR = 1250 ریال
+
+قرارداد مقدار جدید باید نسخه/معنای صریح داشته باشد.
+انتخاب ذخیره دقیق و افزایشی در ExpertQuote موجود، در
+حد همین مالکیت مجاز است؛ Aggregate مالی جدید نساز.
+
+از decimal دقیق یا قرارداد معادلِ صریح و قابل اثبات استفاده کن.
+مقدار API جدید رشته دقیق باشد، نه binary floating-point.
+
+برای scale، range، overflow، ورودی ناسالم، null و صفر
+قرارداد مشخص و آزمون داشته باش.
+دقت اضافی نامجاز قبل از ذخیره رد شود؛
+به rounding ستون DB یا parseFloat اعتماد نکن.
+
+دامنه معتبر مبلغ تاریخی به دلیل precision نامناسب ستون
+جدید کوچک نشود. NaN/Infinity و coercion مبهم پذیرفته نشوند.
+
+تاریخچه:
+- amount/currency قبلی تغییر نکنند؛
+- IRR قدیمی با ضرب/تقسیم به تومان/ریال تبدیل نشود؛
+- major/minor بودن داده قدیمی بدون شاهد اعلام نشود؛
+- legacy money contract از قرارداد صریح جدید متمایز بماند؛
+- رکورد مبهم با همان مقدار/کد و توضیح محدودیت خوانده شود.
+
+Client قدیمی:
+مبلغ اعشاری جدید را گرد یا truncate نکن تا در فیلد قدیمی جا شود.
+شکل پاسخ و محدودیت compatibility را صریح و آزموده کن.
+اگر نمایش دقیق ممکن نیست، unsupported/نیاز به client جدید
+را آشکار کن؛ مقدار دروغین یا صفر جایگزین نکن.
+
+اثر این اصلاح بر digest پیشنهاد، response snapshot،
+notification template، read projection و UI بررسی شود.
+formatter/parser FWD-04 تا حد ممکن reuse شود.
+
+FX، تومان به‌عنوان ارز تازه، حسابداری، پرداخت و
+بازتفسیر انبوه داده تاریخی خارج Scope هستند.
+
+جزئیات schema و compatibility انتخاب‌شده را پیش از Build
+در ADR-047 منعکس کن. اگر بدون تغییر گسترده خارج این
+قرارداد ممکن نیست، همان نیاز تازه را HOLD کن.
+
+────────────────────────────────
+6. D05 — USABLE ORGANIZATION VALIDITY SETTING
+────────────────────────────────
+
+issuer-organization timezone fallback طبق TIME-BIZ-003/004
+پذیرفته است؛ timezone نمایشی مرورگر مبنای آن نیست.
+
+یک مسیر محدود و قابل استفاده برای ادمین سازمان فراهم کن:
+مشاهده/تنظیم timezone اعتبار پیشنهاد با IANA zone معتبر،
+audit و اختیار فعلی سازمان.
+
+از سطح تنظیمات موجود استفاده کن؛ پنل عمومی configuration نساز.
+کارشناس حق تعیین policy سازمان در payload پیشنهاد ندارد.
+
+وقتی تنظیم لازم وجود ندارد:
+انتشار جدید با reason code و پیام فارسی روشن متوقف شود.
+کارشناس بداند «ادمین سازمان باید منطقه زمانی اعتبار
+پیشنهاد را تنظیم کند».
+ادمین مجاز از مسیر طبیعی به تنظیم برسد.
+
+zone، policy، Local Date و UTC deadline روی پیشنهاد
+snapshot شوند. تغییر تنظیم سازمان، پیشنهاد قبلی را عوض نکند.
+
+معنای system receipt در مرز انقضا مطابق TIME-BIZ مصوب
+پیاده و آزمون شود؛ timestamp ارسالی مشتری مرجع نباشد.
+
+fixture با تنظیم واقعی ادمین آماده شود، نه مقدار
+پیش‌فرض پنهان در startup.
+
+────────────────────────────────
+7. RECIPIENT READINESS AND DELIVERY BLOCKED
+────────────────────────────────
+
+دامنه این Slice:
+مسیر پاسخ مشتریِ دارای رابطه دقیق و معتبر موجود،
+به‌همراه نمایش و پیگیری صادقانه نبود آن رابطه.
+
+در جزئیات پیشنهاد کارشناس، حداقل این تفاوت‌ها روشن باشند:
+- پیشنهاد منتشر شده؛
+- لینک پاسخ آماده/در صف است؛
+- ارسال آزمایشی ثبت شده؛
+- ارسال ناموفق/نامعلوم؛
+- رابطه گیرنده برای ارسال آماده نیست.
+
+نبود گیرنده معتبر می‌تواند طبق ADR انتشار را متوقف نکند،
+ولی تحویل capability باید BLOCKED باشد.
+
+مسئول پیگیری، کارشناس فعلی پرونده است.
+reason و مسیر مجاز تکمیل/بررسی اطلاعات تماس را نشان بده.
+
+از command/linking و مسیر تأیید موجود و واقعاً معتبر استفاده کن.
+فقط وقتی آن مسیر وجود دارد، لینک رفع مانع را ارائه کن.
+مسیر ناقص را با دکمه بی‌اثر یا وعده ساختگی پنهان نکن.
+
+staff حق ندارد:
+- verified=true را برای عبور از Gate جعل کند؛
+- token مشتری را بگیرد یا کپی کند؛
+- مقصد دلخواه جایگزین کند؛
+- مشتری را با جست‌وجوی عمومی ایمیل به tenant وصل کند.
+
+اگر مسیر کامل آماده‌سازی مشتری جدید موجود نیست،
+آن را DELIVERY/ONBOARDING_DEPENDENCY_OPEN ثبت کن.
+این استثنا فقط اجازه احراز مسیر گیرنده ازپیش‌معتبر را می‌دهد،
+نه اعلام آمادگی کل onboarding مشتری واقعی.
+
+fixture مصنوعی معتبر طبق قرارداد رسمی تست مجاز است،
+اما شاهد onboarding واقعی محسوب نمی‌شود.
+
+اگر handler فعلیِ مورد استفاده لینک تأیید یا capability را
+log می‌کند، نشت را در همان اتصال محدود برطرف کن.
+حذف log به معنی تحویل موفق پیام نیست.
+
+تحویل فقط از Fake Provider خصوصی آزمون انجام شود.
+هیچ URL محرمانه در گزارش، Git، screenshot یا trace منتشر نشود.
+
+────────────────────────────────
+8. D06 — GRANT AND RECEIPT LIFECYCLE
+────────────────────────────────
+
+بازه پیشنهادی 30 روز برای این نسخه پذیرفته می‌شود:
+
+READ_UNTIL =
+max(publication Instant, quote expiry Instant) + 30 days
+
+این عدد تصمیم محصولی همین نسخه است، نه قانون عمومی.
+پایان read grant، تاریخچه response/receipt را حذف نمی‌کند.
+
+WRITE:
+فقط تا expiry و با احراز quote/current state، scope،
+grant و recipient معتبر.
+
+reissue فقط به همان گیرنده دقیق و فعلاً معتبر،
+همراه revoke قبلی و audit مجاز است.
+reissue افق read را بی‌صدا از ابتدا 30 روز دیگر تمدید نکند.
+قابلیت منقضی‌شده با tracking code احیا نشود.
+
+برای پیشنهاد superseded:
+مجوز قبلی نباید اطلاعات پیشنهاد جایگزین را افشا کند.
+خواندن رسید مجازِ همان پیشنهاد و نبود اختیار نوشتن
+از یکدیگر جدا بمانند.
+
+retention بلندمدت، purge و هویت قوی‌تر مشتری scope بعدی‌اند.
+هیچ پاکسازی خودکار تاریخچه در این Slice انجام نشود.
+
+────────────────────────────────
+9. MODULARITY AND AGENTIC BOUNDARIES
+────────────────────────────────
+
+Commercial:
+مالک quote، money contract، response، eligibility و history.
+
+Authorization:
+مالک اعتبار grant و اختیار؛ نه Notification یا UI.
+
+Notification:
+مالک قصد ارسال، attempts/results و delivery policy محدود.
+
+Adapter:
+مالک ارتباط اختصاصی و Fake transport آزمون.
+
+UI و Agent:
+مصرف‌کننده همان command/query؛ بدون قواعد موازی.
+
+Agent می‌تواند آماده‌سازی محدود انجام دهد؛
+از طرف مشتری accept/decline نکند و approval نسازد.
+
+Outbox، inbox و الگوهای FWD-01 reuse شوند.
+Response event از quote.available جدا بماند.
+worker نباید با هویت خودش اختیار تجاری به دست بیاورد.
+Provider failure/UNKNOWN پاسخ تجاری ثبت‌شده را برنگرداند.
+
+هیچ موتور مستقل Attention، Identity، Workflow یا Agent
+خودمختار ایجاد نشود.
+
+────────────────────────────────
+10. QUALIFICATION AND COMPLETION
+────────────────────────────────
+
+از fixture/harness FWD-04 و PostgreSQL disposable
+قابل شناسایی استفاده کن.
+
+ابتدا feasibility اتصال امن grant/signing/delivery را در
+مرز مصوب احراز کن؛ نبود آن مجوز crypto دست‌ساز نیست.
+
+تست‌های جدید و Gateهای قبلی ADR-047/FWD-05 حفظ شوند؛
+به‌ویژه:
+- پاسخ دقیق به همان پیشنهاد/نسخه؛
+- revocation، cross-tenant و منع tracking-code writes؛
+- مرورگر واقعی مشتری و کارشناس؛
+- مذاکره تا تصمیم نهایی؛
+- replacement بعد از رد و منع آن بعد از قبول؛
+- money اعشاری دقیق و تاریخچه مبهم بدون تبدیل؛
+- تنظیم ادمین و رفتار سازمان تنظیم‌نشده؛
+- گیرنده معتبر و گیرنده نامعتبر با BLOCKED قابل پیگیری؛
+- read expiry و reissue بدون تمدید ناخواسته؛
+- race پاسخ/جایگزینی/انقضا/revoke روی PostgreSQL؛
+- idempotency و عدم اثر تکراری؛
+- migration، حفظ داده و rollback غیرمخرب؛
+- RTL موبایل/دسکتاپ و دو timezone؛
+- Regression مرتبط FWD-01 تا FWD-04.
+
+test plan یا fake delivery را Browser/Production PASS ننام.
+
+شکاف‌های قبلی حفظ شوند:
+FORWARDER-HISTORICAL-REPLAY-001 =
+BLOCKED_MISSING_EXTERNAL_EVIDENCE
+PRODUCTION_IDENTITY = UNKNOWN
+
+آنها معافیت شکست تازه FWD-05 نیستند.
+
+در محدوده تصمیم‌های صریح مستقل ادامه بده:
+AMEND DOCS → RECORD ACCEPTANCE → IMPLEMENT
+→ TEST → IN-SCOPE REPAIR → RETEST
+→ DOCUMENT → REVIEW → COMMIT → PUSH → REMOTE VERIFY
+
+برای جزئیات عادی داخل قرارداد دوباره تأیید نخواه.
+تصمیم تازه اثرگذار یا تعارض با MUST فعال را خودت تصویب نکن.
+
+یک Agent اصلی؛ Context محدود و گزارش مختصر در چت.
+کل Discovery، ADR و LPAF را دوباره بی‌دلیل تولید نکن.
+
+فقط فایل‌های مرتبط را پس از احراز stage کن.
+secret، raw capability، browser session، DB و log حجیم
+وارد Git نشوند.
+
+Push فقط شاخه:
+feature/fwd-05-quote-response
+
+بدون force، merge به main/baseline یا release tag.
+
+بعد از fetch:
+LOCAL_HEAD == REMOTE_HEAD
+AHEAD = 0
+BEHIND = 0
+
+گزارش نهایی:
+MISSION_RESULT:
+ADR_047_STATUS_AND_HASH:
+PDR_019_STATUS_AND_HASH:
+AMENDMENTS_IMPLEMENTED:
+REFERENCE_28_DISPOSITION:
+MONEY_UNIT_SCALE_AND_LEGACY:
+CUSTOMER_AUTHORITY:
+REPLACEMENT_POLICY:
+RECIPIENT_READINESS:
+ADMIN_VALIDITY_SETTING:
+GRANT_AND_RECEIPT:
+MODULAR_AND_AGENT_BOUNDARIES:
+MIGRATION:
+POSTGRESQL_TESTS:
+BROWSER_UAT:
+REGRESSION:
+KNOWN_GAPS:
+REAL_CUSTOMER_DELIVERY_READINESS:
+COMMITS:
+LOCAL_HEAD:
+REMOTE_HEAD:
+LOCAL_REMOTE_SYNC:
+EVIDENCE_PATH:
+
+REAL_MESSAGES_SENT: NO
+LLM_APIS_CALLED: NO
+PRODUCTION_CHANGED: NO
+
+COMPLETE فقط برای دامنه مصوب و آزموده‌شده گزارش شود.
+آمادگی محیط آزمایشی را آمادگی ارسال واقعی یا Production
+معرفی نکن.

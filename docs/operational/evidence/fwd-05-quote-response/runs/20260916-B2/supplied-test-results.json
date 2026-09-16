@@ -1,0 +1,63 @@
+{
+  "recorded_at": "2026-09-16T12:06:31.617527+00:00",
+  "classification": "Main supplied actual disposable native cluster results; not reviewer execution, not yet final full gates",
+  "results": [
+    {
+      "scope": "runtime-and-existing-contracts",
+      "executed": true,
+      "tests": "128",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "6",
+      "seconds": "460.839",
+      "source_sha256": "6F5AE5DA42D7831ADF6E3972AA49E0DBB8D14189873570EB50C22D04338160C2",
+      "raw_private_junit_not_committed": true
+    },
+    {
+      "scope": "native-post-lock-clock",
+      "executed": true,
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "1",
+      "seconds": "31.075",
+      "source_sha256": "64892ABB6461D35F42AAA008084D52C884334DC2177B50672708B93C50D4DC5D",
+      "raw_private_junit_not_committed": true
+    },
+    {
+      "scope": "built-native-browser-two-zones",
+      "executed": true,
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0",
+      "seconds": "121.197",
+      "source_sha256": "C349EE036BBF0B67663B54A05D78160E03DF0E7DB894E0E22F16EC9BDAA15183",
+      "raw_private_junit_not_committed": true
+    }
+  ],
+  "build": "PASS",
+  "lint": "0 errors; 12 preexisting warnings",
+  "architecture_governance": "PASS",
+  "secret_scan_current": "0 findings; redaction enabled",
+  "full_backend": "RUNNING; not PASS",
+  "frontend": {
+    "result": "PASS",
+    "files": 38,
+    "tests": 176,
+    "seconds": 139.24,
+    "workers": 1
+  },
+  "real_messages_sent": false,
+  "product_llm_calls": false,
+  "production_changed": false,
+  "backend_determinism": "PASS",
+  "repository_structure": "PASS",
+  "reference_28_end_checkpoint": {
+    "path": "D:/1-webapp/28-AI-Rules",
+    "exists": false,
+    "mapping": "NOT_PROVEN",
+    "recovery": "OPEN",
+    "recorded_at": "2026-09-16T12:08:34.759626+00:00"
+  }
+}

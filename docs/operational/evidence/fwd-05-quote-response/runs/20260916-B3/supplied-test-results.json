@@ -1,0 +1,42 @@
+{
+  "recorded_at": "2026-09-16T12:24:50.665131+00:00",
+  "product_inputs_unchanged_since_B2": true,
+  "test_only_changes": "one new boundary module; fresh isolated app creates real in-memory census tables; recording handler temporarily restores logging threshold/disabled/level after observing actual application messages; no product fixes or policy/HTTP bypass",
+  "prior_expanded_diagnostic": "42PASS5FAIL1ERROR1SQLiteSKIP197.54s; same fresh-app census/disabled-logger fixture flaws; raw private JUnit excluded",
+  "affected_fixed_focused": "6PASS42deselected37warnings38.07s; actual peer/app limiter and GET/POST exception markers with CSPRNG key/token privacy",
+  "final_full_new_test_module": {
+    "result": "PASS",
+    "passed": 47,
+    "skipped": 1,
+    "seconds": 200.89,
+    "source": "supplemental-boundary-result.json"
+  },
+  "full_main_backend_on_original112_frozen_inputs": {
+    "result": "PASS",
+    "passed": 1145,
+    "skipped": 112,
+    "xfailed": 1,
+    "warnings": 242451,
+    "seconds": 1295.94,
+    "source": "full-backend-result.json",
+    "external_unconfigured_skips_not_proof": true
+  },
+  "frontend": "176PASS38files139.24s",
+  "browser": "4PASStwozones; existing launcher actual4PASS115.34s",
+  "production": "NOT_RUN",
+  "real_messages_sent": false,
+  "product_llm_calls": false,
+  "production_changed": false,
+  "implementation_security_verification": "PASS_LOCAL_CONTROLLED_FWD05_ONLY_B3",
+  "final_secret_scan_current": "0 findings; redaction enabled",
+  "diff_check": "PASS_DEFAULT_CODE_TEST_MUTABLE_DOCS; IMMUTABLE_ARCHIVE_RECORDS_ALL_CHECKS_EXCEPT_PRESERVED_EOF_BLANK",
+  "frozen_input_drift": [],
+  "final_reference_28_recheck": {
+    "recorded_at": "2026-09-16T12:38:02.488134+00:00",
+    "exact_path": "D:/1-webapp/28-AI-Rules",
+    "exists": false,
+    "mapping": "NOT_PROVEN",
+    "recovery": "OPEN",
+    "alternate_mapping_claimed": false
+  }
+}

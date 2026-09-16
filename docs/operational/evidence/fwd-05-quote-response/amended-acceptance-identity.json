@@ -1,0 +1,88 @@
+{
+  "decision_type": "ACCEPT_AS_EXPLICITLY_AMENDED",
+  "source_attachment": "58dcf3a3-6fe2-4d7a-b261-9812c5934e9d",
+  "owner_source_sha256": "B204786131A9A0CBF70E29AEC253514CFEE0143F55AFE80862834D18E7EF821B",
+  "original_proposals": {
+    "ADR-047-governed-quote-customer-response.md": "229A22FEC79C5556BB349348A54EC0A60A2BA3DEC8C4BB1613E7393AAC174AFC",
+    "PDR-019-governed-quote-response.md": "FFD2FDAEF602A99FA8269B4037618807DA1596F47E32871D2F9429004A8B4A4A"
+  },
+  "final_documents": {
+    "ADR-047-governed-quote-customer-response.md": "76B91A53260AABB2DEE6A15AFF714050ABCD6806A428CD1DEDAAAB0CB0036F69",
+    "PDR-019-governed-quote-response.md": "6B7F4409294B8D025FE9BF4131686F951F497AF2634E84014AE58E06B4BBB330"
+  },
+  "matrix": [
+    {
+      "area": "Acceptance",
+      "original": "PROPOSED, no authority",
+      "amended": "Named Owner ACCEPT_AS_EXPLICITLY_AMENDED; original bytes/source preserved",
+      "implementation_status": "RECORDED_OR_PROBED"
+    },
+    {
+      "area": "D01 authority",
+      "original": "tracking writer; scoped grant proposed",
+      "amended": "bounded quote possession accepted; old writer retirement required, unimplemented",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "D02/D03 replacement",
+      "original": "later publication/created_at supersession",
+      "amended": "explicit predecessor/effective chain; accepted replacement denied; declined replacement and negotiation finalization accepted",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "D03 display",
+      "original": "unread/inbox proposed",
+      "amended": "independent quote response display/counters/query; no operational status effects",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "D04 money",
+      "original": "integral BIGINT only",
+      "amended": "quote-major.v1 EUR/USD <=2 decimals; IRR integer rial; NUMERIC(21,2), exact strings, strict scale/range and explicit N-1 unsupported",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "D04 legacy",
+      "original": "codes preserved",
+      "amended": "original values/codes unchanged; legacy-unspecified unit; no conversion/rounding/backfill",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "D05 admin",
+      "original": "narrow zone proposal",
+      "amended": "usable audited organization admin IANA setting; missing-zone Persian reason; immutable zone/policy/deadline snapshot",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "Recipient",
+      "original": "certified link/BLOCKED proposed",
+      "amended": "truthful ready/queued/simulated/failed/unknown/BLOCKED current-assignee follow-up; no fake remediation; onboarding dependency OPEN",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "D06 grant",
+      "original": "30 days/reissue proposed",
+      "amended": "max(publication,expiry)+30 days; reissue revokes without extending; superseded reads only own receipt",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "Reference 28",
+      "original": "mapping needed before Build",
+      "amended": "NOT_PROVEN; pilot-only access deferral; recovery/review at slice end or before real release",
+      "implementation_status": "RECORDED_OR_PROBED"
+    },
+    {
+      "area": "Modularity",
+      "original": "owner contracts and event separation",
+      "amended": "Commercial/Authorization/Notification/Adapter ownership retained; Agent never customer writer/approver",
+      "implementation_status": "NOT_IMPLEMENTED"
+    },
+    {
+      "area": "Qualification",
+      "original": "Security and full product gates pending",
+      "amended": "18 primitive probes +14 baseline tests PASS; Security review, full runtime/PG/browser/migration/regression unqualified",
+      "implementation_status": "RECORDED_OR_PROBED"
+    }
+  ],
+  "hash_kind": "SHA256 of current local file bytes, not Git blob hash; re-attest after any byte/line-ending change"
+}

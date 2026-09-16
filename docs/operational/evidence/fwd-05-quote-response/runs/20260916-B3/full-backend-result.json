@@ -1,0 +1,486 @@
+{
+  "recorded_at": "2026-09-16T12:27:47.186984+00:00",
+  "scope": "Full backend suite collected on original frozen B2 112-input candidate, no effective product/config/contract edits during execution. One later added supplemental boundary module separately qualified; not misrepresented as collected in this full run.",
+  "result": "PASS_TEST_RUN_WITH_EXPLICIT_SKIPS_AND_PREEXISTING_XFAIL",
+  "passed": 1145,
+  "skipped": 112,
+  "xfailed": 1,
+  "failures": 0,
+  "errors": 0,
+  "warnings": 242451,
+  "seconds": 1295.94,
+  "total_cases": 1258,
+  "raw_private_junit_sha256": "32076F3EF84F64A9EB4D391F0EE32E1B63999F1959A7C8871EBBBD428AC93BD0",
+  "raw_private_junit_excluded_from_git": true,
+  "family_dispositions": {
+    "test_admin_multitenant_adversarial": {
+      "passed": 10
+    },
+    "test_admin_panel_read_contract": {
+      "passed": 1,
+      "skipped": 7
+    },
+    "test_adr043_pre_cutover_integrity_contract": {
+      "passed": 2
+    },
+    "test_adr043_reporting_fail_closed": {
+      "passed": 1
+    },
+    "test_ai_provider_service": {
+      "passed": 23
+    },
+    "test_alembic_version_table": {
+      "passed": 8
+    },
+    "TestAPIEndpoints": {
+      "passed": 10
+    },
+    "TestAPIErrorHandling": {
+      "passed": 3
+    },
+    "test_api": {
+      "passed": 2
+    },
+    "test_architecture_governance": {
+      "passed": 1
+    },
+    "test_assigned_work_authorization": {
+      "passed": 4
+    },
+    "TestAuthManager": {
+      "passed": 6
+    },
+    "TestSecurityDecorators": {
+      "passed": 2
+    },
+    "test_auth": {
+      "passed": 2
+    },
+    "test_auth_sessions": {
+      "passed": 5
+    },
+    "test_border_customs_seed": {
+      "passed": 1
+    },
+    "test_cargo_foundation": {
+      "passed": 16
+    },
+    "test_cargo_options_authorization": {
+      "passed": 2
+    },
+    "test_cargo_traceability": {
+      "passed": 3
+    },
+    "test_case_documents": {
+      "passed": 26
+    },
+    "test_case_documents_fault_injection": {
+      "passed": 13
+    },
+    "test_case_documents_migration": {
+      "passed": 1
+    },
+    "test_case_documents_postgresql": {
+      "skipped": 5
+    },
+    "test_case_documents_schema_parity": {
+      "skipped": 1
+    },
+    "test_cors": {
+      "passed": 2
+    },
+    "test_country_port_customs_domain": {
+      "passed": 5
+    },
+    "test_credential_policy_verifier": {
+      "passed": 1
+    },
+    "test_crm_customer_create_from_request_preview": {
+      "passed": 9
+    },
+    "test_crm_customer_link_contract": {
+      "passed": 4
+    },
+    "test_crm_read_contract": {
+      "passed": 1
+    },
+    "test_crm_write_contract": {
+      "passed": 3
+    },
+    "test_customer_gamification_contract": {
+      "passed": 9
+    },
+    "test_customer_quote_response": {
+      "passed": 41
+    },
+    "test_data_integrity_migration_portability": {
+      "passed": 2
+    },
+    "test_dms_current_head_compatibility_postgresql": {
+      "skipped": 1
+    },
+    "test_document_catalog": {
+      "passed": 4
+    },
+    "test_document_catalog_package": {
+      "passed": 19
+    },
+    "test_exception_reconciliation_races_postgresql": {
+      "skipped": 2
+    },
+    "test_execution_units": {
+      "passed": 7
+    },
+    "test_expert_assignment_referral_contract": {
+      "passed": 20
+    },
+    "test_expert_membership_permissions": {
+      "passed": 4
+    },
+    "test_expert_service_scope": {
+      "passed": 5
+    },
+    "test_expert_sla_migration": {
+      "passed": 1
+    },
+    "test_external_operational_references": {
+      "passed": 5
+    },
+    "test_external_reference_type_certification_harness": {
+      "passed": 1
+    },
+    "test_external_reference_type_package": {
+      "passed": 4
+    },
+    "test_fe2_races_postgresql": {
+      "skipped": 14
+    },
+    "test_fwd01_migration_postgresql": {
+      "skipped": 1
+    },
+    "test_fwd01_notifications": {
+      "passed": 66,
+      "skipped": 6
+    },
+    "test_fwd02_geography": {
+      "passed": 6
+    },
+    "test_fwd03_migration_postgresql": {
+      "skipped": 1
+    },
+    "test_fwd03_transport_intent": {
+      "passed": 23,
+      "skipped": 1
+    },
+    "test_fwd04_quote_amount_contract": {
+      "passed": 4
+    },
+    "test_fwd05_browser": {
+      "skipped": 4,
+      "passed": 4
+    },
+    "test_fwd05_postgresql": {
+      "passed": 1
+    },
+    "test_fwd05_runtime": {
+      "passed": 95,
+      "skipped": 7
+    },
+    "test_fwd05_signing_feasibility": {
+      "passed": 49
+    },
+    "test_g0_proposal_service": {
+      "passed": 18
+    },
+    "test_global_logistics_point_adoption_migration": {
+      "passed": 1
+    },
+    "test_global_logistics_point_adoptions": {
+      "passed": 3
+    },
+    "test_global_logistics_point_adoptions_postgresql": {
+      "skipped": 1
+    },
+    "test_global_logistics_point_catalog_importer": {
+      "passed": 14
+    },
+    "test_global_logistics_point_catalog_v1": {
+      "passed": 2,
+      "skipped": 1
+    },
+    "test_global_logistics_point_materialization": {
+      "passed": 7
+    },
+    "test_global_logistics_point_materialization_migration": {
+      "passed": 1
+    },
+    "test_global_logistics_points": {
+      "passed": 9
+    },
+    "test_global_logistics_points_postgresql": {
+      "skipped": 1
+    },
+    "test_governed_international_geography": {
+      "passed": 6
+    },
+    "test_health_provinces_transport": {
+      "passed": 6
+    },
+    "test_integrated_certification_bootstrap": {
+      "passed": 1
+    },
+    "test_international_reference_reconciliation": {
+      "passed": 1
+    },
+    "test_iran_destination_point": {
+      "passed": 16
+    },
+    "test_legacy_datetime": {
+      "passed": 5
+    },
+    "test_local_sqlite_config": {
+      "passed": 15
+    },
+    "test_location_admin": {
+      "passed": 6
+    },
+    "test_logistics_network": {
+      "passed": 8
+    },
+    "test_manage_create_admin": {
+      "passed": 11
+    },
+    "test_master_data": {
+      "passed": 5
+    },
+    "test_master_data_migration": {
+      "passed": 1
+    },
+    "test_mdpm_races_postgresql": {
+      "skipped": 13
+    },
+    "test_mdpm_readiness": {
+      "passed": 6
+    },
+    "test_mt1_ownership_contract": {
+      "passed": 8
+    },
+    "test_mt1_ownership_postgresql": {
+      "skipped": 4
+    },
+    "test_mt1_ownership_slice2": {
+      "passed": 3
+    },
+    "test_mt1c1_census_foundation": {
+      "passed": 6
+    },
+    "test_mt1c1_census_postgresql": {
+      "skipped": 1
+    },
+    "test_mt1c2_full_surface_postgresql": {
+      "skipped": 6
+    },
+    "test_mt1c_quarantine_postgresql": {
+      "skipped": 1
+    },
+    "test_mt1c_quarantine_runtime": {
+      "passed": 21
+    },
+    "test_mt1d_census_postgresql": {
+      "skipped": 2
+    },
+    "test_mt1d_identity_and_census": {
+      "passed": 11
+    },
+    "test_multi_unit_tracking_api": {
+      "passed": 8
+    },
+    "test_multi_unit_tracking_postgresql": {
+      "skipped": 1
+    },
+    "test_multi_unit_tracking_service": {
+      "passed": 7
+    },
+    "test_multileg_route_orchestration": {
+      "passed": 40
+    },
+    "test_multileg_route_orchestration_postgresql": {
+      "skipped": 1
+    },
+    "test_oip": {
+      "passed": 15
+    },
+    "test_oip_openapi": {
+      "passed": 1
+    },
+    "test_oip_races_postgresql": {
+      "skipped": 13
+    },
+    "test_oip_rebuild_recovery_postgresql": {
+      "skipped": 1
+    },
+    "test_operational_execution_190": {
+      "passed": 8
+    },
+    "test_operational_selectors": {
+      "passed": 5
+    },
+    "test_operational_vertical_slice": {
+      "passed": 14
+    },
+    "test_operational_vertical_slice_postgresql": {
+      "skipped": 1
+    },
+    "test_organization_document_policy": {
+      "passed": 5
+    },
+    "test_organization_hostname_routing": {
+      "passed": 9
+    },
+    "test_package_secret_policy": {
+      "passed": 13
+    },
+    "test_parallel_expert_console_migrations": {
+      "passed": 3
+    },
+    "test_phase0_2_current_head_compatibility_postgresql": {
+      "skipped": 2
+    },
+    "test_phase0_2_postgresql_gate": {
+      "skipped": 3
+    },
+    "test_phase1b_full_uat_runner": {
+      "passed": 14
+    },
+    "test_phase1b_safe_downgrade_postgresql": {
+      "skipped": 2
+    },
+    "test_phase1b_uat_seed": {
+      "passed": 8
+    },
+    "test_project_aggregate_foundation": {
+      "passed": 5
+    },
+    "test_project_configuration": {
+      "passed": 5
+    },
+    "test_project_configuration_openapi": {
+      "passed": 1
+    },
+    "test_public_tracking_timeline": {
+      "passed": 11
+    },
+    "test_reference_backfill_tooling": {
+      "passed": 24
+    },
+    "test_reference_data_catalog": {
+      "passed": 9
+    },
+    "test_reference_data_seed_migration": {
+      "passed": 1
+    },
+    "test_reference_schema_expansion": {
+      "passed": 17
+    },
+    "test_reference_schema_postgresql": {
+      "skipped": 1
+    },
+    "test_referral_auto_assign_state_compatibility": {
+      "passed": 2,
+      "skipped": 3
+    },
+    "test_referral_engine": {
+      "passed": 1
+    },
+    "test_referral_tenant_fencing": {
+      "passed": 10
+    },
+    "test_release_identity": {
+      "passed": 2
+    },
+    "test_release_postgres_orchestrator": {
+      "passed": 3
+    },
+    "test_release_publication_contract": {
+      "passed": 6
+    },
+    "test_reporter_permission_postgresql": {
+      "skipped": 1
+    },
+    "test_runtime_binding": {
+      "passed": 14
+    },
+    "test_runtime_dependency_contract": {
+      "passed": 1
+    },
+    "test_runtime_migration_safety": {
+      "passed": 22
+    },
+    "test_s4_reporting_oversight": {
+      "passed": 3
+    },
+    "test_security_config": {
+      "passed": 14
+    },
+    "test_security_credential_remediation_migration": {
+      "passed": 4
+    },
+    "test_shipment_context_service": {
+      "passed": 8
+    },
+    "test_shipment_economics": {
+      "passed": 8
+    },
+    "test_shipment_list_deduplication_postgresql": {
+      "skipped": 1
+    },
+    "test_shipment_request_contract": {
+      "passed": 6
+    },
+    "test_shipment_request_public_identity": {
+      "passed": 4
+    },
+    "test_shipment_request_update_trigger_migration": {
+      "passed": 2
+    },
+    "test_sla_service": {
+      "passed": 22
+    },
+    "test_tenant_architecture_contract": {
+      "passed": 8,
+      "xfailed": 1
+    },
+    "test_timestamp_contracts_phase1": {
+      "passed": 6
+    },
+    "test_token_revocation": {
+      "passed": 3
+    },
+    "test_tracking_locations": {
+      "passed": 7
+    },
+    "test_tracking_locations_postgresql": {
+      "skipped": 1
+    },
+    "test_tracking_projection": {
+      "passed": 4
+    },
+    "test_user_management_contract": {
+      "passed": 16
+    },
+    "test_v191_location_resolver": {
+      "passed": 5
+    },
+    "test_v191_persistence_foundation": {
+      "passed": 12
+    },
+    "test_v191_persistence_postgresql": {
+      "skipped": 1
+    },
+    "test_version_consistency": {
+      "passed": 1
+    }
+  },
+  "production_security": "NOT_RUN",
+  "all_external_integrations_proven": false
+}

@@ -1,0 +1,570 @@
+{
+  "root": "D:\\1-webapp\\forwarder-dev",
+  "branch": "feature/fwd-05-quote-response",
+  "head": "98a0364a6b6f97daf70152c7d3a5cefbb242cac0",
+  "recorded_at": "2026-09-16T12:06:31.528688+00:00",
+  "reviewer_identity": "/root/security_reviewer",
+  "scope": "Changed FWD05 implementation, tests, executable ephemeral configuration samples, accepted contracts and retained prior review references. Continuation outcome report and B2 authored outputs are non-effective recording excluded from input freeze.",
+  "files": [
+    {
+      "relative_path": ".env.example",
+      "path": "D:\\1-webapp\\forwarder-dev\\.env.example",
+      "sha256": "29F32F330493F0590EA7E8134ECC239C180543040CDB41227DBB8DEA422EAF4C"
+    },
+    {
+      "relative_path": "backend/__init__.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\__init__.py",
+      "sha256": "2EB12746F14E4A3E8B2A25992EE8100BBE0A27719D9AF07B2765FB6BE26C7869"
+    },
+    {
+      "relative_path": "backend/config.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\config.py",
+      "sha256": "38E5B7D14B6AB0D4994C92195A52247F07A3C17B24357B667D188C66C9C671F5"
+    },
+    {
+      "relative_path": "backend/env.docker.example",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\env.docker.example",
+      "sha256": "3FD37616CC0C81F9B6BD361CA176C29F75D87E6F8EA2B447AAF953E7797EB836"
+    },
+    {
+      "relative_path": "backend/env.production.example",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\env.production.example",
+      "sha256": "5294769A6088397836185EA27744E4F9092F04E3B10E8DFE9CC7230BF00ABC40"
+    },
+    {
+      "relative_path": "backend/migrations/versions/20260916_fwd05_quote_response.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\migrations\\versions\\20260916_fwd05_quote_response.py",
+      "sha256": "1FEB363B9502A4E369CEFADB49BDFFB4FED2EAD9C3A5F73F5B03CE889356CAAD"
+    },
+    {
+      "relative_path": "backend/models.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\models.py",
+      "sha256": "3E82C264E631604BE3F6EF950099F19CDEB004770783D6CA8D76763CFFDA9B18"
+    },
+    {
+      "relative_path": "backend/notification_models.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\notification_models.py",
+      "sha256": "6A0E5472D66C9310414C5D91836C52BF3AF15A8D3B8EF7E64CD08BD048148E4F"
+    },
+    {
+      "relative_path": "backend/notification_provider.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\notification_provider.py",
+      "sha256": "5126B56BEC3089B2178C857A3D8351879A413A343EEE80D619D27FA31D5A4A8D"
+    },
+    {
+      "relative_path": "backend/operational_models.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\operational_models.py",
+      "sha256": "A92231F1F94C7FE82C27414614FE6CD9F6123852FE72EAECEFD20A264DA00661"
+    },
+    {
+      "relative_path": "backend/quarantine.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\quarantine.py",
+      "sha256": "A889F25C3F42977BE149C7CC2CCEF4438B1EB770F061820C62605B4B29081D70"
+    },
+    {
+      "relative_path": "backend/quote_response_models.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\quote_response_models.py",
+      "sha256": "4449B390C1EB3192B1C2FDFABEBA5B8246C9CA21086D4FDC46941B0B09CA4A67"
+    },
+    {
+      "relative_path": "backend/requirements.txt",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\requirements.txt",
+      "sha256": "EDB069BCCE7E5B97D6BDAD327B33D7A292285808ADFE18E2E6BBA7255316E7C7"
+    },
+    {
+      "relative_path": "backend/routes/__init__.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\__init__.py",
+      "sha256": "6720AFDC85CE49763F7F7A4D1918D44BB5087E2F0C29A9288176E4DE8B244FBA"
+    },
+    {
+      "relative_path": "backend/routes/crm.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\crm.py",
+      "sha256": "B3D9289561EC65AED069B9E27638C9A6D58E51CC61A37DEFAA60D5B03665A7FD"
+    },
+    {
+      "relative_path": "backend/routes/customer_gamification.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\customer_gamification.py",
+      "sha256": "B0E1A34F0491DD54494E56BBB693368D396CBD75788D675AC180F7F1A2D7715D"
+    },
+    {
+      "relative_path": "backend/routes/expert_console.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\expert_console.py",
+      "sha256": "A01E330767BC5DC783708186A69E7B9D5B8BDF1BEA00EF10DC54DAC6B2179DA0"
+    },
+    {
+      "relative_path": "backend/routes/quotation_settings.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\quotation_settings.py",
+      "sha256": "C09EEEBB9A18B648E34EF3801FCF1E18F5D156617A342D080B7C909220F76381"
+    },
+    {
+      "relative_path": "backend/routes/quote_capability.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\quote_capability.py",
+      "sha256": "41A70BB330D5AB34B93110AE8BED38F078C836E69A45742775F0FDB39CC75A72"
+    },
+    {
+      "relative_path": "backend/security.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\security.py",
+      "sha256": "799BEF144945E4BC4514ECAD0317B553CCA9113902FE379277CD4BA36F408050"
+    },
+    {
+      "relative_path": "backend/services/assigned_work_authorization.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\assigned_work_authorization.py",
+      "sha256": "3356BFFAB4123A21AD04160B94F4DEA4CA0C70B1CCC32292D1AA1201B398C273"
+    },
+    {
+      "relative_path": "backend/services/assignment_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\assignment_service.py",
+      "sha256": "443780BD901D1D34324D01E97B15FFD73A7336CFA39B163108946DB04AADBA27"
+    },
+    {
+      "relative_path": "backend/services/crm_customer_create_from_request_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\crm_customer_create_from_request_service.py",
+      "sha256": "D90A3EFF65F3A0E2A43DF0743AF55D66B7AF79AABC3466A13D9C125D04599183"
+    },
+    {
+      "relative_path": "backend/services/crm_customer_link_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\crm_customer_link_service.py",
+      "sha256": "1406EF182B05208F746449B448D57F69FE3023B71F1A3421511D74AE491CA27D"
+    },
+    {
+      "relative_path": "backend/services/customer_gamification_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\customer_gamification_service.py",
+      "sha256": "B82E7AD5AD9A336324BBDC1C4BCA300978BC6CAD4976AE1D4DB2C8BE6C2E20A1"
+    },
+    {
+      "relative_path": "backend/services/economics_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\economics_service.py",
+      "sha256": "3CFA30D80A62E4ACC1BF5E678FFF9753F9CC5A6AEE0B0514057B6F3221572E5B"
+    },
+    {
+      "relative_path": "backend/services/expert_request_detail_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\expert_request_detail_service.py",
+      "sha256": "CC8599CA0129A3C6B3DE79FE8BE3669EF10D060C027C74C30648F07D668381B1"
+    },
+    {
+      "relative_path": "backend/services/expert_request_list_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\expert_request_list_service.py",
+      "sha256": "D6746DCE05969262A40D6CDBF842E79E515BC98122FBBAFA25457344178B3877"
+    },
+    {
+      "relative_path": "backend/services/governed_quote_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\governed_quote_service.py",
+      "sha256": "10F6A82242DF1D60714DBC0DE0237123D5C8BA05576A927FA2E0ABC673AB5E81"
+    },
+    {
+      "relative_path": "backend/services/notification_action_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\notification_action_service.py",
+      "sha256": "4FD6C6420D9D509C8ACAE65A510C3D01498B603BCE7DC346B99A5E382AD1390D"
+    },
+    {
+      "relative_path": "backend/services/notification_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\notification_service.py",
+      "sha256": "A9059DBD1AAFD0724AEC380339BF3CD6D743DAA0D153DFCAB3052B98C09E4F64"
+    },
+    {
+      "relative_path": "backend/services/operational_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\operational_service.py",
+      "sha256": "30211EE374520A41DE13B2C45F8AB41F7CD55501F0592C03BFAF1D9045DE64FD"
+    },
+    {
+      "relative_path": "backend/services/quotation_settings_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quotation_settings_service.py",
+      "sha256": "A231B3F8DFEFE4ED5AF7C45E5A0D017193B318E07BA82C63B0A048D00F8C76EF"
+    },
+    {
+      "relative_path": "backend/services/quote_capability_crypto.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_capability_crypto.py",
+      "sha256": "EC395BBF3BBA0737988969C4D2546509B915DB9CCBF0014783858B7502CBED2E"
+    },
+    {
+      "relative_path": "backend/services/quote_notification_contract.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_notification_contract.py",
+      "sha256": "5DC583E39DC2F7B81AAFE514E963ECD9B535CF58FFB03F80CA3BDB8A0AFF6F0E"
+    },
+    {
+      "relative_path": "backend/services/quote_response_authorization.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_response_authorization.py",
+      "sha256": "20E9D28441E70FAE4F098C179E5DAFA9C041F643E55514F6A207C4CF85DECF0B"
+    },
+    {
+      "relative_path": "backend/services/quote_response_notification.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_response_notification.py",
+      "sha256": "8781A59DE03079DF28B1023A818EDA7249CB2C3267A7C2D46FA1FDACBE8431BD"
+    },
+    {
+      "relative_path": "backend/services/quote_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_service.py",
+      "sha256": "543D66ED275B8CEC4483E00F29CBE4C47C214B973193B738BC675670FFF60256"
+    },
+    {
+      "relative_path": "backend/services/tracking_service.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\tracking_service.py",
+      "sha256": "B13108AD94272A3C450205810FA539D8489F23A8786E756779FFDDB967CED0E0"
+    },
+    {
+      "relative_path": "backend/tests/test_alembic_version_table.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_alembic_version_table.py",
+      "sha256": "AC59B13A605013A71A409A02FC5972135160E18A9FA2F26B6D4EAF7FD52073D5"
+    },
+    {
+      "relative_path": "backend/tests/test_case_documents_migration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_case_documents_migration.py",
+      "sha256": "ACE6F0C8B3D1B7F87A69C8293F10070251FBB849EBD7AC2BD568099D9EAECF6A"
+    },
+    {
+      "relative_path": "backend/tests/test_customer_gamification_contract.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_customer_gamification_contract.py",
+      "sha256": "198FB4D87F2F75FD21B38ACCDADA3217680666A4BABCF4A0475D423BEC6E7644"
+    },
+    {
+      "relative_path": "backend/tests/test_customer_quote_response.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_customer_quote_response.py",
+      "sha256": "F6BA93C8C2F97493B73FC4B0AF2841A1906270E8BF783C5DEF921DF388297B72"
+    },
+    {
+      "relative_path": "backend/tests/test_execution_units.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_execution_units.py",
+      "sha256": "13CE092D9C866FE29C12A0619BF0DDB410464D6B2C5CE9108D9C133F692B61D7"
+    },
+    {
+      "relative_path": "backend/tests/test_expert_assignment_referral_contract.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_expert_assignment_referral_contract.py",
+      "sha256": "F7CFE94BE2CEC5DE32CB6DEF7AE245DBE96985EE2540B845F549AAFC0E3FB585"
+    },
+    {
+      "relative_path": "backend/tests/test_expert_service_scope.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_expert_service_scope.py",
+      "sha256": "815B7A71D8C22EEBECA2C05F24742DFC18E5694975BA807EC3B7D160CD87C01B"
+    },
+    {
+      "relative_path": "backend/tests/test_expert_sla_migration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_expert_sla_migration.py",
+      "sha256": "FCDEF83170F14273612B31B5BCE63246598F791810C1EF5DB9BDDA7C1A32EFCA"
+    },
+    {
+      "relative_path": "backend/tests/test_fwd01_notifications.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd01_notifications.py",
+      "sha256": "643396DDDAE92E98D8FD3F34A8BEF1BAEBB1566B9107CFC2FEFA742326DC2E0E"
+    },
+    {
+      "relative_path": "backend/tests/test_fwd03_transport_intent.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd03_transport_intent.py",
+      "sha256": "AE649F04500C69C2CD3523B1CE6F168FC80548079E709A22D368D69545492C63"
+    },
+    {
+      "relative_path": "backend/tests/test_fwd05_browser.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_browser.py",
+      "sha256": "0F53DBF07C8E1495C313177AE6669C7005B05CBF0828C64DD6AA8EF9819643E4"
+    },
+    {
+      "relative_path": "backend/tests/test_fwd05_postgresql.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_postgresql.py",
+      "sha256": "7D279CE8EFBDBC05488DDAD40ABDA6A35D7DFE3D47D43CFC741A0DEB3381B508"
+    },
+    {
+      "relative_path": "backend/tests/test_fwd05_runtime.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_runtime.py",
+      "sha256": "1FE5C50D559CB50564E76B26290DA5AE5B79CAAD5D35F6043502C2E33944445E"
+    },
+    {
+      "relative_path": "backend/tests/test_fwd05_signing_feasibility.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_signing_feasibility.py",
+      "sha256": "037CA61C939C95D2B96A9B29324F08D19EB1C19C7D57215F69DED30612D0DC22"
+    },
+    {
+      "relative_path": "backend/tests/test_global_logistics_point_adoption_migration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_global_logistics_point_adoption_migration.py",
+      "sha256": "20FC1BFF45092AB24F63A864EC29A094108C006DF3CC9B80B6C257F73F7AB8D9"
+    },
+    {
+      "relative_path": "backend/tests/test_global_logistics_point_materialization_migration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_global_logistics_point_materialization_migration.py",
+      "sha256": "07EF3CF3CD323DFE25EA9B302C798744F1C1727B0EBA1CA1F0F4A190711F2509"
+    },
+    {
+      "relative_path": "backend/tests/test_logistics_network.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_logistics_network.py",
+      "sha256": "38B4201EBE78991D81FFD91D4FCEA8050678C74B34726389C85BE08BD1FAC4C7"
+    },
+    {
+      "relative_path": "backend/tests/test_master_data_migration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_master_data_migration.py",
+      "sha256": "0F3182B5CE968E372D0B88E6115056A48191E56D50CFAF24C1135427BEBE4F2E"
+    },
+    {
+      "relative_path": "backend/tests/test_mt1c_quarantine_runtime.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_mt1c_quarantine_runtime.py",
+      "sha256": "118A2F6B87ADD0110621DEEE19A59F12B6DE5DC85E95B92CCD0936485999DBFA"
+    },
+    {
+      "relative_path": "backend/tests/test_operational_execution_190.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_operational_execution_190.py",
+      "sha256": "F70F27A33215AFEB5C1F060F17EDB8A61C9FD41F1CA099A4AB3E0D3E5E5F240C"
+    },
+    {
+      "relative_path": "backend/tests/test_project_aggregate_foundation.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_project_aggregate_foundation.py",
+      "sha256": "F293ADB70C5590BA66B5A40A2A111C28FA6B0BE265B1762B1DF545B966CFC63D"
+    },
+    {
+      "relative_path": "backend/tests/test_project_configuration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_project_configuration.py",
+      "sha256": "5B7A3BCA0E4D1A6D2817ABD551BC2C89388D9AB12144F3E0EC22337D248B4FE9"
+    },
+    {
+      "relative_path": "backend/tests/test_reference_data_seed_migration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_reference_data_seed_migration.py",
+      "sha256": "83BD24435CBD21987096A53E2022D189ED50D9CD04B26723C0D52F5254C1A020"
+    },
+    {
+      "relative_path": "backend/tests/test_release_publication_contract.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_release_publication_contract.py",
+      "sha256": "92B4AA70246C3001BEBF93C75822F0AB86C9E56ABC93477DBEEB72A1D4DC5276"
+    },
+    {
+      "relative_path": "backend/tests/test_shipment_request_update_trigger_migration.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_shipment_request_update_trigger_migration.py",
+      "sha256": "64BF8FD60BA20CE68C3FCDECCEBC61FFE0925CFCEA701E4CF1726364854C41D9"
+    },
+    {
+      "relative_path": "docs/architecture/ADR-INDEX.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\architecture\\ADR-INDEX.md",
+      "sha256": "31B1847F322DFE362B479BB14663EE718F0874BC7A624A7E8633FB20A94427DA"
+    },
+    {
+      "relative_path": "docs/architecture/FORWARDER-ARCHITECTURE-BASELINE.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\architecture\\FORWARDER-ARCHITECTURE-BASELINE.md",
+      "sha256": "43F50C3F468A1DFB5D3296A9F00168B8B51AE1FF229848829E40D0F13A4219DE"
+    },
+    {
+      "relative_path": "docs/architecture/tenant-ownership-inventory.yaml",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\architecture\\tenant-ownership-inventory.yaml",
+      "sha256": "5279160D06F7846BAE06897E95A7C2DCE7CD0BBA46D61C299A16DF1CC65E1D55"
+    },
+    {
+      "relative_path": "docs/operational/PDR-019-governed-quote-response.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\PDR-019-governed-quote-response.md",
+      "sha256": "6B7F4409294B8D025FE9BF4131686F951F497AF2634E84014AE58E06B4BBB330"
+    },
+    {
+      "relative_path": "docs/operational/adr/ADR-047-governed-quote-customer-response.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\adr\\ADR-047-governed-quote-customer-response.md",
+      "sha256": "76B91A53260AABB2DEE6A15AFF714050ABCD6806A428CD1DEDAAAB0CB0036F69"
+    },
+    {
+      "relative_path": "docs/operational/decision-index.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\decision-index.md",
+      "sha256": "CE2680921D44C64CE5B558C36AD8E2BF55C528A277D725E9319BCE08F45A5AF7"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/AMENDMENT-MATRIX.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\AMENDMENT-MATRIX.md",
+      "sha256": "3571BA0B077A8B738BD3FC6D75A5714CCBDD2AB750AC1B4BECF2ACBD466D32CD"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/README.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\README.md",
+      "sha256": "9B8E6FAEC7458B7B906E08447950F040412CA284C9FB67085F20E9F159EA0F94"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/REFERENCE-28-DISPOSITION.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\REFERENCE-28-DISPOSITION.md",
+      "sha256": "3A8CEF4F1C98422D5A96A8814A6F8AC53CCAD7B3B5403A1B06D84A855D597518"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/SECURITY-REVIEW.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\SECURITY-REVIEW.md",
+      "sha256": "DEE80900896D433EB2E5B703D9C3918A6A8184E02ED1986251CD7F9B3E096D1F"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/amended-acceptance-identity.json",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\amended-acceptance-identity.json",
+      "sha256": "2E748F3D1F94D84746AD2D609707E1CC3AD5B395255A072BDA7617B7680D3953"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/owner-amended-acceptance.txt",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\owner-amended-acceptance.txt",
+      "sha256": "B204786131A9A0CBF70E29AEC253514CFEE0143F55AFE80862834D18E7EF821B"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/proposals/ADR-047-governed-quote-customer-response.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\proposals\\ADR-047-governed-quote-customer-response.md",
+      "sha256": "229A22FEC79C5556BB349348A54EC0A60A2BA3DEC8C4BB1613E7393AAC174AFC"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/proposals/PDR-019-governed-quote-response.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\proposals\\PDR-019-governed-quote-response.md",
+      "sha256": "FFD2FDAEF602A99FA8269B4037618807DA1596F47E32871D2F9429004A8B4A4A"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A1/EXECUTION-LOG.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A1\\EXECUTION-LOG.md",
+      "sha256": "A24261ACA219FD7AC08EB57277136EE2CED49B12C8B4345D097A7068C91C9BC1"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A1/SECURITY-REVIEW-RESULT.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A1\\SECURITY-REVIEW-RESULT.md",
+      "sha256": "3BC50A08D809BEE09B322FEDBBB4B9267F27B2A91C3F15C7171198496C8DB0C4"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A1/identity-manifest.json",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A1\\identity-manifest.json",
+      "sha256": "F9FE254AA7C967E952E3177F481ED231D8C9E5628D4BC50B5DC010372137CC44"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A2/EXECUTION-LOG.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A2\\EXECUTION-LOG.md",
+      "sha256": "395D1BF3443463834E1BA3C59C5847ED323F42D983C10659D706BB3C32631ECA"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A2/SECURITY-REVIEW-RESULT.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A2\\SECURITY-REVIEW-RESULT.md",
+      "sha256": "B7D9D9F348255F68B9D5E7B4522C20A689A781152AFACD695C48771F1D7641EF"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A2/identity-manifest.json",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A2\\identity-manifest.json",
+      "sha256": "A6A69D4730B8073AD8CCEF7B0BA876940E4E99720BCF4E90D9EF3D5950DD9CFB"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A3/EXECUTION-LOG.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A3\\EXECUTION-LOG.md",
+      "sha256": "40A2C07C5971364FE12318C79D5C40C9C872160D3B326A914D3D0BD6B1D17664"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A3/SECURITY-REVIEW-RESULT.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A3\\SECURITY-REVIEW-RESULT.md",
+      "sha256": "31A5EF6EA5FE208FC3C0676A48AE8307FBCA7E4CF93D40485D66E94801E1CD93"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A3/identity-manifest.json",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A3\\identity-manifest.json",
+      "sha256": "E9B9E80FFBD48D4229AEA4DFA6C13010FCDDF2CEF58CD1E756C25EFF3736FC7C"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-B1/EXECUTION-LOG.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-B1\\EXECUTION-LOG.md",
+      "sha256": "951906DE463DC84D07D04960EEA67D456087FA7FD1112DE3EA4238690646D4FB"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-B1/SECURITY-REVIEW-RESULT.md",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-B1\\SECURITY-REVIEW-RESULT.md",
+      "sha256": "31DCB75DB14C9391AFCE71DFA721DE9441EC3F885345913E8989F130B8475A2C"
+    },
+    {
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-B1/identity-manifest.json",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-B1\\identity-manifest.json",
+      "sha256": "F329D69FAE1541F0708C281A2A6121881F6FD2FFE9501B8377CE4277C8AC3206"
+    },
+    {
+      "relative_path": "public/quote-capture.js",
+      "path": "D:\\1-webapp\\forwarder-dev\\public\\quote-capture.js",
+      "sha256": "3DAAC5AA5057773D7C36CD952418E62337E10F60BF09B2CA1CC6B297DCD7C131"
+    },
+    {
+      "relative_path": "quote-response.html",
+      "path": "D:\\1-webapp\\forwarder-dev\\quote-response.html",
+      "sha256": "4A6966841A8E68BC11C05462599DD8D78D9FA6EAB1F1841AA6F69C025677E5D4"
+    },
+    {
+      "relative_path": "scripts/build_release_package.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\build_release_package.py",
+      "sha256": "A6F857058AFFF5EE337A36DF734CE7FFBD0D79AAFBC3D549F3592B6A62103535"
+    },
+    {
+      "relative_path": "scripts/uat/fwd05_customer_browser_runner.mjs",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\uat\\fwd05_customer_browser_runner.mjs",
+      "sha256": "CEE98C0FB87820D6790A85EB1B15492D3AF36F84DE6A0C0A2E0B8CC32EA3DF31"
+    },
+    {
+      "relative_path": "scripts/uat/fwd05_reconstruction_probe.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\uat\\fwd05_reconstruction_probe.py",
+      "sha256": "18E111E1ABCDD2EC74928BD33E6590CE6330C91BA912EE9D1A58F8A26E5323C3"
+    },
+    {
+      "relative_path": "scripts/uat/fwd05_staff_browser_runner.mjs",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\uat\\fwd05_staff_browser_runner.mjs",
+      "sha256": "35D9B7B325061F2160EA5E17E92A8101548EBEEBFAE15EB16C13B7ED9C187930"
+    },
+    {
+      "relative_path": "scripts/uat/run-fwd04-browser-uat.ps1",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\uat\\run-fwd04-browser-uat.ps1",
+      "sha256": "BFFDD26145C7702945ECE00887460354A69A85BD721B240925D4939BEC79EE27"
+    },
+    {
+      "relative_path": "scripts/uat/run_fwd05_disposable_postgres.py",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\uat\\run_fwd05_disposable_postgres.py",
+      "sha256": "CDCAFB87061495932E00FB04D35AECED896F75E79E5D30A1CE090D2FC93A1E49"
+    },
+    {
+      "relative_path": "src/components/QuotationSettingsTab.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\components\\QuotationSettingsTab.tsx",
+      "sha256": "3D419601F2D944137C65D09FB249E8891D3FAF2D89BCD61884BB040E81369C0F"
+    },
+    {
+      "relative_path": "src/components/QuoteModal.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\components\\QuoteModal.tsx",
+      "sha256": "C2C9D39F9C0786C3AF127468DE2F841E5CF8C66123D765E3CFC0204B5E43E0A0"
+    },
+    {
+      "relative_path": "src/lib/api.ts",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\lib\\api.ts",
+      "sha256": "DBEC5DCF263DD0CB7A4D89C1A6AA18AE6FED0B599EDCFD24942C9B1324C2D6C7"
+    },
+    {
+      "relative_path": "src/lib/presentation.test.ts",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\lib\\presentation.test.ts",
+      "sha256": "348B92341BD76300B452D9EF57ECF336DD777CB26196C47642FEDDE15510BEF3"
+    },
+    {
+      "relative_path": "src/lib/presentation.ts",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\lib\\presentation.ts",
+      "sha256": "E1B0528D591F19E268C0CAA1E797D1500BDC0E60A15AE047630DB1DF39A40043"
+    },
+    {
+      "relative_path": "src/pages/AdminPanel.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\AdminPanel.tsx",
+      "sha256": "2C3D9FF1E32B52A494DF986BAA827E79ED4646580D9C2852871B375785D6AE52"
+    },
+    {
+      "relative_path": "src/pages/CustomerRequestDetail.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\CustomerRequestDetail.tsx",
+      "sha256": "355E1B9E5294ED42A873F1FE59ACEAAC1F03186FD917192D7DA5121FC485AE1A"
+    },
+    {
+      "relative_path": "src/pages/ExpertConsole.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\ExpertConsole.tsx",
+      "sha256": "E0A28332CED20D3D8ED03B66D9E84DC5E79C4A354876DED4645469DA279643D4"
+    },
+    {
+      "relative_path": "src/pages/PublicTracking.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\PublicTracking.tsx",
+      "sha256": "F7BA109A18A71CD1770B5AE5BC620F32FFC495F1C19CB928294B5887FDC57C0E"
+    },
+    {
+      "relative_path": "src/pages/QuoteCapabilityCustomer.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\QuoteCapabilityCustomer.tsx",
+      "sha256": "42855FA025B8F68D2C3D5F9F517FC1931D5782F17D81DE0B1EC659BCFB4D4CED"
+    },
+    {
+      "relative_path": "src/pages/RequestDetail.tsx",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\RequestDetail.tsx",
+      "sha256": "28BB0BBD0BD5D540E0172C1C47B908D5F5CF1D974B20B3B0808F54C97C0B716D"
+    },
+    {
+      "relative_path": "src/pages/quote-capability-customer.css",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\quote-capability-customer.css",
+      "sha256": "FDCDE5C0C7B466D49BBA8A4FEE655895B0C50F849383B2B3ED076D805E271C0C"
+    },
+    {
+      "relative_path": "src/quote-capability-bootstrap.ts",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\quote-capability-bootstrap.ts",
+      "sha256": "CA82D087CCC1AE2821CB5F93EAE16DDDFF66506FB7D08860E19845910E815370"
+    },
+    {
+      "relative_path": "vite.config.ts",
+      "path": "D:\\1-webapp\\forwarder-dev\\vite.config.ts",
+      "sha256": "81EE4BAD99F71E7E6EE49A88BBF4F0E8B8BE6DB644EFEB39D6F6EFE3E09A8571"
+    }
+  ]
+}

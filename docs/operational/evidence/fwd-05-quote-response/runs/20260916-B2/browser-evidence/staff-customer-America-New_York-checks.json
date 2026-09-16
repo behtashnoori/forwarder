@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "timezone": "America/New_York",
+  "checks": [
+    "admin-zone-save-HTTP-success",
+    "real-admin-IANA-setting-UI",
+    "real-expert-exact-money-publication-UI",
+    "staff-publication-has-no-customer-token",
+    "private-fake-link-bounded-origin",
+    "new-customer-content-from-real-publication",
+    "published-note-is-escaped-text",
+    "staff-recipient-ready-does-not-claim-real-delivery",
+    "expert-read-projects-real-negotiation",
+    "real-staff-reissue-metadata-only",
+    "private-fake-link-bounded-origin",
+    "reopened-private-fragment-cleared",
+    "old-link-no-fresh-decision-controls",
+    "reissued-customer-own-receipts-final",
+    "accepted-publication-cannot-replace-in-expert-UI",
+    "live-expert-inbox-has-two-actual-response-facts",
+    "customer-context-isolated-from-staff",
+    "customer-private-link-cleared-and-no-leakage",
+    "legacy-tracking-remains-exact-read-only",
+    "synthetic-recipient-invalidation-ack",
+    "staff-not-ready-recipient-and-open-follow-up"
+  ]
+}

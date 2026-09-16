@@ -108,6 +108,12 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | ADR-028 | Administrator-Managed Reference Data | Accepted | Platform/Reference Data | 2026-08-04 | Permanent policy | Deployment-independent administrator ownership, empty catalogs, optional import/export/Seed | [ADR-028](adr/ADR-028-administrator-managed-reference-data.md) | Supersedes deployment-dependent interpretations of PDR-014/ADR-021 | No release depends on population |
 | ADR-041 | Platform Global Logistics Point Catalog and Organization Adoption | Accepted / Phase 1 implemented locally — Not deployed | Logistics/Location Governance | 2026-08-22 | Target architecture | Empty platform global schema/read API; tenant adoption and optional organization representation pending | [ADR-041](adr/ADR-041-platform-global-logistics-point-catalog-and-organization-adoption.md) | Complements ADR-005/025/026/028/035/040 | No seed, Production migration, adoption or catalog population authorized |
 
+## Bounded FWD-05 amended business acceptance
+
+| ID | Title | Status | Source | Authority |
+| --- | --- | --- | --- | --- |
+| PDR-019 | Governed quotation customer response | Accepted as explicitly amended | [PDR-019](PDR-019-governed-quote-response.md), [ADR-047](adr/ADR-047-governed-quote-customer-response.md) | Explicit amended Owner acceptance 2026-09-16; FWD-05 only; qualification pending |
+
 ## Slice contracts
 
 | ID | Title | Status | Domain | Decision date | Implementation release | Governing scope | Authoritative file | Supersession | Notes |
@@ -116,3 +122,6 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | SLICE-B1 | Master Data Governance Foundation | Delivered | Master Data | 2026-08-01 | 1.4.0 | CargoType/ServiceType/UOM governance | [EPIC-002](EPIC-002-cargo-data-foundation.md) | — | — |
 | SLICE-B3/B4 | Cargo Catalog/ShipmentCargoItem | Delivered/deployed lineage | Cargo | 2026-08-02 | 1.6.0 | Bounded catalog and snapshot | [1.6.0 Closure](release-1.6.0-cargo-governance-closure.md) | — | — |
 | R17 | Logistics Network Foundation | Accepted / implemented | Logistics Network | 2026-08-02 | 1.7.0 | Type, point, Project association | [1.7.0 Contract](release-1.7.0-logistics-network-slice-contract.md) | — | R17-D01–D10 Accepted; bounded source implementation complete; not deployed |
+
+FWD-05: PDR-019 and ADR-047 ACCEPTED_AS_EXPLICITLY_AMENDED by explicit Owner
+continuation 2026-09-16; bounded development/qualification only, not product PASS.

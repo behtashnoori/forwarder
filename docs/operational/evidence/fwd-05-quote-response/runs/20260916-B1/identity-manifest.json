@@ -1,0 +1,476 @@
+{
+  "returned_agent_uuid": null,
+  "final_qualification": "NOT_FULLY_VERIFIED",
+  "root": "D:\\1-webapp\\forwarder-dev",
+  "head": "98a0364a6b6f97daf70152c7d3a5cefbb242cac0",
+  "files": [
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\__init__.py",
+      "relative_path": "backend/__init__.py",
+      "sha256": "2EB12746F14E4A3E8B2A25992EE8100BBE0A27719D9AF07B2765FB6BE26C7869"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\config.py",
+      "relative_path": "backend/config.py",
+      "sha256": "38E5B7D14B6AB0D4994C92195A52247F07A3C17B24357B667D188C66C9C671F5"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\migrations\\versions\\20260916_fwd05_quote_response.py",
+      "relative_path": "backend/migrations/versions/20260916_fwd05_quote_response.py",
+      "sha256": "7B992AFB97269C2BBBCF9AA2EF7B7DF61C3C9430B93785814AF715F8C62165B9"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\models.py",
+      "relative_path": "backend/models.py",
+      "sha256": "215E4037D99EBE414E74BAFF7A164D18125C810D7C44B34ABBD28EFE13055668"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\notification_models.py",
+      "relative_path": "backend/notification_models.py",
+      "sha256": "6A0E5472D66C9310414C5D91836C52BF3AF15A8D3B8EF7E64CD08BD048148E4F"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\notification_provider.py",
+      "relative_path": "backend/notification_provider.py",
+      "sha256": "5126B56BEC3089B2178C857A3D8351879A413A343EEE80D619D27FA31D5A4A8D"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\operational_models.py",
+      "relative_path": "backend/operational_models.py",
+      "sha256": "A92231F1F94C7FE82C27414614FE6CD9F6123852FE72EAECEFD20A264DA00661"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\quarantine.py",
+      "relative_path": "backend/quarantine.py",
+      "sha256": "A889F25C3F42977BE149C7CC2CCEF4438B1EB770F061820C62605B4B29081D70"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\quote_response_models.py",
+      "relative_path": "backend/quote_response_models.py",
+      "sha256": "F16F9D06A65940B7113B81FF618802EC363D2731AB41FA9155EEFBD78A4E9C11"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\requirements.txt",
+      "relative_path": "backend/requirements.txt",
+      "sha256": "EDB069BCCE7E5B97D6BDAD327B33D7A292285808ADFE18E2E6BBA7255316E7C7"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\__init__.py",
+      "relative_path": "backend/routes/__init__.py",
+      "sha256": "6720AFDC85CE49763F7F7A4D1918D44BB5087E2F0C29A9288176E4DE8B244FBA"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\expert_console.py",
+      "relative_path": "backend/routes/expert_console.py",
+      "sha256": "A01E330767BC5DC783708186A69E7B9D5B8BDF1BEA00EF10DC54DAC6B2179DA0"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\quotation_settings.py",
+      "relative_path": "backend/routes/quotation_settings.py",
+      "sha256": "C09EEEBB9A18B648E34EF3801FCF1E18F5D156617A342D080B7C909220F76381"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\quote_capability.py",
+      "relative_path": "backend/routes/quote_capability.py",
+      "sha256": "41A70BB330D5AB34B93110AE8BED38F078C836E69A45742775F0FDB39CC75A72"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\security.py",
+      "relative_path": "backend/security.py",
+      "sha256": "799BEF144945E4BC4514ECAD0317B553CCA9113902FE379277CD4BA36F408050"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\assigned_work_authorization.py",
+      "relative_path": "backend/services/assigned_work_authorization.py",
+      "sha256": "3356BFFAB4123A21AD04160B94F4DEA4CA0C70B1CCC32292D1AA1201B398C273"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\assignment_service.py",
+      "relative_path": "backend/services/assignment_service.py",
+      "sha256": "BE78DC0A6FF65770C61160AEA77388DA84F1A0C9D5BB3179186BFB4CF693E4BF"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\crm_customer_create_from_request_service.py",
+      "relative_path": "backend/services/crm_customer_create_from_request_service.py",
+      "sha256": "D90A3EFF65F3A0E2A43DF0743AF55D66B7AF79AABC3466A13D9C125D04599183"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\crm_customer_link_service.py",
+      "relative_path": "backend/services/crm_customer_link_service.py",
+      "sha256": "1881B4851EC1E1E22F9027F8BD7CD27FD66143D55AF414652A9823DA5D56ACBF"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\customer_gamification_service.py",
+      "relative_path": "backend/services/customer_gamification_service.py",
+      "sha256": "B249B8C34425CE78007B258691B0C6E7C49709A0486916C6DC483BCB4C962456"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\expert_request_detail_service.py",
+      "relative_path": "backend/services/expert_request_detail_service.py",
+      "sha256": "2C2D1E67FCF27F359CA099A75184FA1F7DD5EBE7EE42F68D26BF3A7028C58224"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\expert_request_list_service.py",
+      "relative_path": "backend/services/expert_request_list_service.py",
+      "sha256": "D6746DCE05969262A40D6CDBF842E79E515BC98122FBBAFA25457344178B3877"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\governed_quote_service.py",
+      "relative_path": "backend/services/governed_quote_service.py",
+      "sha256": "4D3678974000024255CC1B83810F54E911931DFD343E6BFFF55E0C6E4AE508F9"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\notification_action_service.py",
+      "relative_path": "backend/services/notification_action_service.py",
+      "sha256": "4FD6C6420D9D509C8ACAE65A510C3D01498B603BCE7DC346B99A5E382AD1390D"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\notification_service.py",
+      "relative_path": "backend/services/notification_service.py",
+      "sha256": "B6EB3A88120B7512D9CC6D0905E79145B5A3B3E7393E1B7EE38B8242DE00214A"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quotation_settings_service.py",
+      "relative_path": "backend/services/quotation_settings_service.py",
+      "sha256": "A231B3F8DFEFE4ED5AF7C45E5A0D017193B318E07BA82C63B0A048D00F8C76EF"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_capability_crypto.py",
+      "relative_path": "backend/services/quote_capability_crypto.py",
+      "sha256": "EC395BBF3BBA0737988969C4D2546509B915DB9CCBF0014783858B7502CBED2E"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_notification_contract.py",
+      "relative_path": "backend/services/quote_notification_contract.py",
+      "sha256": "5DC583E39DC2F7B81AAFE514E963ECD9B535CF58FFB03F80CA3BDB8A0AFF6F0E"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_response_authorization.py",
+      "relative_path": "backend/services/quote_response_authorization.py",
+      "sha256": "5DA9A3047D94447AB5C5D50A4FCD19AF4A7B3B49DCE5C36AF70B0ACBEA1EFF04"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_response_notification.py",
+      "relative_path": "backend/services/quote_response_notification.py",
+      "sha256": "A6C32D92B82D4098610CADA898F2C06B9A6F74E5CBF46CA533196D0C133CD417"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_service.py",
+      "relative_path": "backend/services/quote_service.py",
+      "sha256": "2DFCA281C73FFE6D30DC01DF338EC031C8BD3F72C350E842D232698BB66CA67C"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_browser.py",
+      "relative_path": "backend/tests/test_fwd05_browser.py",
+      "sha256": "535AB87BD46E7A296A12A0C6BA003AC8C8420CE559B2AC26DD2101A66F31043D"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_postgresql.py",
+      "relative_path": "backend/tests/test_fwd05_postgresql.py",
+      "sha256": "97EE186A070E48DB33A1C94C81EF7EF9D1BC8D00F6EFFA3D061FF526EC08E340"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_runtime.py",
+      "relative_path": "backend/tests/test_fwd05_runtime.py",
+      "sha256": "C977F5D5BCEF6454AC5A475F091CD718817A5F70D8F3F070D075B8D5FC321C37"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_signing_feasibility.py",
+      "relative_path": "backend/tests/test_fwd05_signing_feasibility.py",
+      "sha256": "037CA61C939C95D2B96A9B29324F08D19EB1C19C7D57215F69DED30612D0DC22"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\architecture\\ADR-INDEX.md",
+      "relative_path": "docs/architecture/ADR-INDEX.md",
+      "sha256": "31B1847F322DFE362B479BB14663EE718F0874BC7A624A7E8633FB20A94427DA"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\architecture\\FORWARDER-ARCHITECTURE-BASELINE.md",
+      "relative_path": "docs/architecture/FORWARDER-ARCHITECTURE-BASELINE.md",
+      "sha256": "43F50C3F468A1DFB5D3296A9F00168B8B51AE1FF229848829E40D0F13A4219DE"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\architecture\\tenant-ownership-inventory.yaml",
+      "relative_path": "docs/architecture/tenant-ownership-inventory.yaml",
+      "sha256": "A23341ED5D4E95242F12DA11DB99A87320ECD10938E9A745109C887B1A23CD5C"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\adr\\ADR-047-governed-quote-customer-response.md",
+      "relative_path": "docs/operational/adr/ADR-047-governed-quote-customer-response.md",
+      "sha256": "76B91A53260AABB2DEE6A15AFF714050ABCD6806A428CD1DEDAAAB0CB0036F69"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\decision-index.md",
+      "relative_path": "docs/operational/decision-index.md",
+      "sha256": "CE2680921D44C64CE5B558C36AD8E2BF55C528A277D725E9319BCE08F45A5AF7"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\CONTINUATION-REPORT.md",
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/CONTINUATION-REPORT.md",
+      "sha256": "A1D2307C2225DDCFC46C7F2BA07972F0A3C9CC9D78F5B9CE9653FE950072DD77"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A1\\SECURITY-REVIEW-RESULT.md",
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A1/SECURITY-REVIEW-RESULT.md",
+      "sha256": "3BC50A08D809BEE09B322FEDBBB4B9267F27B2A91C3F15C7171198496C8DB0C4"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A2\\SECURITY-REVIEW-RESULT.md",
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A2/SECURITY-REVIEW-RESULT.md",
+      "sha256": "B7D9D9F348255F68B9D5E7B4522C20A689A781152AFACD695C48771F1D7641EF"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\runs\\20260916-A3\\SECURITY-REVIEW-RESULT.md",
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/runs/20260916-A3/SECURITY-REVIEW-RESULT.md",
+      "sha256": "31A5EF6EA5FE208FC3C0676A48AE8307FBCA7E4CF93D40485D66E94801E1CD93"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\SECURITY-REVIEW.md",
+      "relative_path": "docs/operational/evidence/fwd-05-quote-response/SECURITY-REVIEW.md",
+      "sha256": "DEE80900896D433EB2E5B703D9C3918A6A8184E02ED1986251CD7F9B3E096D1F"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\PDR-019-governed-quote-response.md",
+      "relative_path": "docs/operational/PDR-019-governed-quote-response.md",
+      "sha256": "6B7F4409294B8D025FE9BF4131686F951F497AF2634E84014AE58E06B4BBB330"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\public\\quote-capture.js",
+      "relative_path": "public/quote-capture.js",
+      "sha256": "7C4BF3DF839288096869CAD6BBE1FABF74E7A047F0A7C22334B26122F38263FA"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\quote-response.html",
+      "relative_path": "quote-response.html",
+      "sha256": "4A6966841A8E68BC11C05462599DD8D78D9FA6EAB1F1841AA6F69C025677E5D4"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\uat\\fwd05_customer_browser_runner.mjs",
+      "relative_path": "scripts/uat/fwd05_customer_browser_runner.mjs",
+      "sha256": "CEE98C0FB87820D6790A85EB1B15492D3AF36F84DE6A0C0A2E0B8CC32EA3DF31"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\scripts\\uat\\run_fwd05_disposable_postgres.py",
+      "relative_path": "scripts/uat/run_fwd05_disposable_postgres.py",
+      "sha256": "53FB7934979A25C6874F340DFD0B9CDA2B87D1601E11BFC75A335C2739098BA2"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\components\\QuotationSettingsTab.tsx",
+      "relative_path": "src/components/QuotationSettingsTab.tsx",
+      "sha256": "D512C141A72ABE06DCC9F94B05A8376E119FE50D5354FBED4AC0FE18D2836A9E"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\components\\QuoteModal.tsx",
+      "relative_path": "src/components/QuoteModal.tsx",
+      "sha256": "C2C9D39F9C0786C3AF127468DE2F841E5CF8C66123D765E3CFC0204B5E43E0A0"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\lib\\api.ts",
+      "relative_path": "src/lib/api.ts",
+      "sha256": "63EDEEF222B7B2737132C9BC0FEDC1505DB1F119B017CA0FEE14B281DB8F09C3"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\lib\\presentation.test.ts",
+      "relative_path": "src/lib/presentation.test.ts",
+      "sha256": "348B92341BD76300B452D9EF57ECF336DD777CB26196C47642FEDDE15510BEF3"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\lib\\presentation.ts",
+      "relative_path": "src/lib/presentation.ts",
+      "sha256": "E1B0528D591F19E268C0CAA1E797D1500BDC0E60A15AE047630DB1DF39A40043"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\AdminPanel.tsx",
+      "relative_path": "src/pages/AdminPanel.tsx",
+      "sha256": "2C3D9FF1E32B52A494DF986BAA827E79ED4646580D9C2852871B375785D6AE52"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\CustomerRequestDetail.tsx",
+      "relative_path": "src/pages/CustomerRequestDetail.tsx",
+      "sha256": "355E1B9E5294ED42A873F1FE59ACEAAC1F03186FD917192D7DA5121FC485AE1A"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\ExpertConsole.tsx",
+      "relative_path": "src/pages/ExpertConsole.tsx",
+      "sha256": "E0A28332CED20D3D8ED03B66D9E84DC5E79C4A354876DED4645469DA279643D4"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\PublicTracking.tsx",
+      "relative_path": "src/pages/PublicTracking.tsx",
+      "sha256": "F7BA109A18A71CD1770B5AE5BC620F32FFC495F1C19CB928294B5887FDC57C0E"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\quote-capability-customer.css",
+      "relative_path": "src/pages/quote-capability-customer.css",
+      "sha256": "FDCDE5C0C7B466D49BBA8A4FEE655895B0C50F849383B2B3ED076D805E271C0C"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\QuoteCapabilityCustomer.tsx",
+      "relative_path": "src/pages/QuoteCapabilityCustomer.tsx",
+      "sha256": "42855FA025B8F68D2C3D5F9F517FC1931D5782F17D81DE0B1EC659BCFB4D4CED"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\pages\\RequestDetail.tsx",
+      "relative_path": "src/pages/RequestDetail.tsx",
+      "sha256": "AAEB9D81FA2E4A7356933BA1442D6F720C038E4A53BF4346E4A24266764CC8A1"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\quote-capability-bootstrap.ts",
+      "relative_path": "src/quote-capability-bootstrap.ts",
+      "sha256": "571EC719C017E23E51CAA03D8F15B4009DA2460F8A7D7DC048EC154AB7322C70"
+    },
+    {
+      "scope": "full/focused implementation symbol review or supporting frozen candidate identity as report describes",
+      "path": "D:\\1-webapp\\forwarder-dev\\vite.config.ts",
+      "relative_path": "vite.config.ts",
+      "sha256": "81EE4BAD99F71E7E6EE49A88BBF4F0E8B8BE6DB644EFEB39D6F6EFE3E09A8571"
+    }
+  ],
+  "candidate_aggregate_sha256": "3DA7BA5B04C4DE939E2F040711DCE2990DCC43C1DAB8A2BC835A21CADAF24FDC",
+  "uncommitted": true,
+  "implementation_result": "FAIL",
+  "git_status": [
+    " M backend/__init__.py",
+    " M backend/models.py",
+    " M backend/notification_provider.py",
+    " M backend/operational_models.py",
+    " M backend/quarantine.py",
+    " M backend/requirements.txt",
+    " M backend/routes/__init__.py",
+    " M backend/routes/expert_console.py",
+    " M backend/security.py",
+    " M backend/services/crm_customer_create_from_request_service.py",
+    " M backend/services/crm_customer_link_service.py",
+    " M backend/services/customer_gamification_service.py",
+    " M backend/services/expert_request_detail_service.py",
+    " M backend/services/expert_request_list_service.py",
+    " M backend/services/notification_action_service.py",
+    " M backend/services/quote_notification_contract.py",
+    " M backend/services/quote_service.py",
+    " M docs/architecture/ADR-INDEX.md",
+    " M docs/architecture/FORWARDER-ARCHITECTURE-BASELINE.md",
+    " M docs/architecture/tenant-ownership-inventory.yaml",
+    " M docs/operational/decision-index.md",
+    " M src/components/QuoteModal.tsx",
+    " M src/lib/api.ts",
+    " M src/lib/presentation.test.ts",
+    " M src/lib/presentation.ts",
+    " M src/pages/AdminPanel.tsx",
+    " M src/pages/CustomerRequestDetail.tsx",
+    " M src/pages/ExpertConsole.tsx",
+    " M src/pages/PublicTracking.tsx",
+    " M src/pages/RequestDetail.tsx",
+    " M vite.config.ts",
+    "?? backend/migrations/versions/20260916_fwd05_quote_response.py",
+    "?? backend/quote_response_models.py",
+    "?? backend/routes/quotation_settings.py",
+    "?? backend/routes/quote_capability.py",
+    "?? backend/services/governed_quote_service.py",
+    "?? backend/services/quotation_settings_service.py",
+    "?? backend/services/quote_capability_crypto.py",
+    "?? backend/services/quote_response_authorization.py",
+    "?? backend/services/quote_response_notification.py",
+    "?? backend/tests/test_fwd05_browser.py",
+    "?? backend/tests/test_fwd05_postgresql.py",
+    "?? backend/tests/test_fwd05_runtime.py",
+    "?? backend/tests/test_fwd05_signing_feasibility.py",
+    "?? docs/operational/PDR-019-governed-quote-response.md",
+    "?? docs/operational/adr/ADR-047-governed-quote-customer-response.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/AMENDMENT-MATRIX.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/CONTINUATION-REPORT.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/README.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/REFERENCE-28-DISPOSITION.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/SECURITY-REVIEW.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/amended-acceptance-identity.json",
+    "?? docs/operational/evidence/fwd-05-quote-response/owner-amended-acceptance.txt",
+    "?? docs/operational/evidence/fwd-05-quote-response/proposals/ADR-047-governed-quote-customer-response.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/proposals/PDR-019-governed-quote-response.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A1/EXECUTION-LOG.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A1/SECURITY-REVIEW-RESULT.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A1/identity-manifest.json",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A2/EXECUTION-LOG.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A2/SECURITY-REVIEW-RESULT.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A2/identity-manifest.json",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A3/EXECUTION-LOG.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A3/SECURITY-REVIEW-RESULT.md",
+    "?? docs/operational/evidence/fwd-05-quote-response/runs/20260916-A3/identity-manifest.json",
+    "?? public/quote-capture.js",
+    "?? quote-response.html",
+    "?? scripts/uat/fwd05_customer_browser_runner.mjs",
+    "?? scripts/uat/run_fwd05_disposable_postgres.py",
+    "?? src/components/QuotationSettingsTab.tsx",
+    "?? src/pages/QuoteCapabilityCustomer.tsx",
+    "?? src/pages/quote-capability-customer.css",
+    "?? src/quote-capability-bootstrap.ts"
+  ],
+  "production": "NOT_RUN",
+  "candidate_identity_method": "SHA256 UTF8 LF-joined sorted relative-path + space + uppercase file hash, no final LF",
+  "branch": "feature/fwd-05-quote-response",
+  "utc": "2026-09-16T10:48:20.7770834Z",
+  "uuid_status": "not observable",
+  "reviewer_execution_identity": "/root/security_reviewer",
+  "phase": "B1"
+}

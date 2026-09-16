@@ -68,6 +68,12 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | --- | --- | --- | --- | --- |
 | [046](../operational/adr/ADR-046-commercial-request-transport-intent.md) | Ordered commercial request transport intent | ACCEPTED | Commercial intake / transport intent | Explicit named mission-issuer acceptance 2026-09-16; FWD-03 only |
 
+## Bounded FWD-05 amended acceptance
+
+| ADR | Title | Status | Domain | Implementation authority |
+| --- | --- | --- | --- | --- |
+| [047](../operational/adr/ADR-047-governed-quote-customer-response.md) | Governed quote currency, revision and customer response | ACCEPTED | Commercial / customer action / notification | Explicit amended Owner acceptance 2026-09-16; FWD-05 only; qualification pending |
+
 ## Usage rules
 
 1. Read this index and the baseline before design or implementation.

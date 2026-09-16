@@ -1,0 +1,175 @@
+{
+  "utc": "2026-09-16T09:55:22.8536845Z",
+  "head": "98a0364a6b6f97daf70152c7d3a5cefbb242cac0",
+  "returned_agent_uuid": null,
+  "phase": "A1",
+  "design_result": "FAIL",
+  "implementation": "NOT_RUN",
+  "production": "NOT_RUN",
+  "files": [
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "5F1EBA084BD27275D5693CD21A3D8A920B3316E6FA1F9B4DEA3B4FE137D1CD55",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\SECURITY-REVIEW.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "9B9976BD7CB32DBDBD210B18E55C5DFA6D182573DA8CBBBFF4A78242F5C3EF89",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\CONTINUATION-REPORT.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "0918415E89A82008FF1D3FC75AF01808C29D0B4FA5096580130D3FFFCA9B519C",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\evidence\\fwd-05-quote-response\\amended-feasibility-tests.log"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "76B91A53260AABB2DEE6A15AFF714050ABCD6806A428CD1DEDAAAB0CB0036F69",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\adr\\ADR-047-governed-quote-customer-response.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "6B7F4409294B8D025FE9BF4131686F951F497AF2634E84014AE58E06B4BBB330",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\PDR-019-governed-quote-response.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "FCC42F76ECEAE4F3072AE91002D4E165C0F6CB4A23D6725CAE3CA60789182D96",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\operational\\architecture_baseline_v1.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "6241C60CDC644E9AB3752FBB6A297B7609E88339922D608ECD1B630556B69C72",
+      "path": "D:\\1-webapp\\forwarder-dev\\docs\\architecture\\CODEX-DEVELOPMENT-GATE.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "33E32586D93E74B56D04E975C6528FBDB4D30CA5492216BF815575361674E0F6",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd05_signing_feasibility.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "90F171F78200A52D8ED1A44EC18CA01BCDE0462DD678D6C8479F02C6E290C4B4",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\security.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "38E5B7D14B6AB0D4994C92195A52247F07A3C17B24357B667D188C66C9C671F5",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\config.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "AA2FCD2C10F6D611569BB65BC66729B2604D32A7D8E1F39EF2B24E399FA1729F",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\auth.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "EF0A25988BB33D48556727033F34D86A436949249DDA49B357E2DD54279B913F",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\__init__.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "6A63E7933B0D44E7BF23AFC000F0B62C74F823583F5C521F60CC0C6EC645D82E",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\notification_provider.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "6A0E5472D66C9310414C5D91836C52BF3AF15A8D3B8EF7E64CD08BD048148E4F",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\notification_models.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "048F730805710A5A040DCCA5C30D2211BB9D973DFD8ED1263C3B0E2B01A47203",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\quote_notification_contract.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "D58B5010D3987A6AC92233284F46D2A940683744B005EC01A5AC8F3777E05A98",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\notification_action_service.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "0D8E469F8AE76A2F278EA06B6111ADE8E002CB7AACEE08D7697364DE2CE54AEB",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\outbox_service.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "667E437D0DBA33CABA76043F5E5576F7475AD246AEE19B0FB74E64C7AADA1C39",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\token_revocation_service.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "36E17F8D9E5158460EF5C6E4A4D403F93C8A4F77C73FDF09E9B2738B84EA8353",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\services\\customer_gamification_service.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "64D89BEC09F08D4296A38D7CFAA4D68288F64845CA5A60697E750D55258306E0",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\routes\\public_tracking.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "E148DC40B48787550D9380C12313E7029A317A94397FB739EF23B33A388C283C",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\tests\\test_fwd01_notifications.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "29EBFD691BEDDABBB412CB8361EE24BD21024BE16CDF188CE8D4B5624976D748",
+      "path": "D:\\1-webapp\\forwarder-dev\\backend\\cors_config.py"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "0E6F13D73EA54DE0964C09DDD627297F201E439379075AAACE03D2AE302F901B",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\main.tsx"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "72C473B9F3452B04300E8E0A5D6F869F8A00D85FAC8C706462F7CC7192560E03",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\App.tsx"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "3A5983C6AE923F2479F6630E9E8FDC049CA7493BD75C455B4DFB5863789308CD",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\lib\\api.ts"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "78C3B63488562ED532772A04A1D776A0BD20B5CB8E47ACDEB9DC3E301C1AD154",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\components\\RouteScrollManager.tsx"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "E866A98E77A6485757ED252AAE2834CB47DCE52E5D0ED11F34106D00EA9A8BB9",
+      "path": "D:\\1-webapp\\forwarder-dev\\src\\components\\ErrorBoundary.tsx"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "2750A6216E9AD11D9E0D958AD095C7F089E1504DFF87B9A5DB124FE92BC1E794",
+      "path": "D:\\1-webapp\\forwarder-dev\\index.html"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "293099D575E3D438D6345B1F491D8B0533714C0449DD0A78C798E6DE1F3308FF",
+      "path": "D:\\1-webapp\\forwarder-dev\\package.json"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "B0D2BC5679BB32F4A8F5D86950CBBC87C712B70F6D29DCC221FD5C014E420180",
+      "path": "D:\\1-webapp\\29-lpaf\\29-lpaf (1)\\29-lpaf\\lpaf\\LPAF-v2.2-Architecture-Framework-FA.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "F5492F4B03738088AD55A9837848007942AB0AFC24543C08B738DB6CF319D023",
+      "path": "D:\\1-webapp\\29-lpaf\\29-lpaf (1)\\29-lpaf\\lpaf\\LPAF-v2.2-Agent-Entry-Protocol.md"
+    },
+    {
+      "scope": "full or focused relevant symbols/search hits as described in review matrix",
+      "sha256": "D32EB431AD3AA00ED264B33AD1D380FA148114525D961CFFB3D56918B8D9718F",
+      "path": "C:\\Users\\pc\\AppData\\Local\\Programs\\Python\\Python313\\Lib\\site-packages\\jwt\\api_jwt.py"
+    }
+  ],
+  "branch": "feature/fwd-05-quote-response",
+  "root": "D:\\1-webapp\\forwarder-dev",
+  "uuid_status": "not observable by reviewer",
+  "reviewer_execution_identity": "/root/security_reviewer"
+}

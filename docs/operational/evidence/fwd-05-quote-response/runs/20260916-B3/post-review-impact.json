@@ -1,0 +1,14 @@
+{
+  "scope": "Post-review non-effective diff hygiene only",
+  "relative_path": "backend/tests/test_fwd05_http_boundary.py",
+  "reviewed_sha256": "BA1D7D5E936D67EBB47F10612E8A7D1054AD955367F6A662A1B71008F8AB4C22",
+  "final_sha256": "E9D21FADA70BA73A21907940DAFB0228082C189E58CC58187BAD24DFC606464E",
+  "change": "one trailing empty EOF line removed after staged whitespace check exposed it; no tokens/AST/line numbers for existing statements changed",
+  "python_ast_identical": true,
+  "product_config_contract_delta": false,
+  "repeat_runtime_execution_justified": false,
+  "immutable_review_record_diff_handling": {
+    "reason": "Five byte-frozen archived result Markdown files have an extra empty EOF line; editing them would destroy retained SHA256 identities. Preserve exact records.",
+    "checks": "Default staged/full-baseline whitespace check for code, tests and all mutable docs PASS; archived result records separately pass every whitespace check except blank-at-eof, deliberately preserved. No secret scanner or security control exemption; no repo Git configuration/attribute changed."
+  }
+}

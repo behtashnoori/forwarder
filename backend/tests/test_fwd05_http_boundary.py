@@ -270,4 +270,3 @@ def test_native_populated_downgrade_refusal_retains_running_customer_application
         headers={**_headers(journey), 'Idempotency-Key': 'retained-schema-app'})
     assert response.status_code == 200
     assert db.session.query(QuoteResponseFact).count() == db.session.query(QuoteResponseReceipt).count() == 1
-
