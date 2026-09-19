@@ -10,7 +10,7 @@ vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
   return { ...actual,
     createRoutePlan: vi.fn(), addRouteLeg: vi.fn(), updateRouteLeg: vi.fn(), addRouteCheckpoint: vi.fn(), updateRouteCheckpoint: vi.fn(), validateRoutePlan: vi.fn(), activateRoutePlan: vi.fn(),
-    fetchProvinces: vi.fn(), searchIranDestinations: vi.fn(), listLogisticsPoints: vi.fn(), fetchCountries: vi.fn(), fetchInternationalCities: vi.fn(),
+    fetchProvinces: vi.fn(), searchIranDestinations: vi.fn(), listLogisticsPoints: vi.fn(), fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(),
   };
 });
 
@@ -31,7 +31,7 @@ beforeEach(() => {
   vi.mocked(api.searchIranDestinations).mockResolvedValue({ data: [{ identity: { type: "city", id: 7 }, label: "Qom", province: null, secondary_label: "" }], meta: { count: 1, limit: 50 } });
   vi.mocked(api.listLogisticsPoints).mockResolvedValue({ items: [{ public_id: "facility-1", fa_name: "Depot", is_active: true, point_type: { fa_name: "Depot" } } as api.LogisticsPointView], page: 1, pages: 1, total: 1 });
   vi.mocked(api.fetchCountries).mockResolvedValue([]);
-  vi.mocked(api.fetchInternationalCities).mockResolvedValue([]);
+  vi.mocked(api.fetchInternationalCityPage).mockResolvedValue({ items: [], offset: 0, limit: 50, has_more: false });
 });
 
 describe("governed route authoring", () => {
@@ -102,15 +102,15 @@ describe("governed route authoring", () => {
 
   it("loads governed international cities for the selected country", async () => {
     vi.mocked(api.fetchCountries).mockResolvedValue([{ id: 9, name: "Turkey", name_en: "Turkey", code: "TR" }]);
-    vi.mocked(api.fetchInternationalCities).mockResolvedValue([{ id: 19, name: "Istanbul", name_en: "Istanbul", city_type: "city", is_major_port: false, is_major_airport: false }]);
+    vi.mocked(api.fetchInternationalCityPage).mockResolvedValue({ items: [{ id: 19, name: "Istanbul", name_en: "Istanbul", un_locode: "TRIST", city_type: "city", is_major_port: false, is_major_airport: false }], offset: 0, limit: 50, has_more: false });
     vi.mocked(api.addRouteLeg).mockResolvedValue({ data: draft.legs[0] });
     renderDraft();
     fireEvent.click(screen.getByRole("button", { name: "افزودن بخش مسیر" }));
     await screen.findAllByRole("option", { name: "Turkey" });
     fireEvent.change(screen.getByLabelText("مبدأ کشور شهر بین‌المللی"), { target: { value: "9" } });
-    await waitFor(() => expect(api.fetchInternationalCities).toHaveBeenCalledWith(9));
-    await screen.findByRole("option", { name: "شهر بین‌المللی · Istanbul" });
-    fireEvent.change(screen.getByLabelText("مبدأ"), { target: { value: "international_city:19" } });
+    await waitFor(() => expect(api.fetchInternationalCityPage).toHaveBeenCalledWith(9, "", 0));
+    await screen.findByRole("option", { name: /Istanbul/ });
+    fireEvent.change(screen.getByLabelText("انتخاب مکان مبدأ"), { target: { value: "19" } });
     fireEvent.change(screen.getByLabelText("مقصد"), { target: { value: "province:1" } });
     fireEvent.change(screen.getByLabelText("حرکت برنامه‌ریزی‌شده"), { target: { value: "2026-01-03T10:00" } });
     fireEvent.change(screen.getByLabelText("رسیدن برنامه‌ریزی‌شده"), { target: { value: "2026-01-04T10:00" } });

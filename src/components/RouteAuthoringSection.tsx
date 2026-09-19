@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import OperationalPermission from "@/components/OperationalPermission";
+import { InternationalLocationSelector } from "@/components/InternationalLocationSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   ApiError, activateRoutePlan, addRouteCheckpoint, addRouteLeg, createRoutePlan,
-  fetchCountries, fetchInternationalCities, fetchProvinces, listLogisticsPoints,
+  fetchCountries, fetchProvinces, listLogisticsPoints,
   searchIranDestinations, updateRouteCheckpoint, updateRouteLeg, validateRoutePlan,
   type Country, type InternationalCity, type IranDestinationOption, type LogisticsPointView,
   type OperationalLocationRef, type Province, type RouteCheckpoint, type RouteLeg,
@@ -47,12 +48,8 @@ function LocationPicker({ id, label, value, onChange, catalog, searchIran, inclu
 }) {
   const [country, setCountry] = useState("");
   const [cities, setCities] = useState<InternationalCity[]>([]);
+  const [countryQuery, setCountryQuery] = useState("");
   const [query, setQuery] = useState("");
-  const [cityError, setCityError] = useState("");
-  useEffect(() => {
-    if (!country) { setCities([]); return; }
-    fetchInternationalCities(Number(country)).then(setCities).catch(() => setCityError("دریافت شهرهای کشور ممکن نشد."));
-  }, [country]);
   const key = value ? `${value.source_type}:${value.source_id}` : "";
   const options = [
     ...catalog.provinces.map((row) => ({ key: `province:${row.id}`, label: row.name, group: "استان" })),
@@ -64,8 +61,9 @@ function LocationPicker({ id, label, value, onChange, catalog, searchIran, inclu
   return <div className="min-w-0 space-y-2">
     <label className="block text-sm font-medium" htmlFor={id}>{label}</label>
     <div className="flex min-w-0 flex-col gap-2 sm:flex-row"><Input aria-label={`${label} جست‌وجوی مکان ایران`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="جست‌وجوی شهر، بندر یا گمرک" /><Button type="button" variant="outline" aria-label={`${label} جست‌وجو`} onClick={() => searchIran(query)}>جست‌وجو</Button></div>
-    <select className={selectClass} aria-label={`${label} کشور شهر بین‌المللی`} value={country} onChange={(event) => { setCountry(event.target.value); setCityError(""); }}><option value="">کشور برای شهر بین‌المللی</option>{catalog.countries.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
-    {cityError && <p role="alert" className="text-sm text-red-700">{cityError}</p>}
+    <Input aria-label={`${label} جست‌وجوی کشور`} value={countryQuery} onChange={(event) => setCountryQuery(event.target.value)} placeholder="جست‌وجوی کشور / Country" />
+    <select className={selectClass} aria-label={`${label} کشور شهر بین‌المللی`} value={country} onChange={(event) => { setCountry(event.target.value); setCities([]); }}><option value="">کشور برای شهر بین‌المللی</option>{catalog.countries.filter((row) => { const needle = countryQuery.trim().toLocaleLowerCase(); return !needle || String(row.id) === country || [row.name, row.name_en, row.code].some((item) => item.toLocaleLowerCase().includes(needle)); }).map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select>
+    <InternationalLocationSelector key={`${id}-${country}`} countryId={country} locale="fa" side={id.includes("origin") ? "origin" : id.includes("destination") ? "destination" : "location"} selected={cities.find((city) => key === `international_city:${city.id}`) ?? null} onChange={(city) => { setCities(city ? [city] : []); onChange(city ? { source_type: "international_city", source_id: city.id } : null); }} />
     <select id={id} className={selectClass} value={key} onChange={(event) => { const selected = event.target.value; const split = selected.indexOf(":"); onChange(split < 0 ? null : { source_type: selected.slice(0, split) as OperationalLocationRef["source_type"], source_id: selected.startsWith("logistics_point:") ? selected.slice(split + 1) : Number(selected.slice(split + 1)) }); }}>
       <option value="">انتخاب مکان معتبر</option>
       {options.map((row) => <option key={row.key} value={row.key}>{row.group} · {row.label}</option>)}

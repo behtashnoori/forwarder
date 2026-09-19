@@ -2,9 +2,10 @@
 import traceback
 
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import text
+from sqlalchemy import or_, text
 
 from backend.extensions import db
+from backend.international_geography_catalog import CATALOG_DATASET_ID
 from backend.models import City, County, Province, Country, InternationalCity, IranPort, PortProvinceMapping, CustomsOffice
 from backend.services.location_resolver import LocationResolutionError, iran_destination_results
 
@@ -143,7 +144,7 @@ def list_countries():
             Country.is_active.is_(True),
             Country.cities.any(InternationalCity.is_active.is_(True)),
         )
-        .order_by(Country.name_fa)
+        .order_by(Country.name_fa, Country.name_en, Country.code, Country.id)
         .all()
     )
     return jsonify(
@@ -153,6 +154,10 @@ def list_countries():
                 "name": country.name_fa,
                 "name_en": country.name_en,
                 "code": country.code,
+                "name_fa_is_fallback": bool(
+                    country.dataset_id == CATALOG_DATASET_ID
+                    and country.name_fa == country.name_en
+                ),
             }
             for country in countries
         ]
@@ -161,7 +166,11 @@ def list_countries():
 
 @location_bp.get("/international-cities")
 def list_international_cities():
-    """Return international cities/ports filtered by the provided country ID."""
+    """Return active governed locations, with an opt-in bounded search contract.
+
+    The legacy array shape remains available to existing Golden consumers. New
+    form selectors use ``paged=1`` and never transfer a complete large country.
+    """
     country_id = request.args.get("country_id", type=int)
     if country_id is None:
         return (
@@ -169,23 +178,86 @@ def list_international_cities():
             400,
         )
 
-    cities = InternationalCity.query.filter_by(
-        country_id=country_id, 
-        is_active=True
-    ).order_by(InternationalCity.name_fa).all()
-    
+    query = InternationalCity.query.join(Country).filter(
+        InternationalCity.country_id == country_id,
+        InternationalCity.is_active.is_(True),
+        Country.is_active.is_(True),
+    )
+    search = request.args.get("q", "").strip()
+    if len(search) > 160:
+        return jsonify({"message": "عبارت جست‌وجو بیش از حد طولانی است."}), 400
+    if search:
+        literal = search.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        pattern = f"%{literal}%"
+        query = query.filter(
+            or_(
+                InternationalCity.name_fa.ilike(pattern, escape="!"),
+                InternationalCity.name_en.ilike(pattern, escape="!"),
+                InternationalCity.un_locode.ilike(pattern, escape="!"),
+            )
+        )
+    location_type = request.args.get("type", "").strip().lower()
+    if location_type:
+        if location_type not in {"city", "port", "airport"}:
+            return jsonify({"message": "نوع مکان معتبر نیست."}), 400
+        query = query.filter(InternationalCity.city_type == location_type)
+    query = query.order_by(
+        InternationalCity.name_fa,
+        InternationalCity.name_en,
+        InternationalCity.un_locode,
+        InternationalCity.id,
+    )
+
+    paged_value = request.args.get("paged")
+    if paged_value not in (None, "1"):
+        return jsonify({"message": "پارامتر صفحه‌بندی معتبر نیست."}), 400
+    paged = paged_value == "1"
+    if paged:
+        try:
+            limit = int(request.args.get("limit", "50"))
+            offset = int(request.args.get("offset", "0"))
+        except (TypeError, ValueError):
+            return jsonify({"message": "صفحه‌بندی معتبر نیست."}), 400
+        if not 1 <= limit <= 100 or not 0 <= offset <= 1_000_000:
+            return jsonify({"message": "صفحه‌بندی معتبر نیست."}), 400
+        rows = query.offset(offset).limit(limit + 1).all()
+        has_more = len(rows) > limit
+        cities = rows[:limit]
+    else:
+        # Backward compatibility only. Golden form clients use the bounded path.
+        cities = query.all()
+
+    items = [
+        {
+            "id": city.id,
+            "name": city.name_fa,
+            "name_en": city.name_en,
+            "city_type": city.city_type,
+            "un_locode": city.un_locode,
+            "is_major_port": city.is_major_port,
+            "is_major_airport": city.is_major_airport,
+            "name_fa_is_fallback": bool(
+                city.dataset_id == CATALOG_DATASET_ID
+                and city.name_fa == city.name_en
+            ),
+            "label_source": (
+                "source_name_fallback"
+                if city.dataset_id == CATALOG_DATASET_ID
+                and city.name_fa == city.name_en
+                else "verified_localized_or_legacy"
+            ),
+        }
+        for city in cities
+    ]
+    if not paged:
+        return jsonify(items)
     return jsonify(
-        [
-            {
-                "id": city.id,
-                "name": city.name_fa,
-                "name_en": city.name_en,
-                "city_type": city.city_type,
-                "is_major_port": city.is_major_port,
-                "is_major_airport": city.is_major_airport,
-            }
-            for city in cities
-        ]
+        {
+            "items": items,
+            "offset": offset,
+            "limit": limit,
+            "has_more": has_more,
+        }
     )
 
 

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -17,7 +17,7 @@ vi.mock("@/components/RequestConfirmation", () => ({
 }));
 vi.mock("@/lib/api", async () => ({
   ...await vi.importActual<typeof import("@/lib/api")>("@/lib/api"),
-  fetchCountries: vi.fn(), fetchInternationalCities: vi.fn(), fetchTransportMethodOptions: vi.fn(),
+  fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(), fetchTransportMethodOptions: vi.fn(),
   fetchProvinces: vi.fn(), fetchIranPorts: vi.fn(), fetchBorderCustoms: vi.fn(),
   submitShipmentRequest: vi.fn(),
 }));
@@ -34,9 +34,10 @@ beforeEach(() => {
     { id: 1, name: "Iran", name_en: "Iran", code: "IR" },
     { id: 2, name: "Turkey", name_en: "Turkey", code: "TR" },
   ]);
-  vi.mocked(api.fetchInternationalCities).mockImplementation(async (id) => [
-    { id: id === 1 ? 11 : 22, name: id === 1 ? "Tehran" : "Istanbul", name_en: id === 1 ? "Tehran" : "Istanbul", city_type: "city", is_major_port: false, is_major_airport: false },
-  ]);
+  vi.mocked(api.fetchInternationalCityPage).mockImplementation(async (id) => ({
+    items: [{ id: id === 1 ? 11 : 22, name: id === 1 ? "Tehran" : "Istanbul", name_en: id === 1 ? "Tehran" : "Istanbul", un_locode: id === 1 ? "IRTHR" : "TRIST", city_type: "city", is_major_port: false, is_major_airport: false }],
+    offset: 0, limit: 50, has_more: false,
+  }));
   vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
     international_methods: [], domestic_methods: [],
     preference_options: [{ value: "forwarder_suggestion", label: "Forwarder chooses", description: "" }],
@@ -46,8 +47,14 @@ beforeEach(() => {
 
 async function choose(index: number, option: string) {
   const user = userEvent.setup();
-  await user.click(screen.getAllByRole("combobox")[index]);
-  await user.click(await screen.findByRole("option", { name: option }));
+  const control = screen.getAllByRole("combobox")[index];
+  if (control.tagName === "SELECT") {
+    const selected = await waitFor(() => within(control).getByRole("option", { name: new RegExp(`^${option}`) }));
+    await user.selectOptions(control, selected);
+    return;
+  }
+  await user.click(control);
+  await user.click(await screen.findByRole("option", { name: new RegExp(`^${option}`) }));
 }
 async function start() {
   render(<MemoryRouter><LocationForm shippingType="international" onBack={vi.fn()} /></MemoryRouter>);
@@ -96,7 +103,7 @@ describe("public destination business flow", () => {
       expect(api.submitShipmentRequest).not.toHaveBeenCalled();
       await waitFor(() => expect(screen.getAllByRole("combobox")[3]).not.toBeDisabled());
       await choose(3, nextCity);
-      expect(api.fetchInternationalCities).toHaveBeenCalledWith(id);
+      expect(api.fetchInternationalCityPage).toHaveBeenCalledWith(id, "", 0);
       await submit(id, cityId);
     });
 });

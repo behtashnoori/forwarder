@@ -10,7 +10,8 @@ import locationFormSource from "@/components/LocationForm.tsx?raw";
 describe("RG-08 public Iran destination wiring", () => {
   it("does not short-circuit Iran before fetching its governed city options", () => {
     expect(locationFormSource).not.toMatch(/destCountry\s*\|\|\s*selectedCountry\?\.code\s*===\s*["']IR["']/);
-    expect(locationFormSource).toContain("fetchInternationalCities(countryId)");
+    expect(locationFormSource).toContain("InternationalLocationSelector");
+    expect(locationFormSource).not.toContain("fetchInternationalCities(");
     expect(locationFormSource).toContain("payload.dest_international_city_id = Number(formData.destCityInternational)");
   });
 });

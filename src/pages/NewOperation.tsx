@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 import OperationsNav from "@/components/OperationsNav";
+import { InternationalLocationSelector } from "@/components/InternationalLocationSelector";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,6 @@ import {
   createQuoteOperationalShipment,
   createShipmentCargoItem,
   fetchCountries,
-  fetchInternationalCities,
   fetchProvinces,
   getOperationalContext,
   getShipmentCargoOptions,
@@ -227,6 +227,7 @@ export default function NewOperation() {
   const [quoteId, setQuoteId] = useState(params.get("accepted_quote_id") || "");
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [countries, setCountries] = useState<Country[]>([]);
+  const [countryQuery, setCountryQuery] = useState({ origin: "", destination: "" });
   const [originCities, setOriginCities] = useState<InternationalCity[]>([]);
   const [destinationCities, setDestinationCities] = useState<
     InternationalCity[]
@@ -380,7 +381,7 @@ export default function NewOperation() {
     [logisticsPoints, preferredPointIds],
   );
 
-  const countryChange = async (
+  const countryChange = (
     sideName: "origin" | "destination",
     id: string,
   ) => {
@@ -392,11 +393,9 @@ export default function NewOperation() {
       cityId: "",
       iranId: "",
     }));
-    if (id && id !== String(iranCountry?.id)) {
-      const rows = await fetchInternationalCities(Number(id));
-      if (sideName === "origin") setOriginCities(rows);
-      else setDestinationCities(rows);
-    } else if (sideName === "destination") void loadIran();
+    if (sideName === "origin") setOriginCities([]);
+    else setDestinationCities([]);
+    if (id === String(iranCountry?.id) && sideName === "destination") void loadIran();
   };
   const location = (side: Side): OperationalLocationRef | null => {
     if (side.locationMode === "facility" && side.logisticsPointId)
@@ -639,6 +638,12 @@ export default function NewOperation() {
             <Label htmlFor={`${sideName}-country`}>
               <RequiredLabel required>{t("operations.country")}</RequiredLabel>
             </Label>
+            <Input
+              aria-label={`${label} country search`}
+              value={countryQuery[sideName]}
+              placeholder={direction === "rtl" ? "جست‌وجوی کشور / Country" : "Search country"}
+              onChange={(event) => setCountryQuery((value) => ({ ...value, [sideName]: event.target.value }))}
+            />
             <select
               id={`${sideName}-country`}
               aria-label={`${label} ${t("operations.country")}`}
@@ -647,11 +652,15 @@ export default function NewOperation() {
               className="min-h-11 w-full rounded border px-3"
               value={side.countryId}
               onChange={(event) =>
-                void countryChange(sideName, event.target.value)
+                countryChange(sideName, event.target.value)
               }
             >
               <option value="">{t("operations.select")}</option>
-              {countries.map((country) => (
+              {countries.filter((country) => {
+                const query = countryQuery[sideName].trim().toLocaleLowerCase();
+                return !query || String(country.id) === side.countryId
+                  || [country.name, country.name_en, country.code].some((value) => value.toLocaleLowerCase().includes(query));
+              }).map((country) => (
                 <option key={country.id} value={country.id}>
                   {country.name_en || country.name}
                 </option>
@@ -723,27 +732,19 @@ export default function NewOperation() {
                     {t("operations.internationalCity")}
                   </RequiredLabel>
                 </Label>
-                <select
-                  id={`${sideName}-city`}
-                  aria-label={`${label} ${t("operations.internationalCity")}`}
-                  data-field={sideName}
-                  required
-                  aria-required="true"
-                  aria-invalid={!!sideError}
-                  aria-describedby={sideError ? `${sideName}-error` : undefined}
-                  className="min-h-11 w-full rounded border px-3"
-                  value={side.cityId}
-                  onChange={(event) =>
-                    setter({ ...side, cityId: event.target.value })
-                  }
-                >
-                  <option value="">{t("operations.select")}</option>
-                  {cities.map((city) => (
-                    <option key={city.id} value={city.id}>
-                      {city.name_en || city.name}
-                    </option>
-                  ))}
-                </select>
+                <InternationalLocationSelector
+                  key={`${sideName}-${side.countryId}`}
+                  countryId={side.countryId}
+                  locale={direction === "rtl" ? "fa" : "en"}
+                  side={sideName}
+                  selected={cities.find((city) => String(city.id) === side.cityId) ?? null}
+                  fieldError={sideError}
+                  onChange={(city) => {
+                    if (sideName === "origin") setOriginCities(city ? [city] : []);
+                    else setDestinationCities(city ? [city] : []);
+                    setter({ ...side, cityId: city ? String(city.id) : "" });
+                  }}
+                />
                 <FieldMessage id={`${sideName}-error`} message={sideError} />
               </>
             )}

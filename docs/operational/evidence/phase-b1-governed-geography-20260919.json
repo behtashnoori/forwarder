@@ -1,0 +1,95 @@
+{
+  "slice": "Phase B — Slice 1 — Governed Geography Reconciliation",
+  "branch": "codex/phase-b1-governed-geography",
+  "starting_head": "953a67ff5820864c08bc8727f34f49ed66237527",
+  "starting_parent": "2b95c35acc12e1ba28c390a125eb51f46af7dd4b",
+  "application_provenance": "e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4",
+  "engineering_base": "b48e51c8d0eda00bcc7582b68da85528b14547d2",
+  "database_head": "20260921_shipment_evidence_ownership",
+  "donor": {
+    "runtime_catalog_commit": "4b06ed039d72c15f10d2f114fed07fc2fdef457b",
+    "qualification_commit": "1714118340943f1dbbf99e4b25edc9ef41f817e6",
+    "merge_or_cherry_pick": false
+  },
+  "catalog": {
+    "dataset_id": "forwarder-international-geography-v2-fwd02",
+    "snapshot_version": "2025-1",
+    "sha256": "b3e71f12f7c9cc8a9c5061a9df0ed67f085636bc84bd7120400694adab2d48ca",
+    "source_archive_sha256": "ad409fc7149b10f98d61190c34d9daf78b78bb8b31464cc66de1a89d09b01b5d",
+    "country_authority": "ISO 3166-1 alpha-2",
+    "location_authority": "UNECE UN/LOCODE",
+    "countries": 249,
+    "locations": 115208,
+    "iran_locations": 154,
+    "italy_locations": 5799,
+    "norway_locations": 1142,
+    "types": {
+      "city": 102894,
+      "port": 7062,
+      "airport": 5252
+    },
+    "duplicates": 0,
+    "invalid_records": 0,
+    "stable_keys_unique": true,
+    "italy_present": true,
+    "norway_present": true
+  },
+  "full_disposable_reconciliation": {
+    "first_apply": {
+      "created_countries": 247,
+      "created_locations": 115204,
+      "created_total": 115451,
+      "unchanged_countries": 2,
+      "unchanged_locations": 4,
+      "unchanged_total": 6,
+      "updated": 0,
+      "skipped": 0,
+      "conflicts": 0,
+      "elapsed_seconds": 1.569
+    },
+    "second_apply": {
+      "created": 0,
+      "updated": 0,
+      "unchanged_countries": 249,
+      "unchanged_locations": 115208,
+      "unchanged_total": 115457,
+      "skipped": 0,
+      "conflicts": 0,
+      "elapsed_seconds": 0.323
+    },
+    "inactive_tehran_id_preserved": true,
+    "inactive_tehran_remained_inactive": true
+  },
+  "lookup_measurement": {
+    "query": "Italy by exact ITGOA search, bounded page",
+    "samples": 25,
+    "median_ms": 7.995,
+    "p95_ms": 8.66,
+    "environment": "local disposable in-memory SQLite",
+    "product_sla_claimed": false,
+    "maximum_page_size": 100,
+    "frontend_page_size": 50
+  },
+  "qualification": {
+    "focused_backend": "45 passed",
+    "focused_frontend": "7 files, 54 passed",
+    "full_backend": "1050 passed, 93 skipped, 1 xfailed",
+    "full_frontend": "58 files, 286 passed in seven deterministic batches",
+    "typescript": "passed",
+    "production_build": "passed, 2537 modules",
+    "eslint": "passed, 0 errors, 13 historical warnings",
+    "migration_pending": false,
+    "migration_added": false,
+    "migration_modified": false
+  },
+  "scope": {
+    "CONTROL_TOWER_IMPORTED": "NO",
+    "OTHER_FWD_FEATURE_IMPORTED": "NO",
+    "PRODUCT_MIGRATION_ADDED": "NO",
+    "PRODUCTION_ACCESSED": "NO",
+    "PRODUCTION_CHANGED": "NO",
+    "SECRETS_ACCESSED": "NO",
+    "DONOR_REPOSITORY_CHANGED": "NO"
+  },
+  "verdict": "PASS — GOVERNED GEOGRAPHY RECONCILIATION COMPLETE"
+}

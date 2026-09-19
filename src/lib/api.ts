@@ -19,15 +19,26 @@ export interface Country {
   name: string;
   name_en: string;
   code: string;
+  name_fa_is_fallback?: boolean;
 }
 
 export interface InternationalCity {
   id: number;
   name: string;
   name_en: string;
+  un_locode?: string | null;
   city_type: string;
   is_major_port: boolean;
   is_major_airport: boolean;
+  name_fa_is_fallback?: boolean;
+  label_source?: "source_name_fallback" | "verified_localized_or_legacy";
+}
+
+export interface InternationalCityPage {
+  items: InternationalCity[];
+  offset: number;
+  limit: number;
+  has_more: boolean;
 }
 
 export interface IranPort {
@@ -369,6 +380,23 @@ export function fetchInternationalCities(
     country_id: countryId,
   });
   return request<InternationalCity[]>(path);
+}
+
+export function fetchInternationalCityPage(
+  countryId: number,
+  query = "",
+  offset = 0,
+  type?: "city" | "port" | "airport",
+): Promise<InternationalCityPage> {
+  const path = withQuery("/api/international-cities", {
+    country_id: countryId,
+    paged: 1,
+    q: query,
+    offset,
+    limit: 50,
+    type,
+  });
+  return request<InternationalCityPage>(path);
 }
 
 export function submitShipmentRequest(

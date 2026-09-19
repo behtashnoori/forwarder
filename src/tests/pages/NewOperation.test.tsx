@@ -65,7 +65,7 @@ vi.mock("@/lib/api", async () => {
     getOperationalContext: vi.fn(),
     fetchProvinces: vi.fn(),
     fetchCountries: vi.fn(),
-    fetchInternationalCities: vi.fn(),
+    fetchInternationalCityPage: vi.fn(),
     searchOperationalCustomers: vi.fn(),
     searchOperationalProjects: vi.fn(),
     searchAcceptedOperationalQuotes: vi.fn(),
@@ -111,16 +111,20 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(api.fetchProvinces).mockResolvedValue([province]);
   vi.mocked(api.fetchCountries).mockResolvedValue(countries);
-  vi.mocked(api.fetchInternationalCities).mockResolvedValue([
-    {
+  vi.mocked(api.fetchInternationalCityPage).mockResolvedValue({
+    items: [{
       id: 30,
       name: "Hamburg",
       name_en: "Hamburg",
+      un_locode: "DEHAM",
       city_type: "city",
       is_major_port: true,
       is_major_airport: false,
-    },
-  ]);
+    }],
+    offset: 0,
+    limit: 50,
+    has_more: false,
+  });
   vi.mocked(api.searchOperationalCustomers).mockResolvedValue({
     items: [{ id: 7, label: "Canonical Co" }],
     meta: { count: 1, limit: 25 },
