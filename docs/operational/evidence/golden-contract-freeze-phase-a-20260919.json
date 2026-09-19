@@ -1,0 +1,157 @@
+{
+  "phase": "A — GOLDEN CONTRACT FREEZE",
+  "baseline": {
+    "starting_commit": "2b95c35acc12e1ba28c390a125eb51f46af7dd4b",
+    "application_provenance": "e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4",
+    "engineering_base": "b48e51c8d0eda00bcc7582b68da85528b14547d2",
+    "golden_certification_commit": "0a6f1d368d0c266657188960e0507ff6d9039f59",
+    "database_head": "20260921_shipment_evidence_ownership"
+  },
+  "contracts": [
+    {
+      "id": "GCF-A-001",
+      "surface": "application-shell-routing-navigation",
+      "behavior": "The 26 Golden public, customer, Expert, CRM, Admin, operations, dashboard, deep-link, and catch-all routes remain present in order; malformed stored identity redirects to the public root; platform-wide authority without tenant context cannot enter operational routes.",
+      "coverage": "STRENGTHENED",
+      "tests": ["src/tests/App.routing.test.tsx", "src/tests/components/ApplicationNavigation.test.tsx", "src/tests/components/OperationsNav.test.tsx", "src/tests/components/ProtectedRoute.test.tsx"],
+      "dependent_phases": ["B", "D", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "Phase G may append adapted Control Tower UI seams but cannot replace the Golden shell or remove a route, link, or guard."
+    },
+    {
+      "id": "GCF-A-002",
+      "surface": "authentication-authorization-tenancy-assignment",
+      "behavior": "Anonymous, malformed, expired, wrong-role, cross-tenant, unrelated-Expert, reassigned, revoked, and inactive access remains denied; current tenant and assignment roots govern private operational reads.",
+      "coverage": "EXISTING",
+      "tests": ["backend/tests/test_auth.py", "backend/tests/test_auth_sessions.py", "backend/tests/test_assigned_work_authorization.py", "backend/tests/test_expert_membership_permissions.py", "backend/tests/test_execution_authority_3a.py", "backend/tests/test_expert_assignment_referral_contract.py"],
+      "dependent_phases": ["B", "C", "D", "E", "F", "G", "H"],
+      "future_intentional_change": false
+    },
+    {
+      "id": "GCF-A-003",
+      "surface": "customer-request-workflow",
+      "behavior": "Current public request creation, opaque identity, review/detail, optional cargo compatibility, scalar transport fields, tracking, quote, document, and location projections remain readable with their existing response shapes.",
+      "coverage": "EXISTING",
+      "tests": ["backend/tests/test_shipment_request_contract.py", "backend/tests/test_shipment_request_public_identity.py", "backend/tests/test_customer_gamification_contract.py", "backend/tests/test_public_tracking_timeline.py", "src/tests/internationalDestination.test.ts"],
+      "dependent_phases": ["B", "E", "H"],
+      "future_intentional_change": true,
+      "future_change": "Transport-intent and mandatory-cargo semantics remain decision-dependent and are not encoded in Phase A."
+    },
+    {
+      "id": "GCF-A-004",
+      "surface": "expert-workflow-list-detail-assignment",
+      "behavior": "Expert list/detail payloads, assignment/referral, SLA, unread state, scope, reassignment revocation, and current request mutation behavior remain intact.",
+      "coverage": "STRENGTHENED",
+      "tests": ["backend/tests/test_expert_assignment_referral_contract.py", "backend/tests/test_expert_service_scope.py", "backend/tests/test_admin_panel_read_contract.py"],
+      "dependent_phases": ["B", "D", "F", "G", "H"],
+      "future_intentional_change": false
+    },
+    {
+      "id": "GCF-A-005",
+      "surface": "operational-shipment-detail",
+      "behavior": "The Golden shipment graph preserves identity, source, customer, current-route provenance, route plans and legs, milestones, occurred/recorded evidence, open work, audit summary, and the existing field-disclosure boundary.",
+      "coverage": "STRENGTHENED",
+      "tests": ["backend/tests/test_operational_vertical_slice.py", "backend/tests/test_operational_reads_3b.py", "src/tests/pages/OperationalShipmentDetail.behavior.test.tsx", "src/tests/components/RouteAuthoringSection.test.tsx"],
+      "dependent_phases": ["D", "E", "F", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "Later responsible-Expert and Control Tower projections must be additive, explicitly authorized, and non-disclosing."
+    },
+    {
+      "id": "GCF-A-006",
+      "surface": "request-lists-counters",
+      "behavior": "The Expert new-request counter and filtered list share the current assignee and status scope across create, status transition, pagination, and reassignment; reassignment changes the request to assigned.",
+      "coverage": "NEW CHARACTERIZATION",
+      "tests": ["backend/tests/test_expert_assignment_referral_contract.py::test_golden_new_request_counter_and_list_share_scope_through_mutations"],
+      "dependent_phases": ["B", "D", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "Phase B may establish a canonical count query for additional cards without changing this Golden scope accidentally."
+    },
+    {
+      "id": "GCF-A-007",
+      "surface": "geography-reference-data-logistics-points",
+      "behavior": "Golden uses governed identities, the current two-country/four-location snapshot, Iran destinations, ports/airports, active same-tenant private logistics points, bounded safe projections, and immutable snapshots.",
+      "coverage": "EXISTING",
+      "tests": ["backend/tests/test_governed_international_geography.py", "backend/tests/test_iran_destination_point.py", "backend/tests/test_v191_location_resolver.py", "backend/tests/test_logistics_network.py", "backend/tests/test_tracking_locations.py", "src/tests/components/LocationForm.geography.test.ts", "src/tests/components/LogisticsNetworkAcceptance.test.tsx"],
+      "dependent_phases": ["B", "D", "E", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "Phase B may reconcile the approved FWD-02 worldwide catalog without a schema migration while preserving identity, inactive rows, authorization, and explicit Persian fallback labeling."
+    },
+    {
+      "id": "GCF-A-008",
+      "surface": "quote-economics-currency",
+      "behavior": "Customer responses are accepted or declined only; replay is idempotent only for the same response; conflicting/expired/foreign responses fail; acceptance or decline leaves the request status quoted while setting unread/audit facts; current economics and currency serialization remain governed.",
+      "coverage": "STRENGTHENED",
+      "tests": ["backend/tests/test_customer_quote_response.py", "backend/tests/test_shipment_economics.py", "src/tests/components/ShipmentEconomicsSection.test.tsx"],
+      "dependent_phases": ["B", "E", "F", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "EUR presentation is an approved bounded Phase B change; negotiating/reject lifecycle semantics remain decision-dependent."
+    },
+    {
+      "id": "GCF-A-009",
+      "surface": "tracking-timeline-operational-history",
+      "behavior": "Canonical execution units/events, mutation authority, occurred versus recorded time, stable ordering, location snapshots, late events, and customer-safe projections remain unchanged; the legacy add-unit write fails closed.",
+      "coverage": "EXISTING",
+      "tests": ["backend/tests/test_multi_unit_tracking_api.py", "backend/tests/test_multi_unit_tracking_service.py", "backend/tests/test_tracking_projection.py", "backend/tests/test_public_tracking_timeline.py", "src/tests/components/UnifiedShipmentHistory.test.tsx"],
+      "dependent_phases": ["B", "D", "E", "F", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "Later tracking UX and provenance changes must use the canonical Golden path and cannot revive the retired legacy path."
+    },
+    {
+      "id": "GCF-A-010",
+      "surface": "documents-evidence",
+      "behavior": "Golden preserves private ownership, case/shipment authority, validation, audit, immutable versions, download/delete boundaries, and multiple backend rows; the current case UI submits one selected file and sets replace=true whenever an active requirement file exists, even if the cap exceeds one.",
+      "coverage": "STRENGTHENED",
+      "tests": ["backend/tests/test_case_documents.py", "backend/tests/test_case_documents_fault_injection.py", "backend/tests/test_case_documents_schema_parity.py", "src/tests/components/CaseDocumentsTab.test.tsx", "src/tests/components/DocumentReadinessSection.test.tsx"],
+      "dependent_phases": ["E", "F", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "Append/version/replace/batch/partial-failure/lost-response rules remain explicitly deferred; Phase A does not invent retry or operation-receipt semantics."
+    },
+    {
+      "id": "GCF-A-011",
+      "surface": "dates-time-localization",
+      "behavior": "UTC/offset-bearing instants, Local Date non-shifting, assignment-event separation from request creation, occurrence timestamps, Persian operational locale, and existing localized labels remain as Golden currently implements them.",
+      "coverage": "EXISTING",
+      "tests": ["backend/tests/test_timestamp_contracts_phase1.py", "src/lib/localDate.test.ts", "src/lib/localDateTime.test.ts", "src/tests/i18n.business-labels.test.tsx", "src/tests/pages/OperationalShipmentDetail.behavior.test.tsx"],
+      "dependent_phases": ["B", "E", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "The per-surface Jalali/Gregorian policy is still a product decision; future fixes may remove false assignment fallback without relabeling creation."
+    },
+    {
+      "id": "GCF-A-012",
+      "surface": "numeric-currency-presentation",
+      "behavior": "Current cargo quantities preserve significant decimals, trim storage zeros, group large integral quantities, and distinguish current zero/missing behavior; identifiers, phone numbers, tracking codes, vehicle references, and UUIDs remain unformatted.",
+      "coverage": "EXISTING",
+      "tests": ["src/tests/components/ShipmentCargoItems.presentation.test.ts", "src/tests/components/ShipmentEconomicsSection.test.tsx", "backend/tests/test_shipment_economics.py"],
+      "dependent_phases": ["B", "G", "H"],
+      "future_intentional_change": true,
+      "future_change": "Phase B may introduce a shared formatter and reconcile consumers while preserving excluded identifiers and values."
+    },
+    {
+      "id": "GCF-A-013",
+      "surface": "database-migration",
+      "behavior": "The immutable 97-revision graph has one base and one head, 20260921_shipment_evidence_ownership; runtime startup never auto-migrates and read-only current/check report no pending work for a database stamped at the Golden head.",
+      "coverage": "EXISTING",
+      "tests": ["backend/tests/test_alembic_version_table.py", "backend/tests/test_runtime_migration_safety.py", "backend/tests/test_data_integrity_migration_portability.py"],
+      "dependent_phases": ["B", "C", "D", "E", "F", "G", "H"],
+      "future_intentional_change": false
+    },
+    {
+      "id": "GCF-A-014",
+      "surface": "windows-production-launcher-release",
+      "behavior": "The certified launcher remains system cmd.exe /d /c to explicit PYTHONPATH and release cwd, release-local Python, approved external serve launcher, explicit external env/repo/127.0.0.1:5101/log arguments, and a release-local Waitress child; direct Waitress Scheduled Tasks remain forbidden.",
+      "coverage": "EXISTING",
+      "tests": ["scripts/tests/test_operational_release_builder.py", "scripts/tests/test_launcher_chain_contract.ps1", "scripts/tests/test_launcher_chain_real_process.py"],
+      "dependent_phases": ["H"],
+      "future_intentional_change": false
+    }
+  ],
+  "scope_integrity": {
+    "FWD_RUNTIME_IMPORTED": "NO",
+    "CONTROL_TOWER_IMPORTED": "NO",
+    "PRODUCT_MIGRATION_ADDED": "NO",
+    "PRODUCTION_ACCESSED": "NO",
+    "PRODUCTION_CHANGED": "NO",
+    "SECRETS_ACCESSED": "NO",
+    "DONOR_REPOSITORY_CHANGED": "NO"
+  }
+}

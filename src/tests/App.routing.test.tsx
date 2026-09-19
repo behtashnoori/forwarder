@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -37,5 +38,40 @@ describe("App operational routing", () => {
     localStorage.setItem("expert_user", "{");
     render(<App />);
     expect(await screen.findByText("public index")).toBeInTheDocument();
+  });
+
+  it("freezes the complete Golden route inventory and catch-all ordering", () => {
+    const source = readFileSync("src/App.tsx", "utf8");
+    const routes = [...source.matchAll(/<Route\s+path="([^"]+)"/g)].map((match) => match[1]);
+
+    expect(routes).toEqual([
+      "/",
+      "/about",
+      "/contact",
+      "/expert",
+      "/expert/requests/:id",
+      "/crm",
+      "/admin",
+      "/admin/customers",
+      "/customers",
+      "/user-management",
+      "/operations/shipments",
+      "/operations/shipments/new",
+      "/operations/shipments/:id",
+      "/operations/work-queue",
+      "/operations/control-tower",
+      "/dashboards",
+      "/dashboards/:public_id",
+      "/dashboards/:public_id/edit",
+      "/operations/intelligence/:id",
+      "/operations/projects/:projectId/units",
+      "/customer/:customerId",
+      "/request/:requestId",
+      "/customer/track/:requestId",
+      "/project/track/:trackingCode",
+      "/verify-email",
+      "*",
+    ]);
+    expect(routes.at(-1)).toBe("*");
   });
 });

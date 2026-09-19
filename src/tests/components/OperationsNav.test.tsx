@@ -11,9 +11,9 @@ vi.mock("@/lib/api", async () => {
   return { ...actual, getOperationalContext: vi.fn() };
 });
 
-function renderNav(authority: string) {
+function renderNav(authority: string, permissions = ["operational_shipment.create_direct"]) {
   localStorage.setItem("expert_user", JSON.stringify({ authority, role: "expert" }));
-  vi.mocked(api.getOperationalContext).mockResolvedValue({ data: { organization_id: 1, permissions: ["operational_shipment.create_direct"] } });
+  vi.mocked(api.getOperationalContext).mockResolvedValue({ data: { organization_id: 1, permissions } });
   return render(<MemoryRouter><I18nProvider><OperationsNav /></I18nProvider></MemoryRouter>);
 }
 
@@ -29,5 +29,42 @@ describe("OperationsNav tenant customer maintenance", () => {
     renderNav(authority);
     await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
     expect(screen.queryByRole("link", { name: "مشتریان" })).not.toBeInTheDocument();
+  });
+
+  it("freezes permission-driven operational links for an organization admin", async () => {
+    renderNav("ORGANIZATION_ADMIN", [
+      "operational_shipment.read",
+      "operational_shipment.create_direct",
+      "oip.read",
+      "personal_dashboard.read",
+    ]);
+
+    await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/operations/shipments",
+      "/operations/control-tower",
+      "/operations/work-queue",
+      "/dashboards",
+      "/customers",
+      "/operations/shipments/new",
+    ]);
+  });
+
+  it("keeps tenant customer maintenance hidden from an Expert with operational permissions", async () => {
+    renderNav("EXPERT", [
+      "operational_shipment.read",
+      "operational_shipment.create_direct",
+      "oip.read",
+      "personal_dashboard.read",
+    ]);
+
+    await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
+    expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/operations/shipments",
+      "/operations/control-tower",
+      "/operations/work-queue",
+      "/dashboards",
+      "/operations/shipments/new",
+    ]);
   });
 });

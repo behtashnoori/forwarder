@@ -36,4 +36,40 @@ describe("CaseDocumentsTab", () => {
     fireEvent.change(screen.getByPlaceholderText("عنوان الزامی"), {target:{value:"سند تکمیلی"}});
     await waitFor(() => expect(document.querySelector('input[type="file"]:disabled')).toBeNull());
   });
+
+  it("characterizes the current single-file replacement UI even when the requirement cap exceeds one", async () => {
+    const activeFile = {
+      id: 9,
+      original_filename: "existing.pdf",
+      version_number: 1,
+      file_size_bytes: 100,
+      status: "active",
+    };
+    vi.mocked(api.fetchCaseDocuments).mockResolvedValue({
+      ...payload,
+      requirements: [{
+        ...payload.requirements[0],
+        max_active_file_count: 3,
+        complete: true,
+        active_files: [activeFile],
+        versions: [activeFile],
+      }],
+    } as never);
+
+    const { container } = render(<CaseDocumentsTab caseId="00000000-0000-4000-8000-000000000010"/>);
+    await screen.findByText(/existing\.pdf/);
+    expect([...container.querySelectorAll("p")].some((node) => node.textContent?.includes("حداکثر 1 MB · 3 فایل"))).toBe(true);
+    const requirementInput = container.querySelectorAll<HTMLInputElement>('input[type="file"]')[0];
+    expect(requirementInput.multiple).toBe(false);
+
+    const first = new File(["first"], "first.pdf", { type: "application/pdf" });
+    const ignoredSecond = new File(["second"], "second.pdf", { type: "application/pdf" });
+    fireEvent.change(requirementInput, { target: { files: [first, ignoredSecond] } });
+
+    await waitFor(() => expect(api.uploadCaseDocument).toHaveBeenCalledTimes(1));
+    const [caseId, requirementId, formData, replace] = vi.mocked(api.uploadCaseDocument).mock.calls[0];
+    expect([caseId, requirementId, replace]).toEqual(["00000000-0000-4000-8000-000000000010", 5, true]);
+    expect((formData as FormData).get("file")).toBe(first);
+    expect([...((formData as FormData).keys())]).toEqual(["file"]);
+  });
 });

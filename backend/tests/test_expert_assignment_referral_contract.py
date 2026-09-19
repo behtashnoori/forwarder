@@ -1572,3 +1572,69 @@ def test_api_reassignment_revokes_old_expert_immediately(expert_contract_app):
     assert client.get(f"/api/expert/requests/{request_id}", headers=b_headers).status_code == 200
     assert client.get(f"/api/expert/requests/{request_id}/tracking", headers=b_headers).status_code == 200
     assert client.get("/api/expert/requests", headers=b_headers).get_json()["pagination"]["total"] == 1
+
+
+def test_golden_new_request_counter_and_list_share_scope_through_mutations(
+    expert_contract_app,
+):
+    """Freeze the current status, assignee, tenant, and pagination count contract."""
+    client = expert_contract_app["app"].test_client()
+    expert_headers = _auth_headers(expert_contract_app["expert_token"])
+    other_headers = _auth_headers(expert_contract_app["other_expert_token"])
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+
+    def list_total(headers, status):
+        response = client.get(
+            f"/api/expert/requests?status={status}&per_page=1", headers=headers
+        )
+        assert response.status_code == 200
+        return response.get_json()["pagination"]["total"]
+
+    def counts(headers):
+        response = client.get("/api/expert/dashboard/kpis", headers=headers)
+        assert response.status_code == 200
+        return response.get_json()["counts"]
+
+    assert list_total(expert_headers, "new") == 1
+    assert counts(expert_headers)["new"] == 1
+
+    with expert_contract_app["app"].app_context():
+        created = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=expert_contract_app["organization_id"],
+            tracking_code="SR-GOLDEN-COUNT",
+            shipping_type="domestic",
+            contact_phone="09120000999",
+            status_request_status="new",
+            status="new",
+            assigned_to=expert_contract_app["expert_id"],
+            created_at=datetime(2026, 1, 2, 10, 0, 0),
+        )
+        db.session.add(created)
+        db.session.commit()
+        created_id = created.id
+
+    assert list_total(expert_headers, "new") == 2
+    assert counts(expert_headers)["new"] == 2
+
+    transition = client.post(
+        f"/api/expert/requests/{created_id}/status",
+        headers=expert_headers,
+        json={"status": "in_progress"},
+    )
+    assert transition.status_code == 200
+    assert list_total(expert_headers, "new") == 1
+    assert list_total(expert_headers, "in_progress") == 1
+    assert counts(expert_headers)["new"] == 1
+    assert counts(expert_headers)["in_progress"] == 1
+
+    reassigned = client.post(
+        f"/api/admin/shipment-requests/{expert_contract_app['request_id']}/assign",
+        headers=admin_headers,
+        json={"expert_id": expert_contract_app["other_expert_id"]},
+    )
+    assert reassigned.status_code == 200
+    assert list_total(expert_headers, "new") == 0
+    assert counts(expert_headers)["new"] == 0
+    assert list_total(other_headers, "assigned") == 1
+    assert counts(other_headers)["new"] == 0

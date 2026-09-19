@@ -57,15 +57,19 @@ def test_customer_can_accept_quote(app, client):
         quote = db.session.get(ExpertQuote, quote_id)
         assert quote.customer_response == "accepted"
         assert quote.responded_at is not None
-        assert db.session.get(ShipmentRequest, request_id).has_unread_for_assignee is True
+        request_row = db.session.get(ShipmentRequest, request_id)
+        assert request_row.has_unread_for_assignee is True
+        assert request_row.status == "quoted"
 
 
 def test_customer_can_decline_quote(app, client):
     with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed()
+        _customer_id, request_id, _, tracking_code = _seed()
     resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "declined"})
     assert resp.status_code == 200
     assert resp.get_json()["latest_quote"]["customer_response"] == "declined"
+    with app.app_context():
+        assert db.session.get(ShipmentRequest, request_id).status == "quoted"
 
 
 def test_invalid_response_is_rejected(app, client):

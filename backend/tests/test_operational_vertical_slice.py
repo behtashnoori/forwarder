@@ -870,6 +870,17 @@ def test_http_create_list_detail_and_error_envelopes(operational_app):
     )
     assert detail.status_code == 200 and "audit_summary" in detail.json["data"]
     assert detail.json["data"]["public_id"] == created.json["data"]["public_id"]
+    assert set(detail.json["data"]) == {
+        "public_id", "status", "operational_provenance", "scope",
+        "recent_events_scope", "history_scope", "version", "customer",
+        "project_public_id", "source", "route_plan", "route_leg", "route_legs",
+        "current_milestone", "overdue", "overdue_since", "open_work_item_count",
+        "milestones", "recent_events", "open_work_items", "audit_summary",
+    }
+    assert set(detail.json["data"]["source"]) == {
+        "type", "accepted_quote_id", "shipment_request_id", "request_public_id",
+        "quote_amount",
+    }
     missing = client.get(
         "/api/operational-shipments/11111111-1111-4111-8111-111111111111",
         headers=_auth(operational_app),
