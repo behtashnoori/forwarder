@@ -55,7 +55,7 @@ describe("Cargo foundation UI", () => {
     render(<CargoCatalogAdminTab/>);
     fireEvent.click(await screen.findByRole("button",{name:"مشاهده محموله‌های دارای این کالا"}));
     expect(await screen.findByText("PRJ-1")).toBeTruthy();
-    expect(screen.getByText(/2.000000 ea/)).toBeTruthy();
+    expect(screen.getByText(/2 ea/)).toBeTruthy();
     expect(screen.getByText(/Border/)).toBeTruthy();
   });
 

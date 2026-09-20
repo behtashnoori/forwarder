@@ -21,7 +21,7 @@ const projection = {
   shipment_public_id: "shipment-public",
   calculated_at: "2026-08-09T00:00:00Z",
   stages: {
-    ESTIMATE: { revenue: { amount: "100.000000", currency: "USD" }, cost: null, margin: null, margin_percentage: null, currency: "USD", completeness: "INCOMPLETE" as const, missing_inputs: ["COST_VISIBILITY_RESTRICTED"], source_observation_ids: [], applied_fx_rate_ids: [] },
+    ESTIMATE: { revenue: { amount: "1234567.500000", currency: "USD" }, cost: null, margin: null, margin_percentage: null, currency: "USD", completeness: "INCOMPLETE" as const, missing_inputs: ["COST_VISIBILITY_RESTRICTED"], source_observation_ids: [], applied_fx_rate_ids: [] },
     COMMITMENT: { revenue: null, cost: null, margin: null, margin_percentage: null, currency: null, completeness: "INCOMPLETE" as const, missing_inputs: [], source_observation_ids: [], applied_fx_rate_ids: [] },
     ACTUAL: { revenue: null, cost: null, margin: null, margin_percentage: null, currency: null, completeness: "INCOMPLETE" as const, missing_inputs: [], source_observation_ids: [], applied_fx_rate_ids: [] },
   },
@@ -36,7 +36,7 @@ describe("ShipmentEconomicsSection capability isolation", () => {
 
   it("keeps authorized projection and line reads visible when optional preview is forbidden", async () => {
     render(<ShipmentEconomicsSection shipmentPublicId="shipment-public" />);
-    expect(await screen.findByText("Revenue: 100.000000 USD")).toBeInTheDocument();
+    expect(await screen.findByText("Revenue: 1,234,567.500000 USD")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByText(/Accepted commercial intent/)).not.toBeInTheDocument();
     expect(api.getEconomicProjection).toHaveBeenCalledWith("shipment-public");

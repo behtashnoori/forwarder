@@ -38,6 +38,7 @@ import OperationalAnyPermission from "@/components/OperationalAnyPermission";
 import CaseDocumentsTab from "@/components/CaseDocumentsTab";
 import { QuoteModal } from "@/components/QuoteModal";
 import { useToast } from "@/hooks/use-toast";
+import { formatMoney as formatBusinessMoney, formatQuantity } from "@/lib/formatQuantity";
 import {
   addMessage,
   addTrackingUnit,
@@ -169,12 +170,11 @@ const displayValue = (value: string | number | null | undefined, fallback: strin
   return String(value);
 };
 const formatMeasurement = (value: number | null | undefined, unit: string, locale: string, fallback: string) => {
-  if (value === null || value === undefined) return fallback;
-  return `${value.toLocaleString(locale)} ${unit}`;
+  const quantity = formatQuantity(value, locale, fallback);
+  return quantity === fallback ? fallback : `${quantity} ${unit}`;
 };
 const formatMoney = (value: number | null | undefined, locale: string, fallback: string, unit: string) => {
-  if (value === null || value === undefined) return fallback;
-  return `${value.toLocaleString(locale)} ${unit}`;
+  return formatBusinessMoney(value, unit, locale, fallback);
 };
 const crmLinkAllowedRoles = new Set(["admin", "crm_manager", "supervisor", "business_expert"]);
 
@@ -778,7 +778,7 @@ const RequestDetail = () => {
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-xs text-slate-500">{t("common.amount")}</span>
                             <span className="text-lg font-bold text-slate-900">
-                              {request.latest_quote.amount?.toLocaleString(locale)} {request.latest_quote.currency}
+                              {formatBusinessMoney(request.latest_quote.amount, request.latest_quote.currency, locale, missingValue)}
                             </span>
                           </div>
                           {request.latest_quote.valid_until && (
@@ -1395,7 +1395,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
           </CardContent>
         </Card>
         {!data.unit_tracking?.units.length && <p className="rounded-xl border border-dashed p-5 text-sm text-muted-foreground">{t("multiTracking.emptyUnits")}</p>}
-        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: <span dir="ltr">{u.vehicle_reference}</span></p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p>{u.allocated_cargo?.length ? <p className="mt-2 text-sm">Cargo: {u.allocated_cargo.map(c => `${c.cargo_name} — ${c.allocated_quantity} ${c.uom_symbol}`).join(" · ")}</p> : null}<p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
+        <div className="grid gap-4 md:grid-cols-2">{data.unit_tracking?.units.map(u => <Card key={u.id}><CardContent className="p-5"><p className="font-bold">{u.display_name || u.unit_code}</p>{u.vehicle_reference && <p className="text-sm text-slate-600">{t("multiTracking.vehicleReference")}: <span dir="ltr">{u.vehicle_reference}</span></p>}<p className="text-sm text-slate-500">{t(`multiTracking.status.${u.latest_status}`)} · {u.latest_location || "—"}</p>{u.allocated_cargo?.length ? <p className="mt-2 text-sm">Cargo: {u.allocated_cargo.map(c => `${c.cargo_name} — ${formatQuantity(c.allocated_quantity, locale)} ${c.uom_symbol}`).join(" · ")}</p> : null}<p className="mt-2 text-xs text-slate-400">{u.latest_event_at ? new Date(u.latest_event_at).toLocaleString(locale) : t("multiTracking.noUpdates")}</p></CardContent></Card>)}</div>
       </>}
     </div>
   );

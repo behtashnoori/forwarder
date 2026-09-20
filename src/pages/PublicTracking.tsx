@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useI18n } from "@/i18n";
 import { formatLocalDate } from "@/lib/localDate";
+import { formatBusinessNumber, formatMoney } from "@/lib/formatQuantity";
 
 const showLatestQuoteCard: boolean = false;
 
@@ -311,7 +312,7 @@ const PublicTracking: React.FC = () => {
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
                 label={t("common.amount")}
-                value={`${requestData.latest_quote.amount?.toLocaleString(locale)} ${requestData.latest_quote.currency}`}
+                value={formatMoney(requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
               />
               {requestData.latest_quote.valid_until && (
                 <Field
@@ -342,14 +343,14 @@ const PublicTracking: React.FC = () => {
           <Section icon={Truck} title={t("multiTracking.customerTitle")} className="mb-6">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <Field label={t("multiTracking.aggregateStatus")} value={t(`multiTracking.status.${unitTracking.aggregate_status}`)} />
-              <Field label={t("multiTracking.unitCount")} value={unitTracking.summary.total_units.toLocaleString(locale)} />
-              <Field label={t("multiTracking.deliveredCount")} value={unitTracking.summary.delivered.toLocaleString(locale)} />
+              <Field label={t("multiTracking.unitCount")} value={formatBusinessNumber(unitTracking.summary.total_units, { locale })} />
+              <Field label={t("multiTracking.deliveredCount")} value={formatBusinessNumber(unitTracking.summary.delivered, { locale })} />
               <Field label={t("multiTracking.latestUpdate")} value={formatDate(unitTracking.last_updated_at, { dateStyle: "medium", timeStyle: "short" }, "—", locale)} />
             </div>
             <div className="mt-5">
               <div className="mb-2 flex items-center justify-between text-sm font-medium">
                 <span>{t("multiTracking.overallProgress")}</span>
-                <span>{unitTracking.progress_percent.toLocaleString(locale)}%</span>
+                <span>{formatBusinessNumber(unitTracking.progress_percent, { locale })}%</span>
               </div>
               <div className="h-3 overflow-hidden rounded-full bg-muted" role="progressbar" aria-valuenow={unitTracking.progress_percent} aria-valuemin={0} aria-valuemax={100}>
                 <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${unitTracking.progress_percent}%` }} />
@@ -529,7 +530,7 @@ const PublicTracking: React.FC = () => {
                 <div className="space-y-4">
                   <Field
                     label={t("common.amount")}
-                    value={`${requestData.latest_quote.amount?.toLocaleString(locale)} ${requestData.latest_quote.currency}`}
+                    value={formatMoney(requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
                   />
                   {requestData.latest_quote.valid_until && (
                     <Field

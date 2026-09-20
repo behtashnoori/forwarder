@@ -42,7 +42,7 @@ beforeEach(() => {
     international_methods: [], domestic_methods: [],
     preference_options: [{ value: "forwarder_suggestion", label: "Forwarder chooses", description: "" }],
   });
-  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "SR-TEST", message: "Created" });
+  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "123456789012", message: "Created" });
 });
 
 async function choose(index: number, option: string) {
@@ -77,12 +77,13 @@ async function submit(countryId: number, cityId: number) {
   await waitFor(() => expect(api.submitShipmentRequest).toHaveBeenCalledTimes(1));
   const payload = vi.mocked(api.submitShipmentRequest).mock.calls[0][0];
   expect(payload).toMatchObject({ origin_country_id: 2, origin_international_city_id: 22,
-    dest_country_id: countryId, dest_international_city_id: cityId });
+    dest_country_id: countryId, dest_international_city_id: cityId, contact_phone: "09123456789" });
   expect(Object.keys(payload).filter(key => key.startsWith("iran_"))).toEqual([]);
   expect(api.fetchIranPorts).not.toHaveBeenCalled();
   expect(api.fetchBorderCustoms).not.toHaveBeenCalled();
   expect(api.fetchProvinces).not.toHaveBeenCalled();
-  await screen.findByText("SR-TEST");
+  await screen.findByText("123456789012");
+  expect(screen.queryByText("123,456,789,012")).not.toBeInTheDocument();
 }
 
 describe("public destination business flow", () => {

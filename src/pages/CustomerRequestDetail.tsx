@@ -27,6 +27,7 @@ import {
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 import { formatLocalDate, isLocalDateBeforeToday } from "@/lib/localDate";
+import { formatMoney } from "@/lib/formatQuantity";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
 
@@ -401,7 +402,7 @@ const CustomerRequestDetail: React.FC = () => {
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-sm text-muted-foreground">{t("common.amount")}</span>
                       <span className="text-lg font-bold text-foreground">
-                        {quote.amount?.toLocaleString(locale)} {quote.currency}
+                        {formatMoney(quote.amount, quote.currency, locale)}
                       </span>
                     </div>
                     {quote.valid_until && (
