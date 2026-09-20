@@ -10,6 +10,7 @@ import {
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 import { ProjectionHealthNotice } from "@/components/oip/ProjectionHealthNotice";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 type DispositionAction = "snooze" | "resolve" | "dismiss";
 
@@ -114,7 +115,7 @@ export default function OipSituationDetailPage() {
           </p>
           {row.snoozed_until && (
             <p>
-              Snoozed until {new Date(row.snoozed_until).toLocaleString(locale)}
+              Snoozed until {formatDualCalendarInstant(row.snoozed_until, locale)}
             </p>
           )}
           {error && (
@@ -292,7 +293,7 @@ export default function OipSituationDetailPage() {
           <CardContent>
             {row.timeline.map((e, i) => (
               <p key={`${e.at}-${i}`}>
-                {new Date(e.at).toLocaleString(locale)} · {e.event} ·{" "}
+                {formatDualCalendarInstant(e.at, locale)} · {e.event} ·{" "}
                 {e.from || "—"} → {e.to}
                 {e.reason ? ` · ${e.reason}` : ""}
               </p>

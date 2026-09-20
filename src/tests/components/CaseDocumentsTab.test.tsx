@@ -128,6 +128,7 @@ describe("CaseDocumentsTab", () => {
     } as never);
     render(<CaseDocumentsTab caseId="request-public-id" />);
     expect(await screen.findByText("existing.pdf")).toBeInTheDocument();
+    expect(document.body).toHaveTextContent("۲۰ سپتامبر ۲۰۲۶ (۲۹ شهریور ۱۴۰۵)");
     expect(screen.queryByLabelText(/افزودن فایل‌ها|جایگزینی/)).not.toBeInTheDocument();
     expect(screen.queryByText("غیرفعال‌سازی")).not.toBeInTheDocument();
   });

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, createExecutionCondition, getOperationalContext, listExecutionConditions, listExecutionReasons, resolveExecutionCondition, type ExecutionCondition, type ExecutionReason } from "@/lib/api";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 type Kind = "delay" | "exception";
 const label = (kind: Kind) => kind === "delay" ? "تأخیر" : "استثنا";
@@ -63,8 +64,8 @@ export default function OperationalConditionsSection({ shipmentPublicId }: { shi
       {!rows[kind].length && <p>موردی ثبت نشده است.</p>}
       {rows[kind].map(row => <article key={row.public_id} className="rounded border p-3">
         <strong className="break-words">{row.reason.fa_name}</strong>
-        <p>{row.active ? "فعال" : "رفع‌شده"} · شروع: {new Date((kind === "delay" ? row.started_at : row.occurred_at) || "").toLocaleString("fa-IR")}</p>
-        {row.resolved_at && <p>رفع: {new Date(row.resolved_at).toLocaleString("fa-IR")}</p>}
+        <p>{row.active ? "فعال" : "رفع‌شده"} · شروع: {formatDualCalendarInstant(kind === "delay" ? row.started_at : row.occurred_at, "fa-IR", { fallback: "ثبت نشده" })}</p>
+        {row.resolved_at && <p>رفع: {formatDualCalendarInstant(row.resolved_at, "fa-IR")}</p>}
         {row.note && <p className="break-words">{row.note}</p>}
         {row.active && canManage && <Button disabled={busy} onClick={() => void run(() => resolveExecutionCondition(shipmentPublicId, kind, row))}>رفع {label(kind)}</Button>}
       </article>)}

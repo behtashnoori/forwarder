@@ -27,7 +27,8 @@ import {
   type CustomerWorkflowData,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
-import { formatLocalDate, isLocalDateBeforeToday } from "@/lib/localDate";
+import { isLocalDateBeforeToday } from "@/lib/localDate";
+import { formatDualCalendarDate, formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { formatMoney } from "@/lib/formatQuantity";
 import { getRequestTransportMethod } from "@/lib/transportPresentation";
 import RequestCargoSummary from "@/components/RequestCargoSummary";
@@ -35,7 +36,7 @@ import RequestCargoSummary from "@/components/RequestCargoSummary";
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
 
 function formatDate(date: string | null | undefined, locale: string, fallback: string): string {
-  return date ? new Date(date).toLocaleDateString(locale) : fallback;
+  return formatDualCalendarInstant(date, locale, { fallback, includeTime: false });
 }
 
 const CustomerRequestDetail: React.FC = () => {
@@ -433,7 +434,7 @@ const CustomerRequestDetail: React.FC = () => {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Calendar className="h-4 w-4 shrink-0" />
                         <span>
-                          {t("customer.quoteValidUntil")}: {formatLocalDate(quote.valid_until, locale, t("common.pending"))}
+                          {t("customer.quoteValidUntil")}: {formatDualCalendarDate(quote.valid_until, locale, t("common.pending"))}
                         </span>
                       </div>
                     )}

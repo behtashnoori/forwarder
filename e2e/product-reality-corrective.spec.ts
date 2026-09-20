@@ -41,6 +41,11 @@ test.describe("Product Reality corrective retest", () => {
     const cards = page.getByRole("link", { name: /مشاهده محموله عملیاتی/ });
     await expect(cards).toHaveCount(payload.data.length);
     expect(await cards.count()).toBeGreaterThan(0);
+    await expect(cards.first()).toContainText(/[^()]+\([^()]+\)/);
+    await cards.first().click();
+    await expect(page.getByRole("heading", { name: "خلاصه محموله" })).toBeVisible();
+    await expect(page.locator("main")).toContainText(/[^()]+\([^()]+\)/);
+    await page.goto("/operations/shipments");
     await page.reload(); await expect(cards).toHaveCount(payload.data.length);
     await page.goto("/expert"); await page.goto("/operations/shipments"); await expect(cards).toHaveCount(payload.data.length);
     const restrictedPage = await page.context().newPage(); await login(restrictedPage, "restricted");
@@ -64,9 +69,32 @@ test.describe("Product Reality corrective retest", () => {
   });
 
   test("Control Tower — normal business view hides technical formulas and semantic codes", async ({ page }) => {
-    const e = observe(page); await login(page, "operator"); await page.goto("/operations/control-tower");
+    const e = observe(page); await login(page, "operator");
+    await page.route("**/api/control-tower/shipments?*", route => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ data: {
+        evaluatedAt: "2026-09-20T12:00:00Z", state: "complete", notice: null,
+        emptyMessage: null, page: { nextCursor: null }, items: [{
+          key: "dual-calendar-browser", shipmentReference: "DUAL-CALENDAR-001",
+          routeLabel: "تهران → بندرعباس", transportLabel: "جاده‌ای", actualRouteModes: ["road"],
+          operationalStatus: "in_progress", source: { type: "direct", requestPublicId: null },
+          requestTransport: null, ownerName: "کارشناس آزمون", attention: "urgent", attentionLabel: "فوری",
+          progress: { currentLocation: "تهران", locationState: "AVAILABLE", unitCount: 1,
+            latestEventOccurredAt: "2026-09-20T08:00:00Z", latestEventRecordedAt: "2026-09-20T09:30:00Z",
+            latestEventType: "departed", source: "operational_event", projectionState: "available" },
+          workSummary: { reasonCount: 1, openAttention: true },
+          primaryReason: { semantic: "delay_open", title: "نیازمند پیگیری", explanation: "آزمون نمایش تاریخ", time: [] },
+          additionalReasons: [], destination: `/operations/shipments/${fixture.shipment_a}`,
+        }],
+      } }),
+    }));
+    await page.goto("/operations/control-tower");
     await expect(page.getByRole("heading", { name: "برج کنترل عملیات" })).toBeVisible();
     const text = await page.locator("main").innerText();
+    expect(text).toContain("۲۰ سپتامبر ۲۰۲۶ (۲۹ شهریور ۱۴۰۵)");
+    expect(text).toContain("زمان وقوع آخرین رخداد");
+    expect(text).toContain("زمان ثبت آخرین رخداد");
     for (const forbidden of ["PARTIAL_DIMENSION_COVERAGE", "semantic_version", "query_kind", "metric_keys", "dimension_keys", "coverage_percent", "eligible_count"]) expect(text).not.toContain(forbidden);
     clean(e);
   });

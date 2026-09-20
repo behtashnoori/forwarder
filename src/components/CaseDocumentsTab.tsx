@@ -15,6 +15,7 @@ import {
   type CaseDocumentRequirement,
   type CaseDocumentsPayload,
 } from "@/lib/api";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 type QueueState = "queued" | "uploading" | "succeeded" | "failed" | "unknown";
 type QueueItem = {
@@ -145,7 +146,7 @@ export default function CaseDocumentsTab({ caseId }: { caseId: string }) {
     <div className="grid gap-1 text-sm text-slate-600 sm:grid-cols-2">
       <span>نوع: {file.canonical_extension.toUpperCase()}</span>
       <span>حجم: {Math.ceil(file.file_size_bytes / 1024).toLocaleString("fa-IR")} KB</span>
-      <span>زمان: {new Date(file.uploaded_at).toLocaleString("fa-IR")}</span>
+      <span>زمان: <time dateTime={file.uploaded_at} dir="auto">{formatDualCalendarInstant(file.uploaded_at, "fa-IR")}</time></span>
       <span>ثبت‌کننده: {file.uploader_label || "ثبت نشده"}</span>
     </div>
   );

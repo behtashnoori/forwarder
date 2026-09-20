@@ -81,6 +81,7 @@ async function reopenFromCustomerDashboard(page: Page, requestId: number) {
   await page.goto(`/customer/${customerId}`);
   const card = page.getByText(`درخواست #${requestId}`, { exact: true }).locator("xpath=ancestor::div[contains(@class,'rounded-xl')][1]");
   await expect(card).toBeVisible();
+  await expect(card).toContainText(/[^()]+\([^()]+\)/);
   await card.getByRole("button", { name: "مشاهده جزئیات" }).click();
   await expect(page).toHaveURL(new RegExp(`/request/${requestId}\\?customer=${customerId}$`));
 }

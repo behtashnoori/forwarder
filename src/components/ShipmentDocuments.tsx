@@ -10,6 +10,7 @@ import {
   uploadShipmentDocument,
   type ShipmentDocument,
 } from "@/lib/api";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 const stateLabel = (value: string) => ({
   active: "فعال", superseded: "جایگزین‌شده", deleted: "باطل‌شده",
@@ -103,7 +104,7 @@ export default function ShipmentDocuments({ shipmentPublicId }: { shipmentPublic
                 </div>
                 <div className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
                   <p>نسخه {row.version}</p><p>مالک/منشأ: {row.owner === "REQUEST" ? "درخواست" : "محموله"}</p>
-                  <p>زمان ثبت: {new Date(row.recorded_at).toLocaleString("fa-IR")}</p><p>ثبت‌کننده: {row.actor || "ثبت نشده"}</p>
+                  <p>زمان ثبت: <time dateTime={row.recorded_at} dir="auto">{formatDualCalendarInstant(row.recorded_at, "fa-IR")}</time></p><p>ثبت‌کننده: {row.actor || "ثبت نشده"}</p>
                   <p>مرجع مرتبط: {row.references.length ? row.references.map((item) => `${item.type}: ${item.display_value}`).join("، ") : "ندارد"}</p>
                   <p>الزام سند مرتبط: {row.requirements.length ? row.requirements.map((item) => item.title).join("، ") : "ندارد"}</p>
                 </div>

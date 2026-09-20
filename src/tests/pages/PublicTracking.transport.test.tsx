@@ -49,5 +49,6 @@ describe("public request transport summary", () => {
     expect(screen.getAllByText("حمل ریلی")).toHaveLength(1);
     expect(screen.queryByText("Rail Transport")).not.toBeInTheDocument();
     expect(screen.queryByText("جاده‌ای")).not.toBeInTheDocument();
+    expect(document.body).toHaveTextContent("۲۰ سپتامبر ۲۰۲۶ (۲۹ شهریور ۱۴۰۵)");
   });
 });

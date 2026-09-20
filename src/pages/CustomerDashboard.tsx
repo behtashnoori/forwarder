@@ -25,9 +25,10 @@ import {
   type CustomerProfileData,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 function formatDate(date: string | null | undefined, locale: string, fallback: string): string {
-  return date ? new Date(date).toLocaleDateString(locale) : fallback;
+  return formatDualCalendarInstant(date, locale, { fallback, includeTime: false });
 }
 
 const CustomerDashboard: React.FC = () => {

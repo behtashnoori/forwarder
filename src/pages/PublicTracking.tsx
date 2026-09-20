@@ -27,7 +27,7 @@ import {
   User,
 } from "lucide-react";
 import { useI18n } from "@/i18n";
-import { formatLocalDate } from "@/lib/localDate";
+import { formatDualCalendarDate, formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { formatBusinessNumber, formatMoney } from "@/lib/formatQuantity";
 import { getRequestTransportMethod } from "@/lib/transportPresentation";
 
@@ -59,8 +59,12 @@ const formatDate = (
   fallback = "—",
   locale = "fa-IR",
 ) => {
-  if (!value) return fallback;
-  return new Intl.DateTimeFormat(locale, options).format(new Date(value));
+  return formatDualCalendarInstant(value, locale, {
+    fallback,
+    includeTime: options?.timeStyle !== undefined,
+    dateStyle: options?.dateStyle ?? "medium",
+    timeStyle: options?.timeStyle ?? "short",
+  });
 };
 
 const getLocationDisplay = (
@@ -317,7 +321,7 @@ const PublicTracking: React.FC = () => {
               {requestData.latest_quote.valid_until && (
                 <Field
                   label={t("customer.quoteValidUntil")}
-                  value={formatLocalDate(requestData.latest_quote.valid_until, locale)}
+                  value={formatDualCalendarDate(requestData.latest_quote.valid_until, locale)}
                 />
               )}
             </div>
@@ -470,10 +474,10 @@ const PublicTracking: React.FC = () => {
                       <Field label={t("common.value")} value={requestData.cargo_value} />
                     )}
                     {requestData.pickup_date && (
-                      <Field label={t("common.createdAt")} value={formatLocalDate(requestData.pickup_date, locale)} />
+                      <Field label={t("common.createdAt")} value={formatDualCalendarDate(requestData.pickup_date, locale)} />
                     )}
                     {requestData.delivery_date && (
-                      <Field label={t("common.createdAt")} value={formatLocalDate(requestData.delivery_date, locale)} />
+                      <Field label={t("common.createdAt")} value={formatDualCalendarDate(requestData.delivery_date, locale)} />
                     )}
                   </div>
                   {requestData.special_instructions && (
@@ -526,7 +530,7 @@ const PublicTracking: React.FC = () => {
                   {requestData.latest_quote.valid_until && (
                     <Field
                       label={t("common.validUntil")}
-                      value={formatLocalDate(requestData.latest_quote.valid_until, locale)}
+                      value={formatDualCalendarDate(requestData.latest_quote.valid_until, locale)}
                     />
                   )}
                   {requestData.latest_quote.note && (

@@ -106,6 +106,7 @@ describe("Golden Control Tower operational view", () => {
     expect(within(transports).getByText("تهران → آنکارا")).toBeVisible();
     expect(screen.getByText("زمان وقوع آخرین رخداد:", { exact: false })).toBeVisible();
     expect(screen.getByText("زمان ثبت آخرین رخداد:", { exact: false })).toBeVisible();
+    expect(document.body).toHaveTextContent("۲۰ سپتامبر ۲۰۲۶ (۲۹ شهریور ۱۴۰۵)");
     expect(screen.getByText("۲ مورد باز")).toBeVisible();
     expect(screen.getByText("تأخیر باز")).toBeVisible();
     expect(document.body.textContent).not.toMatch(/notification|provider|recipient/i);

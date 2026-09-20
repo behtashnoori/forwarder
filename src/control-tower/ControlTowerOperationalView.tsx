@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { formatBusinessNumber } from "@/lib/formatQuantity";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import {
   classifyControlTowerFailure,
   getControlTowerPage,
@@ -53,9 +54,9 @@ function subscribeSession(onChange: () => void): () => void {
 }
 
 function SafeTime({ value, locale }: { value: string; locale: string }) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return <time dateTime={value}>{date.toLocaleString(locale, { timeZoneName: "short" })}</time>;
+  const formatted = formatDualCalendarInstant(value, locale, { fallback: "", timeZoneName: "short" });
+  if (!formatted) return null;
+  return <time dateTime={value} dir="auto">{formatted}</time>;
 }
 
 function ReasonTimes({ reason, locale }: { reason: ControlTowerReason; locale: string }) {

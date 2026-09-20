@@ -41,6 +41,7 @@ describe("EUR quote presentation", () => {
       customer_id: 7,
       tracking_code: "TRACK-12",
       status: "waiting_for_customer",
+      shipping_type: "domestic",
       created_at: "2026-09-20T00:00:00Z",
       assigned_expert: null,
       cargo_items: [],
@@ -86,6 +87,7 @@ describe("EUR quote presentation", () => {
       </I18nProvider>,
     );
     expect(await screen.findByText("1,234,567 EUR")).toBeInTheDocument();
+    expect(document.body).toHaveTextContent("Sep 30, 2026 (Mehr 8, 1405 AP)");
 
     cleanup();
     render(
@@ -96,6 +98,7 @@ describe("EUR quote presentation", () => {
       </I18nProvider>,
     );
     expect(await screen.findByText("1,234,567 EUR")).toBeInTheDocument();
+    expect(document.body).toHaveTextContent("Sep 30, 2026 (Mehr 8, 1405 AP)");
     expect(screen.queryByText(/USD|IRR/)).not.toBeInTheDocument();
   });
 });

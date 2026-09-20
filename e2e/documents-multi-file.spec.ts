@@ -108,6 +108,7 @@ test.describe.serial("Expert-only multi-file Documents", () => {
 
     await page.getByRole("button", { name: "بازگشت به کنسول" }).first().click();
     await openDocumentsFromConsole(page);
+    await expect(page.getByText(/زمان: [^()]+\([^()]+\)/).first()).toBeVisible();
     await expect(page.getByText("A2.pdf").first()).toBeVisible();
     await expect(page.getByText("B.pdf").first()).toBeVisible();
     await expect(page.getByText("C.pdf").first()).toBeVisible();
@@ -120,6 +121,7 @@ test.describe.serial("Expert-only multi-file Documents", () => {
     await login(page, fixture.owner_username);
     await openDocumentsFromConsole(page);
     await expect(addInput(page)).toBeAttached();
+    await expect(page.getByText(/زمان: [^()]+\([^()]+\)/).first()).toBeVisible();
     expect(await page.locator("html").evaluate((node) => getComputedStyle(node).direction)).toBe("rtl");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBeTruthy();
     await expect(page.getByText("A2.pdf").first()).toBeVisible();

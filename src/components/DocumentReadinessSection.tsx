@@ -8,6 +8,7 @@ import {
   materializeDocumentRequirements, removeDocumentArtifactAssociation, resolveDocumentApplicability,
   type DocumentReadinessRequirement, type EligibleDocumentArtifact, type TransitionReadiness,
 } from "@/lib/api";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 type Draft = { artifact?: string; reason?: string };
 const statusLabel: Record<DocumentReadinessRequirement["readiness_status"], string> = {
@@ -19,9 +20,7 @@ const assessmentLabel: Record<string, string> = {
   ASSOCIATED: "مرتبط شده؛ در انتظار بررسی", REVIEW_STARTED: "در حال بررسی",
   APPROVED: "تأیید شده", REJECTED: "رد شده", VERIFIED: "راستی‌آزمایی شده",
 };
-const formatDate = (value: string) => new Intl.DateTimeFormat("fa-IR", {
-  dateStyle: "medium", timeStyle: "short",
-}).format(new Date(value));
+const formatDate = (value: string) => formatDualCalendarInstant(value, "fa-IR");
 
 export default function DocumentReadinessSection({
   shipmentPublicId, shipmentVersion, shipmentReference, projectReference, sourceRequestId, readOnly = false,

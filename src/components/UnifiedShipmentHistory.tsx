@@ -4,6 +4,7 @@ import { useI18n } from "@/i18n";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 const categories: Record<string, string> = {
   SHIPMENT: "محموله", ROUTE: "مسیر", ROUTE_OCCURRENCE: "رخداد مسیر",
@@ -30,7 +31,7 @@ export default function UnifiedShipmentHistory({ shipmentPublicId }: { shipmentP
     finally { setLoading(false); }
   }, [shipmentPublicId, page]);
   useEffect(() => { void load(); }, [load]);
-  const displayTime = (value: string) => new Date(value).toLocaleString(locale, { timeZoneName: "short" });
+  const displayTime = (value: string) => formatDualCalendarInstant(value, locale, { timeZoneName: "short" });
   const visible = data?.items.filter(item => category === "ALL" || item.category === category) || [];
   return <Card dir="rtl" aria-label="تاریخچه عملیات حمل">
     <CardHeader><div className="flex flex-wrap items-center justify-between gap-2"><CardTitle>تاریخچه عملیات حمل</CardTitle><Button variant="outline" disabled={loading} onClick={() => void load()}>به‌روزرسانی تاریخچه</Button></div></CardHeader>
@@ -44,8 +45,8 @@ export default function UnifiedShipmentHistory({ shipmentPublicId }: { shipmentP
         {!data?.total ? <p>در محدوده دسترسی شما سابقه‌ای برای این محموله ثبت نشده است.</p> : !visible.length ? <p>در این صفحه موردی از دسته انتخاب‌شده وجود ندارد.</p> : <ol className="space-y-3">
           {visible.map(item => <li key={item.history_id} className="min-w-0 rounded border p-3">
             <div className="flex flex-wrap items-start justify-between gap-2"><strong>{businessLabel(item.business_type)}</strong><span className="rounded bg-slate-100 px-2 py-1 text-xs">{categories[item.category] || "اقدام عملیاتی"}</span></div>
-            <p>{item.occurred_at ? <>زمان وقوع: <time dateTime={item.occurred_at}>{displayTime(item.occurred_at)}</time></> : item.recorded_at ? <>زمان ثبت: <time dateTime={item.recorded_at}>{displayTime(item.recorded_at)}</time></> : "زمان در منبع ثبت نشده است."}</p>
-            {item.occurred_at && item.recorded_at && <p className="text-sm text-slate-600">ثبت سیستمی: <time dateTime={item.recorded_at}>{displayTime(item.recorded_at)}</time></p>}
+            <p>{item.occurred_at ? <>زمان وقوع: <time dateTime={item.occurred_at} dir="auto">{displayTime(item.occurred_at)}</time></> : item.recorded_at ? <>زمان ثبت: <time dateTime={item.recorded_at} dir="auto">{displayTime(item.recorded_at)}</time></> : "زمان در منبع ثبت نشده است."}</p>
+            {item.occurred_at && item.recorded_at && <p className="text-sm text-slate-600">ثبت سیستمی: <time dateTime={item.recorded_at} dir="auto">{displayTime(item.recorded_at)}</time></p>}
             {item.actor && <p>اقدام‌کننده: {item.actor}</p>}
             {item.source_is_projection && <p>این مورد از وضعیت عملیات شناسایی شده است.</p>}
             {item.source_type && <p>منبع: {item.source_type === "direct" ? "عملیات مستقیم" : "درخواست و پیشنهاد پذیرفته‌شده"}</p>}

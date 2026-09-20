@@ -28,6 +28,7 @@ describe("unified shipment history", () => {
     expect(screen.getByText(/توقف بندر/)).toBeInTheDocument();
     expect(screen.getByText(/این رخداد جایگزین گزارش پیشین شده است/)).toBeInTheDocument();
     expect(screen.getAllByText(/ثبت سیستمی/)).toHaveLength(2);
+    expect(document.body).toHaveTextContent("۱۴ سپتامبر ۲۰۲۶ (۲۳ شهریور ۱۴۰۵)");
     expect(screen.queryByRole("button", { name: /ویرایش|حذف|اصلاح|تأیید/ })).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText("دسته‌بندی"), "DELAY");
     expect(screen.queryByText(/این رخداد جایگزین/)).not.toBeInTheDocument();

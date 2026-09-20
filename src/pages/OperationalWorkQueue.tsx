@@ -13,6 +13,7 @@ import {
 } from "@/lib/api";
 import { ProjectionHealthNotice } from "@/components/oip/ProjectionHealthNotice";
 import { useI18n } from "@/i18n";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 const tone: Record<string, string> = {
   CRITICAL: "bg-red-100 text-red-800",
@@ -124,16 +125,14 @@ export default function OperationalWorkQueue() {
                     </p>
                     <p>
                       {t("operations.owner")}: {row.owner.state} · {t("operations.since")}{" "}
-                      {new Date(row.first_detected_at).toLocaleString(locale)}
+                      {formatDualCalendarInstant(row.first_detected_at, locale)}
                       {row.due_at
-                        ? ` · ${t("operations.due")} ${new Date(row.due_at).toLocaleString(locale)}`
+                        ? ` · ${t("operations.due")} ${formatDualCalendarInstant(row.due_at, locale)}`
                         : ""}
                     </p>
                     <p className="text-xs text-slate-500">
                       {t("operations.policy")} {row.policy.id} {row.policy.version} · {t("operations.calculated")}{" "}
-                      {new Date(row.freshness.calculated_at).toLocaleString(
-                        locale,
-                      )}
+                      {formatDualCalendarInstant(row.freshness.calculated_at, locale)}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">

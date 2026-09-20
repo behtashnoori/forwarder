@@ -44,6 +44,7 @@ import {
   type KPIs,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
 import { getRequestTransportMethod } from "@/lib/transportPresentation";
 
@@ -552,7 +553,7 @@ const ExpertConsole = () => {
                             <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-500">
                               <span className="flex items-center gap-1">
                                 <CalendarDays className="h-4 w-4" />
-                                {t("expert.createdPrefix")}: {new Date(request.created_at).toLocaleDateString(locale)}
+                                {t("expert.createdPrefix")}: {formatDualCalendarInstant(request.created_at, locale, { includeTime: false })}
                               </span>
                               {request.cargo.description && (
                                 <span className="flex min-w-0 items-center gap-1">

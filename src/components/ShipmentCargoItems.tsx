@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { formatQuantity } from "@/lib/formatQuantity";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import {
   addOperationalTransportTrackingUpdate, createShipmentCargoItem,
   createCanonicalCargoAllocation, createCanonicalShipmentTransportUnit,
@@ -21,7 +22,7 @@ import {
 type Option = { public_id: string; code: string; name: string; cargo_type_public_id?: string; default_uom_public_id?: string | null; symbol?: string; preferred?: boolean };
 const statusLabel: Record<string, string> = { loading: "در حال بارگیری", departed: "حرکت کرده", in_transit: "در مسیر", at_checkpoint: "در نقطه کنترل", delayed: "با تأخیر", arrived_destination: "رسیده به مقصد", delivered: "تحویل شده", cancelled: "لغو شده" };
 const label = (status?: string) => statusLabel[status || ""] || status || "ثبت نشده";
-const time = (value?: string) => value ? new Date(value).toLocaleString("fa-IR") : "ثبت نشده";
+const time = (value?: string) => formatDualCalendarInstant(value, "fa-IR", { fallback: "ثبت نشده" });
 const uniqueCustomers = (customers: OperationalCustomerSelector[]) =>
   Array.from(new Map(customers.map((customer) => [customer.id, customer])).values());
 

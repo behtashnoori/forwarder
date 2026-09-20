@@ -26,6 +26,7 @@ import {
   type RouteTimeline,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import ShipmentCargoItems from "@/components/ShipmentCargoItems";
 import OperationalExecutionSection from "@/components/OperationalExecutionSection";
 import OperationalConditionsSection from "@/components/OperationalConditionsSection";
@@ -65,7 +66,7 @@ const safeError = (error: unknown) => {
   return "انجام این کار ممکن نشد.";
 };
 const when = (value: string | null | undefined, locale: string) =>
-  value ? new Date(value).toLocaleString(locale, { timeZoneName: "short" }) : "ثبت نشده";
+  formatDualCalendarInstant(value, locale, { fallback: "ثبت نشده", timeZoneName: "short" });
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const invalidIdentityMessage = "پیوند محموله دارای شناسه معتبر نیست.";
 const inconsistentIdentityMessage = "شناسه بازگشتی محموله با پیوند بازشده یکسان نیست.";
