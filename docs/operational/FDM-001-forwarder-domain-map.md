@@ -39,7 +39,11 @@ Reference Data is administrator-managed and may be empty after installation. It 
 flowchart LR
   C["Customer"] --> P["Project"]
   C --> SR["ShipmentRequest"]
+  SR -->|"0..N optional"| RC["RequestCargoItem — commercial"]
+  SR --> Q["Quotation — official offer/history"]
   P --> SR --> OS["OperationalShipment"]
+  Q -->|"accepted lineage"| OS
+  TE["One fixed responsible Transport Expert"] --> OS
   P --> EU["ExecutionUnit"]
   OS --> RP["RoutePlan"]
   OS --> SC["ShipmentCargoItem"]
@@ -49,17 +53,19 @@ flowchart LR
   CP --> E
 ```
 
-This is conceptual flow: ShipmentRequest commercial state, Project coordination, OperationalShipment execution, ExecutionUnit lifecycle, planning, and evidence remain distinct sources of truth.
+This is conceptual flow: ShipmentRequest commercial state, optional Request Cargo, Quotation lifecycle, Project coordination, fixed Shipment Expert ownership, OperationalShipment execution, ExecutionUnit lifecycle, planning, and evidence remain distinct sources of truth. Request assignment does not mutate an existing Shipment owner.
 
 ## 3. Cargo model
 
 ```mermaid
 flowchart LR
+  SR["ShipmentRequest"] -->|"0..N optional"| RI["RequestCargoItem — commercial intent"]
   CT["CargoType — Reference Data"] --> CC["CargoCatalogItem — Master Data"] --> SI["ShipmentCargoItem — Transaction Snapshot"]
+  RI -. "later explicit planning/traceability; no automatic allocation" .-> SI
   SI -. "future; deferred" .-> AL["Cargo-to-ExecutionUnit Link / Allocation"]
 ```
 
-Catalog changes never rewrite ShipmentCargoItem snapshots. Allocation remains deferred under PDR-013 and ADR-023 Proposed.
+`RequestCargoItem` and `ShipmentCargoItem` are distinct. Request submission permits zero Cargo Items and no Cargo field is mandatory. Catalog changes never rewrite ShipmentCargoItem snapshots. Any Request-to-Shipment Cargo lineage/allocation is later operational planning, not Customer-authored execution. Allocation remains separately governed.
 
 ## 4. Logistics Network boundaries
 
@@ -110,3 +116,20 @@ flowchart LR
 ```
 
 The bounded 1.8.0 concepts are **Implemented — Not Deployed**. ADR-027 and the Slice Contract remain the accepted authority; Release 1.8.0 is implementation complete, not published, and not deployed. Production is unchanged, Seed was not executed, the MilestoneType catalog is prepared but not applied, and no automatic execution behavior is present.
+
+## 7. Post-D2 owner/SOR boundary
+
+**NEW ACCEPTED DECISION — reference phase only:** PDR-019 and ADR-047 establish the following target ownership without authorizing a physical modular refactor or runtime change.
+
+```mermaid
+flowchart LR
+  R["Requests / Request Cargo\nSOR: ShipmentRequest"] --> C["Commercial Quote\nSOR: Quotation"]
+  C --> S["Shipment / Operational Cargo\nSOR: OperationalShipment"]
+  S --> T["Tracking\nSOR: canonical operational events"]
+  S --> CT["Control Tower\nread projection, not SOR"]
+  S -. "source events; activation deferred" .-> N["Notifications\ndormant lifecycle"]
+  D["Documents\nSOR split by definition/requirement/file/association"] -. "actor decision blocked" .-> S
+  Cal["Calendar presentation\nrender existing time fact"] -.-> R & C & S & T & CT
+```
+
+Request transport intent and actual Route Leg transport are separate facts. Documents remain `BLOCKED_PENDING_DOCUMENT_ACTOR_DECISION`. Control Tower's 100-Shipment ceiling is a pre-release scalability gap. Notifications remain dormant.

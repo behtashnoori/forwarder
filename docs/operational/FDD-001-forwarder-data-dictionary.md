@@ -1,5 +1,7 @@
 # FDD-001 — Forwarder Business Data Dictionary
 
+> **Post-D2 reference reconciliation (2026-09-20):** PDR-019 and ADR-047 are **NEW ACCEPTED DECISIONS**. The definitions below retain implemented-state evidence while the appended FDD-001-033 through FDD-001-035 entries define target concepts for later bounded Build. Reference closure is not implementation completion.
+
 ## Release 1.9.0 authorized vocabulary reconciliation
 
 Implementation reconciliation: **Implemented — Not Published — Not Deployed** under `20260812_operational_execution`; Evidence and dashboards/reporting remain excluded.
@@ -60,21 +62,21 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - **Canonical/Persian:** ShipmentRequest / درخواست حمل; **definition/rationale:** commercial request capturing customer intent before operational execution.
 - **Class/owners:** Transaction; Product; CAP-002.
 - **Lifecycle/identity/scope:** commercial statuses; request/tracking identity; customer/organization access governed by existing contracts.
-- **Relationships:** Customer, Quote, Project, later OperationalShipment lineage. **Mutable/immutable:** request fields/status mutable per workflow; tracking identity stable.
+- **Relationships:** Customer, Quotation, Project, `0..N RequestCargoItems`, optional scalar Request transport intent, later OperationalShipment lineage. **Mutable/immutable:** request fields/status mutable per workflow; tracking identity stable.
 - **Activation/history:** logs preserve change; deletion behavior governed by legacy policy. **API/UI/reporting:** customer request/admin/expert surfaces; commercial reporting.
-- **Version/state/future/exclusions:** original application foundation; Implemented and Deployed; structured service/cargo evolution; not OperationalShipment.
-- **Governance/source:** ADR-002/007, Catalog; `backend.models.ShipmentRequest`.
+- **Version/state/future/exclusions:** original application foundation; current scalar fields Implemented and Deployed; target Request Cargo is optional and structurally multi-item; Request transport intent is not the actual Route Leg sequence; not OperationalShipment.
+- **Governance/source:** ADR-002/007, PDR-019, Catalog; `backend.models.ShipmentRequest`.
 
 ## FDD-001-006 — OperationalShipment
 
 - **Canonical/Persian:** OperationalShipment / محموله عملیاتی; **definition/rationale:** execution aggregate created from accepted commercial lineage.
 - **Class/owners:** Transaction/operational aggregate; Operations/Product; CAP-002.
 - **Lifecycle/identity/scope:** planned/in_progress/completed/cancelled; UUID; organization-scoped.
-- **Relationships:** Project, ShipmentRequest, accepted Quote, RoutePlans, ShipmentCargoItems, ExecutionUnits.
+- **Relationships:** Project, optional ShipmentRequest, accepted Quotation, one fixed responsible Transport Expert, RoutePlans, ShipmentCargoItems, ExecutionUnits.
 - **Mutable/immutable:** lifecycle/version mutable; lineage and public identity stable. **Activation/history:** cancellation does not erase history; no hard delete.
 - **API/UI/reporting:** internal operational APIs/workspace; shipment status/count dimension.
 - **Version/state/future/exclusions:** operational foundation; Implemented and Deployed; standardized visibility; not ShipmentRequest.
-- **Governance/source:** ADR-002/003/007/017; `backend.operational_models.OperationalShipment`.
+- **Governance/source:** ADR-002/003/007/017/047; `backend.operational_models.OperationalShipment`. Current accepted-Quote request-assignee derivation is compatibility drift pending the ADR-047 implementation slice.
 
 ## FDD-001-007 — ExecutionUnit
 
@@ -302,7 +304,7 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 ## Governance gaps
 
 - Named business owner and deletion lifecycle for ExpertUser require explicit identity-governance confirmation.
-- Platform-wide DocumentArtifact/DocumentAttachment visibility, retention, and customer action rules remain Proposed under ADR-020/PDR-008/009/011.
+- Platform-wide DocumentArtifact/DocumentAttachment visibility, retention, and customer action rules remain Proposed under ADR-020/PDR-008/009/011. The Post-D2 multi-file/append/targeted-replace/history/retry slice is `BLOCKED_PENDING_DOCUMENT_ACTOR_DECISION` for the Customer / owning Transport Expert / Admin-Manager action matrix.
 - ServiceType relationships remain unresolved under PDR-013 D02/D03.
 - ShipmentCargoItem correction/supersession, allocation, and customer search remain deferred/proposed.
 - Logistics Network physical/API choices are Accepted and implemented in Release 1.7.0 source; Production migration, catalog apply, packaging, and deployment remain separately governed.
@@ -343,6 +345,38 @@ The following entries are **Implemented — Not Deployed** for the bounded Relea
 - **Class/owners/scope:** Reference Data; Product/Data/Operations; immutable code, bilingual labels, definition, display order, active lifecycle.
 - **Relationships/exclusions:** selected by ProjectMilestoneDefinition; not the existing operational Milestone row or its execution-specific string constraint.
 - **Governance/reporting:** versioned/checksummed catalog; no migration Seed rows and no Production apply without separate authority.
+
+## Post-D2 accepted target definitions — reference only
+
+These entries are accepted domain/reference truth but are not claims of runtime implementation.
+
+### FDD-001-033 — RequestCargoItem
+
+- **Canonical/Persian:** RequestCargoItem / قلم کالای درخواست; Customer-provided commercial Cargo information belonging to one ShipmentRequest.
+- **Class/owners/scope:** Transaction child; Commercial/Request owner and SOR; Customer/request authorization; inherits Request organization/customer scope.
+- **Cardinality and submission:** `ShipmentRequest 0..N RequestCargoItems`; Cargo is optional for submission and no item field is currently mandatory.
+- **Relationships/exclusions:** may later provide traceable input to operational planning; is not `ShipmentCargoItem`, an allocation, Execution Unit, vehicle/container, Route Leg, or Shipment split decision.
+- **Compatibility:** historical Requests without Cargo remain valid; legacy scalar Cargo is not guessed into items; future mandatory policy is deferred.
+- **Governance/source:** PDR-019, ADR-002, Post-D2 Cargo amendment.
+
+### FDD-001-034 — RequestTransportIntent
+
+- **Canonical/Persian:** RequestTransportIntent / قصد حمل درخواست; one Customer-facing scalar indication of preferred/requested transport at commercial intake.
+- **Class/owners/scope:** Request transaction attribute backed by the existing Request `TransportMethod` catalog/compatibility boundary; Commercial/Request SOR.
+- **Accepted extension:** includes one choice displayed as `حمل ترکیبی` without enumerating an ordered mode sequence.
+- **Relationships/exclusions:** belongs to ShipmentRequest; is not `RouteLeg.transport_mode`, RoutePlan order, carrier planning, or execution truth.
+- **Compatibility:** historical scalar values remain readable unchanged; later catalog reconciliation is idempotent and no ordered-intent JSON is approved.
+- **Governance/source:** PDR-017 scoped extension, PDR-019, ADR-004.
+
+### FDD-001-035 — QuotationCommunication
+
+- **Canonical/Persian:** QuotationCommunication / ارتباط پیشنهاد قیمت; bounded Customer response/history attached to one official Quotation.
+- **Class/owners/scope:** Commercial transaction history; Quotation/Pricing SOR; Customer response authorized through the existing Request/Quote capability boundary.
+- **States:** approve (`accepted`), needs discussion with a short message (`discussion`), reject (`declined`).
+- **Relationships/exclusions:** belongs to one Quotation; revised terms create a new/revised official Quotation. It is not a counter-offer, bargaining engine, price mutation, Notification, or automatic Request-state change.
+- **Compatibility:** existing accepted/declined rows retain meaning; each Quotation retains its own response/message/time history; only accepted Quotation creates Shipment eligibility.
+- **Governance/source:** PDR-019, Canonical Business Object Catalog (`Quotation`, `Comment`).
+
 ## Permanent data-class administration policy
 
 ADR-028 classifies LogisticsPointType, MilestoneType, ServiceType, DocumentDefinition, CargoType, UnitOfMeasure, Cargo Catalog, and equivalent governed lookups as administrator-managed Reference Data. They use immutable business codes, duplicate protection, activation/deactivation rather than hard delete, audit, and applicable organization rules. Empty catalogs are valid and no deployment or release validation depends on population.

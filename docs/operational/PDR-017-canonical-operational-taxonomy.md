@@ -74,3 +74,19 @@ This record defines the shared vocabulary for Project configuration, execution, 
 ## Decision
 
 Adopt this vocabulary and the required distinctions. PDR-017 defines vocabulary and boundaries; it does not authorize future capabilities automatically. Implementation authority remains Slice-specific. Required approvers are role authorities: Product, Architecture, Operations, and Data, with Security consulted where visibility, party, evidence, or organization-isolation boundaries apply. No named individual signatures are asserted.
+
+## Post-D2 scoped extension
+
+**NEW ACCEPTED DECISION — 2026-09-20:** PDR-019 extends, but does not rewrite, this taxonomy:
+
+- `RequestCargoItem` is optional commercial Request data (`0..N`) and is distinct from operational `ShipmentCargoItem`;
+- `RequestTransportIntent` is a scalar Customer intent and may be displayed as `حمل ترکیبی`;
+- the ordered actual sequence remains `RouteLeg.transport_mode` under RoutePlan ownership;
+- no ordered permutation is modeled at Request intake;
+- `QuotationDiscussionRequest` is supporting communication attached to one official Quotation and is not a bargaining or price state.
+
+```text
+REQUEST_TRANSPORT_INTENT != ACTUAL_ROUTE_TRANSPORT
+```
+
+Schema, API, catalog application, migration, and runtime behavior remain subject to separately authorized Build slices.

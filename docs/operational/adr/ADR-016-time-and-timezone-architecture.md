@@ -53,3 +53,14 @@ Authentication can expire safely without changing business state. The client
 uses controlled single-flight refresh and a safe internal return path. Draft
 recovery for unsubmitted sensitive forms is a separate bounded design item;
 committed data already remains server-side.
+
+## Post-D2 accepted dual-calendar presentation contract
+
+**NEW ACCEPTED DECISION — 2026-09-20:** selected user-facing business dates render as `Gregorian (Jalali)`. Both calendar values are presentation of the same authoritative Local Date or Instant governed by this ADR.
+
+This extension creates no duplicate persisted Jalali date, second timestamp, alternate ordering/filtering field, timezone inference, or historical backfill. Storage, API authority, comparisons, ordering, filtering, Local Date/Instant separation, IANA timezone ownership, and `occurred_at`/`recorded_at` semantics remain unchanged. Later implementation must maintain a surface-adoption ledger and prove that formatting cannot change the authoritative fact.
+
+```text
+REFERENCE_IMPACT=UPDATE_REQUIRED
+REFERENCE_IMPACT_STATUS=CLOSED_FOR_REFERENCE_PHASE
+```

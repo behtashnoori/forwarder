@@ -49,6 +49,7 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | PDR-014 | Initial Reference Data Catalog | Accepted | Reference Data | 2026-08-01 | 1.5.0 | Initial cargo/service/UOM values | [PDR-014](PDR-014-initial-reference-data-catalog.md) | — | Production Seed not executed |
 | PDR-015 | Domain Development Roadmap | Accepted strategic direction | Platform | 2026-08-02 | N/A | Maturity layers | [PDR-015](PDR-015-forwarder-domain-development-roadmap.md) | — | No automatic Slice authority |
 | PDR-016 | Logistics Network Foundation | Accepted D01–D10 | Logistics Network | 2026-08-02 | 1.7.0 | Types, points, Project association | [PDR-016](PDR-016-logistics-network-foundation.md) | — | Bounded implementation complete; not deployed |
+| PDR-019 | Post-D2 Product Reference Contract | Accepted — reference phase | Product integration | 2026-09-20 | Future bounded slices | Optional Request Cargo, dual calendar, combined transport, quote communication, document blocker, CT/notification gates | [PDR-019](PDR-019-post-d2-product-reference-contract.md) | Supersedes only the Mandatory Cargo decision in the first Post-D2 amendment | **NEW ACCEPTED DECISION**; no implementation authority |
 
 ## Architecture Decision Records
 
@@ -80,6 +81,7 @@ Blank/TBD dates mean the source does not state a reliable decision date. Index i
 | ADR-024 | Tenant Cargo Search | Proposed | Search/Security | 2026-08-01 | None | Customer cargo search | [ADR-024](adr/ADR-024-tenant-scoped-postgresql-cargo-search.md) | — | Unauthorized |
 | ADR-025 | Logistics Network Boundaries | Accepted | Logistics Network | 2026-08-02 | 1.7.0 candidate | Type/master/config/plan/evidence separation | [ADR-025](adr/ADR-025-logistics-network-aggregate-boundaries.md) | — | — |
 | ADR-026 | Logistics Point Region Contract | Accepted | Logistics Network | 2026-08-03 | 1.7.0 | Governed Country and optional Province/City; `region_name` deferred | [ADR-026](adr/ADR-026-logistics-point-region-contract-gap.md) | — | Security consulted; future region requires a separate decision and additive migration |
+| ADR-047 | Fixed Responsible Transport Expert per Operational Shipment | Accepted — target/reference phase | Shipment authorization | 2026-09-20 | Future bounded slice | One immutable Shipment-owned responsible Expert; no Shipment reassignment | [ADR-047](adr/ADR-047-fixed-operational-shipment-responsible-expert.md) | Scoped supersession of ADR-042/043 Shipment reassignment and accepted-Quote request-root ownership | **SCOPE CHANGE**; no implementation authority |
 
 ## RFCs
 

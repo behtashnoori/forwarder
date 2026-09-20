@@ -37,6 +37,7 @@ ADR-017, ADR-018, and the implemented models establish:
 OperationalOrganization
 └── Project
     ├── ShipmentRequest 0..N (commercial lineage, not execution)
+    │   └── RequestCargoItem 0..N (optional commercial Cargo information)
     └── OperationalShipment 0..N (execution aggregate)
         └── ExecutionUnit 0..N (independently managed unit)
 ```
@@ -74,7 +75,9 @@ See `LEGACY-CANONICAL-MAP.md`.
 | Organization configuration/master data | Organization: `OrganizationDocumentRequirement`, `CargoCatalogItem`, `LogisticsPoint`, memberships and organization policies |
 | Project configuration | Project: services, `ProjectDocumentRequirement`, milestones, ordered `ProjectLogisticsPoint` associations |
 | Commercial request | `ShipmentRequest`: intake, quote/referral lineage, legacy compatibility fields |
+| Request Cargo | `ShipmentRequest` owns future `RequestCargoItem` children; `0..N`, optional for submission, no mandatory Cargo field under PDR-019 |
 | Shipment execution | `OperationalShipment` |
+| Shipment responsible Expert | `OperationalShipment`: exactly one fixed responsible Transport Expert under ADR-047; Request assignment does not mutate it |
 | Independent execution | `ExecutionUnit` |
 | Uploaded document binary metadata | `CaseDocumentFile`, owned by its source `ShipmentRequest`; contextual use is separate |
 | Shipment document use/readiness | `OperationalDocumentRequirement` plus `ArtifactAssociation` and assessments |
@@ -121,9 +124,13 @@ There is currently no direct `ExecutionUnit` document ownership. Adding it requi
 ## 9. Cargo architecture
 
 ```text
-CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment
+ShipmentRequest -> 0..N RequestCargoItem (commercial, optional)
+
+CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment (operational)
 ```
 
+- Request Cargo and Shipment Cargo are different concepts and owners. Customer submission is valid with zero Request Cargo Items and no Cargo field is currently mandatory.
+- Customer intake does not decide Shipment count, Cargo allocation, Execution Units, vehicles/containers, or Route Legs.
 - Catalog items are organization-owned reusable master data, not transactional truth.
 - Shipment cargo lines snapshot catalog identity and descriptive fields so later catalog edits do not rewrite history.
 - A manual shipment line may exist without a catalog item but still uses governed CargoType and UOM.
@@ -144,12 +151,16 @@ CRM is an internal, database-backed, organization-scoped subsystem. It is not an
 
 ## 12. Assignment and referral architecture
 
+> **ADR-047 scoped target:** Request assignment/referral remains commercial workflow. Operational Shipment ownership is a separate immutable Shipment-owned relation established at creation. No Shipment Expert reassignment/transfer/replacement workflow is approved. The statements below describe Request assignment behavior unless explicitly qualified.
+
 - Assignment is tenant-fenced: request, candidate expert membership, rule, state, and logs remain within one organization.
 - Direct assignment and rule pools validate runtime eligibility.
 - Rule `round_robin` uses per-rule state; rule `least_workload` uses active-assignment count; an optional maximum workload filters candidates.
 - The tenant-safe fallback uses oldest last-assignment/time-based round-robin and does not use the displayed workload metric.
 - Displayed `ExpertUser.get_workload()` counts assigned and in-progress requests. It is not a universal workload definition.
 - Changing included statuses, weights, fallback selection, or authority is an architecture/behavior decision requiring explicit approval and tests.
+
+For Operational Shipment access, the owning active Transport Expert may act within entitlement/state; another same-organization Expert is denied by default and gains nothing through membership alone; other tenants and inactive/revoked actors are denied. Same-organization Admin/Manager oversight remains action-specific and tenant-scoped. Accepted-Quote creation captures the issuing Expert as fixed owner; Direct creation validates one fixed responsible Expert. Existing request-assignee-derived Shipment access is implementation drift pending a separately authorized ADR-047 slice.
 
 ## 13. API, migration, audit, and reference-data gates
 

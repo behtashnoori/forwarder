@@ -2,6 +2,8 @@
 
 ## Scope and baseline
 
+> **Historical evidence notice (2026-09-20):** S6 PASS below remains historical evidence of the tested baseline. References to Request/Shipment reassignment are not target authority after ADR-047. The appended Post-D2 contracts define future acceptance journeys and do not claim implementation PASS.
+
 This is local/test-only LPAF v2.1 assurance evidence.  It began from S5 commit
 `50d3efc56e4215c06a4118312a918b679ed63549` on
 `stabilization/s6-golden-business-journeys`.  No application, frontend,
@@ -87,3 +89,83 @@ All five Golden Business Journeys, the separate direct LogisticsPoint path, tena
 isolation, cross-role propagation, reference-data behavior, negative/error paths,
 configuration propagation, lifecycle contracts, frontend suite/build, and full
 backend regression are proven by the recorded local evidence.  S6 is **PASS**.
+
+## Post-D2 target journey contracts — reference phase
+
+The following are **NEW ACCEPTED DECISION** journey references under PDR-019 and the LPAF v2.3 Product Integration strong default. Their reference definition is closed; implementation and browser acceptance remain future Build/Verify work.
+
+### A. Optional Multi-Cargo Request
+
+| Contract field | Target |
+| --- | --- |
+| ENTRY | Customer is signed in and starts or edits a Shipment Request. |
+| ACTOR | Customer; authorized staff projection is a downstream reader, not intake owner. |
+| ENTITLEMENT | Customer may create/edit only its governed Request; tenant/customer scope is server-derived. |
+| DISCOVERY | Normal Customer navigation exposes Request creation/edit and an optional Cargo section. |
+| USE | Customer submits with zero Cargo Items or adds/removes `0..N RequestCargoItems`; no Cargo characteristic is required. |
+| RESULT | Request is accepted under the existing commercial workflow; any supplied items remain Request-owned commercial facts. |
+| LEAVE | Customer may leave after save/submit without creating Shipment, allocation, Execution Unit, vehicle/container, or Route Leg. |
+| RETURN | Customer reopens the Request through the normal Request list/detail and sees the same Cargo state, including empty state. |
+| DENIAL/ERROR | Foreign/unauthorized Request is non-disclosing; malformed supplied values receive stable field errors; absent Cargo never causes rejection. |
+| DOWNSTREAM | Pricing/Expert projection may read Request Cargo; Operations later creates separate Shipment Cargo snapshots/allocation explicitly. |
+
+### B. Dual Calendar presentation
+
+| Contract field | Target |
+| --- | --- |
+| ENTRY | Entitled user opens a supported Request, Quote, Document, Tracking, Shipment Detail, or Control Tower surface. |
+| ACTOR | Customer, owning Transport Expert, or same-organization Admin/Manager as authorized for that surface. |
+| ENTITLEMENT | Calendar formatting grants no data access; the underlying surface authorization must already pass. |
+| DISCOVERY | Dates appear in their normal existing location; no separate calendar-only route is required. |
+| USE | Selected business dates display `Gregorian (Jalali)` from one authoritative Local Date or Instant. |
+| RESULT | Both renderings identify the same fact; storage, sort, filter, comparison, and timezone semantics are unchanged. |
+| LEAVE | User navigates away through ordinary product navigation. |
+| RETURN | Reopening the same record reproduces the same dual rendering for the same authoritative fact. |
+| DENIAL/ERROR | Unauthorized records remain hidden/denied; invalid/unknown date facts are not guessed; format failure must not fabricate a Jalali value. |
+| DOWNSTREAM | Exports/APIs retain their separately governed authoritative date contract unless a later surface decision explicitly adds presentation. |
+
+### C. Combined Transport Request intent
+
+| Contract field | Target |
+| --- | --- |
+| ENTRY | Customer creates or edits a Request and reaches the existing transport-intent selector. |
+| ACTOR | Customer; authorized Expert/Admin are read-only or act under existing Request workflow authority. |
+| ENTITLEMENT | Governed Request create/edit access; catalog visibility does not grant operational planning authority. |
+| DISCOVERY | Existing transport selector exposes one deterministic `حمل ترکیبی` choice without duplicate/conflicting Rail choices. |
+| USE | Customer selects the one scalar combined intent; no ordered modes or permutations are entered. |
+| RESULT | Request summaries round-trip the combined intent consistently. |
+| LEAVE | Customer saves/submits and leaves through the normal Request journey. |
+| RETURN | Customer and entitled staff reopen Request detail/summary and see the same scalar intent. |
+| DENIAL/ERROR | Inactive/invalid catalog identity fails stably; historical values remain readable; actual Route Legs are never fabricated from intent. |
+| DOWNSTREAM | Operational planning owns the actual ordered Route Legs; Shipment/Tracking/Control Tower label Request intent and actual route as separate facts. |
+
+### D. Quote communication
+
+| Contract field | Target |
+| --- | --- |
+| ENTRY | Customer opens a current official Quote through the normal Request/Quote surface. |
+| ACTOR | Customer responds; owning/authorized Transport Expert reads response/history and may issue a revised official Quote. |
+| ENTITLEMENT | Existing Request/Quote customer capability and tenant/tracking protection; Expert access follows current Request authority before Shipment creation. |
+| DISCOVERY | The Quote presents approve, needs discussion, and reject actions; needs discussion reveals a short-message field. |
+| USE | Customer chooses one response; `discussion` requires a bounded message; accepted/declined carry no discussion message. |
+| RESULT | One governed response/history fact is stored on that official Quote; discussion creates no price/status mutation and accepted alone enables Shipment creation. |
+| LEAVE | Customer may leave after a truthful confirmation; no endless conversation UI is implied. |
+| RETURN | Customer and entitled Expert reopen bounded Quote history; a later revised Quote remains a separate official record. |
+| DENIAL/ERROR | Expired, conflicting, concurrent, foreign, inactive, or unauthorized response follows stable existing error/non-disclosure rules; same-response replay stays idempotent. |
+| DOWNSTREAM | Expert may issue a new/revised official Quote; Notification activation is not triggered; accepted-Quote Shipment creation later captures the issuing Expert under ADR-047. |
+
+### E. Documents — blocked journey
+
+```text
+JOURNEY_STATUS=BLOCKED_PENDING_DOCUMENT_ACTOR_DECISION
+```
+
+ENTRY, DISCOVERY, USE, RESULT, LEAVE, RETURN, DENIAL/ERROR, and DOWNSTREAM semantics for multi-file append, targeted replace/history, and failed-file retry are understood. `ACTOR` and `ENTITLEMENT` are not authoritative until Product decides the action matrix for Customer, owning Transport Expert, and Admin/Manager. This gap blocks implementation and browser acceptance; it does not invalidate the already approved functional intent.
+
+### Reference-phase status
+
+```text
+REFERENCE_IMPACT=UPDATE_REQUIRED
+REFERENCE_IMPACT_STATUS=CLOSED_FOR_REFERENCE_PHASE
+USER_JOURNEY_REFERENCE=A/B/C/D DEFINED; DOCUMENTS BLOCKED
+```

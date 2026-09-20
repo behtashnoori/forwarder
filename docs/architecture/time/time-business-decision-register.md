@@ -29,6 +29,7 @@ authorize an unreviewed legacy timestamp migration.
 | TIME-BIZ-010 | Reporting Company Day | Accepted | Internal company reporting uses `Asia/Tehran`; branch/customer/user/operation/SLA reports use their named business timezone; comparisons use UTC or an explicit zone. APIs must eventually expose boundary metadata. |
 | TIME-BIZ-011 | Tracking fallback | Accepted | Without a known Location, explicit timezone selection is mandatory; no browser/server-zone guess is allowed. |
 | TIME-BIZ-012 | Session expiry | Accepted | Access lifetime is 1 hour, refresh idle lifetime 30 days, absolute session lifetime 90 days, and clock skew 60 seconds. All are configurable. Session expiry never expires a Shipment. |
+| TIME-BIZ-013 | Dual-calendar presentation | Accepted | Selected user-facing business dates render `Gregorian (Jalali)` from one authoritative Local Date or Instant. No Jalali persistence, duplicate timestamp, timezone change, or alternate sorting/filtering fact is created. |
 
 ## Confirmed policies without a matching register question
 

@@ -1,5 +1,7 @@
 # ADR-043 authorization implementation design package
 
+> **SCOPED SUPERSESSION NOTICE — 2026-09-20:** [ADR-047](../operational/adr/ADR-047-fixed-operational-shipment-responsible-expert.md) supersedes this package's accepted-Quote ownership through current Request assignment, Shipment reassignment/transfer workflow, former-Expert states, and Direct Shipment reassignment design. Those passages remain historical implementation evidence. Tenant-first evaluation, certified child lineage, non-disclosure, and Request-only assignment controls remain applicable where they do not conflict with ADR-047.
+
 - Status: design baseline for later separately authorized implementation
 - Date: 2026-08-30
 - Governing decisions: ADR-042 and ADR-043 (ACCEPTED); ADR-037 remains authoritative for request-parented CRM.

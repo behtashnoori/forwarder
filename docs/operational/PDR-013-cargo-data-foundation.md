@@ -1,5 +1,7 @@
 # PDR-013 — Cargo Data Foundation Product Decisions
 
+> **Post-D2 scope change (2026-09-20):** [PDR-019](PDR-019-post-d2-product-reference-contract.md) adds optional `0..N RequestCargoItems` at the commercial Request boundary. Request Cargo is not required for submission. This does not amend this record's `ShipmentCargoItem`, catalog, snapshot, search, allocation, or master/reference-data decisions. `RequestCargoItem` and `ShipmentCargoItem` must not be collapsed.
+
 - **Status:** Partially Accepted (D01, D04, D05, D06, D07, internal-only D11, and D12)
 - **Date:** 2026-08-01
 - **Target:** EPIC-002 — Cargo Data Foundation

@@ -58,3 +58,20 @@ This report records differences between the target architecture and the current 
 ## Required follow-up governance
 
 Each high-risk item needs a bounded Accepted ADR or an Accepted amendment naming compatibility, tenant/security, migration, rollback, and validation consequences. Until then the current compatibility behavior remains authoritative even where imperfect.
+
+## Post-D2 product/reference drift register — 2026-09-20
+
+PDR-019 and ADR-047 are now the target reference authority for the rows below. Existing runtime remains implementation evidence; this reconciliation does not describe gaps as solved.
+
+| Intended architecture | Actual implementation evidence | Known deviation / consequence | Disposition | Target slice | Owner | Status | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `ShipmentRequest -> 0..N RequestCargoItems`; Cargo optional | Request has nullable scalar Cargo fields and no RequestCargoItem collection | Multi-Cargo structure absent; submission must remain unblocked by absent Cargo | Correct in bounded Build; preserve Cargo-less history; no guessed backfill | Optional Multi-Cargo Request | Commercial/Product | OPEN | PDR-019; FDD-001-033; Post-D2 amendment v2 |
+| Operational Shipment owns one fixed responsible Expert | Direct Shipment has `primary_responsible_expert_id`; accepted-Quote Shipment derives access from current Request assignee; historical reassignment behavior exists | Request reassignment can change Shipment access, contrary to fixed owner target | Supersede via ADR-047; converge both creation paths; no transfer workflow | Responsible Expert ownership implementation gate | Product/Architecture/Security | OPEN | ADR-047; ADR-042/043 scoped supersession; current service/model evidence |
+| User dates render `Gregorian (Jalali)` from one fact | Current surfaces use existing mixed date presentation without a complete dual-calendar adoption ledger | Approved presentation is not consistently product-integrated | Correct through shared presentation slice only | Dual Calendar | Product/Time Architecture | OPEN | ADR-016 extension; TIME-BIZ-013; PDR-019 |
+| Request supports scalar `حمل ترکیبی`; actual Route Legs remain separate | Current Request transport catalog lacks the combined choice; actual ordered Route Legs already exist | Customer cannot express combined intent; conflation risk remains | Idempotent catalog/intake/presentation reconciliation; no ordered JSON | Combined Transport | Commercial/Product/Data | OPEN | PDR-019; PDR-017 extension; FDD-001-034 |
+| Customer can accept, request discussion + short message, or reject one official Quote | Existing response supports accepted/declined without the approved discussion message contract | Human follow-up path is absent | Add bounded response/message/history slice; no bargaining engine | Quote Communication | Pricing/Commercial | OPEN | PDR-019; FDD-001-035 |
+| Multi-file append/replace/history/retry with approved actor matrix | Foundation supports relevant file/version behavior, but Customer/Expert/Admin action entitlements are not decided | Implementing now could grant or deny the wrong actor | Await Product Owner actor/action decision | Documents | Product/Document/Security | OPEN — BLOCKED | PDR-019 §6; PDR-008/009; ADR-020 |
+| Control Tower works beyond launch volume without a business cap | D1/D2 fail closed above 100 authorized active Shipments | Product becomes unavailable above the safety ceiling | Prove launch headroom or replace with server-side search/windowing before RC | Control Tower scaling | Operations/Product | OPEN — PRE-RELEASE | D1/D2 evidence; PDR-019 §7 |
+| Notifications stay dormant until explicit activation policy | C1/C2 foundation/lifecycle exists with no producer/provider/API/UI activation | No deviation while dormant; risk is accidental scope expansion | Preserve dormant state | Notification activation | Product/Operations/Security | ACCEPTED DEFERRED | C1/C2 evidence; PDR-019 §7 |
+
+All rows have `REFERENCE_IMPACT=UPDATE_REQUIRED`. Their project reference updates are `CLOSED_FOR_REFERENCE_PHASE`; their runtime/product status remains as shown above.

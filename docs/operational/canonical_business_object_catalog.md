@@ -3,7 +3,7 @@
 - Status: Authoritative vocabulary draft for Phase 0.6 review
 - Date: 2026-07-31
 - Scope: Entire Forwarder platform
-- References: ADR-001 through ADR-020, PDR-001 through PDR-011, and the Operational Architecture Workshop
+- References: original ADR-001 through ADR-020 and PDR-001 through PDR-011 baseline, plus accepted scoped extensions PDR-017, PDR-019, and ADR-047
 - Constraint: This catalog defines language; it does not authorize implementation or mark Proposed decisions Accepted.
 
 ## Part 1 — Purpose
@@ -467,3 +467,25 @@ Any deviation must cite the canonical object, explain whether the term is a boun
 ### DA-1.0 dictionary and map
 
 [FDD-001](FDD-001-forwarder-data-dictionary.md) applies this Catalog to business-data definitions and [FDM-001](FDM-001-forwarder-domain-map.md) visualizes the boundaries. The Catalog remains vocabulary authority; neither living view changes decision status.
+
+## Part 11 — Accepted Post-D2 vocabulary extension
+
+**NEW ACCEPTED DECISION — 2026-09-20:** PDR-019 and ADR-047 add these meanings without retroactively changing the original Phase 0.6 review.
+
+| Business concept | Canonical name | Owner / SOR | Definition and required distinction |
+| --- | --- | --- | --- |
+| Cargo information supplied with a commercial request | `RequestCargoItem` | `ShipmentRequest` / Commercial | Optional child (`0..N`) describing requested Cargo. It is never `ShipmentCargoItem`, Shipment allocation, Execution Unit, or route planning. No field is mandatory for submission under the current policy. |
+| Carried/allocated operational Cargo snapshot | `ShipmentCargoItem` | `OperationalShipment` / Operations | Operational Cargo truth/snapshot. It must not be used as the Customer's Request intake record merely because it already exists. |
+| Customer's request-level movement preference | `RequestTransportIntent` | `ShipmentRequest` / Commercial | One scalar Request fact, including `حمل ترکیبی`; it is not an ordered actual route. |
+| Actual transport sequence | `RouteLegTransport` | `RoutePlan` / Operations | Ordered Route Leg modes representing planned/actual operational sequence. `REQUEST_TRANSPORT_INTENT != ACTUAL_ROUTE_TRANSPORT`. |
+| One fixed Shipment work owner | `ResponsibleTransportExpert` | `OperationalShipment` / Operations authorization | Exactly one active Transport Expert captured at Shipment creation. It is not Request assignee, creator history, Project access, WorkItem assignee, former Expert, or replacement Expert. No Shipment reassignment workflow is approved. |
+| Customer request for human follow-up on a Quote | `QuotationDiscussionRequest` | `Quotation` / Commercial | One short supporting message attached to the official Quote response. It is not a counter-offer, revised price, bargaining thread, Notification, or status truth. |
+| Dual-calendar date rendering | `DualCalendarPresentation` | Presentation constrained by authoritative time SOR | `Gregorian (Jalali)` rendering of one existing Local Date or Instant; never two persisted date facts. |
+
+The following terms must not be used interchangeably in new formal references:
+
+- `RequestCargoItem` / `ShipmentCargoItem`;
+- `RequestTransportIntent` / `RouteLegTransport`;
+- Request assignee / `ResponsibleTransportExpert`;
+- `QuotationDiscussionRequest` / Quotation revision / Notification;
+- Gregorian/Jalali rendering / stored authoritative date.
