@@ -4,10 +4,11 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from typing import Any, Mapping
 
-from sqlalchemy import desc, or_
+from sqlalchemy import case, desc, func, or_
+from sqlalchemy.orm import joinedload
 
 from backend.extensions import db
-from backend.models import ExpertUser, ShipmentRequest
+from backend.models import ShipmentRequest
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
 from backend.services.assigned_work_authorization import assigned_request_scope
@@ -35,9 +36,14 @@ def apply_request_list_visibility(query, user: dict[str, Any], filters: dict[str
     return query
 
 
-def apply_request_list_filters(query, filters: dict[str, Any]):
-    """Apply current status, priority, search, and sort behavior."""
-    status = filters.get("status")
+def apply_request_population_filters(
+    query,
+    filters: dict[str, Any],
+    *,
+    include_status: bool = True,
+):
+    """Apply predicates shared by list rows and aggregate counts."""
+    status = filters.get("status") if include_status else None
     if status:
         if "," in status:
             status_list = [s.strip() for s in status.split(",")]
@@ -61,6 +67,11 @@ def apply_request_list_filters(query, filters: dict[str, Any]):
             )
         )
 
+    return query
+
+
+def apply_request_list_ordering(query, filters: dict[str, Any]):
+    """Apply stable ordering after the canonical population is complete."""
     sort_by = filters.get("sort_by")
     if sort_by == "created_at":
         sort_column = ShipmentRequest.created_at
@@ -72,13 +83,82 @@ def apply_request_list_filters(query, filters: dict[str, Any]):
         sort_column = ShipmentRequest.created_at
 
     if filters.get("sort_order") == "desc":
-        return query.order_by(desc(sort_column))
-    return query.order_by(sort_column)
+        return query.order_by(desc(sort_column), desc(ShipmentRequest.id))
+    return query.order_by(sort_column, ShipmentRequest.id)
+
+
+def apply_request_list_filters(query, filters: dict[str, Any]):
+    """Compatibility wrapper for current callers that need filters and order."""
+    query = apply_request_population_filters(query, filters)
+    return apply_request_list_ordering(query, filters)
+
+
+def canonical_request_population(
+    user: dict[str, Any],
+    filters: dict[str, Any],
+    *,
+    include_status: bool = True,
+):
+    """Build the authorized, filtered population before count or pagination."""
+    query = db.session.query(ShipmentRequest)
+    query = apply_request_list_visibility(query, user, filters)
+    return apply_request_population_filters(
+        query,
+        filters,
+        include_status=include_status,
+    )
+
+
+def build_expert_request_kpis(
+    user: dict[str, Any],
+    filters: dict[str, Any],
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Count the same authorized population as the list in one SQL aggregate."""
+    observed_at = now or datetime.utcnow()
+    population = canonical_request_population(user, filters, include_status=False)
+
+    def matching_count(condition):
+        return func.count(case((condition, 1)))
+
+    counts = population.with_entities(
+        func.count(ShipmentRequest.id),
+        matching_count(ShipmentRequest.status == "new"),
+        matching_count(ShipmentRequest.status == "in_progress"),
+        matching_count(ShipmentRequest.status == "waiting_for_customer"),
+        matching_count(
+            ShipmentRequest.status.in_(["won", "lost", "closed"])
+            & (func.date(ShipmentRequest.created_at) == observed_at.date())
+        ),
+        matching_count(
+            (ShipmentRequest.sla_due_at < observed_at)
+            & ShipmentRequest.status.in_(["assigned", "in_progress"])
+        ),
+        matching_count(
+            (ShipmentRequest.sla_due_at <= observed_at + timedelta(hours=2))
+            & (ShipmentRequest.sla_due_at > observed_at)
+            & ShipmentRequest.status.in_(["assigned", "in_progress"])
+        ),
+    ).one()
+    return {
+        "counts": {
+            "total_visible": counts[0],
+            "new": counts[1],
+            "in_progress": counts[2],
+            "waiting_for_customer": counts[3],
+            "closed_today": counts[4],
+        },
+        "sla": {
+            "overdue": counts[5],
+            "due_soon": counts[6],
+        },
+    }
 
 
 def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
     """Build the current request list item payload."""
-    assigned_expert = db.session.query(ExpertUser).get(req.assigned_to) if req.assigned_to else None
+    assigned_expert = req.assigned_expert
 
     sla_status = "on_time"
     if req.sla_due_at:
@@ -136,9 +216,9 @@ def build_request_list_response_payload(items, pagination, filters: dict[str, An
 
 def list_expert_requests(user: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
     """Return the current filtered and paginated expert request list payload."""
-    query = db.session.query(ShipmentRequest)
-    query = apply_request_list_visibility(query, user, filters)
-    query = apply_request_list_filters(query, filters)
+    query = canonical_request_population(user, filters)
+    query = query.options(joinedload(ShipmentRequest.assigned_expert))
+    query = apply_request_list_ordering(query, filters)
     pagination = query.paginate(
         page=filters["page"],
         per_page=filters["per_page"],

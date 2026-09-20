@@ -1,10 +1,9 @@
 """Expert console API routes."""
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import wraps
 from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request, current_app, g
-from sqlalchemy import and_, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from backend.extensions import db
@@ -691,52 +690,13 @@ def get_dashboard_kpis():
         if not current_user:
             return jsonify({"error": "احراز هویت نشده"}), 401
         
-        query = db.session.query(ShipmentRequest)
-        if current_user.get("role") != "admin":
-            query = query.filter(ShipmentRequest.assigned_to == current_user["id"])
-        
-        # Today's date
-        today = datetime.utcnow().date()
-        
-        # ShipmentRequest.status is the canonical lifecycle field.
-        new_count = query.filter(ShipmentRequest.status == "new").count()
-        in_progress_count = query.filter(ShipmentRequest.status == "in_progress").count()
-        waiting_count = query.filter(ShipmentRequest.status == "waiting_for_customer").count()
-        closed_today = query.filter(
-            and_(
-                ShipmentRequest.status.in_(["won", "lost", "closed"]),
-                func.date(ShipmentRequest.created_at) == today
+        filters = expert_request_list_service.normalize_request_list_filters(request.args)
+        return jsonify(
+            expert_request_list_service.build_expert_request_kpis(
+                current_user,
+                filters,
             )
-        ).count()
-        
-        # SLA metrics
-        overdue_count = query.filter(
-            and_(
-                ShipmentRequest.sla_due_at < datetime.utcnow(),
-                ShipmentRequest.status.in_(["assigned", "in_progress"])
-            )
-        ).count()
-        
-        due_soon_count = query.filter(
-            and_(
-                ShipmentRequest.sla_due_at <= datetime.utcnow() + timedelta(hours=2),
-                ShipmentRequest.sla_due_at > datetime.utcnow(),
-                ShipmentRequest.status.in_(["assigned", "in_progress"])
-            )
-        ).count()
-        
-        return jsonify({
-            "counts": {
-                "new": new_count,
-                "in_progress": in_progress_count,
-                "waiting_for_customer": waiting_count,
-                "closed_today": closed_today
-            },
-            "sla": {
-                "overdue": overdue_count,
-                "due_soon": due_soon_count
-            }
-        })
+        )
         
     except Exception as e:
         current_app.logger.error(f"Error getting KPIs: {e}")

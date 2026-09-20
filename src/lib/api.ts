@@ -1259,6 +1259,7 @@ export interface ExpertNotification {
 
 export interface KPIs {
   counts: {
+    total_visible: number;
     new: number;
     in_progress: number;
     waiting_for_customer: number;
@@ -2284,10 +2285,10 @@ export function fetchNotifications(
   return request(path);
 }
 
-export function fetchKPIs(expertId?: number): Promise<KPIs> {
+export function fetchKPIs(expertId?: number, search?: string): Promise<KPIs> {
   const path = withQuery(
     "/api/expert/dashboard/kpis",
-    expertId ? { expert_id: expertId } : undefined,
+    { expert_id: expertId, search },
   );
   return request(path);
 }

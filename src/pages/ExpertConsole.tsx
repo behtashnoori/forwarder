@@ -101,12 +101,17 @@ const ExpertConsole = () => {
 
   const loadKPIs = useCallback(async () => {
     try {
-      const data = await fetchKPIs();
+      const data = await fetchKPIs(undefined, searchTerm || undefined);
       setKpis(data);
     } catch (error) {
       console.error("Error loading KPIs:", error);
     }
-  }, []);
+  }, [searchTerm]);
+
+  const refreshConsole = useCallback(() => {
+    void loadRequests();
+    void loadKPIs();
+  }, [loadKPIs, loadRequests]);
 
   const loadCurrentExpert = useCallback(async () => {
     try {
@@ -214,7 +219,7 @@ const ExpertConsole = () => {
 
   const totalKpiCount = useMemo(() => {
     if (!kpis) return 0;
-    return kpis.counts.new + kpis.counts.in_progress + kpis.counts.waiting_for_customer + kpis.counts.closed_today;
+    return kpis.counts.total_visible;
   }, [kpis]);
 
   const clearFilters = () => {
@@ -323,7 +328,7 @@ const ExpertConsole = () => {
 
             <div className="flex flex-col gap-3 sm:items-end">
               <div className="flex flex-wrap items-center gap-2">
-                <Button variant="outline" size="sm" onClick={loadRequests} disabled={loading} className="rounded-full">
+                <Button variant="outline" size="sm" onClick={refreshConsole} disabled={loading} className="rounded-full">
                   <RefreshCw className={`ml-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   {t("common.refresh")}
                 </Button>

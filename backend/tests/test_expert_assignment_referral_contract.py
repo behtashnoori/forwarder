@@ -1652,3 +1652,170 @@ def test_golden_new_request_counter_and_list_share_scope_through_mutations(
     assert counts(expert_headers)["new"] == 0
     assert list_total(other_headers, "assigned") == 1
     assert counts(other_headers)["new"] == 0
+
+
+def test_phase_b4_canonical_population_covers_filters_pagination_tenants_and_revocation(
+    expert_contract_app,
+):
+    """Count and list remain two database views over one authorized population."""
+    client = expert_contract_app["app"].test_client()
+    expert_headers = _auth_headers(expert_contract_app["expert_token"])
+    other_headers = _auth_headers(expert_contract_app["other_expert_token"])
+    admin_headers = _auth_headers(expert_contract_app["admin_token"])
+
+    def request_list(headers, *, status=None, page=1, per_page=20, search=None):
+        query = [f"page={page}", f"per_page={per_page}"]
+        if status:
+            query.append(f"status={status}")
+        if search:
+            query.append(f"search={search}")
+        response = client.get(
+            f"/api/expert/requests?{'&'.join(query)}",
+            headers=headers,
+        )
+        assert response.status_code == 200
+        return response.get_json()
+
+    def kpis(headers, *, search=None):
+        suffix = f"?search={search}" if search else ""
+        response = client.get(f"/api/expert/dashboard/kpis{suffix}", headers=headers)
+        assert response.status_code == 200
+        return response.get_json()
+
+    with expert_contract_app["app"].app_context():
+        fixed_created_at = datetime(2026, 1, 2, 10, 0, 0)
+        created_rows = []
+        for index in range(5):
+            row = ShipmentRequest(
+                ownership_scope="TENANT",
+                operational_organization_id=expert_contract_app["organization_id"],
+                tracking_code=f"SR-B4-{index}",
+                shipping_type="domestic",
+                contact_phone=f"0912000100{index}",
+                customer_first_name="Needle" if index == 0 else "Canonical",
+                customer_last_name=f"Request {index}",
+                status_request_status="new",
+                status="new",
+                assigned_to=expert_contract_app["expert_id"],
+                created_at=fixed_created_at,
+            )
+            db.session.add(row)
+            created_rows.append(row)
+
+        same_tenant_other_expert = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=expert_contract_app["organization_id"],
+            tracking_code="SR-B4-OTHER-EXPERT",
+            shipping_type="domestic",
+            contact_phone="09120001100",
+            status_request_status="new",
+            status="new",
+            assigned_to=expert_contract_app["other_expert_id"],
+            created_at=fixed_created_at,
+        )
+        foreign_organization = OperationalOrganization(name="Phase B4 Foreign Organization")
+        db.session.add_all([same_tenant_other_expert, foreign_organization])
+        db.session.flush()
+        foreign_request = ShipmentRequest(
+            ownership_scope="TENANT",
+            operational_organization_id=foreign_organization.id,
+            tracking_code="SR-B4-FOREIGN",
+            shipping_type="domestic",
+            contact_phone="09120001101",
+            status_request_status="new",
+            status="new",
+            assigned_to=expert_contract_app["expert_id"],
+            created_at=fixed_created_at,
+        )
+        db.session.add(foreign_request)
+        db.session.commit()
+        created_ids = [row.id for row in created_rows]
+
+    # CREATE + TENANT/ASSIGNMENT: the Expert gains exactly five eligible rows;
+    # same-tenant work assigned elsewhere and foreign-tenant work stay excluded.
+    new_population = request_list(expert_headers, status="new", per_page=2)
+    assert new_population["pagination"]["total"] == 6
+    assert kpis(expert_headers)["counts"]["new"] == 6
+    assert kpis(expert_headers)["counts"]["total_visible"] == 6
+
+    # Organization Admin is still tenant-fenced while seeing this tenant's
+    # assigned requests under the existing request.read capability.
+    assert request_list(admin_headers, status="new")["pagination"]["total"] == 7
+    assert kpis(admin_headers)["counts"]["new"] == 7
+
+    # PAGINATION: totals are population totals, pages are stable/disjoint, and
+    # changing page size or reading beyond the last page does not change total.
+    first_page = request_list(expert_headers, status="new", page=1, per_page=2)
+    second_page = request_list(expert_headers, status="new", page=2, per_page=2)
+    repeated_first_page = request_list(expert_headers, status="new", page=1, per_page=2)
+    first_ids = [row["id"] for row in first_page["requests"]]
+    second_ids = [row["id"] for row in second_page["requests"]]
+    assert first_ids == [row["id"] for row in repeated_first_page["requests"]]
+    assert set(first_ids).isdisjoint(second_ids)
+    assert first_page["pagination"]["total"] == second_page["pagination"]["total"] == 6
+    assert request_list(expert_headers, status="new", per_page=3)["pagination"]["total"] == 6
+    beyond = request_list(expert_headers, status="new", page=99, per_page=2)
+    assert beyond["requests"] == []
+    assert beyond["pagination"]["total"] == 6
+
+    # FILTER + REFRESH: status/search predicates match and repeated reads are
+    # identical without client-side reconstruction.
+    searched_list = request_list(expert_headers, status="new", search="Needle")
+    searched_kpis = kpis(expert_headers, search="Needle")
+    assert searched_list["pagination"]["total"] == 1
+    assert searched_kpis["counts"]["new"] == 1
+    assert searched_kpis["counts"]["total_visible"] == 1
+    assert request_list(expert_headers, status="new", search="Needle") == searched_list
+    assert kpis(expert_headers, search="Needle") == searched_kpis
+
+    # STATUS TRANSITION: both views leave new and enter in-progress together.
+    transitioned_id = created_ids[0]
+    transition = client.post(
+        f"/api/expert/requests/{transitioned_id}/status",
+        headers=expert_headers,
+        json={"status": "in_progress"},
+    )
+    assert transition.status_code == 200
+    assert request_list(expert_headers, status="new")["pagination"]["total"] == 5
+    assert request_list(expert_headers, status="in_progress")["pagination"]["total"] == 1
+    transitioned_kpis = kpis(expert_headers)["counts"]
+    assert transitioned_kpis["new"] == 5
+    assert transitioned_kpis["in_progress"] == 1
+
+    # REASSIGNMENT: current ownership revokes the old Expert and grants the new
+    # Expert. Existing Golden semantics change the request to assigned, so the
+    # new Expert gains total-visible/assigned rather than a fabricated new count.
+    old_total = kpis(expert_headers)["counts"]["total_visible"]
+    new_total = kpis(other_headers)["counts"]["total_visible"]
+    reassigned = client.post(
+        f"/api/admin/shipment-requests/{expert_contract_app['request_id']}/assign",
+        headers=admin_headers,
+        json={"expert_id": expert_contract_app["other_expert_id"]},
+    )
+    assert reassigned.status_code == 200
+    assert kpis(expert_headers)["counts"]["total_visible"] == old_total - 1
+    assert kpis(other_headers)["counts"]["total_visible"] == new_total + 1
+    assert request_list(other_headers, status="assigned")["pagination"]["total"] == 1
+    assert client.get(
+        f"/api/expert/requests/{expert_contract_app['request_id']}",
+        headers=expert_headers,
+    ).status_code == 403
+
+    # REVOKED MEMBERSHIP: neither row data nor aggregate existence is disclosed.
+    with expert_contract_app["app"].app_context():
+        membership = OperationalMembership.query.filter_by(
+            organization_id=expert_contract_app["organization_id"],
+            user_id=expert_contract_app["expert_id"],
+        ).one()
+        membership.is_active = False
+        db.session.commit()
+
+    assert request_list(expert_headers)["pagination"]["total"] == 0
+    revoked_counts = kpis(expert_headers)["counts"]
+    assert revoked_counts == {
+        "total_visible": 0,
+        "new": 0,
+        "in_progress": 0,
+        "waiting_for_customer": 0,
+        "closed_today": 0,
+    }
