@@ -278,6 +278,8 @@ def test_admin_shipment_request_detail_and_list_contract(admin_panel_app):
         "country": None, "international_city": None, "address": None,
     }
     assert detail_payload["iran_destination"] is None
+    assert "cargo_items" not in detail_payload
+    assert "legacy_cargo" not in detail_payload
 
     invalid_date = client.get("/api/admin/shipment-requests?date_from=not-a-date", headers=admin_headers)
     assert invalid_date.status_code == 400
@@ -294,6 +296,8 @@ def test_admin_shipment_request_detail_and_list_contract(admin_panel_app):
     assert len(list_payload["requests"]) == 1
     assert list_payload["requests"][0]["id"] == admin_panel_app["assigned_request_id"]
     assert list_payload["requests"][0]["assigned_to"] == admin_panel_app["expert_id"]
+    assert "cargo_item_count" not in list_payload["requests"][0]
+    assert "has_legacy_cargo" not in list_payload["requests"][0]
     assert list_payload["requests"][0]["origin"] == {
         "province": "Tehran", "county": "Tehran County", "city": "Tehran City",
         "country": None, "international_city": None, "address": None,

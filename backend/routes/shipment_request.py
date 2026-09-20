@@ -27,6 +27,16 @@ def get_transport_methods():
         )
 
 
+@shipment_request_bp.get("/request-cargo-options")
+def get_request_cargo_options():
+    """Return active governed references safe for optional Customer intake."""
+    try:
+        return jsonify(shipment_service.get_request_cargo_options_payload())
+    except Exception as e:
+        current_app.logger.exception("Error fetching Request Cargo options")
+        return jsonify({"error": "Unable to load Request Cargo options", "message": str(e)}), 500
+
+
 @shipment_request_bp.post("/shipment-request")
 def create_shipment_request():
     """Create a shipment request from public form submissions."""
@@ -44,6 +54,8 @@ def create_shipment_request():
         body = {"message": e.message}
         if canonical_submission or e.code != "VALIDATION_FAILED":
             body["error"] = {"code": e.code, "message": e.message}
+            if e.fields:
+                body["error"]["fields"] = e.fields
         return jsonify(body), e.status_code
     except Exception as e:
         db.session.rollback()

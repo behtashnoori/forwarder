@@ -526,6 +526,8 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
         "completed_steps",
         "total_steps",
         "latest_quote",
+        "cargo_items",
+        "legacy_cargo",
     }
     assert workflow_payload["id"] == customer_gamification_app["request_id"]
     assert workflow_payload["shipping_type"] == "domestic"
@@ -550,6 +552,8 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
     }
     assert workflow_payload["customer_id"] == customer_gamification_app["customer_id"]
     assert workflow_payload["request_id"] == customer_gamification_app["request_id"]
+    assert workflow_payload["cargo_items"] == []
+    assert workflow_payload["legacy_cargo"]["description"] is None
     assert len(workflow_payload["workflow_steps"]) == 8
     assert set(workflow_payload["workflow_steps"][0].keys()) == {
         "name",

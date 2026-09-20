@@ -6,11 +6,17 @@ from datetime import datetime
 from typing import Any
 
 from sqlalchemy import desc, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from backend.models import City, County, Province, ShipmentRequest
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_iran_destination_payload
+from backend.services.assigned_work_authorization import authorize_work_action
+from backend.services.shipment_service import (
+    build_legacy_cargo_payload,
+    has_legacy_cargo,
+    serialize_request_cargo_items,
+)
 
 
 INVALID_DATE_ERROR = "\u0641\u0631\u0645\u062a \u062a\u0627\u0631\u06cc\u062e \u0646\u0627\u0645\u0639\u062a\u0628\u0631 \u0627\u0633\u062a"
@@ -38,10 +44,16 @@ class AdminRequestFilters:
     date_to: str | None
 
 
-def get_admin_shipment_request_detail(request_id: int, context=None) -> dict[str, Any] | None:
+def get_admin_shipment_request_detail(
+    request_id: int,
+    context=None,
+    *,
+    actor: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     """Return the existing admin shipment request detail payload."""
     query = ShipmentRequest.query.options(
-        joinedload(ShipmentRequest.assigned_expert)
+        joinedload(ShipmentRequest.assigned_expert),
+        selectinload(ShipmentRequest.request_cargo_items),
     ).filter(ShipmentRequest.id == request_id)
     if context is not None: query = query.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
     shipment_request = query.one_or_none()
@@ -49,13 +61,27 @@ def get_admin_shipment_request_detail(request_id: int, context=None) -> dict[str
     if shipment_request is None:
         return None
 
-    return build_admin_request_detail_payload(shipment_request)
+    include_request_cargo = bool(
+        actor
+        and authorize_work_action(actor, shipment_request, "request.read").allowed
+    )
+    return build_admin_request_detail_payload(
+        shipment_request,
+        include_request_cargo=include_request_cargo,
+    )
 
 
-def list_admin_shipment_requests(args, context=None) -> dict[str, Any]:
+def list_admin_shipment_requests(
+    args,
+    context=None,
+    *,
+    actor: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Return the existing admin shipment request list payload."""
     filters = normalize_admin_request_filters(args)
-    query = ShipmentRequest.query
+    query = ShipmentRequest.query.options(
+        selectinload(ShipmentRequest.request_cargo_items)
+    )
     if context is not None: query = query.filter(ShipmentRequest.operational_organization_id == context.organization_id, ShipmentRequest.ownership_scope == "TENANT")
     query = apply_admin_request_filters(query, filters)
 
@@ -69,7 +95,14 @@ def list_admin_shipment_requests(args, context=None) -> dict[str, Any]:
 
     location_lookups = build_location_lookups(shipment_requests)
     items = [
-        build_admin_request_list_item_payload(req, location_lookups)
+        build_admin_request_list_item_payload(
+            req,
+            location_lookups,
+            include_request_cargo=bool(
+                actor
+                and authorize_work_action(actor, req, "request.read").allowed
+            ),
+        )
         for req in shipment_requests
     ]
 
@@ -81,7 +114,9 @@ def list_unassigned_tenant_requests(context) -> dict[str, Any]:
     from backend.services.expert_request_list_service import build_request_list_item_payload
 
     rows = (
-        ShipmentRequest.query.filter(
+        ShipmentRequest.query.options(
+            selectinload(ShipmentRequest.request_cargo_items)
+        ).filter(
             ShipmentRequest.ownership_scope == "TENANT",
             ShipmentRequest.operational_organization_id == context.organization_id,
             ShipmentRequest.assigned_to.is_(None),
@@ -153,7 +188,11 @@ def apply_admin_request_filters(query, filters: AdminRequestFilters):
     return query
 
 
-def build_admin_request_detail_payload(shipment_request: ShipmentRequest) -> dict[str, Any]:
+def build_admin_request_detail_payload(
+    shipment_request: ShipmentRequest,
+    *,
+    include_request_cargo: bool = False,
+) -> dict[str, Any]:
     """Build the existing admin shipment request detail response shape."""
     origin_province = (
         Province.query.get(shipment_request.origin_province_id)
@@ -195,7 +234,7 @@ def build_admin_request_detail_payload(shipment_request: ShipmentRequest) -> dic
             "username": shipment_request.assigned_expert.username,
         }
 
-    return {
+    payload = {
         "id": shipment_request.id,
         "contact_phone": shipment_request.contact_phone,
         "customer_first_name": shipment_request.customer_first_name,
@@ -233,6 +272,12 @@ def build_admin_request_detail_payload(shipment_request: ShipmentRequest) -> dic
             else None
         ),
     }
+    if include_request_cargo:
+        payload.update({
+            "cargo_items": serialize_request_cargo_items(shipment_request),
+            "legacy_cargo": build_legacy_cargo_payload(shipment_request),
+        })
+    return payload
 
 
 def build_location_lookups(shipment_requests: list[ShipmentRequest]) -> dict[str, dict[int, str]]:
@@ -275,13 +320,15 @@ def build_location_lookups(shipment_requests: list[ShipmentRequest]) -> dict[str
 def build_admin_request_list_item_payload(
     req: ShipmentRequest,
     location_lookups: dict[str, dict[int, str]],
+    *,
+    include_request_cargo: bool = False,
 ) -> dict[str, Any]:
     """Build one list item using the existing response shape."""
     province_lookup = location_lookups["provinces"]
     county_lookup = location_lookups["counties"]
     city_lookup = location_lookups["cities"]
 
-    return {
+    payload = {
         "id": req.id,
         "contact_phone": req.contact_phone,
         "customer_first_name": req.customer_first_name,
@@ -310,6 +357,12 @@ def build_admin_request_list_item_payload(
         "iran_destination": build_iran_destination_payload(req),
         "created_at": serialize_legacy_utc_datetime(req.created_at),
     }
+    if include_request_cargo:
+        payload.update({
+            "cargo_item_count": len(req.request_cargo_items),
+            "has_legacy_cargo": has_legacy_cargo(req),
+        })
+    return payload
 
 
 def build_admin_request_list_response_payload(

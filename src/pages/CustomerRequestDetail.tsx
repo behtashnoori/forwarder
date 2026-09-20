@@ -30,6 +30,7 @@ import { useI18n } from "@/i18n";
 import { formatLocalDate, isLocalDateBeforeToday } from "@/lib/localDate";
 import { formatMoney } from "@/lib/formatQuantity";
 import { getRequestTransportMethod } from "@/lib/transportPresentation";
+import RequestCargoSummary from "@/components/RequestCargoSummary";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
 
@@ -349,6 +350,18 @@ const CustomerRequestDetail: React.FC = () => {
           </aside>
 
           <main className="space-y-6 lg:col-span-8">
+            <RequestCargoSummary items={requestDetail.cargo_items || []} className="border-border/70 bg-card/95 shadow-sm" />
+            {requestDetail.legacy_cargo && Object.entries(requestDetail.legacy_cargo).some(([, value]) => value != null && value !== "") && (
+              <Card className="border-border/70 bg-card/95 shadow-sm">
+                <CardHeader><CardTitle className="text-base">{t("requestForm.legacyCargo")}</CardTitle></CardHeader>
+                <CardContent className="grid gap-3 sm:grid-cols-2">
+                  {requestDetail.legacy_cargo.description && <p>{requestDetail.legacy_cargo.description}</p>}
+                  {requestDetail.legacy_cargo.weight != null && <p>{t("common.weightKg")}: {requestDetail.legacy_cargo.weight}</p>}
+                  {requestDetail.legacy_cargo.volume != null && <p>{t("common.volumeM3")}: {requestDetail.legacy_cargo.volume}</p>}
+                  {requestDetail.legacy_cargo.value != null && <p>{t("common.value")}: {requestDetail.legacy_cargo.value}</p>}
+                </CardContent>
+              </Card>
+            )}
             <Card className="border-border/70 bg-card/95 shadow-sm">
               <CardHeader>
                 <CardTitle className="flex flex-wrap items-center gap-2 text-base">

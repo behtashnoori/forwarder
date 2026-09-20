@@ -36,6 +36,7 @@ import PageNav from "@/components/PageNav";
 import OperationalPermission from "@/components/OperationalPermission";
 import OperationalAnyPermission from "@/components/OperationalAnyPermission";
 import CaseDocumentsTab from "@/components/CaseDocumentsTab";
+import RequestCargoSummary from "@/components/RequestCargoSummary";
 import { QuoteModal } from "@/components/QuoteModal";
 import OperationalEventLocationSelector, {
   type OperationalEventLocation,
@@ -63,6 +64,7 @@ import {
   type CRMShipmentRequestLinkState,
   type TrackingManagementData,
   type OperationalShipmentSummary,
+  type RequestCargoItem,
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 import { localDateTimeInputToUtc, toLocalDateTimeInputValue } from "@/lib/localDateTime";
@@ -123,6 +125,7 @@ interface RequestDetail {
     value?: number | null;
     special_instructions?: string | null;
   };
+  cargo_items?: RequestCargoItem[];
   dates: {
     pickup_date?: string;
     delivery_date?: string;
@@ -623,6 +626,7 @@ const RequestDetail = () => {
 
   const internalNotes = request.messages.filter((message) => message.type === "internal_note");
   const cargo = request.cargo ?? {};
+  const hasLegacyCargo = Object.values(cargo).some((value) => value != null && value !== "");
   const origin = request.route?.origin ?? emptyLocation;
   const destination = request.route?.destination ?? emptyLocation;
 
@@ -678,6 +682,8 @@ const RequestDetail = () => {
           <TabsContent value="details" className="space-y-0">
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
               <main className="min-w-0 space-y-6">
+                <RequestCargoSummary items={request.cargo_items || []} className="rounded-3xl border-slate-200 bg-white shadow-sm" />
+
                 <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-3 text-lg text-slate-950">
@@ -730,13 +736,13 @@ const RequestDetail = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+                {hasLegacyCargo && <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
                   <CardHeader className="pb-3">
                     <CardTitle className="flex items-center gap-3 text-lg text-slate-950">
                       <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-50 text-violet-700">
                         <Package className="h-5 w-5" />
                       </span>
-                      {t("requestDetail.cargoInfo")}
+                      {t("requestForm.legacyCargo")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -758,7 +764,7 @@ const RequestDetail = () => {
                       <p className="mt-2 text-sm font-medium leading-7 text-slate-900">{displayValue(cargo.special_instructions, missingValue)}</p>
                     </div>
                   </CardContent>
-                </Card>
+                </Card>}
 
                 <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
                   <CardHeader className="pb-3">

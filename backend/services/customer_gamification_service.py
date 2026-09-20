@@ -16,6 +16,10 @@ from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.request_transport_projection import (
     project_existing_request_transport,
 )
+from backend.services.shipment_service import (
+    build_legacy_cargo_payload,
+    serialize_request_cargo_items,
+)
 
 
 def generate_customer_verification_token() -> str:
@@ -663,6 +667,8 @@ def build_customer_workflow_payload(
         "customer_id": customer_id,
         "request_id": request_id,
         "tracking_code": shipment_request.tracking_code,
+        "cargo_items": serialize_request_cargo_items(shipment_request),
+        "legacy_cargo": build_legacy_cargo_payload(shipment_request),
         "workflow_steps": workflow_status,
         "workflow_steps_simple": _workflow_steps_simple_4(shipment_request),
         "total_points_earned": sum(step.points_earned for step in steps),

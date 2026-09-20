@@ -463,7 +463,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260923_notification_lifecycle"
+            "20260924_request_cargo_items"
     ]
 
 

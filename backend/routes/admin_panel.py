@@ -37,7 +37,11 @@ admin_bp = Blueprint("admin_panel", __name__, url_prefix="/api/admin")
 @require_organization_admin_context()
 def get_shipment_request_detail(request_id: int):
     """Return a shipment request with human-readable location names."""
-    payload = admin_shipment_request_service.get_admin_shipment_request_detail(request_id, getattr(g, "organization_context", None))
+    payload = admin_shipment_request_service.get_admin_shipment_request_detail(
+        request_id,
+        getattr(g, "organization_context", None),
+        actor=get_current_user(),
+    )
 
     if payload is None:
         return jsonify({"error": "درخواست موردنظر یافت نشد"}), 404
@@ -61,7 +65,11 @@ def list_shipment_requests():
     - date_to: Filter to date (ISO format)
     """
     try:
-        return jsonify(admin_shipment_request_service.list_admin_shipment_requests(request.args, getattr(g, "organization_context", None)))
+        return jsonify(admin_shipment_request_service.list_admin_shipment_requests(
+            request.args,
+            getattr(g, "organization_context", None),
+            actor=get_current_user(),
+        ))
     except admin_shipment_request_service.AdminShipmentRequestFilterError as e:
         return jsonify({"error": e.message}), e.status_code
 

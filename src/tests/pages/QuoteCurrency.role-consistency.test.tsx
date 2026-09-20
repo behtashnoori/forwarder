@@ -43,6 +43,8 @@ describe("EUR quote presentation", () => {
       status: "waiting_for_customer",
       created_at: "2026-09-20T00:00:00Z",
       assigned_expert: null,
+      cargo_items: [],
+      legacy_cargo: { description: null, weight: null, volume: null, value: null, special_instructions: null },
       workflow_steps: [],
       workflow_steps_simple: [],
       total_points_earned: 0,
@@ -59,7 +61,8 @@ describe("EUR quote presentation", () => {
       created_at: "2026-09-20T00:00:00Z",
       sla_status: "on_time",
       customer: { phone: "09120000000", full_name: "Customer" },
-      route: { shipping_type: "domestic", origin: {}, destination: {} },
+      route: { shipping_type: "domestic", origin: { province: null, county: null, city: null }, destination: { province: null, county: null, city: null } },
+      cargo: {},
       dates: {},
       timeline: [],
       messages: [],
@@ -68,7 +71,7 @@ describe("EUR quote presentation", () => {
     });
     vi.mocked(api.listOperationalShipments).mockResolvedValue({
       data: [],
-      pagination: { page: 1, per_page: 100, total: 0, pages: 0 },
+      meta: { page: 1, has_more: false },
     });
   });
 

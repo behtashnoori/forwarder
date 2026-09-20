@@ -105,6 +105,39 @@ export interface TransportMethodOptions {
   }[];
 }
 
+export interface RequestCargoTypeReference {
+  public_id: string;
+  code: string;
+  fa_name: string;
+  en_name: string;
+}
+
+export interface RequestCargoUomReference extends RequestCargoTypeReference {
+  symbol: string;
+  measurement_dimension: "COUNT" | "WEIGHT" | "VOLUME" | "LENGTH" | "OTHER_GOVERNED";
+}
+
+export interface RequestCargoItemInput {
+  description?: string;
+  cargo_type_public_id?: string;
+  quantity?: string;
+  uom_public_id?: string;
+}
+
+export interface RequestCargoItem {
+  public_id: string;
+  position: number;
+  description: string | null;
+  cargo_type: RequestCargoTypeReference | null;
+  quantity: string | null;
+  uom: RequestCargoUomReference | null;
+}
+
+export interface RequestCargoOptions {
+  cargo_types: RequestCargoTypeReference[];
+  uoms: RequestCargoUomReference[];
+}
+
 export interface ShipmentRequestPayload {
   shipping_type: "domestic" | "international";
   // Domestic shipping fields
@@ -148,6 +181,7 @@ export interface ShipmentRequestPayload {
   cargo_weight?: number;
   cargo_volume?: number;
   cargo_value?: number;
+  cargo_items?: RequestCargoItemInput[];
   special_instructions?: string;
   pickup_date?: string;
   delivery_date?: string;
@@ -401,14 +435,18 @@ export function fetchInternationalCityPage(
 
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
-): Promise<{ message: string; id: number; tracking_code: string }> {
-  return request<{ message: string; id: number; tracking_code: string }>(
+): Promise<{ message: string; id: number; tracking_code: string; cargo_items: RequestCargoItem[] }> {
+  return request<{ message: string; id: number; tracking_code: string; cargo_items: RequestCargoItem[] }>(
     "/api/shipment-request",
     {
       method: "POST",
       body: JSON.stringify(payload),
     },
   );
+}
+
+export function fetchRequestCargoOptions(): Promise<RequestCargoOptions> {
+  return request<RequestCargoOptions>("/api/request-cargo-options");
 }
 
 export interface PublicTrackingWorkflowStep {
@@ -983,6 +1021,8 @@ export interface CustomerWorkflowStep {
 export interface CustomerWorkflowData {
   tracking_code: string | null;
   id: number;
+  request_id: number;
+  customer_id: number;
   shipping_type: string;
   transport_method?: string | null;
   international_transport_method?: string | null;
@@ -996,6 +1036,14 @@ export interface CustomerWorkflowData {
     phone: string;
     email: string;
   } | null;
+  cargo_items: RequestCargoItem[];
+  legacy_cargo: {
+    description: string | null;
+    weight: number | null;
+    volume: number | null;
+    value: number | null;
+    special_instructions: string | null;
+  };
   workflow_steps: CustomerWorkflowStep[];
   workflow_steps_simple?: CustomerWorkflowStep[];
   total_points_earned: number;
@@ -1195,7 +1243,7 @@ export interface ExpertRequest {
     name: string;
   };
   customer: {
-    name: string;
+    name?: string;
     phone: string;
   };
   route: {
@@ -1232,6 +1280,9 @@ export interface ExpertRequest {
     volume?: number;
     value?: number;
   };
+  cargo_items?: RequestCargoItem[];
+  cargo_item_count?: number;
+  has_legacy_cargo?: boolean;
   has_unread: boolean;
 }
 

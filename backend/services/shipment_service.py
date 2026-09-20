@@ -1,7 +1,9 @@
 """Service helpers for public shipment request endpoints."""
 import secrets
 import string
-from datetime import datetime
+import re
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import Any
 
 from flask import current_app
@@ -12,10 +14,13 @@ from backend.quarantine import QuarantinedResource
 from backend.models import (
     CustomerGamification,
     CustomerWorkflowStep,
+    CargoType,
     Country,
+    RequestCargoItem,
     ShipmentRequest,
     ShipmentRequestLog,
     TransportMethod,
+    UnitOfMeasure,
 )
 from backend.referral_engine import referral_engine
 from backend.services.location_resolver import LocationResolutionError, resolve_location
@@ -31,6 +36,16 @@ VALID_TRANSPORT_PREFERENCES = ["customer_choice", "forwarder_suggestion"]
 VALID_IRAN_DEST_TYPES = ["port", "customs", "city"]
 SECURITY_FENCE_ERRORS = (QuarantinedResource, CensusTransitioned, CensusUnavailable)
 DOMESTIC_LOCATION_ERROR = "اطلاعات مبدا و مقصد داخلی نامعتبر است."
+REQUEST_CARGO_ERROR = "Request cargo is invalid."
+REQUEST_CARGO_ALLOWED_FIELDS = frozenset({
+    "description",
+    "cargo_type_public_id",
+    "quantity",
+    "uom_public_id",
+})
+REQUEST_CARGO_DECIMAL_GRAMMAR = re.compile(
+    r"^(?:0|[1-9][0-9]*)(?:\.([0-9]+))?$"
+)
 
 # Keys carrying the structured Iran destination point. Absent for domestic and
 # for international shipments whose destination is not Iran.
@@ -48,11 +63,18 @@ IRAN_DEST_KEYS = (
 class ShipmentValidationError(ValueError):
     """Raised when shipment request payload validation should return a 400 response."""
 
-    def __init__(self, message: str, status_code: int = 400, code: str = "VALIDATION_FAILED"):
+    def __init__(
+        self,
+        message: str,
+        status_code: int = 400,
+        code: str = "VALIDATION_FAILED",
+        fields: list[dict[str, str]] | None = None,
+    ):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
         self.code = code
+        self.fields = fields or []
 
 
 def get_transport_methods_payload() -> dict:
@@ -81,6 +103,26 @@ def get_transport_methods_payload() -> dict:
         "international_methods": international_methods,
         "domestic_methods": domestic_methods,
         "preference_options": PREFERENCE_OPTIONS,
+    }
+
+
+def get_request_cargo_options_payload() -> dict[str, list[dict[str, Any]]]:
+    """Return the fixed, active, public-safe Request Cargo reference projection."""
+    cargo_types = (
+        db.session.query(CargoType)
+        .filter(CargoType.is_active.is_(True))
+        .order_by(CargoType.display_order, CargoType.immutable_code, CargoType.id)
+        .all()
+    )
+    uoms = (
+        db.session.query(UnitOfMeasure)
+        .filter(UnitOfMeasure.is_active.is_(True))
+        .order_by(UnitOfMeasure.display_order, UnitOfMeasure.immutable_code, UnitOfMeasure.id)
+        .all()
+    )
+    return {
+        "cargo_types": [_serialize_cargo_type(row) for row in cargo_types],
+        "uoms": [_serialize_uom(row) for row in uoms],
     }
 
 
@@ -120,6 +162,20 @@ def _stage_shipment_request(
         **build_shipment_request_data(normalized, timestamp),
     )
     db.session.add(shipment_request)
+    db.session.flush()
+
+    for position, cargo_item in enumerate(normalized["cargo_items"], start=1):
+        db.session.add(RequestCargoItem(
+            shipment_request_id=shipment_request.id,
+            position=position,
+            cargo_type_id=(
+                cargo_item["cargo_type"].id if cargo_item["cargo_type"] else None
+            ),
+            description=cargo_item["description"],
+            quantity=cargo_item["quantity"],
+            uom_id=cargo_item["uom"].id if cargo_item["uom"] else None,
+            created_at=datetime.now(timezone.utc),
+        ))
     db.session.flush()
 
     shipment_request.tracking_code = generate_tracking_code(shipment_request)
@@ -201,7 +257,160 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "special_instructions": payload.get("special_instructions", "").strip() or None,
         "pickup_date": parse_date_or_none(payload.get("pickup_date")),
         "delivery_date": parse_date_or_none(payload.get("delivery_date")),
+        "cargo_items": normalize_request_cargo_items(payload),
     })
+    return normalized
+
+
+def _cargo_error(field: str, code: str, message: str) -> dict[str, str]:
+    return {"field": field, "code": code, "message": message}
+
+
+def _optional_public_id(
+    item: dict[str, Any],
+    key: str,
+    path: str,
+    errors: list[dict[str, str]],
+) -> str | None:
+    value = item.get(key)
+    if value in (None, ""):
+        return None
+    if not isinstance(value, str):
+        errors.append(_cargo_error(path, "INVALID_TYPE", "Value must be a string public ID."))
+        return None
+    return value.strip() or None
+
+
+def _parse_request_cargo_quantity(
+    value: Any,
+    path: str,
+    errors: list[dict[str, str]],
+) -> Decimal | None:
+    if value in (None, ""):
+        return None
+    if not isinstance(value, str):
+        errors.append(_cargo_error(path, "INVALID_TYPE", "Quantity must be a decimal string."))
+        return None
+
+    match = REQUEST_CARGO_DECIMAL_GRAMMAR.fullmatch(value)
+    if match is None:
+        if re.fullmatch(r"[0-9]+\.[0-9]+", value):
+            fraction = value.partition(".")[2]
+            if len(fraction) > 6:
+                errors.append(_cargo_error(path, "DECIMAL_SCALE_EXCEEDED", "Quantity may have at most 6 decimal places."))
+                return None
+        errors.append(_cargo_error(path, "DECIMAL_FORMAT_INVALID", "Quantity must be a canonical non-exponent decimal string."))
+        return None
+
+    fraction = match.group(1) or ""
+    integer = value.partition(".")[0]
+    if len(fraction) > 6:
+        errors.append(_cargo_error(path, "DECIMAL_SCALE_EXCEEDED", "Quantity may have at most 6 decimal places."))
+        return None
+    if len(value.replace(".", "")) > 18 or len(integer) > 12:
+        errors.append(_cargo_error(path, "DECIMAL_PRECISION_EXCEEDED", "Quantity may have at most 18 digits."))
+        return None
+
+    parsed = Decimal(value)
+    if parsed <= 0:
+        errors.append(_cargo_error(path, "MUST_BE_POSITIVE", "Quantity must be greater than zero."))
+        return None
+    return parsed
+
+
+def normalize_request_cargo_items(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Validate optional nested Request Cargo without making the collection mandatory."""
+    if "cargo_items" not in payload:
+        return []
+    raw_items = payload.get("cargo_items")
+    if not isinstance(raw_items, list):
+        raise ShipmentValidationError(
+            REQUEST_CARGO_ERROR,
+            422,
+            "REQUEST_CARGO_VALIDATION_FAILED",
+            [_cargo_error("cargo_items", "INVALID_TYPE", "Cargo items must be an array.")],
+        )
+
+    normalized: list[dict[str, Any]] = []
+    errors: list[dict[str, str]] = []
+    for index, raw_item in enumerate(raw_items):
+        base = f"cargo_items[{index}]"
+        if not isinstance(raw_item, dict):
+            errors.append(_cargo_error(base, "INVALID_TYPE", "Each cargo item must be an object."))
+            continue
+
+        for key in raw_item:
+            if key not in REQUEST_CARGO_ALLOWED_FIELDS:
+                errors.append(_cargo_error(f"{base}.{key}", "UNKNOWN_FIELD", "Field is not accepted for Request cargo."))
+
+        description_value = raw_item.get("description")
+        description = None
+        if description_value not in (None, ""):
+            if not isinstance(description_value, str):
+                errors.append(_cargo_error(f"{base}.description", "INVALID_TYPE", "Description must be text."))
+            else:
+                description = description_value.strip() or None
+                if description and len(description) > 2000:
+                    errors.append(_cargo_error(f"{base}.description", "MAX_LENGTH_EXCEEDED", "Description may have at most 2000 characters."))
+
+        cargo_type_public_id = _optional_public_id(
+            raw_item,
+            "cargo_type_public_id",
+            f"{base}.cargo_type_public_id",
+            errors,
+        )
+        uom_public_id = _optional_public_id(
+            raw_item,
+            "uom_public_id",
+            f"{base}.uom_public_id",
+            errors,
+        )
+        quantity_supplied = raw_item.get("quantity") not in (None, "")
+        quantity = _parse_request_cargo_quantity(
+            raw_item.get("quantity"), f"{base}.quantity", errors
+        )
+
+        cargo_type = None
+        if cargo_type_public_id:
+            cargo_type = db.session.query(CargoType).filter(
+                CargoType.public_id == cargo_type_public_id
+            ).one_or_none()
+            if cargo_type is None:
+                errors.append(_cargo_error(f"{base}.cargo_type_public_id", "REFERENCE_NOT_FOUND", "Cargo type was not found."))
+            elif not cargo_type.is_active:
+                errors.append(_cargo_error(f"{base}.cargo_type_public_id", "REFERENCE_INACTIVE", "Cargo type is inactive."))
+
+        uom = None
+        if uom_public_id:
+            uom = db.session.query(UnitOfMeasure).filter(
+                UnitOfMeasure.public_id == uom_public_id
+            ).one_or_none()
+            if uom is None:
+                errors.append(_cargo_error(f"{base}.uom_public_id", "REFERENCE_NOT_FOUND", "Unit of measure was not found."))
+            elif not uom.is_active:
+                errors.append(_cargo_error(f"{base}.uom_public_id", "REFERENCE_INACTIVE", "Unit of measure is inactive."))
+
+        if quantity_supplied != bool(uom_public_id):
+            pair_field = "uom_public_id" if quantity_supplied else "quantity"
+            errors.append(_cargo_error(f"{base}.{pair_field}", "QUANTITY_UOM_PAIR_REQUIRED", "Quantity and unit of measure must be supplied together."))
+
+        if not (description or cargo_type_public_id or (quantity_supplied and uom_public_id)):
+            errors.append(_cargo_error(base, "ITEM_EMPTY", "Cargo item must contain at least one meaningful fact."))
+
+        normalized.append({
+            "description": description,
+            "cargo_type": cargo_type,
+            "quantity": quantity,
+            "uom": uom,
+        })
+
+    if errors:
+        raise ShipmentValidationError(
+            REQUEST_CARGO_ERROR,
+            422,
+            "REQUEST_CARGO_VALIDATION_FAILED",
+            errors,
+        )
     return normalized
 
 
@@ -522,6 +731,64 @@ def build_shipment_request_payload(shipment_request: ShipmentRequest) -> dict[st
         "message": "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت.",
         "id": shipment_request.id,
         "tracking_code": tracking_display,
+        "cargo_items": serialize_request_cargo_items(shipment_request),
+    }
+
+
+def _serialize_cargo_type(row: CargoType) -> dict[str, Any]:
+    return {
+        "public_id": row.public_id,
+        "code": row.immutable_code,
+        "fa_name": row.fa_name,
+        "en_name": row.en_name,
+    }
+
+
+def _serialize_uom(row: UnitOfMeasure) -> dict[str, Any]:
+    return {
+        "public_id": row.public_id,
+        "code": row.immutable_code,
+        "fa_name": row.fa_name,
+        "en_name": row.en_name,
+        "symbol": row.symbol,
+        "measurement_dimension": row.measurement_dimension,
+    }
+
+
+def serialize_request_cargo_item(item: RequestCargoItem) -> dict[str, Any]:
+    return {
+        "public_id": item.public_id,
+        "position": item.position,
+        "description": item.description,
+        "cargo_type": _serialize_cargo_type(item.cargo_type) if item.cargo_type else None,
+        "quantity": f"{item.quantity:.6f}" if item.quantity is not None else None,
+        "uom": _serialize_uom(item.uom) if item.uom else None,
+    }
+
+
+def serialize_request_cargo_items(shipment_request: ShipmentRequest) -> list[dict[str, Any]]:
+    return [serialize_request_cargo_item(item) for item in shipment_request.request_cargo_items]
+
+
+def has_legacy_cargo(shipment_request: ShipmentRequest) -> bool:
+    return any(
+        value is not None and value != ""
+        for value in (
+            shipment_request.cargo_description,
+            shipment_request.cargo_weight,
+            shipment_request.cargo_volume,
+            shipment_request.cargo_value,
+        )
+    )
+
+
+def build_legacy_cargo_payload(shipment_request: ShipmentRequest) -> dict[str, Any]:
+    return {
+        "description": shipment_request.cargo_description,
+        "weight": shipment_request.cargo_weight,
+        "volume": shipment_request.cargo_volume,
+        "value": shipment_request.cargo_value,
+        "special_instructions": shipment_request.special_instructions,
     }
 
 

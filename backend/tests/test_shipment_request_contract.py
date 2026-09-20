@@ -103,7 +103,8 @@ def test_create_domestic_shipment_request_preserves_response_defaults_and_commit
 
     assert response.status_code == 201
     data = response.get_json()
-    assert set(data.keys()) == {"message", "id", "tracking_code"}
+    assert set(data.keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert data["cargo_items"] == []
     assert "public_id" not in data
     assert data["message"] == "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت."
     assert data["tracking_code"].startswith("SR")
@@ -171,7 +172,8 @@ def test_create_domestic_shipment_request_accepts_province_only_locations(shipme
 
     assert response.status_code == 201
     data = response.get_json()
-    assert set(data.keys()) == {"message", "id", "tracking_code"}
+    assert set(data.keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert data["cargo_items"] == []
 
     with shipment_app.app_context():
         shipment_request = db.session.get(ShipmentRequest, data["id"])

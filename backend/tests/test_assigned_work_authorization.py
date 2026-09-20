@@ -3,7 +3,7 @@ import pytest
 from sqlalchemy import select, update
 
 from backend import create_app
-from backend.models import Customer, ExpertQuote, ExpertUser, ShipmentRequest
+from backend.models import Customer, ExpertQuote, ExpertUser, RequestCargoItem, ShipmentRequest
 from backend.operational_models import OperationalMembership, OperationalOrganization, OperationalShipment
 from backend.services.assigned_work_authorization import (
     assigned_shipment_scope,
@@ -38,6 +38,52 @@ def test_request_assignment_is_current_and_tenant_fenced(assigned_work_app):
         request.assigned_to = b.id; db.session.commit()
         assert not authorize_work_action({"id": a.id}, request, "request.read").allowed
         assert authorize_work_action({"id": b.id}, request, "request.read").allowed
+
+
+def test_request_cargo_child_identity_never_broadens_parent_authorization(assigned_work_app):
+    with assigned_work_app.app_context():
+        org = OperationalOrganization(name="cargo-one", is_active=True)
+        other = OperationalOrganization(name="cargo-two", is_active=True)
+        db.session.add_all([org, other]); db.session.flush()
+        owner = _user("cargo-owner")
+        same_org = _user("cargo-unrelated")
+        foreign = _user("cargo-foreign")
+        inactive = _user("cargo-inactive")
+        org_admin_denied = _user("cargo-admin-denied", authority="ORGANIZATION_ADMIN", role="admin")
+        org_admin_allowed = _user("cargo-admin-allowed", authority="ORGANIZATION_ADMIN", role="admin")
+        manager_label = _user("cargo-manager-label", role="manager")
+        platform = _user("cargo-platform", authority="PLATFORM_ADMIN", role="admin")
+        inactive.is_active = False
+        _member(owner, org)
+        _member(same_org, org)
+        _member(foreign, other)
+        _member(inactive, org)
+        _member(org_admin_denied, org)
+        _member(org_admin_allowed, org, permissions=("request.read",))
+        _member(manager_label, org)
+        request = ShipmentRequest(
+            operational_organization_id=org.id,
+            ownership_scope="TENANT",
+            assigned_to=owner.id,
+            contact_phone="09110000009",
+        )
+        db.session.add(request); db.session.flush()
+        child = RequestCargoItem(
+            shipment_request_id=request.id,
+            position=1,
+            description="Authorization probe",
+        )
+        db.session.add(child); db.session.commit()
+
+        assert authorize_work_action({"id": owner.id}, request, "request.read").allowed
+        assert not authorize_work_action({"id": same_org.id}, request, "request.read").allowed
+        assert not authorize_work_action({"id": foreign.id}, request, "request.read").allowed
+        assert not authorize_work_action({"id": inactive.id}, request, "request.read").allowed
+        assert not authorize_work_action({"id": org_admin_denied.id}, request, "request.read").allowed
+        assert authorize_work_action({"id": org_admin_allowed.id}, request, "request.read").allowed
+        assert not authorize_work_action({"id": manager_label.id}, request, "request.read").allowed
+        assert not authorize_work_action({"id": platform.id}, request, "request.read").allowed
+        assert child.public_id and child.shipment_request_id == request.id
 
 
 def test_direct_shipment_requires_current_responsibility(assigned_work_app):

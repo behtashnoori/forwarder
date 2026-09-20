@@ -6,9 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, Weight, DollarSign, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User, Copy } from "lucide-react";
+import { ArrowLeft, MapPin, Send, CheckCircle2, Phone, Truck, Package, Calendar, FileText, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, User, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import RequestConfirmation from "./RequestConfirmation";
+import RequestCargoEditor from "./RequestCargoEditor";
+import { type RequestCargoDraft, validateRequestCargoDrafts } from "./requestCargoDraft";
 import { InternationalLocationSelector } from "./InternationalLocationSelector";
 import {
   City,
@@ -19,11 +21,15 @@ import {
   TransportMethod,
   TransportMethodOptions,
   ShipmentRequestPayload,
+  ApiError,
+  type RequestCargoItem,
+  type RequestCargoOptions,
   fetchCities,
   fetchCounties,
   fetchProvinces,
   fetchCountries,
   fetchTransportMethodOptions,
+  fetchRequestCargoOptions,
   submitShipmentRequest,
   isInternationalRouteComplete,
 } from "@/lib/api";
@@ -55,10 +61,6 @@ interface LocationFormData {
   domesticTransportMethod: string;
   transportMethodPreference: string;
   // Cargo details (optional)
-  cargoDescription: string;
-  cargoWeight: string;
-  cargoVolume: string;
-  cargoValue: string;
   specialInstructions: string;
   pickupDate: string;
   deliveryDate: string;
@@ -423,10 +425,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     internationalTransportMethod: "",
     domesticTransportMethod: "",
     transportMethodPreference: "customer_choice",
-    cargoDescription: "",
-    cargoWeight: "",
-    cargoVolume: "",
-    cargoValue: "",
     specialInstructions: "",
     pickupDate: "",
     deliveryDate: "",
@@ -435,6 +433,11 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCargoDetails, setShowCargoDetails] = useState(false);
+  const [cargoItems, setCargoItems] = useState<RequestCargoDraft[]>([]);
+  const [cargoOptions, setCargoOptions] = useState<RequestCargoOptions>({ cargo_types: [], uoms: [] });
+  const [cargoOptionsError, setCargoOptionsError] = useState<string | null>(null);
+  const [cargoErrors, setCargoErrors] = useState<Record<string, string>>({});
+  const [submittedCargoItems, setSubmittedCargoItems] = useState<RequestCargoItem[]>([]);
   const [showOriginLocationDetails, setShowOriginLocationDetails] = useState(false);
   const [showDestinationLocationDetails, setShowDestinationLocationDetails] = useState(false);
   const [submittedTrackingCode, setSubmittedTrackingCode] = useState<string | null>(null);
@@ -457,6 +460,25 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
     fetchTransportOptions();
   }, [t, toast]);
+
+  useEffect(() => {
+    let active = true;
+    fetchRequestCargoOptions()
+      .then((options) => {
+        if (active) {
+          setCargoOptions(options);
+          setCargoOptionsError(null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setCargoOptionsError(t("requestForm.cargoOptionsUnavailable"));
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [t]);
 
   // Legacy transport method options (fallback)
   const transportMethods = [
@@ -844,83 +866,19 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      const payload: ShipmentRequestPayload = {
-        shipping_type: shippingType,
-        contact_phone: formData.phoneNumber,
-        transport_method: formData.transportMethod,  // Legacy field
-        international_transport_method: formData.internationalTransportMethod,
-        domestic_transport_method: formData.domesticTransportMethod,
-        transport_method_preference: formData.transportMethodPreference,
-      };
-
-      // Add location data based on shipping type
-      if (shippingType === "domestic") {
-        payload.origin_province_id = Number(formData.originProvince);
-        payload.origin_county_id = formData.originCounty ? Number(formData.originCounty) : null;
-        payload.origin_city_id = formData.originCity ? Number(formData.originCity) : null;
-        payload.dest_province_id = Number(formData.destinationProvince);
-        payload.dest_county_id = formData.destinationCounty ? Number(formData.destinationCounty) : null;
-        payload.dest_city_id = formData.destinationCity ? Number(formData.destinationCity) : null;
-      } else {
-        // Get country names from selected IDs
-        const originCountry = countries.find(c => c.id.toString() === formData.originCountry);
-        const destCountry = countries.find(c => c.id.toString() === formData.destCountry);
-        const originCity = originInternationalCities.find(c => c.id.toString() === formData.originCityInternational);
-        const destCity = destinationInternationalCities.find(c => c.id.toString() === formData.destCityInternational);
-        
-        payload.origin_country_id = Number(formData.originCountry);
-        payload.origin_international_city_id = Number(formData.originCityInternational);
-        payload.origin_address_international = formData.originAddressInternational;
-        payload.dest_country_id = Number(formData.destCountry);
-        payload.dest_international_city_id = Number(formData.destCityInternational);
-        payload.dest_address_international = formData.destAddressInternational;
-      }
-
-      // Add customer details if provided
-      if (formData.customerFirstName.trim()) {
-        payload.customer_first_name = formData.customerFirstName.trim();
-      }
-      if (formData.customerLastName.trim()) {
-        payload.customer_last_name = formData.customerLastName.trim();
-      }
-
-      // Add cargo details if provided
-      if (formData.cargoDescription.trim()) {
-        payload.cargo_description = formData.cargoDescription.trim();
-      }
-      if (formData.cargoWeight.trim()) {
-        payload.cargo_weight = parseFloat(formData.cargoWeight);
-      }
-      if (formData.cargoVolume.trim()) {
-        payload.cargo_volume = parseFloat(formData.cargoVolume);
-      }
-      if (formData.cargoValue.trim()) {
-        payload.cargo_value = parseFloat(formData.cargoValue);
-      }
-      if (formData.specialInstructions.trim()) {
-        payload.special_instructions = formData.specialInstructions.trim();
-      }
-      if (formData.pickupDate) {
-        payload.pickup_date = formData.pickupDate;
-      }
-      if (formData.deliveryDate) {
-        payload.delivery_date = formData.deliveryDate;
-      }
-
-      // Show confirmation page instead of submitting directly
-      setShowConfirmation(true);
-    } catch (error) {
+    const nextCargoErrors = validateRequestCargoDrafts(cargoItems);
+    setCargoErrors(nextCargoErrors);
+    if (Object.keys(nextCargoErrors).length) {
+      setShowCargoDetails(true);
       toast({
-        title: t("requestForm.submitErrorTitle"),
-        description: error instanceof Error ? error.message : t("requestForm.submitError"),
+        title: t("common.error"),
+        description: t("requestForm.cargoItemEmpty"),
         variant: "destructive",
       });
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    setShowConfirmation(true);
   };
 
   const handleFinalSubmit = async () => {
@@ -945,12 +903,6 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.dest_county_id = formData.destinationCounty ? Number(formData.destinationCounty) : null;
         payload.dest_city_id = formData.destinationCity ? Number(formData.destinationCity) : null;
       } else {
-        // Get country names from selected IDs
-        const originCountry = countries.find(c => c.id.toString() === formData.originCountry);
-        const destCountry = countries.find(c => c.id.toString() === formData.destCountry);
-        const originCity = originInternationalCities.find(c => c.id.toString() === formData.originCityInternational);
-        const destCity = destinationInternationalCities.find(c => c.id.toString() === formData.destCityInternational);
-        
         payload.origin_country_id = Number(formData.originCountry);
         payload.origin_international_city_id = Number(formData.originCityInternational);
         payload.origin_address_international = formData.originAddressInternational;
@@ -967,19 +919,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.customer_last_name = formData.customerLastName.trim();
       }
 
-      // Add cargo details if provided
-      if (formData.cargoDescription.trim()) {
-        payload.cargo_description = formData.cargoDescription.trim();
-      }
-      if (formData.cargoWeight.trim()) {
-        payload.cargo_weight = parseFloat(formData.cargoWeight);
-      }
-      if (formData.cargoVolume.trim()) {
-        payload.cargo_volume = parseFloat(formData.cargoVolume);
-      }
-      if (formData.cargoValue.trim()) {
-        payload.cargo_value = parseFloat(formData.cargoValue);
-      }
+      payload.cargo_items = cargoItems.map((item) => ({
+        ...(item.description.trim() && { description: item.description.trim() }),
+        ...(item.cargoTypePublicId && { cargo_type_public_id: item.cargoTypePublicId }),
+        ...(item.quantity.trim() && { quantity: item.quantity.trim() }),
+        ...(item.uomPublicId && { uom_public_id: item.uomPublicId }),
+      }));
       if (formData.specialInstructions.trim()) {
         payload.special_instructions = formData.specialInstructions.trim();
       }
@@ -993,6 +938,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       const response = await submitShipmentRequest(payload);
       const trackingCode = response.tracking_code || `SR${response.id.toString().padStart(6, "0")}`;
       setSubmittedTrackingCode(trackingCode);
+      setSubmittedCargoItems(response.cargo_items || []);
       setIsSubmitted(true);
       setShowConfirmation(false);
       toast({
@@ -1000,6 +946,17 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         description: tf("requestForm.submitSuccessDescription", { trackingCode }),
       });
     } catch (error) {
+      if (error instanceof ApiError && error.code === "REQUEST_CARGO_VALIDATION_FAILED") {
+        const fieldErrors = Object.fromEntries(
+          error.fields.flatMap((field) => {
+            if (!field || typeof field !== "object" || !("field" in field) || !("message" in field)) return [];
+            return [[String(field.field), String(field.message)]];
+          }),
+        );
+        setCargoErrors(fieldErrors);
+        setShowCargoDetails(true);
+        setShowConfirmation(false);
+      }
       toast({
         title: t("requestForm.submitErrorTitle"),
         description: error instanceof Error ? error.message : t("requestForm.submitError"),
@@ -1035,16 +992,15 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       internationalTransportMethod: "",
       domesticTransportMethod: "",
       transportMethodPreference: "customer_choice",
-      cargoDescription: "",
-      cargoWeight: "",
-      cargoVolume: "",
-      cargoValue: "",
       specialInstructions: "",
       pickupDate: "",
       deliveryDate: "",
     });
     setIsSubmitted(false);
     setShowCargoDetails(false);
+    setCargoItems([]);
+    setCargoErrors({});
+    setSubmittedCargoItems([]);
     setShowOriginLocationDetails(false);
     setShowDestinationLocationDetails(false);
     setSubmittedTrackingCode(null);
@@ -1100,6 +1056,21 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
               </div>
             </div>
           )}
+          <div className="mb-4 rounded-lg border p-4 text-right">
+            <p className="mb-2 text-sm font-semibold">{t("requestForm.cargoItemsTitle")}</p>
+            {submittedCargoItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("requestForm.noCargoItems")}</p>
+            ) : (
+              <ol className="space-y-2">
+                {submittedCargoItems.map((item) => (
+                  <li key={item.public_id} className="rounded bg-muted/40 p-2 text-sm">
+                    <strong>{item.position}. {item.description || item.cargo_type?.fa_name || item.cargo_type?.en_name}</strong>
+                    {item.quantity && item.uom && <p dir="ltr">{item.quantity} {item.uom.symbol}</p>}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
           <p className="text-muted-foreground mb-6 leading-7">{t("requestForm.successHelp")}</p>
           <div className="space-y-2">
             <Button
@@ -1130,6 +1101,12 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         onSubmit={handleFinalSubmit}
         isSubmitting={isSubmitting}
         locationDisplay={confirmationLocationDisplay}
+        cargoItems={cargoItems.map((item) => ({
+          description: item.description.trim(),
+          cargoTypeLabel: cargoOptions.cargo_types.find((option) => option.public_id === item.cargoTypePublicId)?.[language === "fa" ? "fa_name" : "en_name"] || "",
+          quantity: item.quantity.trim(),
+          uomLabel: cargoOptions.uoms.find((option) => option.public_id === item.uomPublicId)?.symbol || "",
+        }))}
       />
     );
   }
@@ -1860,133 +1837,40 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
         {/* Cargo Details Form */}
         {showCargoDetails && (
-          <div className="space-y-4 p-4 bg-muted/30 rounded-lg border">
-            <div className="flex items-center gap-2 text-sm font-semibold text-foreground mb-3">
-              <Package className="w-4 h-4 text-primary" />
-              {t("requestForm.cargoDetails")}
-            </div>
-
-            {/* Cargo Description */}
-            <div className="space-y-2">
-              <Label htmlFor="cargoDescription" className="flex items-center gap-2 text-sm font-medium">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                {t("requestForm.cargoDescription")}
-              </Label>
-              <Input
-                id="cargoDescription"
-                placeholder={t("requestForm.cargoDescriptionPlaceholder")}
-                value={formData.cargoDescription}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    cargoDescription: e.target.value,
-                  });
-                }}
-              />
-            </div>
-
-            {/* Weight and Volume Row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="cargoWeight" className="flex items-center gap-2 text-sm font-medium">
-                  <Weight className="w-4 h-4 text-muted-foreground" />
-                  {t("common.weightKg")}
-                </Label>
-                <Input
-                  id="cargoWeight"
-                  type="number"
-                  placeholder="0"
-                  value={formData.cargoWeight}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      cargoWeight: e.target.value,
-                    });
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cargoVolume" className="flex items-center gap-2 text-sm font-medium">
-                  <Package className="w-4 h-4 text-muted-foreground" />
-                  {t("common.volumeM3")}
-                </Label>
-                <Input
-                  id="cargoVolume"
-                  type="number"
-                  step="0.01"
-                  placeholder="0"
-                  value={formData.cargoVolume}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      cargoVolume: e.target.value,
-                    });
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Cargo Value */}
-            <div className="space-y-2">
-              <Label htmlFor="cargoValue" className="flex items-center gap-2 text-sm font-medium">
-                <DollarSign className="w-4 h-4 text-muted-foreground" />
-                {t("requestForm.cargoValueToman")}
-              </Label>
-              <Input
-                id="cargoValue"
-                type="number"
-                placeholder="0"
-                value={formData.cargoValue}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    cargoValue: e.target.value,
-                  });
-                }}
-              />
-            </div>
-
-            {/* Special Instructions */}
-            <div className="space-y-2">
-              <Label htmlFor="specialInstructions" className="flex items-center gap-2 text-sm font-medium">
-                <FileText className="w-4 h-4 text-muted-foreground" />
-                {t("requestForm.specialInstructions")}
-              </Label>
-              <Input
-                id="specialInstructions"
-                placeholder={t("requestForm.specialInstructionsPlaceholder")}
-                value={formData.specialInstructions}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    specialInstructions: e.target.value,
-                  });
-                }}
-              />
-            </div>
-
-            <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
-              <div>
-                <p className="text-sm font-medium">{t("requestForm.availabilityWindow")}</p>
-                <p className={helperTextClass}>{t("requestForm.availabilityWindowHelp")}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="pickupDate">{t("requestForm.availabilityFrom")}</Label>
-                  <Input id="pickupDate" type="date" value={formData.pickupDate} onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="deliveryDate">{t("requestForm.availabilityTo")}</Label>
-                  <Input id="deliveryDate" type="date" value={formData.deliveryDate} onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <JalaliDateInput id="pickupDateJalali" label={t("requestForm.availabilityFromJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.pickupDate} onChange={(pickupDate) => setFormData({ ...formData, pickupDate })} />
-                <JalaliDateInput id="deliveryDateJalali" label={t("requestForm.availabilityToJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.deliveryDate} onChange={(deliveryDate) => setFormData({ ...formData, deliveryDate })} />
-              </div>
-            </div>
-          </div>
+          <RequestCargoEditor
+            items={cargoItems}
+            options={cargoOptions}
+            optionsError={cargoOptionsError}
+            errors={cargoErrors}
+            onChange={(items) => {
+              setCargoItems(items);
+              setCargoErrors({});
+            }}
+          />
         )}
+
+        <div className="space-y-2">
+          <Label htmlFor="specialInstructions" className="flex items-center gap-2 text-sm font-medium">
+            <FileText className="w-4 h-4 text-muted-foreground" />
+            {t("requestForm.specialInstructions")}
+          </Label>
+          <Input id="specialInstructions" placeholder={t("requestForm.specialInstructionsPlaceholder")} value={formData.specialInstructions} onChange={(e) => setFormData({ ...formData, specialInstructions: e.target.value })} />
+        </div>
+
+        <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+          <div>
+            <p className="text-sm font-medium">{t("requestForm.availabilityWindow")}</p>
+            <p className={helperTextClass}>{t("requestForm.availabilityWindowHelp")}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2"><Label htmlFor="pickupDate">{t("requestForm.availabilityFrom")}</Label><Input id="pickupDate" type="date" value={formData.pickupDate} onChange={(e) => setFormData({ ...formData, pickupDate: e.target.value })} /></div>
+            <div className="space-y-2"><Label htmlFor="deliveryDate">{t("requestForm.availabilityTo")}</Label><Input id="deliveryDate" type="date" value={formData.deliveryDate} onChange={(e) => setFormData({ ...formData, deliveryDate: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <JalaliDateInput id="pickupDateJalali" label={t("requestForm.availabilityFromJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.pickupDate} onChange={(pickupDate) => setFormData({ ...formData, pickupDate })} />
+            <JalaliDateInput id="deliveryDateJalali" label={t("requestForm.availabilityToJalali")} selectLabel={t("requestForm.selectJalaliDate")} nextMonthLabel={t("requestForm.nextMonth")} previousMonthLabel={t("requestForm.previousMonth")} clearLabel={t("requestForm.clearDate")} value={formData.deliveryDate} onChange={(deliveryDate) => setFormData({ ...formData, deliveryDate })} />
+          </div>
+        </div>
 
         {/* Submit Button */}
         <Button

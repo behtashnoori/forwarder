@@ -24,7 +24,8 @@ def mt_admin_app():
         expert_b=ExpertUser(username="expert-b",password_hash=password,full_name="Expert B",role="expert",authority="EXPERT",is_active=True)
         db.session.add_all([platform,admin_a,admin_b,expert_a,expert_b]);db.session.flush()
         for org,user in ((org_a,admin_a),(org_a,expert_a),(org_b,admin_b),(org_b,expert_b)):
-            db.session.add(OperationalMembership(organization_id=org.id,user_id=user.id,is_active=True,permissions=[]))
+            permissions = ["request.read"] if user.authority == "ORGANIZATION_ADMIN" else []
+            db.session.add(OperationalMembership(organization_id=org.id,user_id=user.id,is_active=True,permissions=permissions))
         req_a=ShipmentRequest(tracking_code="MT-A",shipping_type="domestic",contact_phone="09000000001",status_request_status="new",status="new",operational_organization_id=org_a.id,ownership_scope="TENANT")
         req_b=ShipmentRequest(tracking_code="MT-B",shipping_type="domestic",contact_phone="09000000002",status_request_status="new",status="new",operational_organization_id=org_b.id,ownership_scope="TENANT")
         db.session.add_all([req_a,req_b]);db.session.commit()
@@ -47,6 +48,8 @@ def test_operational_reads_and_dashboard_are_tenant_scoped(mt_admin_app):
     app,ids,tokens=mt_admin_app;c=app.test_client();headers=h(tokens,"admin_a")
     rows=c.get("/api/admin/shipment-requests",headers=headers).get_json()["requests"]
     assert [row["id"] for row in rows]==[ids["req_a"]]
+    assert rows[0]["cargo_item_count"]==0
+    assert rows[0]["has_legacy_cargo"] is False
     assert c.get(f"/api/admin/shipment-requests/{ids['req_b']}",headers=headers).status_code==404
     dashboard=c.get("/api/admin/dashboard",headers=headers)
     assert dashboard.status_code==200
@@ -54,6 +57,15 @@ def test_operational_reads_and_dashboard_are_tenant_scoped(mt_admin_app):
     export=c.get("/api/admin/reports/export.xlsx?period=yearly",headers=headers)
     assert export.status_code==200
     assert export.mimetype=="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+def test_platform_admin_parent_read_does_not_expand_to_request_cargo(mt_admin_app):
+    app,ids,tokens=mt_admin_app;c=app.test_client();headers=h(tokens,"platform")
+    row=c.get("/api/admin/shipment-requests",headers=headers).get_json()["requests"][0]
+    assert "cargo_item_count" not in row
+    assert "has_legacy_cargo" not in row
+    detail=c.get(f"/api/admin/shipment-requests/{ids['req_a']}",headers=headers).get_json()
+    assert "cargo_items" not in detail
+    assert "legacy_cargo" not in detail
 
 def test_manual_assignment_cannot_cross_tenant_or_change_owner(mt_admin_app):
     app,ids,tokens=mt_admin_app;c=app.test_client();headers=h(tokens,"admin_a")

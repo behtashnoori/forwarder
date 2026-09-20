@@ -31,7 +31,8 @@ const request = {
   created_at: "2026-09-20T00:00:00Z",
   sla_status: "on_time" as const,
   customer: { phone: "09120000000", full_name: "مشتری" },
-  route: { shipping_type: "domestic", origin: {}, destination: {} },
+  route: { shipping_type: "domestic", origin: { province: null, county: null, city: null }, destination: { province: null, county: null, city: null } },
+  cargo: {},
   dates: {},
   timeline: [],
   messages: [],
@@ -105,7 +106,7 @@ describe("retired tracking action reachability", () => {
     vi.mocked(api.fetchExpertRequestDetail).mockResolvedValue(request);
     vi.mocked(api.listOperationalShipments).mockResolvedValue({
       data: [],
-      pagination: { page: 1, per_page: 100, total: 0, pages: 0 },
+      meta: { page: 1, has_more: false },
     });
     vi.mocked(api.fetchTrackingLogisticsPoints).mockResolvedValue({ items: [], limit: 20, offset: 0, has_more: false });
     vi.mocked(api.fetchTrackingLocations).mockResolvedValue({ items: [] });

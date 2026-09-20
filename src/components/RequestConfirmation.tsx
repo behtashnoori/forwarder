@@ -28,10 +28,6 @@ interface RequestConfirmationFormData {
   transportMethodPreference?: string;
   domesticTransportMethodName?: string;
   internationalTransportMethodName?: string;
-  cargoDescription?: string;
-  cargoWeight?: string;
-  cargoVolume?: string;
-  cargoValue?: string;
   pickupDate?: string;
   deliveryDate?: string;
   specialInstructions?: string;
@@ -43,6 +39,12 @@ interface RequestConfirmationProps {
   onBack: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  cargoItems?: Array<{
+    description: string;
+    cargoTypeLabel: string;
+    quantity: string;
+    uomLabel: string;
+  }>;
   /** Resolved origin/destination labels; when provided, used instead of formData name fields */
   locationDisplay?: LocationDisplayPayload;
 }
@@ -53,6 +55,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
   onBack,
   onSubmit,
   isSubmitting,
+  cargoItems = [],
   locationDisplay: locationDisplayProp,
 }) => {
   const { t, shippingTypeLabel } = useI18n();
@@ -184,44 +187,26 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
             </div>
           </div>
 
-          {/* Cargo Details */}
-          {(formData.cargoDescription || formData.cargoWeight || formData.cargoVolume || formData.cargoValue) && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  {t("common.cargoDetails")}
-                </h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {formData.cargoDescription && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">{t("common.description")}:</span>
-                      <p className="text-sm font-medium">{formData.cargoDescription}</p>
-                    </div>
-                  )}
-                  {formData.cargoWeight && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">{t("common.weightKg")}:</span>
-                      <p className="text-sm font-medium">{formData.cargoWeight}</p>
-                    </div>
-                  )}
-                  {formData.cargoVolume && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">{t("common.volumeM3")}:</span>
-                      <p className="text-sm font-medium">{formData.cargoVolume}</p>
-                    </div>
-                  )}
-                  {formData.cargoValue && (
-                    <div>
-                      <span className="text-sm text-muted-foreground">{t("common.value")}:</span>
-                      <p className="text-sm font-medium">{formData.cargoValue}</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
+          <Separator />
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Package className="w-5 h-5" />
+              {t("requestForm.cargoItemsTitle")}
+            </h3>
+            {cargoItems.length === 0 ? (
+              <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{t("requestForm.noCargoItems")}</p>
+            ) : (
+              <ol className="space-y-3">
+                {cargoItems.map((item, index) => (
+                  <li key={`${index}-${item.description}-${item.quantity}`} className="rounded-lg border p-3 text-sm">
+                    <strong>{index + 1}. {item.description || item.cargoTypeLabel}</strong>
+                    {item.cargoTypeLabel && item.description && <p className="text-muted-foreground">{item.cargoTypeLabel}</p>}
+                    {item.quantity && <p dir="ltr">{item.quantity} {item.uomLabel}</p>}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
 
           {/* Dates */}
           {(formData.pickupDate || formData.deliveryDate) && (

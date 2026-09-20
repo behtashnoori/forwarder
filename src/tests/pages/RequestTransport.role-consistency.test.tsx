@@ -42,6 +42,8 @@ describe("request transport role consistency", () => {
       status: "new",
       created_at: "2026-09-20T00:00:00Z",
       assigned_expert: null,
+      cargo_items: [],
+      legacy_cargo: { description: null, weight: null, volume: null, value: null, special_instructions: null },
       workflow_steps: [],
       workflow_steps_simple: [],
       total_points_earned: 0,
@@ -58,18 +60,19 @@ describe("request transport role consistency", () => {
       created_at: "2026-09-20T00:00:00Z",
       sla_status: "on_time",
       customer: { phone: "09120000000", full_name: "مشتری" },
-      route: { shipping_type: storedTransport.shipping_type, origin: {}, destination: {} },
+      route: { shipping_type: storedTransport.shipping_type, origin: { province: null, county: null, city: null }, destination: { province: null, county: null, city: null } },
       transport_method: storedTransport.transport_method,
       domestic_transport_method: storedTransport.domestic_transport_method,
       international_transport_method: storedTransport.international_transport_method,
       transport_method_preference: storedTransport.transport_method_preference,
+      cargo: {},
       dates: {},
       timeline: [],
       messages: [],
       has_unread: false,
       latest_quote: null,
     });
-    vi.mocked(api.listOperationalShipments).mockResolvedValue({ data: [], pagination: { page: 1, per_page: 100, total: 0, pages: 0 } });
+    vi.mocked(api.listOperationalShipments).mockResolvedValue({ data: [], meta: { page: 1, has_more: false } });
   });
 
   afterEach(cleanup);

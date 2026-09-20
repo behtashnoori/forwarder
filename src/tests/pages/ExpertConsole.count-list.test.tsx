@@ -57,7 +57,7 @@ const requestRow: api.ExpertRequest = {
   created_at: "2026-09-20T00:00:00Z",
   sla_status: "on_time",
   customer: { name: "Needle Customer", phone: "09120000000" },
-  route: { shipping_type: "domestic", origin: {}, destination: {} },
+  route: { shipping_type: "domestic", origin: { province: null, county: null, city: null }, destination: { province: null, county: null, city: null } },
   transport_method: "road",
   cargo: {},
   has_unread: false,

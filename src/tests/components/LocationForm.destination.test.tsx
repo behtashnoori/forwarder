@@ -17,7 +17,7 @@ vi.mock("@/components/RequestConfirmation", () => ({
 }));
 vi.mock("@/lib/api", async () => ({
   ...await vi.importActual<typeof import("@/lib/api")>("@/lib/api"),
-  fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(), fetchTransportMethodOptions: vi.fn(),
+  fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(), fetchTransportMethodOptions: vi.fn(), fetchRequestCargoOptions: vi.fn(),
   fetchProvinces: vi.fn(), fetchIranPorts: vi.fn(), fetchBorderCustoms: vi.fn(),
   submitShipmentRequest: vi.fn(),
 }));
@@ -42,7 +42,11 @@ beforeEach(() => {
     international_methods: [], domestic_methods: [],
     preference_options: [{ value: "forwarder_suggestion", label: "Forwarder chooses", description: "" }],
   });
-  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "123456789012", message: "Created" });
+  vi.mocked(api.fetchRequestCargoOptions).mockResolvedValue({
+    cargo_types: [{ public_id: "cargo-type", code: "GENERAL", fa_name: "عمومی", en_name: "General" }],
+    uoms: [{ public_id: "kg", code: "KG", fa_name: "کیلوگرم", en_name: "Kilogram", symbol: "kg", measurement_dimension: "WEIGHT" }],
+  });
+  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "123456789012", message: "Created", cargo_items: [] });
 });
 
 async function choose(index: number, option: string) {
@@ -77,7 +81,7 @@ async function submit(countryId: number, cityId: number) {
   await waitFor(() => expect(api.submitShipmentRequest).toHaveBeenCalledTimes(1));
   const payload = vi.mocked(api.submitShipmentRequest).mock.calls[0][0];
   expect(payload).toMatchObject({ origin_country_id: 2, origin_international_city_id: 22,
-    dest_country_id: countryId, dest_international_city_id: cityId, contact_phone: "09123456789" });
+    dest_country_id: countryId, dest_international_city_id: cityId, contact_phone: "09123456789", cargo_items: [] });
   expect(Object.keys(payload).filter(key => key.startsWith("iran_"))).toEqual([]);
   expect(api.fetchIranPorts).not.toHaveBeenCalled();
   expect(api.fetchBorderCustoms).not.toHaveBeenCalled();
@@ -107,4 +111,36 @@ describe("public destination business flow", () => {
       expect(api.fetchInternationalCityPage).toHaveBeenCalledWith(id, "", 0);
       await submit(id, cityId);
     });
+
+  it("submits multiple optional cargo items without converting exact quantity to Number", async () => {
+    await start();
+    await destination("Turkey", "Istanbul");
+    await userEvent.click(screen.getByRole("button", { name: /requestForm.cargoOptional/ }));
+    await userEvent.click(screen.getByRole("button", { name: /requestForm.addCargoItem/ }));
+    await userEvent.click(screen.getByRole("button", { name: /requestForm.addCargoItem/ }));
+    const descriptions = screen.getAllByLabelText("requestForm.cargoDescription");
+    await userEvent.type(descriptions[0], "Medical devices");
+    await userEvent.type(descriptions[1], "Precision cargo");
+    await userEvent.type(screen.getAllByLabelText("requestForm.cargoQuantity")[1], "3.250000");
+    await userEvent.selectOptions(screen.getAllByLabelText("requestForm.cargoUnit")[1], "kg");
+
+    await userEvent.click(screen.getByRole("button", { name: "shipping.submit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
+    await waitFor(() => expect(api.submitShipmentRequest).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(api.submitShipmentRequest).mock.calls[0][0].cargo_items).toEqual([
+      { description: "Medical devices" },
+      { description: "Precision cargo", quantity: "3.250000", uom_public_id: "kg" },
+    ]);
+  });
+
+  it("keeps an empty voluntarily-added item on the form and blocks submission", async () => {
+    await start();
+    await destination("Turkey", "Istanbul");
+    await userEvent.click(screen.getByRole("button", { name: /requestForm.cargoOptional/ }));
+    await userEvent.click(screen.getByRole("button", { name: /requestForm.addCargoItem/ }));
+    await userEvent.click(screen.getByRole("button", { name: "shipping.submit" }));
+    expect(screen.getByText("requestForm.cargoItemEmpty")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Confirm request" })).not.toBeInTheDocument();
+    expect(api.submitShipmentRequest).not.toHaveBeenCalled();
+  });
 });

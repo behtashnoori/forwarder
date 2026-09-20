@@ -488,6 +488,13 @@ class ShipmentRequest(db.Model):
     customer = db.relationship("Customer", back_populates="requests")
     project = db.relationship("Project", back_populates="shipment_requests")
     gamification_customer = db.relationship("CustomerGamification", back_populates="requests")
+    request_cargo_items = db.relationship(
+        "RequestCargoItem",
+        back_populates="shipment_request",
+        order_by="RequestCargoItem.position, RequestCargoItem.id",
+        lazy="selectin",
+        passive_deletes=True,
+    )
     origin_country_ref = db.relationship("Country", foreign_keys=[origin_country_id])
     origin_international_city_ref = db.relationship(
         "InternationalCity", foreign_keys=[origin_international_city_id]
@@ -508,6 +515,80 @@ class ShipmentRequest(db.Model):
 
     def __repr__(self) -> str:  # pragma: no cover - debug helper
         return f"<ShipmentRequest id={self.id}>"
+
+
+class RequestCargoItem(db.Model):
+    """Customer-supplied commercial cargo facts owned by one Request."""
+
+    __tablename__ = "request_cargo_item"
+    __table_args__ = (
+        db.UniqueConstraint("public_id", name="uq_request_cargo_item_public_id"),
+        db.UniqueConstraint(
+            "shipment_request_id",
+            "position",
+            name="uq_request_cargo_item_request_position",
+        ),
+        db.CheckConstraint(
+            "position >= 1", name="ck_request_cargo_item_position_positive"
+        ),
+        db.CheckConstraint(
+            "description IS NULL OR length(trim(description)) > 0",
+            name="ck_request_cargo_item_description_nonblank",
+        ),
+        db.CheckConstraint(
+            "quantity IS NULL OR quantity > 0",
+            name="ck_request_cargo_item_quantity_positive",
+        ),
+        db.CheckConstraint(
+            "(quantity IS NULL AND uom_id IS NULL) OR "
+            "(quantity IS NOT NULL AND uom_id IS NOT NULL)",
+            name="ck_request_cargo_item_quantity_uom_pair",
+        ),
+        db.CheckConstraint(
+            "cargo_type_id IS NOT NULL OR description IS NOT NULL OR "
+            "(quantity IS NOT NULL AND uom_id IS NOT NULL)",
+            name="ck_request_cargo_item_meaningful",
+        ),
+        db.Index(
+            "ix_request_cargo_item_request",
+            "shipment_request_id",
+            "position",
+        ),
+    )
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, default=lambda: str(uuid4())
+    )
+    shipment_request_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("shipment_request.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    position = db.Column(db.Integer, nullable=False)
+    cargo_type_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("cargo_type.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    description = db.Column(db.Text, nullable=True)
+    quantity = db.Column(db.Numeric(18, 6), nullable=True)
+    uom_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("unit_of_measure.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    created_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+    )
+
+    shipment_request = db.relationship(
+        "ShipmentRequest", back_populates="request_cargo_items"
+    )
+    cargo_type = db.relationship("CargoType")
+    uom = db.relationship("UnitOfMeasure")
 
 
 class ShipmentTracking(db.Model):

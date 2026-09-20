@@ -273,6 +273,8 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "domestic_transport_method",
         "transport_method_preference",
         "cargo",
+        "cargo_item_count",
+        "has_legacy_cargo",
         "has_unread",
     }
 
@@ -310,6 +312,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "domestic_transport_method",
         "transport_method_preference",
         "cargo",
+        "cargo_items",
         "dates",
         "timeline",
         "messages",
@@ -377,6 +380,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "special_instructions",
     }
     assert detail_data["cargo"]["description"] == "Phase 4H cargo"
+    assert detail_data["cargo_items"] == []
     assert set(detail_data["dates"].keys()) == {"pickup_date", "delivery_date"}
     assert detail_data["latest_quote"] is None
     assert detail_data["messages"] == []
@@ -1302,8 +1306,10 @@ def test_public_request_creation_does_not_use_tenant_round_robin_before_ownershi
 
     assert first_response.status_code == 201
     assert second_response.status_code == 201
-    assert set(first_response.get_json().keys()) == {"message", "id", "tracking_code"}
-    assert set(second_response.get_json().keys()) == {"message", "id", "tracking_code"}
+    assert set(first_response.get_json().keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert set(second_response.get_json().keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert first_response.get_json()["cargo_items"] == []
+    assert second_response.get_json()["cargo_items"] == []
 
     first_request_id = first_response.get_json()["id"]
     second_request_id = second_response.get_json()["id"]
@@ -1364,7 +1370,8 @@ def test_public_request_creation_remains_unassigned_when_no_active_expert_exists
     )
 
     assert response.status_code == 201
-    assert set(response.get_json().keys()) == {"message", "id", "tracking_code"}
+    assert set(response.get_json().keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert response.get_json()["cargo_items"] == []
     request_id = response.get_json()["id"]
 
     with expert_contract_app["app"].app_context():

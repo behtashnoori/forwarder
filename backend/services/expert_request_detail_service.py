@@ -17,6 +17,7 @@ from backend.services.assigned_work_authorization import authorize_work_action
 from backend.services.request_transport_projection import (
     project_existing_request_transport,
 )
+from backend.services.shipment_service import serialize_request_cargo_items
 
 
 class ExpertRequestDetailServiceError(Exception):
@@ -78,6 +79,7 @@ def build_request_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
         "route": build_route_detail_payload(req),
         **project_existing_request_transport(req),
         "cargo": build_cargo_detail_payload(req),
+        "cargo_items": serialize_request_cargo_items(req),
         "dates": build_dates_detail_payload(req),
         "timeline": build_timeline_payload(req.id),
         "messages": build_messages_payload(req.id),

@@ -5,13 +5,14 @@ from datetime import datetime, timedelta
 from typing import Any, Mapping
 
 from sqlalchemy import case, desc, func, or_
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from backend.extensions import db
 from backend.models import ShipmentRequest
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
 from backend.services.assigned_work_authorization import assigned_request_scope
+from backend.services.shipment_service import has_legacy_cargo
 
 
 def normalize_request_list_filters(args: Mapping[str, Any]) -> dict[str, Any]:
@@ -195,6 +196,8 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
             "volume": req.cargo_volume,
             "value": req.cargo_value,
         },
+        "cargo_item_count": len(req.request_cargo_items),
+        "has_legacy_cargo": has_legacy_cargo(req),
         "has_unread": req.has_unread_for_assignee,
     }
 
@@ -217,7 +220,10 @@ def build_request_list_response_payload(items, pagination, filters: dict[str, An
 def list_expert_requests(user: dict[str, Any], filters: dict[str, Any]) -> dict[str, Any]:
     """Return the current filtered and paginated expert request list payload."""
     query = canonical_request_population(user, filters)
-    query = query.options(joinedload(ShipmentRequest.assigned_expert))
+    query = query.options(
+        joinedload(ShipmentRequest.assigned_expert),
+        selectinload(ShipmentRequest.request_cargo_items),
+    )
     query = apply_request_list_ordering(query, filters)
     pagination = query.paginate(
         page=filters["page"],
