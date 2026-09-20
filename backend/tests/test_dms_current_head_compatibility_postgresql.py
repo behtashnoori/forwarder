@@ -87,7 +87,10 @@ def test_integrated_head_dms_identity_version_integrity_audit_and_tenant_boundar
                         data={"file": (io.BytesIO(PDF + b"-v1"), "evidence-v1.pdf")})
     assert first.status_code == 201
     replacement = client.post(path + "/replace", headers=owner_headers,
-        data={"file": (io.BytesIO(PDF + b"-v2"), "evidence-v2.pdf")})
+        data={
+            "file": (io.BytesIO(PDF + b"-v2"), "evidence-v2.pdf"),
+            "replaces_file_public_id": first.get_json()["public_id"],
+        })
     assert replacement.status_code == 201
     assert client.get(f"/api/expert/requests/{case_id}/documents", headers=outsider_headers).status_code in {403, 404}
 

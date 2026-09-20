@@ -5,17 +5,17 @@ import json
 import re
 import io
 import zipfile
+import unicodedata
 from datetime import datetime
-from pathlib import Path
 from typing import Any
 
-from sqlalchemy import func
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
 from backend.extensions import db
-from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentAuditEvent, DocumentDefinition, ShipmentRequest
+from backend.models import CaseDocumentFile, CaseDocumentRequirement, DocumentAuditEvent, DocumentDefinition, ExpertUser, ShipmentRequest
 from backend.models import DOCUMENT_FAMILIES, DOCUMENT_SOURCE_REVIEW_STATUSES
 from backend.quarantine import assert_instance_current
 from backend.services.document_storage_service import DocumentStorageError, PrivateDocumentStorage
@@ -33,9 +33,9 @@ CODE_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 
 
 class DocumentError(Exception):
-    def __init__(self, message: str, status: int = 400):
+    def __init__(self, message: str, status: int = 400, code: str = "DOCUMENT_REQUEST_INVALID"):
         super().__init__(message)
-        self.message, self.status = message, status
+        self.message, self.status, self.code = message, status, code
 
 
 def _json(value) -> str:
@@ -183,38 +183,79 @@ def detect_format(data: bytes) -> tuple[str, str] | None:
 
 
 def _safe_original(name: str) -> tuple[str, str]:
-    normalized = secure_filename(Path(name or "").name)
-    parts = normalized.lower().split(".")
-    if len(parts) != 2 or not parts[0] or parts[1] not in {e for v in FORMAT_CATALOG.values() for e in v[0]}:
-        raise DocumentError("نام فایل یا پسوند آن امن نیست")
-    return normalized[:255], parts[1]
+    raw = str(name or "")
+    normalized = unicodedata.normalize("NFC", raw).strip()
+    unsafe = (
+        not normalized
+        or len(normalized) > 255
+        or "/" in normalized
+        or "\\" in normalized
+        or ".." in normalized
+        or any(unicodedata.category(character).startswith("C") for character in normalized)
+    )
+    stem, separator, extension = normalized.rpartition(".")
+    extension = extension.lower()
+    allowed_extensions = {item for value in FORMAT_CATALOG.values() for item in value[0]}
+    if unsafe or separator != "." or not stem or stem[-1] in {".", " "} or extension not in allowed_extensions:
+        raise DocumentError(
+            "نام فایل یا پسوند آن امن نیست", 400, "DOCUMENT_FILENAME_UNSAFE",
+        )
+    return normalized, extension
 
 
-def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, requirement=None, miscellaneous=False, custom_title=None, description=None, replacement=None):
+def _actor_context(actor: dict[str, Any] | int) -> tuple[dict[str, Any], int]:
+    if isinstance(actor, dict):
+        try:
+            return actor, int(actor["id"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise DocumentError(
+                "مجوز مدیریت سند معتبر نیست", 403, "DOCUMENT_MUTATION_FORBIDDEN",
+            ) from exc
+    try:
+        actor_id = int(actor)
+    except (TypeError, ValueError) as exc:
+        raise DocumentError(
+            "مجوز مدیریت سند معتبر نیست", 403, "DOCUMENT_MUTATION_FORBIDDEN",
+        ) from exc
+    return {"id": actor_id}, actor_id
+
+
+def upload(case: ShipmentRequest, actor: dict[str, Any] | int, upload_file: FileStorage, *, requirement=None, miscellaneous=False, custom_title=None, description=None, replacement=None):
+    from backend.services.assigned_work_authorization import authorize_document_management
+
+    actor_context, actor_id = _actor_context(actor)
+    case = db.session.scalar(select(ShipmentRequest).where(
+        ShipmentRequest.id == case.id
+    ).with_for_update().execution_options(populate_existing=True))
+    if case is None or not authorize_document_management(actor_context, case).allowed:
+        raise DocumentError(
+            "شما مجاز به مدیریت اسناد این پرونده نیستید", 403,
+            "DOCUMENT_MUTATION_FORBIDDEN",
+        )
     if miscellaneous and not str(custom_title or "").strip():
-        raise DocumentError("عنوان سند متفرقه الزامی است")
+        raise DocumentError("عنوان سند متفرقه الزامی است", 400, "DOCUMENT_TITLE_REQUIRED")
     if not miscellaneous and (not requirement or requirement.shipment_request_id != case.id):
-        raise DocumentError("نیازمندی سند معتبر نیست", 404)
+        raise DocumentError("نیازمندی سند معتبر نیست", 404, "DOCUMENT_PARENT_NOT_FOUND")
     original, extension = _safe_original(upload_file.filename or "")
     maximum = 25 * 1024 * 1024 if miscellaneous else requirement.max_file_size_bytes
     data = upload_file.stream.read(maximum + 1)
     if len(data) > maximum:
-        raise DocumentError("File is larger than the configured limit")
+        raise DocumentError("File is larger than the configured limit", 400, "DOCUMENT_FILE_TOO_LARGE")
     detected = detect_format(data)
     if not detected:
-        raise DocumentError("نوع محتوای فایل پشتیبانی نمی‌شود")
+        raise DocumentError("نوع محتوای فایل پشتیبانی نمی‌شود", 400, "DOCUMENT_CONTENT_UNSUPPORTED")
     format_id, mime = detected
     if extension not in FORMAT_CATALOG[format_id][0]:
-        raise DocumentError("پسوند فایل با محتوای آن مطابقت ندارد")
+        raise DocumentError("پسوند فایل با محتوای آن مطابقت ندارد", 400, "DOCUMENT_EXTENSION_MISMATCH")
     allowed = list(FORMAT_CATALOG) if miscellaneous else json.loads(requirement.allowed_formats)
     if format_id not in allowed:
-        raise DocumentError("این فرمت برای سند انتخاب‌شده مجاز نیست")
+        raise DocumentError("این فرمت برای سند انتخاب‌شده مجاز نیست", 400, "DOCUMENT_FORMAT_NOT_ALLOWED")
     if requirement is not None:
         requirement = db.session.query(CaseDocumentRequirement).filter_by(
             id=requirement.id, shipment_request_id=case.id,
         ).with_for_update().one_or_none()
         if requirement is None:
-            raise DocumentError("Document requirement was not found", 404)
+            raise DocumentError("Document requirement was not found", 404, "DOCUMENT_PARENT_NOT_FOUND")
     query = CaseDocumentFile.query.filter_by(shipment_request_id=case.id, status="active")
     if miscellaneous:
         active_count = query.filter_by(is_miscellaneous=True).count()
@@ -223,7 +264,13 @@ def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, re
         active_count = query.filter_by(case_requirement_id=requirement.id).count()
         version = (db.session.query(func.max(CaseDocumentFile.version_number)).filter_by(case_requirement_id=requirement.id).scalar() or 0) + 1
         if replacement is None and active_count >= requirement.max_active_file_count:
-            raise DocumentError("حداکثر تعداد فایل فعال این سند تکمیل شده است")
+            raise DocumentError("حداکثر تعداد فایل فعال این سند تکمیل شده است", 409, "DOCUMENT_ACTIVE_LIMIT_REACHED")
+        if replacement is not None:
+            # Corrupt or ambiguous chains must never be extended.
+            requirement_rows = CaseDocumentFile.query.filter_by(
+                shipment_request_id=case.id, case_requirement_id=requirement.id,
+            ).all()
+            _build_lineages(requirement, requirement_rows)
     storage = PrivateDocumentStorage()
     key = None
     try:
@@ -243,14 +290,22 @@ def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, re
         db.session.flush()
         if replacement is not None:
             previous = db.session.query(CaseDocumentFile).filter_by(
-                id=replacement.id, case_requirement_id=requirement.id, status="active",
+                id=replacement.id, shipment_request_id=case.id,
+                operational_organization_id=case.operational_organization_id,
+                case_requirement_id=requirement.id, owner_type="REQUEST", status="active",
             ).with_for_update().one_or_none()
             if previous is None:
-                raise DocumentError("Active version is no longer available for replacement", 409)
+                raise DocumentError(
+                    "Active version is no longer available for replacement", 409,
+                    "REPLACEMENT_TARGET_CHANGED",
+                )
             previous.status = "superseded"
             previous.superseded_at = datetime.utcnow()
             previous.superseded_by = row.id
-        audit("file_uploaded", actor_id, case_id=case.id, file_id=row.id, details={"format": format_id, "size": size, "version": version})
+        audit("file_uploaded", actor_id, case_id=case.id, file_id=row.id, details={
+            "format": format_id, "size": size, "version": version,
+            "operation": "targeted_replace" if replacement is not None else "append",
+        })
         if replacement is not None:
             audit("file_version_superseded", actor_id, case_id=case.id, file_id=previous.id, details={"replacement_id": row.id})
         db.session.commit()
@@ -275,6 +330,7 @@ def upload(case: ShipmentRequest, actor_id: int, upload_file: FileStorage, *, re
 
 def serialize_file(row: CaseDocumentFile) -> dict[str, Any]:
     assert_instance_current(row, purpose="document-metadata-serialize")
+    uploader = db.session.get(ExpertUser, row.uploaded_by) if row.uploaded_by else None
     return {
         "id": row.id, "requirement_id": row.case_requirement_id, "is_miscellaneous": row.is_miscellaneous,
         "public_id": row.public_id, "custom_title": row.custom_title, "description": row.description, "original_filename": row.original_filename,
@@ -282,27 +338,231 @@ def serialize_file(row: CaseDocumentFile) -> dict[str, Any]:
         "file_size_bytes": row.file_size_bytes, "sha256_hash": row.sha256_hash,
         "version_number": row.version_number, "status": row.status,
         "uploaded_at": row.uploaded_at.isoformat(),
+        "uploader_label": (uploader.full_name or uploader.username) if uploader else None,
     }
 
 
-def case_payload(case: ShipmentRequest) -> dict[str, Any]:
+def _history_error() -> DocumentError:
+    return DocumentError(
+        "زنجیره تاریخچه سند معتبر نیست", 409, "DOCUMENT_HISTORY_CORRUPT",
+    )
+
+
+def _build_lineages(
+    requirement: CaseDocumentRequirement,
+    rows: list[CaseDocumentFile],
+) -> list[list[CaseDocumentFile]]:
+    """Validate and derive immutable logical-file chains from superseded_by."""
+    by_id = {row.id: row for row in rows}
+    predecessor: dict[int, CaseDocumentFile] = {}
+    for row in rows:
+        if (
+            row.owner_type != "REQUEST"
+            or row.shipment_request_id != requirement.shipment_request_id
+            or row.case_requirement_id != requirement.id
+            or row.operational_organization_id != requirement.operational_organization_id
+        ):
+            raise _history_error()
+        if row.status == "superseded" and row.superseded_by is None:
+            raise _history_error()
+        if row.superseded_by is None:
+            continue
+        successor = by_id.get(row.superseded_by)
+        if successor is None:
+            successor = db.session.get(CaseDocumentFile, row.superseded_by)
+            if successor is None:
+                raise _history_error()
+            raise _history_error()
+        if successor.id in predecessor:
+            raise _history_error()
+        predecessor[successor.id] = row
+        if row.status != "superseded" or successor.id == row.id:
+            raise _history_error()
+    for row in rows:
+        if row.status == "active" and row.superseded_by is not None:
+            raise _history_error()
+
+    roots = [row for row in rows if row.id not in predecessor]
+    chains: list[list[CaseDocumentFile]] = []
+    visited: set[int] = set()
+    for root in roots:
+        chain: list[CaseDocumentFile] = []
+        current = root
+        local: set[int] = set()
+        while True:
+            if current.id in local or current.id in visited:
+                raise _history_error()
+            local.add(current.id)
+            visited.add(current.id)
+            chain.append(current)
+            if current.superseded_by is None:
+                break
+            successor = by_id.get(current.superseded_by)
+            if successor is None:
+                raise _history_error()
+            current = successor
+        if chain[-1].status not in {"active", "deleted"}:
+            raise _history_error()
+        chains.append(chain)
+    if len(visited) != len(rows):
+        raise _history_error()
+    return chains
+
+
+def _public_file_projection(
+    row: CaseDocumentFile,
+    *,
+    logical_file_public_id: str,
+    lineage_version: int,
+    current: bool,
+) -> dict[str, Any]:
+    assert_instance_current(row, purpose="document-metadata-serialize")
+    uploader = db.session.get(ExpertUser, row.uploaded_by) if row.uploaded_by else None
+    return {
+        "public_id": row.public_id,
+        "logical_file_public_id": logical_file_public_id,
+        "original_filename": row.original_filename,
+        "canonical_extension": row.canonical_extension,
+        "detected_mime_type": row.detected_mime_type,
+        "file_size_bytes": row.file_size_bytes,
+        "version_number": row.version_number,
+        "lineage_version": lineage_version,
+        "status": row.status,
+        "current": current,
+        "uploaded_at": row.uploaded_at.isoformat(),
+        "uploader_label": (uploader.full_name or uploader.username) if uploader else None,
+    }
+
+
+def project_file(row: CaseDocumentFile) -> dict[str, Any]:
+    if row.case_requirement_id is None:
+        return serialize_file(row)
+    requirement = db.session.get(CaseDocumentRequirement, row.case_requirement_id)
+    if requirement is None:
+        raise _history_error()
+    rows = CaseDocumentFile.query.filter_by(
+        shipment_request_id=requirement.shipment_request_id,
+        case_requirement_id=requirement.id,
+    ).all()
+    for chain in _build_lineages(requirement, rows):
+        for index, member in enumerate(chain, start=1):
+            if member.id == row.id:
+                result = _public_file_projection(
+                    member,
+                    logical_file_public_id=chain[0].public_id,
+                    lineage_version=index,
+                    current=member.status == "active" and index == len(chain),
+                )
+                result["history"] = [
+                    _public_file_projection(
+                        prior,
+                        logical_file_public_id=chain[0].public_id,
+                        lineage_version=prior_index,
+                        current=False,
+                    )
+                    for prior_index, prior in reversed(list(enumerate(chain[:index - 1], start=1)))
+                ]
+                return result
+    raise _history_error()
+
+
+def deactivate(
+    case: ShipmentRequest,
+    actor: dict[str, Any] | int,
+    row: CaseDocumentFile,
+    reason: str,
+) -> CaseDocumentFile:
+    from backend.services.assigned_work_authorization import authorize_document_management
+
+    actor_context, actor_id = _actor_context(actor)
+    locked_case = db.session.scalar(select(ShipmentRequest).where(
+        ShipmentRequest.id == case.id
+    ).with_for_update().execution_options(populate_existing=True))
+    if locked_case is None or not authorize_document_management(actor_context, locked_case).allowed:
+        raise DocumentError(
+            "شما مجاز به مدیریت اسناد این پرونده نیستید", 403,
+            "DOCUMENT_MUTATION_FORBIDDEN",
+        )
+    locked = db.session.scalar(select(CaseDocumentFile).where(
+        CaseDocumentFile.id == row.id,
+        CaseDocumentFile.owner_type == "REQUEST",
+        CaseDocumentFile.shipment_request_id == locked_case.id,
+        CaseDocumentFile.operational_organization_id == locked_case.operational_organization_id,
+    ).with_for_update().execution_options(populate_existing=True))
+    if locked is None:
+        raise DocumentError("فایل یافت نشد", 404, "DOCUMENT_PARENT_NOT_FOUND")
+    if locked.status != "active":
+        raise DocumentError(
+            "فایل انتخاب‌شده دیگر جاری نیست", 409,
+            "REPLACEMENT_TARGET_CHANGED",
+        )
+    clean_reason = str(reason or "").strip()
+    if not clean_reason:
+        raise DocumentError("دلیل حذف الزامی است", 400, "DOCUMENT_DEACTIVATION_REASON_REQUIRED")
+    locked.status = "deleted"
+    locked.deleted_at = datetime.utcnow()
+    locked.deleted_by = actor_id
+    locked.deletion_reason = clean_reason
+    audit(
+        "file_logically_deleted", actor_id, case_id=locked_case.id,
+        file_id=locked.id, details={"reason": clean_reason},
+    )
+    db.session.commit()
+    return locked
+
+
+def case_payload(case: ShipmentRequest, *, can_manage: bool = False) -> dict[str, Any]:
     assert_instance_current(case, purpose="document-metadata-serialize")
     requirements = CaseDocumentRequirement.query.filter_by(shipment_request_id=case.id).order_by(CaseDocumentRequirement.sort_order).all()
     files = CaseDocumentFile.query.filter_by(shipment_request_id=case.id).order_by(CaseDocumentFile.uploaded_at.desc()).all()
+    definitions = {
+        row.id: row for row in DocumentDefinition.query.filter(
+            DocumentDefinition.id.in_([requirement.source_definition_id for requirement in requirements])
+        ).all()
+    } if requirements else {}
     result = []
     for requirement in requirements:
-        active = [serialize_file(f) for f in files if f.case_requirement_id == requirement.id and f.status == "active"]
-        versions = [serialize_file(f) for f in files if f.case_requirement_id == requirement.id]
+        requirement_rows = [f for f in files if f.case_requirement_id == requirement.id]
+        active = [serialize_file(f) for f in requirement_rows if f.status == "active"]
+        versions = [serialize_file(f) for f in requirement_rows]
+        current_files = []
+        inactive_lineages = []
+        for chain in _build_lineages(requirement, requirement_rows):
+            terminal = chain[-1]
+            projected = _public_file_projection(
+                terminal,
+                logical_file_public_id=chain[0].public_id,
+                lineage_version=len(chain),
+                current=terminal.status == "active",
+            )
+            projected["history"] = [
+                _public_file_projection(
+                    prior,
+                    logical_file_public_id=chain[0].public_id,
+                    lineage_version=index,
+                    current=False,
+                )
+                for index, prior in reversed(list(enumerate(chain[:-1], start=1)))
+            ]
+            (current_files if terminal.status == "active" else inactive_lineages).append(projected)
+        current_files.sort(key=lambda item: (item["uploaded_at"], item["public_id"]), reverse=True)
+        definition = definitions.get(requirement.source_definition_id)
         result.append({
             "id": requirement.id, "code": requirement.source_definition_code, "title": requirement.title,
             "description": requirement.description, "is_required": requirement.is_required,
             "allowed_formats": json.loads(requirement.allowed_formats), "max_file_size_bytes": requirement.max_file_size_bytes,
-            "max_active_file_count": requirement.max_active_file_count, "complete": bool(active),
+            "max_active_file_count": requirement.max_active_file_count,
+            "definition_public_id": definition.public_id if definition else None,
+            "source_definition_revision": requirement.source_definition_revision,
+            "has_current_file": bool(active), "complete": bool(active),
+            "current_files": current_files, "inactive_lineages": inactive_lineages,
+            # Compatibility-only numeric/flat projection for older clients.
             "active_files": active, "versions": versions,
         })
     misc = [serialize_file(f) for f in files if f.is_miscellaneous and f.status == "active"]
     return {
         "requirements": result, "miscellaneous": misc,
+        "can_manage_documents": bool(can_manage),
         "summary": {
             "total_requirements": len(result), "required_requirements": sum(r["is_required"] for r in result),
             "uploaded_requirements": sum(r["complete"] for r in result),

@@ -73,6 +73,64 @@ def _has_capability(membership: OperationalMembership, action: str) -> bool:
     return aliases.get(action, action) in set(membership.permissions or [])
 
 
+def authorize_document_management(actor: dict[str, Any], resource: Any) -> AuthorizationDecision:
+    """Authorize a document mutation against its persisted owning parent.
+
+    Document read remains governed by ``authorize_work_action``.  Management is
+    deliberately narrower: an active canonical Expert with exactly one active
+    membership must be the parent owner.  Organization and Platform
+    administrators never inherit this authority from read/create capabilities.
+    """
+    user_id = _actor_id(actor)
+    if user_id is None:
+        return _deny("ACTIVE_IDENTITY_REQUIRED")
+    user = db.session.scalar(select(ExpertUser).where(
+        ExpertUser.id == user_id
+    ).execution_options(populate_existing=True))
+    if user is None or not user.is_active:
+        return _deny("ACTIVE_IDENTITY_REQUIRED")
+    membership = _membership(user_id)
+    if membership is None:
+        return _deny("EXACTLY_ONE_ACTIVE_MEMBERSHIP_REQUIRED")
+    if _authority(user) != EXPERT:
+        return _deny("OWNING_TRANSPORT_EXPERT_REQUIRED")
+
+    if isinstance(resource, ShipmentRequest):
+        parent = db.session.scalar(select(ShipmentRequest).where(
+            ShipmentRequest.id == resource.id
+        ).execution_options(populate_existing=True))
+        if parent is None or parent.ownership_scope != "TENANT":
+            return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
+        if parent.operational_organization_id != membership.organization_id:
+            return _deny("RESOURCE_TENANT_MISMATCH")
+        if parent.assigned_to != user_id:
+            return _deny("PERSISTED_OWNING_EXPERT_REQUIRED")
+        return AuthorizationDecision(
+            True, "OWNING_REQUEST_EXPERT", membership.organization_id,
+            "ShipmentRequest", parent.id,
+        )
+
+    if isinstance(resource, OperationalShipment):
+        parent = db.session.scalar(select(OperationalShipment).where(
+            OperationalShipment.id == resource.id
+        ).execution_options(populate_existing=True))
+        if parent is None:
+            return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
+        if parent.organization_id != membership.organization_id:
+            return _deny("RESOURCE_TENANT_MISMATCH")
+        # ADR-047 makes the Shipment field authoritative for both direct and
+        # accepted-Quote Shipments.  A null/ambiguous legacy owner fails closed.
+        if parent.primary_responsible_expert_id is None:
+            return _deny("PERSISTED_SHIPMENT_OWNER_REQUIRED")
+        if parent.primary_responsible_expert_id != user_id:
+            return _deny("PERSISTED_OWNING_EXPERT_REQUIRED")
+        return AuthorizationDecision(
+            True, "OWNING_SHIPMENT_EXPERT", membership.organization_id,
+            "OperationalShipment", parent.id,
+        )
+    return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
+
+
 def _request_root(shipment: OperationalShipment) -> ShipmentRequest | None:
     if shipment.source_type != "accepted_quote" or shipment.shipment_request_id is None:
         return None
@@ -111,6 +169,9 @@ def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> 
     browser response, or SQLAlchemy identity-map value cannot retain access
     after a committed reassignment.
     """
+    if action == "document.manage":
+        return authorize_document_management(actor, resource)
+
     user_id = _actor_id(actor)
     if user_id is None:
         return _deny("ACTIVE_IDENTITY_REQUIRED")

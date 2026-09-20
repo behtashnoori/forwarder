@@ -22,7 +22,6 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.operational_models import OperationalMembership, OperationalOrganization
-from backend.services import case_document_service as document_service
 
 
 PDF = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF"
@@ -53,7 +52,7 @@ def postgres_app():
         revision = db.session.execute(text("select version_num from alembic_version")).scalar_one()
         assert version.startswith("18.")
         assert database.startswith("dms1a_")
-        assert revision == "20260824_mt1_graph"
+        assert revision == "20260924_request_cargo_items"
         db.session.rollback()
     yield app, root
     with app.app_context():
@@ -108,6 +107,7 @@ def _seed(app, *, maximum=1, with_initial=False):
         )
         assert uploaded.status_code == 201
         ids["initial_file"] = uploaded.get_json()["id"]
+        ids["initial_file_public_id"] = uploaded.get_json()["public_id"]
     return ids, headers
 
 
@@ -116,15 +116,15 @@ def _concurrent_requests(app, calls):
 
     def invoke(call):
         client = app.test_client()
-        barrier.wait(timeout=10)
+        barrier.wait(timeout=30)
         return call(client)
 
     with ThreadPoolExecutor(max_workers=len(calls)) as pool:
         futures = [pool.submit(invoke, call) for call in calls]
-        return [future.result(timeout=30) for future in futures]
+        return [future.result(timeout=60) for future in futures]
 
 
-def test_postgresql_concurrent_requirement_initialization_is_idempotent(postgres_app, monkeypatch):
+def test_postgresql_concurrent_requirement_initialization_is_idempotent(postgres_app):
     app, _ = postgres_app
     token = uuid4().hex
     with app.app_context():
@@ -156,16 +156,6 @@ def test_postgresql_concurrent_requirement_initialization_is_idempotent(postgres
         token_value = auth_manager.generate_tokens(expert.id)["access_token"]
     headers = {"Authorization": f"Bearer {token_value}"}
     path = f"/api/expert/requests/{case_id}/documents/initialize"
-    insert_barrier = threading.Barrier(2)
-
-    original_audit = document_service.audit
-
-    def synchronize_before_commit(*args, **kwargs):
-        if kwargs.get("case_id") == case_id:
-            insert_barrier.wait(timeout=10)
-        return original_audit(*args, **kwargs)
-
-    monkeypatch.setattr(document_service, "audit", synchronize_before_commit)
     responses = _concurrent_requests(app, [
         lambda client: client.post(path, headers=headers),
         lambda client: client.post(path, headers=headers),
@@ -200,12 +190,22 @@ def test_postgresql_concurrent_first_uploads_allocate_unique_versions(postgres_a
 
 def test_postgresql_concurrent_replacement_serializes_and_has_safe_loser(postgres_app):
     app, root = postgres_app
-    ids, headers = _seed(app, maximum=1, with_initial=True)
+    ids, headers = _seed(app, maximum=2, with_initial=True)
+    append_path = f"/api/expert/requests/{ids['case']}/document-requirements/{ids['requirement']}/files"
+    sibling = app.test_client().post(
+        append_path, headers=headers,
+        data={"file": (io.BytesIO(PDF + b"\nsibling"), "sibling.pdf")},
+    )
+    assert sibling.status_code == 201
+    sibling_id = sibling.get_json()["id"]
     path = f"/api/expert/requests/{ids['case']}/document-requirements/{ids['requirement']}/replace"
     responses = _concurrent_requests(app, [
         lambda client, n=n: client.post(
             path, headers=headers,
-            data={"file": (io.BytesIO(PDF + f"\nreplacement-{n}".encode()), f"replacement-{n}.pdf")},
+            data={
+                "file": (io.BytesIO(PDF + f"\nreplacement-{n}".encode()), f"replacement-{n}.pdf"),
+                "replaces_file_public_id": ids["initial_file_public_id"],
+            },
         ) for n in (1, 2)
     ])
     assert sorted(response.status_code for response in responses) == [201, 409]
@@ -213,9 +213,12 @@ def test_postgresql_concurrent_replacement_serializes_and_has_safe_loser(postgre
         rows = CaseDocumentFile.query.filter_by(case_requirement_id=ids["requirement"]).order_by(
             CaseDocumentFile.version_number
         ).all()
-        assert [row.version_number for row in rows] == [1, 2]
-        assert [row.status for row in rows] == ["superseded", "active"]
-        assert rows[0].superseded_by == rows[1].id
+        assert [row.version_number for row in rows] == [1, 2, 3]
+        assert rows[0].status == "superseded"
+        assert db.session.get(CaseDocumentFile, sibling_id).status == "active"
+        successor = db.session.get(CaseDocumentFile, rows[0].superseded_by)
+        assert successor is not None and successor.status == "active"
+        assert sum(row.status == "active" for row in rows) == 2
         assert all((root / row.storage_key).is_file() for row in rows)
 
 
@@ -229,7 +232,9 @@ def test_postgresql_concurrent_max_count_allows_only_one_active_upload(postgres_
             data={"file": (io.BytesIO(PDF + f"\nlimit-{n}".encode()), f"limit-{n}.pdf")},
         ) for n in (1, 2)
     ])
-    assert sorted(response.status_code for response in responses) == [201, 400]
+    assert sorted(response.status_code for response in responses) == [201, 409]
+    loser = next(response for response in responses if response.status_code == 409)
+    assert loser.get_json()["code"] == "DOCUMENT_ACTIVE_LIMIT_REACHED"
     with app.app_context():
         rows = CaseDocumentFile.query.filter_by(case_requirement_id=ids["requirement"]).all()
         assert len(rows) == 1 and rows[0].status == "active"

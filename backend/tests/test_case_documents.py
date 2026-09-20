@@ -27,17 +27,23 @@ def document_app(tmp_path):
         org_admin = ExpertUser(username="doc-org-admin", password_hash="x", full_name="Organization Admin", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
         expert = ExpertUser(username="doc-expert", password_hash="x", full_name="Expert", role="expert", is_active=True)
         outsider = ExpertUser(username="doc-other", password_hash="x", full_name="Other", role="expert", is_active=True)
+        foreign = ExpertUser(username="doc-foreign", password_hash="x", full_name="Foreign", role="expert", is_active=True)
         organization = OperationalOrganization(name="Case Documents Organization")
-        db.session.add_all([admin, org_admin, expert, outsider, organization])
+        foreign_organization = OperationalOrganization(name="Foreign Documents Organization")
+        db.session.add_all([admin, org_admin, expert, outsider, foreign, organization, foreign_organization])
         db.session.flush()
-        db.session.add_all([
+        memberships = [
             OperationalMembership(
                 organization_id=organization.id,
                 user_id=user.id,
                 permissions=["request.read"] if user is org_admin else [],
             )
             for user in (admin, org_admin, expert, outsider)
-        ])
+        ]
+        memberships.append(OperationalMembership(
+            organization_id=foreign_organization.id, user_id=foreign.id, permissions=[],
+        ))
+        db.session.add_all(memberships)
         case = ShipmentRequest(contact_phone="1", shipping_type="domestic", status="new", status_request_status="new", assigned_to=expert.id, ownership_scope="TENANT", operational_organization_id=organization.id)
         other_case = ShipmentRequest(contact_phone="2", shipping_type="domestic", status="new", status_request_status="new", assigned_to=outsider.id, ownership_scope="TENANT", operational_organization_id=organization.id)
         db.session.add_all([case, other_case])
@@ -47,8 +53,12 @@ def document_app(tmp_path):
             "org_admin": auth_manager.generate_tokens(org_admin.id)["access_token"],
             "expert": auth_manager.generate_tokens(expert.id)["access_token"],
             "outsider": auth_manager.generate_tokens(outsider.id)["access_token"],
+            "foreign": auth_manager.generate_tokens(foreign.id)["access_token"],
             "case_id": case.id,
+            "case_public_id": case.public_id,
             "other_case_id": other_case.id,
+            "expert_id": expert.id,
+            "expert_membership_id": next(row.id for row in memberships if row.user_id == expert.id),
             "root": tmp_path / "private",
         }
     return app, values
@@ -152,9 +162,13 @@ def test_upload_download_delete_security_and_miscellaneous(document_app):
     assert client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(b""), "empty.pdf")}).status_code == 400
     assert client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()), "payload.exe")}).status_code == 400
     assert client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()), "photo.jpg")}).status_code == 400
-    uploaded = client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()), "../../invoice.pdf")})
+    unsafe = client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()), "../../invoice.pdf")})
+    assert unsafe.status_code == 400
+    assert unsafe.get_json()["code"] == "DOCUMENT_FILENAME_UNSAFE"
+    uploaded = client.post(path, headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()), "صورتحساب.pdf")})
     assert uploaded.status_code == 201
     row = uploaded.get_json()
+    assert row["original_filename"] == "صورتحساب.pdf"
     assert row["sha256_hash"] and row["file_size_bytes"] == len(pdf_bytes())
     assert client.get(f"/api/expert/requests/{state['case_id']}/documents/{row['id']}/download", headers=headers(state["outsider"])).status_code == 403
     download = client.get(f"/api/expert/requests/{state['case_id']}/documents/{row['id']}/download", headers=headers(state["expert"]))
@@ -179,7 +193,13 @@ def test_replacement_retains_binary_and_versions(document_app):
     requirement = client.get(f"/api/expert/requests/{state['case_id']}/documents", headers=headers(state["expert"])).get_json()["requirements"][0]
     base = f"/api/expert/requests/{state['case_id']}/document-requirements/{requirement['id']}"
     first = client.post(base + "/files", headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()), "one.pdf")}).get_json()
-    second = client.post(base + "/replace", headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()+b"\n2"), "two.pdf")})
+    missing_target = client.post(base + "/replace", headers=headers(state["expert"]), data={"file": (io.BytesIO(pdf_bytes()+b"\n2"), "two.pdf")})
+    assert missing_target.status_code == 422
+    assert missing_target.get_json()["code"] == "REPLACEMENT_TARGET_REQUIRED"
+    second = client.post(base + "/replace", headers=headers(state["expert"]), data={
+        "file": (io.BytesIO(pdf_bytes()+b"\n2"), "two.pdf"),
+        "replaces_file_public_id": first["public_id"],
+    })
     assert second.status_code == 201 and second.get_json()["version_number"] == 2
     with app.app_context():
         old = db.session.get(CaseDocumentFile, first["id"])
@@ -214,11 +234,14 @@ def cross_case_documents(document_app):
     active_a = client.post(
         f"/api/expert/requests/{state['case_id']}/document-requirements/{requirement_a}/replace",
         headers=headers(state["expert"]),
-        data={"file": (io.BytesIO(pdf_bytes() + b"\n2"), "case-a-v2.pdf")},
+        data={
+            "file": (io.BytesIO(pdf_bytes() + b"\n2"), "case-a-v2.pdf"),
+            "replaces_file_public_id": first_a["public_id"],
+        },
     ).get_json()
     active_b = client.post(
         f"/api/expert/requests/{state['other_case_id']}/document-requirements/{requirement_b}/files",
-        headers=headers(state["org_admin"]),
+        headers=headers(state["outsider"]),
         data={"file": (io.BytesIO(pdf_bytes()), "case-b.pdf")},
     ).get_json()
     misc_a = client.post(
@@ -232,6 +255,7 @@ def cross_case_documents(document_app):
         "superseded_a": first_a["id"],
         "active_a": active_a["id"],
         "active_b": active_b["id"],
+        "active_b_public_id": active_b["public_id"],
         "misc_a": misc_a["id"],
     })
     return app, state
@@ -289,8 +313,11 @@ def test_expert_a_cannot_download_case_b_superseded_version(cross_case_documents
     client = app.test_client()
     old_b = client.post(
         f"/api/expert/requests/{state['other_case_id']}/document-requirements/{state['requirement_b']}/replace",
-        headers=headers(state["org_admin"]),
-        data={"file": (io.BytesIO(pdf_bytes() + b"\nnew"), "case-b-new.pdf")},
+        headers=headers(state["outsider"]),
+        data={
+            "file": (io.BytesIO(pdf_bytes() + b"\nnew"), "case-b-new.pdf"),
+            "replaces_file_public_id": state["active_b_public_id"],
+        },
     )
     assert old_b.status_code == 201
     _assert_denied_without_side_effect(
@@ -440,3 +467,116 @@ def test_successful_active_and_superseded_download_each_create_exactly_one_audit
             event_type="file_downloaded", document_file_id=state[file_key],
         ).count()
     assert after == before + 1
+
+
+def test_opaque_multi_file_append_targeted_replace_and_history(document_app):
+    app, state = document_app
+    client = app.test_client()
+    definition = client.post(
+        "/api/admin/document-definitions",
+        headers=headers(state["admin"]),
+        json=definition_payload(max_active_file_count=4),
+    ).get_json()
+    payload = client.get(
+        f"/api/expert/requests/{state['case_id']}/documents",
+        headers=headers(state["expert"]),
+    ).get_json()
+    requirement = payload["requirements"][0]
+    assert requirement["definition_public_id"] == definition["public_id"]
+    assert requirement["has_current_file"] is False
+    path = (
+        f"/api/expert/requests/{state['case_public_id']}/document-requirements/"
+        f"{definition['public_id']}/files"
+    )
+
+    uploaded = []
+    for name, suffix in (("A.pdf", b"\nA"), ("B.pdf", b"\nB"), ("C.pdf", b"\nC")):
+        response = client.post(path, headers=headers(state["expert"]), data={
+            "source_definition_revision": requirement["source_definition_revision"],
+            "file": (io.BytesIO(pdf_bytes() + suffix), name),
+        })
+        assert response.status_code == 201
+        assert "id" not in response.get_json()
+        uploaded.append(response.get_json())
+
+    append = client.post(path, headers=headers(state["expert"]), data={
+        "source_definition_revision": requirement["source_definition_revision"],
+        "file": (io.BytesIO(pdf_bytes() + b"\nD"), "D.pdf"),
+    })
+    assert append.status_code == 201
+    replacement = client.post(path, headers=headers(state["expert"]), data={
+        "source_definition_revision": requirement["source_definition_revision"],
+        "replaces_file_public_id": uploaded[0]["public_id"],
+        "file": (io.BytesIO(pdf_bytes() + b"\nA2"), "A2.pdf"),
+    })
+    assert replacement.status_code == 201
+
+    current = client.get(
+        f"/api/expert/requests/{state['case_id']}/documents",
+        headers=headers(state["expert"]),
+    ).get_json()["requirements"][0]["current_files"]
+    assert {item["original_filename"] for item in current} == {"A2.pdf", "B.pdf", "C.pdf", "D.pdf"}
+    a2 = next(item for item in current if item["original_filename"] == "A2.pdf")
+    assert a2["logical_file_public_id"] == uploaded[0]["public_id"]
+    assert a2["lineage_version"] == 2
+    assert [item["original_filename"] for item in a2["history"]] == ["A.pdf"]
+    assert all("id" not in item for item in current)
+
+    for file_public_id in (uploaded[0]["public_id"], a2["public_id"]):
+        response = client.get(
+            f"/api/expert/requests/{state['case_public_id']}/documents/{file_public_id}/download",
+            headers=headers(state["expert"]),
+        )
+        assert response.status_code == 200
+
+    stale = client.post(path, headers=headers(state["expert"]), data={
+        "source_definition_revision": requirement["source_definition_revision"],
+        "replaces_file_public_id": uploaded[0]["public_id"],
+        "file": (io.BytesIO(pdf_bytes() + b"\nstale"), "stale.pdf"),
+    })
+    assert stale.status_code == 409
+    assert stale.get_json()["code"] == "REPLACEMENT_TARGET_CHANGED"
+
+
+@pytest.mark.parametrize("actor_key", ["org_admin", "admin", "foreign"])
+def test_admin_platform_and_cross_tenant_mutation_are_denied_without_side_effect(
+    cross_case_documents, actor_key,
+):
+    app, state = cross_case_documents
+    client = app.test_client()
+    before = _document_state(app, state["root"])
+    response = client.post(
+        f"/api/expert/requests/{state['case_id']}/document-requirements/{state['requirement_a']}/files",
+        headers=headers(state[actor_key]),
+        data={"file": (io.BytesIO(pdf_bytes() + b"\nforbidden"), "forbidden.pdf")},
+    )
+    assert response.status_code in {401, 403, 404}
+    assert _document_state(app, state["root"]) == before
+
+
+@pytest.mark.parametrize("revocation", ["user", "membership"])
+def test_inactive_or_revoked_owner_is_denied_at_action_time_without_side_effect(
+    cross_case_documents, revocation,
+):
+    app, state = cross_case_documents
+    client = app.test_client()
+    before = _document_state(app, state["root"])
+    with app.app_context():
+        if revocation == "user":
+            db.session.get(ExpertUser, state["expert_id"]).is_active = False
+        else:
+            db.session.get(OperationalMembership, state["expert_membership_id"]).is_active = False
+        db.session.commit()
+    response = client.post(
+        f"/api/expert/requests/{state['case_id']}/document-requirements/{state['requirement_a']}/files",
+        headers=headers(state["expert"]),
+        data={"file": (io.BytesIO(pdf_bytes() + b"\nrevoked"), "revoked.pdf")},
+    )
+    assert response.status_code in {401, 403, 404}
+    assert _document_state(app, state["root"]) == before
+
+
+def test_customer_document_management_surface_is_not_registered(document_app):
+    app, _ = document_app
+    routes = {rule.rule for rule in app.url_map.iter_rules()}
+    assert not any("customer" in rule and "document" in rule for rule in routes)

@@ -332,7 +332,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
+    const message = `Request failed with status ${response.status}`;
     try {
       const body = await response.json();
       if (
@@ -348,9 +348,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
           body.error.details,
         );
       } else if (body && typeof body.message === "string") {
-        message = body.message;
+        throw new ApiError(response.status, body.code || "API_ERROR", body.message);
       } else if (body && typeof body.error === "string") {
-        message = body.error;
+        throw new ApiError(response.status, body.code || "API_ERROR", body.error);
       }
     } catch (error) {
       if (error instanceof ApiError) throw error;
@@ -1488,7 +1488,7 @@ export const fetchDocumentCatalogDefinition = (publicId: string) => request<Docu
 export const updateDocumentCatalogDefinition = (publicId: string, payload: DocumentCatalogMetadataUpdate, idempotencyKey: string) => request<DocumentCatalogDefinition>(`/api/platform/document-catalog/${publicId}`, {method:"PATCH", headers:{"Idempotency-Key":idempotencyKey}, body:JSON.stringify(payload)});
 export const transitionDocumentCatalogDefinition = (publicId: string, payload: {expected_revision:number; target_status:DocumentCatalogLifecycle; approval_reference?:string}, idempotencyKey: string) => request<DocumentCatalogDefinition>(`/api/platform/document-catalog/${publicId}/lifecycle`, {method:"POST", headers:{"Idempotency-Key":idempotencyKey}, body:JSON.stringify(payload)});
 export interface CaseDocumentFile {
-  id: number;
+  id?: number;
   public_id: string;
   requirement_id?: number | null;
   is_miscellaneous: boolean;
@@ -1501,9 +1501,16 @@ export interface CaseDocumentFile {
   version_number: number;
   status: "active" | "superseded" | "deleted";
   uploaded_at: string;
+  uploader_label?: string | null;
+  logical_file_public_id?: string;
+  lineage_version?: number;
+  current?: boolean;
+  history?: CaseDocumentFile[];
 }
 export interface CaseDocumentRequirement {
   id: number;
+  definition_public_id: string;
+  source_definition_revision: number;
   code: string;
   title: string;
   description?: string | null;
@@ -1511,13 +1518,17 @@ export interface CaseDocumentRequirement {
   allowed_formats: DocumentFormat[];
   max_file_size_bytes: number;
   max_active_file_count: number;
+  has_current_file: boolean;
   complete: boolean;
+  current_files: CaseDocumentFile[];
+  inactive_lineages: CaseDocumentFile[];
   active_files: CaseDocumentFile[];
   versions: CaseDocumentFile[];
 }
 export interface CaseDocumentsPayload {
   requirements: CaseDocumentRequirement[];
   miscellaneous: CaseDocumentFile[];
+  can_manage_documents: boolean;
   summary: {
     total_requirements: number;
     required_requirements: number;
@@ -1579,19 +1590,26 @@ export const fetchCaseDocuments = (caseId: string) =>
   request<CaseDocumentsPayload>(`/api/expert/requests/${caseId}/documents`);
 export const uploadCaseDocument = (
   caseId: string,
-  requirementId: number | null,
+  requirement: { definitionPublicId: string; sourceDefinitionRevision: number } | null,
   form: FormData,
-  replace = false,
-) =>
-  request<CaseDocumentFile>(
-    requirementId == null
+  replacesFilePublicId?: string,
+) => {
+  if (requirement) {
+    form.set("source_definition_revision", String(requirement.sourceDefinitionRevision));
+  }
+  if (replacesFilePublicId) {
+    form.set("replaces_file_public_id", replacesFilePublicId);
+  }
+  return request<CaseDocumentFile>(
+    requirement == null
       ? `/api/expert/requests/${caseId}/documents/miscellaneous`
-      : `/api/expert/requests/${caseId}/document-requirements/${requirementId}/${replace ? "replace" : "files"}`,
+      : `/api/expert/requests/${caseId}/document-requirements/${encodeURIComponent(requirement.definitionPublicId)}/files`,
     { method: "POST", body: form },
   );
+};
 export const deleteCaseDocument = (
   caseId: string,
-  fileId: number,
+  fileId: string,
   reason: string,
 ) =>
   request<{ id: number; status: string }>(
@@ -1600,7 +1618,7 @@ export const deleteCaseDocument = (
   );
 export async function downloadCaseDocument(
   caseId: string,
-  fileId: number,
+  fileId: string,
   filename: string,
 ) {
   const token = localStorage.getItem("expert_token");
@@ -1637,7 +1655,7 @@ export interface OperationalLocationRef {
   source_id: number | string;
 }
 export interface ShipmentDocument { public_id:string; business_document_type:string; filename:string; version:number; recorded_at:string; actor?:string|null; owner:"REQUEST"|"SHIPMENT"; lifecycle_state:"active"|"superseded"|"deleted"; description?:string|null; references:Array<{public_id:string;type:string;display_value:string;lifecycle_status:string}>; requirements:Array<{public_id:string;title:string;association_state:string}>; }
-export const fetchShipmentDocuments=(shipmentId:string)=>request<{data:ShipmentDocument[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`);
+export const fetchShipmentDocuments=(shipmentId:string)=>request<{data:ShipmentDocument[];can_manage_documents:boolean}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`);
 export const uploadShipmentDocument=(shipmentId:string,form:FormData,idempotencyKey:string)=>request<{data:ShipmentDocument}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`,{method:"POST",headers:{"Idempotency-Key":idempotencyKey},body:form});
 export const deleteShipmentDocument=(shipmentId:string,documentId:string,reason:string)=>request<{data:{public_id:string;lifecycle_state:string}}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents/${encodeURIComponent(documentId)}`,{method:"DELETE",body:JSON.stringify({reason})});
 export async function downloadShipmentDocument(shipmentId:string,documentId:string,filename:string){const token=localStorage.getItem("expert_token");const response=await fetch(`${API_BASE_URL}${buildPath(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents/${encodeURIComponent(documentId)}/download`)}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!response.ok)throw new Error("دریافت فایل ناموفق بود");const url=URL.createObjectURL(await response.blob());const anchor=document.createElement("a");anchor.href=url;anchor.download=filename;anchor.click();URL.revokeObjectURL(url);}

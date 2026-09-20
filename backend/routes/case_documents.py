@@ -1,7 +1,6 @@
 """Authorized admin definition and expert case-document APIs."""
 from __future__ import annotations
 
-from datetime import datetime
 from functools import wraps
 
 from flask import Blueprint, g, jsonify, request, send_file
@@ -21,7 +20,7 @@ from backend.services.admin_authorization_service import require_organization_ad
 from backend.services import organization_document_policy_service as organization_policy
 from backend.services import document_catalog_service as catalog_service
 from backend.services import shipment_document_service as shipment_documents
-from backend.services.assigned_work_authorization import authorize_work_action
+from backend.services.assigned_work_authorization import authorize_document_management, authorize_work_action
 from backend.operational_models import OperationalShipment
 
 document_bp = Blueprint("case_documents", __name__)
@@ -56,6 +55,93 @@ def _case_or_error(case_id: int):
     return case, None
 
 
+def _case_manage_or_error(case_id: int):
+    case, error = _case_or_error(case_id)
+    if error:
+        return None, error
+    if not authorize_document_management(_current(), case).allowed:
+        return None, (
+            jsonify({
+                "error": "شما مجاز به مدیریت اسناد این پرونده نیستید",
+                "code": "DOCUMENT_MUTATION_FORBIDDEN",
+            }),
+            403,
+        )
+    return case, None
+
+
+def _document_error(exc: service.DocumentError):
+    return jsonify({"error": exc.message, "code": exc.code}), exc.status
+
+
+def _requirement_for_selector(
+    case: ShipmentRequest, definition_public_id: str, revision_value: str | None,
+):
+    try:
+        revision = int(str(revision_value or ""))
+    except ValueError:
+        return None
+    definition = DocumentDefinition.query.filter_by(public_id=definition_public_id).one_or_none()
+    if definition is None:
+        return None
+    return CaseDocumentRequirement.query.filter_by(
+        shipment_request_id=case.id,
+        operational_organization_id=case.operational_organization_id,
+        source_definition_id=definition.id,
+        source_definition_revision=revision,
+    ).one_or_none()
+
+
+def _replacement_for_requirement(
+    case: ShipmentRequest, requirement: CaseDocumentRequirement, public_id: str,
+):
+    return CaseDocumentFile.query.filter_by(
+        public_id=public_id,
+        owner_type="REQUEST",
+        shipment_request_id=case.id,
+        operational_organization_id=case.operational_organization_id,
+        case_requirement_id=requirement.id,
+    ).one_or_none()
+
+
+def _upload_to_requirement(
+    case: ShipmentRequest,
+    requirement: CaseDocumentRequirement | None,
+    *,
+    replacement_required: bool = False,
+    legacy_response: bool = False,
+):
+    if requirement is None or requirement.shipment_request_id != case.id:
+        return jsonify({"error": "نیازمندی سند معتبر نیست", "code": "DOCUMENT_PARENT_NOT_FOUND"}), 404
+    upload_file = request.files.get("file")
+    if not upload_file:
+        return jsonify({"error": "انتخاب فایل الزامی است", "code": "DOCUMENT_FILE_REQUIRED"}), 400
+    replacement_public_id = request.form.get("replaces_file_public_id", "").strip()
+    if replacement_required and not replacement_public_id:
+        return jsonify({
+            "error": "فایل جاری هدف برای جایگزینی الزامی است",
+            "code": "REPLACEMENT_TARGET_REQUIRED",
+        }), 422
+    replacement = None
+    if replacement_public_id:
+        replacement = _replacement_for_requirement(case, requirement, replacement_public_id)
+        if replacement is None:
+            return jsonify({"error": "فایل یافت نشد", "code": "DOCUMENT_PARENT_NOT_FOUND"}), 404
+        if replacement.status != "active":
+            return jsonify({
+                "error": "فایل انتخاب‌شده دیگر جاری نیست",
+                "code": "REPLACEMENT_TARGET_CHANGED",
+            }), 409
+    try:
+        row = service.upload(
+            case, _current(), upload_file, requirement=requirement,
+            description=request.form.get("description"), replacement=replacement,
+        )
+        return jsonify(service.serialize_file(row) if legacy_response else service.project_file(row)), 201
+    except service.DocumentError as exc:
+        return _document_error(exc)
+
+
 def _shipment_or_error(public_id: str, action: str = "document.read"):
     row = OperationalShipment.query.filter_by(public_id=public_id).one_or_none()
     if row is None or not authorize_work_action(_current(), row, action).allowed:
@@ -67,7 +153,10 @@ def _shipment_or_error(public_id: str, action: str = "document.read"):
 @require_auth
 def shipment_document_list(shipment_id: str):
     shipment, error = _shipment_or_error(shipment_id)
-    return error if error else jsonify({"data": shipment_documents.documents(shipment)})
+    return error if error else jsonify({
+        "data": shipment_documents.documents(shipment),
+        "can_manage_documents": authorize_document_management(_current(), shipment).allowed,
+    })
 
 
 @document_bp.post("/api/internal/operational-shipments/<shipment_id>/documents")
@@ -81,8 +170,15 @@ def shipment_document_upload(shipment_id: str):
         return jsonify({"error": "انتخاب فایل الزامی است"}), 400
     try:
         replacement_id = request.form.get("replaces_document_public_id", "").strip()
-        replacement = CaseDocumentFile.query.filter_by(public_id=replacement_id).one_or_none() if replacement_id else None
-        row = shipment_documents.upload(shipment, _current()["id"], upload_file,
+        replacement = CaseDocumentFile.query.filter_by(
+            public_id=replacement_id,
+            owner_type="SHIPMENT",
+            operational_shipment_id=shipment.id,
+            operational_organization_id=shipment.organization_id,
+        ).one_or_none() if replacement_id else None
+        if replacement_id and replacement is None:
+            return jsonify({"error": "فایل یافت نشد", "code": "DOCUMENT_PARENT_NOT_FOUND"}), 404
+        row = shipment_documents.upload(shipment, _current(), upload_file,
             request.form.get("title", ""), request.form.get("description"),
             request.headers.get("Idempotency-Key", "").strip(), replacement)
         item = next(item for item in shipment_documents.documents(shipment) if item["public_id"] == row.public_id)
@@ -113,13 +209,15 @@ def shipment_document_delete(shipment_id: str, document_id: str):
     shipment, error = _shipment_or_error(shipment_id, "document.manage")
     if error:
         return error
-    row = CaseDocumentFile.query.filter_by(public_id=document_id, operational_organization_id=shipment.organization_id).one_or_none()
-    owns = row and ((row.owner_type == "SHIPMENT" and row.operational_shipment_id == shipment.id) or
-                    (row.owner_type == "REQUEST" and row.shipment_request_id == shipment.shipment_request_id))
-    if not owns:
+    row = CaseDocumentFile.query.filter_by(
+        public_id=document_id, owner_type="SHIPMENT",
+        operational_shipment_id=shipment.id,
+        operational_organization_id=shipment.organization_id,
+    ).one_or_none()
+    if row is None:
         return jsonify({"error": "فایل یافت نشد"}), 404
     try:
-        shipment_documents.remove(shipment, row, _current()["id"], (request.get_json(silent=True) or {}).get("reason"))
+        shipment_documents.remove(shipment, row, _current(), (request.get_json(silent=True) or {}).get("reason"))
         return jsonify({"data": {"public_id": row.public_id, "lifecycle_state": row.status}})
     except service.DocumentError as exc:
         return jsonify({"error": exc.message}), exc.status
@@ -288,7 +386,12 @@ def case_documents(case_id: int):
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "Document requirements were initialized concurrently; retry the request"}), 409
-    return jsonify(service.case_payload(case))
+    try:
+        return jsonify(service.case_payload(
+            case, can_manage=authorize_document_management(actor, case).allowed,
+        ))
+    except service.DocumentError as exc:
+        return _document_error(exc)
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/documents/initialize")
@@ -305,7 +408,16 @@ def case_documents_initialize(case_id: int):
     except IntegrityError:
         db.session.rollback()
         return jsonify({"error": "Document requirements were initialized concurrently; retry the request"}), 409
-    return jsonify({"created_count": created, **service.case_payload(case)})
+    try:
+        return jsonify({
+            "created_count": created,
+            **service.case_payload(
+                case,
+                can_manage=authorize_document_management(_current(), case).allowed,
+            ),
+        })
+    except service.DocumentError as exc:
+        return _document_error(exc)
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/document-requirements/<int:requirement_id>/files")
@@ -313,20 +425,24 @@ def case_documents_initialize(case_id: int):
 @require_auth
 @_resolve_opaque_case_route
 def requirement_upload(case_id: int, requirement_id: int):
-    case, error = _case_or_error(case_id)
+    case, error = _case_manage_or_error(case_id)
     if error:
         return error
     requirement = db.session.get(CaseDocumentRequirement, requirement_id)
-    upload_file = request.files.get("file")
-    if not upload_file:
-        return jsonify({"error": "انتخاب فایل الزامی است"}), 400
-    try:
-        row = service.upload(case, _current()["id"], upload_file, requirement=requirement, description=request.form.get("description"))
-        return jsonify(service.serialize_file(row)), 201
-    except (service.DocumentError, Exception) as exc:
-        if isinstance(exc, service.DocumentError):
-            return jsonify({"error": exc.message}), exc.status
-        raise
+    return _upload_to_requirement(case, requirement, legacy_response=True)
+
+
+@document_bp.post("/api/expert/requests/<case_id>/document-requirements/<definition_public_id>/files")
+@require_auth
+@_resolve_opaque_case_route
+def requirement_upload_opaque(case_id: int, definition_public_id: str):
+    case, error = _case_manage_or_error(case_id)
+    if error:
+        return error
+    requirement = _requirement_for_selector(
+        case, definition_public_id, request.form.get("source_definition_revision"),
+    )
+    return _upload_to_requirement(case, requirement)
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/document-requirements/<int:requirement_id>/replace")
@@ -334,25 +450,13 @@ def requirement_upload(case_id: int, requirement_id: int):
 @require_auth
 @_resolve_opaque_case_route
 def requirement_replace(case_id: int, requirement_id: int):
-    case, error = _case_or_error(case_id)
+    case, error = _case_manage_or_error(case_id)
     if error:
         return error
     requirement = db.session.get(CaseDocumentRequirement, requirement_id)
-    if not requirement or requirement.shipment_request_id != case.id:
-        return jsonify({"error": "نیازمندی سند معتبر نیست"}), 404
-    previous = CaseDocumentFile.query.filter_by(case_requirement_id=requirement.id, status="active").order_by(CaseDocumentFile.version_number.desc()).first()
-    if not previous:
-        return jsonify({"error": "نسخه فعالی برای جایگزینی وجود ندارد"}), 409
-    upload_file = request.files.get("file")
-    if not upload_file:
-        return jsonify({"error": "انتخاب فایل الزامی است"}), 400
-    actor_id = _current()["id"]
-    try:
-        row = service.upload(case, actor_id, upload_file, requirement=requirement, description=request.form.get("description"), replacement=previous)
-        return jsonify(service.serialize_file(row)), 201
-    except service.DocumentError as exc:
-        db.session.rollback()
-        return jsonify({"error": exc.message}), exc.status
+    return _upload_to_requirement(
+        case, requirement, replacement_required=True, legacy_response=True,
+    )
 
 
 @document_bp.post("/api/expert/requests/<int:case_id>/documents/miscellaneous")
@@ -360,30 +464,34 @@ def requirement_replace(case_id: int, requirement_id: int):
 @require_auth
 @_resolve_opaque_case_route
 def miscellaneous_upload(case_id: int):
-    case, error = _case_or_error(case_id)
+    case, error = _case_manage_or_error(case_id)
     if error:
         return error
     upload_file = request.files.get("file")
     if not upload_file:
         return jsonify({"error": "انتخاب فایل الزامی است"}), 400
     try:
-        row = service.upload(case, _current()["id"], upload_file, miscellaneous=True, custom_title=request.form.get("title"), description=request.form.get("description"))
+        row = service.upload(case, _current(), upload_file, miscellaneous=True, custom_title=request.form.get("title"), description=request.form.get("description"))
         return jsonify(service.serialize_file(row)), 201
     except service.DocumentError as exc:
-        return jsonify({"error": exc.message}), exc.status
+        return _document_error(exc)
 
 
-@document_bp.get("/api/expert/requests/<int:case_id>/documents/<int:file_id>/download")
-@document_bp.get("/api/expert/requests/<case_id>/documents/<int:file_id>/download")
-@require_auth
-@_resolve_opaque_case_route
-def file_download(case_id: int, file_id: int):
+def _file_for_case(case: ShipmentRequest, *, file_id: int | None = None, public_id: str | None = None):
+    query = CaseDocumentFile.query.filter_by(
+        owner_type="REQUEST",
+        shipment_request_id=case.id,
+        operational_organization_id=case.operational_organization_id,
+    )
+    return query.filter_by(id=file_id).one_or_none() if file_id is not None else query.filter_by(public_id=public_id).one_or_none()
+
+
+def _download_case_file(case_id: int, *, file_id: int | None = None, public_id: str | None = None):
     case, error = _case_or_error(case_id)
     if error:
         return error
-    row = db.session.get(CaseDocumentFile, file_id)
-    if (not row or is_quarantined("CaseDocumentFile", file_id)
-            or row.shipment_request_id != case.id or row.status == "deleted"):
+    row = _file_for_case(case, file_id=file_id, public_id=public_id)
+    if (not row or is_quarantined("CaseDocumentFile", row.id) or row.status == "deleted"):
         return jsonify({"error": "فایل یافت نشد"}), 404
     try:
         path = PrivateDocumentStorage().resolve_for_download(row, case=case)
@@ -396,22 +504,48 @@ def file_download(case_id: int, file_id: int):
     return send_file(path, as_attachment=True, download_name=row.safe_download_filename, mimetype=row.detected_mime_type)
 
 
+@document_bp.get("/api/expert/requests/<int:case_id>/documents/<int:file_id>/download")
+@document_bp.get("/api/expert/requests/<case_id>/documents/<int:file_id>/download")
+@require_auth
+@_resolve_opaque_case_route
+def file_download(case_id: int, file_id: int):
+    return _download_case_file(case_id, file_id=file_id)
+
+
+@document_bp.get("/api/expert/requests/<case_id>/documents/<file_public_id>/download")
+@require_auth
+@_resolve_opaque_case_route
+def file_download_opaque(case_id: int, file_public_id: str):
+    return _download_case_file(case_id, public_id=file_public_id)
+
+
+def _delete_case_file(case_id: int, *, file_id: int | None = None, public_id: str | None = None):
+    case, error = _case_manage_or_error(case_id)
+    if error:
+        return error
+    row = _file_for_case(case, file_id=file_id, public_id=public_id)
+    if not row or is_quarantined("CaseDocumentFile", row.id):
+        return jsonify({"error": "فایل یافت نشد", "code": "DOCUMENT_PARENT_NOT_FOUND"}), 404
+    try:
+        row = service.deactivate(
+            case, _current(), row,
+            (request.get_json(silent=True) or {}).get("reason", ""),
+        )
+        return jsonify({"public_id": row.public_id, "status": row.status})
+    except service.DocumentError as exc:
+        return _document_error(exc)
+
+
 @document_bp.delete("/api/expert/requests/<int:case_id>/documents/<int:file_id>")
 @document_bp.delete("/api/expert/requests/<case_id>/documents/<int:file_id>")
 @require_auth
 @_resolve_opaque_case_route
 def file_delete(case_id: int, file_id: int):
-    case, error = _case_or_error(case_id)
-    if error:
-        return error
-    row = db.session.get(CaseDocumentFile, file_id)
-    if (not row or is_quarantined("CaseDocumentFile", file_id)
-            or row.shipment_request_id != case.id or row.status == "deleted"):
-        return jsonify({"error": "فایل یافت نشد"}), 404
-    reason = str((request.get_json(silent=True) or {}).get("reason", "")).strip()
-    if not reason:
-        return jsonify({"error": "دلیل حذف الزامی است"}), 400
-    row.status, row.deleted_at, row.deleted_by, row.deletion_reason = "deleted", datetime.utcnow(), _current()["id"], reason
-    service.audit("file_logically_deleted", _current()["id"], case_id=case.id, file_id=row.id, details={"reason": reason})
-    db.session.commit()
-    return jsonify({"id": row.id, "status": row.status})
+    return _delete_case_file(case_id, file_id=file_id)
+
+
+@document_bp.delete("/api/expert/requests/<case_id>/documents/<file_public_id>")
+@require_auth
+@_resolve_opaque_case_route
+def file_delete_opaque(case_id: int, file_public_id: str):
+    return _delete_case_file(case_id, public_id=file_public_id)

@@ -264,6 +264,54 @@ def test_eligible_projection_status_and_remove_are_exact_versioned(execution_app
         assert removed["readiness_status"] == "MISSING"
 
 
+def test_append_and_unassociated_replace_do_not_change_readiness_but_associated_replace_does(execution_app):
+    with execution_app.app_context():
+        shipment, milestone, requirement, definition = _seed(execution_app)
+        associated = _artifact(shipment, definition)
+        docs.associate(
+            shipment.public_id, requirement.public_id,
+            {"artifact_public_id": associated.public_id, "expected_requirement_version": 1},
+            actor(execution_app),
+        )
+        docs.assess(
+            shipment.public_id, requirement.public_id,
+            {"decision": "APPROVED"}, actor(execution_app),
+        )
+        assert docs.transition_readiness(shipment, milestone, "READY")["allowed"]
+
+        def successor(version, filename):
+            row = CaseDocumentFile(
+                operational_organization_id=shipment.organization_id,
+                shipment_request_id=shipment.shipment_request_id,
+                case_requirement_id=associated.case_requirement_id,
+                is_miscellaneous=False, original_filename=filename,
+                safe_download_filename=filename, storage_key=f"mdpm/{version}",
+                canonical_extension="pdf", detected_mime_type="application/pdf",
+                file_size_bytes=10, sha256_hash=str(version) * 64,
+                version_number=version, status="active",
+            )
+            db.session.add(row); db.session.flush()
+            return row
+
+        sibling = successor(2, "sibling.pdf")
+        db.session.commit()
+        assert docs.transition_readiness(shipment, milestone, "READY")["allowed"]
+
+        sibling_successor = successor(3, "sibling-v2.pdf")
+        sibling.status = "superseded"
+        sibling.superseded_by = sibling_successor.id
+        db.session.commit()
+        assert docs.transition_readiness(shipment, milestone, "READY")["allowed"]
+
+        associated_successor = successor(4, "associated-v2.pdf")
+        associated.status = "superseded"
+        associated.superseded_by = associated_successor.id
+        db.session.commit()
+        result = docs.transition_readiness(shipment, milestone, "READY")
+        assert not result["allowed"]
+        assert result["blocking_requirements"][0]["code"] == "DOC_ARTIFACT_SUPERSEDED"
+
+
 def test_file_without_proven_tenant_is_not_eligible(execution_app):
     with execution_app.app_context():
         shipment, _, requirement, definition = _seed(execution_app)

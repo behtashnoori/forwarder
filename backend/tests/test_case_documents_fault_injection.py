@@ -17,6 +17,7 @@ from backend.models import (
     ExpertUser,
     ShipmentRequest,
 )
+from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.services import case_document_service as service
 
 
@@ -45,11 +46,20 @@ def fault_context(tmp_path):
             allowed_formats='["pdf"]', max_file_size_bytes=1024 * 1024,
             max_active_file_count=1, sort_order=1, applicability_scope="all",
         )
-        db.session.add_all([actor, case, definition])
+        organization = OperationalOrganization(name="Fault Documents Organization")
+        db.session.add_all([actor, organization, definition])
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=organization.id, user_id=actor.id, permissions=[],
+        ))
+        case.ownership_scope = "TENANT"
+        case.operational_organization_id = organization.id
+        db.session.add(case)
         db.session.flush()
         case.assigned_to = actor.id
         requirement = CaseDocumentRequirement(
             shipment_request_id=case.id, source_definition_id=definition.id,
+            operational_organization_id=organization.id,
             source_definition_code=definition.code, source_definition_revision=1,
             title=definition.title, is_required=True, allowed_formats='["pdf"]',
             max_file_size_bytes=1024 * 1024, max_active_file_count=1,
@@ -116,6 +126,36 @@ def test_atomic_finalize_failure_rolls_back_and_removes_temporary_file(
     monkeypatch.setattr(os, "replace", fail_replace)
     with pytest.raises(OSError, match="injected atomic rename failure"):
         _upload(case, actor_id, requirement, miscellaneous=miscellaneous)
+    assert _rows_and_files(root) == (0, 0, [])
+
+
+@pytest.mark.parametrize("failure_point", ["flush", "fsync"])
+def test_flush_or_fsync_failure_leaves_no_database_audit_temp_or_final_file(
+    fault_context, monkeypatch, failure_point,
+):
+    _, root, case_id, actor_id, requirement_id = fault_context
+    case = db.session.get(ShipmentRequest, case_id)
+    requirement = db.session.get(CaseDocumentRequirement, requirement_id)
+    if failure_point == "fsync":
+        monkeypatch.setattr(os, "fsync", lambda _fd: (_ for _ in ()).throw(OSError("injected fsync failure")))
+    else:
+        original_open = Path.open
+
+        class FlushFailure:
+            def __init__(self, wrapped): self.wrapped = wrapped
+            def __enter__(self): return self
+            def __exit__(self, *args): return self.wrapped.__exit__(*args)
+            def write(self, value): return self.wrapped.write(value)
+            def fileno(self): return self.wrapped.fileno()
+            def flush(self): raise OSError("injected flush failure")
+
+        def open_with_flush_failure(path, *args, **kwargs):
+            wrapped = original_open(path, *args, **kwargs)
+            return FlushFailure(wrapped) if path.name.endswith(".tmp") else wrapped
+
+        monkeypatch.setattr(Path, "open", open_with_flush_failure)
+    with pytest.raises(OSError, match=f"injected {failure_point} failure"):
+        _upload(case, actor_id, requirement)
     assert _rows_and_files(root) == (0, 0, [])
 
 

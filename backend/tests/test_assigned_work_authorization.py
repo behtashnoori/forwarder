@@ -112,7 +112,7 @@ def test_reassignment_reloads_persisted_root_for_stale_actor_and_child_ids(assig
         db.session.add(request); db.session.flush()
         quote = ExpertQuote(shipment_request_id=request.id, amount=1, created_by_expert_id=a.id, operational_organization_id=org.id)
         db.session.add(quote); db.session.flush()
-        child = OperationalShipment(organization_id=org.id, source_type="accepted_quote", shipment_request_id=request.id, accepted_quote_id=quote.id, lifecycle_status="planned", created_by_user_id=a.id)
+        child = OperationalShipment(organization_id=org.id, source_type="accepted_quote", shipment_request_id=request.id, accepted_quote_id=quote.id, lifecycle_status="planned", created_by_user_id=a.id, primary_responsible_expert_id=a.id)
         db.session.add(child); db.session.commit()
 
         # Keep these exact objects/IDs as a browser or client would after its
@@ -120,6 +120,7 @@ def test_reassignment_reloads_persisted_root_for_stale_actor_and_child_ids(assig
         stale_request, stale_child = request, child
         assert authorize_work_action({"id": a.id}, stale_request, "request.read").allowed
         assert authorize_work_action({"id": a.id}, stale_child, "shipment.read").allowed
+        assert authorize_work_action({"id": a.id}, stale_child, "document.manage").allowed
 
         db.session.execute(update(ShipmentRequest).where(ShipmentRequest.id == request.id).values(assigned_to=b.id))
         db.session.commit()
@@ -128,6 +129,8 @@ def test_reassignment_reloads_persisted_root_for_stale_actor_and_child_ids(assig
         assert not authorize_work_action({"id": a.id}, stale_child, "shipment.read").allowed
         assert authorize_work_action({"id": b.id}, stale_request, "request.read").allowed
         assert authorize_work_action({"id": b.id}, stale_child, "shipment.read").allowed
+        assert authorize_work_action({"id": a.id}, stale_child, "document.manage").allowed
+        assert not authorize_work_action({"id": b.id}, stale_child, "document.manage").allowed
         assert not authorize_work_action({"id": outsider.id}, stale_child, "shipment.read").allowed
         assert db.session.scalars(select(OperationalShipment).where(assigned_shipment_scope({"id": a.id}))).all() == []
         assert [row.id for row in db.session.scalars(select(OperationalShipment).where(assigned_shipment_scope({"id": b.id}))).all()] == [child.id]
