@@ -136,6 +136,11 @@ def operational_app():
         db.session.flush()
         request = ShipmentRequest(
             contact_phone="09000000000",
+            shipping_type="domestic",
+            transport_method="road",
+            domestic_transport_method="Rail Transport",
+            international_transport_method="Sea Freight",
+            transport_method_preference="customer_choice",
             status="waiting_for_customer",
             status_request_status="new",
             assigned_to=user.id,
@@ -879,7 +884,14 @@ def test_http_create_list_detail_and_error_envelopes(operational_app):
     }
     assert set(detail.json["data"]["source"]) == {
         "type", "accepted_quote_id", "shipment_request_id", "request_public_id",
-        "quote_amount",
+        "quote_amount", "request_transport",
+    }
+    assert detail.json["data"]["source"]["request_transport"] == {
+        "shipping_type": "domestic",
+        "transport_method": "road",
+        "domestic_transport_method": "Rail Transport",
+        "international_transport_method": "Sea Freight",
+        "transport_method_preference": "customer_choice",
     }
     missing = client.get(
         "/api/operational-shipments/11111111-1111-4111-8111-111111111111",

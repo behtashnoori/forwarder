@@ -15,6 +15,7 @@ import {
   Package,
   Phone,
   RefreshCw,
+  Truck,
   User,
   XCircle,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import {
 import { useI18n } from "@/i18n";
 import { formatLocalDate, isLocalDateBeforeToday } from "@/lib/localDate";
 import { formatMoney } from "@/lib/formatQuantity";
+import { getRequestTransportMethod } from "@/lib/transportPresentation";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
 
@@ -45,7 +47,7 @@ const CustomerRequestDetail: React.FC = () => {
     undefined;
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { locale, shippingTypeLabel, statusLabel, stepLabel, t } = useI18n();
+  const { locale, shippingTypeLabel, statusLabel, stepLabel, t, transportLabel } = useI18n();
 
   const [requestDetail, setRequestDetail] = useState<CustomerWorkflowData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,6 +200,10 @@ const CustomerRequestDetail: React.FC = () => {
 
   const statusInfo = getStatusBadge(requestDetail.status);
   const currentStatusLabel = statusLabel(requestDetail.status);
+  const requestTransportMethod = getRequestTransportMethod(requestDetail);
+  const requestTransportLabel = requestTransportMethod
+    ? transportLabel(requestTransportMethod)
+    : t("transport.requestMissing");
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -272,6 +278,11 @@ const CustomerRequestDetail: React.FC = () => {
                     <Badge variant="outline">
                       {shippingTypeLabel(requestDetail.shipping_type)}
                     </Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 rounded-lg bg-background/60 p-3">
+                    <Truck className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">{t("transport.requestMethod")}:</span>
+                    <span className="text-sm font-medium text-foreground">{requestTransportLabel}</span>
                   </div>
                 </div>
 

@@ -29,6 +29,7 @@ import {
 import { useI18n } from "@/i18n";
 import { formatLocalDate } from "@/lib/localDate";
 import { formatBusinessNumber, formatMoney } from "@/lib/formatQuantity";
+import { getRequestTransportMethod } from "@/lib/transportPresentation";
 
 const showLatestQuoteCard: boolean = false;
 
@@ -119,7 +120,7 @@ const PublicTracking: React.FC = () => {
   const { requestId } = useParams<{ requestId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { locale, statusLabel, shippingTypeLabel, t } = useI18n();
+  const { locale, statusLabel, shippingTypeLabel, t, transportLabel } = useI18n();
 
   const [requestData, setRequestData] = useState<PublicTrackingData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -221,11 +222,10 @@ const PublicTracking: React.FC = () => {
     requestData.pickup_date ||
     requestData.delivery_date;
 
-  const transportLabel =
-    requestData.domestic_transport_method ||
-    requestData.international_transport_method ||
-    requestData.transport_method ||
-    null;
+  const requestTransportMethod = getRequestTransportMethod(requestData);
+  const requestTransportLabel = requestTransportMethod
+    ? transportLabel(requestTransportMethod)
+    : t("transport.requestMissing");
   const unitTracking = requestData.unit_tracking;
 
   return (
@@ -301,8 +301,8 @@ const PublicTracking: React.FC = () => {
               </div>
             </div>
             <div className="p-5">
-              <p className="text-xs font-medium text-muted-foreground">{t("common.transportMethod")}</p>
-              <p className="mt-2 text-sm font-semibold text-foreground">{transportLabel || "—"}</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("transport.requestMethod")}</p>
+              <p className="mt-2 text-sm font-semibold text-foreground">{requestTransportLabel}</p>
             </div>
           </div>
         </section>
@@ -431,15 +431,6 @@ const PublicTracking: React.FC = () => {
                   </p>
                 </div>
               </div>
-              {transportLabel && (
-                <div className="mt-4 rounded-md border border-border/70 bg-muted/20 p-4">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Truck className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{t("common.transportMethod")}:</span>
-                    <span className="font-semibold text-foreground">{transportLabel}</span>
-                  </div>
-                </div>
-              )}
             </Section>
 
             <Section icon={User} title={t("publicTracking.contactInfo")}>

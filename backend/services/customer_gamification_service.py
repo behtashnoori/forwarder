@@ -13,6 +13,9 @@ from backend.extensions import db
 from backend.models import CustomerGamification, CustomerWorkflowStep, ExpertConsoleLog, ExpertQuote, ShipmentRequest
 from backend.routes.public_tracking import _workflow_steps_simple_4
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
+from backend.services.request_transport_projection import (
+    project_existing_request_transport,
+)
 
 
 def generate_customer_verification_token() -> str:
@@ -653,6 +656,7 @@ def build_customer_workflow_payload(
     return {
         "id": shipment_request.id,
         "shipping_type": shipment_request.shipping_type or "domestic",
+        **project_existing_request_transport(shipment_request),
         "status": shipment_request.status or "new",
         "created_at": created_at,
         "assigned_expert": build_assigned_expert_payload(shipment_request),

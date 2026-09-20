@@ -11,7 +11,10 @@ vi.mock("../../i18n", () => ({
     "operations.timelineReconciliation":"Timeline reconciliation",
     "operations.lifecycle":"Checkpoints and milestone lifecycle",
     "operations.routeExceptions":"Route exceptions and work items",
-  } as Record<string,string>)[key] || key, direction: "ltr", locale: "en-US", businessLabel: (value: string) => value, transportLabel: (value: string) => value }),
+    "transport.requestMethod":"Requested transport",
+    "transport.actualRoute":"Actual route transport",
+    "transport.requestMissing":"Transport method not recorded",
+  } as Record<string,string>)[key] || key, direction: "ltr", locale: "en-US", businessLabel: (value: string) => value, transportLabel: (value: string) => ({ road: "Road", rail: "Rail", "Sea Freight": "Sea freight" } as Record<string,string>)[value] || value }),
 }));
 vi.mock("../../components/OperationalPermission", () => ({
   default: ({ permission, children }: { permission: string; children: unknown }) =>
@@ -39,7 +42,7 @@ vi.mock("../../lib/api", async () => {
 
 const shipment = {
   public_id: "11111111-1111-4111-8111-111111111111", status: "active", version: 3, customer: "UAT Customer",
-  overdue: true, open_work_item_count: 1, source: { type: "accepted_quote" as const, accepted_quote_id: 2, shipment_request_id: 3 },
+  overdue: true, open_work_item_count: 1, source: { type: "accepted_quote" as const, accepted_quote_id: 2, shipment_request_id: 3, request_transport: { shipping_type: "domestic", domestic_transport_method: "Sea Freight", transport_method: "road" } },
   route_leg: { id: 10, origin: { display_name: "Origin" }, destination: { display_name: "Hub" }, transport_mode: "road", planned_departure: "2026-01-01T00:00:00Z", planned_arrival: "2026-01-02T00:00:00Z", version: 1 },
   milestones: [], recent_events: [],
   open_work_items: [{ id: 90, milestone_id: 31, type: "ROUTE_DEPENDENCY_BLOCKED", due_at: "2026-01-01T00:00:00Z", status: "open", version: 2 }],
@@ -49,7 +52,7 @@ const plan = {
   id: 20, revision_number: 2, status: "active", is_active: true, version: 4,
   legs: [
     { ...shipment.route_leg, id: 21, sequence_number: 1, status: "completed", actual_departure: "2026-01-01T00:00:00Z", actual_arrival: "2026-01-02T00:00:00Z", departure_milestone_id: "leg-21-depart", arrival_milestone_id: "leg-21-arrive" },
-    { ...shipment.route_leg, id: 22, sequence_number: 2, status: "planned", origin: { display_name: "Hub" }, destination: { display_name: "Port" }, departure_milestone_id: "leg-22-depart", arrival_milestone_id: "leg-22-arrive" },
+    { ...shipment.route_leg, id: 22, sequence_number: 2, status: "planned", origin: { display_name: "Hub" }, destination: { display_name: "Port" }, transport_mode: "rail", departure_milestone_id: "leg-22-depart", arrival_milestone_id: "leg-22-arrive" },
     { ...shipment.route_leg, id: 23, sequence_number: 3, status: "planned", origin: { display_name: "Port" }, destination: { display_name: "Destination" }, departure_milestone_id: "leg-23-depart", arrival_milestone_id: "leg-23-arrive" },
   ],
   checkpoints: [{
@@ -173,6 +176,16 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(screen.getByRole("heading", { name: "مسیر و اجرای عملیاتی" })).toBeInTheDocument();
     expect(screen.getByText("Active route plan")).toBeInTheDocument();
     expect(screen.getByText("اجرای عملیاتی")).toBeInTheDocument();
+  });
+
+  it("keeps request intent separate from ordered actual route modes", async () => {
+    renderDetail();
+    expect(await screen.findByText("Requested transport")).toBeInTheDocument();
+    expect(screen.getByText("Sea freight")).toBeInTheDocument();
+    expect(screen.getByText("Actual route transport")).toBeInTheDocument();
+    expect(screen.getByText("Road → Rail → Road")).toBeInTheDocument();
+    expect(screen.queryByText("combined")).not.toBeInTheDocument();
+    expect(screen.queryByText("multimodal")).not.toBeInTheDocument();
   });
 
   it("renders the same primary detail structure for a direct operation", async () => {

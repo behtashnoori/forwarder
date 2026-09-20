@@ -34,6 +34,9 @@ from backend.services.location_resolver import (
     resolve_location as resolve_canonical_location,
 )
 from backend.services.facility_endpoint_resolver import resolve_facility_endpoint, ResolvedFacilityEndpoint
+from backend.services.request_transport_projection import (
+    project_existing_request_transport,
+)
 
 TRANSPORT_MODES = {
     "road",
@@ -908,6 +911,11 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
         if shipment.accepted_quote_id
         else None
     )
+    request_row = (
+        db.session.get(ShipmentRequest, shipment.shipment_request_id)
+        if shipment.shipment_request_id
+        else None
+    )
     customer_row = (
         db.session.get(Customer, shipment.customer_id) if shipment.customer_id else None
     )
@@ -978,14 +986,14 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             "type": shipment.source_type,
             "accepted_quote_id": shipment.accepted_quote_id,
             "shipment_request_id": shipment.shipment_request_id,
-            "request_public_id": db.session.scalar(
-                select(ShipmentRequest.public_id).where(
-                    ShipmentRequest.id == shipment.shipment_request_id
-                )
-            )
-            if shipment.shipment_request_id
-            else None,
+            "request_public_id": request_row.public_id if request_row else None,
             "quote_amount": quote.amount if quote else None,
+            "request_transport": {
+                "shipping_type": request_row.shipping_type,
+                **project_existing_request_transport(request_row),
+            }
+            if request_row
+            else None,
         },
         "route_plan": {
             "id": plan.id,

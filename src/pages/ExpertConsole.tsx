@@ -45,18 +45,15 @@ import {
 } from "@/lib/api";
 import { useI18n } from "@/i18n";
 import { logoutAndClearExpertSession } from "@/lib/authSession";
+import { getRequestTransportMethod } from "@/lib/transportPresentation";
 
-type ShipmentRequest = ExpertRequest & {
-  international_transport_method?: string;
-  domestic_transport_method?: string;
-  transport_method_preference?: string;
-};
+type ShipmentRequest = ExpertRequest;
 type KPI = KPIs;
 
 const ExpertConsole = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { locale, statusLabel, t, tf } = useI18n();
+  const { locale, statusLabel, t, tf, transportLabel } = useI18n();
   const [requests, setRequests] = useState<ShipmentRequest[]>([]);
   const [kpis, setKpis] = useState<KPI | null>(null);
   const [loading, setLoading] = useState(true);
@@ -249,10 +246,11 @@ const ExpertConsole = () => {
   };
 
   const formatTransport = (request: ShipmentRequest) => {
-    if (request.international_transport_method) return `${t("shipping.type.international")}: ${request.international_transport_method}`;
-    if (request.domestic_transport_method) return `${t("shipping.type.domestic")}: ${request.domestic_transport_method}`;
-    if (request.transport_method) return request.transport_method;
-    return t("expert.transportMissing");
+    const method = getRequestTransportMethod({
+      ...request,
+      shipping_type: request.route.shipping_type,
+    });
+    return method ? transportLabel(method) : t("transport.requestMissing");
   };
 
   const statusItems = [
@@ -540,7 +538,7 @@ const ExpertConsole = () => {
                               <div className="rounded-2xl bg-slate-50 p-3">
                                 <div className="mb-2 flex items-center gap-2 text-xs text-slate-500">
                                   <Truck className="h-4 w-4" />
-                                  {t("common.transportMethod")}
+                                  {t("transport.requestMethod")}
                                 </div>
                                 <p className="line-clamp-2 text-sm font-semibold text-slate-900">{formatTransport(request)}</p>
                               </div>

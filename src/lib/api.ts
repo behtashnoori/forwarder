@@ -978,6 +978,10 @@ export interface CustomerWorkflowData {
   tracking_code: string | null;
   id: number;
   shipping_type: string;
+  transport_method?: string | null;
+  international_transport_method?: string | null;
+  domestic_transport_method?: string | null;
+  transport_method_preference?: string | null;
   status: string;
   created_at: string;
   assigned_expert: {
@@ -1213,6 +1217,9 @@ export interface ExpertRequest {
     } | null;
   };
   transport_method?: string;
+  international_transport_method?: string;
+  domestic_transport_method?: string;
+  transport_method_preference?: string;
   cargo: {
     description?: string;
     weight?: number;
@@ -1614,6 +1621,13 @@ export interface OperationalShipmentSummary {
     shipment_request_id: number | null;
     request_public_id?: string | null;
     quote_amount?: number | null;
+    request_transport?: {
+      shipping_type?: string | null;
+      transport_method?: string | null;
+      international_transport_method?: string | null;
+      domestic_transport_method?: string | null;
+      transport_method_preference?: string | null;
+    } | null;
   };
   route_leg: {
     id: number;

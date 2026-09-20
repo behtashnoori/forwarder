@@ -81,7 +81,9 @@ def customer_gamification_app():
             customer_first_name="Verified",
             customer_last_name="Customer",
             transport_method="road",
-            domestic_transport_method="road",
+            domestic_transport_method="Rail Transport",
+            international_transport_method="Sea Freight",
+            transport_method_preference="customer_choice",
             status_request_status="new",
             status="assigned",
             assigned_to=expert.id,
@@ -508,12 +510,16 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
     assert set(workflow_payload.keys()) == {
         "id",
         "shipping_type",
+        "transport_method",
+        "international_transport_method",
+        "domestic_transport_method",
+        "transport_method_preference",
         "status",
         "created_at",
         "assigned_expert",
         "customer_id",
-            "request_id",
-            "tracking_code",
+        "request_id",
+        "tracking_code",
         "workflow_steps",
         "workflow_steps_simple",
         "total_points_earned",
@@ -523,6 +529,17 @@ def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
     }
     assert workflow_payload["id"] == customer_gamification_app["request_id"]
     assert workflow_payload["shipping_type"] == "domestic"
+    assert {
+        "transport_method": workflow_payload["transport_method"],
+        "international_transport_method": workflow_payload["international_transport_method"],
+        "domestic_transport_method": workflow_payload["domestic_transport_method"],
+        "transport_method_preference": workflow_payload["transport_method_preference"],
+    } == {
+        "transport_method": "road",
+        "international_transport_method": "Sea Freight",
+        "domestic_transport_method": "Rail Transport",
+        "transport_method_preference": "customer_choice",
+    }
     assert workflow_payload["status"] == "assigned"
     assert workflow_payload["created_at"]
     assert workflow_payload["assigned_expert"] == {

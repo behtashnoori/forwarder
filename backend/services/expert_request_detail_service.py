@@ -14,6 +14,9 @@ from backend.services import message_service, quote_service
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
 from backend.services.assigned_work_authorization import authorize_work_action
+from backend.services.request_transport_projection import (
+    project_existing_request_transport,
+)
 
 
 class ExpertRequestDetailServiceError(Exception):
@@ -73,7 +76,7 @@ def build_request_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
         "assigned_to": build_assignment_detail_payload(req),
         "customer": build_customer_detail_payload(req),
         "route": build_route_detail_payload(req),
-        "transport_method": req.transport_method,
+        **project_existing_request_transport(req),
         "cargo": build_cargo_detail_payload(req),
         "dates": build_dates_detail_payload(req),
         "timeline": build_timeline_payload(req.id),

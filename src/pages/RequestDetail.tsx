@@ -67,6 +67,7 @@ import {
 import { useI18n } from "@/i18n";
 import { localDateTimeInputToUtc, toLocalDateTimeInputValue } from "@/lib/localDateTime";
 import { formatLocalDate } from "@/lib/localDate";
+import { getRequestTransportMethod } from "@/lib/transportPresentation";
 
 interface RequestDetail {
   id: number;
@@ -197,7 +198,7 @@ const emptyCreateCustomerFields: CRMCreateCustomerFields = {
 const RequestDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { actionLabel, locale, statusLabel, t, tf } = useI18n();
+  const { actionLabel, locale, statusLabel, t, tf, transportLabel } = useI18n();
   const missingValue = t("common.notRegistered");
 
   const [request, setRequest] = useState<RequestDetail | null>(null);
@@ -521,13 +522,16 @@ const RequestDetail = () => {
     }
   };
 
-  const transportLabel = useMemo(() => {
-    if (!request) return missingValue;
-    if (request.international_transport_method) return `${t("shipping.type.international")}: ${request.international_transport_method}`;
-    if (request.domestic_transport_method) return `${t("shipping.type.domestic")}: ${request.domestic_transport_method}`;
-    if (request.transport_method) return request.transport_method;
-    return missingValue;
-  }, [missingValue, request, t]);
+  const requestTransportLabel = useMemo(() => {
+    const method = getRequestTransportMethod({
+      shipping_type: request?.route?.shipping_type,
+      transport_method: request?.transport_method,
+      international_transport_method: request?.international_transport_method,
+      domestic_transport_method: request?.domestic_transport_method,
+      transport_method_preference: request?.transport_method_preference,
+    });
+    return method ? transportLabel(method) : t("transport.requestMissing");
+  }, [request, t, transportLabel]);
 
   const renderLocationBox = (title: string, location: RouteLocation, tone: "origin" | "destination") => {
     const accent = tone === "origin" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-blue-50 text-blue-700 border-blue-100";
@@ -715,8 +719,8 @@ const RequestDetail = () => {
                           <Truck className="h-5 w-5" />
                         </span>
                         <div>
-                          <p className="text-xs text-slate-500">{t("common.transportMethod")}</p>
-                          <p className="font-semibold text-slate-900">{transportLabel}</p>
+                          <p className="text-xs text-slate-500">{t("transport.requestMethod")}</p>
+                          <p className="font-semibold text-slate-900">{requestTransportLabel}</p>
                         </div>
                         {request.transport_method_preference === "forwarder_suggestion" && (
                           <Badge className="rounded-full bg-blue-50 text-blue-700 hover:bg-blue-50">{t("requestFlow.forwarderSuggestion")}</Badge>

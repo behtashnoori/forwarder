@@ -37,6 +37,10 @@ import ShipmentDocuments from "@/components/ShipmentDocuments";
 import OperationsNav from "@/components/OperationsNav";
 import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 import RouteAuthoringSection from "@/components/RouteAuthoringSection";
+import {
+  formatRouteTransportModes,
+  getRequestTransportMethod,
+} from "@/lib/transportPresentation";
 
 const key = () => crypto.randomUUID();
 const safeError = (error: unknown) => {
@@ -152,6 +156,17 @@ export default function OperationalShipmentDetail() {
     ? `${displayedLegs[0].origin.display_name || "مبدأ ثبت‌نشده"} ← ${displayedLegs.at(-1)?.destination.display_name || "مقصد ثبت‌نشده"}`
     : "هنوز مسیر عملیاتی ثبت نشده است";
   const routeConnector = direction === "rtl" ? "←" : "→";
+  const requestTransportMethod = getRequestTransportMethod(data?.source.request_transport);
+  const requestTransportSummary = requestTransportMethod
+    ? transportLabel(requestTransportMethod)
+    : data?.source.request_transport
+      ? t("transport.requestMissing")
+      : null;
+  const actualRouteTransportSummary = formatRouteTransportModes(
+    displayedLegs,
+    transportLabel,
+    direction,
+  );
   return (
     <main className="min-h-screen overflow-x-hidden bg-slate-50 p-3 sm:p-4 md:p-8" dir={direction}>
       <div className="mx-auto max-w-7xl space-y-6">
@@ -164,9 +179,11 @@ export default function OperationalShipmentDetail() {
               <div className="min-w-0"><p className="text-sm text-slate-300">فضای کار عملیاتی محموله</p><h1 className="text-2xl font-bold sm:text-3xl">خلاصه محموله</h1><p className="mt-2 break-all text-xs text-slate-300">شناسه محموله: <bdi dir="ltr">{data.public_id}</bdi></p></div>
               <span className="w-fit rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold ring-1 ring-white/20">{businessLabel(data.status)}</span>
             </div>
-            <div className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-3">
               <div className="bg-white p-4"><p className="text-xs text-slate-500">مشتری و پروژه</p><p className="mt-1 font-semibold">{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</p>{data.project_public_id ? <Link className="mt-1 inline-block text-xs text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>مشاهده پروژه مرتبط</Link> : <p className="mt-1 text-xs text-slate-500">محموله مستقیم؛ بدون پروژه</p>}</div>
               <div className="bg-white p-4"><p className="text-xs text-slate-500">مسیر فعال</p><p className="mt-1 font-semibold">{routeSummary}</p>{activePlan && <p className="mt-1 text-xs text-slate-500">نسخه {activePlan.revision_number}</p>}</div>
+              {requestTransportSummary && <div className="bg-white p-4"><p className="text-xs text-slate-500">{t("transport.requestMethod")}</p><p className="mt-1 font-semibold">{requestTransportSummary}</p></div>}
+              {actualRouteTransportSummary && <div className="bg-white p-4"><p className="text-xs text-slate-500">{t("transport.actualRoute")}</p><p className="mt-1 font-semibold">{actualRouteTransportSummary}</p></div>}
               <div className="bg-white p-4"><p className="text-xs text-slate-500">آخرین رخداد عملیاتی</p><p className="mt-1 font-semibold">{data.recent_events[0] ? businessLabel(data.recent_events[0].event_type) : "هنوز رخدادی ثبت نشده"}</p>{data.recent_events[0] && <p className="mt-1 text-xs text-slate-500">{when(data.recent_events[0].occurred_at, locale)}</p>}</div>
               <div className="bg-white p-4"><p className="text-xs text-slate-500">موارد باز</p><p className="mt-1 font-semibold">{data.open_work_items.length} مورد پیگیری · {openExceptions.length} استثنا</p><p className="mt-1 text-xs text-slate-500">{data.source.type === "direct" ? "عملیات مستقیم" : "درخواست و پیشنهاد پذیرفته‌شده"}</p></div>
             </div>

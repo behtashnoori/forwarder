@@ -306,6 +306,9 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "customer",
         "route",
         "transport_method",
+        "international_transport_method",
+        "domestic_transport_method",
+        "transport_method_preference",
         "cargo",
         "dates",
         "timeline",
@@ -315,6 +318,17 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     }
     assert set(detail_data["assigned_to"].keys()) == {"id", "name", "username"}
     assert detail_data["assigned_to"]["id"] == expert_contract_app["expert_id"]
+    assert {
+        "transport_method": detail_data["transport_method"],
+        "international_transport_method": detail_data["international_transport_method"],
+        "domestic_transport_method": detail_data["domestic_transport_method"],
+        "transport_method_preference": detail_data["transport_method_preference"],
+    } == {
+        "transport_method": "road",
+        "international_transport_method": None,
+        "domestic_transport_method": "road",
+        "transport_method_preference": "customer_choice",
+    }
     opaque_detail = client.get(
         f"/api/expert/requests/{detail_data['public_id']}", headers=expert_headers
     )
