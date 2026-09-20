@@ -77,14 +77,14 @@ This section summarizes existing decisions and links to their authoritative sour
 | Canonical vocabulary | Use the catalog as the terminology gate; legacy aliases are compatibility terms, not new primary names | [Canonical Catalog](canonical_business_object_catalog.md) |
 | Status ownership | Commercial, operational, verification, task, document, approval, and alert states have distinct owners | [ADR-007](adr/ADR-007-commercial-operational-status.md), [State Matrix](phase0_state_transition_matrix.md), [Canonical Status Vocabulary](canonical_business_object_catalog.md#part-4--canonical-status-vocabulary) |
 | Operational event model | Important facts are immutable and selected projections rebuildable; this is lightweight event sourcing, not mandatory full event sourcing | [ADR-009](adr/ADR-009-milestone-verification.md), [ADR-019](adr/ADR-019-unified-timeline-operational-event-model.md) |
-| Document architecture | Separate immutable binary artifact from scoped attachment/version/visibility; never copy a binary merely for multiple scopes | [ADR-020](adr/ADR-020-document-attachment-visibility-architecture.md) |
+| Document architecture | Separate logical requirement, immutable physical file/version, contextual exact-version attachment/use, and derived readiness; only the owning Transport Expert manages files and the System preserves history | [ADR-020](adr/ADR-020-document-attachment-visibility-architecture.md), [ADR-030](adr/ADR-030-mdpm-document-readiness-policy.md), [ADR-050](adr/ADR-050-owning-expert-document-management-history.md), [PDR-020](PDR-020-documents-expert-only-management.md) |
 | Control tower | Alerts/exceptions/tasks are actionable projections; work queues do not become operational truth | [ADR-008](adr/ADR-008-control-tower-work-queue.md) |
 | Concurrency and retry safety | Sensitive creates/events/transitions use idempotency; aggregate mutations use expected versions and atomic audit/outbox | [ADR-010](adr/ADR-010-idempotency-locking.md) |
 | Time correctness | Distinguish Instant, Local Date, and business local datetime; keep occurred and recorded times separate | [ADR-016](adr/ADR-016-time-and-timezone-architecture.md) |
 | Deterministic runtime and deployment | Startup has no schema writes; use canonical entrypoint, controlled environment, quality gates, immutable release identity, and manifest | [ADR-011](adr/ADR-011-explicit-migration-execution.md), [ADR-012](adr/ADR-012-versioned-backend-entrypoint.md), [Release Governance](../../../28-AI-Rules/06-Version-Release-Deployment-Governance.md) |
 | Human approval boundaries | AI and automation may read/recommend/prepare; sensitive execution and approval remain governed explicit actions | [Operational Workshop](operational_architecture_workshop.md#5-ai-readiness), [PDR](phase0_5_product_decision_register.md) |
 
-ADR-017 through ADR-019, PDR-001 through PDR-006, and PDR-010 are Accepted as of 2026-07-31. ADR-020 and PDR-007 through PDR-009/PDR-011 remain `Proposed`. Inclusion in this index does not change any individual status.
+ADR-017 through ADR-019, PDR-001 through PDR-006, and PDR-010 are Accepted as of 2026-07-31. ADR-020, PDR-007/PDR-008/PDR-011, and historical PDR-009 remain `Proposed`; PDR-009's Customer-management recommendation is superseded by Accepted PDR-020. PDR-020 and ADR-050 are Accepted target/reference decisions as of 2026-09-20 and grant design authority only. Inclusion in this index does not change any individual status.
 
 ## 3. Architecture Map
 
@@ -378,7 +378,7 @@ No existing document was modified during this review.
 | Project architecture | ADR-017 | PDR-001–004, Workshop, Catalog | ADR Accepted; PDR-001–004 Accepted for SLICE-001 |
 | ExecutionUnit | ADR-018 | PDR-005–007/010, Workshop, Catalog | ADR Accepted; PDR-005/006/010 Accepted for Release 1.2.0 |
 | Unified events/timeline | ADR-019 | ADR-009/010/016, Workshop, Catalog | ADR Accepted; preserves specialized events |
-| Document platform | ADR-020 | PDR-008/009/011, Workshop, Catalog | ADR Proposed; later-slice decisions Proposed |
+| Document platform | ADR-050 + ADR-030; ADR-020 for Proposed visibility context | PDR-020 Accepted; PDR-008/011 Proposed; PDR-009 historical recommendation superseded; Workshop; Catalog | Management actor/history/readiness reference reconciled and ready for design; generalized read visibility/retention remain Proposed |
 | Vocabulary | Canonical Catalog | All ADR/PDR/workshop sources | Catalog draft; proposed for authority |
 | Human/AI approval | AI Rules + PDR/Workshop | AI-ready docs, Permission Matrix | Principles established; action policies not broadly accepted |
 | Version/release | AI Rule 06, Release Notes, manifests | Deployment/runbooks/CI | Existing controls; version sources require release-by-release consistency |
@@ -426,7 +426,7 @@ These are compatibility/documentation findings, not authorization to rename code
 
 ### Consistency verdict
 
-The architecture sources are structurally consistent when document status and historical context are respected. ADR-017 through ADR-019, PDR-001 through PDR-006, and PDR-010 are Accepted; ADR-020 and the remaining PDRs retain Proposed status. Workshop outcomes, Catalog authority, and this Baseline retain their documented statuses.
+The architecture sources are structurally consistent when document status and historical context are respected. ADR-017 through ADR-019, PDR-001 through PDR-006, and PDR-010 are Accepted; PDR-020/ADR-050 add Accepted Documents management target truth. ADR-020, PDR-008/PDR-011, and the preserved historical PDR-009 text retain Proposed status within their remaining scopes. Workshop outcomes, Catalog authority, and this Baseline retain their documented statuses.
 
 ## 11. Architecture Readiness Assessment
 

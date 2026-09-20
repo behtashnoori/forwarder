@@ -263,23 +263,35 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 
 ## FDD-001-025 — DocumentArtifact
 
-- **Canonical/Persian:** DocumentArtifact / سند; **definition/rationale:** logical business document distinct from stored attachment/version.
-- **Class/owners:** Master/Transaction boundary by document type; Product; CAP-005.
-- **Lifecycle/identity/scope:** current bounded case-document lifecycle; opaque identity where implemented; request/project scope varies.
-- **Relationships:** DocumentAttachment/version, requirements, business subjects. **Mutable/immutable:** metadata/state governed; historical versions/evidence preserved.
+- **Canonical/Persian:** DocumentArtifact / فایل سند; **definition/rationale:** one immutable physical file version and its intrinsic metadata/bytes identity, distinct from the logical requirement and contextual attachment/use.
+- **Class/owners:** Transactional evidence; Document system; CAP-005. The owning Transport Expert may initiate management, but the System owns persistence and history.
+- **Lifecycle/identity/scope:** immutable file/version identity; current/superseded/logically deleted availability is governed; parent Request/Shipment context is server-derived.
+- **Relationships:** DocumentAttachment/exact contextual use, DocumentVersion lineage, DocumentRequirement, private storage, uploader, and audit. **Mutable/immutable:** bytes/checksum/version identity immutable; current/availability state governed; historical versions preserved.
 - **Activation/history:** no silent history replacement. **API/UI/reporting:** document tabs and evidence inventory.
-- **Version/state/future/exclusions:** bounded case-document implementation exists/deployed lineage; platform-wide model partly Proposed; visibility/retention not generalized.
-- **Governance/source:** ADR-020 Proposed and case-document records; `backend` case document models/services.
+- **Version/state/future/exclusions:** bounded `CaseDocumentFile` compatibility implementation exists; platform-wide visibility/retention remains Proposed; no destructive overwrite or enterprise DMS.
+- **Governance/source:** PDR-020 and ADR-050 Accepted target; ADR-020 Proposed visibility context; case-document records and services.
 
 ## FDD-001-026 — DocumentAttachment
 
-- **Canonical/Persian:** DocumentAttachment / پیوست سند; **definition/rationale:** stored-file association to a business document/subject.
-- **Class/owners:** Evidence; Product/Security; CAP-005.
-- **Lifecycle/identity/scope:** upload/replace/verify per bounded feature; opaque identity where implemented; resource/visibility scoped.
-- **Relationships:** artifact, storage object, actor/audit. **Mutable/immutable:** metadata/state mutable; historical bytes/version evidence preserved.
+- **Canonical/Persian:** DocumentAttachment / پیوند سند; **definition/rationale:** contextual association of an exact DocumentArtifact/DocumentVersion to one parent subject or logical DocumentRequirement; it is not the binary or the requirement.
+- **Class/owners:** Contextual evidence; parent scope plus Document policy; CAP-005.
+- **Lifecycle/identity/scope:** current/superseded association; opaque identity where implemented; parent, tenant, exact version, and visibility scoped.
+- **Relationships:** exact artifact/version, parent Shipment/Case, logical requirement, assessment, actor/audit. **Mutable/immutable:** association state governed; historical association and exact-version evidence preserved.
 - **Activation/history:** destructive removal/visibility requires policy. **API/UI/reporting:** bounded document UI; evidence inventory.
-- **Version/state/future/exclusions:** bounded implementation; platform visibility architecture Proposed; no universal customer visibility inference.
-- **Governance/source:** ADR-020 Proposed, case-document docs/models/services.
+- **Version/state/future/exclusions:** bounded `ArtifactAssociation` compatibility implementation; platform visibility architecture Proposed; no universal Customer visibility and no independent attachment management permission.
+- **Governance/source:** PDR-020 and ADR-050 Accepted target; ADR-030 exact-version readiness; ADR-020 Proposed visibility; case-document/MDPM records.
+
+### Documents target vocabulary and lifecycle separation
+
+| Concept | Governing meaning | Must not be conflated with |
+| --- | --- | --- |
+| `DocumentRequirement` | Logical, parent-scoped evidence contract and limits; compatibility forms include `CaseDocumentRequirement` and `OperationalDocumentRequirement` | File count, attachment, approval, or readiness result |
+| `DocumentArtifact` / compatibility `CaseDocumentFile` | One immutable physical file version plus filename, detected type, size, checksum, uploader, upload time, status, and private storage identity | Logical requirement or contextual permission |
+| `DocumentAttachment` / compatibility `ArtifactAssociation` | Contextual use of an exact current/history version by a parent or requirement | The file bytes or a standalone authorization grant |
+| `DocumentVersion` | Immutable member of one targeted file lineage; replacement creates a new member and preserves the old member | Append of an independent sibling file |
+| `DocumentReadiness` | Derived logical-requirement result over applicability, eligible current evidence, and assessment policy | Number of uploaded or historical files |
+
+Under PDR-020/ADR-050 the active owning Transport Expert is the only management actor; the System owns version/history preservation. Existing separately governed read/oversight visibility is not converted into management authority.
 
 ## FDD-001-027 — OperationalAudit
 
@@ -304,7 +316,7 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 ## Governance gaps
 
 - Named business owner and deletion lifecycle for ExpertUser require explicit identity-governance confirmation.
-- Platform-wide DocumentArtifact/DocumentAttachment visibility, retention, and customer action rules remain Proposed under ADR-020/PDR-008/009/011. The Post-D2 multi-file/append/targeted-replace/history/retry slice is `BLOCKED_PENDING_DOCUMENT_ACTOR_DECISION` for the Customer / owning Transport Expert / Admin-Manager action matrix.
+- Documents management actor/history ambiguity is closed by PDR-020/ADR-050: owning Transport Expert only; Customer, Admin/Manager, other Expert, other tenant, and inactive/revoked actor cannot manage; the System preserves history. Generalized read/download visibility and retention remain separately Proposed under PDR-008/ADR-020 and PDR-011, with no new Customer visibility granted. Exact schema sufficiency remains `TO_BE_CONFIRMED_IN_DESIGN` and does not block the bounded design phase.
 - ServiceType relationships remain unresolved under PDR-013 D02/D03.
 - ShipmentCargoItem correction/supersession, allocation, and customer search remain deferred/proposed.
 - Logistics Network physical/API choices are Accepted and implemented in Release 1.7.0 source; Production migration, catalog apply, packaging, and deployment remain separately governed.

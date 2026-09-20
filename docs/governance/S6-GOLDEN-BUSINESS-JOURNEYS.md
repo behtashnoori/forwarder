@@ -154,18 +154,29 @@ The following are **NEW ACCEPTED DECISION** journey references under PDR-019 and
 | DENIAL/ERROR | Expired, conflicting, concurrent, foreign, inactive, or unauthorized response follows stable existing error/non-disclosure rules; same-response replay stays idempotent. |
 | DOWNSTREAM | Expert may issue a new/revised official Quote; Notification activation is not triggered; accepted-Quote Shipment creation later captures the issuing Expert under ADR-047. |
 
-### E. Documents — blocked journey
+### E. Documents — owning-Expert management
 
-```text
-JOURNEY_STATUS=BLOCKED_PENDING_DOCUMENT_ACTOR_DECISION
-```
+This target journey is authoritative under PDR-020/ADR-050. It is a reference contract for future design and acceptance, not an implementation or browser PASS.
 
-ENTRY, DISCOVERY, USE, RESULT, LEAVE, RETURN, DENIAL/ERROR, and DOWNSTREAM semantics for multi-file append, targeted replace/history, and failed-file retry are understood. `ACTOR` and `ENTITLEMENT` are not authoritative until Product decides the action matrix for Customer, owning Transport Expert, and Admin/Manager. This gap blocks implementation and browser acceptance; it does not invalidate the already approved functional intent.
+| Contract field | Target |
+| --- | --- |
+| ENTRY | The active owning Transport Expert opens the existing Shipment/Case Documents surface through the normal Shipment/Case workflow. |
+| ACTOR | Owning Transport Expert only for document management. The System owns history preservation. |
+| ENTITLEMENT | Server derives active identity, tenant, authoritative parent, and owning Expert. Same-organization membership, Admin/Manager title, Customer relation, Project access, or a file identifier does not grant management. |
+| DISCOVERY | The existing Shipment/Case workflow exposes Documents to the owning Expert; no hidden standalone attachment-management route or unrelated permission is required. |
+| USE | Select one or multiple files; upload; append new sibling files; select one current file for targeted replacement; retry only a known failed file. |
+| RESULT | Each file receives a truthful file-level result and governed metadata. Successful siblings remain successful. Replacement creates a new current version where applicable while the System preserves the old immutable/auditable version. |
+| LEAVE | The Expert returns to the Shipment/Case workflow without an all-or-nothing batch requirement. |
+| RETURN | The Expert reopens Documents through normal navigation and sees the governed current set plus authorized history. |
+| DENIAL/ERROR | Customer management, Admin/Manager management, other same-Organization Expert, other tenant, inactive/revoked actor, forged parent/owner, and stale/foreign replacement target are denied. For A success, B failure, C success, A/C remain and only B is retryable. |
+| DOWNSTREAM | Document readiness evaluates the logical requirement, eligible current evidence, and assessment policy. Historical replaced versions do not count as extra current evidence; `more files` never means `more ready`. |
+
+Read/history/download visibility is evaluated separately. Existing owning-Expert and governed Admin/Manager oversight reads may remain; no Customer read visibility is newly granted, and PDR-008 remains Proposed for generalized projections.
 
 ### Reference-phase status
 
 ```text
 REFERENCE_IMPACT=UPDATE_REQUIRED
-REFERENCE_IMPACT_STATUS=CLOSED_FOR_REFERENCE_PHASE
-USER_JOURNEY_REFERENCE=A/B/C/D DEFINED; DOCUMENTS BLOCKED
+REFERENCE_IMPACT_STATUS=CLOSED_FOR_DOCUMENTS_DESIGN
+USER_JOURNEY_REFERENCE=A/B/C/D/E DEFINED; IMPLEMENTATION_AND_BROWSER_ACCEPTANCE_PENDING
 ```

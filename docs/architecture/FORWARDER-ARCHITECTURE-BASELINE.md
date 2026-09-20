@@ -81,6 +81,8 @@ See `LEGACY-CANONICAL-MAP.md`.
 | Independent execution | `ExecutionUnit` |
 | Uploaded document binary metadata | `CaseDocumentFile`, owned by its source `ShipmentRequest`; contextual use is separate |
 | Shipment document use/readiness | `OperationalDocumentRequirement` plus `ArtifactAssociation` and assessments |
+| Document management entitlement | Authoritative Shipment/Case parent; owning active Transport Expert only under PDR-020/ADR-050 |
+| Document version/history | System-owned immutable file/version lineage, private bytes, and audit; initiating Expert is not the history owner |
 | Cargo master | Organization-owned `CargoCatalogItem` |
 | Shipment cargo truth | `ShipmentCargoItem` immutable descriptive snapshot plus mutable controlled quantity/version |
 | CRM | Organization-scoped internal `Customer`, contacts, opportunities, activities and link audit |
@@ -120,6 +122,18 @@ Project/organization policy
 Requirements are not files. Upload is not approval. Configuration changes do not rewrite materialized shipment requirements. Files remain private and tenant-safe. An artifact association must match the operational shipment's organization, source request, definition, active typed version, and exact version rules.
 
 There is currently no direct `ExecutionUnit` document ownership. Adding it requires an Accepted ADR; ADR-020 remains PROPOSED and MDPM explicitly excluded ExecutionUnit documents.
+
+PDR-020 and ADR-050 add the target management contract without activating ADR-020's generalized visibility model:
+
+- only the active owning Transport Expert may upload, append, target one current file for replacement, or retry a known failed upload;
+- Customer, Admin/Manager, other same-Organization Expert, other tenant, and inactive/revoked actor cannot manage files;
+- existing separately governed read/history/download or Admin/Manager oversight may remain read-only; no Customer visibility is newly granted;
+- one logical requirement may contain multiple current physical files, but append is not replace and file count is not readiness;
+- replacement creates a new governed version, preserves the old immutable version/history, and does not inherit assessment under ADR-030;
+- authority derives from the persisted parent and never from client-supplied tenant/owner, generic Organization membership, or a standalone attachment permission;
+- ADR-047 remains authoritative: there is one fixed Shipment owner and no Expert reassignment/former-Expert document transfer model.
+
+Current runtime deviations are implementation evidence, not target authority. Schema sufficiency for multiple current operational associations, targeted lineage, and retry outcome is `TO_BE_CONFIRMED_IN_DESIGN`; no migration is authorized by this baseline update.
 
 ## 9. Cargo architecture
 

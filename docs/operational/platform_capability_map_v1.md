@@ -249,24 +249,24 @@ Level 3 and Level 4 entries are planning decompositions, not newly accepted Prod
 | Purpose | Govern immutable artifacts, scoped attachments, versions, requirements, visibility, approval, download, and retention |
 | Business Goal | Make operational/commercial evidence available to the right stakeholder without duplication or leakage |
 | Business Value | Compliance, document completeness, safe collaboration, structured exports |
-| Primary Actors | Expert, Customer, Compliance/Verifier |
-| Supporting Actors | Carrier, Customs representative, Security, Operations, AI assistant |
+| Primary Actors | Owning Transport Expert (management); separately authorized read/assessment actors |
+| Supporting Actors | Same-organization Admin/Manager oversight reader, Compliance/Verifier, Security, Operations, AI assistant; Customer only through a separately approved read projection |
 | Canonical Objects | DocumentArtifact, DocumentAttachment, DocumentVersion, DocumentRequirement, AttachmentVisibility, Approval |
-| Related ADR | Proposed ADR-020; ADR-006, ADR-015, ADR-016 |
-| Related PDR | PDR-008, PDR-009, PDR-011; Proposed |
+| Related ADR | Accepted ADR-030/ADR-050; Proposed ADR-020 for generalized visibility; ADR-006, ADR-015, ADR-016, ADR-047 |
+| Related PDR | PDR-020 Accepted; PDR-008/PDR-011 Proposed; PDR-009 Customer-management recommendation superseded |
 | Future RFC | Artifact/attachment migration and visibility RFC — identifier not assigned |
 | Dependencies | CAP-001/CAP-002/CAP-003 scopes, CAP-010 security, CAP-004 event/audit references |
 | Parent Capability | Platform Product Capabilities |
 | Child Capabilities | Artifact storage; scoped attachment; version/requirement; visibility/approval; bulk package/manifest; retention |
 | Current Phase | Phase 4 — Documents planning; Request-level case documents are operational |
-| Planned Slice | Internal scoped attachment foundation; customer/bulk/purge deferred until accepted |
-| Current Status | Architected |
+| Planned Slice | Owning-Expert-only management design: multi-file, append, targeted replace/history, failed-file retry; generalized customer/bulk/purge remains deferred |
+| Current Status | Reference reconciled — ready for bounded design; runtime implementation open |
 | AI Readiness | Metadata/completeness recommendation possible; content/actions require explicit permission/approval |
 | Operational Owner | Operations (supporting); accountable capability owner is Product |
 | Product Owner | Product — Documents & Collaboration |
 | Security Classification | Restricted/mixed; internal default and deny-by-default |
 | KPIs | Candidate: required-document completeness; leakage incidents; verification time; checksum/version integrity; export failure rate |
-| Future Extensions | Customer uploads, malware scanning, digital signature validation, legal hold, object storage |
+| Future Extensions | Separately approved Customer read projection, malware scanning, digital signature validation, legal hold, object storage; Customer upload requires a future superseding Product decision |
 
 ## CAP-006 — Reporting & Analytics
 
@@ -762,7 +762,7 @@ Runbook, User/Operator Guide, and Operational Evidence
 | CAP-002 | Conversion RFC future | ADR-002–005/007/009/010 | Project-related PDR subset Proposed | Existing Phase 1A/1B operational slices | Existing repository releases; per-manifest evidence | Phase 1A/1B migration/deploy/UAT runbooks | Existing user/operator docs |
 | CAP-003 | Future, unassigned | Proposed ADR-018 | PDR-005–007/010 Proposed | Canonical ExecutionUnit foundation, not approved | None for canonical capability | Future | Future expert/operator guide |
 | CAP-004 | Future, unassigned | ADR-009/010/016 + Proposed ADR-019 | Visibility/retention PDR subset Proposed | Unit Timeline projection future | None for unified model | Future projector/rebuild runbook | Future Timeline guide |
-| CAP-005 | Future, unassigned | Proposed ADR-020 | PDR-008/009/011 Proposed | Request-level documents existing; scoped platform future | Existing case-document revision/release evidence | Existing storage/migration docs; future bulk/retention | Existing expert UI; future customer document guide |
+| CAP-005 | Future bounded design, identifier unassigned | ADR-050/030 Accepted; ADR-020 Proposed visibility context | PDR-020 Accepted; PDR-008/011 Proposed; PDR-009 write recommendation superseded | Request-level documents existing; owning-Expert-only multi-file/history/retry target ready for design | Existing case-document revision/release evidence plus reference reconciliation | Existing storage/migration docs; future bounded design and bulk/retention | Existing expert UI; Customer management intentionally absent |
 | CAP-006 | Future export RFC | ADR-007/008 + proposed foundation ADRs | PDR-004/008/010/011 as applicable | Existing admin report/XLSX; unit report future | Existing report releases | Existing deployment; future export-job runbook | Existing admin UI docs |
 | CAP-007 | Future portal v2 RFC | ADR-002/007/016 + Accepted ADR-017 + Proposed ADR-018–020 | PDR-001/003/004/008/009 | Existing customer/public tracking; Project view future | Existing releases | Existing deployment/auth docs | Existing user guide; future Project guide |
 | CAP-008 | Future workspace RFC | ADR-002/008/010 + Accepted ADR-017 + Proposed ADR-018–020 | PDR-002/004–010 | Existing expert/operational UI; scalable unit view future | Existing releases | Existing UAT/operator docs | Expert/user guide |
