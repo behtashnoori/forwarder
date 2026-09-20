@@ -3,6 +3,7 @@ import { BrowserRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import OperationsControlTower from "@/pages/OperationsControlTower";
+import { operationsControlTower } from "@/dashboard/control-tower";
 import * as api from "@/lib/api";
 class ResizeObserverMock { observe() {} unobserve() {} disconnect() {} }
 vi.stubGlobal("ResizeObserver", ResizeObserverMock);
@@ -13,7 +14,7 @@ const registry = {semantic_version:"analytics-semantic-v1",metrics:[metric("ACTI
 const response = (metricKey:string) => ({data:{semantic_version:"analytics-semantic-v1",normalized_query:{metrics:[metricKey]},query:{metrics:[metricKey]},columns:[{key:metricKey,business_name:metricKey,kind:"metric",data_type:"number"}],rows:[{[metricKey]:{state:"VALUE",value:2}}],coverage:[],warnings:[],pagination:{limit:20,next_cursor:null},execution:{read_only:true,organization_scoped:true}}});
 describe("Operations Control Tower", () => {
   beforeEach(() => { vi.clearAllMocks(); (api.getOperationalContext as ReturnType<typeof vi.fn>).mockResolvedValue({data:{organization_id:1,permissions:["operational_shipment.read"]}}); (api.getAnalyticsSemanticRegistry as ReturnType<typeof vi.fn>).mockResolvedValue({data:registry}); (api.queryAnalytics as ReturnType<typeof vi.fn>).mockImplementation((query:{metrics:string[]}) => Promise.resolve(response(query.metrics[0]))); });
-  const renderTower = () => render(<TooltipProvider><BrowserRouter><OperationsControlTower /></BrowserRouter></TooltipProvider>);
+  const renderTower = () => render(<TooltipProvider><BrowserRouter><OperationsControlTower definition={operationsControlTower} /></BrowserRouter></TooltipProvider>);
   it("loads the governed widgets from one registry request and analytics queries", async () => { renderTower(); expect(await screen.findByText("محموله‌های فعال")).toBeInTheDocument(); await waitFor(() => expect(api.queryAnalytics).toHaveBeenCalledTimes(8)); expect(api.getAnalyticsSemanticRegistry).toHaveBeenCalledTimes(1); expect(screen.queryByText(/On Time|Needs Attention/)).not.toBeInTheDocument(); });
   it("propagates a customer filter through analytics queries", async () => { renderTower(); await screen.findByText("محموله‌های فعال"); fireEvent.change(screen.getByLabelText("شناسه مشتری"), {target:{value:"customer:7"}}); await waitFor(() => expect((api.queryAnalytics as ReturnType<typeof vi.fn>).mock.calls.some(([query]) => query.filters.some((item:{dimension:string;value:string}) => item.dimension === "CUSTOMER" && item.value === "customer:7"))).toBe(true)); });
   it("uses POST drilldown with the widget normalized query", async () => { (api.drilldownAnalytics as ReturnType<typeof vi.fn>).mockResolvedValue({data:{items:[],pagination:{limit:20,next_cursor:null}}}); renderTower(); const link = await screen.findAllByText("جزئیات جمعیت"); fireEvent.click(link[0]); await waitFor(() => expect(api.drilldownAnalytics).toHaveBeenCalledWith("ACTIVE_SHIPMENT_COUNT", expect.objectContaining({metrics:["ACTIVE_SHIPMENT_COUNT"]}))); });

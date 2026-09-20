@@ -10,9 +10,15 @@ import { operationsControlTower, operationsControlTowerManifest } from "@/dashbo
 import { validateDashboardDefinition } from "@/dashboard/validator";
 import { DashboardWidget, type WidgetResult } from "@/dashboard/DashboardWidgets";
 import type { WidgetDefinition } from "@/dashboard/types";
+import ControlTowerOperationalView from "@/control-tower/ControlTowerOperationalView";
 
 type RuntimeProps = { definition?: import("@/dashboard/types").DashboardDefinition; displayName?: string; displayDescription?: string; sourceContext?: string; allowClone?: boolean; headerAction?:ReactNode };
-export default function OperationsControlTower({ definition = operationsControlTower, displayName, displayDescription, sourceContext, allowClone = true, headerAction }: RuntimeProps) {
+export default function OperationsControlTower(props: RuntimeProps) {
+  if (props.definition === undefined) return <ControlTowerOperationalView />;
+  return <SemanticDashboardRuntime {...props} />;
+}
+
+function SemanticDashboardRuntime({ definition = operationsControlTower, displayName, displayDescription, sourceContext, allowClone = true, headerAction }: RuntimeProps) {
   const navigate = useNavigate(); const [cloning, setCloning] = useState(false);
   const dashboard = definition;
   const blank = (): Record<string, WidgetResult> => Object.fromEntries(dashboard.widgets.map((widget) => [widget.widget_id, { state:"LOADING" }]));
