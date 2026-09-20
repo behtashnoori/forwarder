@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { submitQuote, type SubmitQuotePayload } from "@/lib/api";
+import quoteCurrencyContract from "../../contracts/quote-currencies.v1.json";
 
 interface QuoteModalProps {
   open: boolean;
@@ -20,10 +21,7 @@ interface QuoteModalProps {
   onSuccess: () => void;
 }
 
-const CURRENCY_OPTIONS = [
-  { value: "IRR", label: "تومان (IRR)" },
-  { value: "USD", label: "دلار (USD)" },
-];
+const CURRENCY_OPTIONS = quoteCurrencyContract.currencies;
 
 export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteModalProps) {
   const [amount, setAmount] = useState("");
@@ -101,8 +99,8 @@ export function QuoteModal({ open, onOpenChange, requestId, onSuccess }: QuoteMo
               disabled={loading}
             >
               {CURRENCY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
+                <option key={o.code} value={o.code}>
+                  {o.label_fa}
                 </option>
               ))}
             </select>

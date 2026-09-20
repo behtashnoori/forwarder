@@ -11,6 +11,10 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.services.ownership_service import OwnershipContractError, require_tenant_resource
+from backend.services.quote_currency import (
+    DEFAULT_QUOTE_CURRENCY,
+    SUPPORTED_QUOTE_CURRENCIES,
+)
 
 
 class QuoteServiceError(Exception):
@@ -150,7 +154,7 @@ def build_quote_payload(quote: ExpertQuote, include_created_by: bool = False) ->
     payload = {
         "id": quote.id,
         "amount": int(quote.amount) if quote.amount is not None else None,
-        "currency": quote.currency or "IRR",
+        "currency": quote.currency or DEFAULT_QUOTE_CURRENCY,
         "note": quote.note,
         "valid_until": quote.valid_until.isoformat() if quote.valid_until else None,
         "created_at": quote.created_at.isoformat(),
@@ -165,7 +169,15 @@ def build_quote_payload(quote: ExpertQuote, include_created_by: bool = False) ->
 def normalize_quote_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """Validate and normalize quote payload while preserving current tolerant parsing."""
     amount = payload.get("amount")
-    currency = (payload.get("currency") or "IRR").strip() or "IRR"
+    currency_value = payload.get("currency")
+    if currency_value is None or currency_value == "":
+        currency = DEFAULT_QUOTE_CURRENCY
+    elif not isinstance(currency_value, str):
+        raise QuoteValidationError("ارز پشتیبانی نمی‌شود")
+    else:
+        currency = currency_value.strip() or DEFAULT_QUOTE_CURRENCY
+    if currency not in SUPPORTED_QUOTE_CURRENCIES:
+        raise QuoteValidationError("ارز پشتیبانی نمی‌شود")
     note = (payload.get("note") or "").strip() or None
     valid_until = payload.get("valid_until")
 

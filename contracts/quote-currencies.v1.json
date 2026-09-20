@@ -1,0 +1,18 @@
+{
+  "contract": "quote-currencies.v1",
+  "default": "IRR",
+  "currencies": [
+    {
+      "code": "IRR",
+      "label_fa": "تومان (IRR)"
+    },
+    {
+      "code": "USD",
+      "label_fa": "دلار (USD)"
+    },
+    {
+      "code": "EUR",
+      "label_fa": "یورو (EUR)"
+    }
+  ]
+}
