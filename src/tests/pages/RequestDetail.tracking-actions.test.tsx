@@ -1,7 +1,7 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n";
 import RequestDetail from "@/pages/RequestDetail";
 import * as api from "@/lib/api";
@@ -16,6 +16,7 @@ vi.mock("@/lib/api", async () => {
     listOperationalShipments: vi.fn(),
     fetchTrackingManagement: vi.fn(),
     fetchTrackingLogisticsPoints: vi.fn(),
+    fetchTrackingLocations: vi.fn(),
     updateTrackingUnitMetadata: vi.fn(),
     addTrackingUnitUpdate: vi.fn(),
   };
@@ -89,6 +90,13 @@ async function openTrackingTab() {
   await waitFor(() => expect(api.fetchTrackingManagement).toHaveBeenCalledWith("request-12"));
 }
 
+beforeAll(() => {
+  HTMLElement.prototype.scrollIntoView = vi.fn();
+  HTMLElement.prototype.hasPointerCapture = () => false;
+  HTMLElement.prototype.setPointerCapture = vi.fn();
+  HTMLElement.prototype.releasePointerCapture = vi.fn();
+});
+
 describe("retired tracking action reachability", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -99,8 +107,10 @@ describe("retired tracking action reachability", () => {
       data: [],
       pagination: { page: 1, per_page: 100, total: 0, pages: 0 },
     });
-    vi.mocked(api.fetchTrackingLogisticsPoints).mockResolvedValue({ items: [], meta: { count: 0, limit: 20 } });
+    vi.mocked(api.fetchTrackingLogisticsPoints).mockResolvedValue({ items: [], limit: 20, offset: 0, has_more: false });
+    vi.mocked(api.fetchTrackingLocations).mockResolvedValue({ items: [] });
     vi.mocked(api.fetchTrackingManagement).mockResolvedValue(tracking([mappedUnit]));
+    vi.mocked(api.addTrackingUnitUpdate).mockResolvedValue(tracking([mappedUnit]));
   });
 
   afterEach(cleanup);
@@ -122,5 +132,42 @@ describe("retired tracking action reachability", () => {
     expect(await screen.findByText(/فقط از مسیر بخش‌های اجرایی پروژه/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "افزودن بخش قابل رهگیری" })).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("کد بخش")).not.toBeInTheDocument();
+  });
+
+  it("selects a same-tenant private point and submits its governed identity", async () => {
+    vi.mocked(api.fetchTrackingLogisticsPoints).mockResolvedValue({
+      items: [{
+        public_id: "private-point-1",
+        fa_name: "انبار خصوصی",
+        en_name: "Private warehouse",
+        immutable_code: "PRIVATE-WH",
+        selector_kind: "organization_private",
+        type: { code: "WAREHOUSE", label: "انبار" },
+        country: { code: "IR", label: "ایران" },
+        province: "تهران",
+        city: "تهران",
+      }],
+      limit: 20,
+      offset: 0,
+      has_more: false,
+    });
+    await openTrackingTab();
+    const user = userEvent.setup();
+    const selector = await screen.findByLabelText("انتخاب مکان رخداد");
+    await waitFor(() => expect(selector).not.toBeDisabled());
+    await user.selectOptions(selector, "private:private-point-1");
+    const unitSelector = screen.getAllByRole("combobox")[1];
+    await user.click(unitSelector);
+    await user.click(await screen.findByRole("option", { name: "واحد اجرایی متصل" }));
+    await user.click(screen.getByRole("button", { name: "ثبت به‌روزرسانی" }));
+    await waitFor(() => expect(api.addTrackingUnitUpdate).toHaveBeenCalledWith(
+      "request-12",
+      41,
+      expect.objectContaining({
+        logistics_point_public_id: "private-point-1",
+        location_reference_id: undefined,
+        location_text: undefined,
+      }),
+    ));
   });
 });

@@ -37,6 +37,9 @@ import OperationalPermission from "@/components/OperationalPermission";
 import OperationalAnyPermission from "@/components/OperationalAnyPermission";
 import CaseDocumentsTab from "@/components/CaseDocumentsTab";
 import { QuoteModal } from "@/components/QuoteModal";
+import OperationalEventLocationSelector, {
+  type OperationalEventLocation,
+} from "@/components/OperationalEventLocationSelector";
 import { useToast } from "@/hooks/use-toast";
 import { formatMoney as formatBusinessMoney, formatQuantity } from "@/lib/formatQuantity";
 import {
@@ -48,8 +51,6 @@ import {
   fetchTrackingManagement,
   enableTrackingManagement,
   updateTrackingUnitMetadata,
-  fetchTrackingLogisticsPoints,
-  type TrackingLogisticsPoint,
   fetchShipmentRequestCustomerLink,
   fetchShipmentRequestCustomerCreatePreview,
   listOperationalShipments,
@@ -1304,20 +1305,14 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
   const [editUnitId, setEditUnitId] = useState("");
   const [editUnit, setEditUnit] = useState({ display_name: "", vehicle_reference: "" });
   const [updateUnitId, setUpdateUnitId] = useState("");
-  const [update, setUpdate] = useState({ status: "in_transit", logistics_point_public_id: "", location_text: "", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: toLocalDateTimeInputValue(new Date()) });
-  const [locationQuery, setLocationQuery] = useState("");
-  const [locations, setLocations] = useState<TrackingLogisticsPoint[]>([]);
+  const [update, setUpdate] = useState({ status: "in_transit", customer_message: "", internal_note: "", is_customer_visible: true, occurred_at: toLocalDateTimeInputValue(new Date()) });
+  const [eventLocation, setEventLocation] = useState<OperationalEventLocation>({ kind: "manual", locationText: "" });
 
   const load = useCallback(async () => {
     try { setData(await fetchTrackingManagement(requestId)); }
     catch { toast({ title: t("common.error"), description: t("multiTracking.fetchError"), variant: "destructive" }); }
   }, [requestId, t, toast]);
   useEffect(() => { load(); }, [load]);
-  useEffect(() => {
-    const timer=window.setTimeout(() => { fetchTrackingLogisticsPoints(locationQuery).then(x=>setLocations(x.items)).catch(()=>setLocations([])); },250);
-    return () => window.clearTimeout(timer);
-  },[locationQuery]);
-
   const run = async (operation: () => Promise<TrackingManagementData>, success: string) => {
     try {
       setBusy(true);
@@ -1334,8 +1329,9 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
     }
     void run(() => addTrackingUnitUpdate(requestId, Number(updateUnitId), {
       ...update,
-      logistics_point_public_id: update.logistics_point_public_id || undefined,
-      location_text: update.location_text || undefined,
+      logistics_point_public_id: eventLocation.kind === "private" ? eventLocation.publicId : undefined,
+      location_reference_id: eventLocation.kind === "reference" ? eventLocation.id : undefined,
+      location_text: eventLocation.kind === "manual" ? eventLocation.locationText || undefined : undefined,
       occurred_at: occurredAtUtc,
     }), t("multiTracking.updateAdded"));
   };
@@ -1369,16 +1365,7 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
           <CardContent className="grid gap-3 md:grid-cols-2">
             <Select value={updateUnitId} onValueChange={setUpdateUnitId}><SelectTrigger><SelectValue placeholder={t("multiTracking.selectUnit")} /></SelectTrigger><SelectContent>{data.unit_tracking?.units.map(u => <SelectItem key={u.id} value={String(u.id)}>{u.display_name || u.unit_code}</SelectItem>)}</SelectContent></Select>
             <Select value={update.status} onValueChange={(status) => setUpdate({ ...update, status })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["not_started","loading","departed","in_transit","at_checkpoint","delayed","arrived_destination","delivered","cancelled"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.status.${v}`)}</SelectItem>)}</SelectContent></Select>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">مکان لجستیکی</p>
-              <p className="text-xs text-muted-foreground">مکان‌های استاندارد مانند بندر، گمرک، مرز، انبار، فرودگاه و پایانه توسط سازمان تعریف می‌شوند و هنگام ثبت وضعیت محموله قابل انتخاب هستند.</p>
-              <Input value={locationQuery} onChange={(e)=>setLocationQuery(e.target.value)} placeholder={t("multiTracking.searchLocation")} />
-              <Select value={update.logistics_point_public_id || "manual"} onValueChange={(value)=>setUpdate({...update,logistics_point_public_id:value==="manual"?"":value,location_text:value==="manual"?update.location_text:""})}>
-                <SelectTrigger><SelectValue placeholder={t("multiTracking.selectLocation")} /></SelectTrigger>
-                <SelectContent><SelectItem value="manual">{t("multiTracking.locationNotListed")}</SelectItem>{locations.map(x=><SelectItem key={x.public_id} value={x.public_id}>{x.fa_name}{x.en_name?` / ${x.en_name}`:""} · {x.type.label} · {x.city?`${x.city}، `:""}{x.country.label}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-            {!update.logistics_point_public_id && <Input value={update.location_text} onChange={(e) => setUpdate({ ...update, location_text: e.target.value })} placeholder={t("multiTracking.freeTextLocation")} />}
+            <OperationalEventLocationSelector value={eventLocation} onChange={setEventLocation} />
             <Input type="datetime-local" value={update.occurred_at} onChange={(e) => setUpdate({ ...update, occurred_at: e.target.value })} />
             <Textarea value={update.customer_message} onChange={(e) => setUpdate({ ...update, customer_message: e.target.value })} placeholder={t("multiTracking.customerMessage")} />
             <Textarea value={update.internal_note} onChange={(e) => setUpdate({ ...update, internal_note: e.target.value })} placeholder={t("multiTracking.internalNote")} />

@@ -404,7 +404,19 @@ def list_points(args, user, *, admin=False):
 
 def tracking_selector(args, user):
     """Bounded active LogisticsPoint selector for the authenticated tenant."""
-    require_permission(user, "logistics_point.read")
+    # This projection is also the location picker for existing operational
+    # commands that already accept a logistics-point identity.  Possessing one
+    # of those write authorities must not require the broader logistics-network
+    # read permission just to discover the safe selector label.
+    require_any_permission(user, {
+        "logistics_point.read",
+        "operational_shipment.create_direct",
+        "operational_shipment.create_from_quote",
+        "operational_shipment.create",
+        "route_plan.create",
+        "route_leg.manage",
+        "execution_unit.update",
+    })
     org = organization_for_user(user["id"])
     q = (
         select(LogisticsPoint)
@@ -414,6 +426,8 @@ def tracking_selector(args, user):
             joinedload(LogisticsPoint.country),
             joinedload(LogisticsPoint.province),
             joinedload(LogisticsPoint.city),
+            joinedload(LogisticsPoint.global_point),
+            joinedload(LogisticsPoint.global_adoption),
         )
         .where(
             LogisticsPoint.organization_id == org,
@@ -446,8 +460,12 @@ def tracking_selector(args, user):
     except (TypeError, ValueError) as exc:
         raise OperationalError("VALIDATION_FAILED", "pagination is invalid.", 400) from exc
     rows = db.session.scalars(
-        q.order_by(LogisticsPoint.fa_name, LogisticsPoint.id).offset(offset).limit(limit)
+        q.order_by(LogisticsPoint.fa_name, LogisticsPoint.id)
+        .offset(offset)
+        .limit(limit + 1)
     ).all()
+    has_more = len(rows) > limit
+    rows = rows[:limit]
     return {
         "items": [
             {
@@ -455,6 +473,11 @@ def tracking_selector(args, user):
                 "fa_name": row.fa_name,
                 "en_name": row.en_name,
                 "immutable_code": row.immutable_code,
+                "selector_kind": (
+                    "organization_reference"
+                    if row.global_point is not None and row.global_adoption is not None
+                    else "organization_private"
+                ),
                 "type": {
                     "code": row.point_type.immutable_code,
                     "label": row.point_type.fa_name,
@@ -470,6 +493,7 @@ def tracking_selector(args, user):
         ],
         "limit": limit,
         "offset": offset,
+        "has_more": has_more,
     }
 
 

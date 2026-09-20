@@ -468,6 +468,7 @@ export interface TrackingLogisticsPoint {
   fa_name: string;
   en_name: string | null;
   immutable_code: string;
+  selector_kind: "organization_private" | "organization_reference";
   type: { code: string; label: string };
   country: { code: string; label: string };
   province: string | null;
@@ -476,7 +477,12 @@ export interface TrackingLogisticsPoint {
 
 export const fetchTrackingLogisticsPoints = (
   q = "",
-): Promise<{ items: TrackingLogisticsPoint[]; limit: number; offset: number }> =>
+): Promise<{
+  items: TrackingLogisticsPoint[];
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}> =>
   request(`/api/internal/logistics-points/tracking-selector${q ? `?q=${encodeURIComponent(q)}` : ""}`);
 export const fetchAdminTrackingLocations = (
   q = "",
@@ -3249,6 +3255,16 @@ export interface ExecutionEventView {
   event_type: string;
   lifecycle_status?: string | null;
   checkpoint_text?: string | null;
+  location?: {
+    source_type: string;
+    source_identity?: string | null;
+    display_name?: string | null;
+    country_code?: string | null;
+    name_en?: string | null;
+    location_type?: string | null;
+    city_name?: string | null;
+    location_text?: string | null;
+  } | null;
   customer_message?: string | null;
   internal_note?: string | null;
   visibility: string;
