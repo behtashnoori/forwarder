@@ -1269,6 +1269,9 @@ class OperationalAudit(db.Model):
 class OperationalOutbox(db.Model):
     __tablename__ = "operational_outbox"
     __table_args__ = (
+        db.UniqueConstraint(
+            "id", "organization_id", name="uq_operational_outbox_tenant"
+        ),
         db.Index("ix_operational_outbox_unpublished", "published_at", "created_at"),
     )
     id = db.Column(BIGINT, primary_key=True)

@@ -76,6 +76,8 @@
     "SavedView": {"kind":"persisted_model","table":"saved_view","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Private personal analytical/list configuration is tenant-scoped and owner_user_id-scoped."},
     "SavedViewRevision": {"kind":"persisted_model","table":"saved_view_revision","scope":"TENANT_OWNED_INDIRECT","owner_path":"saved_view.organization_id","rationale":"Immutable definition history inherits tenant ownership from SavedView."},
     "OperationalOutbox": {"kind":"persisted_model","table":"operational_outbox","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
+    "NotificationAction": {"kind":"persisted_model","table":"notification_action","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Dormant notification work has a mandatory tenant envelope and a composite tenant fence for optional OperationalOutbox correlation."},
+    "NotificationAttempt": {"kind":"persisted_model","table":"notification_attempt","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"Delivery-attempt audit is tenant-owned directly and is also fenced to its parent action by a composite foreign key."},
     "OperationalIdempotency": {"kind":"persisted_model","table":"operational_idempotency","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "Milestone": {"kind":"persisted_model","table":"operational_milestone","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id"},
     "MilestoneEvent": {"kind":"persisted_model","table":"milestone_event","scope":"TENANT_OWNED_INDIRECT","owner_path":"operational_milestone.organization_id","integrity_risks":["denormalized organization_id is nullable and must not be treated as authoritative"]},

@@ -2148,6 +2148,10 @@ from backend.external_reference_models import (  # noqa: E402,F401
 )
 from backend.dashboard_models import Dashboard, DashboardRevision  # noqa: E402,F401
 from backend.saved_view_models import SavedView, SavedViewRevision  # noqa: E402,F401
+from backend.notification_models import (  # noqa: E402,F401
+    NotificationAction,
+    NotificationAttempt,
+)
 
 
 __all__ = [
@@ -2251,4 +2255,6 @@ __all__ = [
     "DashboardRevision",
     "SavedView",
     "SavedViewRevision",
+    "NotificationAction",
+    "NotificationAttempt",
 ]
