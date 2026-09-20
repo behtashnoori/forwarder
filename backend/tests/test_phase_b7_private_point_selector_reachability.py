@@ -1,6 +1,7 @@
 from backend.extensions import db
 from backend.logistics_network_models import LogisticsPoint, LogisticsPointType
 from backend.models import Country, ExpertUser
+from backend.notification_models import NotificationAction, NotificationAttempt
 from backend.operational_models import OperationalMembership, OperationalOrganization
 from backend.tests.test_execution_units import eu_app  # noqa: F401
 
@@ -214,3 +215,9 @@ def test_private_point_event_identity_round_trips_and_snapshot_survives_deactiva
         serialized = str(public)
         assert "organization_id" not in serialized
         assert "B7-ROUNDTRIP" not in serialized
+
+    # Private-point selection and the canonical event path remain normal product
+    # flows: C2 is invoked only directly and never creates lifecycle rows here.
+    with app.app_context():
+        assert NotificationAction.query.count() == 0
+        assert NotificationAttempt.query.count() == 0

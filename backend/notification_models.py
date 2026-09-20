@@ -119,12 +119,21 @@ class NotificationAttempt(db.Model):
             "attempt_number",
             name="uq_notification_attempt_number",
         ),
+        db.UniqueConstraint(
+            "claim_token",
+            name="uq_notification_attempt_claim_token",
+        ),
         db.CheckConstraint(
             "attempt_number >= 1", name="ck_notification_attempt_number_positive"
         ),
         db.CheckConstraint(
             "status IN ('PENDING','IN_PROGRESS','SUCCEEDED','FAILED','UNKNOWN')",
             name="ck_notification_attempt_status",
+        ),
+        db.CheckConstraint(
+            "(claim_token IS NULL AND claim_expires_at IS NULL) OR "
+            "(claim_token IS NOT NULL AND claim_expires_at IS NOT NULL)",
+            name="ck_notification_attempt_claim_pair",
         ),
         db.Index(
             "ix_notification_attempt_org_status",
@@ -156,6 +165,11 @@ class NotificationAttempt(db.Model):
     result_code = db.Column(db.String(80), nullable=True)
     failure_code = db.Column(db.String(80), nullable=True)
     failure_summary = db.Column(db.String(255), nullable=True)
+
+    # Opaque, provider-neutral lease fencing. A new claim replaces the token,
+    # making every older claimant durably non-authoritative.
+    claim_token = db.Column(db.String(36), nullable=True)
+    claim_expires_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
     attempted_at = db.Column(db.DateTime(timezone=True), nullable=True)
     completed_at = db.Column(db.DateTime(timezone=True), nullable=True)

@@ -18,6 +18,7 @@ from backend.migration_runtime import (
 
 
 HEAD = "20260922_notification_foundation"
+CURRENT_HEAD = "20260923_notification_lifecycle"
 PREVIOUS = "20260921_shipment_evidence_ownership"
 DONOR_REVISION = "20260916_fwd01_notifications"
 
@@ -53,7 +54,7 @@ def test_phase_c1_from_golden_upgrade_constraints_sentinel_and_rollback():
     _reset_owned_database(engine)
     config = alembic_config(url)
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
+    assert script.get_heads() == [CURRENT_HEAD]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
     assert DONOR_REVISION not in {
         item.revision for item in script.walk_revisions(base="base", head="heads")
@@ -260,7 +261,7 @@ def test_phase_c1_from_golden_upgrade_constraints_sentinel_and_rollback():
 
     command.upgrade(config, HEAD)
     assert revision_status(url).current == (HEAD,)
-    assert revision_status(url).heads == (HEAD,)
+    assert revision_status(url).heads == (CURRENT_HEAD,)
     with engine.connect() as connection:
         assert connection.execute(text("SELECT COUNT(*) FROM notification_action")).scalar_one() == 0
         assert connection.execute(text("SELECT COUNT(*) FROM notification_attempt")).scalar_one() == 0
