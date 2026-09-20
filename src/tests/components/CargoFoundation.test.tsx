@@ -108,6 +108,17 @@ describe("Cargo foundation UI", () => {
     await waitFor(()=>expect(api.createCanonicalCargoAllocation).toHaveBeenCalledWith("shipment-1",{execution_unit_public_id:"truck-2",cargo_item_public_id:"line-1",allocated_quantity:"400"}));
   });
 
+  it("keeps the canonical shipment execution-unit creation path available", async () => {
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1"/>);
+    fireEvent.click(await screen.findByText("افزودن وسیله حمل"));
+    fireEvent.change(screen.getByLabelText("نام وسیله حمل"), {target:{value:"کامیون اصلی"}});
+    fireEvent.change(screen.getByLabelText("شناسه وسیله حمل"), {target:{value:"IR-77"}});
+    fireEvent.click(screen.getByRole("button", {name:"افزودن کامیون"}));
+    await waitFor(()=>expect(api.createCanonicalShipmentTransportUnit).toHaveBeenCalledWith("shipment-1",{
+      unit_type:"truck",display_name:"کامیون اصلی",vehicle_reference:"IR-77",
+    }));
+  });
+
   it("renders and persists Cargo Owners by unique Customer identity", async () => {
     const consoleError = vi.spyOn(console, "error");
     const ownedItem = {...shipmentItem,cargo_owner:{id:1,label:"Same Name"}};

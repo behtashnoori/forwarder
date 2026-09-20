@@ -1352,20 +1352,6 @@ export const enableTrackingManagement = (
     method: "POST",
   });
 
-export const addTrackingUnit = (
-  requestId: string,
-  payload: {
-    unit_code: string;
-    unit_type: string;
-    display_name?: string;
-    vehicle_reference?: string;
-  },
-): Promise<TrackingManagementData> =>
-  request(`/api/expert/requests/${requestId}/tracking/units`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-
 export const updateTrackingUnitMetadata = (
   requestId: string,
   unitId: number,

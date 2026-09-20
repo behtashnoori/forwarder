@@ -41,7 +41,6 @@ import { useToast } from "@/hooks/use-toast";
 import { formatMoney as formatBusinessMoney, formatQuantity } from "@/lib/formatQuantity";
 import {
   addMessage,
-  addTrackingUnit,
   addTrackingUnitUpdate,
   changeRequestStatus,
   createCustomerFromShipmentRequest,
@@ -1302,7 +1301,6 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
 }) => {
   const [data, setData] = useState<TrackingManagementData | null>(null);
   const [busy, setBusy] = useState(false);
-  const [unit, setUnit] = useState({ unit_code: "", unit_type: "truck", display_name: "", vehicle_reference: "" });
   const [editUnitId, setEditUnitId] = useState("");
   const [editUnit, setEditUnit] = useState({ display_name: "", vehicle_reference: "" });
   const [updateUnitId, setUpdateUnitId] = useState("");
@@ -1357,16 +1355,6 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
         </CardContent>
       </Card>
       {data.enabled && <>
-        <Card className="rounded-3xl border-slate-200 shadow-sm">
-          <CardHeader><CardTitle>{t("multiTracking.addUnit")}</CardTitle><p className="text-sm text-muted-foreground">{t("multiTracking.unitHelp")}</p></CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-5">
-            <Input value={unit.unit_code} onChange={(e) => setUnit({ ...unit, unit_code: e.target.value })} placeholder={t("multiTracking.unitCode")} />
-            <Select value={unit.unit_type} onValueChange={(value) => setUnit({ ...unit, unit_type: value })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{["truck","container","wagon","other"].map(v => <SelectItem key={v} value={v}>{t(`multiTracking.type.${v}`)}</SelectItem>)}</SelectContent></Select>
-            <Input value={unit.display_name} onChange={(e) => setUnit({ ...unit, display_name: e.target.value })} placeholder={t("multiTracking.displayName")} />
-            <Input value={unit.vehicle_reference} onChange={(e) => setUnit({ ...unit, vehicle_reference: e.target.value })} placeholder={t("multiTracking.vehicleReference")} title={t("multiTracking.vehicleReferenceHelp")} />
-            <Button disabled={busy || !unit.unit_code.trim()} onClick={() => run(() => addTrackingUnit(requestId, unit), t("multiTracking.unitAdded"))}><Plus className="h-4 w-4" />{t("multiTracking.addUnit")}</Button>
-          </CardContent>
-        </Card>
         <Card className="rounded-3xl border-slate-200 shadow-sm">
           <CardHeader><CardTitle>{t("multiTracking.editUnit")}</CardTitle></CardHeader>
           <CardContent className="grid gap-3 md:grid-cols-4">
