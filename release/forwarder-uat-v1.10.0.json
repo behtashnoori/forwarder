@@ -1,0 +1,22 @@
+{
+  "schema": "forwarder-uat-release-source-v1",
+  "product_name": "Forwarder",
+  "release_stage": "UAT",
+  "previous_product_version": "1.9.5.1",
+  "new_product_version": "1.10.0",
+  "version_source_of_truth": [
+    "package.json",
+    "backend.__version__"
+  ],
+  "version_policy": "Repository SemVer: the next accepted product capability release advances MINOR; v-prefix is tag formatting only",
+  "accepted_product_base_sha": "a742628293359379cb476b782a2fe27e61a8db1f",
+  "release_source_sha": "SELF",
+  "database_head": "20260926_fixed_shipment_responsible_expert",
+  "release_id": "Forwarder-UAT-v1.10.0",
+  "release_tag": "forwarder-uat-v1.10.0",
+  "package_filename_pattern": "Forwarder-UAT-v1.10.0-<release-source-short-sha>.zip",
+  "runtime_entrypoint": "START-UAT.ps1",
+  "reference_impact": "NONE",
+  "production_deployment": false,
+  "notifications_active": false
+}

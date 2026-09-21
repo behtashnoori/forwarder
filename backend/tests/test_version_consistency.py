@@ -11,7 +11,7 @@ def test_governed_source_versions_are_consistent():
     builder = (ROOT / "scripts" / "build_release_package.py").read_text(
         encoding="utf-8"
     )
-    assert package == backend.__version__ == "1.9.5.1"
+    assert package == backend.__version__ == "1.10.0"
     assert 'VERSION = "1.9.5.1"' not in builder
     assert 'TAG = "v1.9.5.1"' not in builder
     assert 'p.add_argument("--authorized-commit", required=True)' in builder
