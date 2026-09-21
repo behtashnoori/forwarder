@@ -61,8 +61,8 @@ Corrected read-only bundle:
 
 - Expanded: `D:\1-webapp\forwarder-production-releases\Forwarder-v1.10.0-Read-Only-Preflight-Bundle-e36ee7cee157-r2\`
 - ZIP: `D:\1-webapp\forwarder-production-releases\Forwarder-v1.10.0-Read-Only-Preflight-Bundle-e36ee7cee157-r2.zip`
-- Size: `39757` bytes
-- SHA256: `0d564d4e344104ae0407f7a524911e517b606f11b40c114e73769375e75f0ee6`
+- Size: `39574` bytes
+- SHA256: `ec59de13a6d6e021f9f5f8235e78434fd078d89d4fe7cd81497973c6ab6b9543`
 - Files: 9
 - Deployment material present: no
 

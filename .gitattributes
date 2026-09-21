@@ -1,5 +1,6 @@
 backend/reference_data/international-geography-v2-fwd02.json text eol=lf
 scripts/production/v1.10.0/sql/adr047-production-classifier.sql text eol=lf
 scripts/production/v1.10.0/sql/migration-compatibility-readonly.sql text eol=lf
+scripts/production/v1.10.0/Collect-ForwarderV110ProductionReadOnly.ps1 text eol=lf
 scripts/production/v1.10.0/Invoke-ForwarderV110ReadOnlySql.py text eol=lf
 scripts/production/v1.10.0/legacy-production-witness.json text eol=lf
