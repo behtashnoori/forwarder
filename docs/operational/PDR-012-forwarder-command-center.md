@@ -31,4 +31,10 @@ authority outside MT-3.
 
 ## Consequences
 
-This backward-compatible customer-facing change is a MINOR release. No ADR or RFC is required because no business object, API contract, backend architecture, authentication model, or persistence design changes. No migration, backend restart, or environment change is required. The frontend must be rebuilt and later deployed immutably; deployment is not authorized by this record.
+The original Command Center composition was a backward-compatible MINOR
+release.  The MT-3 amendment is an intentional security/API-contract change
+governed by ADR-052: the Request route now accepts only the `SR2-` capability
+and returns a reduced allowlist.  It requires no schema migration, data
+backfill, authentication-model change, deployment, backend restart, or
+environment change in this mission.  A later deployment remains separately
+authorized and must publish rebuilt frontend and backend artifacts together.

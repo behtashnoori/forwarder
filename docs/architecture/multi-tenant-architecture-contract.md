@@ -66,11 +66,19 @@ Future tenant-owned resource adapters must use equivalent permissions for Tenant
 
 Unsupported operations must be explicitly marked not applicable. HTTP boundaries should use opaque public identifiers and normally return a non-disclosing 404 for another tenant's resource.
 
-## Public tracking: capability intent plus isolation defect
+## Public tracking: implemented capability boundary
 
-Current `GET /api/public/track/<identifier>` has no tenant context. Numeric input globally queries `ShipmentRequest.id`; other input globally queries `ShipmentRequest.tracking_code`. Numeric IDs are not capabilities. Tracking codes currently behave as bearer material but are not tenant authority, are not tenant-bound in lookup, and do not satisfy the target capability contract.
+Before MT-3, `GET /api/public/track/<identifier>` accepted numeric
+`ShipmentRequest.id` and weak/global legacy tracking codes.  Numeric IDs were
+not capabilities and the broad response did not satisfy this contract.
 
-Therefore the endpoint is classified `PUBLIC_CAPABILITY_SCOPED` as architectural intent **plus `TENANT_ISOLATION_DEFECT`**. `ShipmentRequest`, `ShipmentTracking`, transport units, logs, quotes, and case documents remain `LEGACY_AMBIGUOUS`; none is reclassified as public data. The characterization test is intentionally expected to fail until MT-3 removes numeric lookup and requires tenant-aware capability resolution. MT-0 does not normalize or repair this defect.
+MT-3 now implements the endpoint as `PUBLIC_CAPABILITY_SCOPED`: only the exact
+ADR-052 `SR2-` capability can resolve, ownership is derived and validated
+server-side, and a fixed minimized projection is returned.  Numeric IDs,
+authenticated public UUIDs, malformed or unknown values, and legacy weak codes
+all receive the same non-disclosing 404.  `ShipmentRequest`,
+`ShipmentTracking`, transport units, logs, quotes, and case documents remain
+`LEGACY_AMBIGUOUS`; only the explicit response allowlist is public data.
 
 ### ADR-052 bounded supersession
 
@@ -95,7 +103,7 @@ context.
 | Administration | Legacy global `admin` role and unscoped request/user operations | platform and tenant authority are conflated | MT-2/MT-2A; UI only in MT-5 |
 | Documents | Indirect through unscoped request; storage key has no tenant namespace | metadata/object ownership cannot independently be proven | MT-1, MT-2B |
 | Branding/public portal | One global `SiteSetting` namespace | cannot represent separate tenants; cache/content crossover if reused | MT-7 |
-| Public tracking | global numeric ID or code lookup, no tenant context | anonymous enumeration/cross-tenant disclosure | MT-3 |
+| Public tracking | ADR-052 `SR2-` capability with server-derived ownership and minimized projection | rate limiting, capability rotation/revocation, hashed-at-rest storage, and infrastructure access-log redaction remain defense-in-depth hardening | MT-3 closed for the P0 authority defect; later governed hardening |
 
 Existing legacy flows may continue unchanged during MT-0. New tenant-sensitive dependencies on ambiguous resources are prohibited. Ambiguous rows must never be silently assigned to a default organization; MT-1 must profile, adjudicate/backfill, quarantine unresolved data, and add same-tenant constraints.
 
@@ -103,7 +111,7 @@ Existing legacy flows may continue unchanged during MT-0. New tenant-sensitive d
 
 - **MT-1:** resolve every ambiguous data owner, backfill without assumptions, add non-null keys and same-tenant constraints, including request/quote/customer/document and direct-child integrity gaps.
 - **MT-2:** establish central immutable request tenant context from validated membership; provide multi-membership selection; replace manual/unscoped access and separate platform authority. MT-2B covers documents, jobs, notifications, and caches.
-- **MT-3:** implement ADR-052 Request tracking: reject numeric/legacy lookup, require the versioned high-entropy capability, derive ownership server-side, and emit the minimal public projection.  Rotation/revocation UI or hashed-at-rest capability storage is additive hardening, not authority to retain the present P0 numeric path.
+- **MT-3:** implemented and qualified through ADR-052 Request tracking: numeric/legacy lookup is rejected, a versioned high-entropy capability is required, ownership is derived server-side, and only the minimal public projection is emitted.  Rotation/revocation UI, hashed-at-rest capability storage, generalized rate limiting, and infrastructure access-log redaction remain additive hardening.
 
 Company/platform admin UI, licensing, branding, domains, and other later roadmap slices remain out of MT-0.
 

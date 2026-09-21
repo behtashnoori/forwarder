@@ -69,36 +69,66 @@ Representative evidence: project constraints (`backend/operational_models.py:58-
 
 ## G. Query/command tenant isolation
 
-The organization scoping strategy is **INCONSISTENT platform-wide**: strong but repeated application-layer scoping in newer operational services, legacy global access elsewhere, and no universal repository/query guard. Positive examples combine resource identity with organization (`backend/services/execution_unit_service.py:50-63`) and issue non-disclosing not-found responses. However, direct ID lookups, globally scoped admin/user/CRM paths, nullable ownership, and public global code lookups remain. No PostgreSQL read-isolation backstop exists.
+The organization scoping strategy is **INCONSISTENT platform-wide**: strong but repeated application-layer scoping in newer operational services, legacy global access elsewhere, and no universal repository/query guard. Positive examples combine resource identity with organization (`backend/services/execution_unit_service.py:50-63`) and issue non-disclosing not-found responses. Direct ID lookups, globally scoped admin/user/CRM paths, and nullable ownership remain.  ADR-052 separately closes the shared public Request route's numeric/global-code authority defect. No PostgreSQL read-isolation backstop exists.
 
 Classifications:
 
 - New operational authenticated paths: generally `SAFE`, with `DEFENSE_IN_DEPTH_NEEDED`.
 - Legacy global administration/CRM/request paths: `UNKNOWN` or `CROSS_TENANT_DEFECT` for a multi-company deployment.
-- Public tracking numeric/global lookup: `CROSS_TENANT_DEFECT`.
+- Public Request tracking numeric/global lookup: `RESOLVED_BY_MT3` for the shared ADR-052 route; Project public tracking and branded/host-resolved portals remain separately governed.
 
 ## H. Public tracking architecture
 
-`GET /api/public/track/<identifier>` is intentionally unauthenticated (`backend/routes/public_tracking.py:21-28`). Numeric input selects `ShipmentRequest.id`; other input globally selects `tracking_code`, with no host or organization predicate (`backend/services/tracking_service.py:9-16`). A second project-public flow globally resolves `Project.tracking_code`. No tenant-domain context participates.
+`GET /api/public/track/<identifier>` is intentionally unauthenticated.  After
+MT-3, it validates only the exact `SR2-<22 base64url characters>` Request
+capability, performs one exact `tracking_code` lookup, derives the governed
+Request ownership envelope server-side, applies quarantine/current-authority
+checks, and emits a fixed minimized allowlist.  Numeric IDs, authenticated
+Request UUIDs, malformed/unknown inputs, and legacy weak codes share the same
+non-disclosing 404.  A second Project-public flow remains separate and outside
+this closure; no tenant-domain context is added by MT-3.
 
-Legacy request codes are generated with about 31 bits from six base-36 characters, with a 24-bit fallback and a predictable ID-derived fallback (`backend/services/shipment_service.py:490-500`). Project codes use UUID4 hex (128 random bits) and are globally unique (`backend/operational_models.py:63-64,82-84`). Neither flow has expiry, rotation, revocation, tracking-access audit, or route-applied rate limiting.
+New Request capabilities use 16 cryptographically secure random bytes (128
+bits) with no deterministic fallback. Historical weak Request codes are not
+accepted. Project codes use UUID4 hex (128 random bits) and are globally unique
+(`backend/operational_models.py:63-64,82-84`). Neither flow has expiry,
+rotation, revocation, tracking-access audit, or route-applied generalized rate
+limiting; infrastructure access-log redaction is also future hardening.
 
 ## I. Public tracking security assessment
 
-**Can a tracking code from Tenant B be used through Tenant A context? YES.** If both domains route to this deployment, Host is ignored and a valid code is searched globally. The code acts as a bearer capability for code-based lookup, but legacy numeric-ID lookup means possession of a capability is not even required.
+**Can a caller combine Tenant A context with Tenant B Request authority on this
+shared route? NO.**  The caller supplies no tenant or resource identity.  The
+globally unique capability is the complete bearer authority, and the backend
+derives the one Request's `TENANT` or governed `INTAKE` ownership envelope.
+Hostname remains intake/branding context rather than an authorization key.
 
-The legacy payload includes database ID, customer name/phone, route/address, cargo/value/instructions, expert contact information, quote information, and dates (`backend/services/tracking_service.py:52-64,121-155`). Existing 404 behavior reveals validity, and no endpoint rate limit was found. Codes occur in path URLs and therefore may enter browser history, proxy/access logs, analytics, and referrers unless explicitly controlled.
+The MT-3 response excludes database and tenant IDs, Customer/contact data,
+exact address, Cargo/value/instructions, Expert identity/contact, Quote and
+discussion data, Documents, internal notes/provenance, and Notification state.
+All invalid forms use the same status/envelope; responses are `no-store`,
+`no-referrer`, and `noindex`.  The capability remains in a path URL, so browser
+history and generic infrastructure logs remain operational considerations;
+access-log redaction and generalized rate limiting are tracked hardening.
 
-Target contract:
+Implemented bounded Request-route contract (ADR-052):
 
 ```text
-verified Host -> active TenantDomain -> tenant public policy
-             + normalized high-entropy tracking capability
-             -> lookup only by (tenant_id, capability_hash)
-             -> explicit versioned public projection
+normalized versioned 128-bit capability
+             -> exact unique Request lookup
+             -> server-derived TENANT or governed INTAKE ownership
+             -> current-authority/quarantine validation
+             -> explicit minimized public projection
 ```
 
-Use tenant-scoped uniqueness, while retaining enough entropy that codes are operationally collision-free across the platform. Tenant-scoped uniqueness enforces the trust boundary; global uniqueness may remain as an implementation convenience but must never authorize cross-host lookup. Prefer at least 96–128 random bits, store a keyed hash where practical, support rotation/revocation and optional expiry, apply uniform errors and tenant/IP/capability-aware rate limits, audit attempts without logging plaintext capabilities, set restrictive cache/referrer policies, and never accept numeric IDs. Historical tracking availability must be an explicit policy independent of staff license state.
+This bounded capability-derived ownership design supersedes the earlier
+host-plus-capability proposal for the shared Request route.  Branded
+tenant-domain portals remain MT-7/MT-8 work.  Keyed/hash-at-rest storage,
+rotation/revocation/optional expiry, tenant/IP/capability-aware rate limits,
+access audit, and infrastructure log redaction are additive defense in depth.
+They must not weaken the implemented prohibition on numeric identity or expand
+the minimized projection. Historical tracking availability remains an explicit
+policy independent of staff license state.
 
 ## J. Staff authentication boundary
 
@@ -163,11 +193,11 @@ Target operations: encrypted off-site PITR plus versioned object backup; a tenan
 
 ## T. Existing tenant-security tests
 
-There are meaningful slice tests for foreign-project non-disclosure, cross-tenant logistics commands, OIP foreign resources, inactive membership, permissions, and PostgreSQL constraints (for example `backend/tests/test_project_configuration.py:169-180,240-311`, `backend/tests/test_oip.py:158-164`, and `backend/tests/test_reporter_permission_postgresql.py:244-259`). Public tests explicitly preserve numeric tracking access (`backend/tests/test_multi_unit_tracking_api.py:114-116`), which is negative security evidence.
+There are meaningful slice tests for foreign-project non-disclosure, cross-tenant logistics commands, OIP foreign resources, inactive membership, permissions, and PostgreSQL constraints (for example `backend/tests/test_project_configuration.py:169-180,240-311`, `backend/tests/test_oip.py:158-164`, and `backend/tests/test_reporter_permission_postgresql.py:244-259`). MT-3 security tests now reject numeric/UUID/legacy/malformed Request identities, prove adjacent enumeration has zero successes, enforce the response allowlist, exercise exact-resource and cross-tenant ownership, and qualify the real route against PostgreSQL 18 and a real browser.
 
 ## U. Missing adversarial tests
 
-A mandatory tenant-isolation matrix must exercise two tenants, two staff identities, a multi-membership identity, platform identity, and anonymous clients across read/create/update/delete/export/download/selector/public paths. Missing gates include legacy CRM/request/customer/report/user boundaries; A-host+B-code; numeric tracking rejection; rate limit and response-uniformity; rotated/expired/disabled capability; document metadata/object access; notification/audit/outbox/job tenant propagation; tenant switching; license/public-policy combinations; cache keys; unknown/forged Host; RLS/direct SQL; backup/export completeness; and absence of internal fields from public projections.
+A mandatory tenant-isolation matrix must exercise two tenants, two staff identities, a multi-membership identity, platform identity, and anonymous clients across read/create/update/delete/export/download/selector/public paths. Remaining gates include legacy CRM/request/customer/report/user boundaries; Project public tracking and future A-host+B-code branded-portal behavior; rate limiting; rotated/expired/disabled capability lifecycle; infrastructure access-log redaction; document metadata/object access; notification/audit/outbox/job tenant propagation; tenant switching; license/public-policy combinations; cache keys; unknown/forged Host; RLS/direct SQL; and backup/export completeness. Numeric Request rejection, uniform failure, and absence of private fields from the Request public projection are closed by MT-3.
 
 ## V. Target architecture
 
@@ -181,7 +211,7 @@ Core components: `Organization`, `TenantDomain`, `Membership`, tenant roles/gran
 |---|---|---|---|---|
 | 1 Platform Admin | separate platform authority + strong auth | explicit target tenant for management action | tenant metadata/license/domain/health; content only audited break-glass | no platform grant, no action; no implicit content access |
 | 2 Tenant Staff | global user + active membership | verified membership plus explicit active tenant | role/grant and entitlement-scoped tenant operational data | missing/conflicting/inactive membership => deny |
-| 3 Public Customer | anonymous + tracking capability | verified Host/domain first | versioned public projection for `(tenant, capability)` only | unknown host/foreign/invalid/disabled => uniform non-disclosing failure |
+| 3 Public Customer | anonymous + tracking capability | shared Request route derives ownership from the unique ADR-052 capability; future branded portals resolve verified Host/domain first | fixed minimized Request projection; future portal projections remain separately governed | numeric/UUID/legacy/malformed/unknown Request identity => uniform non-disclosing failure |
 | 4 Background/System | workload identity + immutable job tenant | envelope tenant, revalidated on execution | one tenant and declared operation; platform jobs explicitly partition | missing tenant or mismatch => reject/dead-letter |
 | 5 Database/Storage | least-privilege app/worker roles | transaction context + row/object tenant key | same-tenant rows/objects; later FORCE RLS | missing DB context/invalid prefix => deny |
 
@@ -198,7 +228,7 @@ Core components: `Organization`, `TenantDomain`, `Membership`, tenant roles/gran
 | Request | global legacy | non-null tenant + same-tenant links | tracking/CRM root gap | H | P0 |
 | Quote | nullable tenant | non-null, same tenant as request/project | ambiguous ownership | H | P0 |
 | OperationalShipment | direct tenant | retain composite integrity | app-only reads | M | P0 |
-| Tracking | global lookup; numeric IDs accepted | tenant+hashed capability and public projection | critical disclosure/IDOR | H | P0 |
+| Tracking | ADR-052 `SR2-` capability, server-derived ownership, minimized projection; Project public flow separate | retain boundary; add hash/rotation/revocation/rate/log defenses when governed | P0 Request identity/IDOR closed; residual defense-in-depth work | M | P1 hardening |
 | Documents | indirect metadata, unprefixed objects | direct tenant metadata + tenant object prefix | dual-layer leakage/ops risk | H | P0 |
 | MDPM | direct tenant | centralized context + later RLS | repeated enforcement | M | P0 |
 | Economics/FX | direct tenant in newer slice | centralized context + later RLS | sensitive financial data | M | P0 |
@@ -216,8 +246,8 @@ Core components: `Organization`, `TenantDomain`, `Membership`, tenant roles/gran
 |---|---|---|---|---|---|---|---|---|
 | Organization/membership | partial CLI/global admin | CLI | partial | cleanup tooling | none | direct | not productized | platform/company admin APIs + audit |
 | Customer/CRM | global legacy checks | global | global | global | none | absent | not tenant-safe | add/backfill tenant; scope all paths |
-| Request/Quote | legacy/global; quote partial | legacy | legacy | legacy | rich global/numeric lookup | absent/nullable | defect | tenant ownership + same-tenant constraints |
-| Project/Units | scoped operational | scoped | scoped | limited | global code lookup | direct/indirect | staff good; public unsafe | central context + host-bound public lookup |
+| Request/Quote | legacy/global; quote partial | legacy | legacy | legacy | Request: ADR-052 minimized capability projection | absent/nullable; public ownership derived | public P0 closed; authenticated legacy gaps remain | tenant ownership + same-tenant authenticated constraints |
+| Project/Units | scoped operational | scoped | scoped | limited | separate Project code lookup | direct/indirect | staff good; Project public path outside MT-3 | central context + separately governed public lookup |
 | OperationalShipment/routes | scoped | scoped | scoped | constrained | via projections | direct/indirect | generally safe slice | systematic matrix + later RLS |
 | Selectors/catalogs | mix tenant/shared | permissioned | permissioned | permissioned | none | direct or declared global | mixed | formal shared-vs-tenant catalog policy |
 | MDPM | scoped | scoped | scoped | scoped | none | direct | good slice, unproven whole matrix | central guard/tests |
@@ -225,12 +255,12 @@ Core components: `Organization`, `TenantDomain`, `Membership`, tenant roles/gran
 | OIP | scoped | system/scoped | scoped | constrained | none | direct | good slice | central guard/tests |
 | Documents | case authorization | authenticated | authenticated | authenticated | no case files | indirect | not tenant-proven | direct tenant + object prefix + tests |
 | Audit/outbox/notifications | mixed | system | append/mark | limited | none | mixed | partial | direct tenant and worker contract |
-| Tracking | global | generated | no rotation | no revocation | anonymous | absent from lookup | **critical defect** | tenant+capability, minimize, rate-limit |
+| Tracking | exact Request capability | cryptographic `SR2-` generation | no rotation | no revocation | anonymous minimized allowlist | server-derived Request ownership | P0 Request authority implemented/qualified | rate limit, hash, rotation/revocation, audit/log hardening; govern Project flow separately |
 | Reports/exports | global/legacy and scoped mix | n/a | n/a | n/a | none | mixed | unproven | tenant-scoped export contract/tests |
 
 ## Z. P0 findings
 
-Before a second real company: formal and mechanically enforced tenant inventory; non-null tenant ownership/backfill for all tenant business/security data; eliminate numeric/global public tracking; central immutable request tenant context and scoped service APIs; minimum platform-vs-tenant authority separation (including constraining legacy global-admin endpoints/CLIs); tenant-aware document metadata/object keys; tenant-aware notifications/jobs/events/caches; minimum commercial entitlement enforcement; least-privilege database roles; exhaustive adversarial matrix; migration/rollback and integrity gates. Any unresolved cross-tenant path is a release blocker. Rich company/platform administration UIs remain P1, but their security boundary does not.
+Before a second real company: formal and mechanically enforced tenant inventory; non-null tenant ownership/backfill for all tenant business/security data; preserve the MT-3 prohibition on numeric/legacy public Request authority and separately close any Project public-tracking boundary; central immutable request tenant context and scoped service APIs; minimum platform-vs-tenant authority separation (including constraining legacy global-admin endpoints/CLIs); tenant-aware document metadata/object keys; tenant-aware notifications/jobs/events/caches; minimum commercial entitlement enforcement; least-privilege database roles; exhaustive adversarial matrix; migration/rollback and integrity gates. Any unresolved cross-tenant path is a release blocker. Rich company/platform administration UIs remain P1, but their security boundary does not.
 
 ## AA. P1 findings
 
@@ -307,6 +337,10 @@ rotation/revocation UI, hashed-at-rest capability records, and generalized rate
 limiting remain separately governed hardening; none may be used to defer
 removal of numeric public authority.
 
+**Closure status:** implemented and qualified.  The original roadmap bullets
+below are retained as the broader branded-portal/capability-lifecycle target,
+not as the acceptance contract for the closed shared Request route.
+
 - **Goal/why:** remove the present anonymous cross-tenant/IDOR defect while preserving passwordless tracking.
 - **Dependencies:** MT-1/2 and public projection contract. P0 uses a canonical verified platform host plus an opaque, non-enumerable tenant route/portal identifier resolved before the capability; code-only tenant discovery is forbidden. Trusted forwarded-host values are accepted only from configured proxies. MT-8 later adds subdomains without changing the contract.
 - **DB:** tenant-owned capability records/hash, state, rotation/revocation/optional expiry, access audit.
@@ -314,7 +348,7 @@ removal of numeric public authority.
 - **Frontend:** host-aware code entry, safe error, no sensitive URL persistence where avoidable.
 - **Security/test gates:** A-host+B-code, brute force, cache, logs, old/rotated/disabled codes, field allowlist.
 - **Rollback:** temporary dual-code mapping behind tenant-safe resolver; never re-enable numeric lookup.
-- **Done:** anonymous access is impossible without both valid tenant context and capability.
+- **Done for the shared Request route:** anonymous access is impossible without the exact ADR-052 capability; ownership is derived server-side and only the minimized projection is returned.  Host-bound branded portal authority and the lifecycle defenses above remain later governed work.
 
 ### MT-3A — Minimum Commercial Entitlement Gate (P0 for commercial launch)
 

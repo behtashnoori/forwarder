@@ -2,7 +2,7 @@
 
 - Decision authority: ADR-040
 - Baseline: repository at `2a120cf0dfdca4687bd28e063600ee6977546325`
-- Runtime changes in this goal: none
+- Runtime change note: ADR-052/MT-3 later hardened the public Request authority and projection without changing tracking-event ownership.
 
 ## Current write/read census
 
@@ -15,7 +15,7 @@
 | `OperationalEvent` | canonical | timeline/current rebuild source | append via unit command | canonical ExecutionUnit/Project tenant | aware occurred/recorded UTC | optional lifecycle/checkpoint, visibility, provenance | execution-unit timeline, cargo projection |
 | `OperationalShipment` | canonical | shipment graph/list/cargo | created with lifecycle; no general tracking mutation found | organization-owned aggregate | aware created/updated | authoritative shipment lifecycle, no single location field | shipment list/detail/cargo |
 | Cargo traceability | canonical projection | latest location event across units, cache fallback | none | tenant-fenced catalog/shipment/unit joins | event occurred time | shipment lifecycle plus one selected location | cargo catalog usage |
-| Public tracking | compatibility | ShipmentRequest plus customer-visible legacy updates | none | public tracking-code contract; quarantine fencing | legacy explicit serialization | request commercial status plus legacy aggregate/unit statuses | customer tracking page |
+| Public tracking | compatibility projection, hardened authority | ShipmentRequest plus customer-visible legacy updates | none | exact ADR-052 `SR2-` capability; server-derived Request ownership; quarantine fencing | legacy explicit serialization | minimized request commercial status plus permitted legacy aggregate/unit statuses | customer tracking page |
 | Expert request tracking | compatibility | internal legacy projection | legacy unit/update commands | authenticated tenant + request authorization | legacy explicit serialization | legacy aggregate/unit status/location | request detail tracking tab |
 | Execution-unit UI | canonical | unit projection/timeline | canonical unit/event commands | Project/unit tenant and permission | RFC 3339 | canonical unit lifecycle/checkpoint/event | project execution units |
 
@@ -27,7 +27,7 @@
 - Canonical unit timeline: `OperationalEvent` ordered by `(occurred_at, id)`; projection currently stores `lifecycle_status`, last supplied checkpoint and maximum event time.
 - Canonical cargo location: latest location-bearing event across all shipment units by `(occurred_at, id)`, then unit checkpoint cache fallback.
 - Shipment detail: displays `OperationalShipment.lifecycle_status`; it currently has no unified current-location field.
-- Public tracking: displays `ShipmentRequest.status` and legacy unit aggregate/status when accessed with `tracking_code`.
+- Public tracking: displays the fixed ADR-052 allowlist, including `ShipmentRequest.status` and permitted legacy unit aggregate/status, only when accessed with an exact valid `SR2-` capability.
 
 ## Projection transition matrix
 
@@ -72,4 +72,9 @@
 
 ## Implementation gates
 
-The first implementation is read-only and internal: deterministic canonical projection, per-unit shipment aggregation, cache mismatch health and cargo traceability adoption. Public tracking, legacy writes, backfill, shipment lifecycle commands, schema migration and retirement are excluded.
+The ADR-040 first implementation remained read-only and internal.  ADR-052
+later changed only public Request identity/authorization and projection:
+numeric/legacy authority is rejected, new `SR2-` capabilities are issued, and
+the minimized public projection is qualified.  Legacy event writes, backfill,
+shipment lifecycle commands, schema migration, and tracking-source retirement
+remain excluded.

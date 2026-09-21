@@ -1,6 +1,6 @@
 # ADR-052: Public Tracking Opaque Capability Authority
 
-- **Status:** ACCEPTED — bounded MT-3 implementation authorized
+- **Status:** ACCEPTED — implemented and qualified
 - **Date:** 2026-09-21
 - **Owners / decision authority:** Product Owner mission; Architecture Owner; Security/Authorization boundary; Customer Tracking owner
 - **Affected domain:** unauthenticated Request tracking, public projection, request tracking-code issuance, public navigation
@@ -8,7 +8,7 @@
 
 ## Context
 
-`GET /api/public/track/{identifier}` currently accepts a decimal
+Before MT-3, `GET /api/public/track/{identifier}` accepted a decimal
 `ShipmentRequest.id` or a global `tracking_code`.  The numeric branch makes an
 internal sequential database identity public authority.  The current request
 code generator provides only about 31 random bits and has a predictable
@@ -86,9 +86,11 @@ public.
 
 Success and not-found responses use `Cache-Control: no-store` and
 `Referrer-Policy: no-referrer`; public tracking is not indexed.  Application
-logs must not record the plaintext capability.  Missing generalized rate
-limiting remains a separately classified defense-in-depth risk and does not
-justify retaining numeric authority.
+business logs do not intentionally record the plaintext capability.  Because
+the capability remains in the route path, generic infrastructure access-log
+redaction is separately required operational hardening.  Missing generalized
+rate limiting likewise remains a separately classified defense-in-depth risk;
+neither item justifies retaining numeric authority.
 
 ## Compatibility and recovery
 
@@ -129,7 +131,7 @@ final reference alignment.
 
 ```text
 REFERENCE_IMPACT=UPDATE_REQUIRED
-REFERENCE_IMPACT_STATUS=CLOSED_BY_ADR_052_DESIGN
+REFERENCE_IMPACT_STATUS=CLOSED_BY_MT3_IMPLEMENTATION_AND_QUALIFICATION
 ```
 
 ADR-052 narrows and implements the public Request tracking authority boundary.
