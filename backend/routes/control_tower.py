@@ -6,7 +6,6 @@ from backend.extensions import db
 from backend.security import require_auth
 from backend.services.control_tower_read_model import compose_control_tower, ControlTowerCursorInvalid
 from backend.services.control_tower_scope import (
-    ControlTowerPopulationLimit,
     ControlTowerResponsibilityInvariant,
     ControlTowerScopeDenied,
 )
@@ -41,6 +40,7 @@ def shipments():
         result = compose_control_tower(
             get_current_user(), page_size=page_size, cursor=request.args.get("cursor"),
             attention=request.args.get("attention"),
+            search=request.args.get("search"),
         )
     except ControlTowerScopeDenied:
         return _error("FORBIDDEN_OPERATION", "دسترسی به این صفحه امکان‌پذیر نیست.", 403)
@@ -48,14 +48,28 @@ def shipments():
         return _error("INVALID_CURSOR", "دریافت ادامه موارد امکان‌پذیر نیست. دوباره تلاش کنید.", 400)
     except ValueError:
         return _error("VALIDATION_ERROR", "درخواست معتبر نیست.", 400)
-    except (ControlTowerResponsibilityInvariant, ControlTowerPopulationLimit):
+    except ControlTowerResponsibilityInvariant:
         return _error("EVALUATION_UNAVAILABLE", UNAVAILABLE_MESSAGE, 503)
     if result.state != "complete":
         return _error("EVALUATION_UNAVAILABLE", UNAVAILABLE_MESSAGE, 503)
     return jsonify({"data": {
         "evaluatedAt": result.evaluated_at.isoformat(), "state": result.state,
         "notice": result.notice, "emptyMessage": result.empty_message,
-        "page": {"nextCursor": result.page.next_cursor},
+        "summary": {
+            "total": result.summary.total,
+            "attentionCounts": {
+                "urgent": result.summary.attention_counts["urgent"],
+                "followUp": result.summary.attention_counts["follow_up"],
+                "review": result.summary.attention_counts["review"],
+            },
+        },
+        "page": {
+            "limit": result.page.limit,
+            "offset": result.page.offset,
+            "returned": result.page.returned,
+            "hasMore": result.page.has_more,
+            "nextCursor": result.page.next_cursor,
+        },
         "items": [{
             "key": item.shipment_reference, "shipmentReference": item.shipment_reference,
             "routeLabel": item.route_label, "transportLabel": item.transport_label,

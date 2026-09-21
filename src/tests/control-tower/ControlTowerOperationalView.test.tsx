@@ -62,12 +62,21 @@ const item: ControlTowerItem = {
   destination: "/operations/shipments/shipment-1",
 };
 
-const page = (items: ControlTowerItem[] = [item], nextCursor: string | null = null): ControlTowerPage => ({
+const page = (
+  items: ControlTowerItem[] = [item],
+  nextCursor: string | null = null,
+  offset = 0,
+  total = items.length,
+): ControlTowerPage => ({
   evaluatedAt: "2026-09-20T12:00:00Z",
   state: "complete",
   notice: null,
   emptyMessage: items.length ? null : "در حال حاضر موردی برای پیگیری در برج کنترل نمایش داده نمی‌شود.",
-  page: { nextCursor },
+  summary: {
+    total,
+    attentionCounts: { urgent: total, follow_up: 0, review: 0 },
+  },
+  page: { limit: 25, offset, returned: items.length, hasMore: nextCursor !== null, nextCursor },
   items,
 });
 
@@ -120,26 +129,43 @@ describe("Golden Control Tower operational view", () => {
     expect(await screen.findByText("جزئیات موجود محموله")).toBeVisible();
   });
 
-  it("requests only the supported backend attention filters", async () => {
+  it("requests server-side attention and text filters and resets to the first page", async () => {
     mount();
     await screen.findByText("shipment-1");
-    fireEvent.click(screen.getByRole("button", { name: "پیگیری" }));
-    await waitFor(() => expect(getControlTowerPage).toHaveBeenLastCalledWith("follow_up"));
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /پیگیری/ }));
+    await waitFor(() => expect(getControlTowerPage).toHaveBeenLastCalledWith("follow_up", undefined, undefined));
+    fireEvent.change(screen.getByRole("textbox", { name: "جست‌وجوی برج کنترل" }), { target: { value: "shipment-42" } });
+    fireEvent.click(screen.getByRole("button", { name: "جست‌وجو" }));
+    await waitFor(() => expect(getControlTowerPage).toHaveBeenLastCalledWith("follow_up", undefined, "shipment-42"));
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 
-  it("passes through the opaque cursor, preserves stable results, and removes duplicates", async () => {
+  it("passes through the opaque cursor and replaces the bounded page", async () => {
     const next = deferred<ControlTowerPage>();
-    vi.mocked(getControlTowerPage).mockResolvedValueOnce(page([item], "opaque+/cursor==")).mockReturnValueOnce(next.promise);
+    vi.mocked(getControlTowerPage).mockResolvedValueOnce(page([item], "opaque+/cursor==", 0, 2)).mockReturnValueOnce(next.promise);
     mount();
-    fireEvent.click(await screen.findByRole("button", { name: "نمایش موارد بیشتر" }));
-    expect(screen.getByText("shipment-1")).toBeVisible();
+    fireEvent.click(await screen.findByRole("button", { name: "صفحه بعدی" }));
     const second = { ...item, key: "shipment-2", shipmentReference: "shipment-2" };
-    await act(async () => next.resolve(page([item, second])));
-    expect(getControlTowerPage).toHaveBeenLastCalledWith(undefined, "opaque+/cursor==");
-    expect(screen.getAllByText("shipment-1")).toHaveLength(1);
+    await act(async () => next.resolve(page([second], null, 1, 2)));
+    expect(getControlTowerPage).toHaveBeenLastCalledWith(undefined, "opaque+/cursor==", undefined);
+    expect(screen.queryByText("shipment-1")).not.toBeInTheDocument();
     expect(screen.getByText("shipment-2")).toBeVisible();
+    expect(screen.getByText("نمایش ۲ تا ۲ از ۲")).toBeVisible();
+    expect(screen.getByRole("button", { name: "صفحه قبلی" })).toBeEnabled();
+  });
+
+  it("does not let an older slower response overwrite newer filter results", async () => {
+    const older = deferred<ControlTowerPage>();
+    const newerItem = { ...item, key: "shipment-newer", shipmentReference: "shipment-newer" };
+    vi.mocked(getControlTowerPage)
+      .mockReturnValueOnce(older.promise)
+      .mockResolvedValueOnce(page([newerItem]));
+    mount();
+    fireEvent.click(screen.getByRole("button", { name: /پیگیری/ }));
+    expect(await screen.findByText("shipment-newer")).toBeVisible();
+    await act(async () => older.resolve(page([item])));
+    expect(screen.getByText("shipment-newer")).toBeVisible();
+    expect(screen.queryByText("shipment-1")).not.toBeInTheDocument();
   });
 
   it("shows explicit loading and empty states", async () => {
@@ -157,7 +183,7 @@ describe("Golden Control Tower operational view", () => {
       .mockResolvedValueOnce(page([item], "next"))
       .mockRejectedValueOnce(new ApiError(503, "EVALUATION_UNAVAILABLE", "private backend detail"));
     mount();
-    fireEvent.click(await screen.findByRole("button", { name: "نمایش موارد بیشتر" }));
+    fireEvent.click(await screen.findByRole("button", { name: "صفحه بعدی" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("هیچ فهرستی نمایش داده نمی‌شود");
     expect(screen.queryByText("shipment-1")).not.toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/Semantic|private backend detail/i);

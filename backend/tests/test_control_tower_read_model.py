@@ -7,10 +7,13 @@ import pytest
 from sqlalchemy import event
 
 from backend.extensions import db
-from backend.models import Customer
+from backend.models import Customer, DocumentDefinition
+from backend.mdpm_models import OperationalDocumentRequirement
 from backend.operational_models import (
     CanonicalLocation,
     ExecutionUnit,
+    Milestone,
+    OperationalCheckpoint,
     OperationalEvent,
     OperationalEventLocationEvidence,
     Project,
@@ -356,7 +359,7 @@ def test_unauthorized_shipments_do_not_change_cursor_or_order_and_are_not_evalua
     assert all(s.public_id.encode() not in raw for s in (*shipments, other, foreign))
 
 
-def test_cursor_bound_to_actor_page_size_and_current_order_and_tamper_rejected(tower, monkeypatch):
+def test_cursor_bound_to_actor_and_query_while_data_changes_are_query_time_views(tower, monkeypatch):
     shipments = [tower.shipment()[0] for _ in range(3)]
     mapping = {s.id: (reason(str(s.id)),) for s in shipments}
     stub(monkeypatch, mapping)
@@ -366,8 +369,9 @@ def test_cursor_bound_to_actor_page_size_and_current_order_and_tamper_rejected(t
         with pytest.raises(model.ControlTowerCursorInvalid):
             read(actor, page_size=size, cursor=token)
     mapping[shipments[-1].id] = (reason("new", level=Level.URGENT),)
-    with pytest.raises(model.ControlTowerCursorInvalid):
-        read(tower.a, page_size=1, cursor=cursor)
+    changed = read(tower.a, page_size=1, cursor=cursor)
+    assert changed.state == "complete"
+    assert changed.page.offset == 1
 
 
 @pytest.mark.parametrize("family", ["active_execution", "open_work", "readiness"])
@@ -523,6 +527,82 @@ def test_composition_request_owner_route_and_tracking_queries_do_not_scale_per_r
         rows.append(shipment)
         mapping[shipment.id] = (reason(str(index)),)
     many = count_queries()
+    assert many <= one + 3
+
+
+def test_batch_readiness_queries_do_not_scale_per_accepted_quote(attention):
+    definition = DocumentDefinition(
+        code="CT-BATCH-READINESS",
+        title="بارنامه",
+        allowed_formats='["pdf"]',
+        max_file_size_bytes=1000,
+    )
+    db.session.add(definition)
+    db.session.flush()
+
+    def add_requirement(shipment, milestone):
+        db.session.add(OperationalDocumentRequirement(
+            organization_id=attention.tower.org.id,
+            operational_shipment_id=shipment.id,
+            document_definition_id=definition.id,
+            requirement_level="CONDITIONAL",
+            applicability_state="UNRESOLVED",
+            target_milestone_type=milestone.milestone_type,
+            target_status="READY",
+            created_by_user_id=attention.tower.a.id,
+        ))
+
+    add_requirement(attention.shipment, attention.milestone)
+    db.session.commit()
+
+    def count_queries(expected):
+        statements = []
+
+        def capture(conn, cursor, statement, parameters, context, many):
+            statements.append(statement)
+
+        event.listen(db.engine, "before_cursor_execute", capture)
+        try:
+            result = read(attention.tower.a)
+            assert len(result.items) == expected
+        finally:
+            event.remove(db.engine, "before_cursor_execute", capture)
+        return len(statements)
+
+    one = count_queries(1)
+    for index in range(2, 11):
+        shipment, _ = attention.tower.shipment()
+        plan = RoutePlan(
+            operational_shipment_id=shipment.id,
+            created_by_user_id=attention.tower.a.id,
+        )
+        db.session.add(plan)
+        db.session.flush()
+        checkpoint = OperationalCheckpoint(
+            route_plan_id=plan.id,
+            sequence_number=1,
+            checkpoint_type="border_entry",
+            canonical_location_id=attention.location.id,
+            planned_arrival_at=NOW,
+            created_by_user_id=attention.tower.a.id,
+        )
+        db.session.add(checkpoint)
+        db.session.flush()
+        milestone = Milestone(
+            organization_id=attention.tower.org.id,
+            operational_shipment_id=shipment.id,
+            route_plan_id=plan.id,
+            checkpoint_id=checkpoint.id,
+            milestone_type="ARRIVAL",
+            sequence=1,
+            lifecycle_status="PENDING",
+        )
+        db.session.add(milestone)
+        db.session.flush()
+        add_requirement(shipment, milestone)
+    db.session.commit()
+
+    many = count_queries(10)
     assert many <= one + 3
 
 

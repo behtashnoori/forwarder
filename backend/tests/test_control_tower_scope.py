@@ -10,8 +10,6 @@ from backend.extensions import db
 from backend.models import Customer, ExpertQuote, ExpertUser, ShipmentRequest
 from backend.operational_models import OperationalMembership, OperationalOrganization, OperationalShipment
 from backend.services.control_tower_scope import (
-    MAX_SUMMARY_SHIPMENTS,
-    ControlTowerPopulationLimit,
     ControlTowerResponsibilityInvariant, ControlTowerScopeDenied,
     governed_summary_scope, refresh_summary_context,
 )
@@ -365,8 +363,7 @@ def test_revoked_control_tower_capability_denies_expert(tower):
         governed_summary_scope({"id": tower.a.id})
 
 
-def test_authorized_population_is_hard_bounded(tower):
-    for _ in range(MAX_SUMMARY_SHIPMENTS + 1):
+def test_authorized_population_has_no_technical_100_row_ceiling(tower):
+    for _ in range(101):
         tower.shipment(source="direct")
-    with pytest.raises(ControlTowerPopulationLimit):
-        governed_summary_scope({"id": tower.a.id})
+    assert len(governed_summary_scope({"id": tower.a.id})) == 101

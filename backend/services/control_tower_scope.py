@@ -1,4 +1,4 @@
-"""Fail-closed, bounded authority for the isolated Control Tower read model.
+"""Fail-closed authority for the isolated Control Tower read model.
 
 The boundary derives every tenant, persona and responsibility fact from current
 Golden persistence. It grants no source capability and returns only lineage
@@ -34,7 +34,6 @@ from backend.services.assigned_work_authorization import (
 
 _logger = logging.getLogger("authorization.control_tower")
 _ELIGIBLE = ("planned", "in_progress")
-MAX_SUMMARY_SHIPMENTS = 100
 
 
 class ControlTowerScopeDenied(Exception):
@@ -51,13 +50,6 @@ class ControlTowerResponsibilityInvariant(Exception):
         super().__init__("Control Tower responsibility invariant failed.")
 
 
-class ControlTowerPopulationLimit(Exception):
-    """The bounded read cannot safely evaluate the full authorized population."""
-
-    def __init__(self):
-        super().__init__("Control Tower population exceeds the bounded evaluator.")
-
-
 @dataclass(frozen=True)
 class SummaryAuthorityContext:
     purpose: ClassVar[str] = "CONTROL_TOWER_V1_OPERATIONAL_SUMMARY"
@@ -71,6 +63,16 @@ class SummaryAuthorityContext:
     responsible_expert_name: str
     actor_id: int
     actor_persona: str
+
+
+@dataclass(frozen=True)
+class SummaryPopulation:
+    """Current actor/tenant facts plus the authorized active SQL population."""
+
+    actor_id: int
+    actor_persona: str
+    organization_id: int
+    query: object
 
 
 def _current_actor(actor: dict):
@@ -244,26 +246,52 @@ def _contexts_for_rows(
     return tuple(result)
 
 
-def governed_summary_scope(actor: dict) -> tuple[SummaryAuthorityContext, ...]:
-    """Return at most the complete bounded authorized active population."""
+def governed_summary_population(actor: dict) -> SummaryPopulation:
+    """Return the authorized active SQL population before any windowing."""
     with db.session.no_autoflush:
         actor_id, persona, organization_id = _current_actor(actor)
+        return SummaryPopulation(
+            actor_id,
+            persona,
+            organization_id,
+            _candidate_query(actor_id, persona, organization_id),
+        )
+
+
+def governed_summary_contexts(
+    actor: dict, shipment_ids: Iterable[int]
+) -> tuple[SummaryAuthorityContext, ...]:
+    """Certify one bounded selected window and preserve the supplied order."""
+    with db.session.no_autoflush:
+        actor_id, persona, organization_id = _current_actor(actor)
+        ids = tuple(dict.fromkeys(shipment_ids))
+        if not ids:
+            return ()
         rows = db.session.scalars(
             _candidate_query(actor_id, persona, organization_id)
-            .order_by(
-                OperationalShipment.created_at.desc(),
-                OperationalShipment.public_id.asc(),
-            )
-            .limit(MAX_SUMMARY_SHIPMENTS + 1)
+            .where(OperationalShipment.id.in_(ids))
         ).all()
-        if len(rows) > MAX_SUMMARY_SHIPMENTS:
-            _logger.error(
-                "control_tower_population_limit organization_id=%s limit=%s",
-                organization_id,
-                MAX_SUMMARY_SHIPMENTS,
-            )
-            raise ControlTowerPopulationLimit()
-        return _contexts_for_rows(rows, actor_id, persona)
+        if len(rows) != len(ids):
+            raise ControlTowerScopeDenied()
+        contexts = {
+            context.shipment_id: context
+            for context in _contexts_for_rows(rows, actor_id, persona)
+        }
+        if set(contexts) != set(ids):
+            raise ControlTowerScopeDenied()
+        return tuple(contexts[shipment_id] for shipment_id in ids)
+
+
+def governed_summary_scope(actor: dict) -> tuple[SummaryAuthorityContext, ...]:
+    """Compatibility helper for tests/tools; runtime uses selected windows."""
+    population = governed_summary_population(actor)
+    rows = db.session.scalars(
+        population.query.order_by(
+            OperationalShipment.created_at.desc(),
+            OperationalShipment.public_id.asc(),
+        )
+    ).all()
+    return _contexts_for_rows(rows, population.actor_id, population.actor_persona)
 
 
 def refresh_summary_contexts(

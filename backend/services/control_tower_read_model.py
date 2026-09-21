@@ -3,9 +3,9 @@
 The caller owns the read transaction. Discovery precedes every source read;
 Slice 2 revalidates each adapter, and this composer revalidates the full scope
 before disclosure. Never invoke source producers, serializers or write helpers.
-Pagination is a current snapshot: an ordering change invalidates continuation
-instead of silently skipping/duplicating items. No totals or private provenance
-are part of the presentation model.
+Pagination is a current query-time view rather than a historical snapshot.
+Population-global metadata comes from the same authorized relational attention
+query; only the selected page is hydrated into presentation rows.
 """
 from __future__ import annotations
 
@@ -24,9 +24,10 @@ from backend.extensions import db
 from backend.models import ShipmentRequest
 from backend.operational_models import OperationalShipment, RouteLeg, RoutePlan, utcnow
 from backend.services import control_tower_sources as sources
+from backend.services.control_tower_query import select_attention_window
 from backend.services.control_tower_scope import (
     ControlTowerResponsibilityInvariant, ControlTowerScopeDenied,
-    governed_summary_scope, refresh_summary_contexts,
+    governed_summary_contexts, governed_summary_scope, refresh_summary_contexts,
 )
 from backend.services.control_tower_translation import (
     AttentionLevel, EMPTY_MESSAGE, UNAVAILABLE_MESSAGE, attention_label,
@@ -84,7 +85,17 @@ class ShipmentAttentionItem:
 
 @dataclass(frozen=True)
 class Page:
+    limit: int = 25
+    offset: int = 0
+    returned: int = 0
+    has_more: bool = False
     next_cursor: str | None = None
+
+
+@dataclass(frozen=True)
+class Summary:
+    total: int = 0
+    attention_counts: dict[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -93,6 +104,7 @@ class ControlTowerReadModel:
     state: str
     items: tuple[ShipmentAttentionItem, ...] = ()
     page: Page = Page()
+    summary: Summary = Summary()
     empty_message: str | None = None
     notice: str | None = None
 
@@ -337,26 +349,19 @@ def _shipment_order(reasons, reference, at):
             due or _LAST, onset or _LAST, reference)
 
 
-def _snapshot(contexts, rows, page_size, attention=None):
-    # Evaluated-at observations change on every readiness read and do not rank;
-    # continuation binds authority and full resulting ordering, not that clock.
-    payload = [page_size, attention, sorted((c.actor_id, c.actor_persona, c.organization_id,
-                                c.shipment_public_id, c.root_type, c.root_id,
-                                c.responsible_expert_id) for c in contexts),
-               [(key, item.shipment_reference) for key, item in rows]]
-    return hashlib.sha256(json.dumps(payload, default=str, separators=(",", ":")).encode()).hexdigest()
-
-
 def _signature(payload):
     return hmac.new(str(current_app.config["SECRET_KEY"]).encode(), payload, hashlib.sha256).digest()
 
 
-def _cursor(offset, snapshot):
-    payload = json.dumps([offset, snapshot], separators=(",", ":")).encode()
+def _cursor(offset, actor_id, page_size, attention, search):
+    payload = json.dumps(
+        ["control-tower-window-v2", offset, actor_id, page_size, attention, search],
+        separators=(",", ":"),
+    ).encode()
     return base64.urlsafe_b64encode(_signature(payload) + payload).decode().rstrip("=")
 
 
-def _offset(cursor, snapshot, length, page_size):
+def _offset(cursor, actor_id, page_size, attention, search):
     if cursor is None:
         return 0
     try:
@@ -364,16 +369,130 @@ def _offset(cursor, snapshot, length, page_size):
             raise ValueError()
         raw = base64.b64decode(cursor + "=" * (-len(cursor) % 4), altchars=b"-_", validate=True)
         signature, payload = raw[:32], raw[32:]
-        offset, expected = json.loads(payload)
-        if (not hmac.compare_digest(signature, _signature(payload)) or expected != snapshot
-                or type(offset) is not int or not 0 < offset < length or offset % page_size):
+        version, offset, expected_actor, expected_size, expected_attention, expected_search = json.loads(payload)
+        if (not hmac.compare_digest(signature, _signature(payload))
+                or version != "control-tower-window-v2"
+                or expected_actor != actor_id
+                or expected_size != page_size
+                or expected_attention != attention
+                or expected_search != search
+                or type(offset) is not int or offset <= 0 or offset % page_size):
             raise ValueError()
         return offset
     except (ValueError, TypeError, UnicodeError):
         raise ControlTowerCursorInvalid() from None
 
 
-def compose_control_tower(actor, *, page_size=25, cursor=None, at=None, attention=None):
+def _compatibility_read(
+    actor, *, evaluated_at, page_size, cursor, attention, search
+):
+    """Non-PostgreSQL test/development parity path.
+
+    PostgreSQL is the governed release engine and uses the relational window.
+    SQLite cannot plan the production CTE acceptably; it retains a no-ceiling
+    complete evaluator so the repository's broad compatibility suite remains
+    useful without becoming release-scale performance evidence.
+    """
+    actor_id = int(actor.get("id"))
+    offset = _offset(cursor, actor_id, page_size, attention, search)
+    with db.session.no_autoflush:
+        try:
+            contexts = governed_summary_scope(actor)
+            current = refresh_summary_contexts(actor, contexts)
+            ranked = []
+            evaluated = sources.evaluate_bounded_sources(
+                actor, current, at=evaluated_at
+            )
+            for context, reasons in evaluated:
+                ordered = _ordered_reasons(reasons, evaluated_at)
+                if ordered:
+                    ranked.append((
+                        _shipment_order(
+                            ordered, context.shipment_public_id, evaluated_at
+                        ),
+                        context,
+                        ordered,
+                    ))
+            if refresh_summary_contexts(actor, current) != current:
+                raise ControlTowerScopeDenied()
+            routes = _route_context(current)
+            facts = _shipment_context(current)
+            rows = []
+            for key, context, ordered in ranked:
+                level = ordered[0].attention_level
+                route = routes.get(context.shipment_id, {
+                    "route_label": None,
+                    "transport_label": None,
+                    "actual_modes": (),
+                })
+                fact = facts[context.shipment_id]
+                rows.append((key, ShipmentAttentionItem(
+                    context.shipment_public_id,
+                    route["route_label"],
+                    route["transport_label"],
+                    level.value.lower(),
+                    attention_label(level),
+                    context.responsible_expert_name,
+                    fact["status"],
+                    fact["source"],
+                    fact["request_transport"],
+                    route["actual_modes"],
+                    fact["progress"],
+                    {"reasonCount": len(ordered), "openAttention": True},
+                    _display(ordered[0]),
+                    tuple(_display(reason) for reason in ordered[1:]),
+                    f"/operations/shipments/{context.shipment_public_id}",
+                )))
+            if refresh_summary_contexts(actor, current) != current:
+                raise ControlTowerScopeDenied()
+            if frozenset(governed_summary_scope(actor)) != frozenset(contexts):
+                raise ControlTowerScopeDenied()
+        except (ControlTowerScopeDenied, ControlTowerResponsibilityInvariant):
+            raise
+        except Exception as exc:
+            _logger.error(
+                "control_tower_composition_unavailable error_type=%s",
+                type(exc).__name__,
+            )
+            return ControlTowerReadModel(
+                evaluated_at, "unavailable", notice=UNAVAILABLE_MESSAGE
+            )
+    rows.sort(key=lambda row: row[0])
+    if search:
+        needle = search.casefold()
+        rows = [
+            row for row in rows
+            if needle in row[1].shipment_reference.casefold()
+            or needle in (row[1].owner_name or "").casefold()
+            or needle in (row[1].source.get("requestPublicId") or "").casefold()
+        ]
+    counts = {
+        level: sum(item.attention == level for _, item in rows)
+        for level in ("urgent", "follow_up", "review")
+    }
+    if attention is not None:
+        rows = [row for row in rows if row[1].attention == attention]
+    total = len(rows)
+    page_rows = rows[offset:offset + page_size]
+    has_more = offset + len(page_rows) < total
+    next_cursor = (
+        _cursor(offset + len(page_rows), actor_id, page_size, attention, search)
+        if has_more
+        else None
+    )
+    return ControlTowerReadModel(
+        evaluated_at,
+        "complete",
+        tuple(item for _, item in page_rows),
+        Page(page_size, offset, len(page_rows), has_more, next_cursor),
+        Summary(total, counts),
+        EMPTY_MESSAGE if total == 0 else None,
+    )
+
+
+def compose_control_tower(
+    actor, *, page_size=25, cursor=None, at=None, attention=None, search=None
+):
     """Build only the ADR-046 read model. Denial/invariant/cursor errors raise.
 
     Genuine source/system failure returns unavailable with zero disclosed
@@ -383,12 +502,38 @@ def compose_control_tower(actor, *, page_size=25, cursor=None, at=None, attentio
         raise ValueError("Control Tower page size must be between 1 and 100.")
     if attention is not None and attention not in {"urgent", "follow_up", "review"}:
         raise ValueError("Invalid attention filter.")
+    if search is not None and not isinstance(search, str):
+        raise ValueError("Invalid Control Tower search.")
+    search = " ".join((search or "").split()) or None
+    if search is not None and len(search) > 100:
+        raise ValueError("Control Tower search is too long.")
     evaluated_at = utc(at or utcnow())
     if evaluated_at is None:
         raise ValueError("Control Tower requires a valid evaluation time.")
+    actor_id = int(actor.get("id"))
+    if db.session.get_bind().dialect.name != "postgresql":
+        return _compatibility_read(
+            actor,
+            evaluated_at=evaluated_at,
+            page_size=page_size,
+            cursor=cursor,
+            attention=attention,
+            search=search,
+        )
     with db.session.no_autoflush:
         try:
-            contexts = governed_summary_scope(actor)
+            offset = _offset(cursor, actor_id, page_size, attention, search)
+            window = select_attention_window(
+                actor,
+                at=evaluated_at,
+                page_size=page_size,
+                offset=offset,
+                attention=attention,
+                search=search,
+            )
+            contexts = governed_summary_contexts(
+                actor, (row.shipment_id for row in window.rows)
+            )
             current = refresh_summary_contexts(actor, contexts)
             ranked = []
             for context, reasons in sources.evaluate_bounded_sources(actor, current, at=evaluated_at):
@@ -405,7 +550,7 @@ def compose_control_tower(actor, *, page_size=25, cursor=None, at=None, attentio
                     )
                 )
             # Later evaluations may have revoked authority over earlier rows.
-            # Revalidate the whole bounded set before reading route context.
+            # Revalidate the selected bounded set before reading route context.
             if refresh_summary_contexts(actor, current) != current:
                 raise ControlTowerScopeDenied()
             routes = _route_context(current)
@@ -443,10 +588,8 @@ def compose_control_tower(actor, *, page_size=25, cursor=None, at=None, attentio
                     f"/operations/shipments/{context.shipment_public_id}",
                 )
                 rows.append((key, item))
-            # Also recheck earlier cards and the actor when the scope is empty.
+            # Also recheck selected cards and the actor when the page is empty.
             if refresh_summary_contexts(actor, current) != current:
-                raise ControlTowerScopeDenied()
-            if frozenset(governed_summary_scope(actor)) != frozenset(contexts):
                 raise ControlTowerScopeDenied()
         except (ControlTowerScopeDenied, ControlTowerResponsibilityInvariant):
             raise
@@ -454,14 +597,24 @@ def compose_control_tower(actor, *, page_size=25, cursor=None, at=None, attentio
             _logger.error("control_tower_composition_unavailable error_type=%s", type(exc).__name__)
             return ControlTowerReadModel(evaluated_at, "unavailable", notice=UNAVAILABLE_MESSAGE)
         rows.sort(key=lambda row: row[0])
-        # Filter the fully evaluated, aggregated result, never a page of cards.
-        if attention is not None:
-            rows = [(key, item) for key, item in rows if item.attention == attention]
-        snapshot = _snapshot(current, rows, page_size, attention)
-        offset = _offset(cursor, snapshot, len(rows), page_size)
-        stop = offset + page_size
+        expected = tuple((row.shipment_public_id, row.attention) for row in window.rows)
+        actual = tuple((item.shipment_reference, item.attention) for _, item in rows)
+        if actual != expected:
+            _logger.error("control_tower_relational_detail_mismatch")
+            return ControlTowerReadModel(
+                evaluated_at, "unavailable", notice=UNAVAILABLE_MESSAGE
+            )
+        next_offset = offset + len(rows)
+        next_cursor = (
+            _cursor(next_offset, actor_id, page_size, attention, search)
+            if window.has_more
+            else None
+        )
         return ControlTowerReadModel(
-            evaluated_at, "complete", tuple(item for _, item in rows[offset:stop]),
-            Page(_cursor(stop, snapshot) if stop < len(rows) else None),
-            EMPTY_MESSAGE if not rows else None,
+            evaluated_at,
+            "complete",
+            tuple(item for _, item in rows),
+            Page(page_size, offset, len(rows), window.has_more, next_cursor),
+            Summary(window.total, window.attention_counts),
+            EMPTY_MESSAGE if window.total == 0 else None,
         )

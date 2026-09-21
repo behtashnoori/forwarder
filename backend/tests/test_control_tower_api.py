@@ -36,7 +36,17 @@ def test_expert_admin_foreign_scope_and_platform_denial(tower, monkeypatch):
                             (tower.foreign, {foreign.public_id})]:
         response = client.get(PATH, headers=headers(actor))
         assert response.status_code == 200
-        assert {item["key"] for item in response.json["data"]["items"]} == expected
+        data = response.json["data"]
+        assert {item["key"] for item in data["items"]} == expected
+        assert data["summary"]["total"] == len(expected)
+        assert sum(data["summary"]["attentionCounts"].values()) == len(expected)
+        assert data["page"] == {
+            "limit": 25,
+            "offset": 0,
+            "returned": len(expected),
+            "hasMore": False,
+            "nextCursor": None,
+        }
         assert response.headers["Cache-Control"] == "private, no-store"
     denied = client.get(PATH, headers=headers(tower.platform))
     assert denied.status_code == 403 and "items" not in denied.json
@@ -90,7 +100,11 @@ def test_cursor_round_trip_invalid_and_changed_filter(tower, monkeypatch):
     second = client.get(PATH, query_string={"page_size": 1, "cursor": first["page"]["nextCursor"]}, headers=auth)
     assert second.status_code == 200
     assert second.json["data"]["items"][0]["key"] != first["items"][0]["key"]
-    for cursor, extra in [("tampered", {}), (first["page"]["nextCursor"], {"attention": "follow_up"})]:
+    for cursor, extra in [
+        ("tampered", {}),
+        (first["page"]["nextCursor"], {"attention": "follow_up"}),
+        (first["page"]["nextCursor"], {"search": "changed"}),
+    ]:
         response = client.get(PATH, query_string={"page_size": 1, "cursor": cursor, **extra}, headers=auth)
         assert response.status_code == 400 and response.json["error"]["code"] == "INVALID_CURSOR"
 
@@ -117,7 +131,43 @@ def test_attention_filter_evaluates_full_result_before_pagination(tower, monkeyp
     assert set(found) == {row.public_id for row in rows[2:]} and len(found) == 3
 
 
-@pytest.mark.parametrize("query", [{"page_size": "bad"}, {"page_size": 0}, {"page_size": 101}, {"attention": "HIGH"}])
+def test_search_is_server_side_authorized_and_reports_full_matching_total(tower, monkeypatch):
+    own, own_request = tower.shipment()
+    other, _ = tower.shipment(source="direct", owner=tower.b)
+    foreign, foreign_request = tower.shipment(owner=tower.foreign, tenant=tower.foreign_org)
+    stub(monkeypatch, {
+        own.id: (reason("own"),),
+        other.id: (reason("other"),),
+        foreign.id: (reason("foreign"),),
+    })
+    client = tower.app.test_client()
+    by_reference = client.get(
+        PATH, query_string={"search": own.public_id}, headers=headers(tower.admin)
+    ).json["data"]
+    assert by_reference["summary"]["total"] == 1
+    assert [item["key"] for item in by_reference["items"]] == [own.public_id]
+    by_request = client.get(
+        PATH,
+        query_string={"search": own_request.public_id},
+        headers=headers(tower.admin),
+    ).json["data"]
+    assert by_request["summary"]["total"] == 1
+    assert by_request["items"][0]["key"] == own.public_id
+    hidden = client.get(
+        PATH,
+        query_string={"search": foreign_request.public_id},
+        headers=headers(tower.admin),
+    ).json["data"]
+    assert hidden["summary"]["total"] == 0 and hidden["items"] == []
+
+
+@pytest.mark.parametrize("query", [
+    {"page_size": "bad"},
+    {"page_size": 0},
+    {"page_size": 101},
+    {"attention": "HIGH"},
+    {"search": "x" * 101},
+])
 def test_invalid_query_fails_safely(tower, query):
     response = tower.app.test_client().get(PATH, query_string=query, headers=headers(tower.a))
     assert response.status_code == 400 and "items" not in response.json

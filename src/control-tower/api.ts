@@ -62,11 +62,28 @@ export interface ControlTowerPage {
   state: "complete";
   notice: string | null;
   emptyMessage: string | null;
-  page: { nextCursor: string | null };
+  summary: {
+    total: number;
+    attentionCounts: Record<ControlTowerAttention, number>;
+  };
+  page: {
+    limit: number;
+    offset: number;
+    returned: number;
+    hasMore: boolean;
+    nextCursor: string | null;
+  };
   items: ControlTowerItem[];
 }
 
-type ControlTowerApiResponse = { data: ControlTowerPage };
+export type ControlTowerApiPage = Omit<ControlTowerPage, "summary"> & {
+  summary: {
+    total: number;
+    attentionCounts: { urgent: number; followUp: number; review: number };
+  };
+};
+
+type ControlTowerApiResponse = { data: ControlTowerApiPage };
 
 const nullable = (value: string | null | undefined): string | null =>
   typeof value === "string" && value.length > 0 ? value : null;
@@ -90,7 +107,21 @@ export function normalizeControlTowerPage(response: ControlTowerApiResponse): Co
     state: data.state,
     notice: nullable(data.notice),
     emptyMessage: nullable(data.emptyMessage),
-    page: { nextCursor: nullable(data.page.nextCursor) },
+    summary: {
+      total: data.summary.total,
+      attentionCounts: {
+        urgent: data.summary.attentionCounts.urgent,
+        follow_up: data.summary.attentionCounts.followUp,
+        review: data.summary.attentionCounts.review,
+      },
+    },
+    page: {
+      limit: data.page.limit,
+      offset: data.page.offset,
+      returned: data.page.returned,
+      hasMore: data.page.hasMore,
+      nextCursor: nullable(data.page.nextCursor),
+    },
     items: data.items.map((item) => ({
       key: item.key,
       shipmentReference: item.shipmentReference,
@@ -138,10 +169,12 @@ export function normalizeControlTowerPage(response: ControlTowerApiResponse): Co
 export async function getControlTowerPage(
   attention?: ControlTowerAttention,
   cursor?: string,
+  search?: string,
   pageSize = 25,
 ): Promise<ControlTowerPage> {
   const query = new URLSearchParams({ page_size: String(pageSize) });
   if (attention) query.set("attention", attention);
+  if (search) query.set("search", search);
   if (cursor) query.set("cursor", cursor);
   const response = await request<ControlTowerApiResponse>(
     `/api/control-tower/shipments?${query.toString()}`,

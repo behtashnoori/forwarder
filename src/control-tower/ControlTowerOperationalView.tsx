@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n";
 import { formatBusinessNumber } from "@/lib/formatQuantity";
@@ -16,6 +17,7 @@ import {
   type ControlTowerAttention,
   type ControlTowerFailure,
   type ControlTowerItem,
+  type ControlTowerPage,
   type ControlTowerReason,
   type ControlTowerRequestTransport,
 } from "./api";
@@ -157,79 +159,90 @@ function LoadingState() {
 
 function Tower({ context }: { context: string }) {
   const [attention, setAttention] = useState<ControlTowerAttention>();
-  const [items, setItems] = useState<ControlTowerItem[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
-  const [emptyMessage, setEmptyMessage] = useState<string | null>(null);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState<ControlTowerPage>();
+  const [cursorHistory, setCursorHistory] = useState<Array<string | null>>([null]);
+  const [pageIndex, setPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [failure, setFailure] = useState<ControlTowerFailure>();
-  const [moreFailed, setMoreFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const generation = useRef(0);
-  const pendingMore = useRef(false);
+  const pendingPage = useRef(false);
 
-  const retire = useCallback((error: unknown, requestGeneration: number, pagination = false) => {
+  const retire = useCallback((error: unknown, requestGeneration: number) => {
     if (generation.current !== requestGeneration || sessionContext() !== context) return;
     const kind = classifyControlTowerFailure(error);
-    if (pagination && kind === "general") {
-      setMoreFailed(true);
-      return;
-    }
     generation.current += 1;
-    pendingMore.current = false;
-    setItems([]);
-    setCursor(null);
-    setEmptyMessage(null);
-    setLoadingMore(false);
-    setMoreFailed(false);
+    pendingPage.current = false;
+    setPage(undefined);
+    setCursorHistory([null]);
+    setPageIndex(0);
     setFailure(kind);
     setLoading(false);
   }, [context]);
 
   useEffect(() => {
     const requestGeneration = ++generation.current;
-    setItems([]);
-    setCursor(null);
+    setPage(undefined);
+    setCursorHistory([null]);
+    setPageIndex(0);
     setFailure(undefined);
-    setMoreFailed(false);
     setLoading(true);
-    pendingMore.current = false;
-    getControlTowerPage(attention).then((page) => {
+    pendingPage.current = false;
+    getControlTowerPage(attention, undefined, search || undefined).then((result) => {
       if (generation.current !== requestGeneration || sessionContext() !== context) return;
-      setItems(page.items);
-      setCursor(page.page.nextCursor);
-      setEmptyMessage(page.emptyMessage);
+      setPage(result);
       setLoading(false);
     }).catch((error: unknown) => retire(error, requestGeneration));
     return () => { generation.current = requestGeneration + 1; };
-  }, [attention, reloadKey, context, retire]);
+  }, [attention, search, reloadKey, context, retire]);
 
   function changeFilter(value?: ControlTowerAttention) {
     if (attention === value) return;
     setAttention(value);
   }
 
-  async function loadMore() {
-    if (!cursor || pendingMore.current) return;
-    const requestGeneration = generation.current;
-    const opaqueCursor = cursor;
-    pendingMore.current = true;
-    setLoadingMore(true);
-    setMoreFailed(false);
+  function submitSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const normalized = searchInput.trim();
+    if (normalized === search) {
+      setReloadKey((value) => value + 1);
+      return;
+    }
+    setSearch(normalized);
+  }
+
+  async function moveToPage(targetIndex: number, cursor: string | null) {
+    if (pendingPage.current) return;
+    const requestGeneration = ++generation.current;
+    pendingPage.current = true;
+    setFailure(undefined);
+    setLoading(true);
     try {
-      const page = await getControlTowerPage(attention, opaqueCursor);
+      const result = await getControlTowerPage(attention, cursor ?? undefined, search || undefined);
       if (generation.current !== requestGeneration || sessionContext() !== context) return;
-      setItems((current) => [...current, ...page.items.filter((item) => !current.some((old) => old.key === item.key))]);
-      setCursor(page.page.nextCursor);
+      setPage(result);
+      setPageIndex(targetIndex);
+      setCursorHistory((current) => {
+        const next = current.slice(0, targetIndex);
+        next[targetIndex] = cursor;
+        return next;
+      });
     } catch (error) {
-      retire(error, requestGeneration, true);
+      retire(error, requestGeneration);
     } finally {
       if (generation.current === requestGeneration) {
-        pendingMore.current = false;
-        setLoadingMore(false);
+        pendingPage.current = false;
+        setLoading(false);
       }
     }
   }
+
+  const items = page?.items ?? [];
+  const counts = page?.summary.attentionCounts;
+  const rangeStart = page && page.page.returned > 0 ? page.page.offset + 1 : 0;
+  const rangeEnd = page ? page.page.offset + page.page.returned : 0;
 
   return <main dir="rtl" lang="fa" className="min-h-screen bg-slate-50 p-3 sm:p-5 md:p-8" aria-busy={loading}>
     <div className="mx-auto max-w-6xl space-y-5">
@@ -238,22 +251,41 @@ function Tower({ context }: { context: string }) {
         <div><h1 className="text-2xl font-bold sm:text-3xl">برج کنترل عملیات</h1><p className="mt-1 text-sm leading-6 text-slate-600">نمای عملیاتی محموله‌های فعال و موارد نیازمند توجه</p></div>
         <Button variant="outline" disabled={loading} onClick={() => setReloadKey((value) => value + 1)}><RefreshCw className="ms-2 h-4 w-4" />به‌روزرسانی</Button>
       </header>
+      <form onSubmit={submitSearch} className="flex flex-col gap-2 rounded-xl border bg-white p-3 sm:flex-row" role="search">
+        <Input
+          aria-label="جست‌وجوی برج کنترل"
+          placeholder="شماره محموله، شماره درخواست یا نام مسئول"
+          value={searchInput}
+          maxLength={100}
+          onChange={(event) => setSearchInput(event.target.value)}
+          className="min-w-0 flex-1"
+        />
+        <div className="flex gap-2">
+          <Button type="submit" disabled={loading}>جست‌وجو</Button>
+          {(searchInput || search) && <Button type="button" variant="outline" disabled={loading} onClick={() => { setSearchInput(""); setSearch(""); }}>پاک‌کردن</Button>}
+        </div>
+      </form>
       <div role="group" aria-label="فیلتر سطح توجه" className="flex flex-wrap gap-2">{attentionFilters.map((filter) => <Button
         key={filter.value ?? "all"}
         variant={attention === filter.value ? "default" : "outline"}
         aria-pressed={attention === filter.value}
         onClick={() => changeFilter(filter.value)}
-      >{filter.label}</Button>)}</div>
+      >{filter.label}{filter.value && counts ? ` (${formatBusinessNumber(counts[filter.value], { locale: "fa-IR" })})` : ""}</Button>)}</div>
+
+      {!loading && !failure && page && <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-white p-3 text-sm" aria-live="polite">
+        <p><strong>{formatBusinessNumber(page.summary.total, { locale: "fa-IR" })}</strong> محموله مطابق</p>
+        <p>نمایش {formatBusinessNumber(rangeStart, { locale: "fa-IR" })} تا {formatBusinessNumber(rangeEnd, { locale: "fa-IR" })} از {formatBusinessNumber(page.summary.total, { locale: "fa-IR" })}</p>
+      </div>}
 
       {loading ? <LoadingState />
         : failure ? <Alert variant={failure === "unavailable" || failure === "general" ? "destructive" : "default"} role="alert"><AlertDescription className="space-y-3"><p>{errorMessages[failure]}</p><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>تلاش دوباره</Button></AlertDescription></Alert>
-        : items.length === 0 ? <p role="status" className="rounded-xl border bg-white p-6 leading-7">{emptyMessage ?? "در حال حاضر محموله فعالی با این سطح توجه برای شما نمایش داده نمی‌شود."}</p>
+        : items.length === 0 ? <p role="status" className="rounded-xl border bg-white p-6 leading-7">{page?.emptyMessage ?? "در حال حاضر محموله فعالی با این سطح توجه برای شما نمایش داده نمی‌شود."}</p>
         : <section aria-label="محموله‌های نیازمند توجه" className="space-y-4">{items.map((item) => <AttentionCard key={item.key} item={item} />)}</section>}
 
-      {!loading && !failure && cursor && <div className="space-y-2">
-        {moreFailed && <p role="alert" className="text-sm text-red-700">دریافت ادامه فهرست کامل نشد؛ موارد نمایش‌داده‌شده حفظ شدند.</p>}
-        <Button variant="outline" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? "در حال دریافت…" : moreFailed ? "تلاش دوباره" : "نمایش موارد بیشتر"}</Button>
-      </div>}
+      {!loading && !failure && page && (pageIndex > 0 || page.page.hasMore) && <nav aria-label="صفحه‌بندی برج کنترل" className="flex flex-wrap justify-between gap-2">
+        <Button variant="outline" disabled={pageIndex === 0} onClick={() => void moveToPage(pageIndex - 1, cursorHistory[pageIndex - 1] ?? null)}>صفحه قبلی</Button>
+        <Button variant="outline" disabled={!page.page.hasMore || !page.page.nextCursor} onClick={() => void moveToPage(pageIndex + 1, page.page.nextCursor)}>صفحه بعدی</Button>
+      </nav>}
     </div>
   </main>;
 }

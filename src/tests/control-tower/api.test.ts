@@ -3,7 +3,7 @@ import { request } from "@/lib/api";
 import {
   getControlTowerPage,
   normalizeControlTowerPage,
-  type ControlTowerPage,
+  type ControlTowerApiPage,
 } from "@/control-tower/api";
 
 vi.mock("@/lib/api", async (importOriginal) => ({
@@ -11,12 +11,16 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   request: vi.fn(),
 }));
 
-const rawPage: ControlTowerPage = {
+const rawPage: ControlTowerApiPage = {
   evaluatedAt: "2026-09-20T12:00:00Z",
   state: "complete",
   notice: null,
   emptyMessage: null,
-  page: { nextCursor: "opaque+/cursor==" },
+  summary: {
+    total: 31,
+    attentionCounts: { urgent: 12, followUp: 10, review: 9 },
+  },
+  page: { limit: 25, offset: 0, returned: 1, hasMore: true, nextCursor: "opaque+/cursor==" },
   items: [{
     key: "shipment-1",
     shipmentReference: "shipment-1",
@@ -65,18 +69,23 @@ describe("Control Tower feature adapter", () => {
     expect(item.progress.latestEventRecordedAt).toBe("2026-09-20T09:00:00Z");
     expect(item.progress.currentLocation).toBeNull();
     expect(item.ownerName).toBeNull();
+    expect(page.summary).toEqual({
+      total: 31,
+      attentionCounts: { urgent: 12, follow_up: 10, review: 9 },
+    });
+    expect(page.page).toMatchObject({ limit: 25, offset: 0, returned: 1, hasMore: true });
     expect(page.page.nextCursor).toBe("opaque+/cursor==");
   });
 
-  it("maps only supported attention and passes the cursor without parsing it", async () => {
+  it("maps supported attention and search and passes the cursor without parsing it", async () => {
     vi.mocked(request).mockResolvedValue({ data: rawPage });
-    await getControlTowerPage("follow_up", "opaque+/cursor==");
+    await getControlTowerPage("follow_up", "opaque+/cursor==", "REQ-42 سارا");
     expect(request).toHaveBeenCalledWith(
-      "/api/control-tower/shipments?page_size=25&attention=follow_up&cursor=opaque%2B%2Fcursor%3D%3D",
+      "/api/control-tower/shipments?page_size=25&attention=follow_up&search=REQ-42+%D8%B3%D8%A7%D8%B1%D8%A7&cursor=opaque%2B%2Fcursor%3D%3D",
     );
   });
 
-  it("does not invent a frontend-only filter", async () => {
+  it("requests the bounded default page without optional filters", async () => {
     vi.mocked(request).mockResolvedValue({ data: rawPage });
     await getControlTowerPage();
     expect(request).toHaveBeenCalledWith("/api/control-tower/shipments?page_size=25");

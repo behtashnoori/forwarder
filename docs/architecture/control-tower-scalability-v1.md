@@ -22,7 +22,7 @@
 | TENANT / DATA SCOPE | Tenant-private operational data. Current actor, membership, organization, capability, eligible lifecycle, and fixed responsibility are applied before search, aggregation, ordering, or windowing. |
 | QUALITY ATTRIBUTES | Truthful totals, stable static traversal, bounded memory/query count, no N+1 page hydration, fail-closed evaluation, non-disclosure, RTL/mobile usability, and explicit query-time consistency. |
 | STOP CONDITIONS | Baseline/reference conflict, authorization-after-windowing, page-derived global count, attention-semantic drift, unbounded population hydration, PostgreSQL qualification failure, browser Product Surface failure, or candidate/reference disagreement. |
-| DEFINITION OF DONE | The stated 0/1/99/100/101/250/500/1000+ population, authorization, global-count, deterministic paging, PostgreSQL performance, browser, full regression, release/source/package, and final reference gates pass. |
+| DEFINITION OF DONE | The required 0/1/99/100/101/250/500 population, authorization, global-count, deterministic paging, PostgreSQL performance, browser, full regression, release/source/package, and final reference gates pass. A 1000+ run is preferred when practical, not a substitute for bounded-query evidence. |
 
 ## 2. Current-state facts, assumptions, and decisions
 

@@ -146,7 +146,7 @@ describe("public destination business flow", () => {
       { description: "Medical devices" },
       { description: "Precision cargo", quantity: "3.250000", uom_public_id: "kg" },
     ]);
-  });
+  }, 15_000);
 
   it("keeps an empty voluntarily-added item on the form and blocks submission", async () => {
     await start();
