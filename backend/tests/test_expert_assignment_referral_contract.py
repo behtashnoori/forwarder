@@ -318,6 +318,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "messages",
         "has_unread",
         "latest_quote",
+        "quote_history",
     }
     assert set(detail_data["assigned_to"].keys()) == {"id", "name", "username"}
     assert detail_data["assigned_to"]["id"] == expert_contract_app["expert_id"]
@@ -383,6 +384,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
     assert detail_data["cargo_items"] == []
     assert set(detail_data["dates"].keys()) == {"pickup_date", "delivery_date"}
     assert detail_data["latest_quote"] is None
+    assert detail_data["quote_history"] == []
     assert detail_data["messages"] == []
     assert detail_data["timeline"] == []
 
@@ -856,12 +858,14 @@ def test_expert_assignment_status_quote_message_notification_contracts(
     assert latest_quote_response.status_code == 200
     assert set(latest_quote_response.get_json()["quote"].keys()) == {
         "id",
+        "public_id",
         "amount",
         "currency",
         "note",
         "valid_until",
         "created_at",
         "customer_response",
+        "customer_response_message",
         "responded_at",
         "created_by",
     }

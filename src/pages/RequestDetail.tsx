@@ -152,15 +152,30 @@ interface RequestDetail {
   has_unread: boolean;
   latest_quote?: {
     id: number;
+    public_id: string;
     amount: number;
     currency: string;
     note?: string | null;
     valid_until?: string | null;
     created_at: string;
     created_by?: string | null;
-    customer_response?: "accepted" | "declined" | null;
+    customer_response?: "accepted" | "discussion" | "declined" | null;
+    customer_response_message?: string | null;
     responded_at?: string | null;
   } | null;
+  quote_history?: Array<{
+    id: number;
+    public_id: string;
+    amount: number;
+    currency: string;
+    note?: string | null;
+    valid_until?: string | null;
+    created_at: string;
+    created_by?: string | null;
+    customer_response?: "accepted" | "discussion" | "declined" | null;
+    customer_response_message?: string | null;
+    responded_at?: string | null;
+  }>;
 }
 
 type RouteLocation = NonNullable<NonNullable<RequestDetail["route"]>["origin"]>;
@@ -777,7 +792,7 @@ const RequestDetail = () => {
                       </CardTitle>
                       <Button size="sm" variant="outline" className="gap-2" onClick={() => setQuoteModalOpen(true)}>
                         <Plus className="h-4 w-4" />
-                        {request.latest_quote ? t("requestDetail.editQuote") : t("requestDetail.setQuote")}
+                        {request.latest_quote ? t("requestDetail.revisedQuote") : t("requestDetail.setQuote")}
                       </Button>
                     </div>
                   </CardHeader>
@@ -805,6 +820,14 @@ const RequestDetail = () => {
                             <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0" />{t("requestDetail.customerAccepted")}</div>
                             <OperationalAnyPermission permissions={["operational_shipment.create_from_quote","operational_shipment.create"]}><Button asChild size="sm"><Link to={`/operations/shipments/new?source=accepted_quote&accepted_quote_id=${request.latest_quote.id}&request_ref=${encodeURIComponent(request.tracking_number)}`}>{t("operations.create")}</Link></Button></OperationalAnyPermission>
                           </div>
+                        ) : request.latest_quote.customer_response === "discussion" ? (
+                          <div className="space-y-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
+                            <div className="flex items-center gap-2 font-medium">
+                              <MessageSquare className="h-4 w-4 shrink-0" />
+                              {t("requestDetail.customerDiscussion")}
+                            </div>
+                            <p className="whitespace-pre-wrap break-words">{request.latest_quote.customer_response_message}</p>
+                          </div>
                         ) : request.latest_quote.customer_response === "declined" ? (
                           <div className="flex items-center gap-2 rounded-2xl bg-red-50 p-3 text-sm font-medium text-red-800">
                             <AlertCircle className="h-4 w-4 shrink-0" />
@@ -814,6 +837,40 @@ const RequestDetail = () => {
                           <div className="flex items-center gap-2 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">
                             <Clock className="h-4 w-4 shrink-0" />
                             {t("requestDetail.customerPending")}
+                          </div>
+                        )}
+                        {request.latest_quote.responded_at && (
+                          <p className="text-xs text-slate-500">
+                            {t("requestDetail.responseTime")}: {formatDualCalendarInstant(request.latest_quote.responded_at, locale)}
+                          </p>
+                        )}
+                        {(request.quote_history?.length ?? 0) > 1 && (
+                          <div className="space-y-2 border-t border-slate-100 pt-3">
+                            <p className="text-xs font-semibold text-slate-600">{t("requestDetail.quoteHistory")}</p>
+                            {request.quote_history?.slice(1).map((quote) => (
+                              <div key={quote.public_id} className="rounded-xl border border-slate-100 bg-white p-3 text-sm">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <span className="font-semibold text-slate-900">
+                                    {formatBusinessMoney(quote.amount, quote.currency, locale, missingValue)}
+                                  </span>
+                                  <span className="text-xs text-slate-500">{formatDualCalendarInstant(quote.created_at, locale)}</span>
+                                </div>
+                                <p className="mt-2 text-slate-600">
+                                  {quote.customer_response === "accepted"
+                                    ? t("requestDetail.customerAccepted")
+                                    : quote.customer_response === "discussion"
+                                      ? t("requestDetail.customerDiscussion")
+                                      : quote.customer_response === "declined"
+                                        ? t("requestDetail.customerDeclined")
+                                        : t("requestDetail.customerPending")}
+                                </p>
+                                {quote.customer_response_message && (
+                                  <p className="mt-2 whitespace-pre-wrap break-words rounded-lg bg-amber-50 p-2 text-amber-900">
+                                    {quote.customer_response_message}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
                           </div>
                         )}
                       </>

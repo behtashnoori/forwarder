@@ -64,10 +64,29 @@ def get_customer_workflow(customer_id: int):
 
 @customer_gamification_bp.post("/quote-response/<tracking_code>")
 def respond_to_quote(tracking_code: str):
-    """Record a customer's accept/decline on the latest quote for one of their requests."""
+    """Compatibility adapter for the historical tracking-code response route."""
     data: Dict[str, Any] = request.get_json(silent=True) or {}
     payload, status_code = customer_gamification_service.record_quote_response(
-        tracking_code, data.get("response"), request.remote_addr
+        tracking_code,
+        data.get("response"),
+        request.remote_addr,
+        message=data.get("message"),
+        customer_id=data.get("customer_id"),
+    )
+    return jsonify(payload), status_code
+
+
+@customer_gamification_bp.post("/quotes/<quote_public_id>/response")
+def respond_to_specific_quote(quote_public_id: str):
+    """Canonical Customer command for one opaque official Quote identity."""
+    data: Dict[str, Any] = request.get_json(silent=True) or {}
+    payload, status_code = customer_gamification_service.record_quote_response(
+        data.get("tracking_code"),
+        data.get("response"),
+        request.remote_addr,
+        message=data.get("message"),
+        customer_id=data.get("customer_id"),
+        quote_public_id=quote_public_id,
     )
     return jsonify(payload), status_code
 

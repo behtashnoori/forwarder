@@ -22,7 +22,7 @@ def get_latest_quote(req):
     row = (
         db.session.query(ExpertQuote)
         .filter(ExpertQuote.shipment_request_id == req.id)
-        .order_by(ExpertQuote.created_at.desc())
+        .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
         .first()
     )
     if not row:
@@ -31,7 +31,6 @@ def get_latest_quote(req):
     if row.created_by_expert:
         created_by_name = row.created_by_expert.full_name
     return {
-        "id": row.id,
         "amount": int(row.amount) if row.amount is not None else None,
         "currency": row.currency or "IRR",
         "note": row.note,

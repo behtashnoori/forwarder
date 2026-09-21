@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ArrowLeft,
   Calendar,
@@ -12,6 +13,7 @@ import {
   DollarSign,
   FileText,
   Mail,
+  MessageSquare,
   Package,
   Phone,
   RefreshCw,
@@ -34,6 +36,13 @@ import { getRequestTransportMethod } from "@/lib/transportPresentation";
 import RequestCargoSummary from "@/components/RequestCargoSummary";
 
 const CUSTOMER_PANEL_ID_KEY = "customer_panel_id";
+const TERMINAL_QUOTE_REQUEST_STATUSES = new Set([
+  "won",
+  "lost",
+  "closed",
+  "completed",
+  "cancelled",
+]);
 
 function formatDate(date: string | null | undefined, locale: string, fallback: string): string {
   return formatDualCalendarInstant(date, locale, { fallback, includeTime: false });
@@ -93,8 +102,12 @@ const CustomerRequestDetail: React.FC = () => {
   };
 
   const [respondingQuote, setRespondingQuote] = useState(false);
+  const [discussionOpen, setDiscussionOpen] = useState(false);
+  const [discussionMessage, setDiscussionMessage] = useState("");
 
-  const handleQuoteResponse = async (response: "accepted" | "declined") => {
+  const handleQuoteResponse = async (
+    response: "accepted" | "discussion" | "declined",
+  ) => {
     if (!customer || !requestId) {
       return;
     }
@@ -103,11 +116,23 @@ const CustomerRequestDetail: React.FC = () => {
       if (!requestDetail?.tracking_code) {
         throw new Error(t("customer.quoteResponseErrorTitle"));
       }
-      await submitQuoteResponse(requestDetail.tracking_code, response);
+      const quote = requestDetail.latest_quote;
+      if (!quote?.public_id) {
+        throw new Error(t("customer.quoteResponseErrorTitle"));
+      }
+      await submitQuoteResponse(
+        quote.public_id,
+        requestDetail.tracking_code,
+        requestDetail.customer_id,
+        response,
+        response === "discussion" ? discussionMessage : undefined,
+      );
       toast({
         title: t("customer.quoteResponseSuccessTitle"),
         description: t("customer.quoteResponseSuccessDesc"),
       });
+      setDiscussionMessage("");
+      setDiscussionOpen(false);
       await fetchRequestDetail();
     } catch (error) {
       toast({
@@ -414,7 +439,10 @@ const CustomerRequestDetail: React.FC = () => {
                 !quote.customer_response &&
                 !!quote.valid_until &&
                 isLocalDateBeforeToday(quote.valid_until);
-              const canRespond = !quote.customer_response && !isExpired;
+              const canRespond =
+                !quote.customer_response &&
+                !isExpired &&
+                !TERMINAL_QUOTE_REQUEST_STATUSES.has(requestDetail.status);
               return (
                 <Card className="border-border/70 bg-card/95 shadow-sm">
                   <CardHeader>
@@ -454,6 +482,20 @@ const CustomerRequestDetail: React.FC = () => {
                         {t("customer.quoteDeclined")}
                       </div>
                     )}
+                    {quote.customer_response === "discussion" && (
+                      <div className="space-y-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+                        <div className="flex items-center gap-2 font-medium">
+                          <MessageSquare className="h-4 w-4 shrink-0" />
+                          {t("customer.quoteDiscussion")}
+                        </div>
+                        <p className="whitespace-pre-wrap break-words">{quote.customer_response_message}</p>
+                      </div>
+                    )}
+                    {quote.responded_at && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("customer.quoteRespondedAt")}: {formatDualCalendarInstant(quote.responded_at, locale)}
+                      </p>
+                    )}
                     {isExpired && (
                       <div className="flex items-center gap-2 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
                         <Clock className="h-4 w-4 shrink-0" />
@@ -462,30 +504,101 @@ const CustomerRequestDetail: React.FC = () => {
                     )}
 
                     {canRespond && (
-                      <div className="flex flex-col gap-2 border-t pt-3 sm:flex-row">
-                        <Button
-                          className="flex-1 gap-2 bg-green-600 hover:bg-green-700"
-                          disabled={respondingQuote}
-                          onClick={() => handleQuoteResponse("accepted")}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                          {t("customer.quoteAccept")}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="flex-1 gap-2 border-red-200 text-red-700 hover:bg-red-50"
-                          disabled={respondingQuote}
-                          onClick={() => handleQuoteResponse("declined")}
-                        >
-                          <XCircle className="h-4 w-4" />
-                          {t("customer.quoteDecline")}
-                        </Button>
+                      <div className="space-y-3 border-t pt-3">
+                        <p className="text-sm font-medium text-foreground">{t("customer.quoteAwaitingResponse")}</p>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <Button
+                            className="gap-2 bg-green-600 hover:bg-green-700"
+                            disabled={respondingQuote}
+                            onClick={() => handleQuoteResponse("accepted")}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                            {t("customer.quoteAccept")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="gap-2 border-amber-300 text-amber-800 hover:bg-amber-50"
+                            disabled={respondingQuote}
+                            onClick={() => setDiscussionOpen((open) => !open)}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            {t("customer.quoteNeedsDiscussion")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            className="gap-2 border-red-200 text-red-700 hover:bg-red-50"
+                            disabled={respondingQuote}
+                            onClick={() => handleQuoteResponse("declined")}
+                          >
+                            <XCircle className="h-4 w-4" />
+                            {t("customer.quoteDecline")}
+                          </Button>
+                        </div>
+                        {discussionOpen && (
+                          <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+                            <label htmlFor="quote-discussion-message" className="text-sm font-medium text-foreground">
+                              {t("customer.quoteDiscussionMessage")}
+                            </label>
+                            <Textarea
+                              id="quote-discussion-message"
+                              value={discussionMessage}
+                              maxLength={500}
+                              rows={3}
+                              disabled={respondingQuote}
+                              placeholder={t("customer.quoteDiscussionPlaceholder")}
+                              onChange={(event) => setDiscussionMessage(event.target.value)}
+                            />
+                            <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                              <span>{t("customer.quoteDiscussionNotice")}</span>
+                              <span dir="ltr">{discussionMessage.length}/500</span>
+                            </div>
+                            <Button
+                              className="w-full sm:w-auto"
+                              disabled={respondingQuote || !discussionMessage.trim()}
+                              onClick={() => handleQuoteResponse("discussion")}
+                            >
+                              {t("customer.quoteSendDiscussion")}
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
                 </Card>
               );
             })()}
+
+            {(requestDetail.quote_history?.length ?? 0) > 1 && (
+              <Card className="border-border/70 bg-card/95 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-base">{t("customer.quoteHistory")}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {requestDetail.quote_history?.slice(1).map((historicalQuote) => (
+                    <div key={historicalQuote.public_id} className="rounded-lg border p-3 text-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-semibold">{formatMoney(historicalQuote.amount, historicalQuote.currency, locale)}</span>
+                        <span className="text-xs text-muted-foreground">{formatDualCalendarInstant(historicalQuote.created_at, locale)}</span>
+                      </div>
+                      <p className="mt-2 text-muted-foreground">
+                        {historicalQuote.customer_response === "accepted"
+                          ? t("customer.quoteAccepted")
+                          : historicalQuote.customer_response === "discussion"
+                            ? t("customer.quoteDiscussion")
+                            : historicalQuote.customer_response === "declined"
+                              ? t("customer.quoteDeclined")
+                              : t("customer.quoteAwaitingResponse")}
+                      </p>
+                      {historicalQuote.customer_response_message && (
+                        <p className="mt-2 whitespace-pre-wrap break-words rounded bg-amber-50 p-2 text-amber-900">
+                          {historicalQuote.customer_response_message}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
           </main>
         </div>
       </div>

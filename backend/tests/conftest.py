@@ -10,6 +10,9 @@ import os
 
 TEST_DATABASE_URI = "sqlite:///:memory:"
 
-os.environ.setdefault("TEST_DATABASE_URL", TEST_DATABASE_URI)
+# A developer shell may already carry a user-local database URL.  The default
+# suite is deliberately isolated; PostgreSQL proofs use their own explicit,
+# test-specific environment variables and application configurations.
+os.environ["TEST_DATABASE_URL"] = TEST_DATABASE_URI
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("JWT_SECRET_KEY", "test-jwt-secret-key-for-pytest-only-32-key-for-pytest-only-32")

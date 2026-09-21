@@ -894,14 +894,13 @@ export interface PublicTrackingData {
   assigned_at?: string | null;
   last_customer_touch_at?: string | null;
   latest_quote?: {
-    id: number;
     amount: number;
     currency: string;
     note?: string | null;
     valid_until?: string | null;
     created_at: string;
     created_by?: string | null;
-    customer_response?: "accepted" | "declined" | null;
+    customer_response?: QuoteResponseState | null;
     responded_at?: string | null;
   } | null;
   workflow_steps?: PublicTrackingWorkflowStep[];
@@ -1018,6 +1017,20 @@ export interface CustomerWorkflowStep {
   meta?: { warning?: string };
 }
 
+export type QuoteResponseState = "accepted" | "discussion" | "declined";
+
+export interface CustomerQuoteView {
+  public_id: string;
+  amount: number;
+  currency: string;
+  note?: string | null;
+  valid_until?: string | null;
+  created_at: string;
+  customer_response?: QuoteResponseState | null;
+  customer_response_message?: string | null;
+  responded_at?: string | null;
+}
+
 export interface CustomerWorkflowData {
   tracking_code: string | null;
   id: number;
@@ -1049,15 +1062,8 @@ export interface CustomerWorkflowData {
   total_points_earned: number;
   completed_steps: number;
   total_steps: number;
-  latest_quote?: {
-    amount: number;
-    currency: string;
-    note?: string | null;
-    valid_until?: string | null;
-    created_at: string;
-    customer_response?: "accepted" | "declined" | null;
-    responded_at?: string | null;
-  } | null;
+  latest_quote?: CustomerQuoteView | null;
+  quote_history?: CustomerQuoteView[];
 }
 
 export class CustomerWorkflowHttpError extends Error {
@@ -1085,19 +1091,28 @@ export async function fetchCustomerWorkflow(
 }
 
 export interface QuoteResponseResult {
+  code?: string;
   message?: string;
   latest_quote?: CustomerWorkflowData["latest_quote"];
 }
 
 export async function submitQuoteResponse(
+  quotePublicId: string,
   trackingCode: string,
-  response: "accepted" | "declined",
+  customerId: number,
+  response: QuoteResponseState,
+  message?: string,
 ): Promise<QuoteResponseResult> {
-  const path = `/api/customer/quote-response/${encodeURIComponent(trackingCode)}`;
+  const path = `/api/customer/quotes/${encodeURIComponent(quotePublicId)}/response`;
   const res = await fetch(`${API_BASE_URL}${buildPath(path)}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ response }),
+    body: JSON.stringify({
+      tracking_code: trackingCode,
+      customer_id: customerId,
+      response,
+      ...(message === undefined ? {} : { message }),
+    }),
   });
 
   const data = (await res.json().catch(() => ({}))) as QuoteResponseResult;
@@ -1377,13 +1392,30 @@ export function fetchExpertRequestDetail(requestId: string): Promise<
     messages: ExpertMessage[];
     latest_quote?: {
       id: number;
+      public_id: string;
       amount: number;
       currency: string;
       note?: string | null;
       valid_until?: string | null;
       created_at: string;
       created_by?: string | null;
+      customer_response?: QuoteResponseState | null;
+      customer_response_message?: string | null;
+      responded_at?: string | null;
     } | null;
+    quote_history?: Array<{
+      id: number;
+      public_id: string;
+      amount: number;
+      currency: string;
+      note?: string | null;
+      valid_until?: string | null;
+      created_at: string;
+      created_by?: string | null;
+      customer_response?: QuoteResponseState | null;
+      customer_response_message?: string | null;
+      responded_at?: string | null;
+    }>;
   }
 > {
   return request(`/api/expert/requests/${requestId}`);

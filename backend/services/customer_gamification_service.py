@@ -480,57 +480,185 @@ def get_customer_workflow_or_none(customer_id: int, request_id: int) -> Shipment
     )
 
 
-VALID_QUOTE_RESPONSES = {"accepted", "declined"}
+VALID_QUOTE_RESPONSES = {"accepted", "discussion", "declined"}
+QUOTE_DISCUSSION_MESSAGE_MAX_LENGTH = 500
+QUOTE_RESPONSE_TERMINAL_REQUEST_STATUSES = {
+    "won",
+    "lost",
+    "closed",
+    "completed",
+    "cancelled",
+}
+
+
+def quote_response_error(code: str, message: str) -> dict[str, str]:
+    """Return the stable Quote response error envelope."""
+    return {"code": code, "message": message}
+
+
+def normalize_quote_response(
+    response: Any, message: Any = None
+) -> tuple[tuple[str, str | None] | None, tuple[dict[str, str], int] | None]:
+    """Validate the intentionally small Customer response command."""
+    if response not in VALID_QUOTE_RESPONSES:
+        return None, (
+            quote_response_error("INVALID_QUOTE_RESPONSE", "پاسخ نامعتبر است"),
+            400,
+        )
+
+    if response != "discussion":
+        if message is not None and (not isinstance(message, str) or message.strip()):
+            return None, (
+                quote_response_error(
+                    "DISCUSSION_MESSAGE_NOT_ALLOWED",
+                    "پیام فقط برای گزینه نیاز به گفتگو مجاز است",
+                ),
+                400,
+            )
+        return (response, None), None
+
+    if not isinstance(message, str) or not message.strip():
+        return None, (
+            quote_response_error(
+                "DISCUSSION_MESSAGE_REQUIRED",
+                "برای نیاز به گفتگو، پیام کوتاه الزامی است",
+            ),
+            400,
+        )
+
+    normalized_message = message.strip()
+    if len(normalized_message) > QUOTE_DISCUSSION_MESSAGE_MAX_LENGTH or any(
+        ord(character) < 32 or ord(character) == 127
+        for character in normalized_message
+    ):
+        return None, (
+            quote_response_error(
+                "DISCUSSION_MESSAGE_INVALID",
+                "پیام گفتگو نامعتبر یا بیش از حد مجاز است",
+            ),
+            400,
+        )
+    return (response, normalized_message), None
 
 
 def record_quote_response(
-    tracking_code: str, response: Any, remote_addr: str | None = None
+    tracking_code: str,
+    response: Any,
+    remote_addr: str | None = None,
+    *,
+    message: Any = None,
+    customer_id: Any = None,
+    quote_public_id: str | None = None,
 ) -> tuple[dict[str, Any], int]:
-    """Record a customer's accept/decline on the latest quote for their own request."""
-    if response not in VALID_QUOTE_RESPONSES:
-        return {"message": "پاسخ نامعتبر است"}, 400
+    """Record one immutable response on one current official Quote."""
+    normalized, validation_error = normalize_quote_response(response, message)
+    if validation_error:
+        return validation_error
+    assert normalized is not None
+    response, normalized_message = normalized
 
     try:
         resolved_request_id = str(tracking_code).strip()
         if not resolved_request_id or resolved_request_id.isdigit():
             raise ValueError
     except (TypeError, ValueError):
-        return {"message": "Not found"}, 404
-        return {"message": "شناسه درخواست نامعتبر است"}, 400
+        return quote_response_error("QUOTE_NOT_FOUND", "Not found"), 404
 
-    shipment_request = (
+    resolved_customer_id: int | None = None
+    if customer_id is not None:
+        if type(customer_id) is not int:
+            return quote_response_error("QUOTE_NOT_FOUND", "Not found"), 404
+        resolved_customer_id = customer_id
+
+    request_query = (
         db.session.query(ShipmentRequest)
         .filter(ShipmentRequest.tracking_code == resolved_request_id)
-        .with_for_update()
-        .first()
     )
+    if resolved_customer_id is not None:
+        request_query = request_query.filter(
+            ShipmentRequest.gamification_customer_id == resolved_customer_id
+        )
+    shipment_request = request_query.with_for_update().first()
     if shipment_request is None:
-        return {"message": "Not found"}, 404
-        return {"message": "درخواست یافت نشد یا به این مشتری تعلق ندارد"}, 404
+        return quote_response_error("QUOTE_NOT_FOUND", "Not found"), 404
 
-    quote_row = (
+    actor_id = shipment_request.gamification_customer_id
+    if actor_id is None or db.session.get(CustomerGamification, actor_id) is None:
+        return quote_response_error("QUOTE_NOT_FOUND", "Not found"), 404
+
+    if quote_public_id is not None:
+        normalized_quote_id = str(quote_public_id).strip()
+        if not normalized_quote_id or normalized_quote_id.isdigit():
+            return quote_response_error("QUOTE_NOT_FOUND", "Not found"), 404
+        quote_row = (
+            db.session.query(ExpertQuote)
+            .filter(
+                ExpertQuote.public_id == normalized_quote_id,
+                ExpertQuote.shipment_request_id == shipment_request.id,
+            )
+            .with_for_update()
+            .first()
+        )
+    else:
+        quote_row = (
+            db.session.query(ExpertQuote)
+            .filter(ExpertQuote.shipment_request_id == shipment_request.id)
+            .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
+            .with_for_update()
+            .first()
+        )
+
+    if quote_row is None:
+        return quote_response_error("QUOTE_NOT_FOUND", "Not found"), 404
+
+    if (
+        quote_row.operational_organization_id
+        != shipment_request.operational_organization_id
+    ):
+        return quote_response_error("QUOTE_NOT_FOUND", "Not found"), 404
+
+    current_quote_id = (
         db.session.query(ExpertQuote)
         .filter(ExpertQuote.shipment_request_id == shipment_request.id)
-        .order_by(ExpertQuote.created_at.desc())
-        .with_for_update()
+        .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
+        .with_entities(ExpertQuote.id)
         .first()
     )
-    if quote_row is None:
-        return {"message": "پیشنهاد قیمتی برای این درخواست ثبت نشده است"}, 404
+    if current_quote_id is None or current_quote_id[0] != quote_row.id:
+        return quote_response_error(
+            "QUOTE_SUPERSEDED", "پیشنهاد جدیدتری برای این درخواست صادر شده است"
+        ), 409
 
-    if quote_row.customer_response == response:
+    if (
+        quote_row.customer_response == response
+        and quote_row.customer_response_message == normalized_message
+    ):
         return {
+            "code": "QUOTE_RESPONSE_REPLAYED",
             "message": "Response recorded",
             "latest_quote": build_latest_quote_payload(shipment_request),
         }, 200
     if quote_row.customer_response is not None:
-        return {"message": "شما قبلاً به این پیشنهاد پاسخ داده‌اید"}, 409
+        return quote_response_error(
+            "QUOTE_RESPONSE_CONFLICT",
+            "شما قبلاً پاسخ دیگری برای این پیشنهاد ثبت کرده‌اید",
+        ), 409
 
     if quote_row.valid_until is not None and quote_row.valid_until < date.today():
-        return {"message": "مهلت این پیشنهاد به پایان رسیده است"}, 400
+        return quote_response_error(
+            "QUOTE_EXPIRED", "مهلت این پیشنهاد به پایان رسیده است"
+        ), 400
+
+    if shipment_request.status in QUOTE_RESPONSE_TERMINAL_REQUEST_STATUSES:
+        return quote_response_error(
+            "QUOTE_RESPONSE_NOT_ALLOWED",
+            "این پیشنهاد دیگر امکان دریافت پاسخ ندارد",
+        ), 409
 
     try:
         quote_row.customer_response = response
+        quote_row.customer_response_message = normalized_message
+        quote_row.responded_by_customer_id = actor_id
         quote_row.responded_at = datetime.utcnow()
         # Surface the decision to the assigned expert on their next console visit.
         shipment_request.has_unread_for_assignee = True
@@ -540,7 +668,10 @@ def record_quote_response(
             action="customer_quote_response",
             old_status=shipment_request.status,
             new_status=shipment_request.status,
-            note=f"response={response}; quote_id={quote_row.id}; capability=tracking_code",
+            note=(
+                f"response={response}; quote_id={quote_row.id}; "
+                "capability=tracking_code"
+            ),
             ip_address=remote_addr,
             created_at=datetime.utcnow(),
         ))
@@ -551,6 +682,7 @@ def record_quote_response(
         return {"message": "خطا در ثبت پاسخ"}, 500
 
     return {
+        "code": "QUOTE_RESPONSE_RECORDED",
         "message": "پاسخ شما ثبت شد",
         "latest_quote": build_latest_quote_payload(shipment_request),
     }, 200
@@ -604,18 +736,10 @@ def build_assigned_expert_payload(shipment_request: ShipmentRequest) -> dict[str
     }
 
 
-def build_latest_quote_payload(shipment_request: ShipmentRequest) -> dict[str, Any] | None:
-    """Build the latest quote object used by the workflow response."""
-    quote_row = (
-        db.session.query(ExpertQuote)
-        .filter(ExpertQuote.shipment_request_id == shipment_request.id)
-        .order_by(ExpertQuote.created_at.desc())
-        .first()
-    )
-    if not quote_row:
-        return None
-
+def build_customer_quote_payload(quote_row: ExpertQuote) -> dict[str, Any]:
+    """Build a Customer-safe private Quote representation."""
     return {
+        "public_id": quote_row.public_id,
         "amount": int(quote_row.amount) if quote_row.amount is not None else None,
         "currency": quote_row.currency or "IRR",
         "note": quote_row.note,
@@ -626,8 +750,29 @@ def build_latest_quote_payload(shipment_request: ShipmentRequest) -> dict[str, A
             else str(quote_row.created_at)
         ),
         "customer_response": quote_row.customer_response,
+        "customer_response_message": quote_row.customer_response_message,
         "responded_at": quote_row.responded_at.isoformat() if quote_row.responded_at else None,
     }
+
+
+def list_customer_quote_history(
+    shipment_request: ShipmentRequest, limit: int = 20
+) -> list[dict[str, Any]]:
+    """Return bounded official Quote history, newest first."""
+    quote_rows = (
+        db.session.query(ExpertQuote)
+        .filter(ExpertQuote.shipment_request_id == shipment_request.id)
+        .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [build_customer_quote_payload(quote_row) for quote_row in quote_rows]
+
+
+def build_latest_quote_payload(shipment_request: ShipmentRequest) -> dict[str, Any] | None:
+    """Build the current official Quote used by the Customer workflow."""
+    history = list_customer_quote_history(shipment_request, limit=1)
+    return history[0] if history else None
 
 
 def build_customer_workflow_payload(
@@ -675,6 +820,7 @@ def build_customer_workflow_payload(
         "completed_steps": len([step for step in steps if step.is_completed]),
         "total_steps": len(all_steps),
         "latest_quote": build_latest_quote_payload(shipment_request),
+        "quote_history": list_customer_quote_history(shipment_request),
     }
 
 

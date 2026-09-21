@@ -17,6 +17,7 @@ from backend.models import CargoType, Province, RequestCargoItem, ShipmentReques
 
 
 HEAD = "20260924_request_cargo_items"
+REPOSITORY_HEAD = "20260925_quote_communication"
 PREVIOUS = "20260923_notification_lifecycle"
 CARGO_TYPE_PUBLIC_ID = "a1111111-1111-4111-8111-111111111111"
 UOM_PUBLIC_ID = "b2222222-2222-4222-8222-222222222222"
@@ -60,7 +61,7 @@ def test_request_cargo_owned_postgresql_lifecycle():
 
     config = alembic_config(url)
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
+    assert script.get_heads() == [REPOSITORY_HEAD]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
     command.upgrade(config, PREVIOUS)
     assert revision_status(url).current == (PREVIOUS,)
@@ -276,7 +277,7 @@ def test_request_cargo_owned_postgresql_lifecycle():
     with pytest.raises(RuntimeError, match="Request Cargo Item evidence exists"):
         command.downgrade(config, PREVIOUS)
     assert revision_status(url).current == (HEAD,)
-    assert revision_status(url).heads == (HEAD,)
+    assert revision_status(url).heads == (REPOSITORY_HEAD,)
     with engine.connect() as connection:
         assert connection.execute(text("SELECT COUNT(*) FROM request_cargo_item")).scalar_one() == 5
         assert connection.execute(

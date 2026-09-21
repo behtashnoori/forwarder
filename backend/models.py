@@ -981,6 +981,9 @@ class ExpertQuote(db.Model):
     __tablename__ = "expert_quote"
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid4())
+    )
     shipment_request_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("shipment_request.id"), nullable=False
     )
@@ -993,8 +996,15 @@ class ExpertQuote(db.Model):
     )
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # Customer response to the quote: NULL (no response yet), 'accepted', or 'declined'.
+    # One immutable Customer response belongs to this specific official Quote.
     customer_response = db.Column(db.String(10), nullable=True)
+    customer_response_message = db.Column(db.String(500), nullable=True)
+    responded_by_customer_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("customer_gamification.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     responded_at = db.Column(db.DateTime, nullable=True)
     operational_organization_id = db.Column(
         SQLITE_COMPAT_BIGINT,
@@ -1005,13 +1015,21 @@ class ExpertQuote(db.Model):
 
     __table_args__ = (
         db.CheckConstraint(
-            "customer_response IS NULL OR customer_response IN ('accepted', 'declined')",
+            "customer_response IS NULL OR customer_response IN ('accepted', 'discussion', 'declined')",
             name="ck_expert_quote_customer_response",
+        ),
+        db.CheckConstraint(
+            "(customer_response IS NULL AND customer_response_message IS NULL) OR "
+            "(customer_response IN ('accepted', 'declined') AND customer_response_message IS NULL) OR "
+            "(customer_response = 'discussion' AND customer_response_message IS NOT NULL "
+            "AND length(trim(customer_response_message)) BETWEEN 1 AND 500)",
+            name="ck_expert_quote_response_message",
         ),
     )
 
     shipment_request = db.relationship("ShipmentRequest", backref=db.backref("quotes", lazy="dynamic"))
     created_by_expert = db.relationship("ExpertUser", backref="created_quotes")
+    responded_by_customer = db.relationship("CustomerGamification")
 
     def __repr__(self) -> str:
         return f"<ExpertQuote id={self.id} request_id={self.shipment_request_id}>"

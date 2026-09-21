@@ -85,6 +85,7 @@ def build_request_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
         "messages": build_messages_payload(req.id),
         "has_unread": req.has_unread_for_assignee,
         "latest_quote": build_latest_quote_payload(req.id),
+        "quote_history": build_quote_history_payload(req.id),
     }
 
 
@@ -165,7 +166,7 @@ def build_latest_quote_payload(request_id: int) -> dict[str, Any] | None:
         latest_quote_row = (
             db.session.query(ExpertQuote)
             .filter(ExpertQuote.shipment_request_id == request_id)
-            .order_by(ExpertQuote.created_at.desc())
+            .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
             .first()
         )
         if latest_quote_row:
@@ -173,6 +174,23 @@ def build_latest_quote_payload(request_id: int) -> dict[str, Any] | None:
     except Exception:
         pass
     return None
+
+
+def build_quote_history_payload(
+    request_id: int, limit: int = 20
+) -> list[dict[str, Any]]:
+    """Build bounded official Quote history for an authorized Expert read."""
+    quote_rows = (
+        db.session.query(ExpertQuote)
+        .filter(ExpertQuote.shipment_request_id == request_id)
+        .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [
+        quote_service.build_quote_payload(quote, include_created_by=True)
+        for quote in quote_rows
+    ]
 
 
 def build_sla_status(req: ShipmentRequest) -> str:

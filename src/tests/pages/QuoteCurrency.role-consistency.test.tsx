@@ -20,6 +20,7 @@ vi.mock("@/lib/api", async () => {
 
 const latestQuote = {
   id: 91,
+  public_id: "quote-91",
   amount: 1234567,
   currency: "EUR",
   note: "EUR quote",

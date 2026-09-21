@@ -51,7 +51,8 @@ def create_quote_for_request(
     normalized = normalize_quote_payload(payload)
     expert_id = user["id"]
 
-    req = get_quote_target_request_or_none(request_id)
+    # Quote issue/revision serializes with Customer response on the Request row.
+    req = get_quote_target_request_or_none(request_id, for_update=True)
     if not req:
         raise QuoteNotFoundError("درخواست یافت نشد", 404)
     if not can_access_quote_request(req, user):
@@ -139,7 +140,7 @@ def get_latest_quote_for_request(request_id: int, user: dict[str, Any]) -> Exper
     return (
         db.session.query(ExpertQuote)
         .filter(ExpertQuote.shipment_request_id == request_id)
-        .order_by(ExpertQuote.created_at.desc())
+        .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
         .first()
     )
 
@@ -153,12 +154,14 @@ def build_quote_payload(quote: ExpertQuote, include_created_by: bool = False) ->
     """Build quote payloads used by current quote endpoints."""
     payload = {
         "id": quote.id,
+        "public_id": quote.public_id,
         "amount": int(quote.amount) if quote.amount is not None else None,
         "currency": quote.currency or DEFAULT_QUOTE_CURRENCY,
         "note": quote.note,
         "valid_until": quote.valid_until.isoformat() if quote.valid_until else None,
         "created_at": quote.created_at.isoformat(),
         "customer_response": quote.customer_response,
+        "customer_response_message": quote.customer_response_message,
         "responded_at": quote.responded_at.isoformat() if quote.responded_at else None,
     }
     if include_created_by:
@@ -205,9 +208,14 @@ def normalize_quote_payload(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def get_quote_target_request_or_none(request_id: int) -> ShipmentRequest | None:
+def get_quote_target_request_or_none(
+    request_id: int, *, for_update: bool = False
+) -> ShipmentRequest | None:
     """Return the target shipment request for quote operations, or None."""
-    return db.session.get(ShipmentRequest, request_id)
+    query = db.session.query(ShipmentRequest).filter(ShipmentRequest.id == request_id)
+    if for_update:
+        query = query.with_for_update()
+    return query.first()
 
 
 def can_access_quote_request(req: ShipmentRequest, user: dict[str, Any] | None) -> bool:
