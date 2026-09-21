@@ -11,6 +11,16 @@ bridge, the governed legacy Production witness, and the SQL files under `sql/`.
 The collector emits one sanitized JSON result and performs no server mutation
 other than creating that explicitly requested result file.
 
+After a successful live read-only preflight, the backup/restore-proof stage uses
+`New-ForwarderV110PreDeploymentBackup.ps1` on Production and
+`Invoke-ForwarderV110ProductionRestoreProof.ps1` only on a controlled laptop.
+The server tool supports the proven `postgresql+psycopg2://` connection shape,
+requires the exact pre-migration revision, creates one timestamped custom dump,
+and emits sanitized evidence. The laptop tool verifies the transferred bytes,
+restores only to its generated disposable PostgreSQL 18 database, rehearses the
+exact five migrations through the qualified package runtime, runs the governed
+read-only assertions, and removes the disposable database.
+
 Collector revision `r3` preserves the `r2` live-topology discovery authority
 and corrects only the selected Scheduled Task projection. It
 enumerates only plausible Forwarder Scheduled Tasks and proves one against the

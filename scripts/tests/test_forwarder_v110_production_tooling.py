@@ -270,6 +270,48 @@ def test_collector_live_topology_self_test_and_legacy_witness(tmp_path: Path) ->
     assert "PRODUCTION_MUTATION_PERFORMED=NO" in result.stdout
 
 
+def test_backup_and_restore_proof_tooling_self_tests() -> None:
+    backup = subprocess.run([
+        "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+        str(TOOLS / "New-ForwarderV110PreDeploymentBackup.ps1"),
+        "-RestoreOwner", "controlled-self-test", "-ToolingSelfTest",
+    ], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
+    assert backup.returncode == 0, backup.stdout
+    assert "SQLALCHEMY_DATABASE_URL=SUPPORTED" in backup.stdout
+    assert "BACKUP_EVIDENCE_CONTRACT=PASS" in backup.stdout
+    assert "PRODUCTION_MUTATION_PERFORMED=NO" in backup.stdout
+
+    restore = subprocess.run([
+        "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+        str(TOOLS / "Invoke-ForwarderV110ProductionRestoreProof.ps1"), "-ToolingSelfTest",
+    ], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
+    assert restore.returncode == 0, restore.stdout
+    assert "ISOLATED_RESTORE_TARGET=DISPOSABLE_ONLY" in restore.stdout
+    assert "FIVE_MIGRATION_SEQUENCE=EXACT" in restore.stdout
+    assert "PRODUCTION_ACCESS_PERFORMED=NO" in restore.stdout
+
+
+def test_backup_restore_proof_contract_is_bounded_and_secret_safe() -> None:
+    backup = (TOOLS / "New-ForwarderV110PreDeploymentBackup.ps1").read_text(encoding="utf-8")
+    restore = (TOOLS / "Invoke-ForwarderV110ProductionRestoreProof.ps1").read_text(encoding="utf-8")
+    assert "postgresql\\+psycopg2" in backup
+    assert "forwarder-v1.10.0-predeployment-backup-evidence-v2" in backup
+    assert "Forwarder-v1.10.0-PreDeploymentBackup-$stamp.json" in backup
+    assert "database_revision=$identity.AlembicRevision" in backup
+    assert "PRODUCTION_DATABASE_MUTATED=NO" in backup
+    assert "Read-Host" in restore and "-AsSecureString" in restore
+    assert "--exit-on-error --single-transaction --no-owner --no-privileges" in restore
+    assert "forwarder-production-restore-evidence-v1" in restore
+    assert "Remove-OwnedDatabase" in restore
+    assert "production_accessed=$false" in restore
+    for revision in (
+        "20260922_notification_foundation", "20260923_notification_lifecycle",
+        "20260924_request_cargo_items", "20260925_quote_communication",
+        "20260926_fixed_shipment_responsible_expert",
+    ):
+        assert revision in restore
+
+
 def test_database_bridge_uses_runtime_loader_and_never_places_secret_on_command_line(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

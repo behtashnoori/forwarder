@@ -1,10 +1,20 @@
 # Forwarder v1.10.0 Operator-Mediated Production Handoff
 
-Status: the human-run `r2` preflight proved release identity, database, ADR-047, migration compatibility, schema, configuration, storage, capacity, IIS, API, SPA, health, and readiness. Its only remaining error was the final selected-Scheduled-Task metadata projection after the correct unique candidate had already been proven. Read-only collector revision `r3` corrects only that projection and is laptop-qualified for one human rerun. No deployment is authorized.
+Status: the human-run `r3` preflight passed with zero collection errors and no Production mutation. Release/runtime/task/IIS/database/configuration/storage/capacity identity is proven. The only remaining prerequisite is a fresh custom-format Production backup plus isolated restore and Production-derived five-migration proof. The bounded procedure is [Forwarder-v1.10.0-backup-restore-proof-procedure.md](Forwarder-v1.10.0-backup-restore-proof-procedure.md). No validate-only or deployment is authorized.
 
 This handoff does not authorize deployment. Codex did not access Production. A human operator must run the read-only collector locally on the Windows Production server and return its sanitized JSON before a release authority can decide GO/NO-GO.
 
-## Phase 1 — Copy and run the read-only Production collector
+## Current operator stop point
+
+Run only Phase A of the backup/restore-proof procedure. Return the sanitized `Forwarder-v1.10.0-PreDeploymentBackup-<UTC>.json`. Keep the dump protected on the server until its metadata passes review and a protected transfer channel is explicitly approved.
+
+`LIVE_PRODUCTION_READ_ONLY_PREFLIGHT=PASS`
+
+`FRESH_BACKUP_RESTORE_PROOF=PENDING`
+
+The following collector instructions are retained as the qualified r3 rerun procedure if a new live preflight is required because state changes or evidence becomes stale.
+
+## Qualified r3 collector rerun procedure
 
 Copy the contents of:
 
