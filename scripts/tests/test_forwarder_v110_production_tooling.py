@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 from datetime import datetime, timezone
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -68,6 +69,7 @@ def create_package(root: Path) -> tuple[Path, str]:
         "mutable_data_packaged": False,
         "reference_impact": "NONE",
         "production_accessed": False,
+        "build_date": "2026-09-21T20:00:00+00:00",
     }
     content: dict[str, bytes] = {
         "release-manifest.json": (json.dumps(manifest) + "\n").encode(),
@@ -217,6 +219,85 @@ def test_collector_is_read_only_and_secret_safe() -> None:
     assert "secret_values_emitted=$false" in source
     assert "production_mutation_performed=$false" in source
     assert "DATABASE_URL']" in source and "DATABASE_URL=" not in source
+    assert "Get-ScheduledTask -TaskName $TaskName" not in source
+    assert "SCHEDULED_TASK_IDENTITY_AMBIGUOUS" in source
+    assert "LEGACY_PRODUCTION_WITNESS" in source
+    assert "ACTIVE_RELEASE_SOURCE_IDENTITY_UNPROVEN" in source
+
+
+def test_collector_live_topology_self_test_and_legacy_witness(tmp_path: Path) -> None:
+    release = tmp_path / "release-without-manifest"
+    files = {
+        "backend/probe.py": b"legacy backend witness\n",
+        "dist/index.html": b"<!doctype html><title>legacy</title>\n",
+    }
+    inventory = []
+    for relative, payload in sorted(files.items()):
+        path = release / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(payload)
+        inventory.append({"path": relative, "bytes": len(payload), "sha256": digest_bytes(payload)})
+    canonical = "".join(f"{item['path']}\0{item['sha256']}\n" for item in inventory).encode()
+    witness = tmp_path / "legacy-production-witness.json"
+    witness.write_text(json.dumps({
+        "schema": "forwarder-v1.10.0-legacy-production-witness-v1",
+        "authority": "controlled_test_fixture",
+        "source_archive_sha256": "1" * 64,
+        "candidate": "legacy-fixture",
+        "application_source_commit": "e" * 40,
+        "application_version": None,
+        "required_database_revision": BEFORE,
+        "inventory_sha256": digest_bytes(canonical),
+        "file_count": len(inventory),
+        "frontend_file_count": 1,
+        "backend_file_count": 1,
+        "files": inventory,
+    }), encoding="utf-8")
+    result = subprocess.run([
+        "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+        str(TOOLS / "Collect-ForwarderV110ProductionReadOnly.ps1"), "-ToolingSelfTest",
+        "-SelfTestReleaseRoot", str(release), "-SelfTestWitnessPath", str(witness),
+    ], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
+    assert result.returncode == 0, result.stdout
+    assert "TASK_NAME_MISMATCH_WITH_EXACT_ACTION=PASS" in result.stdout
+    assert "TASK_AMBIGUITY=FAIL_CLOSED" in result.stdout
+    assert "LEGACY_RELEASE_WITHOUT_MANIFEST=IDENTITY_PROVEN_BY_WITNESS" in result.stdout
+    assert "PRODUCTION_MUTATION_PERFORMED=NO" in result.stdout
+
+
+def test_database_bridge_uses_runtime_loader_and_never_places_secret_on_command_line(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    helper_path = TOOLS / "Invoke-ForwarderV110ReadOnlySql.py"
+    spec = importlib.util.spec_from_file_location("forwarder_v110_readonly_bridge", helper_path)
+    assert spec and spec.loader
+    bridge = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(bridge)
+    secret = "test-only-p%40ss:word"
+    env_file = tmp_path / "production.env"
+    env_file.write_text(
+        f'DATABASE_URL="postgresql+psycopg2://forwarder_user:{secret}@127.0.0.1:5432/forwarder?sslmode=require"\n',
+        encoding="utf-8",
+    )
+    psql = tmp_path / "psql.exe"
+    psql.write_bytes(b"fixture")
+    captured: dict[str, object] = {}
+
+    def fake_run(command, **kwargs):
+        captured["command"] = command
+        captured["environment"] = dict(kwargs["env"])
+        captured["input"] = kwargs["input"]
+        return subprocess.CompletedProcess(command, 0, stdout="SAFE|PASS|fixture\n", stderr="")
+
+    monkeypatch.setattr(bridge.subprocess, "run", fake_run)
+    sql = "BEGIN TRANSACTION READ ONLY;\nSELECT 1;\nCOMMIT;\n"
+    output = bridge.run_read_only_sql(environment_file=env_file, psql_path=psql, sql=sql)
+    assert output == "SAFE|PASS|fixture\n"
+    assert secret not in " ".join(captured["command"])
+    assert captured["environment"]["PGPASSWORD"] == "test-only-p@ss:word"
+    assert captured["environment"]["PGSSLMODE"] == "require"
+    assert captured["input"] == sql
+    assert secret not in output
 
 
 def test_collector_runs_in_controlled_missing_infrastructure_fixture(tmp_path: Path) -> None:
@@ -275,9 +356,44 @@ def test_transfer_bundle_builder_keeps_preflight_and_deployment_separate() -> No
     assert "READ_ONLY_NAME" in source and "DEPLOYMENT_NAME" in source
     read_only_section, deployment_section = source.split("deployment_root.mkdir()", 1)
     assert "Collect-ForwarderV110ProductionReadOnly.ps1" in read_only_section
+    assert "Invoke-ForwarderV110ReadOnlySql.py" in read_only_section
+    assert "legacy-production-witness.json" in read_only_section
     assert "Deploy-ForwarderV110Production.ps1" not in read_only_section
     assert "shutil.copy2(package" in deployment_section
     assert '"production_mutation_authorized": False' in source
+
+
+def test_read_only_only_bundle_build_does_not_rebuild_or_emit_deployment_bundle(tmp_path: Path) -> None:
+    package_root = tmp_path / "package"
+    package_root.mkdir()
+    package, _ = create_package(package_root)
+    output = tmp_path / "output"
+    result = subprocess.run([
+        "python", str(TOOLS / "build_forwarder_v110_transfer_bundles.py"),
+        "--package", str(package), "--output-root", str(output), "--read-only-only",
+    ], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
+    assert result.returncode == 0, result.stdout
+    archives = list(output.glob("Forwarder-v1.10.0-Read-Only-Preflight-Bundle-*-r2.zip"))
+    assert len(archives) == 1
+    assert not list(output.glob("*Production-Deployment-Bundle*.zip"))
+    with zipfile.ZipFile(archives[0]) as bundle:
+        names = set(bundle.namelist())
+        assert "Collect-ForwarderV110ProductionReadOnly.ps1" in names
+        assert "Invoke-ForwarderV110ReadOnlySql.py" in names
+        assert "legacy-production-witness.json" in names
+        assert "Deploy-ForwarderV110Production.ps1" not in names
+
+
+def test_checked_in_legacy_witness_is_strong_and_source_bound() -> None:
+    witness = json.loads((TOOLS / "legacy-production-witness.json").read_text(encoding="utf-8"))
+    assert witness["application_source_commit"] == "e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4"
+    assert witness["source_archive_sha256"] == "e9196ad9cc10dfeef44eba40d98e50520af4c505474211d5c23397bdf7774617"
+    assert witness["required_database_revision"] == BEFORE
+    assert witness["file_count"] == len(witness["files"]) == 323
+    assert witness["frontend_file_count"] == 13
+    assert witness["backend_file_count"] == 309
+    canonical = "".join(f"{item['path']}\0{item['sha256']}\n" for item in witness["files"]).encode()
+    assert digest_bytes(canonical) == witness["inventory_sha256"]
 
 
 def test_package_verifier_accepts_valid_and_rejects_hash_mismatch(tmp_path: Path) -> None:

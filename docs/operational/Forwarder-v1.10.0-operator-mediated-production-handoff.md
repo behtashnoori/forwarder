@@ -1,6 +1,6 @@
 # Forwarder v1.10.0 Operator-Mediated Production Handoff
 
-Status: laptop-side tooling qualified; live Production preflight not yet run.
+Status: the first live Production preflight was run and remained BLOCKED by three collector compatibility failures. Corrected read-only collector revision `r2` is laptop-qualified and awaits a human rerun. No deployment is authorized.
 
 This handoff does not authorize deployment. Codex did not access Production. A human operator must run the read-only collector locally on the Windows Production server and return its sanitized JSON before a release authority can decide GO/NO-GO.
 
@@ -8,7 +8,7 @@ This handoff does not authorize deployment. Codex did not access Production. A h
 
 Copy the contents of:
 
-`D:\1-webapp\forwarder-production-releases\Forwarder-v1.10.0-Read-Only-Preflight-Bundle-e36ee7cee157\`
+`D:\1-webapp\forwarder-production-releases\Forwarder-v1.10.0-Read-Only-Preflight-Bundle-e36ee7cee157-r2\`
 
 to this temporary, non-release directory on the Production server:
 
@@ -17,6 +17,8 @@ to this temporary, non-release directory on the Production server:
 The copied directory must contain:
 
 - `Collect-ForwarderV110ProductionReadOnly.ps1`
+- `Invoke-ForwarderV110ReadOnlySql.py`
+- `legacy-production-witness.json`
 - `BUNDLE-MANIFEST.json`
 - `BUNDLE-INVENTORY.json`
 - `README-FIRST.md`
@@ -48,7 +50,7 @@ The release authority reviews the returned collector result. GO requires exact r
 - `fixed_owner_contradiction_count=0`
 - `fixed_owner_other_unresolved_count=0`
 
-Any collector error, identity disagreement, unexpected database revision, unsafe configuration, insufficient capacity, missing backup readiness, or nonzero hard ADR-047 blocker is NO-GO.
+Any collector error, identity disagreement, unexpected database revision, unsafe configuration, insufficient capacity, or nonzero hard ADR-047 blocker is NO-GO. Collector completion does not make the old dump deployable backup evidence: a fresh deployment-window backup and valid restore proof remain separate deployment prerequisites, and their absence remains NO-GO for deployment.
 
 ## Phase 4 — Only after GO, transfer the qualified Production package
 

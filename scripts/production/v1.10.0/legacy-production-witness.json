@@ -1,0 +1,1630 @@
+{
+  "schema": "forwarder-v1.10.0-legacy-production-witness-v1",
+  "authority": "preserved_current_production_source_20260921",
+  "source_archive_sha256": "e9196ad9cc10dfeef44eba40d98e50520af4c505474211d5c23397bdf7774617",
+  "candidate": "Forwarder-Operational-Workspace-Production-CERTIFIED",
+  "application_source_commit": "e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4",
+  "application_version": null,
+  "required_database_revision": "20260921_shipment_evidence_ownership",
+  "inventory_sha256": "58baed2704b1301c749b2b194f203d6ffd68e9c8eb34536fb765c0e32297e1a5",
+  "file_count": 323,
+  "frontend_file_count": 13,
+  "backend_file_count": 309,
+  "files": [
+    {
+      "path": "backend/__init__.py",
+      "bytes": 14454,
+      "sha256": "ef0a25988bb33d48556727033f34d86a436949249dda49b357e2dd54279b913f"
+    },
+    {
+      "path": "backend/add_iran_country.py",
+      "bytes": 3148,
+      "sha256": "061c051a13541e362cd69b9113790fd4f9e1864ae508d11fb0a1132aae573ed0"
+    },
+    {
+      "path": "backend/analytics/__init__.py",
+      "bytes": 108,
+      "sha256": "ac61d695cc5f73ef37bd7250cd2d06fe66ed1324ae1bc9193ae3171617247109"
+    },
+    {
+      "path": "backend/analytics/registry.py",
+      "bytes": 11099,
+      "sha256": "b7ea6a5731eb0110b57a669ef2a390b3e136f6021a0cfddc31a09b854d92c066"
+    },
+    {
+      "path": "backend/analytics/service.py",
+      "bytes": 31575,
+      "sha256": "f8448d30f81297e4b5cdb3a4807572a8323f5d6fde75e36bc0cba1307201bf5d"
+    },
+    {
+      "path": "backend/analytics/shipment_rowset.py",
+      "bytes": 9957,
+      "sha256": "b8526a838391d01cc3ccbc31dcf68167a511c74ffb1c4a474d1fa2ecfb998b3d"
+    },
+    {
+      "path": "backend/app_logging.py",
+      "bytes": 12628,
+      "sha256": "c60bcde5e87646da6b870dd23abe48a88e42cbdae549122c32b1d5f2fe4c2870"
+    },
+    {
+      "path": "backend/assignment_engine.py",
+      "bytes": 23113,
+      "sha256": "cfcafb0a725a12931fd305545819fe5f7b722c46b348be3dfc115bb4beab53f7"
+    },
+    {
+      "path": "backend/auth.py",
+      "bytes": 7179,
+      "sha256": "aa2fcd2c10f6d611569bb65bc66729b2604d32a7d8e1f39ef2b24e399fa1729f"
+    },
+    {
+      "path": "backend/cache.py",
+      "bytes": 7319,
+      "sha256": "99473c1fe5c463ea2206186ea72e7d50ff7375c171b02fc0908245d66881e74a"
+    },
+    {
+      "path": "backend/cargo_models.py",
+      "bytes": 16388,
+      "sha256": "250b11bfc97c34971494a0591190429eeee3b006a9f66fa909bdf889e69103af"
+    },
+    {
+      "path": "backend/census_context.py",
+      "bytes": 6509,
+      "sha256": "3d28e7ad782f35fc179c2fa76db3e30629265e4b5f80046c08c63a63430cdde1"
+    },
+    {
+      "path": "backend/config.py",
+      "bytes": 16967,
+      "sha256": "38e5b7d14b6ab0d4994c92195a52247f07a3c17b24357b667d188c66c9c671f5"
+    },
+    {
+      "path": "backend/cors_config.py",
+      "bytes": 4758,
+      "sha256": "29ebfd691beddabbb412cb8361ee24bd21024be16cdf188ce8d4b5624976d748"
+    },
+    {
+      "path": "backend/create_admin.py",
+      "bytes": 4093,
+      "sha256": "5771b59e6339794ab1c01f00bd4fe1aaa72fe4d7447b602962809f23166dcec2"
+    },
+    {
+      "path": "backend/create_iran_tables.py",
+      "bytes": 1287,
+      "sha256": "b73734f88010fe98336a0d257b976450090b68c9b074769e9d2117b62f734612"
+    },
+    {
+      "path": "backend/create_iran_tables_sql.py",
+      "bytes": 3681,
+      "sha256": "1178e8ed8fd40cbe8cf1acfaf9a0e5d8002df74c1a251b73ad6a44c85b247937"
+    },
+    {
+      "path": "backend/dashboard_models.py",
+      "bytes": 3399,
+      "sha256": "4efe579b22db26bb70873026bb14778d2aa641e11393ae564ec4df011184a4b8"
+    },
+    {
+      "path": "backend/dashboard_service.py",
+      "bytes": 9290,
+      "sha256": "22d9db28af972c715d44c21beec0e20cb5cca94e1b16b4943f4ca27e54c74da0"
+    },
+    {
+      "path": "backend/dashboard_validation.py",
+      "bytes": 6052,
+      "sha256": "2cbd245d562636867881570c748f59585b639c59455d11e8c5d7b77ffbfd4def"
+    },
+    {
+      "path": "backend/document_catalog_cli.py",
+      "bytes": 3488,
+      "sha256": "68ccd39aa67f858b39459c38abd9b0f3a480131dec8e766836733e1ba7173aca"
+    },
+    {
+      "path": "backend/document_catalog_package.py",
+      "bytes": 37286,
+      "sha256": "c2fed92d02411db648a6802fff4aa72276e7e98d4f6b0bd0de126d9543ce508d"
+    },
+    {
+      "path": "backend/economics_models.py",
+      "bytes": 10483,
+      "sha256": "af133abf50b123a5c0998cd2a2f51fe53bdd4b10828051d3d2e110882db30c93"
+    },
+    {
+      "path": "backend/env.docker.example",
+      "bytes": 1229,
+      "sha256": "3fd37616cc0c81f9b6bd361ca176c29f75d87e6f8ea2b447aaf953e7797eb836"
+    },
+    {
+      "path": "backend/env.production.example",
+      "bytes": 1294,
+      "sha256": "5294769a6088397836185ea27744e4f9092f04e3b10e8dfe9cc7230bf00abc40"
+    },
+    {
+      "path": "backend/extensions.py",
+      "bytes": 257,
+      "sha256": "52f9aa40f3739d58ec8fc240527f03ebcbd9885f7fc92c27610428f509a5df21"
+    },
+    {
+      "path": "backend/external_reference_models.py",
+      "bytes": 9413,
+      "sha256": "34c73cc220d64ec70b17c96b2b07128673b2f191016e4316187277c69ffe84a1"
+    },
+    {
+      "path": "backend/external_reference_type_cli.py",
+      "bytes": 3706,
+      "sha256": "1517ed43bbae167411f69612070818d29a521a8a5d4d4b5d1211ef71ca3c378a"
+    },
+    {
+      "path": "backend/external_reference_type_package.py",
+      "bytes": 16246,
+      "sha256": "d43de92a99c6a68b9e04e4018dd1a3024db5f260ccba033b333fc16e16c0435c"
+    },
+    {
+      "path": "backend/global_logistics_point_catalog.py",
+      "bytes": 21446,
+      "sha256": "d4fb2b80c608923f60d03cbc70362b719e39d88346e02a2fc0b0115ff9f72fce"
+    },
+    {
+      "path": "backend/global_logistics_point_catalog_cli.py",
+      "bytes": 4024,
+      "sha256": "e2035ece5483087af0dcc94219b322e849c7a986a00f2977735b342b5f168fda"
+    },
+    {
+      "path": "backend/global_logistics_point_models.py",
+      "bytes": 12812,
+      "sha256": "21f7266abb97b65688bf6a2d45378bb6e6d0d1aeb1a3d113fea334b049d16348"
+    },
+    {
+      "path": "backend/logistics_network_models.py",
+      "bytes": 9916,
+      "sha256": "4b41a57a832d76e459c151eb822d8f51dcb91cbedd5cc0254d8bdc7ef16f5d21"
+    },
+    {
+      "path": "backend/logistics_point_catalog.py",
+      "bytes": 6633,
+      "sha256": "40a7abc724f6d01109c1e071d0ef51b6e89d76ee1bd5c0644039f07491f24b9b"
+    },
+    {
+      "path": "backend/logistics_point_catalog_cli.py",
+      "bytes": 2688,
+      "sha256": "a69e073294ebbfbbb6937da6e6abb507b53601f82f5ae74d2a2f03b72ae517b8"
+    },
+    {
+      "path": "backend/mdpm_models.py",
+      "bytes": 9618,
+      "sha256": "2242b05f74faa09690ee2aab383cea8249eed4142863c127df11568f2ef68fb4"
+    },
+    {
+      "path": "backend/migration_cli.py",
+      "bytes": 2846,
+      "sha256": "70d4c57e44b60a72bd04fab51223c76bf2e0f3f12231a12c87331c3bfaa56f27"
+    },
+    {
+      "path": "backend/migration_runtime.py",
+      "bytes": 3885,
+      "sha256": "fd07c3c585e3a27d7853e9237e2373e5e0cdcc40e691d07af891079081402ef0"
+    },
+    {
+      "path": "backend/migrations/__init__.py",
+      "bytes": 35,
+      "sha256": "f6edf673ec0979b24069fd3d4b402ea23f6a743efea8182ebb79c55956ac08d2"
+    },
+    {
+      "path": "backend/migrations/alembic.ini",
+      "bytes": 3386,
+      "sha256": "85020ad0ea8f44193129a1797bac74c88e9b6a49eab73e45a154d9ed711d7146"
+    },
+    {
+      "path": "backend/migrations/env.py",
+      "bytes": 3176,
+      "sha256": "8747037c7d694bbfc1dd2e5fff456db54d45f6e53080b7f4309decc17e8aaec7"
+    },
+    {
+      "path": "backend/migrations/script.py.mako",
+      "bytes": 548,
+      "sha256": "99844c15759e2b4271136e4bc98f7208e8b6a2d9373145d75f3c5069ac335404"
+    },
+    {
+      "path": "backend/migrations/version_table.py",
+      "bytes": 3199,
+      "sha256": "ce227859e4324b894204258a28829c27944518f90a2ff04edf6566fabb95f1c4"
+    },
+    {
+      "path": "backend/migrations/versions/20240917_initial_schema.py",
+      "bytes": 3734,
+      "sha256": "e75be2c0209e15807d205d804acd7e488e6956acdc099f7969939768a03720ff"
+    },
+    {
+      "path": "backend/migrations/versions/20240918_add_shipment_request_log.py",
+      "bytes": 1231,
+      "sha256": "38fa50417ed8758debc774086cb825cff2a9593688294699e5fa3d48dd946926"
+    },
+    {
+      "path": "backend/migrations/versions/20240919_add_code_to_province.py",
+      "bytes": 725,
+      "sha256": "fd50aff96ebd2bf81db19f76965a2f2c2ad1e94ce9b27e876c7daa63da55b0e6"
+    },
+    {
+      "path": "backend/migrations/versions/20240920_add_transport_method_to_shipment_request.py",
+      "bytes": 972,
+      "sha256": "40ec93dccfe45ee70c3c03f39755355e6ea365ea14fa48c1fd9cbb668a01d749"
+    },
+    {
+      "path": "backend/migrations/versions/20240922_make_transport_method_nullable.py",
+      "bytes": 1072,
+      "sha256": "107b59ff51ce2001c496d99e0cace1238519b09c55bcda6e352366d4be8162ab"
+    },
+    {
+      "path": "backend/migrations/versions/20240923_add_cargo_details.py",
+      "bytes": 1856,
+      "sha256": "dd9c1db461a77cca26ab597d499a2149ff65460da93f3a3f895c4bf9de8abb80"
+    },
+    {
+      "path": "backend/migrations/versions/20240924_add_customer_name_fields.py",
+      "bytes": 1635,
+      "sha256": "27ea2c6177b39113a37ac7ee5b258d6ba17bfca5dcdafc780115c482f6d5933a"
+    },
+    {
+      "path": "backend/migrations/versions/20240924_add_expert_console_fields.py",
+      "bytes": 8298,
+      "sha256": "58579141ab09f163f7e7f56d654db8ddbd9b2276755e79e07c05ca25a9562904"
+    },
+    {
+      "path": "backend/migrations/versions/20240924_add_expert_console_tables.py",
+      "bytes": 8679,
+      "sha256": "47788a9101bba4ef8636a6ae32cff81d974db8ccc6ee87c772eefa585d5a9b8a"
+    },
+    {
+      "path": "backend/migrations/versions/20240925_add_crm_models.py",
+      "bytes": 9082,
+      "sha256": "5d8d1019a6f6f0fa5840fab8aae74857a80b36ec2a1e7fe438401223fa087672"
+    },
+    {
+      "path": "backend/migrations/versions/20240925_add_data_integrity_constraints.py",
+      "bytes": 12244,
+      "sha256": "6e4e07aa26ea4050e0703f1bff94cb807267bccc288ffcc9845539a7d31e45bf"
+    },
+    {
+      "path": "backend/migrations/versions/20240925_add_performance_indexes.py",
+      "bytes": 8855,
+      "sha256": "a1583033332b89cd376e9604931c4d5606add795545ec2561b696aa632bb3142"
+    },
+    {
+      "path": "backend/migrations/versions/20240925_fix_customer_shipment_relationship.py",
+      "bytes": 1349,
+      "sha256": "fd6ff793b6e2a7f81200a4281fde87147afa5985e897f238618049490f1b2800"
+    },
+    {
+      "path": "backend/migrations/versions/20240926_add_password_to_expert_user.py",
+      "bytes": 1166,
+      "sha256": "6ed41e455ed80e69922f201dbe2e8fd4e9db3e1c60f49bf64fb39a4451013554"
+    },
+    {
+      "path": "backend/migrations/versions/20250101_add_crm_hierarchy_system.py",
+      "bytes": 6569,
+      "sha256": "f45870dea3265d67a6f3bd680220c70bd7dc946f18037653481739a04dbeaa10"
+    },
+    {
+      "path": "backend/migrations/versions/20250110_add_international_models.py",
+      "bytes": 1945,
+      "sha256": "a6b293791e3da789fb4dc84305771500c7a8cd9a6f279cd0ca268a75195a01db"
+    },
+    {
+      "path": "backend/migrations/versions/20250115_add_iran_entry_point_fields.py",
+      "bytes": 2522,
+      "sha256": "46e128164bff09e4fbc30dac5490145373d1274cabeaabdb0906caa4471c6915"
+    },
+    {
+      "path": "backend/migrations/versions/20250115_add_iran_ports_models.py",
+      "bytes": 3615,
+      "sha256": "3363159f82f070f3f510e271a9b92eec777e1ebfa7eeb62a5591b345ca0617e3"
+    },
+    {
+      "path": "backend/migrations/versions/20250120_add_customer_gamification_system.py",
+      "bytes": 3498,
+      "sha256": "abb83af8351e8d686ecd70fc1c01644804ea271e2c65e67cc4276261308ab9ee"
+    },
+    {
+      "path": "backend/migrations/versions/20250120_add_separate_transport_methods.py",
+      "bytes": 1752,
+      "sha256": "fa37857b00b5b2a2e599727892fc89db49082b10403e4a7a5d0f5e74fa7f3f4f"
+    },
+    {
+      "path": "backend/migrations/versions/20250220_add_tracking_code_to_shipment_request.py",
+      "bytes": 2421,
+      "sha256": "5bf9f6a8e569fccda3490c095446d518485a4ad449edc3c44062e7b3935eeae6"
+    },
+    {
+      "path": "backend/migrations/versions/20250220_merge_final_heads.py",
+      "bytes": 465,
+      "sha256": "b00f9076eba8083ee2230252df4f07e0264231e864f200f876933185bd12afb1"
+    },
+    {
+      "path": "backend/migrations/versions/20250220_merge_heads.py",
+      "bytes": 476,
+      "sha256": "2fb782d41254e42a3c4b7f7dcc42a5b7174238cc3b9b4fc0fe501b02f2a4d7ea"
+    },
+    {
+      "path": "backend/migrations/versions/20250221_add_referral_rule_tables.py",
+      "bytes": 3642,
+      "sha256": "dcbb84cc0471b6250bc520af41af86f8bfed38f750b7155bb5fed0b92eba77e2"
+    },
+    {
+      "path": "backend/migrations/versions/20250221_add_site_setting.py",
+      "bytes": 586,
+      "sha256": "060a1892738dfb0237b46e42ecab614b9f09682df6cb19a557204d0916b283ba"
+    },
+    {
+      "path": "backend/migrations/versions/20250221_auto_assign_state_and_nullable_rule.py",
+      "bytes": 1621,
+      "sha256": "067515f66b56733d8d1f6b9026ccb477212183777fdfbbda46bcf5699efaa442"
+    },
+    {
+      "path": "backend/migrations/versions/20250223_add_expert_quote.py",
+      "bytes": 1407,
+      "sha256": "5e74eaf818a75334491cd1cd4475dada36597cd07e10a5d0470db266e27d8382"
+    },
+    {
+      "path": "backend/migrations/versions/20250223_ensure_expert_quote_table.py",
+      "bytes": 2090,
+      "sha256": "9ad2f140915d8ca98b35fbbd2e6582523a76ee3c604d90e72eac15c969f7f202"
+    },
+    {
+      "path": "backend/migrations/versions/20250223_fix_expert_quote_autoincrement.py",
+      "bytes": 1708,
+      "sha256": "f0ce4fd58d5fdfd3b95eb17d4be966ad5e36fc5f1a4b1d9d0782915cd52fbc5d"
+    },
+    {
+      "path": "backend/migrations/versions/20250224_allow_quoted_shipment_status.py",
+      "bytes": 1265,
+      "sha256": "ff7a701283bcc147d937b7e45d262bd9707a5af0e1fe55e75a81e30d2a069230"
+    },
+    {
+      "path": "backend/migrations/versions/20251006_124249_add_international_shipping_fields.py",
+      "bytes": 3398,
+      "sha256": "59fa163f55d755ea0f039829aa97896b859691f45b4850acdca3643d845e994d"
+    },
+    {
+      "path": "backend/migrations/versions/20260710_add_crm_customer_link_audit.py",
+      "bytes": 3185,
+      "sha256": "42103c5f1443305ef9eff73a4f2df134d54b8b653f7b9d92976d79bc87bcc41e"
+    },
+    {
+      "path": "backend/migrations/versions/20260715_add_multi_unit_tracking.py",
+      "bytes": 4981,
+      "sha256": "2d52b3d7ee2d8d842be4bd3f9368a78ec05400020628ee8bd3ef50312ee6e6bd"
+    },
+    {
+      "path": "backend/migrations/versions/20260716_drop_invalid_shipment_update_trigger.py",
+      "bytes": 915,
+      "sha256": "dd4ffd204c2f7e39bd627a00c480c7b144f4e38380d14a081a783af7d6a342fd"
+    },
+    {
+      "path": "backend/migrations/versions/20260717_add_customs_office_domain.py",
+      "bytes": 3859,
+      "sha256": "df614717eb28d4cdc6a6ab84dac342e746b86d053e044b29d98b4f7e552f7275"
+    },
+    {
+      "path": "backend/migrations/versions/20260718_add_token_revocation.py",
+      "bytes": 1930,
+      "sha256": "8acbd2a8b863c89c42610692d7916bb68a9c6fddb2b85940eb74bafb89d69736"
+    },
+    {
+      "path": "backend/migrations/versions/20260719_add_auth_sessions.py",
+      "bytes": 3438,
+      "sha256": "1ae883bf5771e901dc16f13e96f1dc55f53e9b5b0c1bd64e9fa53ebe388ef1c1"
+    },
+    {
+      "path": "backend/migrations/versions/20260720_expand_reference_data_identity.py",
+      "bytes": 13191,
+      "sha256": "5693ab3c4284894c58af9b46717f4d0eccbbc356f324a1d62f2b100b7100d133"
+    },
+    {
+      "path": "backend/migrations/versions/20260725_add_tracking_location_reference.py",
+      "bytes": 3683,
+      "sha256": "f8174a5e838b8c49b10f5749ad8c314ca2dbb61d24829b981af8ff6db8a45a56"
+    },
+    {
+      "path": "backend/migrations/versions/20260726_seed_iran_tracking_reference.py",
+      "bytes": 9607,
+      "sha256": "b93895459312c30ab6feac1070d74ffd902a11766c6911f65bb091c1585ed978"
+    },
+    {
+      "path": "backend/migrations/versions/20260727_add_iran_destination_point.py",
+      "bytes": 1676,
+      "sha256": "03fbd3b5c3aa05e2d39347763f72d054310c9b3cbd970cc7a266bf3c888c1231"
+    },
+    {
+      "path": "backend/migrations/versions/20260728_add_quote_customer_response.py",
+      "bytes": 1188,
+      "sha256": "c1e1dbc4abf774739a157defa7d34c7e15650873abbd8687cf2b69eb9c144f89"
+    },
+    {
+      "path": "backend/migrations/versions/20260729_add_operational_vertical_slice.py",
+      "bytes": 17947,
+      "sha256": "0840b80062cd1d60617113e78a2e1bb7dcd6b9287e62442d5040f6f0aa8e1136"
+    },
+    {
+      "path": "backend/migrations/versions/20260730_add_multileg_route_orchestration.py",
+      "bytes": 20809,
+      "sha256": "94d2560b9ff138869a82168623bbc95bf4caed1a4f880a5637dda515e0735fcd"
+    },
+    {
+      "path": "backend/migrations/versions/20260801_add_route_exception_reconciliation_state.py",
+      "bytes": 1984,
+      "sha256": "e265a018ffe57d05b91e576834568a2d4e44a34f91a469e5a56628e67a405ef0"
+    },
+    {
+      "path": "backend/migrations/versions/20260802_add_expert_service_scope.py",
+      "bytes": 813,
+      "sha256": "a23fe6f381755fc4851620fa610102c5a5ab4ca8fb7518d9ee6947ab2feafd7e"
+    },
+    {
+      "path": "backend/migrations/versions/20260803_add_expert_sla_minutes.py",
+      "bytes": 814,
+      "sha256": "7f866fb7e3bcf8aaef862f936192d4dcaf2c3548ea16b2ca0b234204bfa02767"
+    },
+    {
+      "path": "backend/migrations/versions/20260804_case_documents.py",
+      "bytes": 6813,
+      "sha256": "23130ee021c68345676f1a56efd5e63f6cbe8351511519dcc14e4beb3b08cdbe"
+    },
+    {
+      "path": "backend/migrations/versions/20260805_add_project_aggregate_foundation.py",
+      "bytes": 5561,
+      "sha256": "a41629296886f2137579eefe9ab8386a114c165a3fdaa5c502a288c231011cf8"
+    },
+    {
+      "path": "backend/migrations/versions/20260806_execution_unit_vertical_slice.py",
+      "bytes": 6245,
+      "sha256": "75a49876edfd49cbdfb83a043a2fc8edee480bfce9d935e7104c7240908d3abc"
+    },
+    {
+      "path": "backend/migrations/versions/20260807_master_data_foundation.py",
+      "bytes": 3209,
+      "sha256": "f9e803e6d22a38e78febe4348beb48bc7962e540771d1d0a7a21dc85485b218d"
+    },
+    {
+      "path": "backend/migrations/versions/20260808_reference_data_seed_run.py",
+      "bytes": 2709,
+      "sha256": "38cbe3e972649b2095a30767caeb824eac8de9415436d8a776703809fd841bd8"
+    },
+    {
+      "path": "backend/migrations/versions/20260809_cargo_catalog_items.py",
+      "bytes": 8379,
+      "sha256": "4efbc12a8de8d5933d12171abb8da9debeb9555b19bec8f41700ed016e66acac"
+    },
+    {
+      "path": "backend/migrations/versions/20260810_logistics_network.py",
+      "bytes": 8409,
+      "sha256": "8c9b271825610eb69f03f80c911c8435a54e11059beea9e46880fcae259f6c45"
+    },
+    {
+      "path": "backend/migrations/versions/20260811_project_configuration.py",
+      "bytes": 9807,
+      "sha256": "d5ca09c52feb76b8e69cf322334af1cc3753646309b5cfc512ba56624334cd8c"
+    },
+    {
+      "path": "backend/migrations/versions/20260812_operational_execution.py",
+      "bytes": 18479,
+      "sha256": "94d8053661b7103c4fcbf8abd1bd39867c269233f0d345075c5b190a50d83b60"
+    },
+    {
+      "path": "backend/migrations/versions/20260813_mdpm_document_readiness.py",
+      "bytes": 12371,
+      "sha256": "0b91a35aa9be6a472a21363a307022252c60a2ae3a0a0d85fbf4ba549cebb54e"
+    },
+    {
+      "path": "backend/migrations/versions/20260814_oip_situations.py",
+      "bytes": 7337,
+      "sha256": "f385924da4ed7155fb920fbd753839a91f2710caf5273030fe04606bd34010ed"
+    },
+    {
+      "path": "backend/migrations/versions/20260815_oip_threshold_policy.py",
+      "bytes": 2811,
+      "sha256": "0a73e51df3b274098018b001570993568377c20a0a91f231edb565c86748c003"
+    },
+    {
+      "path": "backend/migrations/versions/20260816_oip_projection_health.py",
+      "bytes": 3725,
+      "sha256": "4166f6657be221a15fea9d6b9f10e4ea50c2011cacaa00f9ae5a873e359b2fed"
+    },
+    {
+      "path": "backend/migrations/versions/20260817_shipment_economics_core.py",
+      "bytes": 8097,
+      "sha256": "6a6bfe491a9f368c4fe30f6448f0695d2afbfd87fd8aea5785b687cc832ca3ce"
+    },
+    {
+      "path": "backend/migrations/versions/20260818_immutable_fx_provenance.py",
+      "bytes": 2360,
+      "sha256": "210da60220aba9e17a1e67808e16da9cce25eb1a7cba7145472295c923c3e48b"
+    },
+    {
+      "path": "backend/migrations/versions/20260819_v191_acceptance_corrections.py",
+      "bytes": 8363,
+      "sha256": "e57efc6ed69d3bfdd8fe895ee9a9703332f9aebf8c48f733fd6c42328f017508"
+    },
+    {
+      "path": "backend/migrations/versions/20260820_mt1c_quarantine_runtime.py",
+      "bytes": 2381,
+      "sha256": "309068e783dde35ffb13800bff543f8f02514b9a74303cbe1fd22c2ec84bae91"
+    },
+    {
+      "path": "backend/migrations/versions/20260821_mt1d_canonical_census.py",
+      "bytes": 11070,
+      "sha256": "57ff00818f37aa73a352733633e9441fa466dc2b19d77bfbe4e7b3812a3796d4"
+    },
+    {
+      "path": "backend/migrations/versions/20260822_mt1c1_census_fence.py",
+      "bytes": 2523,
+      "sha256": "0c55cf8c6bc846e721698954eb3ca85b00c2315139a042130a4f116d0d355314"
+    },
+    {
+      "path": "backend/migrations/versions/20260823_mt1_ownership_expand.py",
+      "bytes": 7323,
+      "sha256": "991409e23eac5364209438ea4045d946c2267dfb659194462d716cffd7a8b574"
+    },
+    {
+      "path": "backend/migrations/versions/20260824_mt1_graph.py",
+      "bytes": 4239,
+      "sha256": "96be39653c5da1a4a8a9aa5dd1f9154ec2da331607884e7f286f2e91c30eb839"
+    },
+    {
+      "path": "backend/migrations/versions/20260825_admin_multitenant.py",
+      "bytes": 2492,
+      "sha256": "d9c2ce0b7a3d4dd6e0ec2c56839a1762da9aa558b0035703bc117b2d23cfd887"
+    },
+    {
+      "path": "backend/migrations/versions/20260826_organization_document_policy.py",
+      "bytes": 4943,
+      "sha256": "0199829c61767962c2db8aac0ada89b807d239a96d89503d1061cf000262438f"
+    },
+    {
+      "path": "backend/migrations/versions/20260827_organization_hostname_routing.py",
+      "bytes": 2327,
+      "sha256": "c58adb48474c2bb2df078d16c51048f38df67604539455a0cc6c30b96e827201"
+    },
+    {
+      "path": "backend/migrations/versions/20260828_referral_state_compatibility.py",
+      "bytes": 1163,
+      "sha256": "73ebadf5649ab766b1482418a7cb9a3aefa43f123b2694abdf506817d2777b5c"
+    },
+    {
+      "path": "backend/migrations/versions/20260829_cargo_traceability_index.py",
+      "bytes": 655,
+      "sha256": "0679347fb75b05a183b66dae7b9b682fc7f084042982fa2b4a9ec1ba5654ef97"
+    },
+    {
+      "path": "backend/migrations/versions/20260830_logistics_point_tracking_convergence.py",
+      "bytes": 2248,
+      "sha256": "b30d04c7d690e33d5b298cdaf4532ea7dedecdf8ce095e55958692f9e5dfebbb"
+    },
+    {
+      "path": "backend/migrations/versions/20260831_document_catalog_metadata.py",
+      "bytes": 14393,
+      "sha256": "8c852cff7cf4495b46da05bc280d8a514e4daf6a7ec4f155fdc7aa861bbaf405"
+    },
+    {
+      "path": "backend/migrations/versions/20260901_document_catalog_runs.py",
+      "bytes": 3095,
+      "sha256": "88404b450401428dd93142614d9a4fa397b1bc6cb439d061b3a6b26308d657e6"
+    },
+    {
+      "path": "backend/migrations/versions/20260902_shipment_request_public_id.py",
+      "bytes": 2817,
+      "sha256": "4b1fc00ac74d097ca63147e67d3a81f63eebe690de60bdac6ef01e97238d5405"
+    },
+    {
+      "path": "backend/migrations/versions/20260903_external_operational_references.py",
+      "bytes": 11065,
+      "sha256": "f54326d658f3f13a9b8801800b3dacd5b6b5e09d5725c0c63cf4d09e8c53082f"
+    },
+    {
+      "path": "backend/migrations/versions/20260904_global_logistics_point_foundation.py",
+      "bytes": 10723,
+      "sha256": "dca874f146290b520986431956f5494c86f557f7f173a54760cf2d51a544e200"
+    },
+    {
+      "path": "backend/migrations/versions/20260905_global_logistics_point_adoption.py",
+      "bytes": 3284,
+      "sha256": "abc4a06f8830f4bec34fd5a83ff4e2f470d3ae66cc71ed3d10e67b9971125b36"
+    },
+    {
+      "path": "backend/migrations/versions/20260906_global_logistics_point_materialization.py",
+      "bytes": 2160,
+      "sha256": "8ccee25bd23c10c9a39b9f3099886db2ce9984f0eaa9b43d3086b5967bd97595"
+    },
+    {
+      "path": "backend/migrations/versions/20260907_direct_shipment_responsibility.py",
+      "bytes": 1437,
+      "sha256": "d8c356ac84947f70e902ce5f2947018f3df0878d32900b00ec466e1d17739b73"
+    },
+    {
+      "path": "backend/migrations/versions/20260908_governed_international_geography.py",
+      "bytes": 1819,
+      "sha256": "d8010b4acb3457f8f28c942aac6cbe48c2ce9bc7f68680e25ad2d52568a73db5"
+    },
+    {
+      "path": "backend/migrations/versions/20260909_cargo_transport_allocation.py",
+      "bytes": 4878,
+      "sha256": "47a985e9fa010a3008aea5a9b85bd45888375c28ecc39c459d09c2a0dfbb6242"
+    },
+    {
+      "path": "backend/migrations/versions/20260910_route_leg_logistics_points.py",
+      "bytes": 2401,
+      "sha256": "84ea8ba580efff574998ffebeb4cd4cff6973d39e309581e20e271d698e3a949"
+    },
+    {
+      "path": "backend/migrations/versions/20260911_project_cargo_preference.py",
+      "bytes": 3460,
+      "sha256": "8dc2ae405a2426e4b3a30bdea8d992b507b361966ff777a8d7c2fe512737a5d8"
+    },
+    {
+      "path": "backend/migrations/versions/20260912_execution_authority.py",
+      "bytes": 5028,
+      "sha256": "87374b4410ad10e37e4a279a9c2f38c85a74665079bc8d981e2f64c719acb6aa"
+    },
+    {
+      "path": "backend/migrations/versions/20260913_dashboard_persistence.py",
+      "bytes": 3129,
+      "sha256": "a409fdb5382bfe4a3ba1d5379e8e295d7eea4128bc9581dd338ce4cd0402cd85"
+    },
+    {
+      "path": "backend/migrations/versions/20260914_saved_view_persistence.py",
+      "bytes": 3106,
+      "sha256": "9c3be4f319040aad015564c90b10f725accc01df4ef05e71bca98ee71b3d9bcf"
+    },
+    {
+      "path": "backend/migrations/versions/20260915_project_access_foundation.py",
+      "bytes": 1767,
+      "sha256": "4d62e056b2cb2338aee626d9ad2718cebbe049c129a741fe4280c3d730534750"
+    },
+    {
+      "path": "backend/migrations/versions/20260916_personal_dashboard_permissions.py",
+      "bytes": 2897,
+      "sha256": "d013dc8714afa0d382e0e729bd1204e3d9eec703752145a0bc98e482d7bef140"
+    },
+    {
+      "path": "backend/migrations/versions/20260917_shared_transport_execution.py",
+      "bytes": 6155,
+      "sha256": "b8459aba06d51a27060aef105f55ed12b2c4f19836c8e1c73358297e08527b7e"
+    },
+    {
+      "path": "backend/migrations/versions/20260918_customer_carrier_role.py",
+      "bytes": 2268,
+      "sha256": "1b78502f402675f1075f442137c4cda56ebc39a860e8206ede6b1271dd5f994d"
+    },
+    {
+      "path": "backend/migrations/versions/20260919_operational_event_location_evidence.py",
+      "bytes": 2236,
+      "sha256": "2c03a0700e3cf36daf1521b679787d0abb1498a268a22837af06f0b3aee0ef9b"
+    },
+    {
+      "path": "backend/migrations/versions/20260920_legal_customer_nullable_contact_names.py",
+      "bytes": 1286,
+      "sha256": "b4fd8d39653ccea4a48856394ea7187f3c32f205d98a3cb3c4272bd9c1bd9bb7"
+    },
+    {
+      "path": "backend/migrations/versions/20260921_shipment_evidence_ownership.py",
+      "bytes": 2448,
+      "sha256": "63263fe4e6cb027d162e94c082a6e1fb48575595a6787d555c7f2e1ea0a70b84"
+    },
+    {
+      "path": "backend/migrations/versions/__init__.py",
+      "bytes": 35,
+      "sha256": "9b50a5d947a803c5c9e863895e328c5315db863ffe27a3f214a1ecfe643ccfdb"
+    },
+    {
+      "path": "backend/migrations/versions/security_credential_remediation.py",
+      "bytes": 1246,
+      "sha256": "49e068b9109f4ecad2904dd9f55c561f44650e0a1526f38a04cc961f1e2d4b27"
+    },
+    {
+      "path": "backend/milestone_type_catalog.py",
+      "bytes": 4964,
+      "sha256": "1cc7b0c1ab309bb34dfb2755a38f51eaeb034bc29c56a1f7ed355cccdadda221"
+    },
+    {
+      "path": "backend/milestone_type_catalog_cli.py",
+      "bytes": 2679,
+      "sha256": "874db2927da2f40ea0308f7b32853a52df3ae133d470b9726d87a4c855a03686"
+    },
+    {
+      "path": "backend/milestone_upgrade_bridge.py",
+      "bytes": 3906,
+      "sha256": "e4fd03ea781ffcf2410557d91f35f5451543fb032a5a3ab36dcac064f228ea58"
+    },
+    {
+      "path": "backend/models.py",
+      "bytes": 117405,
+      "sha256": "3f2d81880b65aaea9cad85d9b69f77265383d11f8478521cf95807766bcf7a3d"
+    },
+    {
+      "path": "backend/models_expert_console.py",
+      "bytes": 1763,
+      "sha256": "c6b6a83a656b7efef28d683444cae0ae0d95f9b44dd15998a3ce2131dced9dc9"
+    },
+    {
+      "path": "backend/monitoring.py",
+      "bytes": 22686,
+      "sha256": "0e24c3b300b58e65e5e99469b6e314aa8783a97bac8939f6554a0cb49579ea3a"
+    },
+    {
+      "path": "backend/oip_models.py",
+      "bytes": 12191,
+      "sha256": "200fe8cb7b7b2cb9fcd1c36ec8cc2d0fe0fa7a272a6962a66a57c7ae7321a3b9"
+    },
+    {
+      "path": "backend/operational_cli.py",
+      "bytes": 26454,
+      "sha256": "08b1fb2176a15086f46adb795f231de2b88ca3a61594e046da6638abf8b8ae4f"
+    },
+    {
+      "path": "backend/operational_models.py",
+      "bytes": 56620,
+      "sha256": "686beac07698b8da505e2ee92ea909113a6892ddac2e086c352c12d138678e71"
+    },
+    {
+      "path": "backend/ownership_census.py",
+      "bytes": 31584,
+      "sha256": "a64999153a3a105e4b07fa2bc28ae0747f2e5214602865a1c545173c72dda7a0"
+    },
+    {
+      "path": "backend/personal_analytics_uat.py",
+      "bytes": 10533,
+      "sha256": "0f757da4f4c6f54b996efbf08e6085ff169c2df5325aa5cdaeb81115dbad6742"
+    },
+    {
+      "path": "backend/project_configuration_models.py",
+      "bytes": 8298,
+      "sha256": "2a36daf78c15d707b5dd034fc23553a6dfb8db2188c6f99ed667dd7b36ff5c45"
+    },
+    {
+      "path": "backend/quarantine.py",
+      "bytes": 31432,
+      "sha256": "20af696f27804dc566276b5a0d203db17834e6d0d77dab737b5827a554003aa0"
+    },
+    {
+      "path": "backend/reference_data/catalog-v1.0.0.json",
+      "bytes": 12405,
+      "sha256": "4760c77acfb4ce42b060dd46f9797bd46026f879236298d8eb558a56133e2aaa"
+    },
+    {
+      "path": "backend/reference_data/documents/document-catalog-international-v1.0.0.json",
+      "bytes": 83321,
+      "sha256": "d24cc92c1dcbf0f3704369f085d7a555cc56fd0ad11a7f14a42e5d4bdfa3e446"
+    },
+    {
+      "path": "backend/reference_data/documents/schema-v1.json",
+      "bytes": 6452,
+      "sha256": "bc2fa3daa2a0b59bbf874d7839721c2238ff2b8d44f7f1280afc93a40082d3f6"
+    },
+    {
+      "path": "backend/reference_data/external_references/external-reference-types-v1.0.0.json",
+      "bytes": 2428,
+      "sha256": "82dcb9a79f1a67efa59fa7bc3617c42cd8b9d7535c62f7fefff31f62e353d790"
+    },
+    {
+      "path": "backend/reference_data/external_references/schema-v1.json",
+      "bytes": 2649,
+      "sha256": "107d7c1b3d2509021b0fad4e4e3eb641530748f41569d738ff844da315cf5270"
+    },
+    {
+      "path": "backend/reference_data/global-logistics-points-china-iran-v1.0.0-approved-baseline.json",
+      "bytes": 21959,
+      "sha256": "245ebce6d262c021c03b79269da09c0c94f019f571dabd6576c5e0de4d4e6fab"
+    },
+    {
+      "path": "backend/reference_data/global-logistics-points-china-iran-v1.0.0.json",
+      "bytes": 93386,
+      "sha256": "a75e1d780ed2237322c349394d71898a622091e6173c12a05ba14166cc115fc5"
+    },
+    {
+      "path": "backend/reference_data/international-geography-v1.json",
+      "bytes": 2896,
+      "sha256": "77e2ec97e36adcf4651440785520647a146743bf2b9cf1fad83263b0218b5e26"
+    },
+    {
+      "path": "backend/reference_data/logistics-point-types-v1.0.0.json",
+      "bytes": 2342,
+      "sha256": "ae0de97dcaff024043a2bf579e2c24e19f2ff5880abf0564adaebf50a4c7b679"
+    },
+    {
+      "path": "backend/reference_data/milestone-types-v1.0.0.json",
+      "bytes": 2578,
+      "sha256": "ea0658b846497ae4e594e2d313d339f357e3a58d3ce3777e70db89c178234491"
+    },
+    {
+      "path": "backend/reference_data_catalog.py",
+      "bytes": 14238,
+      "sha256": "c2ad6425f63af1895b54a0b0a5f34ac3ee7e2539678c89b0031ae575c403aded"
+    },
+    {
+      "path": "backend/reference_data_cli.py",
+      "bytes": 3612,
+      "sha256": "fd4d9fe46ee8ea8a5c6f9c4ef30c49b577d4bea36a3172270f2de9dce82ad13f"
+    },
+    {
+      "path": "backend/referral_engine.py",
+      "bytes": 25772,
+      "sha256": "a8d79c0391237e00fbb0bd117b995b156e24a8e2ce4a137c706138a02a486ebe"
+    },
+    {
+      "path": "backend/requirements.txt",
+      "bytes": 327,
+      "sha256": "9dc14b76a6825c64e6151dbfcf4121f1d9ce52e8c73c45192f510203a2b10a95"
+    },
+    {
+      "path": "backend/resource_identity.py",
+      "bytes": 7692,
+      "sha256": "09ff1985276f11770c8fa4a38d580203b49cc388fe68e02979e5f5ab269cab61"
+    },
+    {
+      "path": "backend/routes/__init__.py",
+      "bytes": 3176,
+      "sha256": "5818bd14b526df26d076eeb0e6ddb7e85d2ea384145a0ef90a10b6b608927a98"
+    },
+    {
+      "path": "backend/routes/admin_panel.py",
+      "bytes": 13580,
+      "sha256": "018bf2261b01708fc8871cfeff2db64d8932606884724d00f6168bafde114261"
+    },
+    {
+      "path": "backend/routes/analytics.py",
+      "bytes": 1740,
+      "sha256": "14204cd30ccf5b070f70631763adf40b681bf5ab971b5656a830e4c65577e0cd"
+    },
+    {
+      "path": "backend/routes/cargo.py",
+      "bytes": 25719,
+      "sha256": "835fc68f6bac056f214a7f2db5ff0b19763e45f27d229c4040351b8ac3032e95"
+    },
+    {
+      "path": "backend/routes/case_documents.py",
+      "bytes": 19926,
+      "sha256": "dc15f86e0d82c6954580b0b8fe1d57260bb67cee1e6bed7f30c4e14fbf427554"
+    },
+    {
+      "path": "backend/routes/crm.py",
+      "bytes": 13228,
+      "sha256": "7ecb320364f061ff2ccc7ae9a6d953c06cc6e356338c099c6fb38c48395ebbc9"
+    },
+    {
+      "path": "backend/routes/customer_gamification.py",
+      "bytes": 3832,
+      "sha256": "ed266fc6c99b7d46b4e9cdc23871bd76916dee1778cc303af455f9fc3dda66a9"
+    },
+    {
+      "path": "backend/routes/customs.py",
+      "bytes": 3426,
+      "sha256": "08c82036485a1f78b8e346d079364d5735bf0929b7260d5f4b23e3afb5b082d1"
+    },
+    {
+      "path": "backend/routes/dashboards.py",
+      "bytes": 1927,
+      "sha256": "ddbfe9a9d6e1ea6012ac9a50f1bcc8021aba98ad04416c21d4acfd99643512a8"
+    },
+    {
+      "path": "backend/routes/document_readiness.py",
+      "bytes": 5347,
+      "sha256": "b18e700cc4ed43fe13836c14a15e8ba627f420ce210efbd6e31d2aa7e9eb7069"
+    },
+    {
+      "path": "backend/routes/economics.py",
+      "bytes": 3388,
+      "sha256": "4dbe42ef6cd3a8a17991a166dd254ae0a80339a10c7772d7557a2ff4ced94dda"
+    },
+    {
+      "path": "backend/routes/execution_units.py",
+      "bytes": 9852,
+      "sha256": "17e5ee513de50612c5d99e718ab4e68edb6486edc1e4160f120bfe5e7cae0858"
+    },
+    {
+      "path": "backend/routes/expert_console.py",
+      "bytes": 33776,
+      "sha256": "61c2ab47006af0a99f9c9f17c1cfec1d67669787b3b94d7615baa2e38ce44813"
+    },
+    {
+      "path": "backend/routes/global_logistics_point_adoptions.py",
+      "bytes": 4299,
+      "sha256": "074084779fae6662d0a5886cd1e685082c2768d76c17f6210b8405b84d83817e"
+    },
+    {
+      "path": "backend/routes/global_logistics_points.py",
+      "bytes": 3145,
+      "sha256": "b789b04ef48cec2219fed9326d0e358f957b94b5d6015fc3a1070f11cd41bcd5"
+    },
+    {
+      "path": "backend/routes/health.py",
+      "bytes": 1612,
+      "sha256": "ec0a3f7271f02869d9dd6c0332826b77d4458df834626b84d43cc7b10c83548f"
+    },
+    {
+      "path": "backend/routes/location_admin.py",
+      "bytes": 5381,
+      "sha256": "54a993391533fbdc943e661b3023414c4c799324eaad57e15a5e44af51474552"
+    },
+    {
+      "path": "backend/routes/locations.py",
+      "bytes": 11950,
+      "sha256": "a4e28e416b7b9105bee4674a1a758c469495716e4389fcee468584da29e3bf96"
+    },
+    {
+      "path": "backend/routes/logistics_network.py",
+      "bytes": 9808,
+      "sha256": "ab38d6fd09a885b91a43ca93ccf7661106fc3ded4021c428160eb94a91d72df2"
+    },
+    {
+      "path": "backend/routes/master_data.py",
+      "bytes": 3950,
+      "sha256": "dc996a3b9418e6fc25da7eabb7ab25a733a458e2b6bfff422c110b01a435c3fd"
+    },
+    {
+      "path": "backend/routes/monitoring.py",
+      "bytes": 5697,
+      "sha256": "70d876a51c338c446e803d8a875076a0456294a6c7890dd5f1947954ead29d34"
+    },
+    {
+      "path": "backend/routes/oip.py",
+      "bytes": 2574,
+      "sha256": "fbb0d7f5d26be036107a1ad4a9fc700bc18b52cb906c328cd48a57311974a485"
+    },
+    {
+      "path": "backend/routes/operational_execution.py",
+      "bytes": 9646,
+      "sha256": "3824827426c804fd0d541241e9ebdec6ea28830ecdcc61268af36915f2e6b8b7"
+    },
+    {
+      "path": "backend/routes/operations.py",
+      "bytes": 32923,
+      "sha256": "0d017027b3190f7a85dad517a47614c43423e34f8236e648b6aecdc51a04ae12"
+    },
+    {
+      "path": "backend/routes/project_access.py",
+      "bytes": 1208,
+      "sha256": "82456b256fde2455092078075ea885b528c092fff1cde28d7be45c83720fe518"
+    },
+    {
+      "path": "backend/routes/project_configuration.py",
+      "bytes": 13508,
+      "sha256": "4831e8a3f678fc41382288457be0e04b89cb789da2a557c198a6f9bdcfe5be16"
+    },
+    {
+      "path": "backend/routes/public_tracking.py",
+      "bytes": 1997,
+      "sha256": "64d89bec09f08d4296a38d7cfaa4d68288f64845ca5a60697e750d55258306e0"
+    },
+    {
+      "path": "backend/routes/saved_views.py",
+      "bytes": 2349,
+      "sha256": "a596abf689e9c2c8fc282e448593ea2d4923915002f2cd119bd59b4eca7a6fa9"
+    },
+    {
+      "path": "backend/routes/shipment_request.py",
+      "bytes": 2376,
+      "sha256": "e9771814bce2d0b012489a102861cfebe0c199331b27d8955a829e8009fc89c1"
+    },
+    {
+      "path": "backend/routes/site_settings.py",
+      "bytes": 2646,
+      "sha256": "a6181ff6268533f1eea42be5f6dd2ab750a551db8c243d6e90a532aec879f1fb"
+    },
+    {
+      "path": "backend/routes/system.py",
+      "bytes": 603,
+      "sha256": "ec58a912bea8e33c1c0744465ec449450f38f0b33cf9c412bff162721ad0054e"
+    },
+    {
+      "path": "backend/routes/tracking_locations.py",
+      "bytes": 2666,
+      "sha256": "fafd9a74e5f7cc7f18beee7650175445c345bb3a1825cc3bb16311c35e86fd23"
+    },
+    {
+      "path": "backend/routes/user_management.py",
+      "bytes": 11307,
+      "sha256": "e60b6ccafec64e21149321a721bd3f5447bb05b38206460dfa930e302aa565d4"
+    },
+    {
+      "path": "backend/run.py",
+      "bytes": 3333,
+      "sha256": "cc0919455168b27cb3a040b7442d966e972f74ee674105829cb960e5e0dfed00"
+    },
+    {
+      "path": "backend/run_migrations.py",
+      "bytes": 479,
+      "sha256": "22b77c8fa38a505ad60a51e60d35ef3e4364af003d81f7dc44f3d562ad57bb68"
+    },
+    {
+      "path": "backend/run_upgrade.py",
+      "bytes": 454,
+      "sha256": "546246c22410afddee7546bd155565c830464f326e55812a07909153f4238980"
+    },
+    {
+      "path": "backend/runtime.py",
+      "bytes": 2757,
+      "sha256": "7c0f681b0b67fbbe608daea15061fc044ab2d7d7ad1b1af0b0fa2952108363ee"
+    },
+    {
+      "path": "backend/saved_view_models.py",
+      "bytes": 3015,
+      "sha256": "7fab0c8f0c3fc4b214601a0504c15204d1774c64d2c9a2fd23a5e682f886457a"
+    },
+    {
+      "path": "backend/saved_view_service.py",
+      "bytes": 7326,
+      "sha256": "afcb7b4718945651314ecaa76731b7fe47a3d3a9b31b79c5969fdc68a8cfd7a0"
+    },
+    {
+      "path": "backend/saved_view_validation.py",
+      "bytes": 8039,
+      "sha256": "38854824a189ca9769357d82db63f1c21a2ba505e2defce1ccb47fd0a6242eec"
+    },
+    {
+      "path": "backend/security.py",
+      "bytes": 14517,
+      "sha256": "90f171f78200a52d8ed1a44ec18ca01bcde0462dd678d6c8479f02c6e290c4b4"
+    },
+    {
+      "path": "backend/seed_border_customs.py",
+      "bytes": 6520,
+      "sha256": "1ac920476c773246892af6fe1059be5911dd3fc0d1e49cdecfbef758fcfc92a9"
+    },
+    {
+      "path": "backend/seed_country.py",
+      "bytes": 1273,
+      "sha256": "6562d5817a820ff34a5e30c3918e1697ac8493df381f21786b11d6de35d4fa8a"
+    },
+    {
+      "path": "backend/seed_crm_hierarchy.py",
+      "bytes": 8236,
+      "sha256": "ce2de34f5feba963a25c5f62e6a70b13e502cedcc7774a9f6b0a6e124347defc"
+    },
+    {
+      "path": "backend/seed_experts.py",
+      "bytes": 560,
+      "sha256": "17ed9251b891fb2927dc195a0d923632c430bc52239dbf8aa9acd1fcbe21488f"
+    },
+    {
+      "path": "backend/seed_international_data.py",
+      "bytes": 16263,
+      "sha256": "3e311264f558a8f8dc4a889b273c33d4b2f1aad8762d61e76a6f48638b7f9e26"
+    },
+    {
+      "path": "backend/seed_iran_ports.py",
+      "bytes": 12191,
+      "sha256": "f4741c4e0da5442c5f85eea65b459e46eedf4ca88150887c732fb0167ffc8078"
+    },
+    {
+      "path": "backend/seed_transport_methods.py",
+      "bytes": 3517,
+      "sha256": "fe1fa08707573523bcde7bf1e89471550c4a1734a1cd36909472bac25b254a51"
+    },
+    {
+      "path": "backend/services/__init__.py",
+      "bytes": 38,
+      "sha256": "6610c7fe73379334043338c733b87f044b6b1e25d9a43e835f4737a82ba86833"
+    },
+    {
+      "path": "backend/services/admin_authorization_service.py",
+      "bytes": 6918,
+      "sha256": "1ffa4ab74b4e2de878263930052d5bcadf32c6d750ff8b1e758a3998cb0795ea"
+    },
+    {
+      "path": "backend/services/admin_dashboard_service.py",
+      "bytes": 4335,
+      "sha256": "3246d9013b0ac72d2581e78ad4f97a52a080579a6d7d68b404615a07ceb6667f"
+    },
+    {
+      "path": "backend/services/admin_report_overview_service.py",
+      "bytes": 20231,
+      "sha256": "b33e82b6b4d4dcecb4a61d40f409975f85acaa9abadd920657e069cd7aeab7f0"
+    },
+    {
+      "path": "backend/services/admin_report_service.py",
+      "bytes": 6489,
+      "sha256": "10f7cc52df82136ca878ccf849c0deca848f25576e3d9253ea926c440c1ccac5"
+    },
+    {
+      "path": "backend/services/admin_report_xlsx_service.py",
+      "bytes": 9178,
+      "sha256": "157d89be8a9848f0187d20ab09d80014943d1e632ab5d109a599aa87230961b0"
+    },
+    {
+      "path": "backend/services/admin_shipment_request_service.py",
+      "bytes": 12824,
+      "sha256": "4cc5a5aaa9dfb893590066aaef17cc1d7d58f9a608af4c54ab3db7ac7ffe1c14"
+    },
+    {
+      "path": "backend/services/ai_provider_service.py",
+      "bytes": 11403,
+      "sha256": "1bdaf5842a6255145fff8f0c8333fdf919aee852cbb60e9b6446f7c379709b66"
+    },
+    {
+      "path": "backend/services/alert_service.py",
+      "bytes": 3219,
+      "sha256": "69972fb1d29a46027f678dede62652e3135d48a43c6f1f73986a8d3e36cb64fd"
+    },
+    {
+      "path": "backend/services/assigned_work_authorization.py",
+      "bytes": 11064,
+      "sha256": "d1fc68342e9d21b3bec2a46a3b7dc21a762760c2e2c0ad0b97bd566a426df617"
+    },
+    {
+      "path": "backend/services/assignment_rule_service.py",
+      "bytes": 3905,
+      "sha256": "68cf1cc545266ca2ca046cc0d0ebacce7809b0fc6997f7d0d882b6ffc3bbe8ea"
+    },
+    {
+      "path": "backend/services/assignment_service.py",
+      "bytes": 9676,
+      "sha256": "be78dc0a6ff65770c61160aea77388da84f1a0c9d5bb3179186bfb4cf693e4bf"
+    },
+    {
+      "path": "backend/services/assignment_statistics_service.py",
+      "bytes": 2211,
+      "sha256": "44b7364c613c656e32c7ebe07b399b7d37dff4c05deae4825c39562c7d79c984"
+    },
+    {
+      "path": "backend/services/auth_session_service.py",
+      "bytes": 5742,
+      "sha256": "cfa286c02c2a9e6fa6eb786283ba8058bc2025ab1e2a0006c8cb22bbafda14fb"
+    },
+    {
+      "path": "backend/services/cargo_service.py",
+      "bytes": 29148,
+      "sha256": "4e717f764f153ce04d390d5a7935a9c32a319d0004802544a4f6a7a8d3af8c03"
+    },
+    {
+      "path": "backend/services/case_document_service.py",
+      "bytes": 18360,
+      "sha256": "595fc847c91040012d63c86aefd996d2483a5c2505903363852ea74a3652aa95"
+    },
+    {
+      "path": "backend/services/crm_customer_create_from_request_service.py",
+      "bytes": 12943,
+      "sha256": "09711ec947442f06e1188c0f5097fcd13cff9e4ec276bcc965f09772a359112a"
+    },
+    {
+      "path": "backend/services/crm_customer_link_service.py",
+      "bytes": 9442,
+      "sha256": "77b876743faeaf45135755254567b5e1b27250b901b8bde0a239191beabb473a"
+    },
+    {
+      "path": "backend/services/crm_dashboard_service.py",
+      "bytes": 3196,
+      "sha256": "7bae9a54d42c31d703d06c6e31ad12749a5c61177643f8fdddfed40b5fee03f3"
+    },
+    {
+      "path": "backend/services/crm_service.py",
+      "bytes": 11369,
+      "sha256": "00707ffc131f2285633e8961d82769e50bb571a6b6d5e5c4fb57d8f21030dc75"
+    },
+    {
+      "path": "backend/services/crm_write_service.py",
+      "bytes": 6862,
+      "sha256": "0bf88a5a6ed78b7d7db25e0544c30876928eb8092aed4e906d679253f9256cdf"
+    },
+    {
+      "path": "backend/services/customer_gamification_service.py",
+      "bytes": 27119,
+      "sha256": "36e17f8d9e5158460ef5c6e4a4d403f93c8a4f77c73fdf09e9b2738b84ea8353"
+    },
+    {
+      "path": "backend/services/customer_role_service.py",
+      "bytes": 1511,
+      "sha256": "e532ac95edf95bf09d9a602f67fd87411b8d3db782ec2aa48fc6131f4864f43c"
+    },
+    {
+      "path": "backend/services/customs_service.py",
+      "bytes": 4943,
+      "sha256": "1566a7429b7c60e21fd2c229f9c33bb9ab31576400ec57a9d3c24b32f96350a3"
+    },
+    {
+      "path": "backend/services/document_catalog_service.py",
+      "bytes": 22176,
+      "sha256": "31d5abc2e9fa2d8efac70179399d6beba3229e83890eb9de585d89376e93d4eb"
+    },
+    {
+      "path": "backend/services/document_readiness_service.py",
+      "bytes": 30928,
+      "sha256": "6ae99fbe43c3c765cb1a53165b0e21c59dfb1c05b8c740ee085885f2183d5d17"
+    },
+    {
+      "path": "backend/services/document_storage_service.py",
+      "bytes": 5374,
+      "sha256": "346f1fea315acd65cd32de5e9a89ca8b86e5bad60f4da878ce8f4d7743733aac"
+    },
+    {
+      "path": "backend/services/economics_service.py",
+      "bytes": 35932,
+      "sha256": "ba08ab7a2fa261f6fc34e7198dfcaf37b81082aef6711798f3370e230c95ea13"
+    },
+    {
+      "path": "backend/services/execution_unit_service.py",
+      "bytes": 21686,
+      "sha256": "e0bee28558be166e5ca0363bba3e4ac5d77ebc268fe505a5f760cb77cebebf11"
+    },
+    {
+      "path": "backend/services/expert_request_detail_service.py",
+      "bytes": 7240,
+      "sha256": "1827006ca91dcd3b01caef7a2316f251610eea708f267942adc7480d95db367a"
+    },
+    {
+      "path": "backend/services/expert_request_list_service.py",
+      "bytes": 5963,
+      "sha256": "269788b688f5af881d70f3325d9c615c8d0de089aec5e100d6e8cde9cf63edfd"
+    },
+    {
+      "path": "backend/services/expert_scope_service.py",
+      "bytes": 4175,
+      "sha256": "56ee1635f7e59d91a1187dc6ca00ed3d320758c1f4104f484d704d2a456a6a88"
+    },
+    {
+      "path": "backend/services/expert_workload_service.py",
+      "bytes": 2607,
+      "sha256": "91f44c68f5e4913e4ecfb6855baf69b395dbbe9159986f04d33f208834af9b2c"
+    },
+    {
+      "path": "backend/services/external_reference_service.py",
+      "bytes": 19793,
+      "sha256": "4fffbfe3c99eaa3e9b15cfd4a149db53f6219e28a1016e073c4c4b66314b9d33"
+    },
+    {
+      "path": "backend/services/facility_endpoint_resolver.py",
+      "bytes": 3286,
+      "sha256": "8eb7f87012eba0247e5a37e6b5e3fbfffe670db7be129bc33ca5d97b27acc3c5"
+    },
+    {
+      "path": "backend/services/g0_proposal_service.py",
+      "bytes": 16343,
+      "sha256": "762cb85eb620bb79baa6c6b506d145f92ac70271d1cbfe83855a552a282c0713"
+    },
+    {
+      "path": "backend/services/global_logistics_point_adoption_service.py",
+      "bytes": 19181,
+      "sha256": "e0f0d1aa106083824328f028bb7f20de3e554aaa92fcbf5ca9bdde4d334c7ade"
+    },
+    {
+      "path": "backend/services/global_logistics_point_service.py",
+      "bytes": 25072,
+      "sha256": "207b6f0d16ab7ca962b8d515f7888df011e26057a561e163f7f3cd98d546f444"
+    },
+    {
+      "path": "backend/services/international_geography_readiness.py",
+      "bytes": 3457,
+      "sha256": "7456b3c4cec9ca13c40b826816b335eb4729648d11941c3703be8ca1081c53fd"
+    },
+    {
+      "path": "backend/services/legacy_datetime.py",
+      "bytes": 671,
+      "sha256": "0e24a9ce82375320f47a9f3bae340f4ef2e2baaa21f39383c6fc2469f3916fc1"
+    },
+    {
+      "path": "backend/services/location_admin_service.py",
+      "bytes": 16276,
+      "sha256": "c008dd8ecbdf8a0c81cd5d33448799f58c7e5da2a30a2deb093b8113d920c5d9"
+    },
+    {
+      "path": "backend/services/location_resolver.py",
+      "bytes": 11971,
+      "sha256": "8a979b861f67bc80afa8f72a0a5067b1fc09c64ca7cf2559e68122cc4bbda5fb"
+    },
+    {
+      "path": "backend/services/logistics_network_service.py",
+      "bytes": 24389,
+      "sha256": "7b42ec08403ffc11f9e42c53ce6a161423bab1fd2a495775dc7d7eb54b0f3100"
+    },
+    {
+      "path": "backend/services/master_data_service.py",
+      "bytes": 8965,
+      "sha256": "d278caeabbaa831781495a06029fa59d46600b838814570161eaef150b49f941"
+    },
+    {
+      "path": "backend/services/message_service.py",
+      "bytes": 4749,
+      "sha256": "db127172238e758f599db2644559e5eb998528a39fa09dc026b60f40592a7609"
+    },
+    {
+      "path": "backend/services/monitoring_service.py",
+      "bytes": 3487,
+      "sha256": "72c9d3d57850d45f6b18f96e5a5bb6b636d1ed94621d953aa09cc8746f31a0b2"
+    },
+    {
+      "path": "backend/services/multi_unit_tracking_service.py",
+      "bytes": 29785,
+      "sha256": "393db82d01c2acad3032fe2a9ddeabbf7369b9096d47577c39c04e8dfdde7950"
+    },
+    {
+      "path": "backend/services/notification_service.py",
+      "bytes": 3738,
+      "sha256": "b6eb3a88120b7512d9cc6d0905e79145b5a3b3e7393e1b7ee38b8242de00214a"
+    },
+    {
+      "path": "backend/services/occurrence_projection_service.py",
+      "bytes": 13832,
+      "sha256": "4454df39457a2ef6a34747e543f331ac3568748fa7872c6306b8afab0652f023"
+    },
+    {
+      "path": "backend/services/oip_service.py",
+      "bytes": 33104,
+      "sha256": "b7733393fc4b38a82131f14104b59afce65954b8d410762397fd57ae08feb712"
+    },
+    {
+      "path": "backend/services/operational_execution_service.py",
+      "bytes": 42969,
+      "sha256": "8f6d3056e740db29ee7678d1944acf55d4b9cbb3b945c59f7d6b2130a1d4ea03"
+    },
+    {
+      "path": "backend/services/operational_read_service.py",
+      "bytes": 11650,
+      "sha256": "a74252e045bbfc20098628c4755c4ff3477641c6d3eb87fd1cfc5622b4aff08f"
+    },
+    {
+      "path": "backend/services/operational_service.py",
+      "bytes": 51905,
+      "sha256": "c1a12bf2231cca0260cd4d6a7c8fb37781084a346ad5dfcde42761971001660b"
+    },
+    {
+      "path": "backend/services/organization_document_policy_service.py",
+      "bytes": 5949,
+      "sha256": "a84a85f8cb6b974e79bfb1b4071134ab0c755f2ccf4c16b4b383f30842685bb6"
+    },
+    {
+      "path": "backend/services/organization_hostname_service.py",
+      "bytes": 5343,
+      "sha256": "f6fb7ec4ea5935ef5b6d8488efc9f1efd47731e1b7638451e459d93e5961c9bd"
+    },
+    {
+      "path": "backend/services/ownership_service.py",
+      "bytes": 4560,
+      "sha256": "37d46f67cda3e2947581e610b1a24cf9abb72a058dc15cd80f8b3175c23bd72f"
+    },
+    {
+      "path": "backend/services/project_access_authorization.py",
+      "bytes": 4220,
+      "sha256": "c4afc1d2db72b680d6eba4e73d9a8ae2fcfced28b79c04a667eec92365ea8465"
+    },
+    {
+      "path": "backend/services/project_configuration_service.py",
+      "bytes": 21633,
+      "sha256": "c88793d8a2acfe1c5ef24e4e6181c01db554e872ac5a2b9bbaee04d078be7fc9"
+    },
+    {
+      "path": "backend/services/quote_service.py",
+      "bytes": 7758,
+      "sha256": "b2bb76078206a737ac8ee6e31e69e2c1565197f4e978c558d3e8e27fc104a3d8"
+    },
+    {
+      "path": "backend/services/reference_backfill_service.py",
+      "bytes": 37473,
+      "sha256": "b22d439e480acfe4b2569c3b9940a4fb1f5714da16ce27bcba83ab5a90c7b834"
+    },
+    {
+      "path": "backend/services/reference_schema_service.py",
+      "bytes": 8508,
+      "sha256": "4d827682a399d78f068248a4583dd8199562fbf2ee7f4ec0331c697930af9d65"
+    },
+    {
+      "path": "backend/services/referral_service.py",
+      "bytes": 10706,
+      "sha256": "ebef3642f28a668d4d53b63d74ea716b52bba5ef52af65367582a6ff888ddb97"
+    },
+    {
+      "path": "backend/services/release_identity_service.py",
+      "bytes": 2419,
+      "sha256": "fb7d46290c14ba317ea888d8934c294c6a6e63183797630ef111636dd6636e9a"
+    },
+    {
+      "path": "backend/services/route_orchestration_service.py",
+      "bytes": 84368,
+      "sha256": "de026924bb851ef6b84f6e9b41da7fdda6c1ce029d1f5b0eb998a3bfc8f7c92d"
+    },
+    {
+      "path": "backend/services/route_payload_service.py",
+      "bytes": 6994,
+      "sha256": "b04a6006fb953f0569b3b435c2f7847a1e75d8f3ef011bc9a25a020b66bf7001"
+    },
+    {
+      "path": "backend/services/settings_service.py",
+      "bytes": 4858,
+      "sha256": "c059cf8c89836a9b44cffe7297118500b52ae58886bf4de8e9c65900a3b2d010"
+    },
+    {
+      "path": "backend/services/shared_transport_service.py",
+      "bytes": 12703,
+      "sha256": "3b6d36e14c457824dd59db4b0d7f504213fd6224ee302532dc847021b658f5b8"
+    },
+    {
+      "path": "backend/services/shipment_context_service.py",
+      "bytes": 10808,
+      "sha256": "9be1f51ede59ded6fd7c2889486fae4256de1a5bb40cce0706fde261f3d7cf17"
+    },
+    {
+      "path": "backend/services/shipment_document_service.py",
+      "bytes": 9306,
+      "sha256": "9b2bfcba0233c8bcb2f6199f6449244e439ccb06ce22f7a596480b6a6d6dc638"
+    },
+    {
+      "path": "backend/services/shipment_population_service.py",
+      "bytes": 5125,
+      "sha256": "bfccb0c00acc9098e51a532aad7e587efad42a02ca2d6e5c10f5c1d294b48cd2"
+    },
+    {
+      "path": "backend/services/shipment_request_identity_service.py",
+      "bytes": 1466,
+      "sha256": "2470009cd282a95b631d7d1db7045b959da954affa1fe81556fb6900984d1860"
+    },
+    {
+      "path": "backend/services/shipment_service.py",
+      "bytes": 29509,
+      "sha256": "4e3d719638e72e6fc2849111036822cbf67656101592601689989b615527b5a1"
+    },
+    {
+      "path": "backend/services/sla_service.py",
+      "bytes": 3189,
+      "sha256": "2e6b969595986777de8aac25ca3ba9d01108c8b5c425754672b8e63b7c204dc7"
+    },
+    {
+      "path": "backend/services/timeline_service.py",
+      "bytes": 8161,
+      "sha256": "36110164395b053baf8d91c090f168b38b3ae8396c07ece26ca8f988f8097337"
+    },
+    {
+      "path": "backend/services/token_revocation_service.py",
+      "bytes": 1521,
+      "sha256": "667e437d0dba33caba76043f5e5576f7475ad246aee19b0fb74e64c7aada1c39"
+    },
+    {
+      "path": "backend/services/tracking_location_bootstrap_service.py",
+      "bytes": 6128,
+      "sha256": "a46ad14fa496ac70a89264753ccb3c188880c54043b7fb66fce0098cc6148b91"
+    },
+    {
+      "path": "backend/services/tracking_location_service.py",
+      "bytes": 4384,
+      "sha256": "2f707ef844ced16bf196b2b4cd03110dcc7f5baed6dcbab510a78fbf86e51a29"
+    },
+    {
+      "path": "backend/services/tracking_projection_service.py",
+      "bytes": 9881,
+      "sha256": "40dca2a4a64b358b7b26fbe8d6f045d24fcbbfdb524043f387a9abe1694af088"
+    },
+    {
+      "path": "backend/services/tracking_service.py",
+      "bytes": 7558,
+      "sha256": "2fc4d9a4b37a1c68e92c1e0e64926ac925cb278b3b7ca94720c5dc092c3facd1"
+    },
+    {
+      "path": "backend/services/transport_method_service.py",
+      "bytes": 1720,
+      "sha256": "911826c43dbbeadbe155ebb5692d9956c0579ca439ae17f30bbbd407d6bef97d"
+    },
+    {
+      "path": "backend/services/unified_shipment_history.py",
+      "bytes": 12426,
+      "sha256": "c565b44e6730726068948c11e86f839d16b5433e99c2e94a3f5534eb19cc6ebf"
+    },
+    {
+      "path": "backend/services/upload_service.py",
+      "bytes": 2771,
+      "sha256": "8f8b45fc35db96b5d058c60cd69e662ff2f2e5a50cc462d8110a64af0deccf44"
+    },
+    {
+      "path": "backend/services/user_delete_service.py",
+      "bytes": 8067,
+      "sha256": "1e58b92158a710ca23d16fd2eacb9d51185b629b9f50770eda8545393a64a569"
+    },
+    {
+      "path": "backend/services/user_service.py",
+      "bytes": 13454,
+      "sha256": "7e67bc9784728007360868e551e1f7ef971dc0238e42802ec61e82e245382bdd"
+    },
+    {
+      "path": "backend/services/utc_timestamp.py",
+      "bytes": 299,
+      "sha256": "e0a820bd2200a89d5ccec401bd28e4836f2280eaa1ff9f8356c71b0179fe4ced"
+    },
+    {
+      "path": "backend/setup_crm_hierarchy.py",
+      "bytes": 3358,
+      "sha256": "f90610eae9907b3739e58c4266ce7ce03ef61043feb229102a80a2ddf5914eb4"
+    },
+    {
+      "path": "backend/start-dev.bat",
+      "bytes": 243,
+      "sha256": "adcb429973bd7935eb7aa527691313e31c2bebd92ce1f632dfbb7ad626abbd5e"
+    },
+    {
+      "path": "backend/start-dev.sh",
+      "bytes": 758,
+      "sha256": "b4cec340f6d9e5530d28d5f039df3fd6363327c24ce6a8bc0386a3045cc62983"
+    },
+    {
+      "path": "backend/startup.py",
+      "bytes": 916,
+      "sha256": "640fbe69fc9b66430532e578a5aa3e1c02742086c714d1b64e02db3ddbd08cda"
+    },
+    {
+      "path": "backend/startup_seed.py",
+      "bytes": 3433,
+      "sha256": "5405e1dc1cd93e7c61634ea72d67b82f3ccd254408d8da5f87022ed0d3631653"
+    },
+    {
+      "path": "backend/tenancy.py",
+      "bytes": 5044,
+      "sha256": "a2719be5db6dd923a0d6cfef3cdae09b9892d0b1f9f0c620ce695add1ef710d0"
+    },
+    {
+      "path": "backend/wsgi.py",
+      "bytes": 385,
+      "sha256": "eb2a433e637e20aab400209728afaec252dcb17e862a6abf53501932ef402133"
+    },
+    {
+      "path": "dist/apple-touch-icon.png",
+      "bytes": 12245,
+      "sha256": "a614fca15c0f66ee586a4d3a25839b66996e7d29ace2775c17c07fe3c2fcbb25"
+    },
+    {
+      "path": "dist/assets/index-CQMBWI4u.css",
+      "bytes": 89560,
+      "sha256": "60f1cf360beb96fa57919478b031b46065028bc5c1b7b740bd5795e97d2030f9"
+    },
+    {
+      "path": "dist/assets/index-D_LzjVIP.js",
+      "bytes": 1676771,
+      "sha256": "759e11673f532f5521408d6c571e5d1a5b934d2827b9ecee92fcd9d62a58ce22"
+    },
+    {
+      "path": "dist/brand-icon.png",
+      "bytes": 69671,
+      "sha256": "c24e55950c2a3803cb30e20baa4b18f0395b1f1ac53aed5b8f39449fad449371"
+    },
+    {
+      "path": "dist/favicon-192.png",
+      "bytes": 13496,
+      "sha256": "f8909a75a0c5e26383ce9fb73c90f929c7bcf2701db96b3db0693930d867e5e5"
+    },
+    {
+      "path": "dist/favicon-32.png",
+      "bytes": 1064,
+      "sha256": "cf5cb583062897fbda12214457334aa606004886f1cf603fb2aa4266de16902e"
+    },
+    {
+      "path": "dist/favicon-512.png",
+      "bytes": 52297,
+      "sha256": "5702d50088bc8f280281aab052e3e0935a08803097d4b3da3b8f75732f5bf493"
+    },
+    {
+      "path": "dist/favicon.ico",
+      "bytes": 3469,
+      "sha256": "ce0672f158d69d30b8e3b5a5569c8d46c7bfc3b4c5e1d80af55d7d06dfa7483a"
+    },
+    {
+      "path": "dist/index.html",
+      "bytes": 2131,
+      "sha256": "e719cbbf7c67f65e4cce5f5139133eeb424daa23ad6ab408b2962e46d6cdc24e"
+    },
+    {
+      "path": "dist/placeholder.svg",
+      "bytes": 3253,
+      "sha256": "64badf7aabda0b9630b87020ffb6095cb858ccbcf66b355c2aa08b1063954d3b"
+    },
+    {
+      "path": "dist/robots.txt",
+      "bytes": 174,
+      "sha256": "52710c261d851bc1ad35604017862f2a8444e7a0f02cd7b8b49e3ba92e6d4cea"
+    },
+    {
+      "path": "dist/site.webmanifest",
+      "bytes": 393,
+      "sha256": "bb59f80de2785decd1f7a5c8de0ce9db2c9dd39439155afde2b81af390177c38"
+    },
+    {
+      "path": "dist/web.config",
+      "bytes": 3684,
+      "sha256": "28868b84e0ad907529e4f9f1652473a127e934167e25e9b2036f1b16cfa1e08b"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 424,
+      "sha256": "b4f0d8e8b186479e87458ce06128a8e179f5f271a48202c64bc02ab2ccade5d9"
+    }
+  ]
+}

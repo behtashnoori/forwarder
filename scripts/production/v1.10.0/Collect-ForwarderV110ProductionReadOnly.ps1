@@ -12,7 +12,10 @@ param(
     [string]$PublicBaseUrl = 'https://samand.forwarderet.ir',
     [string]$PsqlPath = 'C:\Program Files\PostgreSQL\18\bin\psql.exe',
     [string]$PgDumpPath = 'C:\Program Files\PostgreSQL\18\bin\pg_dump.exe',
-    [string]$PgRestorePath = 'C:\Program Files\PostgreSQL\18\bin\pg_restore.exe'
+    [string]$PgRestorePath = 'C:\Program Files\PostgreSQL\18\bin\pg_restore.exe',
+    [switch]$ToolingSelfTest,
+    [string]$SelfTestReleaseRoot,
+    [string]$SelfTestWitnessPath
 )
 
 Set-StrictMode -Version Latest
@@ -21,7 +24,15 @@ $ExpectedBeforeRevision = '20260921_shipment_evidence_ownership'
 $ExpectedTargetRevision = '20260926_fixed_shipment_responsible_expert'
 $ExpectedProductVersion = '1.10.0'
 $ExpectedApplicationCommit = 'e36ee7cee157657c97dc42a539eaf1909f510a33'
+$ExpectedLegacySourceCommit = 'e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4'
+$ExpectedLegacySourceArchiveSha256 = 'e9196ad9cc10dfeef44eba40d98e50520af4c505474211d5c23397bdf7774617'
+$ExpectedLegacyInventorySha256 = '58baed2704b1301c749b2b194f203d6ffd68e9c8eb34536fb765c0e32297e1a5'
+$ExpectedDatabaseBridgeSha256 = 'a94ce7bee93508a95f8bfff36620f77653c7a7008f5c0080b3f1a20199604c19'
+$ExpectedAdr047Sha256 = '16a50c18a4e824ce35564beca18ea11131ed105d3d0d13f51e08ca021c780bae'
+$ExpectedCompatibilitySha256 = '2b43889fee11fb78673e3d36e6117684f319b54fb963f4b3cc4cf7f19682c09b'
 $CollectionErrors = New-Object 'System.Collections.Generic.List[string]'
+$DatabaseBridgePath = Join-Path $PSScriptRoot 'Invoke-ForwarderV110ReadOnlySql.py'
+$LegacyWitnessPath = Join-Path $PSScriptRoot 'legacy-production-witness.json'
 
 function Add-CollectionError([string]$Code) {
     if (-not $CollectionErrors.Contains($Code)) { $CollectionErrors.Add($Code) }
@@ -32,6 +43,7 @@ function Redact-Text([string]$Value) {
     $result = $Value
     $result = [regex]::Replace($result, '(?i)(postgres(?:ql)?://[^:/@\s]+:)[^@\s]+(@)', '$1[REDACTED]$2')
     $result = [regex]::Replace($result, '(?i)\b(password|passwd|pwd|secret|secret_key|jwt_secret_key|token|authorization|api_key)\s*[:=]\s*[^\s;,&]+', '$1=[REDACTED]')
+    $result = [regex]::Replace($result, '(?i)(--(?:password|passwd|pwd|secret|secret-key|token|authorization|api-key)\s+)("[^"]*"|''[^'']*''|\S+)', '$1[REDACTED]')
     $result = [regex]::Replace($result, '(?i)\b(Bearer)\s+[A-Za-z0-9._~+/-]+=*', '$1 [REDACTED]')
     $result = [regex]::Replace($result, '\b[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\b', '[REDACTED_TOKEN]')
     return $result
@@ -61,6 +73,201 @@ function Get-ReleasePathFromText([string]$Value) {
     $match = [regex]::Match($Value, '(?i)[A-Z]:\\(?:[^\\\s"''&|]+\\)*release-[^\\\s"''&|]+')
     if ($match.Success) { return (Normalize-Path $match.Value.TrimEnd(';', '&', '|')) }
     return $null
+}
+
+function Get-BoundedText([string]$Value, [int]$Maximum = 1000) {
+    $safe = Redact-Text $Value
+    if ($null -eq $safe -or $safe.Length -le $Maximum) { return $safe }
+    return $safe.Substring(0, $Maximum) + '[TRUNCATED]'
+}
+
+function Get-ObjectPropertyValue([object]$Object, [string]$Name) {
+    if ($null -eq $Object) { return $null }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($property) { return $property.Value }
+    return $null
+}
+
+function Get-FileSha256([string]$Path) {
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
+}
+
+function Test-PathWithin([string]$Child, [string]$Parent) {
+    $childPath = Normalize-Path $Child; $parentPath = Normalize-Path $Parent
+    if (-not $childPath -or -not $parentPath) { return $false }
+    return ($childPath -eq $parentPath -or $childPath.StartsWith($parentPath + '\', [StringComparison]::OrdinalIgnoreCase))
+}
+
+function Get-TaskCandidateFromXml(
+    [string]$CandidateName,
+    [string]$CandidatePath,
+    [string]$XmlText,
+    [string]$ListenerRelease,
+    [string]$ListenerExecutable,
+    [int]$Port
+) {
+    [xml]$xml = $XmlText
+    $actionNodes = @($xml.SelectNodes("/*[local-name()='Task']/*[local-name()='Actions']/*[local-name()='Exec']"))
+    if ($actionNodes.Count -ne 1) {
+        return [pscustomobject]@{
+            name=$CandidateName; task_path=$CandidatePath; exact_listener_relationship=$false
+            plausible=$true; reason='EXEC_ACTION_COUNT_UNEXPECTED'; release_path=$null
+            action_executable=$null; action_runtime=$null; sanitized_arguments=$null; working_directory=$null
+            evidence=[pscustomobject]@{ action_count=$actionNodes.Count; release_match=$false; runtime_match=$false; port_match=$false; waitress_match=$false; forwarder_name_match=($CandidateName -match '(?i)forwarder') }
+        }
+    }
+    $action = $actionNodes[0]
+    $command = Normalize-Path ([string]$action.Command)
+    $arguments = Get-BoundedText ([string]$action.Arguments)
+    $workingDirectory = Normalize-Path ([string]$action.WorkingDirectory)
+    $combined = (([string]$action.Command) + ' ' + ([string]$action.Arguments) + ' ' + ([string]$action.WorkingDirectory))
+    $runtimeMatches = @([regex]::Matches($combined, '(?i)[A-Z]:[\\/][^"''<>&|]*?[\\/]runtime[\\/]python\.exe') | ForEach-Object { Normalize-Path $_.Value } | Select-Object -Unique)
+    if ($command -and [IO.Path]::GetFileName($command) -ieq 'python.exe' -and [IO.Path]::GetFileName((Split-Path -Parent $command)) -ieq 'runtime') {
+        $runtimeMatches = @($runtimeMatches + $command | Select-Object -Unique)
+    }
+    $runtime = if ($runtimeMatches.Count -eq 1) { $runtimeMatches[0] } else { $null }
+    $release = Get-ReleasePathFromText $combined
+    if (-not $release -and $runtime) { $release = Normalize-Path (Split-Path -Parent (Split-Path -Parent $runtime)) }
+    $releaseMatch = [bool]($ListenerRelease -and $release -and (Same-Path $ListenerRelease $release))
+    $runtimeMatch = [bool]($ListenerExecutable -and $runtime -and (Same-Path $ListenerExecutable $runtime))
+    $portMatch = [bool]($combined -match ("(?i)(--listen(?:=|\s+)127\.0\.0\.1:" + $Port + "\b|--port(?:=|\s+)" + $Port + "\b|127\.0\.0\.1:" + $Port + "\b)"))
+    $waitressMatch = [bool]($combined -match '(?i)(waitress|backend\.wsgi:app|phase1b_production_cutover_runtime\.py)')
+    $nameMatch = [bool](($CandidateName + ' ' + $CandidatePath) -match '(?i)forwarder')
+    $exact = ($releaseMatch -and $runtimeMatch -and ($portMatch -or $waitressMatch))
+    return [pscustomobject]@{
+        name=$CandidateName; task_path=$CandidatePath; exact_listener_relationship=[bool]$exact
+        plausible=[bool]($nameMatch -or $releaseMatch -or $runtimeMatch -or ($portMatch -and $waitressMatch))
+        reason=$(if($exact){'EXACT_LISTENER_ACTION_MATCH'}elseif($runtimeMatches.Count -gt 1){'MULTIPLE_RUNTIME_PATHS'}else{'BOUNDED_EVIDENCE_INSUFFICIENT'})
+        release_path=$release; action_executable=$command; action_runtime=$runtime
+        sanitized_arguments=$arguments; working_directory=$workingDirectory
+        evidence=[pscustomobject]@{
+            action_count=1; release_match=$releaseMatch; runtime_match=$runtimeMatch; port_match=$portMatch
+            waitress_match=$waitressMatch; forwarder_name_match=$nameMatch
+        }
+    }
+}
+
+function Select-ProvenTaskCandidate([object[]]$Candidates) {
+    $plausible = @($Candidates | Where-Object {$_.plausible} | Select-Object -First 32)
+    $exact = @($plausible | Where-Object {$_.exact_listener_relationship})
+    if ($exact.Count -eq 1) { return [pscustomobject]@{ status='PROVEN'; selected=$exact[0]; candidates=$plausible } }
+    if ($exact.Count -gt 1) { return [pscustomobject]@{ status='AMBIGUOUS'; selected=$null; candidates=$plausible } }
+    return [pscustomobject]@{ status='UNPROVEN'; selected=$null; candidates=$plausible }
+}
+
+function Get-FirstJsonValue([object]$Object, [string[]]$Names) {
+    foreach ($name in $Names) {
+        $property = $Object.PSObject.Properties[$name]
+        if ($property -and -not [string]::IsNullOrWhiteSpace([string]$property.Value)) { return [string]$property.Value }
+    }
+    return $null
+}
+
+function Get-GovernedReleaseManifest([string]$ReleasePath, [hashtable]$EnvironmentMap) {
+    $paths = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($candidate in @(
+        (Join-Path $ReleasePath 'release-manifest.json'),
+        (Join-Path $ReleasePath 'RELEASE-METADATA.json'),
+        (Join-Path $ReleasePath 'artifact\release-manifest.json')
+    )) {
+        $normalized = Normalize-Path $candidate
+        if ($normalized -and -not $paths.Contains($normalized)) { $paths.Add($normalized) }
+    }
+    if ($EnvironmentMap.ContainsKey('RELEASE_IDENTITY_PATH') -and $EnvironmentMap['RELEASE_IDENTITY_PATH']) {
+        $configured = Normalize-Path ([string]$EnvironmentMap['RELEASE_IDENTITY_PATH'])
+        if ($configured -and (Test-PathWithin $configured $ReleasePath) -and -not $paths.Contains($configured)) { $paths.Add($configured) }
+    }
+    $found = New-Object 'System.Collections.Generic.List[object]'
+    foreach ($path in $paths) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { continue }
+        $value = Get-Content -Raw -LiteralPath $path -ErrorAction Stop | ConvertFrom-Json
+        $commit = Get-FirstJsonValue $value @('application_commit','application_source_commit','source_commit','git_commit')
+        if ($commit -and $commit -notmatch '^[0-9a-fA-F]{40}$') { $commit = $null }
+        $found.Add([pscustomobject]@{
+            path=$path; sha256=Get-FileSha256 $path; schema=(Get-FirstJsonValue $value @('schema'))
+            candidate=(Get-FirstJsonValue $value @('candidate','product_name'))
+            application_version=(Get-FirstJsonValue $value @('application_version','product_version','version'))
+            application_commit=$(if($commit){$commit.ToLowerInvariant()}else{$null})
+            database_revision=(Get-FirstJsonValue $value @('database_revision','required_db_revision','alembic_head','migration_head'))
+            runtime_sha256=(Get-FirstJsonValue $value @('runtime_sha256'))
+        })
+    }
+    if ($found.Count -eq 0) { return [pscustomobject]@{ status='ABSENT'; governed_locations=$paths.ToArray(); records=@(); identity=$null } }
+    $commits = @($found | Where-Object {$_.application_commit} | Select-Object -ExpandProperty application_commit -Unique)
+    if ($commits.Count -gt 1) { return [pscustomobject]@{ status='CONFLICT'; governed_locations=$paths.ToArray(); records=$found.ToArray(); identity=$null } }
+    $selected = @($found | Where-Object {$_.application_commit} | Select-Object -First 1)
+    if ($selected.Count -ne 1) { return [pscustomobject]@{ status='IDENTITY_INCOMPLETE'; governed_locations=$paths.ToArray(); records=$found.ToArray(); identity=$null } }
+    return [pscustomobject]@{ status='IDENTITY_PROVEN'; governed_locations=$paths.ToArray(); records=$found.ToArray(); identity=$selected[0] }
+}
+
+function Get-LegacyWitnessEvidence([string]$ReleasePath, [string]$WitnessPath) {
+    if (-not (Test-Path -LiteralPath $WitnessPath -PathType Leaf)) {
+        return [pscustomobject]@{ status='WITNESS_UNAVAILABLE'; witness_path=(Normalize-Path $WitnessPath); identity=$null }
+    }
+    $witness = Get-Content -Raw -LiteralPath $WitnessPath -ErrorAction Stop | ConvertFrom-Json
+    if ($witness.schema -ne 'forwarder-v1.10.0-legacy-production-witness-v1' -or $witness.application_source_commit -notmatch '^[0-9a-f]{40}$') {
+        return [pscustomobject]@{ status='WITNESS_INVALID'; witness_path=(Normalize-Path $WitnessPath); identity=$null }
+    }
+    $canonical = New-Object Text.StringBuilder
+    $missing = New-Object 'System.Collections.Generic.List[string]'
+    $mismatched = New-Object 'System.Collections.Generic.List[string]'
+    $matched = 0; $frontendMatched = 0; $backendMatched = 0
+    foreach ($record in @($witness.files)) {
+        $relative = ([string]$record.path).Replace('\','/')
+        if (-not $relative -or $relative.StartsWith('/') -or $relative -match '(^|/)\.\.(/|$)' -or $relative -match ':') {
+            return [pscustomobject]@{ status='WITNESS_INVALID'; witness_path=(Normalize-Path $WitnessPath); identity=$null }
+        }
+        [void]$canonical.Append($relative).Append([char]0).Append(([string]$record.sha256).ToLowerInvariant()).Append("`n")
+        $path = Join-Path $ReleasePath $relative.Replace('/','\')
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { if($missing.Count -lt 12){$missing.Add($relative)}; continue }
+        $item = Get-Item -LiteralPath $path -ErrorAction Stop
+        if ($item.Length -ne [int64]$record.bytes -or (Get-FileSha256 $path) -ne ([string]$record.sha256).ToLowerInvariant()) {
+            if($mismatched.Count -lt 12){$mismatched.Add($relative)}; continue
+        }
+        $matched++
+        if ($relative.StartsWith('dist/')) { $frontendMatched++ }
+        if ($relative.StartsWith('backend/')) { $backendMatched++ }
+    }
+    $canonicalHash = Get-TextSha256 $canonical.ToString()
+    if ($canonicalHash -ne [string]$witness.inventory_sha256 -or @($witness.files).Count -ne [int]$witness.file_count) {
+        return [pscustomobject]@{ status='WITNESS_INVALID'; witness_path=(Normalize-Path $WitnessPath); identity=$null }
+    }
+    $status = if ($matched -eq [int]$witness.file_count) { 'MATCH' } else { 'MISMATCH' }
+    return [pscustomobject]@{
+        status=$status; witness_path=(Normalize-Path $WitnessPath); witness_sha256=(Get-FileSha256 $WitnessPath)
+        source_archive_sha256=[string]$witness.source_archive_sha256; inventory_sha256=$canonicalHash
+        expected_file_count=[int]$witness.file_count; matched_file_count=$matched
+        expected_frontend_file_count=[int]$witness.frontend_file_count; matched_frontend_file_count=$frontendMatched
+        expected_backend_file_count=[int]$witness.backend_file_count; matched_backend_file_count=$backendMatched
+        missing_paths=$missing.ToArray(); mismatched_paths=$mismatched.ToArray()
+        identity=[pscustomobject]@{
+            source='LEGACY_PRODUCTION_WITNESS'; candidate=[string]$witness.candidate
+            application_commit=[string]$witness.application_source_commit; application_version=$witness.application_version
+            database_revision=[string]$witness.required_database_revision
+        }
+    }
+}
+
+function Invoke-ToolingSelfTest {
+    $release = 'C:\1-webapp\forwarder-production\release-legacy-live'
+    $runtime = $release + '\runtime\python.exe'
+    $wrongNameXml = '<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c "' + $runtime + '" -m waitress --listen=127.0.0.1:5101 backend.wsgi:app</Arguments><WorkingDirectory>' + $release + '</WorkingDirectory></Exec></Actions></Task>'
+    $unrelatedXml = '<Task><Actions><Exec><Command>C:\Windows\System32\cmd.exe</Command><Arguments>/d /c echo maintenance</Arguments><WorkingDirectory>C:\Windows</WorkingDirectory></Exec></Actions></Task>'
+    $good = Get-TaskCandidateFromXml 'Established Runtime Task' '\Operations\' $wrongNameXml $release $runtime 5101
+    $unrelated = Get-TaskCandidateFromXml 'Forwarder Cleanup' '\' $unrelatedXml $release $runtime 5101
+    $selection = Select-ProvenTaskCandidate @($unrelated,$good)
+    if ($selection.status -ne 'PROVEN' -or $selection.selected.name -ne 'Established Runtime Task') { throw 'TASK_DISCOVERY_SELF_TEST_FAILED' }
+    $ambiguous = Select-ProvenTaskCandidate @($good,$good)
+    if ($ambiguous.status -ne 'AMBIGUOUS') { throw 'TASK_AMBIGUITY_SELF_TEST_FAILED' }
+    Write-Output 'TASK_NAME_MISMATCH_WITH_EXACT_ACTION=PASS'
+    Write-Output 'TASK_AMBIGUITY=FAIL_CLOSED'
+    if ($SelfTestReleaseRoot -or $SelfTestWitnessPath) {
+        if (-not $SelfTestReleaseRoot -or -not $SelfTestWitnessPath) { throw 'SELF_TEST_WITNESS_ARGUMENTS_INCOMPLETE' }
+        $evidence = Get-LegacyWitnessEvidence $SelfTestReleaseRoot $SelfTestWitnessPath
+        if ($evidence.status -ne 'MATCH') { throw 'LEGACY_WITNESS_SELF_TEST_FAILED' }
+        Write-Output 'LEGACY_RELEASE_WITHOUT_MANIFEST=IDENTITY_PROVEN_BY_WITNESS'
+    }
+    Write-Output 'PRODUCTION_MUTATION_PERFORMED=NO'
 }
 
 function Invoke-Safe([string]$Code, [scriptblock]$Action) {
@@ -95,21 +302,6 @@ function Config-State([hashtable]$Map, [string]$Name, [scriptblock]$Validator, [
     return [pscustomobject]@{ state = $(if ($isSafe) { 'SAFE_VALUE_OK' } else { 'SAFE_VALUE_INVALID' }) }
 }
 
-function Get-ConnectionInfo([hashtable]$Map) {
-    if (-not $Map.ContainsKey('DATABASE_URL') -or [string]::IsNullOrWhiteSpace([string]$Map['DATABASE_URL'])) { return $null }
-    try {
-        $uri = [Uri]([string]$Map['DATABASE_URL'])
-        if ($uri.Scheme -notin @('postgres', 'postgresql')) { return $null }
-        $userInfo = $uri.UserInfo.Split(':', 2)
-        $user = [Uri]::UnescapeDataString($userInfo[0])
-        $password = if ($userInfo.Count -eq 2) { [Uri]::UnescapeDataString($userInfo[1]) } else { '' }
-        $database = [Uri]::UnescapeDataString($uri.AbsolutePath.Trim('/'))
-        $port = if ($uri.Port -gt 0) { $uri.Port } else { 5432 }
-        if ($uri.Host -notmatch '^[A-Za-z0-9_.:-]+$' -or $user -notmatch '^[A-Za-z0-9_.-]+$' -or $database -notmatch '^[A-Za-z0-9_.-]+$') { return $null }
-        return [pscustomobject]@{ Host=$uri.Host; Port=$port; User=$user; Password=$password; Database=$database }
-    } catch { return $null }
-}
-
 function Assert-ReadOnlySql([string]$Sql, [string]$Name) {
     if ($Sql -notmatch '(?is)^\s*BEGIN\s+TRANSACTION\s+READ\s+ONLY\s*;' -or $Sql -notmatch '(?is)COMMIT\s*;\s*$') {
         throw "SQL_READ_ONLY_ENVELOPE_INVALID:$Name"
@@ -118,34 +310,39 @@ function Assert-ReadOnlySql([string]$Sql, [string]$Name) {
     if ($Sql -match $forbidden) { throw "SQL_MUTATION_KEYWORD_REJECTED:$Name" }
 }
 
-function Invoke-ReadOnlySql([string]$Sql, [object]$Connection, [string]$Name) {
+function ConvertTo-ProcessArgument([string]$Value) {
+    if ($Value -match '["\r\n]') { throw 'PROCESS_ARGUMENT_UNSAFE' }
+    return '"' + $Value + '"'
+}
+
+function Invoke-ReadOnlySql([string]$Sql, [string]$DatabasePython, [string]$Name) {
     Assert-ReadOnlySql $Sql $Name
-    if (-not (Test-Path -LiteralPath $PsqlPath -PathType Leaf)) { throw 'PSQL_NOT_AVAILABLE' }
+    if (-not (Test-Path -LiteralPath $DatabasePython -PathType Leaf)) { throw 'DATABASE_RUNTIME_PYTHON_NOT_AVAILABLE' }
+    if (-not (Test-Path -LiteralPath $DatabaseBridgePath -PathType Leaf)) { throw 'DATABASE_READ_ONLY_BRIDGE_NOT_AVAILABLE' }
     $start = New-Object Diagnostics.ProcessStartInfo
-    $start.FileName = $PsqlPath
-    $start.Arguments = '-X -w -q -A -t -F "|" -v ON_ERROR_STOP=1 -h "' + $Connection.Host + '" -p ' + $Connection.Port + ' -U "' + $Connection.User + '" -d "' + $Connection.Database + '"'
+    $start.FileName = $DatabasePython
+    $start.Arguments = '-B ' + (ConvertTo-ProcessArgument $DatabaseBridgePath) + ' --environment-file ' + (ConvertTo-ProcessArgument $EnvironmentFile) + ' --psql ' + (ConvertTo-ProcessArgument $PsqlPath)
     $start.WorkingDirectory = $PSScriptRoot
     $start.UseShellExecute = $false
     $start.CreateNoWindow = $true
     $start.RedirectStandardInput = $true
     $start.RedirectStandardOutput = $true
     $start.RedirectStandardError = $true
-    if (-not [string]::IsNullOrEmpty([string]$Connection.Password)) { $start.EnvironmentVariables['PGPASSWORD'] = [string]$Connection.Password }
+    $start.EnvironmentVariables['PYTHONDONTWRITEBYTECODE'] = '1'
     $process = New-Object Diagnostics.Process
     $process.StartInfo = $start
     try {
-        if (-not $process.Start()) { throw 'PSQL_START_FAILED' }
+        if (-not $process.Start()) { throw 'DATABASE_READ_ONLY_BRIDGE_START_FAILED' }
         $process.StandardInput.Write($Sql)
         $process.StandardInput.Close()
         $stdout = $process.StandardOutput.ReadToEndAsync()
         $stderr = $process.StandardError.ReadToEndAsync()
-        if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'PSQL_TIMEOUT' }
+        if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'DATABASE_READ_ONLY_BRIDGE_TIMEOUT' }
         $output = [string]$stdout.Result
         $errorText = Redact-Text ([string]$stderr.Result)
-        if ($process.ExitCode -ne 0) { throw ('PSQL_FAILED_' + $Name + ':' + $errorText.Substring(0, [Math]::Min(160, $errorText.Length))) }
+        if ($process.ExitCode -ne 0) { throw ('DATABASE_READ_ONLY_BRIDGE_FAILED_' + $Name + ':' + $errorText.Substring(0, [Math]::Min(160, $errorText.Length))) }
         return @($output -split "`r?`n" | Where-Object { $_ -match '\S' })
     } finally {
-        if ($start.EnvironmentVariables.ContainsKey('PGPASSWORD')) { $start.EnvironmentVariables.Remove('PGPASSWORD') }
         $process.Dispose()
     }
 }
@@ -206,6 +403,8 @@ function Get-LogHealth([string[]]$Paths) {
     return [pscustomobject]$counts
 }
 
+if ($ToolingSelfTest) { Invoke-ToolingSelfTest; exit 0 }
+
 if (-not (Test-Path -LiteralPath $OutputDirectory -PathType Container)) { throw 'OutputDirectory must already exist.' }
 $generatedUtc = [DateTime]::UtcNow
 $hostInfo = Invoke-Safe 'HOST_INSPECTION_FAILED' {
@@ -248,31 +447,6 @@ $config['RELEASE_IDENTITY_PATH'] = [pscustomobject]@{ state=$(if ($envMap.Contai
 $invalidConfig = @($config.GetEnumerator() | Where-Object { $_.Value.state -in @('ABSENT','SAFE_VALUE_INVALID') -and $_.Key -in @('DATABASE_URL','SECRET_KEY','JWT_SECRET_KEY','APP_ENV','CORS_ORIGINS','DOCUMENT_STORAGE_ROOT') }).Count
 if ($environment.Duplicates.Count -gt 0) { Add-CollectionError 'DUPLICATE_CONFIG_KEYS' }
 
-$taskResult = Invoke-Safe 'SCHEDULED_TASK_INSPECTION_FAILED' {
-    $tasks = @(Get-ScheduledTask -TaskName $TaskName -ErrorAction Stop)
-    if ($tasks.Count -ne 1) { throw 'task missing or ambiguous' }
-    $task = $tasks[0]; $info = Get-ScheduledTaskInfo -InputObject $task -ErrorAction Stop
-    $xmlText = Export-ScheduledTask -TaskName $TaskName -ErrorAction Stop
-    [xml]$xml = $xmlText
-    $actionNodes = @($xml.SelectNodes("/*[local-name()='Task']/*[local-name()='Actions']/*[local-name()='Exec']"))
-    if ($actionNodes.Count -ne 1) { throw 'task action missing or ambiguous' }
-    $action = $actionNodes[0]
-    $arguments = Redact-Text ([string]$action.Arguments)
-    $release = Get-ReleasePathFromText (([string]$action.Command) + ' ' + $arguments + ' ' + ([string]$action.WorkingDirectory))
-    [pscustomobject]@{
-        name=$TaskName; state=[string]$task.State; enabled=[bool]$task.Settings.Enabled
-        last_result=[int64]$info.LastTaskResult; last_run_utc=$(if($info.LastRunTime){$info.LastRunTime.ToUniversalTime().ToString('o')}else{$null})
-        next_run_utc=$(if($info.NextRunTime){$info.NextRunTime.ToUniversalTime().ToString('o')}else{$null})
-        principal=[pscustomobject]@{ user_id=(Redact-Text ([string]$xml.Task.Principals.Principal.UserId)); logon_type=[string]$xml.Task.Principals.Principal.LogonType; run_level=[string]$xml.Task.Principals.Principal.RunLevel }
-        action_executable=Normalize-Path ([string]$action.Command); sanitized_arguments=$arguments
-        working_directory=Normalize-Path ([string]$action.WorkingDirectory); release_path=$release
-        trigger_count=@($xml.Task.Triggers.ChildNodes).Count
-        restart_count=[string]$xml.Task.Settings.RestartOnFailure.Count
-        restart_interval=[string]$xml.Task.Settings.RestartOnFailure.Interval
-        multiple_instances_policy=[string]$xml.Task.Settings.MultipleInstancesPolicy
-    }
-}
-
 $listeners = New-Object 'System.Collections.Generic.List[object]'
 $listenerRows = @(Invoke-Safe 'LISTENER_INSPECTION_FAILED' { Get-NetTCPConnection -State Listen -LocalPort $BackendPort -ErrorAction Stop })
 foreach ($row in $listenerRows) {
@@ -285,9 +459,68 @@ foreach ($row in $listenerRows) {
         executable=Normalize-Path ([string]$proc.ExecutablePath); sanitized_command_line=$command
         release_path=$release
         waitress_contract=($command -match '(?i)-m\s+waitress' -and $command -match '(?i)backend\.wsgi:app')
-        task_release_match=($taskResult -and $release -and (Same-Path $release $taskResult.release_path))
+        task_release_match=$false
     })
 }
+$activeRelease = $null
+if ($listeners.Count -eq 1 -and $listeners[0].release_path) { $activeRelease = $listeners[0].release_path }
+$listenerExecutable = if ($listeners.Count -eq 1) { [string]$listeners[0].executable } else { $null }
+
+$taskCandidates = New-Object 'System.Collections.Generic.List[object]'
+$taskObjects = @(Invoke-Safe 'SCHEDULED_TASK_ENUMERATION_FAILED' { Get-ScheduledTask -ErrorAction Stop })
+foreach ($task in $taskObjects) {
+    $actionHint = @($task.Actions | ForEach-Object {
+        ([string](Get-ObjectPropertyValue $_ 'Execute')) + ' ' + ([string](Get-ObjectPropertyValue $_ 'Arguments')) + ' ' + ([string](Get-ObjectPropertyValue $_ 'WorkingDirectory'))
+    }) -join ' '
+    $hint = ([string]$task.TaskName) + ' ' + ([string]$task.TaskPath) + ' ' + $actionHint
+    $plausibleHint = ($hint -match '(?i)forwarder|runtime[\\/]python\.exe|waitress|backend\.wsgi:app') -or ($hint -match ("(?i)127\.0\.0\.1:" + $BackendPort + "\b"))
+    if (-not $plausibleHint -and $activeRelease) { $plausibleHint = ($hint.IndexOf($activeRelease, [StringComparison]::OrdinalIgnoreCase) -ge 0) }
+    if (-not $plausibleHint) { continue }
+    if ($taskCandidates.Count -ge 32) { Add-CollectionError 'SCHEDULED_TASK_CANDIDATE_LIMIT_EXCEEDED'; break }
+    try {
+        $xmlText = Export-ScheduledTask -TaskName ([string]$task.TaskName) -TaskPath ([string]$task.TaskPath) -ErrorAction Stop
+        $candidate = Get-TaskCandidateFromXml ([string]$task.TaskName) ([string]$task.TaskPath) $xmlText $activeRelease $listenerExecutable $BackendPort
+        if ($candidate.plausible) { $taskCandidates.Add($candidate) }
+    } catch { Add-CollectionError 'SCHEDULED_TASK_CANDIDATE_INSPECTION_FAILED' }
+}
+
+$taskSelection = Select-ProvenTaskCandidate $taskCandidates.ToArray()
+$taskResult = [pscustomobject]@{
+    status=$taskSelection.status; preferred_name_hint=$TaskName; name=$null; task_path=$null; state=$null; enabled=$null
+    last_result=$null; last_run_utc=$null; next_run_utc=$null; principal=$null
+    action_executable=$null; action_runtime=$null; sanitized_arguments=$null; working_directory=$null; release_path=$null
+    trigger_count=$null; restart_count=$null; restart_interval=$null; multiple_instances_policy=$null
+    candidate_count=@($taskSelection.candidates).Count; candidates=@($taskSelection.candidates)
+}
+if ($taskSelection.status -eq 'PROVEN') {
+    $selected = $taskSelection.selected
+    try {
+        $task = @($taskObjects | Where-Object {$_.TaskName -eq $selected.name -and $_.TaskPath -eq $selected.task_path})[0]
+        $info = Get-ScheduledTaskInfo -TaskName $selected.name -TaskPath $selected.task_path -ErrorAction Stop
+        [xml]$selectedXml = Export-ScheduledTask -TaskName $selected.name -TaskPath $selected.task_path -ErrorAction Stop
+        $principalNode = $selectedXml.SelectSingleNode("/*[local-name()='Task']/*[local-name()='Principals']/*[local-name()='Principal']")
+        $taskResult.name=$selected.name; $taskResult.task_path=$selected.task_path; $taskResult.state=[string]$task.State
+        $taskResult.enabled=[bool]$task.Settings.Enabled; $taskResult.last_result=[int64]$info.LastTaskResult
+        $taskResult.last_run_utc=$(if($info.LastRunTime){$info.LastRunTime.ToUniversalTime().ToString('o')}else{$null})
+        $taskResult.next_run_utc=$(if($info.NextRunTime){$info.NextRunTime.ToUniversalTime().ToString('o')}else{$null})
+        $taskResult.principal=[pscustomobject]@{
+            user_id=(Get-BoundedText ([string]$principalNode.UserId) 256); logon_type=[string]$principalNode.LogonType; run_level=[string]$principalNode.RunLevel
+        }
+        $taskResult.action_executable=$selected.action_executable; $taskResult.action_runtime=$selected.action_runtime
+        $taskResult.sanitized_arguments=$selected.sanitized_arguments; $taskResult.working_directory=$selected.working_directory
+        $taskResult.release_path=$selected.release_path
+        $taskResult.trigger_count=@($selectedXml.SelectNodes("/*[local-name()='Task']/*[local-name()='Triggers']/*")).Count
+        $taskResult.restart_count=[string]$selectedXml.Task.Settings.RestartOnFailure.Count
+        $taskResult.restart_interval=[string]$selectedXml.Task.Settings.RestartOnFailure.Interval
+        $taskResult.multiple_instances_policy=[string]$selectedXml.Task.Settings.MultipleInstancesPolicy
+    } catch { Add-CollectionError 'SCHEDULED_TASK_SELECTED_METADATA_FAILED'; $taskResult.status='UNPROVEN' }
+} elseif ($taskSelection.status -eq 'AMBIGUOUS') {
+    Add-CollectionError 'SCHEDULED_TASK_IDENTITY_AMBIGUOUS'
+} else {
+    Add-CollectionError 'SCHEDULED_TASK_IDENTITY_UNPROVEN'
+}
+if (-not $activeRelease -and $taskResult.release_path) { $activeRelease = $taskResult.release_path }
+foreach ($listener in $listeners) { $listener.task_release_match=[bool]($taskResult.status -eq 'PROVEN' -and $listener.release_path -and (Same-Path $listener.release_path $taskResult.release_path)) }
 $listenerOwnership = ($listeners.Count -eq 1 -and $listeners[0].local_address -eq '127.0.0.1' -and $listeners[0].waitress_contract -and $listeners[0].task_release_match)
 
 $iisResult = Invoke-Safe 'IIS_INSPECTION_FAILED' {
@@ -317,23 +550,44 @@ $iisResult = Invoke-Safe 'IIS_INSPECTION_FAILED' {
     }
 }
 
-$activeRelease = $null
-if ($listeners.Count -eq 1 -and $listeners[0].release_path) { $activeRelease = $listeners[0].release_path }
-elseif ($taskResult -and $taskResult.release_path) { $activeRelease = $taskResult.release_path }
 $manifestResult = $null
+$legacyWitnessResult = $null
+$releaseIdentity = $null
 if ($activeRelease) {
-    $manifestResult = Invoke-Safe 'RELEASE_MANIFEST_INSPECTION_FAILED' {
-        $manifestPath = Join-Path $activeRelease 'release-manifest.json'
-        if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) { throw 'manifest missing' }
-        $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-        [pscustomobject]@{
-            path=Normalize-Path $manifestPath; product_name=[string]$manifest.product_name
-            release_stage=[string]$manifest.release_stage; application_version=[string]$manifest.application_version
-            application_commit=[string]$manifest.application_commit; database_revision=[string]$manifest.database_revision
-            package_sha256=[string]$manifest.package_sha256
+    $manifestResult = Invoke-Safe 'RELEASE_IDENTITY_INSPECTION_FAILED' { Get-GovernedReleaseManifest $activeRelease $envMap }
+    if ($manifestResult -and $manifestResult.status -eq 'CONFLICT') { Add-CollectionError 'RELEASE_IDENTITY_CONFLICT' }
+    if ($manifestResult -and $manifestResult.status -eq 'IDENTITY_PROVEN') {
+        $releaseIdentity = [pscustomobject]@{
+            status='PROVEN'; source='GOVERNED_RELEASE_MANIFEST'; candidate=$manifestResult.identity.candidate
+            application_commit=$manifestResult.identity.application_commit; application_version=$manifestResult.identity.application_version
+            database_revision=$manifestResult.identity.database_revision
+        }
+    } else {
+        $legacyWitnessResult = Invoke-Safe 'LEGACY_RELEASE_WITNESS_INSPECTION_FAILED' { Get-LegacyWitnessEvidence $activeRelease $LegacyWitnessPath }
+        $legacyWitnessAuthorityValid = (
+            $legacyWitnessResult -and $legacyWitnessResult.status -eq 'MATCH' -and
+            $legacyWitnessResult.identity.application_commit -eq $ExpectedLegacySourceCommit -and
+            $legacyWitnessResult.source_archive_sha256 -eq $ExpectedLegacySourceArchiveSha256 -and
+            $legacyWitnessResult.inventory_sha256 -eq $ExpectedLegacyInventorySha256 -and
+            $legacyWitnessResult.identity.database_revision -eq $ExpectedBeforeRevision
+        )
+        if ($legacyWitnessAuthorityValid) {
+            $releaseIdentity = [pscustomobject]@{
+                status='PROVEN'; source='LEGACY_PRODUCTION_WITNESS'; candidate=$legacyWitnessResult.identity.candidate
+                application_commit=$legacyWitnessResult.identity.application_commit; application_version=$legacyWitnessResult.identity.application_version
+                database_revision=$legacyWitnessResult.identity.database_revision
+            }
+        } elseif ($legacyWitnessResult -and $legacyWitnessResult.status -eq 'MATCH') {
+            $legacyWitnessResult.status='WITNESS_AUTHORITY_MISMATCH'
+            Add-CollectionError 'LEGACY_RELEASE_WITNESS_AUTHORITY_MISMATCH'
         }
     }
 }
+if (-not $releaseIdentity) {
+    Add-CollectionError 'ACTIVE_RELEASE_SOURCE_IDENTITY_UNPROVEN'
+    $releaseIdentity = [pscustomobject]@{ status='UNKNOWN'; source=$null; candidate=$null; application_commit=$null; application_version=$null; database_revision=$null }
+}
+$releaseIdentityVerified = ($releaseIdentity.status -eq 'PROVEN' -and $releaseIdentity.application_commit -match '^[0-9a-f]{40}$')
 
 $releaseDirectories = @()
 if (Test-Path -LiteralPath $ReleaseRoot -PathType Container) {
@@ -347,9 +601,29 @@ $health = [ordered]@{
     local_readiness = Get-HttpProbe "http://127.0.0.1:$BackendPort/api/health/ready"
 }
 
-$database = [ordered]@{ collection='UNAVAILABLE'; identity=$null; adr047=$null; compatibility=@(); schema_drift_blocker_count=$null }
-$connection = Get-ConnectionInfo $envMap
-if ($connection) {
+$database = [ordered]@{
+    collection='UNAVAILABLE'; connection_model='ACTIVE_RUNTIME_PYTHON_DOTENV_SQLALCHEMY_TO_PSQL'
+    bridge_sha256=$null; bridge_identity_verified=$false; sql_payload_identity_verified=$false
+    failure_reason=$null; identity=$null; adr047=$null; compatibility=@(); schema_drift_blocker_count=$null
+}
+$databasePython = if ($listeners.Count -eq 1) { [string]$listeners[0].executable } else { $null }
+$databaseBridgeVerified = $false
+if (Test-Path -LiteralPath $DatabaseBridgePath -PathType Leaf) {
+    $database.bridge_sha256 = Get-FileSha256 $DatabaseBridgePath
+    $databaseBridgeVerified = ($database.bridge_sha256 -eq $ExpectedDatabaseBridgeSha256)
+    $database.bridge_identity_verified = [bool]$databaseBridgeVerified
+    if (-not $databaseBridgeVerified) { Add-CollectionError 'DATABASE_READ_ONLY_BRIDGE_IDENTITY_MISMATCH' }
+}
+$adr047Path = Join-Path (Join-Path $PSScriptRoot 'sql') 'adr047-production-classifier.sql'
+$compatibilityPath = Join-Path (Join-Path $PSScriptRoot 'sql') 'migration-compatibility-readonly.sql'
+$sqlPayloadsVerified = (
+    (Test-Path -LiteralPath $adr047Path -PathType Leaf) -and (Get-FileSha256 $adr047Path) -eq $ExpectedAdr047Sha256 -and
+    (Test-Path -LiteralPath $compatibilityPath -PathType Leaf) -and (Get-FileSha256 $compatibilityPath) -eq $ExpectedCompatibilitySha256
+)
+$database.sql_payload_identity_verified = [bool]$sqlPayloadsVerified
+if (-not $sqlPayloadsVerified) { Add-CollectionError 'DATABASE_READ_ONLY_SQL_IDENTITY_MISMATCH' }
+$databasePrerequisites = ($environment.Present -and $envMap.ContainsKey('DATABASE_URL') -and $envMap['DATABASE_URL'] -and $databasePython -and (Test-Path -LiteralPath $databasePython -PathType Leaf) -and $databaseBridgeVerified -and $sqlPayloadsVerified)
+if ($databasePrerequisites) {
     try {
         $identitySql = @"
 BEGIN TRANSACTION READ ONLY;
@@ -363,9 +637,12 @@ UNION ALL SELECT 'ALEMBIC_REVISION_COUNT', count(*)::text FROM alembic_version
 UNION ALL SELECT 'ALEMBIC_REVISION', coalesce(min(version_num),'') FROM alembic_version;
 COMMIT;
 "@
-        $identityRows = @(Invoke-ReadOnlySql $identitySql $connection 'database_identity')
+        $identityRows = @(Invoke-ReadOnlySql $identitySql $databasePython 'database_identity')
         $identityMap = @{}
         foreach($row in $identityRows){$parts=$row.Split('|',2);if($parts.Count -eq 2){$identityMap[$parts[0]]=$parts[1]}}
+        foreach($requiredIdentity in @('POSTGRESQL_VERSION','DATABASE_NAME','DATABASE_ROLE','PRIMARY_STATE','DATABASE_SIZE_BYTES','DATABASE_UTC','ALEMBIC_REVISION_COUNT','ALEMBIC_REVISION')) {
+            if (-not $identityMap.ContainsKey($requiredIdentity)) { throw ('DATABASE_IDENTITY_RESULT_MISSING_' + $requiredIdentity) }
+        }
         $database.identity = [pscustomobject]@{
             postgresql_version=[string]$identityMap['POSTGRESQL_VERSION']
             database_name_sha256=(Get-TextSha256 ([string]$identityMap['DATABASE_NAME']))
@@ -376,7 +653,7 @@ COMMIT;
             alembic_revision_count=[int]$identityMap['ALEMBIC_REVISION_COUNT']
             alembic_revision=[string]$identityMap['ALEMBIC_REVISION']
         }
-        $adrRows = @(Invoke-ReadOnlySql (Read-SqlFile 'adr047-production-classifier.sql') $connection 'adr047_classifier')
+        $adrRows = @(Invoke-ReadOnlySql (Read-SqlFile 'adr047-production-classifier.sql') $databasePython 'adr047_classifier')
         if ($adrRows.Count -ne 1) { throw 'ADR047_RESULT_SHAPE_INVALID' }
         $adr = $adrRows[0].Split('|')
         if ($adr.Count -ne 5) { throw 'ADR047_RESULT_SHAPE_INVALID' }
@@ -387,16 +664,24 @@ COMMIT;
             fixed_owner_contradiction_count=[int64]$adr[3]
             fixed_owner_other_unresolved_count=[int64]$adr[4]
         }
-        $database.compatibility = @(Convert-CheckRows (Invoke-ReadOnlySql (Read-SqlFile 'migration-compatibility-readonly.sql') $connection 'migration_compatibility'))
+        $database.compatibility = @(Convert-CheckRows (Invoke-ReadOnlySql (Read-SqlFile 'migration-compatibility-readonly.sql') $databasePython 'migration_compatibility'))
         $database.schema_drift_blocker_count = @($database.compatibility | Where-Object {$_.state -ne 'PASS'}).Count
         $database.collection = 'AVAILABLE'
     } catch {
         Add-CollectionError 'DATABASE_READ_ONLY_COLLECTION_FAILED'
         $database.collection = 'UNAVAILABLE'
-    } finally {
-        $connection.Password = $null
+        $database.failure_reason = Get-BoundedText ([string]$_.Exception.Message) 240
     }
-} else { Add-CollectionError 'DATABASE_CONNECTION_MODEL_UNAVAILABLE' }
+} else {
+    Add-CollectionError 'DATABASE_CONNECTION_MODEL_UNAVAILABLE'
+    $missingDatabasePrerequisites = New-Object 'System.Collections.Generic.List[string]'
+    if (-not $environment.Present) { $missingDatabasePrerequisites.Add('ENVIRONMENT_FILE') }
+    if (-not $envMap.ContainsKey('DATABASE_URL') -or -not $envMap['DATABASE_URL']) { $missingDatabasePrerequisites.Add('DATABASE_URL') }
+    if (-not $databasePython -or -not (Test-Path -LiteralPath $databasePython -PathType Leaf)) { $missingDatabasePrerequisites.Add('ACTIVE_RUNTIME_PYTHON') }
+    if (-not $databaseBridgeVerified) { $missingDatabasePrerequisites.Add('VERIFIED_READ_ONLY_DATABASE_BRIDGE') }
+    if (-not $sqlPayloadsVerified) { $missingDatabasePrerequisites.Add('VERIFIED_READ_ONLY_SQL_PAYLOADS') }
+    $database.failure_reason = 'MISSING_' + ($missingDatabasePrerequisites -join '_')
+}
 
 $driveNames = New-Object 'System.Collections.Generic.List[string]'
 foreach ($path in @($env:SystemRoot,$ReleaseRoot,$RuntimeRoot,$ApprovedBackupRoot,$documentRoot)) {
@@ -411,7 +696,9 @@ $drives = @($driveNames | ForEach-Object {
 $backup = [ordered]@{
     root=Normalize-Path $ApprovedBackupRoot; mechanism_identified=$false; destination_ready=$false
     tooling_available=((Test-Path -LiteralPath $PgDumpPath -PathType Leaf) -and (Test-Path -LiteralPath $PgRestorePath -PathType Leaf))
-    latest_dump=$null; restore_evidence_available=$false; capacity_status='UNKNOWN'
+    latest_dump=$null; catalog_validation_available=$false; restore_evidence_available=$false; restore_evidence=$null
+    fresh_deployment_window_backup_present=$false; fresh_deployment_window_backup_required=$true
+    deployment_prerequisite_status='PENDING_FRESH_BACKUP_AND_RESTORE_PROOF'; capacity_status='UNKNOWN'
 }
 if (Test-Path -LiteralPath $ApprovedBackupRoot -PathType Container) {
     $backup.mechanism_identified=$true; $backup.destination_ready=$true
@@ -422,8 +709,30 @@ if (Test-Path -LiteralPath $ApprovedBackupRoot -PathType Container) {
             age_hours=[Math]::Round(($generatedUtc-$latest.LastWriteTimeUtc).TotalHours,2)
             sha_sidecar_present=(Test-Path -LiteralPath ($latest.FullName+'.sha256.txt') -PathType Leaf)
             catalog_sidecar_present=(Test-Path -LiteralPath ($latest.FullName+'.list.txt') -PathType Leaf)
+            restore_evidence_sidecar_present=(Test-Path -LiteralPath ($latest.FullName+'.restore-evidence.json') -PathType Leaf)
         }
-        $backup.restore_evidence_available=[bool]$backup.latest_dump.catalog_sidecar_present
+        $backup.catalog_validation_available=[bool]$backup.latest_dump.catalog_sidecar_present
+        if ($backup.latest_dump.restore_evidence_sidecar_present) {
+            try {
+                $restoreEvidence = Get-Content -Raw -LiteralPath ($latest.FullName+'.restore-evidence.json') -ErrorAction Stop | ConvertFrom-Json
+                $restoreValid = (
+                    $restoreEvidence.schema -eq 'forwarder-production-restore-evidence-v1' -and
+                    $restoreEvidence.restore_test_status -eq 'PASS' -and
+                    $restoreEvidence.source_dump_sha256 -match '^[0-9a-fA-F]{64}$' -and
+                    $restoreEvidence.restored_database_disposable -eq $true -and
+                    -not [string]::IsNullOrWhiteSpace([string]$restoreEvidence.tested_utc)
+                )
+                $backup.restore_evidence=[pscustomobject]@{
+                    state=$(if($restoreValid){'VERIFIED_METADATA'}else{'INVALID_METADATA'})
+                    tested_utc=$(if($restoreValid){[string]$restoreEvidence.tested_utc}else{$null})
+                    source_dump_sha256=$(if($restoreValid){([string]$restoreEvidence.source_dump_sha256).ToLowerInvariant()}else{$null})
+                    restored_database_disposable=$(if($restoreValid){$true}else{$false})
+                }
+                $backup.restore_evidence_available=[bool]$restoreValid
+            } catch {
+                $backup.restore_evidence=[pscustomobject]@{ state='UNREADABLE_METADATA'; tested_utc=$null; source_dump_sha256=$null; restored_database_disposable=$false }
+            }
+        }
     }
     $backupDrive = @($drives | Where-Object {$backup.root.StartsWith($_.root,[StringComparison]::OrdinalIgnoreCase)} | Select-Object -First 1)
     if ($backupDrive.Count -eq 1 -and $backupDrive[0].free_bytes -gt 0) { $backup.capacity_status='MEASURED' }
@@ -436,10 +745,11 @@ if (Test-Path -LiteralPath (Join-Path $RuntimeRoot 'logs') -PathType Container) 
 }
 $logHealth = Get-LogHealth @($logPaths)
 
-$runtimeAgreement = ($activeRelease -and $taskResult -and (Same-Path $activeRelease $taskResult.release_path) -and $iisResult -and (Same-Path $iisResult.physical_path (Join-Path $activeRelease 'dist')) -and $listenerOwnership)
+$runtimeAgreement = ($activeRelease -and $taskResult.status -eq 'PROVEN' -and (Same-Path $activeRelease $taskResult.release_path) -and $iisResult -and (Same-Path $iisResult.physical_path (Join-Path $activeRelease 'dist')) -and $listenerOwnership)
 $databaseGate = ($database.collection -eq 'AVAILABLE' -and $database.identity.alembic_revision_count -eq 1 -and $database.identity.alembic_revision -eq $ExpectedBeforeRevision -and $database.identity.primary_state -eq 'PRIMARY' -and $database.schema_drift_blocker_count -eq 0 -and $database.adr047.fixed_owner_ambiguous_count -eq 0 -and $database.adr047.fixed_owner_contradiction_count -eq 0 -and $database.adr047.fixed_owner_other_unresolved_count -eq 0)
 $configGate = ($invalidConfig -eq 0 -and $config['AUTO_MIGRATE_ON_STARTUP'].state -notin @('SAFE_VALUE_INVALID') -and $config['CORS_ALLOW_ALL_ORIGINS'].state -notin @('SAFE_VALUE_INVALID'))
-$collectorStatus = if ($CollectionErrors.Count -eq 0 -and $runtimeAgreement -and $databaseGate -and $configGate -and $backup.mechanism_identified -and $backup.tooling_available) { 'PASS' } else { 'BLOCKED' }
+$collectorStatus = if ($CollectionErrors.Count -eq 0 -and $runtimeAgreement -and $releaseIdentityVerified -and $databaseGate -and $configGate -and $backup.mechanism_identified -and $backup.tooling_available) { 'PASS' } else { 'BLOCKED' }
+$deploymentPrerequisiteStatus = if ($collectorStatus -ne 'PASS') { 'BLOCKED_COLLECTOR' } elseif (-not $backup.restore_evidence_available -or -not $backup.fresh_deployment_window_backup_present) { 'BLOCKED_FRESH_BACKUP_AND_RESTORE_PROOF_REQUIRED' } else { 'READY_FOR_SEPARATE_GO_REVIEW' }
 
 $result = [ordered]@{
     schema='forwarder-v1.10.0-production-readonly-preflight-v1'
@@ -447,7 +757,11 @@ $result = [ordered]@{
     collector_status=$collectorStatus
     product_contract=[ordered]@{ target_product_version=$ExpectedProductVersion; target_application_commit=$ExpectedApplicationCommit; before_database_revision=$ExpectedBeforeRevision; target_database_revision=$ExpectedTargetRevision }
     host=$hostInfo
-    active_release=[ordered]@{ release_root=(Normalize-Path $ReleaseRoot); active_release_path=$activeRelease; directories=$releaseDirectories; manifest=$manifestResult; runtime_agreement=[bool]$runtimeAgreement }
+    active_release=[ordered]@{
+        release_root=(Normalize-Path $ReleaseRoot); active_release_path=$activeRelease; directories=$releaseDirectories
+        manifest=$manifestResult; legacy_witness=$legacyWitnessResult; identity=$releaseIdentity
+        source_identity_verified=[bool]$releaseIdentityVerified; runtime_agreement=[bool]$runtimeAgreement
+    }
     scheduled_task=$taskResult
     listeners=$listeners.ToArray()
     listener_ownership_verified=[bool]$listenerOwnership
@@ -459,6 +773,7 @@ $result = [ordered]@{
     storage=[ordered]@{ document_root=$config['DOCUMENT_STORAGE_ROOT']; runtime_root=(Normalize-Path $RuntimeRoot); release_root=(Normalize-Path $ReleaseRoot); drives=$drives }
     log_health=$logHealth
     backup_readiness=[pscustomobject]$backup
+    deployment_prerequisite_status=$deploymentPrerequisiteStatus
     collection_errors=$CollectionErrors.Count
     collection_error_codes=$CollectionErrors.ToArray()
     secret_values_emitted=$false
