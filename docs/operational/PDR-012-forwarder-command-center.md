@@ -18,6 +18,17 @@
 6. Existing request tracking remains at `/customer/track/:requestId`; Project tracking remains at `/project/track/:trackingCode`. Current `SR-…` request codes and legacy numeric request identifiers use the request route; other opaque public tracking codes use the Project route.
 7. Staff authentication, ProtectedRoute behavior, public projections, APIs, and backend security remain unchanged.
 
+## 2026-09-21 MT-3 security amendment
+
+ADR-052 supersedes only the legacy numeric/public-request identity clause in
+decision 6 and the unchanged-security assumption in decision 7.  Request
+tracking remains at `/customer/track/:requestCapability`, but only a valid
+versioned `SR2-` Request capability can resolve.  Numeric Request IDs and
+legacy weak/predictable codes may still reach the stable unavailable page when
+typed into the Command Center, but they are not public authority and are never
+translated to a database row.  Project tracking remains a separate route and
+authority outside MT-3.
+
 ## Consequences
 
 This backward-compatible customer-facing change is a MINOR release. No ADR or RFC is required because no business object, API contract, backend architecture, authentication model, or persistence design changes. No migration, backend restart, or environment change is required. The frontend must be rebuilt and later deployed immutably; deployment is not authorized by this record.

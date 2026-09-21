@@ -296,6 +296,17 @@ Every phase is documentation-only in this mission. Database changes below are pr
 
 ### MT-3 — Public Tracking Tenant Isolation (P0)
 
+**2026-09-21 bounded implementation amendment:** ADR-052 supersedes the
+host/tenant-path-plus-code design below for the shared Request tracking route.
+The accepted closure uses the existing globally unique `tracking_code` column
+with a versioned 128-bit `SR2-` bearer capability, derives the Request's
+governed ownership envelope server-side, accepts no tenant/resource ID, rejects
+numeric and legacy weak codes, and returns a fixed minimized allowlist.  This
+requires no schema/backfill.  Project tracking, branded tenant portals,
+rotation/revocation UI, hashed-at-rest capability records, and generalized rate
+limiting remain separately governed hardening; none may be used to defer
+removal of numeric public authority.
+
 - **Goal/why:** remove the present anonymous cross-tenant/IDOR defect while preserving passwordless tracking.
 - **Dependencies:** MT-1/2 and public projection contract. P0 uses a canonical verified platform host plus an opaque, non-enumerable tenant route/portal identifier resolved before the capability; code-only tenant discovery is forbidden. Trusted forwarded-host values are accepted only from configured proxies. MT-8 later adds subdomains without changing the contract.
 - **DB:** tenant-owned capability records/hash, state, rotation/revocation/optional expiry, access audit.

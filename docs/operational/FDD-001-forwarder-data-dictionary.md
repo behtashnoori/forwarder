@@ -61,11 +61,11 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 
 - **Canonical/Persian:** ShipmentRequest / درخواست حمل; **definition/rationale:** commercial request capturing customer intent before operational execution.
 - **Class/owners:** Transaction; Product; CAP-002.
-- **Lifecycle/identity/scope:** commercial statuses; request/tracking identity; customer/organization access governed by existing contracts.
+- **Lifecycle/identity/scope:** commercial statuses; authenticated internal UUID identity; public tracking uses only the versioned 128-bit `SR2-` bearer capability from ADR-052, never numeric database identity; Customer/organization access otherwise remains governed by existing contracts.
 - **Relationships:** Customer, Quotation, Project, `0..N RequestCargoItems`, optional scalar Request transport intent, later OperationalShipment lineage. **Mutable/immutable:** request fields/status mutable per workflow; tracking identity stable.
 - **Activation/history:** logs preserve change; deletion behavior governed by legacy policy. **API/UI/reporting:** customer request/admin/expert surfaces; commercial reporting.
 - **Version/state/future/exclusions:** original application foundation; current scalar fields Implemented and Deployed; target Request Cargo is optional and structurally multi-item; Request transport intent is not the actual Route Leg sequence; not OperationalShipment.
-- **Governance/source:** ADR-002/007, PDR-019, Catalog; `backend.models.ShipmentRequest`.
+- **Governance/source:** ADR-002/007/052, PDR-019, Catalog; `backend.models.ShipmentRequest`.
 
 ## FDD-001-006 — OperationalShipment
 

@@ -72,6 +72,20 @@ Current `GET /api/public/track/<identifier>` has no tenant context. Numeric inpu
 
 Therefore the endpoint is classified `PUBLIC_CAPABILITY_SCOPED` as architectural intent **plus `TENANT_ISOLATION_DEFECT`**. `ShipmentRequest`, `ShipmentTracking`, transport units, logs, quotes, and case documents remain `LEGACY_AMBIGUOUS`; none is reclassified as public data. The characterization test is intentionally expected to fail until MT-3 removes numeric lookup and requires tenant-aware capability resolution. MT-0 does not normalize or repair this defect.
 
+### ADR-052 bounded supersession
+
+ADR-052 is the accepted MT-3 authority for the shared public Request route.  It
+retains the `PUBLIC_CAPABILITY_SCOPED` classification but replaces the proposed
+caller-visible tenant-plus-capability lookup with one globally unique,
+versioned 128-bit bearer capability.  The backend resolves exactly one Request
+by that capability, derives its governed `TENANT` or `INTAKE` ownership
+envelope, applies the current quarantine guard, and emits a fixed minimized
+allowlist.  The caller supplies no tenant or resource ID.  Numeric IDs,
+authenticated Request UUIDs, malformed/unknown values, and legacy weak codes
+all share one non-disclosing failure.  This is tenant-aware server-side
+derivation, not global code lookup as ownership or client-selected tenant
+context.
+
 ## Legacy area register
 
 | Area | Current owner model | Current risk | Required future slice |
@@ -89,7 +103,7 @@ Existing legacy flows may continue unchanged during MT-0. New tenant-sensitive d
 
 - **MT-1:** resolve every ambiguous data owner, backfill without assumptions, add non-null keys and same-tenant constraints, including request/quote/customer/document and direct-child integrity gaps.
 - **MT-2:** establish central immutable request tenant context from validated membership; provide multi-membership selection; replace manual/unscoped access and separate platform authority. MT-2B covers documents, jobs, notifications, and caches.
-- **MT-3:** implement tenant-aware public tracking, reject numeric lookup, introduce constrained high-entropy capability lifecycle and a minimal public projection.
+- **MT-3:** implement ADR-052 Request tracking: reject numeric/legacy lookup, require the versioned high-entropy capability, derive ownership server-side, and emit the minimal public projection.  Rotation/revocation UI or hashed-at-rest capability storage is additive hardening, not authority to retain the present P0 numeric path.
 
 Company/platform admin UI, licensing, branding, domains, and other later roadmap slices remain out of MT-0.
 

@@ -82,6 +82,12 @@ Internal projections may include an opaque source event ID and unit ID. They do 
 
 `tracking_code` remains the public identity and grants no new authority. Current public tracking continues reading the legacy allowlist until an explicit cohort meets canonical adoption gates.
 
+ADR-052 supersedes the Request public-identity and top-level projection portion
+of this paragraph: only its versioned 128-bit `SR2-` capability is authority,
+numeric and legacy weak codes fail closed, and the top-level public response is
+the ADR-052 minimized allowlist.  ADR-040 remains authoritative for which
+tracking/event facts and customer-visible unit history may enter that allowlist.
+
 For an adopted cohort, public tracking reads only customer-visible canonical ExecutionUnits and effective customer-visible OperationalEvents belonging to the authorized lineage. It may fall back to the complete legacy projection only when canonical lineage is unavailable. It must not silently mix canonical and legacy events in one timeline, expose internal provenance, numeric IDs, tenant metadata, internal notes, or the existence of hidden units/events.
 
 Partial canonical adoption fails closed to the configured whole-source compatibility policy and emits safe projection-health telemetry. Public source labels are included only if Product/Security approve a customer-meaningful need; internal provenance remains mandatory. Public response non-enumeration and tracking-code behavior remain unchanged.
