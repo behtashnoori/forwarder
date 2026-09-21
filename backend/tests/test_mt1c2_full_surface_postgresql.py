@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from io import BytesIO
+import base64
+import hashlib
 import os
 from pathlib import Path
 from threading import Event
@@ -78,6 +80,13 @@ UNSAFE = {
     "UNRESOLVED": ("UNRESOLVED", "QUARANTINED"),
     "INVALID_LINEAGE": ("INVALID_LINEAGE", "QUARANTINED"),
 }
+
+
+def _public_capability(marker: str) -> str:
+    encoded = base64.urlsafe_b64encode(
+        hashlib.sha256(marker.encode("utf-8")).digest()[:16]
+    ).decode("ascii").rstrip("=")
+    return f"SR2-{encoded}"
 
 
 def _url() -> str:
@@ -205,7 +214,7 @@ def test_01_real_detail_list_search_report_aggregate_export_pagination_and_track
                 ShipmentRequest(
                     ownership_scope="TENANT",
                     operational_organization_id=organization.id,
-                    tracking_code=f"MT1C2-{marker}",
+                    tracking_code=_public_capability(marker),
                     contact_phone=f"surface-{marker}",
                     customer_first_name=marker,
                     customer_last_name="Matrix",
@@ -241,7 +250,7 @@ def test_01_real_detail_list_search_report_aggregate_export_pagination_and_track
         missing = ShipmentRequest(
             ownership_scope="TENANT",
             operational_organization_id=organization_id,
-            tracking_code="MT1C2-MISSING_METADATA",
+            tracking_code=_public_capability("MISSING_METADATA"),
             contact_phone="surface-MISSING_METADATA",
             customer_first_name="MISSING_METADATA",
             customer_last_name="Matrix",
@@ -315,10 +324,10 @@ def test_01_real_detail_list_search_report_aggregate_export_pagination_and_track
     assert "CLEAR" in workbook_text
     assert not any(marker in workbook_text for marker in [*UNSAFE, "MISSING_METADATA"])
 
-    assert client.get("/api/public/track/MT1C2-CLEAR").status_code == 200
+    assert client.get(f"/api/public/track/{_public_capability('CLEAR')}").status_code == 200
     missing_body = client.get("/api/public/track/not-present").get_json()
     for marker in [*UNSAFE, "MISSING_METADATA"]:
-        denied = client.get(f"/api/public/track/MT1C2-{marker}")
+        denied = client.get(f"/api/public/track/{_public_capability(marker)}")
         assert denied.status_code == 404
         assert denied.get_json() == missing_body
     # Flask's scoped request session must not retain the shared publication

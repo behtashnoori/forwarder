@@ -936,7 +936,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
       }
 
       const response = await submitShipmentRequest(payload);
-      const trackingCode = response.tracking_code || `SR${response.id.toString().padStart(6, "0")}`;
+      const trackingCode = response.tracking_code;
       setSubmittedTrackingCode(trackingCode);
       setSubmittedCargoItems(response.cargo_items || []);
       setIsSubmitted(true);

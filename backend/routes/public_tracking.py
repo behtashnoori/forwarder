@@ -16,7 +16,16 @@ _get_final_decision_from_logs = timeline_service.get_final_decision_from_logs
 _workflow_steps_simple_4 = timeline_service.build_workflow_steps_simple_4
 _resolve_request = tracking_service.resolve_request
 _get_assigned_at = timeline_service.get_assigned_at
-_get_latest_quote = tracking_service.get_latest_quote
+
+
+@public_tracking_bp.after_request
+def _protect_public_tracking_response(response):
+    """Prevent capability-bearing responses from being cached or referred."""
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
+    return response
 
 
 def _tracking_not_found():
@@ -25,7 +34,7 @@ def _tracking_not_found():
 
 @public_tracking_bp.get("/track/<identifier>")
 def get_public_tracking_info(identifier: str):
-    """Get public tracking information by request id (numeric) or tracking_code."""
+    """Get bounded public tracking information by opaque Request capability."""
     try:
         response_data = tracking_service.get_public_tracking_payload(identifier)
         if not response_data:

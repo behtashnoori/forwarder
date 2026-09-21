@@ -66,7 +66,7 @@ describe("Forwarder Command Center", () => {
   it("submits a request tracking code with Enter", async () => {
     renderPage();
     const input = screen.getByLabelText("کد رهگیری");
-    await userEvent.type(input, "SR-A7K2M9{Enter}");
+    await userEvent.type(input, "SR2-AAAAAAAAAAAAAAAAAAAAAA{Enter}");
     expect(screen.getByText("request destination")).toBeInTheDocument();
   });
 
@@ -76,8 +76,8 @@ describe("Forwarder Command Center", () => {
     expect(screen.getByText("project destination")).toBeInTheDocument();
   });
 
-  it("preserves documented request and Project route compatibility", () => {
-    expect(trackingRouteFor("SR-ABC123")).toBe("/customer/track/SR-ABC123");
+  it("routes canonical Request capabilities and typed numeric probes to the safe Request surface", () => {
+    expect(trackingRouteFor("SR2-AAAAAAAAAAAAAAAAAAAAAA")).toBe("/customer/track/SR2-AAAAAAAAAAAAAAAAAAAAAA");
     expect(trackingRouteFor("12345")).toBe("/customer/track/12345");
     expect(trackingRouteFor("opaque/project code")).toBe("/project/track/opaque%2Fproject%20code");
   });

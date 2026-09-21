@@ -46,7 +46,7 @@ beforeEach(() => {
     cargo_types: [{ public_id: "cargo-type", code: "GENERAL", fa_name: "عمومی", en_name: "General" }],
     uoms: [{ public_id: "kg", code: "KG", fa_name: "کیلوگرم", en_name: "Kilogram", symbol: "kg", measurement_dimension: "WEIGHT" }],
   });
-  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "123456789012", message: "Created", request_transport_intent: null, cargo_items: [] });
+  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "SR2-AAAAAAAAAAAAAAAAAAAAAA", message: "Created", request_transport_intent: null, cargo_items: [] });
 });
 
 async function choose(index: number, option: string) {
@@ -86,15 +86,15 @@ async function submit(countryId: number, cityId: number) {
   expect(api.fetchIranPorts).not.toHaveBeenCalled();
   expect(api.fetchBorderCustoms).not.toHaveBeenCalled();
   expect(api.fetchProvinces).not.toHaveBeenCalled();
-  await screen.findByText("123456789012");
-  expect(screen.queryByText("123,456,789,012")).not.toBeInTheDocument();
+  await screen.findByText("SR2-AAAAAAAAAAAAAAAAAAAAAA");
+  expect(screen.queryByText("SR000001")).not.toBeInTheDocument();
 }
 
 describe("public destination business flow", () => {
   it("offers Combined Transport as one ordinary customer intent choice", async () => {
     vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
-      international_methods: [{ id: 7, name: "Combined Transport", name_fa: "حمل ترکیبی", description: "Customer intent only" }],
-      domestic_methods: [{ id: 7, name: "Combined Transport", name_fa: "حمل ترکیبی", description: "Customer intent only" }],
+      international_methods: [{ id: 7, name: "Combined Transport", name_fa: "حمل ترکیبی", description: "Customer intent only", is_active: true }],
+      domestic_methods: [{ id: 7, name: "Combined Transport", name_fa: "حمل ترکیبی", description: "Customer intent only", is_active: true }],
       preference_options: [{ value: "customer_choice", label: "Customer chooses", description: "" }],
     });
     render(<MemoryRouter><LocationForm shippingType="international" onBack={vi.fn()} /></MemoryRouter>);

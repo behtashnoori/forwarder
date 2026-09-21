@@ -120,7 +120,8 @@ def test_public_capability_is_separate_from_underlying_resource():
     entries = load_ownership_inventory()["entities"]
     public = {name: entry for name, entry in entries.items() if entry["scope"] == "PUBLIC_CAPABILITY_SCOPED"}
     assert set(public) == {"PublicShipmentTrackingEndpoint"}
-    assert public["PublicShipmentTrackingEndpoint"]["defect"] == "TENANT_ISOLATION_DEFECT"
+    assert public["PublicShipmentTrackingEndpoint"]["defect"] == "NONE"
+    assert "Exact SR2 capability lookup only" in public["PublicShipmentTrackingEndpoint"]["current_lookup"]
     assert entries["ShipmentRequest"]["scope"] == "LEGACY_AMBIGUOUS"
 
 
@@ -136,11 +137,8 @@ def test_fail_closed_tenant_primitives():
         assert_same_tenant(context, 12)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="MT-3 defect: public tracking still accepts global numeric database IDs",
-)
-def test_public_tracking_rejects_numeric_ids_characterization():
+def test_public_tracking_rejects_numeric_ids_regression():
     source = inspect.getsource(tracking_service.resolve_request)
     assert "identifier.isdigit()" not in source
     assert "ShipmentRequest.id" not in source
+    assert "normalize_public_tracking_capability" in source

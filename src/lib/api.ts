@@ -848,14 +848,10 @@ export interface InternalMultiUnitTracking {
 }
 
 export interface PublicTrackingData {
-  id: number;
   tracking_number: string;
   status: string;
   created_at: string;
   shipping_type: string;
-  contact_phone: string;
-  customer_first_name?: string;
-  customer_last_name?: string;
   route: {
     origin: {
       province?: string;
@@ -863,7 +859,6 @@ export interface PublicTrackingData {
       city?: string;
       country?: string;
       city_international?: string;
-      address?: string;
     };
     destination: {
       province?: string;
@@ -871,39 +866,13 @@ export interface PublicTrackingData {
       city?: string;
       country?: string;
       city_international?: string;
-      address?: string;
     };
   };
   transport_method?: string;
   domestic_transport_method?: string;
   international_transport_method?: string;
   transport_method_preference?: string;
-  cargo_description?: string;
-  cargo_weight?: number;
-  cargo_volume?: number;
-  cargo_value?: number;
-  special_instructions?: string;
-  pickup_date?: string | null;
-  delivery_date?: string | null;
-  assigned_expert?: {
-    id: number;
-    full_name: string;
-    phone: string;
-    email?: string;
-  };
   assigned_at?: string | null;
-  last_customer_touch_at?: string | null;
-  latest_quote?: {
-    amount: number;
-    currency: string;
-    note?: string | null;
-    valid_until?: string | null;
-    created_at: string;
-    created_by?: string | null;
-    customer_response?: QuoteResponseState | null;
-    responded_at?: string | null;
-  } | null;
-  workflow_steps?: PublicTrackingWorkflowStep[];
   workflow_steps_simple?: PublicTrackingWorkflowStep[];
   unit_tracking?: MultiUnitTracking | null;
 }

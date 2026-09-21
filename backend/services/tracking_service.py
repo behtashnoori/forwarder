@@ -1,71 +1,46 @@
-"""Read helpers for public tracking response assembly."""
+"""Fail-closed public Request tracking capability resolution and projection."""
+from __future__ import annotations
+
+import re
+
 from backend.extensions import db
-from backend.models import City, County, ExpertQuote, ExpertUser, Province, ShipmentRequest
+from backend.models import City, County, Province, ShipmentRequest
+from backend.quarantine import assert_instance_current, is_quarantined
 from backend.services import timeline_service
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.multi_unit_tracking_service import build_public_unit_tracking
-from backend.quarantine import assert_instance_current, is_quarantined
+
+
+# 16 random bytes encoded with URL-safe base64 (without padding) produce
+# exactly 22 characters. The version prefix makes legacy weak capabilities
+# fail closed without guessing their entropy or origin.
+PUBLIC_TRACKING_CAPABILITY_PATTERN = re.compile(r"^SR2-[A-Za-z0-9_-]{22}$")
+
+
+def normalize_public_tracking_capability(value: str | None) -> str | None:
+    """Return one canonical ADR-052 capability or ``None`` without DB access."""
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    if not PUBLIC_TRACKING_CAPABILITY_PATTERN.fullmatch(normalized):
+        return None
+    return normalized
 
 
 def resolve_request(identifier: str):
-    """Resolve identifier (numeric id or tracking_code) to ShipmentRequest or None."""
-    identifier = (identifier or "").strip()
-    if not identifier:
+    """Resolve only an exact opaque public capability to one Request."""
+    capability = normalize_public_tracking_capability(identifier)
+    if capability is None:
         return None
-    if identifier.isdigit():
-        return db.session.query(ShipmentRequest).filter(ShipmentRequest.id == int(identifier)).first()
-    return db.session.query(ShipmentRequest).filter(ShipmentRequest.tracking_code == identifier).first()
-
-
-def get_latest_quote(req):
-    """Return the latest quote for this request, or None."""
-    row = (
-        db.session.query(ExpertQuote)
-        .filter(ExpertQuote.shipment_request_id == req.id)
-        .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
-        .first()
+    return (
+        db.session.query(ShipmentRequest)
+        .filter(ShipmentRequest.tracking_code == capability)
+        .one_or_none()
     )
-    if not row:
-        return None
-    created_by_name = None
-    if row.created_by_expert:
-        created_by_name = row.created_by_expert.full_name
-    return {
-        "amount": int(row.amount) if row.amount is not None else None,
-        "currency": row.currency or "IRR",
-        "note": row.note,
-        "valid_until": row.valid_until.isoformat() if row.valid_until else None,
-        "created_at": row.created_at.isoformat() if hasattr(row.created_at, "isoformat") else str(row.created_at),
-        "created_by": created_by_name,
-        "customer_response": row.customer_response,
-        "responded_at": row.responded_at.isoformat() if row.responded_at else None,
-    }
 
 
-def date_iso(value):
-    """Return an ISO-like string for date/datetime values while preserving existing fallbacks."""
-    if value is None:
-        return None
-    return value.isoformat() if hasattr(value, "isoformat") else str(value)
-
-
-def build_assigned_expert(req):
-    """Return assigned expert public summary, or None."""
-    if not req.assigned_to:
-        return None
-    exp = db.session.query(ExpertUser).filter(ExpertUser.id == req.assigned_to).first()
-    if not exp:
-        return None
-    return {
-        "id": exp.id,
-        "full_name": exp.full_name,
-        "phone": exp.phone or "",
-        "email": getattr(exp, "email", None) or "",
-    }
-
-
-def build_route_summary(req):
-    """Return public origin/destination route summary for a shipment request."""
+def build_route_summary(req: ShipmentRequest) -> dict:
+    """Return bounded public geography labels without exact address data."""
     origin_province = None
     origin_county = None
     origin_city = None
@@ -74,17 +49,17 @@ def build_route_summary(req):
     dest_city = None
     if req.shipping_type == "domestic":
         if req.origin_province_id:
-            origin_province = db.session.query(Province).filter(Province.id == req.origin_province_id).first()
+            origin_province = db.session.get(Province, req.origin_province_id)
         if req.origin_county_id:
-            origin_county = db.session.query(County).filter(County.id == req.origin_county_id).first()
+            origin_county = db.session.get(County, req.origin_county_id)
         if req.origin_city_id:
-            origin_city = db.session.query(City).filter(City.id == req.origin_city_id).first()
+            origin_city = db.session.get(City, req.origin_city_id)
         if req.dest_province_id:
-            dest_province = db.session.query(Province).filter(Province.id == req.dest_province_id).first()
+            dest_province = db.session.get(Province, req.dest_province_id)
         if req.dest_county_id:
-            dest_county = db.session.query(County).filter(County.id == req.dest_county_id).first()
+            dest_county = db.session.get(County, req.dest_county_id)
         if req.dest_city_id:
-            dest_city = db.session.query(City).filter(City.id == req.dest_city_id).first()
+            dest_city = db.session.get(City, req.dest_city_id)
 
     return {
         "origin": {
@@ -93,7 +68,6 @@ def build_route_summary(req):
             "city": origin_city.name_fa if origin_city else None,
             "country": req.origin_country,
             "city_international": req.origin_city_international,
-            "address": getattr(req, "origin_address_international", None),
         },
         "destination": {
             "province": dest_province.name_fa if dest_province else None,
@@ -101,67 +75,40 @@ def build_route_summary(req):
             "city": dest_city.name_fa if dest_city else None,
             "country": req.dest_country,
             "city_international": req.dest_city_international,
-            "address": getattr(req, "dest_address_international", None),
         },
     }
 
 
-def build_tracking_response(req, *, include_unit_tracking: bool = False):
-    """Build the public tracking response payload for a shipment request."""
-    tracking_number = req.tracking_code if req.tracking_code else f"SR{req.id:06d}"
-
-    created_at = req.created_at
-    created_iso = serialize_legacy_utc_datetime(created_at)
-
+def build_tracking_response(req: ShipmentRequest) -> dict:
+    """Build the exact ADR-052 public-safe Request tracking allowlist."""
     assigned_at = timeline_service.get_assigned_at(req)
-    assigned_at_iso = assigned_at.isoformat() if assigned_at and hasattr(assigned_at, "isoformat") else (str(assigned_at) if assigned_at else None)
-
-    latest_quote = get_latest_quote(req)
-
-    response = {
-        "id": req.id,
-        "tracking_number": tracking_number,
+    assigned_at_iso = (
+        assigned_at.isoformat()
+        if assigned_at is not None and hasattr(assigned_at, "isoformat")
+        else str(assigned_at) if assigned_at is not None else None
+    )
+    return {
+        "tracking_number": req.tracking_code,
         "status": req.status or "new",
-        "created_at": created_iso,
+        "created_at": serialize_legacy_utc_datetime(req.created_at),
         "shipping_type": req.shipping_type or "domestic",
-        "contact_phone": req.contact_phone,
-        "customer_first_name": req.customer_first_name,
-        "customer_last_name": req.customer_last_name,
         "route": build_route_summary(req),
         "transport_method": req.transport_method,
         "domestic_transport_method": req.domestic_transport_method,
         "international_transport_method": req.international_transport_method,
         "transport_method_preference": req.transport_method_preference,
-        "cargo_description": req.cargo_description,
-        "cargo_weight": req.cargo_weight,
-        "cargo_volume": req.cargo_volume,
-        "cargo_value": req.cargo_value,
-        "special_instructions": req.special_instructions,
-        "pickup_date": date_iso(req.pickup_date),
-        "delivery_date": date_iso(req.delivery_date),
-        "assigned_expert": build_assigned_expert(req),
         "assigned_at": assigned_at_iso,
-        "last_customer_touch_at": date_iso(req.last_customer_touch_at),
-        "latest_quote": latest_quote,
-        "workflow_steps": timeline_service.build_workflow_steps_from_status(
-            req.status or "new",
-            req.created_at,
-            assigned_at=assigned_at,
-            quote_created_at=latest_quote.get("created_at") if latest_quote else None,
+        "workflow_steps_simple": timeline_service.build_workflow_steps_simple_4(
+            req, assigned_at=assigned_at
         ),
-        "workflow_steps_simple": timeline_service.build_workflow_steps_simple_4(req, assigned_at=assigned_at),
+        "unit_tracking": build_public_unit_tracking(req),
     }
-    if include_unit_tracking:
-        response["unit_tracking"] = build_public_unit_tracking(req)
-    return response
 
 
-def get_public_tracking_payload(identifier: str):
-    """Return the public tracking payload for an identifier, or None when not found."""
+def get_public_tracking_payload(identifier: str) -> dict | None:
+    """Return one authorized public projection, or ``None`` non-disclosively."""
     req = resolve_request(identifier)
-    if not req or is_quarantined("ShipmentRequest", req.id):
+    if req is None or is_quarantined("ShipmentRequest", req.id):
         return None
     assert_instance_current(req, purpose="public-tracking-serialize")
-    normalized_identifier = (identifier or "").strip()
-    include_unit_tracking = bool(req.tracking_code and normalized_identifier == req.tracking_code)
-    return build_tracking_response(req, include_unit_tracking=include_unit_tracking)
+    return build_tracking_response(req)

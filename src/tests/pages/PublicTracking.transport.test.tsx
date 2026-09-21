@@ -13,7 +13,7 @@ vi.mock("@/lib/api", async () => {
 
 const request = {
   id: 12,
-  tracking_number: "1234567890",
+  tracking_number: "SR2-AAAAAAAAAAAAAAAAAAAAAA",
   status: "new",
   created_at: "2026-09-20T00:00:00Z",
   shipping_type: "domestic",
@@ -49,6 +49,23 @@ describe("public request transport summary", () => {
     expect(screen.getAllByText("حمل ریلی")).toHaveLength(1);
     expect(screen.queryByText("Rail Transport")).not.toBeInTheDocument();
     expect(screen.queryByText("جاده‌ای")).not.toBeInTheDocument();
+    expect(screen.queryByText("09120000000")).not.toBeInTheDocument();
+    expect(screen.queryByText("مشتری")).not.toBeInTheDocument();
     expect(document.body).toHaveTextContent("۲۰ سپتامبر ۲۰۲۶ (۲۹ شهریور ۱۴۰۵)");
+  });
+
+  it("shows the same safe unavailable state for a numeric public probe", async () => {
+    vi.mocked(api.fetchPublicTracking).mockRejectedValue(new api.PublicTrackingNotFoundError());
+    render(
+      <I18nProvider>
+        <MemoryRouter initialEntries={["/track/10"]}>
+          <Routes><Route path="/track/:requestId" element={<PublicTracking />} /></Routes>
+        </MemoryRouter>
+      </I18nProvider>,
+    );
+
+    expect(await screen.findByText("درخواست یافت نشد")).toBeInTheDocument();
+    expect(api.fetchPublicTracking).toHaveBeenCalledWith("10");
+    expect(screen.queryByText("09120000000")).not.toBeInTheDocument();
   });
 });

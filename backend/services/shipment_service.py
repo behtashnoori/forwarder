@@ -1,6 +1,5 @@
 """Service helpers for public shipment request endpoints."""
 import secrets
-import string
 import re
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -778,7 +777,9 @@ def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime)
 
 def build_shipment_request_payload(shipment_request: ShipmentRequest) -> dict[str, Any]:
     """Build the current public create response payload."""
-    tracking_display = getattr(shipment_request, "tracking_code", None) or f"SR{shipment_request.id:06d}"
+    tracking_display = getattr(shipment_request, "tracking_code", None)
+    if not tracking_display:
+        raise RuntimeError("shipment request has no public tracking capability")
     return {
         "message": "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت.",
         "id": shipment_request.id,
@@ -850,18 +851,18 @@ def build_legacy_cargo_payload(shipment_request: ShipmentRequest) -> dict[str, A
 
 
 def generate_tracking_code(shipment_request: ShipmentRequest) -> str:
-    """Generate a unique public tracking code, preserving the legacy fallback behavior."""
-    try:
-        alphabet = string.ascii_uppercase + string.digits
-        for _ in range(100):
-            code = "SR-" + "".join(secrets.choice(alphabet) for _ in range(6))
-            if db.session.query(ShipmentRequest).filter(ShipmentRequest.tracking_code == code).first() is None:
-                return code
-        return "SR-" + secrets.token_hex(3).upper()
-    except Exception as exc:
-        if isinstance(exc, SECURITY_FENCE_ERRORS):
-            raise
-        return f"SR{shipment_request.id:06d}"
+    """Generate one versioned 128-bit ADR-052 public bearer capability."""
+    del shipment_request  # Database identity must not influence public authority.
+    for _ in range(8):
+        code = "SR2-" + secrets.token_urlsafe(16)
+        if (
+            db.session.query(ShipmentRequest)
+            .filter(ShipmentRequest.tracking_code == code)
+            .first()
+            is None
+        ):
+            return code
+    raise RuntimeError("unable to allocate a unique public tracking capability")
 
 
 def handle_gamification(shipment_request: ShipmentRequest, gamification_customer_id, timestamp: datetime) -> None:

@@ -1437,21 +1437,83 @@ paths:
   /api/public/track/{identifier}:
     get:
       tags: [Public Tracking]
-      summary: Public shipment tracking by id or tracking code
+      summary: Public Request tracking by opaque capability
+      description: >-
+        Resolves only a versioned 128-bit SR2 Request bearer capability. Numeric
+        database IDs, authenticated Request UUIDs, legacy weak codes, malformed
+        values, and unknown capabilities share the same non-disclosing 404.
       parameters:
         - name: identifier
           in: path
           required: true
           schema:
             type: string
+            pattern: '^SR2-[A-Za-z0-9_-]{22}$'
       responses:
         '200':
-          description: Public tracking payload. Best-effort schema from public tracking contract tests.
+          description: Fixed public-safe tracking projection.
           content:
             application/json:
               schema:
                 type: object
-                additionalProperties: true
+                additionalProperties: false
+                required:
+                  - tracking_number
+                  - status
+                  - created_at
+                  - shipping_type
+                  - route
+                  - transport_method
+                  - domestic_transport_method
+                  - international_transport_method
+                  - transport_method_preference
+                  - assigned_at
+                  - workflow_steps_simple
+                  - unit_tracking
+                properties:
+                  tracking_number:
+                    type: string
+                    pattern: '^SR2-[A-Za-z0-9_-]{22}$'
+                  status:
+                    type: string
+                  created_at:
+                    type: string
+                  shipping_type:
+                    type: string
+                  route:
+                    type: object
+                    additionalProperties: false
+                    required: [origin, destination]
+                    properties:
+                      origin:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          province: {type: string, nullable: true}
+                          county: {type: string, nullable: true}
+                          city: {type: string, nullable: true}
+                          country: {type: string, nullable: true}
+                          city_international: {type: string, nullable: true}
+                      destination:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          province: {type: string, nullable: true}
+                          county: {type: string, nullable: true}
+                          city: {type: string, nullable: true}
+                          country: {type: string, nullable: true}
+                          city_international: {type: string, nullable: true}
+                  transport_method: {type: string, nullable: true}
+                  domestic_transport_method: {type: string, nullable: true}
+                  international_transport_method: {type: string, nullable: true}
+                  transport_method_preference: {type: string, nullable: true}
+                  assigned_at: {type: string, nullable: true}
+                  workflow_steps_simple:
+                    type: array
+                    items: {type: object}
+                  unit_tracking:
+                    type: object
+                    nullable: true
         '404':
           $ref: '#/components/responses/NotFound'
         '500':

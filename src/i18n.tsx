@@ -136,7 +136,7 @@ const translations = {
     "tracking.title": "پیگیری وضعیت درخواست حمل",
     "tracking.description": "شماره پیگیری درخواست را وارد کنید تا وضعیت ثبت و پیگیری آن را ببینید.",
     "tracking.ariaLabel": "شماره پیگیری",
-    "tracking.placeholder": "مثال: SR-XXXXXX یا SR000001",
+    "tracking.placeholder": "مثال: SR2-AbCdEfGhIjKlMnOpQrStUv",
     "tracking.search": "جستجو",
     "contact.title": "تماس و هماهنگی با فورواردر",
     "contact.description":
@@ -876,7 +876,7 @@ const translations = {
     "tracking.title": "Track freight request status",
     "tracking.description": "Enter your tracking number to view the registration and follow-up status.",
     "tracking.ariaLabel": "Tracking number",
-    "tracking.placeholder": "Example: SR-XXXXXX or SR000001",
+    "tracking.placeholder": "Example: SR2-AbCdEfGhIjKlMnOpQrStUv",
     "tracking.search": "Search",
     "contact.title": "Contact and coordination with Forwarder",
     "contact.description":

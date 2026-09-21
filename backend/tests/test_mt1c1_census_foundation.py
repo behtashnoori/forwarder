@@ -361,7 +361,7 @@ def test_real_public_detail_uses_one_version_and_clear_behavior_is_unchanged(
     foundation_app
 ):
     row = ShipmentRequest(
-        tracking_code="MT1C1-PUBLIC",
+        tracking_code="SR2-CCCCCCCCCCCCCCCCCCCCCC",
         contact_phone="public",
         shipping_type="domestic",
         status="new",
@@ -380,7 +380,7 @@ def test_real_public_detail_uses_one_version_and_clear_behavior_is_unchanged(
             authority=_authority(),
         )
     client = foundation_app.test_client()
-    visible = client.get("/api/public/track/MT1C1-PUBLIC")
+    visible = client.get("/api/public/track/SR2-CCCCCCCCCCCCCCCCCCCCCC")
     assert visible.status_code == 200
     assert visible.headers["X-Ownership-Census-Version"] == str(first.cache_version)
     db.session.rollback()
@@ -397,5 +397,5 @@ def test_real_public_detail_uses_one_version_and_clear_behavior_is_unchanged(
             ),
             authority=_authority(),
         )
-    denied = client.get("/api/public/track/MT1C1-PUBLIC")
+    denied = client.get("/api/public/track/SR2-CCCCCCCCCCCCCCCCCCCCCC")
     assert denied.status_code == 404

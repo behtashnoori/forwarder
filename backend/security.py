@@ -76,7 +76,9 @@ class SecurityManager:
             )
             
             # Referrer Policy
-            response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+            # Capability-bearing routes may set a stricter policy before this
+            # application-wide default runs.
+            response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
             
             return response
     

@@ -13,6 +13,9 @@ from backend.routes.public_tracking import (
 )
 
 
+TRACKING_CAPABILITY = "SR2-TTTTTTTTTTTTTTTTTTTTTT"
+
+
 @pytest.fixture
 def app_with_tables():
     """App with in-memory DB and tables created."""
@@ -41,6 +44,7 @@ def _make_request(app, status="new", created_at=None):
             shipping_type="domestic",
             status=status,
             created_at=created_at,
+            tracking_code=TRACKING_CAPABILITY,
         )
         db.session.add(req)
         db.session.commit()
@@ -178,16 +182,15 @@ def test_get_final_decision_from_logs_returns_most_recent(app_with_tables):
 
 
 def test_public_tracking_response_includes_workflow_steps_simple(app_with_tables):
-    """GET /api/public/track/<id> includes workflow_steps_simple with 4 steps."""
+    """Opaque public capability includes the bounded four-step workflow."""
     app = app_with_tables
     req = _make_request(app, status="in_progress")
     with app.app_context():
-        rid = req.id
+        capability = req.tracking_code
     client = app.test_client()
-    r = client.get(f"/api/public/track/{rid}")
+    r = client.get(f"/api/public/track/{capability}")
     assert r.status_code == 200
     data = json.loads(r.data)
-    assert "workflow_steps" in data
     assert "workflow_steps_simple" in data
     simple = data["workflow_steps_simple"]
     assert len(simple) == 4
@@ -202,61 +205,38 @@ def test_public_tracking_response_contract_keys_and_public_not_found(app_with_ta
     req = _make_request(app, status="new", created_at=created_at)
     with app.app_context():
         rid = req.id
+        capability = req.tracking_code
     client = app.test_client()
 
     missing = client.get("/api/public/track/999999")
     assert missing.status_code == 404
     assert json.loads(missing.data) == {"message": "درخواست یافت نشد"}
 
-    response = client.get(f"/api/public/track/{rid}")
+    response = client.get(f"/api/public/track/{capability}")
     assert response.status_code == 200
     data = json.loads(response.data)
     assert set(data.keys()) == {
-        "id",
         "tracking_number",
         "status",
         "created_at",
         "shipping_type",
-        "contact_phone",
-        "customer_first_name",
-        "customer_last_name",
         "route",
         "transport_method",
         "domestic_transport_method",
         "international_transport_method",
         "transport_method_preference",
-        "cargo_description",
-        "cargo_weight",
-        "cargo_volume",
-        "cargo_value",
-        "special_instructions",
-        "pickup_date",
-        "delivery_date",
-        "assigned_expert",
         "assigned_at",
-        "last_customer_touch_at",
-        "latest_quote",
-        "workflow_steps",
         "workflow_steps_simple",
+        "unit_tracking",
     }
-    assert data["tracking_number"] == f"SR{rid:06d}"
+    assert data["tracking_number"] == TRACKING_CAPABILITY
     assert data["status"] == "new"
     assert data["shipping_type"] == "domestic"
-    assert data["assigned_expert"] is None
-    assert data["latest_quote"] is None
     assert set(data["route"].keys()) == {"origin", "destination"}
-    assert [step["name"] for step in data["workflow_steps"]] == [
-        "request_submitted",
-        "expert_assigned",
-        "expert_contacted",
-        "quote_provided",
-        "contract_signed",
-        "shipment_picked_up",
-        "shipment_delivered",
-    ]
     assert [step["name"] for step in data["workflow_steps_simple"]] == [
         "request_submitted",
         "expert_assigned",
         "in_progress",
         "final_decision",
     ]
+    assert client.get(f"/api/public/track/{rid}").status_code == 404

@@ -13,25 +13,18 @@ import {
 import {
   AlertCircle,
   ArrowLeft,
-  Calendar,
   CheckCircle,
   Clock,
-  DollarSign,
-  FileText,
   Home,
   MapPin,
   Package,
-  Phone,
   Route,
   Truck,
-  User,
 } from "lucide-react";
 import { useI18n } from "@/i18n";
-import { formatDualCalendarDate, formatDualCalendarInstant } from "@/lib/dualCalendar";
-import { formatBusinessNumber, formatMoney } from "@/lib/formatQuantity";
+import { formatDualCalendarInstant } from "@/lib/dualCalendar";
+import { formatBusinessNumber } from "@/lib/formatQuantity";
 import { getRequestTransportMethod } from "@/lib/transportPresentation";
-
-const showLatestQuoteCard: boolean = false;
 
 type StatusInfo = {
   variant: "secondary" | "default" | "destructive";
@@ -167,8 +160,7 @@ const PublicTracking: React.FC = () => {
   const isInternational = requestData?.shipping_type === "international";
   const workflowSteps = useMemo(() => {
     if (!requestData) return [];
-    const steps = requestData.workflow_steps_simple ?? requestData.workflow_steps ?? [];
-    return steps.filter((step) => (requestData.workflow_steps_simple ? true : step.name !== "quote_provided"));
+    return requestData.workflow_steps_simple ?? [];
   }, [requestData]);
 
   if (loading) {
@@ -216,15 +208,6 @@ const PublicTracking: React.FC = () => {
       </main>
     );
   }
-
-  const hasCargo =
-    requestData.cargo_description ||
-    requestData.cargo_weight != null ||
-    requestData.cargo_volume != null ||
-    requestData.cargo_value != null ||
-    requestData.special_instructions ||
-    requestData.pickup_date ||
-    requestData.delivery_date;
 
   const requestTransportMethod = getRequestTransportMethod(requestData);
   const requestTransportLabel = requestTransportMethod
@@ -310,38 +293,6 @@ const PublicTracking: React.FC = () => {
             </div>
           </div>
         </section>
-
-        {requestData.latest_quote && (
-          <Section icon={DollarSign} title={t("customer.quoteTitle")} className="mb-6">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label={t("common.amount")}
-                value={formatMoney(requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
-              />
-              {requestData.latest_quote.valid_until && (
-                <Field
-                  label={t("customer.quoteValidUntil")}
-                  value={formatDualCalendarDate(requestData.latest_quote.valid_until, locale)}
-                />
-              )}
-            </div>
-            {requestData.latest_quote.note && (
-              <p className="mt-4 border-t border-border/70 pt-3 text-sm text-muted-foreground">
-                {requestData.latest_quote.note}
-              </p>
-            )}
-            {requestData.latest_quote.customer_response === "accepted" && (
-              <div className="mt-4 rounded-md border border-green-200 bg-green-50 p-3 text-sm font-medium text-green-800">
-                {t("customer.quoteAccepted")}
-              </div>
-            )}
-            {requestData.latest_quote.customer_response === "declined" && (
-              <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-800">
-                {t("customer.quoteDeclined")}
-              </div>
-            )}
-          </Section>
-        )}
 
         {unitTracking && (
           <Section icon={Truck} title={t("multiTracking.customerTitle")} className="mb-6">
@@ -437,117 +388,9 @@ const PublicTracking: React.FC = () => {
               </div>
             </Section>
 
-            <Section icon={User} title={t("publicTracking.contactInfo")}>
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field
-                  label={t("common.phone")}
-                  value={
-                    <span className="inline-flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-muted-foreground" />
-                      {requestData.contact_phone}
-                    </span>
-                  }
-                />
-                {(requestData.customer_first_name || requestData.customer_last_name) && (
-                  <Field
-                    label={t("common.customerName")}
-                    value={`${requestData.customer_first_name || ""} ${requestData.customer_last_name || ""}`.trim()}
-                  />
-                )}
-              </div>
-            </Section>
-
-            {hasCargo && (
-              <Section icon={FileText} title={t("common.cargoDetails")}>
-                <div className="space-y-4">
-                  {requestData.cargo_description && (
-                    <Field label={t("common.description")} value={requestData.cargo_description} />
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {requestData.cargo_weight != null && (
-                      <Field label={t("common.weightKg")} value={requestData.cargo_weight} />
-                    )}
-                    {requestData.cargo_volume != null && (
-                      <Field label={t("common.volumeM3")} value={requestData.cargo_volume} />
-                    )}
-                    {requestData.cargo_value != null && (
-                      <Field label={t("common.value")} value={requestData.cargo_value} />
-                    )}
-                    {requestData.pickup_date && (
-                      <Field label={t("common.createdAt")} value={formatDualCalendarDate(requestData.pickup_date, locale)} />
-                    )}
-                    {requestData.delivery_date && (
-                      <Field label={t("common.createdAt")} value={formatDualCalendarDate(requestData.delivery_date, locale)} />
-                    )}
-                  </div>
-                  {requestData.special_instructions && (
-                    <Field label={t("common.specialInstructions")} value={requestData.special_instructions} />
-                  )}
-                </div>
-              </Section>
-            )}
           </div>
 
           <aside className="space-y-6">
-            {requestData.assigned_expert && (
-              <Section icon={User} title={t("publicTracking.assignedExpert")}>
-                <div className="space-y-4">
-                  <Field label={t("common.expert")} value={requestData.assigned_expert.full_name} />
-                  {requestData.assigned_at && (
-                    <Field
-                      label={t("publicTracking.assignedAt")}
-                      value={formatDate(requestData.assigned_at, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }, "—", locale)}
-                    />
-                  )}
-                  <Field
-                    label={t("common.phone")}
-                    value={
-                      <a href={`tel:${requestData.assigned_expert.phone}`} className="hover:underline">
-                        {requestData.assigned_expert.phone}
-                      </a>
-                    }
-                  />
-                  {requestData.assigned_expert.email && (
-                    <Field label={t("common.email")} value={requestData.assigned_expert.email} />
-                  )}
-                </div>
-              </Section>
-            )}
-
-            {showLatestQuoteCard && requestData.latest_quote && (
-              <Section icon={DollarSign} title={t("customer.quoteTitle")}>
-                <div className="space-y-4">
-                  <Field
-                    label={t("common.amount")}
-                    value={formatMoney(requestData.latest_quote.amount, requestData.latest_quote.currency, locale)}
-                  />
-                  {requestData.latest_quote.valid_until && (
-                    <Field
-                      label={t("common.validUntil")}
-                      value={formatDualCalendarDate(requestData.latest_quote.valid_until, locale)}
-                    />
-                  )}
-                  {requestData.latest_quote.note && (
-                    <Field label={t("common.notes")} value={requestData.latest_quote.note} />
-                  )}
-                  <p className="text-xs leading-6 text-muted-foreground">
-                    {formatDate(requestData.latest_quote.created_at, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    }, "", locale)}
-                    {requestData.latest_quote.created_by && ` — ${requestData.latest_quote.created_by}`}
-                  </p>
-                </div>
-              </Section>
-            )}
-
             {workflowSteps.length > 0 && (
               <Section icon={CheckCircle} title={t("publicTracking.workflow")}>
                 {currentStatusLabel && (

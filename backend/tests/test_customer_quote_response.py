@@ -48,7 +48,7 @@ def _seed(valid_until=None):
     )
     db.session.add(quote)
     db.session.commit()
-    req.tracking_code = f"SR-QUOTE-CAPABILITY-{suffix}"
+    req.tracking_code = f"SR2-Q{suffix:021d}"
     db.session.commit()
     return customer.id, req.id, quote.id, req.tracking_code
 
@@ -486,5 +486,5 @@ def test_public_tracking_never_exposes_private_discussion_message(app, client):
     assert recorded.status_code == 200
     public = client.get(f"/api/public/track/{tracking_code}")
     assert public.status_code == 200
-    assert "customer_response_message" not in public.get_json()["latest_quote"]
+    assert "latest_quote" not in public.get_json()
     assert "محرمانه تجاری مشتری" not in public.get_data(as_text=True)
