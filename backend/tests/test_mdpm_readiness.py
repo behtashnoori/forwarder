@@ -364,6 +364,7 @@ def test_same_request_file_can_satisfy_independent_shipment_requirements(executi
             shipment_request_id=first.shipment_request_id,
             accepted_quote_id=quote.id,
             created_by_user_id=execution_app.config["ctx"]["operator"],
+            primary_responsible_expert_id=execution_app.config["ctx"]["operator"],
         )
         db.session.add(second)
         db.session.commit()

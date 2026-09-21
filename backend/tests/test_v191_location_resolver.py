@@ -324,10 +324,16 @@ def test_quote_conversion_uses_shared_resolver_and_enriched_snapshot(app):
             role="expert",
             is_active=True,
         )
+        db.session.add_all([org, user])
+        db.session.flush()
         customer = Customer(
-            first_name="Canonical", last_name="Customer", status="active"
+            first_name="Canonical",
+            last_name="Customer",
+            status="active",
+            operational_organization_id=org.id,
+            ownership_scope="TENANT",
         )
-        db.session.add_all([org, user, customer])
+        db.session.add(customer)
         db.session.flush()
         request = ShipmentRequest(
             contact_phone="09120000000",

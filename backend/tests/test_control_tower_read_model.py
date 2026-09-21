@@ -4,7 +4,7 @@ from dataclasses import FrozenInstanceError, asdict, fields, replace
 from datetime import timedelta
 
 import pytest
-from sqlalchemy import event
+from sqlalchemy import event, update
 
 from backend.extensions import db
 from backend.models import Customer, DocumentDefinition
@@ -16,6 +16,7 @@ from backend.operational_models import (
     OperationalCheckpoint,
     OperationalEvent,
     OperationalEventLocationEvidence,
+    OperationalShipment,
     Project,
     RouteLeg,
     RoutePlan,
@@ -394,22 +395,30 @@ def test_direct_readiness_not_applicable_and_empty_complete(tower):
 
 
 @pytest.mark.parametrize("source", ["direct", "accepted_quote"])
-def test_reassignment_before_composition_removes_old_owner(tower, source):
+def test_request_or_owner_mutation_before_composition_cannot_transfer_scope(tower, source):
+    from backend.services.control_tower_scope import governed_summary_scope
+
     shipment, request = tower.shipment(source=source)
     if request:
         request.assigned_to = tower.b.id
+        db.session.commit()
     else:
         shipment.primary_responsible_expert_id = tower.b.id
-    db.session.commit()
-    assert read(tower.a).items == ()
+        with pytest.raises(ValueError, match="responsible Expert is immutable"):
+            db.session.commit()
+        db.session.rollback()
+    assert {row.shipment_id for row in governed_summary_scope({"id": tower.a.id})} == {
+        shipment.id
+    }
+    assert governed_summary_scope({"id": tower.b.id}) == ()
 
 
-@pytest.mark.parametrize("revocation", ["assignment", "membership", "persona", "owner_name"])
+@pytest.mark.parametrize("revocation", ["request_assignment", "membership", "persona", "owner_name"])
 def test_revocation_during_composition_fails_closed(attention, monkeypatch, revocation):
     original = sources._readiness
     def revoke(*args, **kw):
         result = original(*args, **kw)
-        if revocation == "assignment":
+        if revocation == "request_assignment":
             attention.request.assigned_to = attention.tower.b.id
         elif revocation == "membership":
             attention.tower.am.is_active = False
@@ -421,6 +430,10 @@ def test_revocation_during_composition_fails_closed(attention, monkeypatch, revo
         return result
     attention.execution()
     monkeypatch.setattr(sources, "_readiness", revoke)
+    if revocation == "request_assignment":
+        assert len(read(attention.tower.a).items) == 1
+        assert read(attention.tower.b).items == ()
+        return
     with pytest.raises(ControlTowerScopeDenied):
         read(attention.tower.a)
 
@@ -435,15 +448,18 @@ def test_earlier_item_revalidated_after_later_shipment_evaluation(tower, monkeyp
                 db.session.commit()
             yield context, (reason(str(context.shipment_id)),)
     monkeypatch.setattr(sources, "evaluate_bounded_sources", adapter)
-    with pytest.raises(ControlTowerScopeDenied):
-        read(tower.a)
+    result = read(tower.a)
+    assert result.state == "complete" and len(result.items) == 2
+    assert read(tower.b).items == ()
 
 
 def test_platform_denied_and_invalid_responsibility_never_empty(tower):
     shipment, request = tower.shipment()
     with pytest.raises(ControlTowerScopeDenied):
         read(tower.platform)
-    request.assigned_to = None
+    db.session.execute(update(OperationalShipment).where(
+        OperationalShipment.id == shipment.id
+    ).values(primary_responsible_expert_id=tower.foreign.id))
     db.session.commit()
     with pytest.raises(ControlTowerResponsibilityInvariant):
         read(tower.admin)
@@ -613,6 +629,9 @@ def test_batch_rejects_forged_or_revoked_lineage_before_source_queries(attention
     with pytest.raises(ControlTowerScopeDenied):
         sources.evaluate_bounded_sources(attention.actor, forged, at=NOW)
     attention.request.assigned_to = attention.tower.b.id
+    db.session.commit()
+    assert sources.evaluate_bounded_sources(attention.actor, contexts, at=NOW)
+    attention.tower.am.is_active = False
     db.session.commit()
     with pytest.raises(ControlTowerScopeDenied):
         sources.evaluate_bounded_sources(attention.actor, contexts, at=NOW)

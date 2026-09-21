@@ -8,7 +8,7 @@ ROOT=Path(__file__).resolve().parents[2]
 def test_adoption_is_sole_additive_head_and_has_retained_data_guard():
     config=Config(str(ROOT/"backend"/"migrations"/"alembic.ini"))
     script=ScriptDirectory.from_config(config)
-    assert script.get_heads()==["20260925_quote_communication"]
+    assert script.get_heads()==["20260926_fixed_shipment_responsible_expert"]
     revision=script.get_revision("20260905_global_logistics_point_adoption")
     assert revision.down_revision=="20260904_global_logistics_point_foundation"
     source=(ROOT/"backend"/"migrations"/"versions"/"20260905_global_logistics_point_adoption.py").read_text(encoding="utf-8")

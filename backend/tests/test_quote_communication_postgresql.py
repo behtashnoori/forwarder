@@ -30,6 +30,7 @@ from backend.services.quote_service import create_quote_for_request
 
 
 HEAD = "20260925_quote_communication"
+REPOSITORY_HEAD = "20260926_fixed_shipment_responsible_expert"
 PREVIOUS = "20260924_request_cargo_items"
 
 
@@ -148,7 +149,7 @@ def test_quote_communication_owned_postgresql_migration_lifecycle():
     _reset(url, PREVIOUS)
     config = alembic_config(url)
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
+    assert script.get_heads() == [REPOSITORY_HEAD]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
     assert revision_status(url).current == (PREVIOUS,)
 

@@ -62,9 +62,11 @@ def pg_app():
             customer_response="accepted", responded_at=datetime.now(timezone.utc))
         db.session.add_all([quote, other_quote]); db.session.flush()
         shipment = OperationalShipment(organization_id=org.id, shipment_request_id=req.id, accepted_quote_id=quote.id,
-            lifecycle_status="planned", created_by_user_id=user.id)
+            lifecycle_status="planned", created_by_user_id=user.id,
+            primary_responsible_expert_id=user.id)
         other_shipment = OperationalShipment(organization_id=other.id, shipment_request_id=other_req.id,
-            accepted_quote_id=other_quote.id, lifecycle_status="planned", created_by_user_id=outsider.id)
+            accepted_quote_id=other_quote.id, lifecycle_status="planned", created_by_user_id=outsider.id,
+            primary_responsible_expert_id=outsider.id)
         evidence = CaseDocumentFile(shipment_request_id=req.id, is_miscellaneous=True, custom_title="FE2 evidence",
             original_filename="evidence.pdf", safe_download_filename="evidence.pdf", storage_key=f"fe2/{token}",
             canonical_extension="pdf", detected_mime_type="application/pdf", file_size_bytes=10,

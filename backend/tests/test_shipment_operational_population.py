@@ -4,7 +4,13 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from backend.extensions import db
-from backend.operational_models import OperationalShipment, RouteLeg, RoutePlan
+from backend.models import ExpertUser
+from backend.operational_models import (
+    OperationalMembership,
+    OperationalShipment,
+    RouteLeg,
+    RoutePlan,
+)
 from backend.services import operational_service
 from backend.services.operational_service import OperationalError
 from backend.services.shipment_population_service import (
@@ -23,9 +29,12 @@ from backend.tests.test_operational_vertical_slice import (
 UTC = timezone.utc
 
 
-def _shipment(app, key, start, end, *, legs=None):
+def _shipment(app, key, start, end, *, legs=None, responsible_expert_id=None):
+    payload = _direct_payload(app, start, end)
+    if responsible_expert_id is not None:
+        payload["primary_responsible_expert_id"] = responsible_expert_id
     shipment, _ = operational_service.create_direct(
-        _direct_payload(app, start, end), _user(app), key
+        payload, _user(app), key
     )
     shipment.public_id = f"00000000-0000-4000-8000-{key:0>12}"[-36:]
     plan = RoutePlan.query.filter_by(
@@ -171,9 +180,30 @@ def test_endpoint_and_reusable_authority_identity_order_equivalence(operational_
 def test_client_authority_spoof_is_ignored_and_assignment_precedes_pagination(operational_app):
     base = datetime(2036, 1, 10, tzinfo=UTC)
     with operational_app.app_context():
+        other_expert = ExpertUser(
+            username="population-other-expert",
+            password_hash="unused",
+            full_name="Population Other Expert",
+            role="expert",
+            authority="EXPERT",
+            is_active=True,
+        )
+        db.session.add(other_expert)
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=operational_app.config["phase1a"]["org"],
+            user_id=other_expert.id,
+            permissions=["operational_shipment.read"],
+        ))
+        db.session.flush()
         visible = _shipment(operational_app, "41", base, base + timedelta(hours=1))
-        hidden = _shipment(operational_app, "42", base, base + timedelta(hours=1))
-        hidden.primary_responsible_expert_id = operational_app.config["phase1a"]["verifier"]
+        hidden = _shipment(
+            operational_app,
+            "42",
+            base,
+            base + timedelta(hours=1),
+            responsible_expert_id=other_expert.id,
+        )
         hidden.created_at = visible.created_at + timedelta(days=1)
         db.session.commit()
         visible_public_id = visible.public_id

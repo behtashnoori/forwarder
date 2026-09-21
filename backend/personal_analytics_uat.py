@@ -102,6 +102,7 @@ def provision(app, password: str):
         users = {}
         for key, org, authority, permissions in (
             ("expert_a", org_a, "EXPERT", READ), ("expert_b", org_a, "EXPERT", READ),
+            ("expert_b_org", org_b, "EXPERT", READ),
             ("dashboard_only", org_a, "EXPERT", DASHBOARD_ONLY),
             ("admin_a", org_a, "ORGANIZATION_ADMIN", ADMIN), ("admin_b", org_b, "ORGANIZATION_ADMIN", ADMIN),
         ):
@@ -130,11 +131,11 @@ def provision(app, password: str):
             "project_only": direct("1001", org_a, projects["a1"], users["expert_b"], users["admin_a"]),
             "direct": direct("1002", org_a, projects["a1"], users["expert_a"], users["expert_a"]),
             "unauthorized": direct("1003", org_a, projects["a2"], users["expert_b"], users["admin_a"]),
-            "cross_org": direct("1004", org_b, projects["b1"], users["admin_b"], users["admin_b"]),
+            "cross_org": direct("1004", org_b, projects["b1"], users["expert_b_org"], users["admin_b"]),
         }
         request = _one(ShipmentRequest, {"status":"waiting_for_customer", "status_request_status":"new", "assigned_to":users["expert_a"].id, "customer_id":customer_a.id, "operational_organization_id":org_a.id, "ownership_scope":"TENANT"}, contact_phone="09000000992")
         quote = _one(ExpertQuote, {"amount":1000, "currency":"TST", "created_by_expert_id":users["expert_a"].id, "customer_response":"accepted", "operational_organization_id":org_a.id}, shipment_request_id=request.id, created_by_expert_id=users["expert_a"].id)
-        shipments["request"] = _one(OperationalShipment, {"organization_id":org_a.id, "project_id":projects["a2"].id, "source_type":"accepted_quote", "shipment_request_id":request.id, "accepted_quote_id":quote.id, "lifecycle_status":"planned", "created_by_user_id":users["expert_a"].id}, public_id="00000000-0000-0000-0000-000000001005")
+        shipments["request"] = _one(OperationalShipment, {"organization_id":org_a.id, "project_id":projects["a2"].id, "source_type":"accepted_quote", "shipment_request_id":request.id, "accepted_quote_id":quote.id, "lifecycle_status":"planned", "created_by_user_id":users["expert_a"].id, "primary_responsible_expert_id":users["expert_a"].id}, public_id="00000000-0000-0000-0000-000000001005")
         for offset, shipment in enumerate(shipments.values()): _route(shipment, users["admin_a"] if shipment.organization_id == org_a.id else users["admin_b"], provinces[0], provinces[1], offset)
         actor = {"id":users["expert_a"].id}
         view_row = SavedView.query.filter_by(organization_id=org_a.id, owner_user_id=users["expert_a"].id, name="[PA-UAT] Expert A shipments").one_or_none()
@@ -144,6 +145,6 @@ def provision(app, password: str):
         db.session.commit()
     except Exception:
         db.session.rollback(); raise
-    return {"organizations":2, "users":5, "projects":3, "project_access":2, "shipments":5,
+    return {"organizations":2, "users":6, "projects":3, "project_access":2, "shipments":5,
             "saved_view_public_id":view["public_id"], "dashboard_public_id":dashboard["public_id"],
             "shipment_public_ids":{key:value.public_id for key,value in shipments.items()}}

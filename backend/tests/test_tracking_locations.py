@@ -20,7 +20,7 @@ def _app(): return create_app({"TESTING":True,"SQLALCHEMY_DATABASE_URI":"sqlite:
 def _canonical_root(actor,organization,code):
  customer=Customer(first_name="Tracking",last_name=code);db.session.add(customer);db.session.flush()
  project=Project(organization_id=organization.id,primary_customer_id=customer.id,project_code=code,tracking_code=code,created_by_user_id=actor.id);db.session.add(project);db.session.flush()
- shipment=OperationalShipment(organization_id=organization.id,project_id=project.id,source_type="direct",customer_id=customer.id,created_by_user_id=actor.id);db.session.add(shipment);db.session.flush()
+ shipment=OperationalShipment(organization_id=organization.id,project_id=project.id,source_type="direct",customer_id=customer.id,created_by_user_id=actor.id,primary_responsible_expert_id=actor.id);db.session.add(shipment);db.session.flush()
  return project,shipment
 
 def test_bootstrap_dry_run_apply_idempotency_and_alias_policy():

@@ -109,17 +109,13 @@ def test_shipment_non_owner_mutation_is_denied_without_side_effect(shipment_docu
     assert _state(app, state["root"]) == before
 
 
-def test_shipment_null_owner_fails_closed_without_admin_fallback(shipment_documents_app):
+def test_new_shipment_owner_cannot_be_cleared(shipment_documents_app):
     app, state = shipment_documents_app
-    client = app.test_client()
     with app.app_context():
         db.session.get(OperationalShipment, state["shipment_id"]).primary_responsible_expert_id = None
-        db.session.commit()
-    before = _state(app, state["root"])
-    response = client.post(
-        f"/api/internal/operational-shipments/{state['shipment']}/documents",
-        headers={**_headers(state["owner"]), "Idempotency-Key": "null-owner"},
-        data={"title": "No owner", "file": (io.BytesIO(PDF), "ownerless.pdf")},
-    )
-    assert response.status_code == 404
-    assert _state(app, state["root"]) == before
+        with pytest.raises(ValueError, match="responsible Expert is immutable"):
+            db.session.commit()
+        db.session.rollback()
+        assert db.session.get(
+            OperationalShipment, state["shipment_id"]
+        ).primary_responsible_expert_id == state["owner_id"]

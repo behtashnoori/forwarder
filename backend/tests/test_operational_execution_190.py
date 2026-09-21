@@ -132,6 +132,7 @@ def execution_app():
             shipment_request_id=request.id,
             accepted_quote_id=quote.id,
             created_by_user_id=operator.id,
+            primary_responsible_expert_id=operator.id,
         )
         milestone_type = MilestoneType(
             immutable_code="CUSTOMS_CLEARANCE",
@@ -434,7 +435,7 @@ def test_unified_history_composes_distinct_facts_and_preserves_document_scope(ex
             item["history_id"] for item in reads.history(shipment, 2, 2)["items"]]
         direct = OperationalShipment(organization_id=shipment.organization_id,
             source_type="direct", customer_id=Customer.query.one().id,
-            created_by_user_id=user["id"])
+            created_by_user_id=user["id"], primary_responsible_expert_id=user["id"])
         db.session.add(direct); db.session.commit()
         direct_items = reads.history(direct, 1, 100, user)["items"]
         assert len(direct_items) == 1 and direct_items[0]["source_type"] == "direct"
@@ -463,7 +464,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260925_quote_communication"
+            "20260926_fixed_shipment_responsible_expert"
     ]
 
 

@@ -115,29 +115,30 @@ def seed_phase1b_uat(app, password: str) -> dict:
             provinces.append(location)
 
         shipments = []
-        for org_key, organization, creator, phone in (
-            ("A", org_a, users["admin"], "09000000201"),
-            ("B", org_b, users["org_b_admin"], "09000000202"),
+        for org_key, organization, creator, responsible, phone in (
+            ("A", org_a, users["admin"], users["reporter"], "09000000201"),
+            ("B", org_b, users["org_b_admin"], users["org_b_admin"], "09000000202"),
         ):
             request_row = _one_or_create(
                 ShipmentRequest,
                 defaults={"customer_first_name": "Synthetic", "customer_last_name": f"UAT {org_key}",
-                          "status": "waiting_for_customer", "status_request_status": "new", "assigned_to": creator.id,
+                          "status": "waiting_for_customer", "status_request_status": "new", "assigned_to": responsible.id,
                           "ownership_scope": "TENANT",
                           "operational_organization_id": organization.id},
                 contact_phone=phone,
             )
-            quote = ExpertQuote.query.filter_by(shipment_request_id=request_row.id, created_by_expert_id=creator.id).one_or_none()
+            quote = ExpertQuote.query.filter_by(shipment_request_id=request_row.id, created_by_expert_id=responsible.id).one_or_none()
             if quote is None:
                 quote = ExpertQuote(shipment_request_id=request_row.id, amount=1000, currency="TST",
-                                    created_by_expert_id=creator.id, created_at=PHASE1B_NOW,
+                                    created_by_expert_id=responsible.id, created_at=PHASE1B_NOW,
                                     customer_response="accepted", responded_at=PHASE1B_NOW,
                                     operational_organization_id=organization.id)
                 db.session.add(quote); db.session.flush()
             shipment = _one_or_create(
                 OperationalShipment,
                 defaults={"organization_id": organization.id, "shipment_request_id": request_row.id,
-                          "lifecycle_status": "in_progress", "created_by_user_id": creator.id},
+                          "lifecycle_status": "in_progress", "created_by_user_id": creator.id,
+                          "primary_responsible_expert_id": responsible.id},
                 accepted_quote_id=quote.id,
             )
             plan = _one_or_create(

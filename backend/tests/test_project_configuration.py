@@ -226,7 +226,7 @@ def test_identity_catalog_and_single_head(configured_app):
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20260925_quote_communication"
+        "20260926_fixed_shipment_responsible_expert"
     ]
     migration = (
         root / "migrations" / "versions" / "20260911_project_cargo_preference.py"
@@ -378,6 +378,7 @@ def test_preference_and_catalog_changes_do_not_rewrite_shipment_snapshot(configu
         project = Project.query.filter_by(public_id=ctx["project"]).one()
         catalog = CargoCatalogItem.query.filter_by(public_id=ctx["preferred_catalog"]).one()
         user = ExpertUser.query.filter_by(username="config-admin").one()
+        owner = ExpertUser.query.filter_by(username="config-expert").one()
         customer = Customer.query.one()
         shipment = OperationalShipment(
             organization_id=project.organization_id,
@@ -385,6 +386,7 @@ def test_preference_and_catalog_changes_do_not_rewrite_shipment_snapshot(configu
             source_type="direct",
             customer_id=customer.id,
             created_by_user_id=user.id,
+            primary_responsible_expert_id=owner.id,
         )
         db.session.add(shipment)
         db.session.flush()

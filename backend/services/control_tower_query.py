@@ -89,19 +89,15 @@ def _authorized_population(actor):
         OperationalShipment.organization_id.label("organization_id"),
         OperationalShipment.source_type.label("source_type"),
         OperationalShipment.shipment_request_id.label("shipment_request_id"),
-        OperationalShipment.primary_responsible_expert_id.label("direct_owner_id"),
+        OperationalShipment.primary_responsible_expert_id.label("owner_id"),
     ).cte("control_tower_authorized")
 
-    owner_id = case(
-        (authorized.c.source_type == "accepted_quote", ShipmentRequest.assigned_to),
-        (authorized.c.source_type == "direct", authorized.c.direct_owner_id),
-    )
     lineage = select(
         authorized,
         ShipmentRequest.public_id.label("request_public_id"),
         ShipmentRequest.operational_organization_id.label("request_organization_id"),
         ShipmentRequest.ownership_scope.label("request_ownership_scope"),
-        owner_id.label("owner_id"),
+        authorized.c.owner_id,
     ).select_from(
         authorized.outerjoin(
             ShipmentRequest,

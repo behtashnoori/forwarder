@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from backend.extensions import db
 from backend.census_context import ensure_census_context
-from backend.models import Customer, ExpertQuote, ShipmentRequest
+from backend.models import Customer, ExpertQuote, ExpertUser, ShipmentRequest
 from backend.operational_models import (
     CanonicalLocation,
     Milestone,
@@ -96,6 +96,60 @@ def _membership_for_user(user_id: int) -> OperationalMembership:
 
 def organization_for_user(user_id: int) -> int:
     return int(_membership_for_user(user_id).organization_id)
+
+
+def _validated_responsible_expert_id(
+    value: Any, organization_id: int, *, source: str
+) -> int:
+    """Resolve one active same-tenant Transport Expert at creation time."""
+    if type(value) is not int:
+        code = (
+            "DIRECT_RESPONSIBLE_EXPERT_REQUIRED"
+            if source == "direct"
+            else "QUOTE_ISSUER_NOT_ELIGIBLE"
+        )
+        raise OperationalError(code, "A responsible Transport Expert is required.")
+    expert = db.session.scalar(
+        select(ExpertUser)
+        .where(ExpertUser.id == value)
+        .execution_options(populate_existing=True)
+    )
+    if (
+        expert is None
+        or not expert.is_active
+        or (expert.authority or "").upper() != "EXPERT"
+    ):
+        code = (
+            "DIRECT_RESPONSIBLE_EXPERT_NOT_ELIGIBLE"
+            if source == "direct"
+            else "QUOTE_ISSUER_NOT_ELIGIBLE"
+        )
+        raise OperationalError(
+            code, "The responsible Transport Expert is not eligible.", 409
+        )
+    try:
+        membership = _membership_for_user(expert.id)
+    except OperationalError as exc:
+        code = (
+            "DIRECT_RESPONSIBLE_EXPERT_NOT_ELIGIBLE"
+            if source == "direct"
+            else "QUOTE_ISSUER_NOT_ELIGIBLE"
+        )
+        raise OperationalError(
+            code, "The responsible Transport Expert is not eligible.", 409
+        ) from exc
+    if int(membership.organization_id) != int(organization_id):
+        code = (
+            "DIRECT_RESPONSIBLE_EXPERT_TENANT_MISMATCH"
+            if source == "direct"
+            else "QUOTE_ISSUER_TENANT_MISMATCH"
+        )
+        raise OperationalError(
+            code,
+            "Responsible Expert must have the Shipment tenant membership.",
+            403,
+        )
+    return int(expert.id)
 
 
 def operational_context(user: dict[str, Any]) -> dict[str, Any]:
@@ -654,17 +708,17 @@ def create_direct(
     # A direct shipment created by an authorized Expert is explicitly rooted in
     # that actor unless an in-tenant responsible Expert is supplied. This is a
     # creation-time assignment, not creator-history authorization.
-    responsible_id = payload.get("primary_responsible_expert_id", user["id"])
-    if type(responsible_id) is not int:
-        raise OperationalError("DIRECT_RESPONSIBLE_EXPERT_REQUIRED", "A primary responsible Expert is required.")
-    responsible_membership = _membership_for_user(responsible_id)
-    if responsible_membership.organization_id != org:
-        raise OperationalError("DIRECT_RESPONSIBLE_EXPERT_TENANT_MISMATCH", "Responsible Expert must have the shipment tenant membership.", 403)
+    responsible_id = _validated_responsible_expert_id(
+        payload.get("primary_responsible_expert_id", user["id"]),
+        org,
+        source="direct",
+    )
     project = _project(org, payload.get("project_public_id"), customer.id)
     route = _route_command(payload, org)
     canonical = {
         "source_type": "direct",
         "customer_id": customer.id,
+        "primary_responsible_expert_id": responsible_id,
         "project_public_id": project.public_id if project else None,
         "route": {
             "origin": _endpoint_reference(route[0]),
@@ -686,16 +740,16 @@ def create_direct(
         )
     )
     if replay:
+        shipment = db.session.get(OperationalShipment, replay.result_resource_id)
+        from backend.services.assigned_work_authorization import authorize_work_action
+        if shipment is None or not authorize_work_action(user, shipment, "shipment.read").allowed:
+            raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
         if replay.request_hash != request_hash:
             raise OperationalError(
                 "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD",
                 "Idempotency key was already used with a different payload.",
                 409,
             )
-        shipment = db.session.get(OperationalShipment, replay.result_resource_id)
-        from backend.services.assigned_work_authorization import authorize_work_action
-        if shipment is None or not authorize_work_action(user, shipment, "shipment.read").allowed:
-            raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
         return shipment, False
     shipment = _initialize_aggregate(
         org=org,
@@ -746,16 +800,16 @@ def create_from_accepted_quote(
         )
     )
     if replay:
+        shipment = db.session.get(OperationalShipment, replay.result_resource_id)
+        from backend.services.assigned_work_authorization import authorize_work_action
+        if shipment is None or not authorize_work_action(user, shipment, "shipment.read").allowed:
+            raise OperationalError("RESOURCE_NOT_FOUND", "The accepted quote was not found.", 404)
         if replay.request_hash != request_hash:
             raise OperationalError(
                 "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD",
                 "Idempotency key was already used with a different payload.",
                 409,
             )
-        shipment = db.session.get(OperationalShipment, replay.result_resource_id)
-        from backend.services.assigned_work_authorization import authorize_work_action
-        if shipment is None or not authorize_work_action(user, shipment, "shipment.read").allowed:
-            raise OperationalError("RESOURCE_NOT_FOUND", "The accepted quote was not found.", 404)
         return shipment, False
     quote = db.session.scalar(
         select(ExpertQuote).where(ExpertQuote.id == quote_id).with_for_update()
@@ -776,6 +830,13 @@ def create_from_accepted_quote(
     if request_row is None:
         raise OperationalError(
             "RESOURCE_NOT_FOUND", "The source shipment request was not found.", 404
+        )
+    if (
+        request_row.ownership_scope != "TENANT"
+        or request_row.operational_organization_id != org
+    ):
+        raise OperationalError(
+            "RESOURCE_NOT_FOUND", "The accepted quote was not found.", 404
         )
     from backend.services.assigned_work_authorization import authorize_work_action
     if not authorize_work_action(user, request_row, "request.read").allowed:
@@ -803,6 +864,20 @@ def create_from_accepted_quote(
         raise OperationalError(
             "CUSTOMER_REQUIRED", "The shipment request requires a canonical customer."
         )
+    customer = db.session.get(Customer, request_row.customer_id)
+    if (
+        customer is None
+        or customer.ownership_scope != "TENANT"
+        or customer.operational_organization_id != org
+    ):
+        raise OperationalError(
+            "CUSTOMER_LINEAGE_CONFLICT",
+            "The accepted quote customer lineage is not tenant-consistent.",
+            409,
+        )
+    responsible_id = _validated_responsible_expert_id(
+        quote.created_by_expert_id, org, source="accepted_quote"
+    )
     project = _project(org, payload.get("project_public_id"), request_row.customer_id)
     shipment = _initialize_aggregate(
         org=org,
@@ -818,6 +893,7 @@ def create_from_accepted_quote(
         resource_id=quote.id,
         key=key,
         request_hash=request_hash,
+        primary_responsible_expert_id=responsible_id,
     )
     try:
         db.session.commit()

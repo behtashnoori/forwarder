@@ -95,6 +95,7 @@ def _shipment(app, **overrides):
         "accepted_quote_id": ids["quote"],
         "lifecycle_status": "planned",
         "created_by_user_id": ids["user"],
+        "primary_responsible_expert_id": ids["user"],
     }
     values.update(overrides)
     return OperationalShipment(**values)

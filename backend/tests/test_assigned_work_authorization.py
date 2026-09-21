@@ -86,7 +86,7 @@ def test_request_cargo_child_identity_never_broadens_parent_authorization(assign
         assert child.public_id and child.shipment_request_id == request.id
 
 
-def test_direct_shipment_requires_current_responsibility(assigned_work_app):
+def test_direct_shipment_owner_is_fixed(assigned_work_app):
     with assigned_work_app.app_context():
         db.create_all(); org = OperationalOrganization(name="one", is_active=True); db.session.add(org); db.session.flush()
         a = _user("direct-a"); b = _user("direct-b"); _member(a, org); _member(b, org); db.session.flush()
@@ -94,13 +94,16 @@ def test_direct_shipment_requires_current_responsibility(assigned_work_app):
         shipment = OperationalShipment(organization_id=org.id, source_type="direct", customer_id=customer.id, lifecycle_status="planned", created_by_user_id=a.id, primary_responsible_expert_id=a.id); db.session.add(shipment); db.session.commit()
         assert authorize_work_action({"id": a.id}, shipment, "shipment.read").allowed
         assert not authorize_work_action({"id": b.id}, shipment, "shipment.read").allowed
-        shipment.primary_responsible_expert_id = b.id; db.session.commit()
-        assert not authorize_work_action({"id": a.id}, shipment, "shipment.read").allowed
-        assert authorize_work_action({"id": b.id}, shipment, "shipment.read").allowed
+        shipment.primary_responsible_expert_id = b.id
+        with pytest.raises(ValueError, match="responsible Expert is immutable"):
+            db.session.commit()
+        db.session.rollback()
+        assert authorize_work_action({"id": a.id}, shipment, "shipment.read").allowed
+        assert not authorize_work_action({"id": b.id}, shipment, "shipment.read").allowed
 
 
-def test_reassignment_reloads_persisted_root_for_stale_actor_and_child_ids(assigned_work_app):
-    """A committed reassignment revokes a stale actor before its next operation."""
+def test_request_reassignment_does_not_transfer_fixed_shipment_authority(assigned_work_app):
+    """Request authority moves while persisted Shipment authority stays fixed."""
     with assigned_work_app.app_context():
         org = OperationalOrganization(name="one", is_active=True); other = OperationalOrganization(name="two", is_active=True)
         db.session.add_all([org, other]); db.session.flush()
@@ -116,7 +119,7 @@ def test_reassignment_reloads_persisted_root_for_stale_actor_and_child_ids(assig
         db.session.add(child); db.session.commit()
 
         # Keep these exact objects/IDs as a browser or client would after its
-        # initial allow.  They must not carry the old decision forward.
+        # initial allow. Authorization must re-read both independent roots.
         stale_request, stale_child = request, child
         assert authorize_work_action({"id": a.id}, stale_request, "request.read").allowed
         assert authorize_work_action({"id": a.id}, stale_child, "shipment.read").allowed
@@ -126,14 +129,14 @@ def test_reassignment_reloads_persisted_root_for_stale_actor_and_child_ids(assig
         db.session.commit()
 
         assert not authorize_work_action({"id": a.id}, stale_request, "request.read").allowed
-        assert not authorize_work_action({"id": a.id}, stale_child, "shipment.read").allowed
+        assert authorize_work_action({"id": a.id}, stale_child, "shipment.read").allowed
         assert authorize_work_action({"id": b.id}, stale_request, "request.read").allowed
-        assert authorize_work_action({"id": b.id}, stale_child, "shipment.read").allowed
+        assert not authorize_work_action({"id": b.id}, stale_child, "shipment.read").allowed
         assert authorize_work_action({"id": a.id}, stale_child, "document.manage").allowed
         assert not authorize_work_action({"id": b.id}, stale_child, "document.manage").allowed
         assert not authorize_work_action({"id": outsider.id}, stale_child, "shipment.read").allowed
-        assert db.session.scalars(select(OperationalShipment).where(assigned_shipment_scope({"id": a.id}))).all() == []
-        assert [row.id for row in db.session.scalars(select(OperationalShipment).where(assigned_shipment_scope({"id": b.id}))).all()] == [child.id]
+        assert [row.id for row in db.session.scalars(select(OperationalShipment).where(assigned_shipment_scope({"id": a.id}))).all()] == [child.id]
+        assert db.session.scalars(select(OperationalShipment).where(assigned_shipment_scope({"id": b.id}))).all() == []
 
 
 def test_capability_history_and_forged_assignee_never_replace_current_tenant_root(assigned_work_app):

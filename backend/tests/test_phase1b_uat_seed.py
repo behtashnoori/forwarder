@@ -118,10 +118,9 @@ def test_reporter_detail_reads_and_report_are_allowed_but_privileged_actions_are
         shipment = OperationalShipment.query.join(OperationalOrganization).filter(
             OperationalOrganization.name == "[PHASE1B-UAT] Organization A"
         ).one()
-        # Capabilities are insufficient for an Expert: bind the reporter to the
-        # persisted request root so every child read/action proves current work.
-        db.session.get(ShipmentRequest, shipment.shipment_request_id).assigned_to = reporter.id
-        db.session.commit()
+        # Capabilities are insufficient for an Expert; the reporter is the
+        # accepted Quote issuer and persisted fixed Shipment owner.
+        assert shipment.primary_responsible_expert_id == reporter.id
         plan = RoutePlan.query.filter_by(operational_shipment_id=shipment.id, is_active=True).one()
         checkpoint = OperationalCheckpoint.query.filter_by(route_plan_id=plan.id, sequence_number=3).one()
         milestone = Milestone.query.filter_by(checkpoint_id=checkpoint.id, milestone_type="checkpoint_arrival").one()

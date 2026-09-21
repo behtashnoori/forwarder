@@ -394,7 +394,7 @@ def test_readiness_optional_override_and_direct_not_applicable(attention):
 
 
 @pytest.mark.parametrize("adapter", ADAPTERS)
-def test_reassigned_and_revoked_context_fail_before_source_reads(attention, adapter):
+def test_request_reassignment_preserves_context_but_owner_revocation_denies(attention, adapter):
     statements = []
     def capture(conn, cursor, statement, parameters, context, many):
         statements.append(statement.lower())
@@ -402,12 +402,9 @@ def test_reassigned_and_revoked_context_fail_before_source_reads(attention, adap
     db.session.commit()
     event.listen(db.engine, "before_cursor_execute", capture)
     try:
-        with pytest.raises(ControlTowerScopeDenied):
-            _read(adapter, attention)
+        _read(adapter, attention)
     finally:
         event.remove(db.engine, "before_cursor_execute", capture)
-    assert not any(any(table in s for table in ("operational_delay", "operational_exception", "operational_work_item", "operational_milestone", "oip_", "document_requirement")) for s in statements)
-    attention.request.assigned_to = attention.tower.a.id
     attention.tower.am.is_active = False
     db.session.commit()
     with pytest.raises(ControlTowerScopeDenied):

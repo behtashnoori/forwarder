@@ -617,9 +617,10 @@ def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scop
         headers=peer_headers,
     ).status_code == 404
     assert client.get("/api/operations/selectors/accepted-quotes", headers=peer_headers).json["items"] == []
+    unauthorized_replay_payload = {**quote_payload, "transport_mode": "rail"}
     replay_probe = client.post(
         "/api/operational-shipments/from-accepted-quote",
-        json=quote_payload,
+        json=unauthorized_replay_payload,
         headers={**peer_headers, "Idempotency-Key": "request-cargo-chain"},
     )
     assert replay_probe.status_code == 404
@@ -646,6 +647,13 @@ def test_create_from_accepted_quote_is_complete_and_idempotent(operational_app):
             payload, _user(operational_app), "create-1"
         )
         assert created is True and recreated is False and replay.id == first.id
+        assert (
+            first.primary_responsible_expert_id
+            == db.session.get(
+                ExpertQuote, payload["accepted_quote_id"]
+            ).created_by_expert_id
+            == operational_app.config["phase1a"]["user"]
+        )
         assert OperationalShipment.query.count() == 1
         assert RoutePlan.query.count() == 1 and RouteLeg.query.count() == 1
         assert {m.milestone_type for m in Milestone.query.all()} == {

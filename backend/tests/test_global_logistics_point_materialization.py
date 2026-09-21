@@ -226,6 +226,7 @@ def test_phase4b_materialized_point_uses_ordinary_tracking_and_project_contracts
             shipment = OperationalShipment(
                 organization_id=c["org_a"], project_id=project.id, source_type="direct",
                 customer_id=customer.id, created_by_user_id=c["admin_a_id"],
+                primary_responsible_expert_id=c["expert_id"],
             )
             db.session.add(shipment); db.session.commit()
             project_public_id = project.public_id

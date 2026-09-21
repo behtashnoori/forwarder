@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import uuid
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect
 
 from backend.extensions import db
 
@@ -503,10 +503,10 @@ class OperationalShipment(db.Model):
     created_by_user_id = db.Column(
         BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
     )
-    # ADR-043 direct-root evidence. Request-derived shipments keep their root
-    # on ShipmentRequest and leave this field null.
+    # ADR-047 authoritative, fixed owner for every OperationalShipment.
+    # Request assignment is a separate mutable commercial/workflow concern.
     primary_responsible_expert_id = db.Column(
-        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True, index=True
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False, index=True
     )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(
@@ -514,6 +514,12 @@ class OperationalShipment(db.Model):
     )
 
     customer = db.relationship("Customer", foreign_keys=[customer_id])
+
+
+@event.listens_for(OperationalShipment, "before_update")
+def _operational_shipment_owner_is_immutable(_mapper, _connection, target):
+    if inspect(target).attrs.primary_responsible_expert_id.history.has_changes():
+        raise ValueError("OperationalShipment responsible Expert is immutable")
 
 
 class RoutePlan(db.Model):

@@ -108,18 +108,21 @@ def _candidate_query(actor_id: int, persona: str, organization_id: int):
         assigned_shipment_scope({"id": actor_id}),
     )
     if persona == EXPERT:
-        assigned_requests = select(ShipmentRequest.id).where(
-            ShipmentRequest.operational_organization_id == organization_id,
-            ShipmentRequest.ownership_scope == "TENANT",
-            ShipmentRequest.assigned_to == actor_id,
-        )
         query = query.where(
+            OperationalShipment.primary_responsible_expert_id == actor_id,
             or_(
-                (OperationalShipment.source_type == "accepted_quote")
-                & OperationalShipment.shipment_request_id.in_(assigned_requests),
-                (OperationalShipment.source_type == "direct")
-                & (OperationalShipment.primary_responsible_expert_id == actor_id),
-            )
+                OperationalShipment.source_type == "direct",
+                (
+                    OperationalShipment.source_type == "accepted_quote"
+                )
+                & OperationalShipment.shipment_request_id.in_(
+                    select(ShipmentRequest.id).where(
+                        ShipmentRequest.operational_organization_id
+                        == organization_id,
+                        ShipmentRequest.ownership_scope == "TENANT",
+                    )
+                ),
+            ),
         )
     return query.execution_options(populate_existing=True)
 
@@ -155,7 +158,6 @@ def _contexts_for_rows(
         if request_ids
         else {}
     )
-
     responsibility = {}
     for shipment in rows:
         if shipment.source_type == "accepted_quote":
@@ -165,11 +167,11 @@ def _contexts_for_rows(
                 or request.operational_organization_id != shipment.organization_id
                 or request.ownership_scope != "TENANT"
             ):
-                _invariant(shipment, "INVALID_REQUEST_ROOT")
+                _invariant(shipment, "INVALID_ACCEPTED_QUOTE_LINEAGE")
             responsibility[shipment.id] = (
-                request.assigned_to,
-                "ShipmentRequest",
-                request.id,
+                shipment.primary_responsible_expert_id,
+                "OperationalShipment",
+                shipment.id,
             )
         elif shipment.source_type == "direct":
             responsibility[shipment.id] = (

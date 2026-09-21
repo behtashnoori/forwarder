@@ -131,17 +131,6 @@ def authorize_document_management(actor: dict[str, Any], resource: Any) -> Autho
     return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
 
 
-def _request_root(shipment: OperationalShipment) -> ShipmentRequest | None:
-    if shipment.source_type != "accepted_quote" or shipment.shipment_request_id is None:
-        return None
-    request = db.session.scalar(select(ShipmentRequest).where(
-        ShipmentRequest.id == shipment.shipment_request_id
-    ).execution_options(populate_existing=True))
-    if request is None or request.operational_organization_id != shipment.organization_id:
-        return None
-    return request
-
-
 def emit_shadow_decision(
     *, surface: str, actor: dict[str, Any] | None, resource: Any,
     legacy_allowed: bool, canonical: AuthorizationDecision,
@@ -226,12 +215,17 @@ def authorize_work_action(actor: dict[str, Any], resource: Any, action: str) -> 
             ))
             if project_allowed is not None:
                 return AuthorizationDecision(True, "PROJECT_DERIVED_SHIPMENT_READ", membership.organization_id, "OperationalShipment", resource.id)
-        request = _request_root(resource)
-        if request is not None:
-            return AuthorizationDecision(request.assigned_to == user_id, "REQUEST_ROOT_ASSIGNMENT_REQUIRED", membership.organization_id, "ShipmentRequest", request.id)
-        if resource.source_type == "direct" and resource.primary_responsible_expert_id == user_id:
-            return AuthorizationDecision(True, "DIRECT_SHIPMENT_ROOT_ASSIGNMENT", membership.organization_id, "OperationalShipment", resource.id)
-        return _deny("CERTIFIED_ROOT_ASSIGNMENT_REQUIRED")
+        if resource.primary_responsible_expert_id is None:
+            return _deny("PERSISTED_SHIPMENT_OWNER_REQUIRED")
+        if resource.primary_responsible_expert_id == user_id:
+            return AuthorizationDecision(
+                True,
+                "FIXED_SHIPMENT_OWNER",
+                membership.organization_id,
+                "OperationalShipment",
+                resource.id,
+            )
+        return _deny("PERSISTED_SHIPMENT_OWNER_REQUIRED")
     return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
 
 
@@ -255,7 +249,7 @@ def assigned_request_scope(actor: dict[str, Any], action: str = "request.read"):
 
 
 def assigned_shipment_scope(actor: dict[str, Any], action: str = "operational_shipment.read"):
-    """Canonical Shipment read scope: direct/request assignment OR Project access."""
+    """Canonical Shipment scope: persisted fixed owner or explicit Project read."""
     user_id = _actor_id(actor)
     if user_id is None:
         return false()
@@ -269,15 +263,9 @@ def assigned_shipment_scope(actor: dict[str, Any], action: str = "operational_sh
         return tenant
     if authority != EXPERT:
         return false()
-    request_assigned = OperationalShipment.source_type == "accepted_quote"
-    request_assigned &= OperationalShipment.shipment_request_id.in_(select(ShipmentRequest.id).where(
-        ShipmentRequest.operational_organization_id == membership.organization_id,
-        ShipmentRequest.ownership_scope == "TENANT",
-        ShipmentRequest.assigned_to == user_id,
-    ))
-    direct_assigned = (OperationalShipment.source_type == "direct") & (OperationalShipment.primary_responsible_expert_id == user_id)
+    owner_assigned = OperationalShipment.primary_responsible_expert_id == user_id
     if action != "operational_shipment.read":
-        return tenant & or_(request_assigned, direct_assigned)
+        return tenant & owner_assigned
     from backend.services.project_access_authorization import authorized_project_scope
     # Project scope is expressed against Project; use its ids directly so the
     # predicate remains composable in every consumer query.
@@ -285,4 +273,4 @@ def assigned_shipment_scope(actor: dict[str, Any], action: str = "operational_sh
     project_derived = OperationalShipment.project_id.in_(
         select(Project.id).where(authorized_project_scope(actor))
     )
-    return tenant & or_(request_assigned, direct_assigned, project_derived)
+    return tenant & or_(owner_assigned, project_derived)

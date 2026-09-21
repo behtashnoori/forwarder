@@ -101,6 +101,7 @@ def reference_app():
             customer_id=customer.id,
             project_id=project.id,
             created_by_user_id=user.id,
+            primary_responsible_expert_id=user.id,
         )
         second = OperationalShipment(
             organization_id=org.id,
@@ -108,6 +109,7 @@ def reference_app():
             customer_id=customer.id,
             project_id=project.id,
             created_by_user_id=user.id,
+            primary_responsible_expert_id=user.id,
         )
         foreign = OperationalShipment(
             organization_id=other.id,
@@ -115,6 +117,7 @@ def reference_app():
             customer_id=customer.id,
             project_id=other_project.id,
             created_by_user_id=outsider.id,
+            primary_responsible_expert_id=outsider.id,
         )
         db.session.add_all([shipment, second, foreign])
         db.session.flush()

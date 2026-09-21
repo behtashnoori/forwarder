@@ -67,7 +67,8 @@ def tower():
                                     created_by_expert_id=owner.id, operational_organization_id=tenant.id)
                 db.session.add(quote)
                 db.session.flush()
-                kwargs = {"shipment_request_id": request.id, "accepted_quote_id": quote.id}
+                kwargs = {"shipment_request_id": request.id, "accepted_quote_id": quote.id,
+                          "primary_responsible_expert_id": owner.id}
             else:
                 kwargs = {"customer_id": customer.id, "primary_responsible_expert_id": owner.id}
             row = OperationalShipment(organization_id=tenant.id, source_type=source,
@@ -102,44 +103,33 @@ def test_expert_and_admin_eligible_scope_and_resolved_responsibility(tower, sour
         assert context.responsible_expert_id == tower.a.id
         assert context.responsible_expert_name == tower.a.full_name
         assert context.actor_persona == actor.authority
-        assert (context.root_type, context.root_id) == (
-            ("ShipmentRequest", request.id) if request else ("OperationalShipment", row.id)
-        )
+        assert (context.root_type, context.root_id) == ("OperationalShipment", row.id)
         assert context.purpose == "CONTROL_TOWER_V1_OPERATIONAL_SUMMARY"
 
 
 @pytest.mark.parametrize("source", ["accepted_quote", "direct"])
 def test_foreign_and_terminal_shipments_excluded_before_evaluation(tower, source):
     for status in ("completed", "cancelled"):
-        row, request = tower.shipment(source=source, status=status)
-        # Invalid terminal responsibility must not affect evaluation/metadata.
-        if request:
-            request.assigned_to = None
-        else:
-            row.primary_responsible_expert_id = None
+        tower.shipment(source=source, status=status)
     tower.shipment(source=source, owner=tower.foreign, tenant=tower.foreign_org)
     db.session.commit()
     assert _ids(tower.a) == set()
     assert _ids(tower.admin) == set()
 
 
-@pytest.mark.parametrize("source", ["accepted_quote", "direct"])
-def test_reassignment_refreshes_persisted_scope_and_revokes_old_context(tower, source):
-    row, request = tower.shipment(source=source)
+def test_request_reassignment_preserves_fixed_owner_scope_and_context(tower):
+    row, request = tower.shipment(source="accepted_quote")
     context, = governed_summary_scope({"id": tower.a.id})
-    model, key, identity = (
-        (ShipmentRequest, "assigned_to", request.id) if request else
-        (OperationalShipment, "primary_responsible_expert_id", row.id)
-    )
-    # Change committed persistence without synchronizing the retained ORM rows.
+    # Change Request persistence without synchronizing the retained ORM rows.
     with db.engine.begin() as connection:
-        connection.execute(update(model).where(model.id == identity).values({key: tower.b.id}))
-    assert _ids(tower.a) == set()
-    assert _ids(tower.b) == {row.id}
-    with pytest.raises(ControlTowerScopeDenied):
-        refresh_summary_context({"id": tower.a.id}, context)
+        connection.execute(update(ShipmentRequest).where(
+            ShipmentRequest.id == request.id
+        ).values(assigned_to=tower.b.id))
+    assert _ids(tower.a) == {row.id}
+    assert _ids(tower.b) == set()
+    assert refresh_summary_context({"id": tower.a.id}, context).shipment_id == row.id
     admin_context, = governed_summary_scope({"id": tower.admin.id})
-    assert admin_context.responsible_expert_id == tower.b.id
+    assert admin_context.responsible_expert_id == tower.a.id
 
 
 @pytest.mark.parametrize("membership,permissions", [
@@ -159,17 +149,15 @@ def test_platform_admin_denied_even_with_accidental_grants(tower, membership, pe
 
 @pytest.mark.parametrize("source", ["accepted_quote", "direct"])
 @pytest.mark.parametrize("failure", [
-    "missing", "foreign", "inactive", "admin_owner", "platform_owner", "invalid_persona",
-    "revoked_owner_membership", "ambiguous_owner_membership", "missing_owner",
+    "foreign", "inactive", "admin_owner", "platform_owner", "invalid_persona",
+    "revoked_owner_membership", "ambiguous_owner_membership",
 ])
 def test_invalid_responsibility_is_unavailable_without_identity_leak(tower, source, failure, caplog):
     row, request = tower.shipment(source=source, owner=tower.b)
-    if failure in {"missing", "foreign", "missing_owner"}:
-        owner = {"missing": None, "foreign": tower.foreign.id, "missing_owner": 999999}[failure]
-        if request:
-            request.assigned_to = owner
-        else:
-            row.primary_responsible_expert_id = owner
+    if failure == "foreign":
+        db.session.execute(update(OperationalShipment).where(
+            OperationalShipment.id == row.id
+        ).values(primary_responsible_expert_id=tower.foreign.id))
     elif failure == "inactive":
         tower.b.is_active = False
     elif failure.endswith("owner") or failure == "invalid_persona":
@@ -194,7 +182,6 @@ def test_invalid_responsibility_is_unavailable_without_identity_leak(tower, sour
 @pytest.mark.parametrize("failure", ["foreign_root", "uncertified_root", "missing_root"])
 def test_broken_request_lineage_has_no_direct_owner_fallback(tower, failure):
     row, request = tower.shipment()
-    row.primary_responsible_expert_id = tower.a.id
     if failure == "foreign_root":
         # Simulate corrupt persisted lineage without weakening canonical guards.
         db.session.execute(update(ShipmentRequest).where(ShipmentRequest.id == request.id)
@@ -254,14 +241,14 @@ def test_supplied_persona_role_and_context_fields_cannot_broaden_scope(tower):
     assert fresh.responsible_expert_name == "a"
 
 
-@pytest.mark.parametrize("change", ["terminal", "missing_owner", "inactive_owner", "membership", "lineage"])
+@pytest.mark.parametrize("change", ["terminal", "request_reassignment", "inactive_owner", "membership", "lineage"])
 def test_admin_retained_context_rechecks_eligibility_and_responsibility(tower, change):
     row, request = tower.shipment()
     context, = governed_summary_scope({"id": tower.admin.id})
     if change == "terminal":
         row.lifecycle_status = "completed"
-    elif change == "missing_owner":
-        request.assigned_to = None
+    elif change == "request_reassignment":
+        request.assigned_to = tower.b.id
     elif change == "inactive_owner":
         tower.a.is_active = False
     elif change == "membership":
@@ -270,6 +257,10 @@ def test_admin_retained_context_rechecks_eligibility_and_responsibility(tower, c
         db.session.execute(update(ShipmentRequest).where(ShipmentRequest.id == request.id)
                            .values(operational_organization_id=tower.foreign_org.id))
     db.session.commit()
+    if change == "request_reassignment":
+        refreshed = refresh_summary_context({"id": tower.admin.id}, context)
+        assert refreshed.responsible_expert_id == tower.a.id
+        return
     expected = ControlTowerScopeDenied if change == "terminal" else ControlTowerResponsibilityInvariant
     with pytest.raises(expected):
         refresh_summary_context({"id": tower.admin.id}, context)
@@ -334,8 +325,8 @@ def test_boundary_performs_no_source_reads_writes_or_public_payload_projection(t
 def test_admin_invariant_aborts_whole_scope_and_clean_empty_remains_distinct(tower):
     assert governed_summary_scope({"id": tower.admin.id}) == ()
     tower.shipment()
-    row, _ = tower.shipment(source="direct", owner=tower.b)
-    row.primary_responsible_expert_id = None
+    tower.shipment(source="direct", owner=tower.b)
+    tower.b.is_active = False
     db.session.commit()
     with pytest.raises(ControlTowerResponsibilityInvariant):
         governed_summary_scope({"id": tower.admin.id})

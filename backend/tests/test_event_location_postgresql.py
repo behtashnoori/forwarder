@@ -56,7 +56,8 @@ def test_canonical_event_location_journey_immutability_tenant_fence_and_legacy_d
                             project_code="PG-B", tracking_code="pg-b", created_by_user_id=actor.id)
         db.session.add_all([project_a, project_b]); db.session.flush()
         shipment = OperationalShipment(organization_id=org_a.id, project_id=project_a.id,
-            source_type="direct", customer_id=customer.id, created_by_user_id=actor.id)
+            source_type="direct", customer_id=customer.id, created_by_user_id=actor.id,
+            primary_responsible_expert_id=actor.id)
         point_a = LogisticsPoint(organization_id=org_a.id, immutable_code="A-PORT",
             logistics_point_type_id=point_type.id, fa_name="Original Port", en_name="Original Port EN",
             normalized_name="original port", country_id=country.id, geography_key="XZ|A",

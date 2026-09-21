@@ -106,7 +106,7 @@ try {
 
   $repositoryHead = (python -m scripts.browser_migration_contract repository-head).Trim()
   Assert-LastExit 'resolve repository migration head'
-  if ($repositoryHead -ne '20260925_quote_communication') {
+  if ($repositoryHead -ne '20260926_fixed_shipment_responsible_expert') {
     throw "Unexpected migration head: $repositoryHead"
   }
   python -m backend.migration_cli upgrade $repositoryHead --confirm

@@ -191,6 +191,7 @@ def selector_app():
                 shipment_request_id=converted_request.id,
                 accepted_quote_id=converted_quote.id,
                 created_by_user_id=quote_user.id,
+                primary_responsible_expert_id=quote_user.id,
             )
         )
         db.session.commit()

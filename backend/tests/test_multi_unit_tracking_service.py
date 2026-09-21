@@ -65,6 +65,7 @@ def _seed_request(status="won", tracking_code="trk-production-safe"):
     shipment = OperationalShipment(
         organization_id=organization.id, project_id=project.id,
         source_type="direct", customer_id=customer.id, created_by_user_id=actor.id,
+        primary_responsible_expert_id=actor.id,
     )
     db.session.add(shipment)
     db.session.commit()

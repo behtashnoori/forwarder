@@ -58,6 +58,7 @@ def projection_app():
             customer_id=customer.id,
             lifecycle_status="in_progress",
             created_by_user_id=user.id,
+            primary_responsible_expert_id=user.id,
         )
         foreign_shipment = OperationalShipment(
             organization_id=foreign_org.id,
@@ -66,6 +67,7 @@ def projection_app():
             customer_id=customer.id,
             lifecycle_status="planned",
             created_by_user_id=user.id,
+            primary_responsible_expert_id=user.id,
         )
         db.session.add_all([shipment, foreign_shipment])
         db.session.flush()

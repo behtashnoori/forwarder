@@ -49,7 +49,7 @@ from backend.services.control_tower_scope import ControlTowerScopeDenied
 from backend.services import oip_service as oip
 
 
-HEAD = "20260925_quote_communication"
+HEAD = "20260926_fixed_shipment_responsible_expert"
 NOW = datetime(2026, 9, 21, 12, tzinfo=timezone.utc)
 ACTIVE_COUNT = 500
 
@@ -188,6 +188,7 @@ def _seed(app):
                     "source_type": "accepted_quote",
                     "shipment_request_id": accepted_request.id,
                     "accepted_quote_id": accepted_quote.id,
+                    "primary_responsible_expert_id": owner_a.id,
                 }
                 if index == 490
                 else {

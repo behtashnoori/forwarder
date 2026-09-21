@@ -2,6 +2,7 @@
 import json
 
 import pytest
+from sqlalchemy import update
 
 from backend.extensions import db
 from backend.notification_models import NotificationAction, NotificationAttempt
@@ -11,7 +12,7 @@ from backend.services.control_tower_translation import AttentionLevel, EMPTY_MES
 from backend.tests.test_control_tower_scope import tower  # noqa: F401
 from backend.tests.test_control_tower_sources import attention  # noqa: F401
 from backend.tests.test_control_tower_read_model import add_leg, reason, stub
-from backend.operational_models import CanonicalLocation
+from backend.operational_models import CanonicalLocation, OperationalShipment
 
 PATH = "/api/control-tower/shipments"
 
@@ -54,7 +55,7 @@ def test_expert_admin_foreign_scope_and_platform_denial(tower, monkeypatch):
 
 
 @pytest.mark.parametrize("source", ["accepted_quote", "direct"])
-def test_reassignment_revokes_old_expert_immediately(tower, monkeypatch, source):
+def test_request_or_owner_mutation_cannot_transfer_fixed_scope(tower, monkeypatch, source):
     shipment, request = tower.shipment(source=source)
     stub(monkeypatch, {shipment.id: (reason("one"),)})
     client = tower.app.test_client()
@@ -62,11 +63,14 @@ def test_reassignment_revokes_old_expert_immediately(tower, monkeypatch, source)
     assert len(client.get(PATH, headers=old).json["data"]["items"]) == 1
     if request:
         request.assigned_to = tower.b.id
+        db.session.commit()
     else:
         shipment.primary_responsible_expert_id = tower.b.id
-    db.session.commit()
-    assert client.get(PATH, headers=old).json["data"]["items"] == []
-    assert len(client.get(PATH, headers=new).json["data"]["items"]) == 1
+        with pytest.raises(ValueError, match="responsible Expert is immutable"):
+            db.session.commit()
+        db.session.rollback()
+    assert len(client.get(PATH, headers=old).json["data"]["items"]) == 1
+    assert client.get(PATH, headers=new).json["data"]["items"] == []
 
 
 def test_complete_empty_and_failure_are_distinct(tower, monkeypatch):
@@ -85,7 +89,9 @@ def test_complete_empty_and_failure_are_distinct(tower, monkeypatch):
 
 def test_invalid_responsibility_not_successful_empty(tower):
     shipment, _ = tower.shipment(source="direct")
-    shipment.primary_responsible_expert_id = None
+    db.session.execute(update(OperationalShipment).where(
+        OperationalShipment.id == shipment.id
+    ).values(primary_responsible_expert_id=tower.foreign.id))
     db.session.commit()
     response = tower.app.test_client().get(PATH, headers=headers(tower.admin))
     assert response.status_code == 503
