@@ -75,7 +75,7 @@ See `LEGACY-CANONICAL-MAP.md`.
 | Organization configuration/master data | Organization: `OrganizationDocumentRequirement`, `CargoCatalogItem`, `LogisticsPoint`, memberships and organization policies |
 | Project configuration | Project: services, `ProjectDocumentRequirement`, milestones, ordered `ProjectLogisticsPoint` associations |
 | Commercial request | `ShipmentRequest`: intake, quote/referral lineage, legacy compatibility fields |
-| Request Cargo | `ShipmentRequest` owns future `RequestCargoItem` children; `0..N`, optional for submission, no mandatory Cargo field under PDR-019 |
+| Request Cargo | `ShipmentRequest` owns implemented `RequestCargoItem` children; `0..N`, optional for submission, no mandatory Cargo field under PDR-019 |
 | Shipment execution | `OperationalShipment` |
 | Shipment responsible Expert | `OperationalShipment`: exactly one fixed responsible Transport Expert under ADR-047; Request assignment does not mutate it |
 | Independent execution | `ExecutionUnit` |
@@ -123,7 +123,7 @@ Requirements are not files. Upload is not approval. Configuration changes do not
 
 There is currently no direct `ExecutionUnit` document ownership. Adding it requires an Accepted ADR; ADR-020 remains PROPOSED and MDPM explicitly excluded ExecutionUnit documents.
 
-PDR-020 and ADR-050 add the target management contract without activating ADR-020's generalized visibility model:
+PDR-020 and ADR-050 establish the implemented bounded management contract without activating ADR-020's generalized visibility model:
 
 - only the active owning Transport Expert may upload, append, target one current file for replacement, or retry a known failed upload;
 - Customer, Admin/Manager, other same-Organization Expert, other tenant, and inactive/revoked actor cannot manage files;
@@ -133,7 +133,7 @@ PDR-020 and ADR-050 add the target management contract without activating ADR-02
 - authority derives from the persisted parent and never from client-supplied tenant/owner, generic Organization membership, or a standalone attachment permission;
 - ADR-047 remains authoritative: there is one fixed Shipment owner and no Expert reassignment/former-Expert document transfer model.
 
-Current runtime deviations are implementation evidence, not target authority. Schema sufficiency for multiple current operational associations, targeted lineage, and retry outcome is `TO_BE_CONFIRMED_IN_DESIGN`; no migration is authorized by this baseline update.
+The qualified bounded implementation provides multiple current operational associations, targeted replacement lineage, immutable version history, and known-failure retry outcome. Generalized visibility, retention/purge, unknown-outcome exactly-once recovery, and enterprise DMS expansion remain separately governed; this baseline grants no Production migration or deployment authority.
 
 ## 9. Cargo architecture
 
@@ -165,7 +165,7 @@ CRM is an internal, database-backed, organization-scoped subsystem. It is not an
 
 ## 12. Assignment and referral architecture
 
-> **ADR-047 scoped target:** Request assignment/referral remains commercial workflow. Operational Shipment ownership is a separate immutable Shipment-owned relation established at creation. No Shipment Expert reassignment/transfer/replacement workflow is approved. The statements below describe Request assignment behavior unless explicitly qualified.
+> **ADR-047 implemented contract:** Request assignment/referral remains commercial workflow. Operational Shipment ownership is a separate immutable Shipment-owned relation established at creation. No Shipment Expert reassignment/transfer/replacement workflow is approved. The statements below describe Request assignment behavior unless explicitly qualified.
 
 - Assignment is tenant-fenced: request, candidate expert membership, rule, state, and logs remain within one organization.
 - Direct assignment and rule pools validate runtime eligibility.
@@ -174,7 +174,7 @@ CRM is an internal, database-backed, organization-scoped subsystem. It is not an
 - Displayed `ExpertUser.get_workload()` counts assigned and in-progress requests. It is not a universal workload definition.
 - Changing included statuses, weights, fallback selection, or authority is an architecture/behavior decision requiring explicit approval and tests.
 
-For Operational Shipment access, the owning active Transport Expert may act within entitlement/state; another same-organization Expert is denied by default and gains nothing through membership alone; other tenants and inactive/revoked actors are denied. Same-organization Admin/Manager oversight remains action-specific and tenant-scoped. Accepted-Quote creation captures the issuing Expert as fixed owner; Direct creation validates one fixed responsible Expert. Existing request-assignee-derived Shipment access is implementation drift pending a separately authorized ADR-047 slice.
+For Operational Shipment access, the owning active Transport Expert may act within entitlement/state; another same-organization Expert is denied by default and gains nothing through membership or later Request assignment; other tenants and inactive/revoked actors are denied. Same-organization Admin/Manager oversight remains action-specific and tenant-scoped. Accepted-Quote creation captures the issuing Expert as fixed owner; Direct creation validates one fixed responsible Expert. Application mutation and the database write-once invariant prevent owner transfer.
 
 ## 13. API, migration, audit, and reference-data gates
 

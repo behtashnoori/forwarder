@@ -64,7 +64,7 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - **Lifecycle/identity/scope:** commercial statuses; authenticated internal UUID identity; public tracking uses only the versioned 128-bit `SR2-` bearer capability from ADR-052, never numeric database identity; Customer/organization access otherwise remains governed by existing contracts.
 - **Relationships:** Customer, Quotation, Project, `0..N RequestCargoItems`, optional scalar Request transport intent, later OperationalShipment lineage. **Mutable/immutable:** request fields/status mutable per workflow; tracking identity stable.
 - **Activation/history:** logs preserve change; deletion behavior governed by legacy policy. **API/UI/reporting:** customer request/admin/expert surfaces; commercial reporting.
-- **Version/state/future/exclusions:** original application foundation; current scalar fields Implemented and Deployed; target Request Cargo is optional and structurally multi-item; Request transport intent is not the actual Route Leg sequence; not OperationalShipment.
+- **Version/state/future/exclusions:** original application foundation; current scalar fields remain compatible; optional structured Request Cargo and scalar Request transport intent are Implemented in the Golden-controlled source; Request transport intent is not the actual Route Leg sequence; not OperationalShipment.
 - **Governance/source:** ADR-002/007/052, PDR-019, Catalog; `backend.models.ShipmentRequest`.
 
 ## FDD-001-006 — OperationalShipment
@@ -76,7 +76,7 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - **Mutable/immutable:** lifecycle/version mutable; lineage and public identity stable. **Activation/history:** cancellation does not erase history; no hard delete.
 - **API/UI/reporting:** internal operational APIs/workspace; shipment status/count dimension.
 - **Version/state/future/exclusions:** operational foundation; Implemented and Deployed; standardized visibility; not ShipmentRequest.
-- **Governance/source:** ADR-002/003/007/017/047; `backend.operational_models.OperationalShipment`. Current accepted-Quote request-assignee derivation is compatibility drift pending the ADR-047 implementation slice.
+- **Governance/source:** ADR-002/003/007/017/047; `backend.operational_models.OperationalShipment`. Accepted-Quote creation captures the exact accepted Quote issuer as the immutable persisted responsible Expert; Direct creation validates the same fixed-owner contract; Request reassignment transfers neither Shipment ownership nor access.
 
 ## FDD-001-007 — ExecutionUnit
 
@@ -316,7 +316,7 @@ Under PDR-020/ADR-050 the active owning Transport Expert is the only management 
 ## Governance gaps
 
 - Named business owner and deletion lifecycle for ExpertUser require explicit identity-governance confirmation.
-- Documents management actor/history ambiguity is closed by PDR-020/ADR-050: owning Transport Expert only; Customer, Admin/Manager, other Expert, other tenant, and inactive/revoked actor cannot manage; the System preserves history. Generalized read/download visibility and retention remain separately Proposed under PDR-008/ADR-020 and PDR-011, with no new Customer visibility granted. Exact schema sufficiency remains `TO_BE_CONFIRMED_IN_DESIGN` and does not block the bounded design phase.
+- Documents management actor/history ambiguity is closed by PDR-020/ADR-050 and the qualified bounded implementation: the owning Transport Expert alone manages; Customer, Admin/Manager, other Expert, other tenant, and inactive/revoked actor cannot manage; the System preserves immutable version history. Generalized read/download visibility and retention remain separately Proposed under PDR-008/ADR-020 and PDR-011, with no new Customer visibility granted.
 - ServiceType relationships remain unresolved under PDR-013 D02/D03.
 - ShipmentCargoItem correction/supersession, allocation, and customer search remain deferred/proposed.
 - Logistics Network physical/API choices are Accepted and implemented in Release 1.7.0 source; Production migration, catalog apply, packaging, and deployment remain separately governed.
@@ -358,9 +358,9 @@ The following entries are **Implemented — Not Deployed** for the bounded Relea
 - **Relationships/exclusions:** selected by ProjectMilestoneDefinition; not the existing operational Milestone row or its execution-specific string constraint.
 - **Governance/reporting:** versioned/checksummed catalog; no migration Seed rows and no Production apply without separate authority.
 
-## Post-D2 accepted target definitions — reference only
+## Post-D2 accepted definitions and Golden-controlled implementation status
 
-These entries are accepted domain/reference truth but are not claims of runtime implementation.
+These entries remain accepted domain/reference truth. The bounded Golden-controlled implementations cited below are qualified source facts; they do not claim Production deployment.
 
 ### FDD-001-033 — RequestCargoItem
 
@@ -369,7 +369,8 @@ These entries are accepted domain/reference truth but are not claims of runtime 
 - **Cardinality and submission:** `ShipmentRequest 0..N RequestCargoItems`; Cargo is optional for submission and no item field is currently mandatory.
 - **Relationships/exclusions:** may later provide traceable input to operational planning; is not `ShipmentCargoItem`, an allocation, Execution Unit, vehicle/container, Route Leg, or Shipment split decision.
 - **Compatibility:** historical Requests without Cargo remain valid; legacy scalar Cargo is not guessed into items; future mandatory policy is deferred.
-- **Governance/source:** PDR-019, ADR-002, Post-D2 Cargo amendment.
+- **Implementation/status:** Implemented and qualified in the Golden-controlled source with additive migration `20260924_request_cargo_items`; zero-Cargo and ordered multi-Cargo journeys are supported without guessed backfill.
+- **Governance/source:** PDR-019, ADR-002, Post-D2 Cargo amendment, `cargo-multi-item-build-20260920.md`.
 
 ### FDD-001-034 — RequestTransportIntent
 
@@ -378,7 +379,8 @@ These entries are accepted domain/reference truth but are not claims of runtime 
 - **Accepted extension:** includes one choice displayed as `حمل ترکیبی` without enumerating an ordered mode sequence.
 - **Relationships/exclusions:** belongs to ShipmentRequest; is not `RouteLeg.transport_mode`, RoutePlan order, carrier planning, or execution truth.
 - **Compatibility:** historical scalar values remain readable unchanged; later catalog reconciliation is idempotent and no ordered-intent JSON is approved.
-- **Governance/source:** PDR-017 scoped extension, PDR-019, ADR-004.
+- **Implementation/status:** Implemented and qualified in the Golden-controlled source as one localized scalar Request intent; actual ordered Route Legs remain separate operational truth.
+- **Governance/source:** PDR-017 scoped extension, PDR-019, ADR-004, `combined-transport-intent-build-20260921.md`.
 
 ### FDD-001-035 — QuotationCommunication
 
@@ -387,7 +389,8 @@ These entries are accepted domain/reference truth but are not claims of runtime 
 - **States:** approve (`accepted`), needs discussion with a short message (`discussion`), reject (`declined`).
 - **Relationships/exclusions:** belongs to one Quotation; revised terms create a new/revised official Quotation. It is not a counter-offer, bargaining engine, price mutation, Notification, or automatic Request-state change.
 - **Compatibility:** existing accepted/declined rows retain meaning; each Quotation retains its own response/message/time history; only accepted Quotation creates Shipment eligibility.
-- **Governance/source:** PDR-019, Canonical Business Object Catalog (`Quotation`, `Comment`).
+- **Implementation/status:** Implemented and qualified in the Golden-controlled source by migration `20260925_quote_communication`; Q1 remains immutable history and changed terms produce a separate official Quote.
+- **Governance/source:** PDR-019, Canonical Business Object Catalog (`Quotation`, `Comment`), `simple-quote-communication-build-20260921.md`.
 
 ## Permanent data-class administration policy
 

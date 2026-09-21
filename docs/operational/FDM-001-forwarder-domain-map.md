@@ -119,7 +119,7 @@ The bounded 1.8.0 concepts are **Implemented — Not Deployed**. ADR-027 and the
 
 ## 7. Post-D2 owner/SOR boundary
 
-**NEW ACCEPTED DECISION — reference phase only:** PDR-019, PDR-020, ADR-047, and ADR-050 establish the following target ownership without authorizing a physical modular refactor or runtime change.
+PDR-019, PDR-020, ADR-047, and ADR-050 established the following ownership boundary. The bounded Cargo, Dual Calendar, Combined Transport, Quote Communication, Documents, Control Tower scalability, public-tracking, and fixed-Shipment-owner implementations are now qualified in the Golden-controlled source. This living view still authorizes no physical modular refactor, Production access, or deployment.
 
 ```mermaid
 flowchart LR
@@ -132,6 +132,6 @@ flowchart LR
   Cal["Calendar presentation\nrender existing time fact"] -.-> R & C & S & T & CT
 ```
 
-Request transport intent and actual Route Leg transport are separate facts. Documents management is `READY_FOR_DESIGN`: only the owning Transport Expert manages files, parent Shipment/Case authority is server-derived, and the System preserves version history. Customer/Admin/Manager/other-Expert management is denied; generalized read visibility remains separately governed and no new Customer visibility is granted. Control Tower's 100-Shipment ceiling is a pre-release scalability gap. Notifications remain dormant.
+Request transport intent and actual Route Leg transport are separate implemented facts. Documents management is `IMPLEMENTED — QUALIFIED`: only the owning Transport Expert manages files, parent Shipment/Case authority is server-derived, and the System preserves version history. Customer/Admin/Manager/other-Expert management is denied; generalized read visibility remains separately governed and no new Customer visibility is granted. Control Tower's former 100-Shipment safety ceiling is removed by the qualified server-side authorized read model. Notifications remain dormant.
 
 Documents keep four boundaries distinct: `DocumentRequirement` is the logical need, `DocumentArtifact`/compatibility `CaseDocumentFile` is an immutable physical version, `DocumentAttachment`/compatibility `ArtifactAssociation` is contextual exact-version use, and DocumentReadiness is a derived requirement result. Append adds a current sibling; targeted replacement supersedes one selected current file while preserving history; historical versions do not inflate readiness.
