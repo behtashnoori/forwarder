@@ -114,4 +114,36 @@ Physical modular extraction is not authorized by this map.
 REFERENCE_IMPACT=UPDATE_REQUIRED
 REFERENCE_IMPACT_STATUS=CLOSED_FOR_REFERENCE_PHASE
 ```
+
 The closure applies to the Forwarder project references changed by the Post-D2 reconciliation. It does not claim runtime implementation, test completion, migration readiness, catalog application, browser acceptance, Freeze, RC, deployment, or Production change.
+
+## 11. Control Tower scalability implementation addendum — 2026-09-21
+
+ADR-051 is the accepted bounded replacement architecture for the §7–§9
+`PRE_RELEASE_SCALABILITY_GAP`. It preserves the existing Control Tower product
+meaning and replaces only the technical complete-population evaluation shape:
+
+- authorization and eligible active scope are applied before search, counts,
+  attention evaluation, ordering, and windowing;
+- existing attention sources and rank semantics are normalized server-side;
+- complete authorized matching totals and global attention counts come from the
+  same governed query, never from the current page;
+- only a bounded deterministic page is hydrated into existing D1 cards;
+- existing item fields and error meanings remain, while explicit summary/window
+  metadata and bounded server-side search are additive;
+- query-time consistency is promised, not a long-lived browser snapshot; and
+- genuine evaluation/invariant failure remains fail-closed with no partial list.
+
+No Shipment state, ownership, attention meaning, Notification, modularization,
+deployment, or Production change is authorized by this addendum. The exact
+implementation and acceptance contract is
+`docs/architecture/control-tower-scalability-v1.md`.
+
+```text
+CONTROL_TOWER_100_CEILING_TARGET=REMOVED
+CONTROL_TOWER_SERVER_SIDE_WINDOWING_REQUIRED=YES
+CONTROL_TOWER_AUTHORIZATION_BEFORE_WINDOWING_REQUIRED=YES
+CONTROL_TOWER_GLOBAL_KPI_FROM_PAGE_LENGTH_ALLOWED=NO
+CONTROL_TOWER_BUSINESS_SEMANTICS_CHANGED=NO
+REFERENCE_IMPACT_STATUS=CLOSED_BY_ADR_051
+```
