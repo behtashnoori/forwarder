@@ -26,6 +26,8 @@ interface RequestConfirmationFormData {
   destCityInternationalName?: string;
   destCountryName?: string;
   transportMethodPreference?: string;
+  domesticTransportMethod?: string;
+  internationalTransportMethod?: string;
   domesticTransportMethodName?: string;
   internationalTransportMethodName?: string;
   pickupDate?: string;
@@ -58,7 +60,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
   cargoItems = [],
   locationDisplay: locationDisplayProp,
 }) => {
-  const { t, shippingTypeLabel } = useI18n();
+  const { t, shippingTypeLabel, transportLabel } = useI18n();
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -84,6 +86,9 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
   };
 
   const locationDisplay = locationDisplayProp ?? getLocationDisplayFallback();
+  const selectedTransportMethod = shippingType === "domestic"
+    ? formData.domesticTransportMethodName || formData.domesticTransportMethod
+    : formData.internationalTransportMethodName || formData.internationalTransportMethod;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -173,9 +178,7 @@ const RequestConfirmation: React.FC<RequestConfirmationProps> = ({
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{t("requestFlow.selectedMethod")}:</span>
                   <span className="font-medium">
-                    {shippingType === "domestic" 
-                      ? formData.domesticTransportMethodName 
-                      : formData.internationalTransportMethodName}
+                    {selectedTransportMethod ? transportLabel(selectedTransportMethod) : "—"}
                   </span>
                 </div>
               )}

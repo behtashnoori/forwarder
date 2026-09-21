@@ -21,7 +21,7 @@ vi.mock("@/lib/api", async () => {
 const storedTransport = {
   shipping_type: "domestic",
   transport_method: "road",
-  domestic_transport_method: "Rail Transport",
+  domestic_transport_method: "Combined Transport",
   international_transport_method: "Sea Freight",
   transport_method_preference: "customer_choice",
 };
@@ -85,8 +85,8 @@ describe("request transport role consistency", () => {
         </MemoryRouter>
       </I18nProvider>,
     );
-    const customerLabel = (await screen.findByText("حمل ریلی")).textContent;
-    expect(screen.queryByText("Rail Transport")).not.toBeInTheDocument();
+    const customerLabel = (await screen.findByText("حمل ترکیبی")).textContent;
+    expect(screen.queryByText("Combined Transport")).not.toBeInTheDocument();
 
     cleanup();
     render(
@@ -96,10 +96,10 @@ describe("request transport role consistency", () => {
         </MemoryRouter>
       </I18nProvider>,
     );
-    const expertLabel = (await screen.findByText("حمل ریلی")).textContent;
+    const expertLabel = (await screen.findByText("حمل ترکیبی")).textContent;
 
     expect(expertLabel).toBe(customerLabel);
-    expect(screen.queryByText("Rail Transport")).not.toBeInTheDocument();
+    expect(screen.queryByText("Combined Transport")).not.toBeInTheDocument();
     expect(screen.queryByText("جاده‌ای")).not.toBeInTheDocument();
   });
 });

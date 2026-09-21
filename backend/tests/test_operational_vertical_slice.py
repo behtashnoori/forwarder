@@ -35,6 +35,8 @@ from backend.operational_models import (
     RoutePlan,
 )
 from backend.services import operational_service as service
+from backend.services.request_transport_projection import project_existing_request_transport
+from backend.request_transport_catalog import COMBINED_TRANSPORT_CODE
 from backend.services import document_readiness_service, economics_service
 from backend.services.expert_scope_service import EXPERT_BASELINE_OPERATIONAL_PERMISSIONS
 from backend.auth import auth_manager
@@ -955,6 +957,56 @@ def test_http_shipment_list_deduplicates_multileg_active_plan_before_pagination(
         "per_page": 1,
         "has_more": False,
     }
+
+
+def test_request_intent_and_actual_route_modes_never_infer_or_mutate_each_other(operational_app):
+    with operational_app.app_context():
+        request_row = ShipmentRequest.query.one()
+        request_row.domestic_transport_method = COMBINED_TRANSPORT_CODE
+        db.session.commit()
+
+        shipment, _ = service.create_from_accepted_quote(
+            _payload(operational_app), _user(operational_app), "combined-route-independence"
+        )
+        plan = RoutePlan.query.filter_by(
+            operational_shipment_id=shipment.id, is_active=True
+        ).one()
+        first = RouteLeg.query.filter_by(route_plan_id=plan.id).one()
+        for sequence, mode in ((2, "rail"), (3, "road")):
+            db.session.add(RouteLeg(
+                route_plan_id=plan.id,
+                sequence_number=sequence,
+                origin_location_id=first.origin_location_id,
+                destination_location_id=first.destination_location_id,
+                origin_snapshot=first.origin_snapshot,
+                destination_snapshot=first.destination_snapshot,
+                transport_mode=mode,
+                planned_departure=first.planned_departure + timedelta(hours=sequence),
+                planned_arrival=first.planned_arrival + timedelta(hours=sequence),
+            ))
+        db.session.commit()
+
+        assert project_existing_request_transport(request_row)["domestic_transport_method"] == COMBINED_TRANSPORT_CODE
+        assert [leg.transport_mode for leg in RouteLeg.query.filter_by(route_plan_id=plan.id).order_by(RouteLeg.sequence_number)] == [
+            "road", "rail", "road",
+        ]
+
+        first.transport_mode = "sea"
+        db.session.commit()
+        assert project_existing_request_transport(request_row)["domestic_transport_method"] == COMBINED_TRANSPORT_CODE
+
+        request_row.domestic_transport_method = "Road Transport"
+        db.session.commit()
+        assert project_existing_request_transport(request_row)["domestic_transport_method"] == "Road Transport"
+        assert [leg.transport_mode for leg in RouteLeg.query.filter_by(route_plan_id=plan.id).order_by(RouteLeg.sequence_number)] == [
+            "sea", "rail", "road",
+        ]
+
+        invalid_payload = _direct_payload(operational_app)
+        invalid_payload["route"]["transport_mode"] = COMBINED_TRANSPORT_CODE
+        with pytest.raises(service.OperationalError) as invalid:
+            service.create_direct(invalid_payload, _user(operational_app), "combined-is-not-a-leg")
+        assert invalid.value.code == "VALIDATION_FAILED"
 
 
 def test_http_permission_validation_transition_and_stale_conflicts(operational_app):

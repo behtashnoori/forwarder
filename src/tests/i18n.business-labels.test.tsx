@@ -18,7 +18,7 @@ const values = [
 
 function Labels() {
   const { businessLabel, transportLabel } = useI18n();
-  return <>{values.map((value) => <p key={value} data-testid={value}>{businessLabel(value)}</p>)}<p data-testid="unknown">{businessLabel("INTERNAL_FUTURE_CODE")}</p><p data-testid="road-mode">{transportLabel("road")}</p><p data-testid="rail-catalog">{transportLabel("Rail Transport")}</p><p data-testid="land-catalog">{transportLabel("Land Transport")}</p><p data-testid="air-catalog">{transportLabel("Air Freight")}</p><p data-testid="sea-catalog">{transportLabel("Sea Freight")}</p></>;
+  return <>{values.map((value) => <p key={value} data-testid={value}>{businessLabel(value)}</p>)}<p data-testid="unknown">{businessLabel("INTERNAL_FUTURE_CODE")}</p><p data-testid="road-mode">{transportLabel("road")}</p><p data-testid="rail-catalog">{transportLabel("Rail Transport")}</p><p data-testid="land-catalog">{transportLabel("Land Transport")}</p><p data-testid="air-catalog">{transportLabel("Air Freight")}</p><p data-testid="sea-catalog">{transportLabel("Sea Freight")}</p><p data-testid="combined-catalog">{transportLabel("Combined Transport")}</p></>;
 }
 
 describe("governed shipment-detail business labels", () => {
@@ -33,6 +33,7 @@ describe("governed shipment-detail business labels", () => {
     expect(screen.getByTestId("land-catalog")).toHaveTextContent("حمل زمینی");
     expect(screen.getByTestId("air-catalog")).toHaveTextContent("حمل هوایی");
     expect(screen.getByTestId("sea-catalog")).toHaveTextContent("حمل دریایی");
+    expect(screen.getByTestId("combined-catalog")).toHaveTextContent("حمل ترکیبی");
     expect(screen.queryByText("road")).not.toBeInTheDocument();
   });
 });

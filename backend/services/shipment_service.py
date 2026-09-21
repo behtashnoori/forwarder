@@ -23,6 +23,11 @@ from backend.models import (
     UnitOfMeasure,
 )
 from backend.referral_engine import referral_engine
+from backend.request_transport_catalog import (
+    COMBINED_TRANSPORT_CODE,
+    LEGACY_REQUEST_TRANSPORT_VALUES,
+    catalog_name_key,
+)
 from backend.services.location_resolver import LocationResolutionError, resolve_location
 
 INTERNATIONAL_METHOD_NAMES = ["sea freight", "air freight", "land transport", "rail transport"]
@@ -79,11 +84,21 @@ class ShipmentValidationError(ValueError):
 
 def get_transport_methods_payload() -> dict:
     """Return available transport methods grouped for public shipment forms."""
-    methods = db.session.query(TransportMethod).filter(TransportMethod.is_active == True).all()
+    methods = (
+        db.session.query(TransportMethod)
+        .filter(TransportMethod.is_active == True)
+        .order_by(TransportMethod.name, TransportMethod.id)
+        .all()
+    )
     international_methods = []
     domestic_methods = []
+    seen_names: set[str] = set()
 
     for method in methods:
+        name_key = catalog_name_key(method.name)
+        if name_key in seen_names:
+            continue
+        seen_names.add(name_key)
         method_data = {
             "id": method.id,
             "name": method.name,
@@ -104,6 +119,32 @@ def get_transport_methods_payload() -> dict:
         "domestic_methods": domestic_methods,
         "preference_options": PREFERENCE_OPTIONS,
     }
+
+
+def _normalize_request_transport_value(value: Any, field: str) -> str | None:
+    """Accept an exact active catalog value or a preserved historical API value."""
+    if value in (None, ""):
+        return None
+    if not isinstance(value, str):
+        raise ShipmentValidationError(
+            "روش حمل انتخاب‌شده نامعتبر است.",
+            code="REQUEST_TRANSPORT_INVALID",
+            fields=[{"field": field, "code": "INVALID_TYPE", "message": "Transport method must be a string."}],
+        )
+    normalized = value.strip()
+    active_names = {
+        name
+        for (name,) in db.session.query(TransportMethod.name)
+        .filter(TransportMethod.is_active == True)
+        .all()
+    }
+    if normalized not in LEGACY_REQUEST_TRANSPORT_VALUES and normalized not in active_names:
+        raise ShipmentValidationError(
+            "روش حمل انتخاب‌شده پشتیبانی نمی‌شود.",
+            code="REQUEST_TRANSPORT_INVALID",
+            fields=[{"field": field, "code": "UNSUPPORTED_VALUE", "message": "Transport method is not supported."}],
+        )
+    return normalized
 
 
 def get_request_cargo_options_payload() -> dict[str, list[dict[str, Any]]]:
@@ -232,10 +273,21 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
 
     transport_method_raw = payload.get("transport_method") or payload.get("shipment_mode")
     transport_method = None
-    if isinstance(transport_method_raw, str):
-        sanitized = transport_method_raw.strip()
+    if transport_method_raw not in (None, ""):
+        sanitized = _normalize_request_transport_value(transport_method_raw, "transport_method")
         if sanitized:
-            transport_method = sanitized.lower()
+            transport_method = (
+                COMBINED_TRANSPORT_CODE
+                if sanitized == COMBINED_TRANSPORT_CODE
+                else sanitized.lower()
+            )
+
+    international_transport_method = _normalize_request_transport_value(
+        payload.get("international_transport_method"), "international_transport_method"
+    )
+    domestic_transport_method = _normalize_request_transport_value(
+        payload.get("domestic_transport_method"), "domestic_transport_method"
+    )
 
     transport_method_preference = payload.get("transport_method_preference", "customer_choice")
     if transport_method_preference not in VALID_TRANSPORT_PREFERENCES:
@@ -247,8 +299,8 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "customer_last_name": payload.get("customer_last_name", "").strip() or None,
         "gamification_customer_id": payload.get("gamification_customer_id"),
         "transport_method": transport_method,
-        "international_transport_method": payload.get("international_transport_method"),
-        "domestic_transport_method": payload.get("domestic_transport_method"),
+        "international_transport_method": international_transport_method,
+        "domestic_transport_method": domestic_transport_method,
         "transport_method_preference": transport_method_preference,
         "cargo_description": payload.get("cargo_description", "").strip() or None,
         "cargo_weight": parse_float_or_none(payload.get("cargo_weight")),
@@ -731,6 +783,11 @@ def build_shipment_request_payload(shipment_request: ShipmentRequest) -> dict[st
         "message": "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت.",
         "id": shipment_request.id,
         "tracking_code": tracking_display,
+        "request_transport_intent": (
+            shipment_request.domestic_transport_method
+            if shipment_request.shipping_type == "domestic"
+            else shipment_request.international_transport_method
+        ),
         "cargo_items": serialize_request_cargo_items(shipment_request),
     }
 

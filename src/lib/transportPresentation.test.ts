@@ -51,4 +51,23 @@ describe("existing transport presentation", () => {
     expect(legs.map((leg) => leg.sequence_number)).toEqual([3, 1, 2]);
     expect(formatRouteTransportModes([], (mode) => mode)).toBeNull();
   });
+
+  it("keeps Combined Request intent independent from concrete route legs", () => {
+    const request = Object.freeze({
+      shipping_type: "domestic",
+      domestic_transport_method: "Combined Transport",
+    });
+    const legs = Object.freeze([
+      Object.freeze({ sequence_number: 1, transport_mode: "road" }),
+      Object.freeze({ sequence_number: 2, transport_mode: "rail" }),
+      Object.freeze({ sequence_number: 3, transport_mode: "road" }),
+    ]);
+
+    expect(getRequestTransportMethod(request)).toBe("Combined Transport");
+    expect(getOrderedRouteTransportModes(legs)).toEqual(["road", "rail", "road"]);
+    expect(getRequestTransportMethod({
+      shipping_type: "domestic",
+      domestic_transport_method: "Road Transport",
+    })).toBe("Road Transport");
+  });
 });

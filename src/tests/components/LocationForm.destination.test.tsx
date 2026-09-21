@@ -46,7 +46,7 @@ beforeEach(() => {
     cargo_types: [{ public_id: "cargo-type", code: "GENERAL", fa_name: "عمومی", en_name: "General" }],
     uoms: [{ public_id: "kg", code: "KG", fa_name: "کیلوگرم", en_name: "Kilogram", symbol: "kg", measurement_dimension: "WEIGHT" }],
   });
-  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "123456789012", message: "Created", cargo_items: [] });
+  vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "123456789012", message: "Created", request_transport_intent: null, cargo_items: [] });
 });
 
 async function choose(index: number, option: string) {
@@ -91,6 +91,21 @@ async function submit(countryId: number, cityId: number) {
 }
 
 describe("public destination business flow", () => {
+  it("offers Combined Transport as one ordinary customer intent choice", async () => {
+    vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
+      international_methods: [{ id: 7, name: "Combined Transport", name_fa: "حمل ترکیبی", description: "Customer intent only" }],
+      domestic_methods: [{ id: 7, name: "Combined Transport", name_fa: "حمل ترکیبی", description: "Customer intent only" }],
+      preference_options: [{ value: "customer_choice", label: "Customer chooses", description: "" }],
+    });
+    render(<MemoryRouter><LocationForm shippingType="international" onBack={vi.fn()} /></MemoryRouter>);
+    await waitFor(() => expect(screen.getAllByRole("combobox")).toHaveLength(6));
+    await userEvent.click(screen.getAllByRole("combobox")[5]);
+    const combined = await screen.findByRole("option", { name: /Combined Transport/ });
+    await userEvent.click(combined);
+    expect(screen.getAllByRole("combobox")[5]).toHaveTextContent("Combined Transport");
+    expect(screen.queryByText("first transport mode")).not.toBeInTheDocument();
+  });
+
   it.each([["Iran", "Tehran", 1, 11], ["Turkey", "Istanbul", 2, 22]] as const)(
     "%s uses country and InternationalCity without the obsolete step", async (country, city, countryId, cityId) => {
       await start();

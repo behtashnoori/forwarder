@@ -11,7 +11,7 @@ const i18n = vi.hoisted(() => ({
   statusLabel: (value: string) => value,
   t: (key: string) => key,
   tf: (key: string, values: { count: number }) => `${key}:${values.count}`,
-  transportLabel: (value: string) => value,
+  transportLabel: (value: string) => value === "Combined Transport" ? "حمل ترکیبی" : value,
 }));
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
 vi.mock("@/components/PageNav", () => ({ default: () => null }));
@@ -59,6 +59,7 @@ const requestRow: api.ExpertRequest = {
   customer: { name: "Needle Customer", phone: "09120000000" },
   route: { shipping_type: "domestic", origin: { province: null, county: null, city: null }, destination: { province: null, county: null, city: null } },
   transport_method: "road",
+  domestic_transport_method: "Combined Transport",
   cargo: {},
   has_unread: false,
 };
@@ -106,6 +107,7 @@ describe("Expert Console canonical count/list refresh", () => {
       expect(api.fetchExpertRequests).toHaveBeenCalledTimes(1);
       expect(api.fetchKPIs).toHaveBeenCalledWith(undefined, undefined);
     });
+    expect(screen.getByText("حمل ترکیبی")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "common.refresh" }));
     await waitFor(() => {

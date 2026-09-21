@@ -1306,8 +1306,8 @@ def test_public_request_creation_does_not_use_tenant_round_robin_before_ownershi
 
     assert first_response.status_code == 201
     assert second_response.status_code == 201
-    assert set(first_response.get_json().keys()) == {"message", "id", "tracking_code", "cargo_items"}
-    assert set(second_response.get_json().keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert set(first_response.get_json().keys()) == {"message", "id", "tracking_code", "request_transport_intent", "cargo_items"}
+    assert set(second_response.get_json().keys()) == {"message", "id", "tracking_code", "request_transport_intent", "cargo_items"}
     assert first_response.get_json()["cargo_items"] == []
     assert second_response.get_json()["cargo_items"] == []
 
@@ -1370,7 +1370,7 @@ def test_public_request_creation_remains_unassigned_when_no_active_expert_exists
     )
 
     assert response.status_code == 201
-    assert set(response.get_json().keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert set(response.get_json().keys()) == {"message", "id", "tracking_code", "request_transport_intent", "cargo_items"}
     assert response.get_json()["cargo_items"] == []
     request_id = response.get_json()["id"]
 

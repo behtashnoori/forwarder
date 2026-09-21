@@ -8,6 +8,8 @@ import pytest
 from backend import create_app
 from backend.extensions import db
 from backend.models import ShipmentRequest, ShipmentRequestLog, TransportMethod
+from backend.operational_models import RoutePlan
+from backend.request_transport_catalog import COMBINED_TRANSPORT_CODE
 
 
 @pytest.fixture
@@ -97,13 +99,108 @@ def test_transport_methods_contract_and_grouping(shipment_app):
     assert {method["name"] for method in data["domestic_methods"]} == {"Road Transport", "Custom Method"}
 
 
+def test_combined_transport_catalog_is_one_deterministic_choice_for_both_scopes(shipment_app):
+    with shipment_app.app_context():
+        db.session.add_all([
+            TransportMethod(name=COMBINED_TRANSPORT_CODE, name_fa="حمل ترکیبی", description="canonical", is_active=True),
+            TransportMethod(name=COMBINED_TRANSPORT_CODE, name_fa="برچسب تکراری", description="duplicate", is_active=True),
+            TransportMethod(name="Rail Transport", name_fa="حمل ریلی", description="rail", is_active=True),
+            TransportMethod(name="Rail Transport", name_fa="ریل تکراری", description="duplicate", is_active=True),
+        ])
+        db.session.commit()
+
+    data = shipment_app.test_client().get("/api/transport-methods").get_json()
+    for scope in ("domestic_methods", "international_methods"):
+        names = [method["name"] for method in data[scope]]
+        assert names.count(COMBINED_TRANSPORT_CODE) == 1
+        assert names.count("Rail Transport") == 1
+        combined = next(method for method in data[scope] if method["name"] == COMBINED_TRANSPORT_CODE)
+        assert combined["name_fa"] == "حمل ترکیبی"
+
+
+def test_combined_transport_round_trips_with_zero_and_multiple_optional_cargo(shipment_app, client):
+    with shipment_app.app_context():
+        db.session.add(TransportMethod(
+            name=COMBINED_TRANSPORT_CODE,
+            name_fa="حمل ترکیبی",
+            description="Customer intent only",
+            is_active=True,
+        ))
+        db.session.commit()
+
+    zero = client.post(
+        "/api/shipment-request",
+        json=_domestic_payload(
+            shipment_mode="",
+            domestic_transport_method=COMBINED_TRANSPORT_CODE,
+            cargo_items=[],
+        ),
+    )
+    multiple = client.post(
+        "/api/shipment-request",
+        json=_domestic_payload(
+            shipment_mode="",
+            domestic_transport_method=COMBINED_TRANSPORT_CODE,
+            cargo_items=[
+                {"description": "Medical devices"},
+                {"description": "Precision cargo"},
+            ],
+        ),
+    )
+
+    assert zero.status_code == 201
+    assert multiple.status_code == 201
+    assert zero.get_json()["request_transport_intent"] == COMBINED_TRANSPORT_CODE
+    assert multiple.get_json()["request_transport_intent"] == COMBINED_TRANSPORT_CODE
+    assert zero.get_json()["cargo_items"] == []
+    assert [item["description"] for item in multiple.get_json()["cargo_items"]] == [
+        "Medical devices",
+        "Precision cargo",
+    ]
+
+    with shipment_app.app_context():
+        rows = ShipmentRequest.query.order_by(ShipmentRequest.id).all()
+        assert [row.domestic_transport_method for row in rows] == [
+            COMBINED_TRANSPORT_CODE,
+            COMBINED_TRANSPORT_CODE,
+        ]
+        assert RoutePlan.query.count() == 0
+
+
+def test_request_transport_rejects_unsupported_or_inactive_values(shipment_app, client):
+    with shipment_app.app_context():
+        db.session.add(TransportMethod(
+            name="Inactive Method",
+            name_fa="غیرفعال",
+            is_active=False,
+        ))
+        db.session.commit()
+
+    for value in ("arbitrary-unsupported", "Inactive Method", "combined_transport"):
+        response = client.post(
+            "/api/shipment-request",
+            json=_domestic_payload(shipment_mode="", domestic_transport_method=value),
+        )
+        assert response.status_code == 400
+        assert response.get_json()["error"] == {
+            "code": "REQUEST_TRANSPORT_INVALID",
+            "message": "روش حمل انتخاب‌شده پشتیبانی نمی‌شود.",
+            "fields": [{
+                "field": "domestic_transport_method",
+                "code": "UNSUPPORTED_VALUE",
+                "message": "Transport method is not supported.",
+            }],
+        }
+
+
 def test_create_domestic_shipment_request_preserves_response_defaults_and_commit(shipment_app, client):
     """Domestic POST /api/shipment-request keeps response, normalization, defaults, and log creation."""
     response = client.post("/api/shipment-request", json=_domestic_payload())
 
     assert response.status_code == 201
     data = response.get_json()
-    assert set(data.keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert set(data.keys()) == {"message", "id", "tracking_code", "request_transport_intent", "cargo_items"}
+    assert data["request_transport_intent"] == "road"
     assert data["cargo_items"] == []
     assert "public_id" not in data
     assert data["message"] == "درخواست شما ثبت شد. کارشناسان ما ظرف دو ساعت با شما تماس خواهند گرفت."
@@ -172,7 +269,8 @@ def test_create_domestic_shipment_request_accepts_province_only_locations(shipme
 
     assert response.status_code == 201
     data = response.get_json()
-    assert set(data.keys()) == {"message", "id", "tracking_code", "cargo_items"}
+    assert set(data.keys()) == {"message", "id", "tracking_code", "request_transport_intent", "cargo_items"}
+    assert data["request_transport_intent"] == "road"
     assert data["cargo_items"] == []
 
     with shipment_app.app_context():

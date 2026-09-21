@@ -6,17 +6,11 @@ import traceback
 
 from backend.extensions import db
 from backend.models import Province, TransportMethod
+from backend.request_transport_catalog import DEFAULT_TRANSPORT_METHODS
 
 
 # Minimal transport methods (same as seed_transport_methods, insert only when empty)
-TRANSPORT_METHODS = [
-    {"name": "Sea Freight", "name_fa": "حمل دریایی", "description": "حمل کالا از طریق دریا - مناسب برای بارهای حجیم و سنگین"},
-    {"name": "Air Freight", "name_fa": "حمل هوایی", "description": "حمل کالا از طریق هوا - سریع و مناسب برای بارهای فوری"},
-    {"name": "Land Transport", "name_fa": "حمل زمینی", "description": "حمل کالا از طریق جاده - مناسب برای مسیرهای کوتاه و متوسط"},
-    {"name": "Rail Transport", "name_fa": "حمل ریلی", "description": "حمل کالا از طریق راه‌آهن - مناسب برای بارهای حجیم و مسیرهای طولانی"},
-    {"name": "Road Transport", "name_fa": "حمل جاده‌ای", "description": "حمل کالا از طریق جاده - سریع و قابل اعتماد برای حمل داخلی"},
-    {"name": "Air Transport", "name_fa": "حمل هوایی", "description": "حمل کالا از طریق هوا - سریع‌ترین روش برای حمل داخلی"},
-]
+TRANSPORT_METHODS = DEFAULT_TRANSPORT_METHODS
 
 # Minimal provinces (Iran) so frontend and routes never depend on manual seed
 PROVINCES = [

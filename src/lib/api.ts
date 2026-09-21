@@ -435,8 +435,8 @@ export function fetchInternationalCityPage(
 
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
-): Promise<{ message: string; id: number; tracking_code: string; cargo_items: RequestCargoItem[] }> {
-  return request<{ message: string; id: number; tracking_code: string; cargo_items: RequestCargoItem[] }>(
+): Promise<{ message: string; id: number; tracking_code: string; request_transport_intent: string | null; cargo_items: RequestCargoItem[] }> {
+  return request<{ message: string; id: number; tracking_code: string; request_transport_intent: string | null; cargo_items: RequestCargoItem[] }>(
     "/api/shipment-request",
     {
       method: "POST",

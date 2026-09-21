@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Seed transport methods for international and domestic shipping."""
+"""Dry-run or apply the idempotent Request transport catalog reconciliation."""
 
+import argparse
+import json
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -8,86 +10,34 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from backend.extensions import db
 from backend.models import TransportMethod
 from backend import create_app
+from backend.request_transport_catalog import DEFAULT_TRANSPORT_METHODS, catalog_name_key
 
 
-def seed_transport_methods():
-    """Seed transport methods for both international and domestic shipping."""
-    
-    # International transport methods
-    international_methods = [
-        {
-            "name": "Sea Freight",
-            "name_fa": "حمل دریایی",
-            "description": "حمل کالا از طریق دریا - مناسب برای بارهای حجیم و سنگین"
-        },
-        {
-            "name": "Air Freight", 
-            "name_fa": "حمل هوایی",
-            "description": "حمل کالا از طریق هوا - سریع و مناسب برای بارهای فوری"
-        },
-        {
-            "name": "Land Transport",
-            "name_fa": "حمل زمینی",
-            "description": "حمل کالا از طریق جاده - مناسب برای مسیرهای کوتاه و متوسط"
-        },
-        {
-            "name": "Rail Transport",
-            "name_fa": "حمل ریلی",
-            "description": "حمل کالا از طریق راه‌آهن - مناسب برای بارهای حجیم و مسیرهای طولانی"
-        }
-    ]
-    
-    # Domestic transport methods
-    domestic_methods = [
-        {
-            "name": "Road Transport",
-            "name_fa": "حمل جاده‌ای",
-            "description": "حمل کالا از طریق جاده - سریع و قابل اعتماد برای حمل داخلی"
-        },
-        {
-            "name": "Rail Transport",
-            "name_fa": "حمل ریلی", 
-            "description": "حمل کالا از طریق راه‌آهن - مناسب برای بارهای حجیم و مسیرهای طولانی"
-        },
-        {
-            "name": "Air Transport",
-            "name_fa": "حمل هوایی",
-            "description": "حمل کالا از طریق هوا - سریع‌ترین روش برای حمل داخلی"
-        }
-    ]
-    
-    app = create_app()
-    
+def reconcile_transport_methods(*, apply: bool = False) -> dict:
+    """Plan or apply missing canonical rows without deleting historical rows."""
+    app = create_app(skip_startup=True)
     with app.app_context():
-        # Clear existing transport methods
-        db.session.query(TransportMethod).delete()
-        db.session.commit()
-        
-        # Add international transport methods
-        for method_data in international_methods:
-            method = TransportMethod(
-                name=method_data["name"],
-                name_fa=method_data["name_fa"],
-                description=method_data["description"],
-                is_active=True
-            )
-            db.session.add(method)
-        
-        # Add domestic transport methods
-        for method_data in domestic_methods:
-            method = TransportMethod(
-                name=method_data["name"],
-                name_fa=method_data["name_fa"],
-                description=method_data["description"],
-                is_active=True
-            )
-            db.session.add(method)
-        
-        db.session.commit()
-        print("✅ Transport methods seeded successfully!")
-        print(f"   - {len(international_methods)} international methods added")
-        print(f"   - {len(domestic_methods)} domestic methods added")
+        existing = {
+            catalog_name_key(row.name): row
+            for row in db.session.query(TransportMethod).order_by(TransportMethod.id).all()
+        }
+        missing = [item for item in DEFAULT_TRANSPORT_METHODS if catalog_name_key(item["name"]) not in existing]
+        if apply:
+            for item in missing:
+                db.session.add(TransportMethod(**item, is_active=True))
+            db.session.commit()
+        else:
+            db.session.rollback()
+        return {
+            "status": "APPLIED" if apply else "DRY_RUN",
+            "inserted": len(missing) if apply else 0,
+            "missing": [item["name"] for item in missing],
+            "historical_rows_deleted": 0,
+        }
 
 
 if __name__ == "__main__":
-    seed_transport_methods()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--apply", action="store_true")
+    args = parser.parse_args()
+    print(json.dumps(reconcile_transport_methods(apply=args.apply), ensure_ascii=False, sort_keys=True))
