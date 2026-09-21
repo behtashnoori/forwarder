@@ -46,4 +46,3 @@ def test_runtime_model_requires_one_persisted_owner():
     column = OperationalShipment.__table__.c.primary_responsible_expert_id
     assert column.nullable is False
     assert column.foreign_keys
-

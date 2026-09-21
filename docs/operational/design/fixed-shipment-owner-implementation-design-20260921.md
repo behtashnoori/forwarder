@@ -293,4 +293,3 @@ future operator may have to adjudicate rejected legacy rows before deployment;
 this design neither performs that deployment nor weakens the invariant. An
 inactive owner remains historical truth and may require separately governed
 operational continuity in the future, but no automatic transfer is introduced.
-

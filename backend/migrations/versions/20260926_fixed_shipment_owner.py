@@ -187,4 +187,3 @@ def downgrade():
             existing_type=BIGINT,
             nullable=True,
         )
-
