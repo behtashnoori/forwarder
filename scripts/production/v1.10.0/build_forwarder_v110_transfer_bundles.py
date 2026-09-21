@@ -14,7 +14,7 @@ VERSION = "1.10.0"
 SOURCE_SHA = "e36ee7cee157657c97dc42a539eaf1909f510a33"
 BEFORE_HEAD = "20260921_shipment_evidence_ownership"
 TARGET_HEAD = "20260926_fixed_shipment_responsible_expert"
-READ_ONLY_REVISION = "r2"
+READ_ONLY_REVISION = "r3"
 READ_ONLY_NAME = f"Forwarder-v{VERSION}-Read-Only-Preflight-Bundle-{SOURCE_SHA[:12]}-{READ_ONLY_REVISION}"
 DEPLOYMENT_NAME = f"Forwarder-v{VERSION}-Production-Deployment-Bundle-{SOURCE_SHA[:12]}"
 
@@ -134,7 +134,7 @@ def main() -> int:
     (read_only_root / "BUNDLE-MANIFEST.json").write_text(json.dumps(read_only_manifest, indent=2)+"\n", encoding="utf-8")
     (read_only_root / "README-FIRST.md").write_text(
         "# Forwarder v1.10.0 read-only Production preflight\n\n"
-        "Copy this directory to `C:\\1-webapp\\forwarder-production-preflight\\v1.10.0-20260921` on the Production server. Run only `Collect-ForwarderV110ProductionReadOnly.ps1` locally on that server. The collector makes no Production mutation and writes one sanitized JSON result beside the script. Copy that JSON back for GO/NO-GO review. This bundle does not authorize deployment.\n",
+        "Copy this directory to `C:\\1-webapp\\forwarder-production-preflight\\v1.10.0-r3` on the Production server. Run only `Collect-ForwarderV110ProductionReadOnly.ps1` locally on that server. The collector makes no Production mutation and writes one sanitized JSON result beside the script. Copy that JSON back for GO/NO-GO review. This bundle does not authorize deployment.\n",
         encoding="utf-8",
     )
 
@@ -177,7 +177,7 @@ def main() -> int:
         result["production_deployment_bundle"] = finish_bundle(deployment_root, deployment_zip, stamp)
 
     result_path = output_root / (
-        "Forwarder-v1.10.0-read-only-preflight-r2.build-result.json"
+        "Forwarder-v1.10.0-read-only-preflight-r3.build-result.json"
         if args.read_only_only
         else "Forwarder-v1.10.0-transfer-bundles.build-result.json"
     )

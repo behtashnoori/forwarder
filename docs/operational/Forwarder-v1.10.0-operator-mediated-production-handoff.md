@@ -1,6 +1,6 @@
 # Forwarder v1.10.0 Operator-Mediated Production Handoff
 
-Status: the first live Production preflight was run and remained BLOCKED by three collector compatibility failures. Corrected read-only collector revision `r2` is laptop-qualified and awaits a human rerun. No deployment is authorized.
+Status: the human-run `r2` preflight proved release identity, database, ADR-047, migration compatibility, schema, configuration, storage, capacity, IIS, API, SPA, health, and readiness. Its only remaining error was the final selected-Scheduled-Task metadata projection after the correct unique candidate had already been proven. Read-only collector revision `r3` corrects only that projection and is laptop-qualified for one human rerun. No deployment is authorized.
 
 This handoff does not authorize deployment. Codex did not access Production. A human operator must run the read-only collector locally on the Windows Production server and return its sanitized JSON before a release authority can decide GO/NO-GO.
 
@@ -8,11 +8,11 @@ This handoff does not authorize deployment. Codex did not access Production. A h
 
 Copy the contents of:
 
-`D:\1-webapp\forwarder-production-releases\Forwarder-v1.10.0-Read-Only-Preflight-Bundle-e36ee7cee157-r2\`
+`D:\1-webapp\forwarder-production-releases\Forwarder-v1.10.0-Read-Only-Preflight-Bundle-e36ee7cee157-r3\`
 
 to this temporary, non-release directory on the Production server:
 
-`C:\1-webapp\forwarder-production-preflight\v1.10.0-20260921\`
+`C:\1-webapp\forwarder-production-preflight\v1.10.0-r3\`
 
 The copied directory must contain:
 
@@ -29,7 +29,7 @@ The copied directory must contain:
 Run exactly one command locally on the Production server:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\1-webapp\forwarder-production-preflight\v1.10.0-20260921\Collect-ForwarderV110ProductionReadOnly.ps1" -OutputDirectory "C:\1-webapp\forwarder-production-preflight\v1.10.0-20260921"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\1-webapp\forwarder-production-preflight\v1.10.0-r3\Collect-ForwarderV110ProductionReadOnly.ps1" -OutputDirectory "C:\1-webapp\forwarder-production-preflight\v1.10.0-r3"
 ```
 
 This command is read-only except for creating its sanitized result file in the specified temporary tooling directory. It does not stage a release, create a backup, migrate the database, stop a process, or change IIS or Scheduled Tasks.
@@ -38,7 +38,7 @@ This command is read-only except for creating its sanitized result file in the s
 
 Return the single newly created file matching:
 
-`C:\1-webapp\forwarder-production-preflight\v1.10.0-20260921\Forwarder-v1.10.0-Production-ReadOnly-Preflight-<UTC>.json`
+`C:\1-webapp\forwarder-production-preflight\v1.10.0-r3\Forwarder-v1.10.0-Production-ReadOnly-Preflight-<UTC>.json`
 
 Do not return `production.env`, credentials, connection strings, raw customer data, logs, or database dumps.
 

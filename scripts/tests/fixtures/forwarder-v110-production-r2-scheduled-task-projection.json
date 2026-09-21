@@ -1,0 +1,77 @@
+{
+  "schema": "forwarder-v1.10.0-production-r2-scheduled-task-projection-regression-v1",
+  "source": "operator_returned_sanitized_production_r2",
+  "active_release_path": "C:\\1-webapp\\forwarder-production\\release-20260914215708-20260921_shipment_evidence_ownership",
+  "scheduled_task": {
+    "status": "UNPROVEN",
+    "preferred_name_hint": "Forwarder Backend Production",
+    "name": null,
+    "task_path": null,
+    "state": null,
+    "enabled": null,
+    "last_result": null,
+    "last_run_utc": null,
+    "next_run_utc": null,
+    "principal": null,
+    "action_executable": null,
+    "action_runtime": null,
+    "sanitized_arguments": null,
+    "working_directory": null,
+    "release_path": null,
+    "trigger_count": null,
+    "restart_count": null,
+    "restart_interval": null,
+    "multiple_instances_policy": null,
+    "candidate_count": 1,
+    "candidates": [
+      {
+        "name": "Forwarder Backend Production",
+        "task_path": "\\",
+        "exact_listener_relationship": true,
+        "plausible": true,
+        "reason": "EXACT_LISTENER_ACTION_MATCH",
+        "release_path": "C:\\1-webapp\\forwarder-production\\release-20260914215708-20260921_shipment_evidence_ownership",
+        "action_executable": "C:\\Windows\\System32\\cmd.exe",
+        "action_runtime": "C:\\1-webapp\\forwarder-production\\release-20260914215708-20260921_shipment_evidence_ownership\\runtime\\python.exe",
+        "sanitized_arguments": "/d /c \"\"C:\\1-webapp\\forwarder-production\\release-20260914215708-20260921_shipment_evidence_ownership\\runtime\\python.exe\" -m waitress --listen=127.0.0.1:5101 backend.wsgi:app\"",
+        "working_directory": "C:\\1-webapp\\forwarder-production\\release-20260914215708-20260921_shipment_evidence_ownership",
+        "evidence": {
+          "action_count": 1,
+          "release_match": true,
+          "runtime_match": true,
+          "port_match": true,
+          "waitress_match": true,
+          "forwarder_name_match": true
+        }
+      }
+    ]
+  },
+  "collection_error_codes": [
+    "SCHEDULED_TASK_SELECTED_METADATA_FAILED"
+  ],
+  "listener_ownership_verified": false,
+  "listeners": [
+    {
+      "local_address": "127.0.0.1",
+      "local_port": 5101,
+      "executable": "C:\\1-webapp\\forwarder-production\\release-20260914215708-20260921_shipment_evidence_ownership\\runtime\\python.exe",
+      "release_path": "C:\\1-webapp\\forwarder-production\\release-20260914215708-20260921_shipment_evidence_ownership",
+      "waitress_contract": true,
+      "task_release_match": false
+    }
+  ],
+  "task_scheduler_metadata": {
+    "task": {
+      "task_name": "Forwarder Backend Production",
+      "task_path": "\\",
+      "state": "Running",
+      "enabled": true
+    },
+    "info": {
+      "last_result": 0,
+      "last_run_utc": "2026-09-21T21:00:00Z",
+      "next_run_utc": "2026-09-22T21:00:00Z"
+    },
+    "xml": "<Task xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\"><Principals><Principal id=\"Author\"><GroupId>S-1-5-32-544</GroupId><RunLevel>HighestAvailable</RunLevel></Principal></Principals><Triggers><BootTrigger><Enabled>true</Enabled></BootTrigger></Triggers><Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><Enabled>true</Enabled></Settings><Actions><Exec><Command>C:\\Windows\\System32\\cmd.exe</Command></Exec></Actions></Task>"
+  }
+}

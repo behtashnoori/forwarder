@@ -11,7 +11,8 @@ bridge, the governed legacy Production witness, and the SQL files under `sql/`.
 The collector emits one sanitized JSON result and performs no server mutation
 other than creating that explicitly requested result file.
 
-Collector revision `r2` is corrected for the observed live topology. It
+Collector revision `r3` preserves the `r2` live-topology discovery authority
+and corrects only the selected Scheduled Task projection. It
 enumerates only plausible Forwarder Scheduled Tasks and proves one against the
 active listener action; ambiguity remains BLOCKED. A missing current-format
 manifest is not treated as proof of identity: the legacy release must instead
@@ -20,6 +21,12 @@ active release's Python, python-dotenv, and SQLAlchemy URL parser, so
 `postgresql+psycopg2://` remains supported without putting a password in a
 command line, output, or result file. Every SQL payload retains its explicit
 read-only transaction envelope.
+
+After exactly one Scheduled Task candidate is proven, `r3` projects the
+candidate-derived action, runtime, working directory, arguments, and release
+path before adding null-safe Task Scheduler state, result, principal, trigger,
+and settings metadata. Listener ownership becomes true only when the listener
+runtime/release, selected task runtime/release, and active release all agree.
 
 Application bytes in the Production package are built only from
 `e36ee7cee157657c97dc42a539eaf1909f510a33`. These tooling files are

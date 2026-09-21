@@ -15,7 +15,8 @@ param(
     [string]$PgRestorePath = 'C:\Program Files\PostgreSQL\18\bin\pg_restore.exe',
     [switch]$ToolingSelfTest,
     [string]$SelfTestReleaseRoot,
-    [string]$SelfTestWitnessPath
+    [string]$SelfTestWitnessPath,
+    [string]$SelfTestProjectionFixturePath
 )
 
 Set-StrictMode -Version Latest
@@ -155,6 +156,110 @@ function Select-ProvenTaskCandidate([object[]]$Candidates) {
     return [pscustomobject]@{ status='UNPROVEN'; selected=$null; candidates=$plausible }
 }
 
+function Get-XmlChildText([System.Xml.XmlNode]$Node, [string]$LocalName) {
+    if ($null -eq $Node) { return $null }
+    $child = $Node.SelectSingleNode("./*[local-name()='$LocalName']")
+    if ($null -eq $child) { return $null }
+    return [string]$child.InnerText
+}
+
+function Get-UtcTimestamp([object]$Value) {
+    if ($null -eq $Value -or [string]::IsNullOrWhiteSpace([string]$Value)) { return $null }
+    try { return ([DateTime]$Value).ToUniversalTime().ToString('o') }
+    catch { return $null }
+}
+
+function Get-NullableBoolean([object]$Value) {
+    if ($null -eq $Value) { return $null }
+    if ($Value -is [bool]) { return [bool]$Value }
+    $text = ([string]$Value).Trim().ToLowerInvariant()
+    if ($text -in @('true','1','yes','on')) { return $true }
+    if ($text -in @('false','0','no','off')) { return $false }
+    return $null
+}
+
+function New-SelectedTaskProjection(
+    [object]$Selection,
+    [object]$Task,
+    [object]$Info,
+    [string]$XmlText,
+    [string]$PreferredNameHint
+) {
+    if ($null -eq $Selection -or $Selection.status -ne 'PROVEN' -or $null -eq $Selection.selected) {
+        throw 'SELECTED_TASK_PROJECTION_REQUIRES_PROVEN_SELECTION'
+    }
+    $selected = $Selection.selected
+
+    # These fields are the output of the bounded authority decision. Populate them
+    # before reading optional Task Scheduler metadata so a missing optional XML node
+    # can never erase the already-proven action/runtime/release relationship.
+    $result = [pscustomobject]@{
+        status='PROVEN'; metadata_status='PARTIAL'; preferred_name_hint=$PreferredNameHint
+        name=[string]$selected.name; task_path=[string]$selected.task_path
+        selection_reason=[string]$selected.reason
+        exact_listener_relationship=[bool]$selected.exact_listener_relationship
+        state=$null; enabled=$null; last_result=$null; last_run_utc=$null; next_run_utc=$null; principal=$null
+        action_executable=$selected.action_executable; action_runtime=$selected.action_runtime
+        sanitized_arguments=$selected.sanitized_arguments; working_directory=$selected.working_directory
+        release_path=$selected.release_path
+        trigger_count=$null; restart_count=$null; restart_interval=$null; multiple_instances_policy=$null
+        candidate_count=@($Selection.candidates).Count; candidates=@($Selection.candidates)
+    }
+
+    $stateValue = Get-ObjectPropertyValue $Task 'State'
+    if ($null -ne $stateValue) { $result.state = [string]$stateValue }
+    $settings = Get-ObjectPropertyValue $Task 'Settings'
+    $result.enabled = Get-NullableBoolean (Get-ObjectPropertyValue $settings 'Enabled')
+
+    $lastResultValue = Get-ObjectPropertyValue $Info 'LastTaskResult'
+    if ($null -ne $lastResultValue) {
+        try { $result.last_result = [int64]$lastResultValue } catch { $result.last_result = $null }
+    }
+    $result.last_run_utc = Get-UtcTimestamp (Get-ObjectPropertyValue $Info 'LastRunTime')
+    $result.next_run_utc = Get-UtcTimestamp (Get-ObjectPropertyValue $Info 'NextRunTime')
+
+    if (-not [string]::IsNullOrWhiteSpace($XmlText)) {
+        [xml]$selectedXml = $XmlText
+        $principalNode = $selectedXml.SelectSingleNode("/*[local-name()='Task']/*[local-name()='Principals']/*[local-name()='Principal']")
+        if ($null -ne $principalNode) {
+            $userId = Get-BoundedText (Get-XmlChildText $principalNode 'UserId') 256
+            $groupId = Get-BoundedText (Get-XmlChildText $principalNode 'GroupId') 256
+            $result.principal = [pscustomobject]@{
+                identity_type=$(if($userId){'USER'}elseif($groupId){'GROUP'}else{'UNAVAILABLE'})
+                user_id=$userId; group_id=$groupId
+                logon_type=(Get-XmlChildText $principalNode 'LogonType')
+                run_level=(Get-XmlChildText $principalNode 'RunLevel')
+            }
+        }
+        $triggerNodes = $selectedXml.SelectNodes("/*[local-name()='Task']/*[local-name()='Triggers']/*")
+        $result.trigger_count = @($triggerNodes).Count
+        $settingsNode = $selectedXml.SelectSingleNode("/*[local-name()='Task']/*[local-name()='Settings']")
+        $restartNode = if ($null -ne $settingsNode) { $settingsNode.SelectSingleNode("./*[local-name()='RestartOnFailure']") } else { $null }
+        $result.restart_count = Get-XmlChildText $restartNode 'Count'
+        $result.restart_interval = Get-XmlChildText $restartNode 'Interval'
+        $result.multiple_instances_policy = Get-XmlChildText $settingsNode 'MultipleInstancesPolicy'
+        if ($null -eq $result.enabled) { $result.enabled = Get-NullableBoolean (Get-XmlChildText $settingsNode 'Enabled') }
+    }
+
+    if ($null -ne $result.state -and $null -ne $result.enabled -and $null -ne $result.last_result) {
+        $result.metadata_status = 'AVAILABLE'
+    }
+    return $result
+}
+
+function Test-ListenerTaskOwnership([object[]]$Listeners, [object]$TaskResult, [string]$ActiveRelease) {
+    if (@($Listeners).Count -ne 1 -or $null -eq $TaskResult -or $TaskResult.status -ne 'PROVEN') { return $false }
+    $listener = @($Listeners)[0]
+    return [bool](
+        $listener.local_address -eq '127.0.0.1' -and
+        [bool]$listener.waitress_contract -and
+        [bool]$TaskResult.exact_listener_relationship -and
+        (Same-Path ([string]$listener.executable) ([string]$TaskResult.action_runtime)) -and
+        (Same-Path ([string]$listener.release_path) ([string]$TaskResult.release_path)) -and
+        (Same-Path $ActiveRelease ([string]$TaskResult.release_path))
+    )
+}
+
 function Get-FirstJsonValue([object]$Object, [string[]]$Names) {
     foreach ($name in $Names) {
         $property = $Object.PSObject.Properties[$name]
@@ -261,6 +366,52 @@ function Invoke-ToolingSelfTest {
     if ($ambiguous.status -ne 'AMBIGUOUS') { throw 'TASK_AMBIGUITY_SELF_TEST_FAILED' }
     Write-Output 'TASK_NAME_MISMATCH_WITH_EXACT_ACTION=PASS'
     Write-Output 'TASK_AMBIGUITY=FAIL_CLOSED'
+    if ($SelfTestProjectionFixturePath) {
+        $fixture = Get-Content -Raw -LiteralPath $SelfTestProjectionFixturePath -ErrorAction Stop | ConvertFrom-Json
+        $fixtureCandidates = @($fixture.scheduled_task.candidates)
+        $fixtureSelection = Select-ProvenTaskCandidate $fixtureCandidates
+        if ($fixtureSelection.status -ne 'PROVEN') { throw 'R2_PROJECTION_FIXTURE_SELECTION_FAILED' }
+        $metadata = $fixture.task_scheduler_metadata
+        $fixtureTask = [pscustomobject]@{
+            TaskName=[string]$metadata.task.task_name; TaskPath=[string]$metadata.task.task_path
+            State=[string]$metadata.task.state
+            Settings=[pscustomobject]@{ Enabled=[bool]$metadata.task.enabled }
+        }
+        $fixtureInfo = [pscustomobject]@{
+            LastTaskResult=[int64]$metadata.info.last_result
+            LastRunTime=[DateTime]$metadata.info.last_run_utc
+            NextRunTime=[DateTime]$metadata.info.next_run_utc
+        }
+        $projection = New-SelectedTaskProjection $fixtureSelection $fixtureTask $fixtureInfo ([string]$metadata.xml) $TaskName
+        $candidate = $fixtureSelection.selected
+        $criticalMatches = (
+            $projection.status -eq 'PROVEN' -and $projection.metadata_status -eq 'AVAILABLE' -and
+            $projection.name -eq $candidate.name -and $projection.task_path -eq $candidate.task_path -and
+            (Same-Path $projection.action_executable $candidate.action_executable) -and
+            (Same-Path $projection.action_runtime $candidate.action_runtime) -and
+            $projection.sanitized_arguments -eq $candidate.sanitized_arguments -and
+            (Same-Path $projection.working_directory $candidate.working_directory) -and
+            (Same-Path $projection.release_path $candidate.release_path)
+        )
+        if (-not $criticalMatches) { throw 'R2_SELECTED_TASK_PROJECTION_SELF_TEST_FAILED' }
+        $fixtureListener = [pscustomobject]@{
+            local_address=[string]$fixture.listeners[0].local_address
+            executable=[string]$fixture.listeners[0].executable
+            release_path=[string]$fixture.listeners[0].release_path
+            waitress_contract=[bool]$fixture.listeners[0].waitress_contract
+        }
+        if (-not (Test-ListenerTaskOwnership @($fixtureListener) $projection ([string]$fixture.active_release_path))) {
+            throw 'R2_LISTENER_OWNERSHIP_SELF_TEST_FAILED'
+        }
+        $mismatchedProjection = $projection.PSObject.Copy()
+        $mismatchedProjection.action_runtime = 'C:\unrelated\runtime\python.exe'
+        if (Test-ListenerTaskOwnership @($fixtureListener) $mismatchedProjection ([string]$fixture.active_release_path)) {
+            throw 'R2_LISTENER_OWNERSHIP_MISMATCH_NOT_CLOSED'
+        }
+        Write-Output 'R2_SELECTED_TASK_PROJECTION=PASS'
+        Write-Output 'R2_LISTENER_OWNERSHIP=TRUE'
+        Write-Output 'R2_LISTENER_OWNERSHIP_MISMATCH=FAIL_CLOSED'
+    }
     if ($SelfTestReleaseRoot -or $SelfTestWitnessPath) {
         if (-not $SelfTestReleaseRoot -or -not $SelfTestWitnessPath) { throw 'SELF_TEST_WITNESS_ARGUMENTS_INCOMPLETE' }
         $evidence = Get-LegacyWitnessEvidence $SelfTestReleaseRoot $SelfTestWitnessPath
@@ -467,6 +618,7 @@ if ($listeners.Count -eq 1 -and $listeners[0].release_path) { $activeRelease = $
 $listenerExecutable = if ($listeners.Count -eq 1) { [string]$listeners[0].executable } else { $null }
 
 $taskCandidates = New-Object 'System.Collections.Generic.List[object]'
+$taskCandidateRecords = New-Object 'System.Collections.Generic.List[object]'
 $taskObjects = @(Invoke-Safe 'SCHEDULED_TASK_ENUMERATION_FAILED' { Get-ScheduledTask -ErrorAction Stop })
 foreach ($task in $taskObjects) {
     $actionHint = @($task.Actions | ForEach-Object {
@@ -480,13 +632,17 @@ foreach ($task in $taskObjects) {
     try {
         $xmlText = Export-ScheduledTask -TaskName ([string]$task.TaskName) -TaskPath ([string]$task.TaskPath) -ErrorAction Stop
         $candidate = Get-TaskCandidateFromXml ([string]$task.TaskName) ([string]$task.TaskPath) $xmlText $activeRelease $listenerExecutable $BackendPort
-        if ($candidate.plausible) { $taskCandidates.Add($candidate) }
+        if ($candidate.plausible) {
+            $taskCandidates.Add($candidate)
+            $taskCandidateRecords.Add([pscustomobject]@{ task=$task; xml_text=$xmlText; candidate=$candidate })
+        }
     } catch { Add-CollectionError 'SCHEDULED_TASK_CANDIDATE_INSPECTION_FAILED' }
 }
 
 $taskSelection = Select-ProvenTaskCandidate $taskCandidates.ToArray()
 $taskResult = [pscustomobject]@{
-    status=$taskSelection.status; preferred_name_hint=$TaskName; name=$null; task_path=$null; state=$null; enabled=$null
+    status=$taskSelection.status; metadata_status='UNAVAILABLE'; preferred_name_hint=$TaskName; name=$null; task_path=$null
+    selection_reason=$null; exact_listener_relationship=$false; state=$null; enabled=$null
     last_result=$null; last_run_utc=$null; next_run_utc=$null; principal=$null
     action_executable=$null; action_runtime=$null; sanitized_arguments=$null; working_directory=$null; release_path=$null
     trigger_count=$null; restart_count=$null; restart_interval=$null; multiple_instances_policy=$null
@@ -494,34 +650,30 @@ $taskResult = [pscustomobject]@{
 }
 if ($taskSelection.status -eq 'PROVEN') {
     $selected = $taskSelection.selected
+    $taskResult = New-SelectedTaskProjection $taskSelection $null $null $null $TaskName
     try {
-        $task = @($taskObjects | Where-Object {$_.TaskName -eq $selected.name -and $_.TaskPath -eq $selected.task_path})[0]
-        $info = Get-ScheduledTaskInfo -TaskName $selected.name -TaskPath $selected.task_path -ErrorAction Stop
-        [xml]$selectedXml = Export-ScheduledTask -TaskName $selected.name -TaskPath $selected.task_path -ErrorAction Stop
-        $principalNode = $selectedXml.SelectSingleNode("/*[local-name()='Task']/*[local-name()='Principals']/*[local-name()='Principal']")
-        $taskResult.name=$selected.name; $taskResult.task_path=$selected.task_path; $taskResult.state=[string]$task.State
-        $taskResult.enabled=[bool]$task.Settings.Enabled; $taskResult.last_result=[int64]$info.LastTaskResult
-        $taskResult.last_run_utc=$(if($info.LastRunTime){$info.LastRunTime.ToUniversalTime().ToString('o')}else{$null})
-        $taskResult.next_run_utc=$(if($info.NextRunTime){$info.NextRunTime.ToUniversalTime().ToString('o')}else{$null})
-        $taskResult.principal=[pscustomobject]@{
-            user_id=(Get-BoundedText ([string]$principalNode.UserId) 256); logon_type=[string]$principalNode.LogonType; run_level=[string]$principalNode.RunLevel
-        }
-        $taskResult.action_executable=$selected.action_executable; $taskResult.action_runtime=$selected.action_runtime
-        $taskResult.sanitized_arguments=$selected.sanitized_arguments; $taskResult.working_directory=$selected.working_directory
-        $taskResult.release_path=$selected.release_path
-        $taskResult.trigger_count=@($selectedXml.SelectNodes("/*[local-name()='Task']/*[local-name()='Triggers']/*")).Count
-        $taskResult.restart_count=[string]$selectedXml.Task.Settings.RestartOnFailure.Count
-        $taskResult.restart_interval=[string]$selectedXml.Task.Settings.RestartOnFailure.Interval
-        $taskResult.multiple_instances_policy=[string]$selectedXml.Task.Settings.MultipleInstancesPolicy
-    } catch { Add-CollectionError 'SCHEDULED_TASK_SELECTED_METADATA_FAILED'; $taskResult.status='UNPROVEN' }
+        $records = @($taskCandidateRecords | Where-Object {
+            $_.candidate.name -eq $selected.name -and $_.candidate.task_path -eq $selected.task_path
+        })
+        if ($records.Count -ne 1) { throw 'SELECTED_TASK_CACHED_RECORD_NOT_UNIQUE' }
+        $record = $records[0]
+        $info = Get-ScheduledTaskInfo -InputObject $record.task -ErrorAction Stop
+        $taskResult = New-SelectedTaskProjection $taskSelection $record.task $info ([string]$record.xml_text) $TaskName
+    } catch {
+        Add-CollectionError 'SCHEDULED_TASK_SELECTED_METADATA_FAILED'
+        $taskResult.status='UNPROVEN'; $taskResult.metadata_status='FAILED'
+    }
 } elseif ($taskSelection.status -eq 'AMBIGUOUS') {
     Add-CollectionError 'SCHEDULED_TASK_IDENTITY_AMBIGUOUS'
 } else {
     Add-CollectionError 'SCHEDULED_TASK_IDENTITY_UNPROVEN'
 }
 if (-not $activeRelease -and $taskResult.release_path) { $activeRelease = $taskResult.release_path }
-foreach ($listener in $listeners) { $listener.task_release_match=[bool]($taskResult.status -eq 'PROVEN' -and $listener.release_path -and (Same-Path $listener.release_path $taskResult.release_path)) }
-$listenerOwnership = ($listeners.Count -eq 1 -and $listeners[0].local_address -eq '127.0.0.1' -and $listeners[0].waitress_contract -and $listeners[0].task_release_match)
+foreach ($listener in $listeners) {
+    $listener.task_release_match=[bool]($taskResult.status -eq 'PROVEN' -and $listener.release_path -and (Same-Path $listener.release_path $taskResult.release_path))
+    $listener | Add-Member -NotePropertyName task_runtime_match -NotePropertyValue ([bool]($taskResult.status -eq 'PROVEN' -and $listener.executable -and (Same-Path $listener.executable $taskResult.action_runtime))) -Force
+}
+$listenerOwnership = Test-ListenerTaskOwnership $listeners.ToArray() $taskResult $activeRelease
 
 $iisResult = Invoke-Safe 'IIS_INSPECTION_FAILED' {
     Import-Module WebAdministration -ErrorAction Stop

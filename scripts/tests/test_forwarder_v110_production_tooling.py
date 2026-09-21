@@ -16,6 +16,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 TOOLS = ROOT / "scripts" / "production" / "v1.10.0"
+R2_TASK_PROJECTION_FIXTURE = ROOT / "scripts" / "tests" / "fixtures" / "forwarder-v110-production-r2-scheduled-task-projection.json"
 SOURCE = "e36ee7cee157657c97dc42a539eaf1909f510a33"
 BEFORE = "20260921_shipment_evidence_ownership"
 TARGET = "20260926_fixed_shipment_responsible_expert"
@@ -257,10 +258,14 @@ def test_collector_live_topology_self_test_and_legacy_witness(tmp_path: Path) ->
         "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
         str(TOOLS / "Collect-ForwarderV110ProductionReadOnly.ps1"), "-ToolingSelfTest",
         "-SelfTestReleaseRoot", str(release), "-SelfTestWitnessPath", str(witness),
+        "-SelfTestProjectionFixturePath", str(R2_TASK_PROJECTION_FIXTURE),
     ], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
     assert result.returncode == 0, result.stdout
     assert "TASK_NAME_MISMATCH_WITH_EXACT_ACTION=PASS" in result.stdout
     assert "TASK_AMBIGUITY=FAIL_CLOSED" in result.stdout
+    assert "R2_SELECTED_TASK_PROJECTION=PASS" in result.stdout
+    assert "R2_LISTENER_OWNERSHIP=TRUE" in result.stdout
+    assert "R2_LISTENER_OWNERSHIP_MISMATCH=FAIL_CLOSED" in result.stdout
     assert "LEGACY_RELEASE_WITHOUT_MANIFEST=IDENTITY_PROVEN_BY_WITNESS" in result.stdout
     assert "PRODUCTION_MUTATION_PERFORMED=NO" in result.stdout
 
@@ -373,7 +378,7 @@ def test_read_only_only_bundle_build_does_not_rebuild_or_emit_deployment_bundle(
         "--package", str(package), "--output-root", str(output), "--read-only-only",
     ], cwd=ROOT, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="utf-8", errors="replace")
     assert result.returncode == 0, result.stdout
-    archives = list(output.glob("Forwarder-v1.10.0-Read-Only-Preflight-Bundle-*-r2.zip"))
+    archives = list(output.glob("Forwarder-v1.10.0-Read-Only-Preflight-Bundle-*-r3.zip"))
     assert len(archives) == 1
     assert not list(output.glob("*Production-Deployment-Bundle*.zip"))
     with zipfile.ZipFile(archives[0]) as bundle:
