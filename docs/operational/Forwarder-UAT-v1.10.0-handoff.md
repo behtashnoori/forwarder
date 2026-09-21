@@ -8,12 +8,16 @@
 | New Product Version | `1.10.0` |
 | Release ID | `Forwarder-UAT-v1.10.0` |
 | Accepted Product Base SHA | `a742628293359379cb476b782a2fe27e61a8db1f` |
-| Release Source SHA | `RESOLVED_AFTER_RELEASE_COMMIT` |
-| Final Canonical SHA | `RESOLVED_AFTER_EVIDENCE_COMMIT` |
+| Release Freeze Commit | `e36ee7cee157657c97dc42a539eaf1909f510a33` |
+| Release Source SHA | `e36ee7cee157657c97dc42a539eaf1909f510a33` |
+| Final Canonical SHA | `SELF` — the evidence-only commit containing this handoff; the exact resolved SHA is reported in the final release return |
 | Release Tag | `forwarder-uat-v1.10.0` |
-| Tag Target SHA | `RESOLVED_AFTER_RELEASE_COMMIT` |
-| Package | `RESOLVED_AFTER_PACKAGE_BUILD` |
-| Package SHA-256 | `RESOLVED_AFTER_PACKAGE_BUILD` |
+| Tag Target SHA | `e36ee7cee157657c97dc42a539eaf1909f510a33` |
+| Package | `D:\1-webapp\forwarder-uat-releases\Forwarder-UAT-v1.10.0-e36ee7cee157.zip` |
+| Package SHA-256 | `3b07ed63d0b2634c84ecaff373b0708322b28c83033862615046b3a1c8d2d5ba` |
+| Package size | `23,351,536 bytes` |
+| Build date | `2026-09-21T18:00:41.965149+00:00` |
+| Frontend build ID | `e5a90e80d5344253` |
 | Database head | `20260926_fixed_shipment_responsible_expert` |
 | Runtime entrypoint | `START-UAT.ps1` |
 
@@ -23,6 +27,11 @@ This package is restricted to a non-Production, loopback PostgreSQL database
 whose name starts with `forwarder_uat_`. It refuses another database identity.
 The default browser URL is `http://127.0.0.1:8110`; the internal backend listens
 on `127.0.0.1:5110`.
+
+The freeze qualification used an owned loopback PostgreSQL 18 cluster and the
+package at the path above. The real launcher, verifier, migration command,
+backend, gateway, start/stop lifecycle, and browser-visible frontend were all
+qualified. Production was neither accessed nor changed.
 
 1. Verify the package with `VERIFY-PACKAGE.ps1`.
 2. Create an owned disposable database named `forwarder_uat_<session>` by using
@@ -51,6 +60,10 @@ The approved fixture runner records the generated persona usernames and the
 operator-only credential location. It never records the password in Git,
 package metadata, screenshots, or evidence.
 
+For a session, the operator obtains the generated synthetic credential from
+the invoking UAT fixture session's local operator output. It is not a static
+package password and must not be copied into evidence.
+
 ## Customer-session order
 
 1. Open or create the Customer Request.
@@ -72,6 +85,11 @@ only its owned document-storage directory, recreate the disposable database,
 run migrations, and rerun the approved fixture runner. Never edit rows manually.
 The Customer journey is ready only when the complete storyboard can be repeated
 without database surgery.
+
+Freeze rehearsal result: `PASS`. The packaged runtime campaign covered the
+Customer, Expert E1/E2, Admin/Manager, Public Tracking, Cargo, Combined
+Transport, Quote, Documents, Control Tower, RTL/mobile, and fixed-owner paths.
+Fixture setup was scripted; no row was edited manually.
 
 ## Intentionally deferred
 

@@ -89,7 +89,7 @@ PACKAGE_VERSION=1.10.0
 RELEASE_METADATA_VERSION=1.10.0
 TAG_VERSION=1.10.0
 UI_VERSION=1.10.0
-VERSION_IDENTITY_CONSISTENT=RESOLVED_AFTER_PACKAGE_BUILD
+VERSION_IDENTITY_CONSISTENT=YES
 ```
 
 The UI version value is updated because the existing build already embeds and
@@ -99,21 +99,23 @@ version display was added.
 ## G. Source / Git Identity
 
 ```text
-RELEASE_FREEZE_COMMIT=RESOLVED_AFTER_RELEASE_COMMIT
-RELEASE_SOURCE_SHA=RESOLVED_AFTER_RELEASE_COMMIT
-APPLICATION_COMMIT=RESOLVED_AFTER_RELEASE_COMMIT
-FINAL_CANONICAL_SHA=RESOLVED_AFTER_EVIDENCE_COMMIT
+RELEASE_FREEZE_COMMIT=e36ee7cee157657c97dc42a539eaf1909f510a33
+RELEASE_SOURCE_SHA=e36ee7cee157657c97dc42a539eaf1909f510a33
+APPLICATION_COMMIT=e36ee7cee157657c97dc42a539eaf1909f510a33
+FINAL_CANONICAL_SHA=SELF
 ```
 
 The release source commit contains version metadata, source release manifest,
 UAT package tooling, handoff, and this freeze record only. Accepted product
 behavior is unchanged. A later commit may update only evidence/attestation.
+`SELF` denotes the evidence-only commit containing this final attestation; its
+exact resolved SHA is reported after commit and canonical synchronization.
 
 ## H. Release Tag / Target
 
 ```text
 RELEASE_TAG=forwarder-uat-v1.10.0
-TAG_TARGET_SHA=RESOLVED_AFTER_RELEASE_COMMIT
+TAG_TARGET_SHA=e36ee7cee157657c97dc42a539eaf1909f510a33
 ```
 
 The annotated tag remains on the exact package source commit.
@@ -139,22 +141,22 @@ scan patterns. It removes old pinned Product/Production candidate identities
 and builds only this non-Production UAT release from the clean release commit.
 
 ```text
-PACKAGE_FILENAME=RESOLVED_AFTER_PACKAGE_BUILD
-PACKAGE_PATH=RESOLVED_AFTER_PACKAGE_BUILD
-BUILD_DATE=RESOLVED_AFTER_PACKAGE_BUILD
-FRONTEND_BUILD_ID=RESOLVED_AFTER_PACKAGE_BUILD
+PACKAGE_FILENAME=Forwarder-UAT-v1.10.0-e36ee7cee157.zip
+PACKAGE_PATH=D:\1-webapp\forwarder-uat-releases\Forwarder-UAT-v1.10.0-e36ee7cee157.zip
+BUILD_DATE=2026-09-21T18:00:41.965149+00:00
+FRONTEND_BUILD_ID=e5a90e80d5344253
 RUNTIME_ENTRYPOINT=START-UAT.ps1
 ```
 
 ## K. Package SHA / Inventory
 
 ```text
-PACKAGE_SHA256=RESOLVED_AFTER_PACKAGE_BUILD
-PACKAGE_SIZE=RESOLVED_AFTER_PACKAGE_BUILD
+PACKAGE_SHA256=3b07ed63d0b2634c84ecaff373b0708322b28c83033862615046b3a1c8d2d5ba
+PACKAGE_SIZE=23351536
 PACKAGE_INVENTORY=PACKAGE-INVENTORY.json + SHA256SUMS.txt
-PACKAGE_IMMUTABLE=RESOLVED_AFTER_PACKAGE_BUILD
-PACKAGE_SHA256_RECORDED=RESOLVED_AFTER_PACKAGE_BUILD
-PACKAGE_SOURCE_SHA_VERIFIED=RESOLVED_AFTER_PACKAGE_BUILD
+PACKAGE_IMMUTABLE=YES
+PACKAGE_SHA256_RECORDED=YES
+PACKAGE_SOURCE_SHA_VERIFIED=YES
 ```
 
 The package excludes virtual environments, `node_modules`, local databases,
@@ -189,36 +191,41 @@ the executable short form.
 ## N. Frozen Release Runtime
 
 ```text
-ENVIRONMENT_IDENTITY=RESOLVED_AFTER_PACKAGE_RUNTIME
-RELEASE_SOURCE_SHA=RESOLVED_AFTER_RELEASE_COMMIT
+ENVIRONMENT_IDENTITY=owned loopback PostgreSQL 18 + Forwarder-UAT-v1.10.0-e36ee7cee157 package bytes
+RELEASE_SOURCE_SHA=e36ee7cee157657c97dc42a539eaf1909f510a33
 DATABASE_HEAD=20260926_fixed_shipment_responsible_expert
-BROWSER_RESULT=RESOLVED_AFTER_PACKAGE_RUNTIME
+BROWSER_RESULT=PASS
 ```
 
-The browser is run against extracted package bytes through its actual
-`START-UAT.ps1` runtime, not a source development server.
+The actual `START-UAT.ps1` launcher was qualified on the owned
+`forwarder_uat_release_e36ee7c` database at backend `5110` and gateway `8110`;
+health and frontend returned success, and `STOP-UAT.ps1` stopped both ports.
+Browser cohorts then used the same extracted package's bundled Python runtime,
+Waitress backend, built `dist`, and `uat_gateway.py` on those ports. The source
+tree supplied only safety-scoped test drivers and deterministic fixture setup;
+no source development server served the application.
 
 ## O. Customer Smoke
 
-`CUSTOMER_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME`
+`CUSTOMER_SMOKE=PASS`
 
 ## P. Expert Smoke
 
-`EXPERT_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME`
+`EXPERT_SMOKE=PASS`
 
 E1 must issue Quotes, own the resulting Shipment, use Documents/Tracking and
 Control Tower. E2 must not gain that Shipment after Request assignment changes.
 
 ## Q. Admin/Manager Smoke
 
-`ADMIN_MANAGER_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME`
+`ADMIN_MANAGER_SMOKE=PASS`
 
 Admin/Manager oversight includes Control Tower, Shipment detail, and governed
 read-only Documents with no forbidden mutation controls.
 
 ## R. Public Tracking Smoke
 
-`PUBLIC_TRACKING_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME`
+`PUBLIC_TRACKING_SMOKE=PASS`
 
 Only a product-generated `SR2-` opaque capability may succeed. Numeric/internal
 IDs fail and the public projection excludes Quote discussion, Documents,
@@ -227,14 +234,14 @@ internal IDs, and owner metadata.
 ## S. Documents / Quote / Control Tower Smoke
 
 ```text
-DOCUMENTS_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME
-QUOTE_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME
-CONTROL_TOWER_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME
+DOCUMENTS_SMOKE=PASS
+QUOTE_SMOKE=PASS
+CONTROL_TOWER_SMOKE=PASS
 ```
 
 ## T. RTL / Mobile
 
-`RTL_MOBILE_SMOKE=RESOLVED_AFTER_PACKAGE_RUNTIME`
+`RTL_MOBILE_SMOKE=PASS`
 
 Representative Persian/RTL desktop and mobile coverage must preserve readable
 Gregorian (Jalali) dates with no blocking layout regression.
@@ -251,17 +258,28 @@ The reset strategy drops and recreates only the owned `forwarder_uat_*`
 database, clears only its owned document storage, reapplies migrations, and
 reruns the approved fixtures. Manual row editing is prohibited.
 
-`CUSTOMER_UAT_REHEARSAL=RESOLVED_AFTER_PACKAGE_RUNTIME`
+`CUSTOMER_UAT_REHEARSAL=PASS`
+
+One complete package-bound scripted rehearsal campaign followed the Customer
+story across the deterministic fixed-owner, Quote, Documents, Combined
+Transport, Cargo, and opaque Public Tracking cohorts. The campaign used fresh
+owned databases, scripted fixtures, and 19 passing browser tests; no manual
+database row editing was used.
 
 ## W. Release / Package / Version / Secret Checks
 
 ```text
-SOURCE_RELEASE_TESTS=RESOLVED_AFTER_QUALIFICATION
-ARCHITECTURE_SOURCE_CHECKS=RESOLVED_AFTER_QUALIFICATION
-SECRET_SCAN=RESOLVED_AFTER_QUALIFICATION
-PACKAGE_INVENTORY_VALIDATION=RESOLVED_AFTER_QUALIFICATION
-SHA_VERIFICATION=RESOLVED_AFTER_QUALIFICATION
-TAG_TARGET_VERIFICATION=RESOLVED_AFTER_TAG
+SOURCE_RELEASE_TESTS=PASS (78 release/source/package tests; 8 focused metadata/builder tests)
+FULL_BACKEND_TESTS=PASS (1333 passed, 106 skipped)
+FULL_FRONTEND_TESTS=PASS (72 files, 357 tests)
+TYPESCRIPT=PASS (zero diagnostics)
+ESLINT=PASS (zero errors, 13 existing warnings)
+PRODUCTION_FRONTEND_BUILD=PASS (2547 modules; existing advisories only)
+ARCHITECTURE_SOURCE_CHECKS=PASS
+SECRET_SCAN=PASS
+PACKAGE_INVENTORY_VALIDATION=PASS
+SHA_VERIFICATION=PASS
+TAG_TARGET_VERIFICATION=PASS
 ```
 
 ## X. UAT Release Blocker Classification
@@ -271,9 +289,15 @@ environment issue, post-UAT engineering, or maintenance. Product defects are
 not repaired inside this freeze.
 
 ```text
-P0_UAT_RELEASE_BLOCKER_COUNT=RESOLVED_AFTER_QUALIFICATION
-P1_UAT_RELEASE_BLOCKER_COUNT=RESOLVED_AFTER_QUALIFICATION
+P0_UAT_RELEASE_BLOCKER_COUNT=0
+P1_UAT_RELEASE_BLOCKER_COUNT=0
 ```
+
+Two qualification interruptions were classified as UAT fixture issues: the
+Request Cargo browser database initially lacked its exact governed UOM fixture,
+and a clean rerun initially omitted its transport/location fixture. The owned
+database was recreated and seeded through deterministic scripts; the complete
+Cargo cohort then passed `3/3`. No product change or blocker resulted.
 
 ## Y. Operator Handoff
 
@@ -298,11 +322,49 @@ Architecture Baseline, Architecture Drift Report, version sources, release
 history, package patterns, LPAF v2.2, and reviewed v2.3 controls are re-read
 before verdict.
 
-`REFERENCE_IMPACT_FINAL=RESOLVED_AT_FINAL_RECHECK`
+The active LPAF v2.2 framework and entry protocol, reviewed v2.3 controls,
+Final Product Acceptance evidence, MT-3 closure, ADR-047 closure, Forwarder
+Architecture Baseline, Architecture Drift Report, version sources, current
+package tooling, and release-tag history were re-read immediately before this
+verdict. No Product/reference truth change is required.
+
+`REFERENCE_IMPACT_FINAL=NONE`
 
 ## AB. Verdict
 
-`PENDING — PACKAGE BUILD, PACKAGE-BOUND QUALIFICATION, TAG, AND CANONICAL SYNC`
+`PASS — NEW FORWARDER UAT VERSION FROZEN`
 
-The final verdict is emitted only after exact package bytes and the frozen
-runtime pass all required gates.
+```text
+FORWARDER_UAT_VERSION_STATUS=FROZEN
+UAT_RELEASE_READINESS=READY
+PREVIOUS_PRODUCT_VERSION=1.9.5.1
+NEW_PRODUCT_VERSION=1.10.0
+VERSION_SOURCE_OF_TRUTH=package.json + backend.__version__ equality gate
+VERSION_POLICY_APPLIED=Repository SemVer; next accepted capability release advances MINOR and resets subordinate components
+VERSION_NUMBER_INVENTED=NO
+VERSION_NUMBER_SKIPPED=NO
+VERSION_CONFLICT_COUNT=0
+VERSION_IDENTITY_CONSISTENT=YES
+ACCEPTED_PRODUCT_BASE_SHA=a742628293359379cb476b782a2fe27e61a8db1f
+RELEASE_FREEZE_COMMIT=e36ee7cee157657c97dc42a539eaf1909f510a33
+RELEASE_SOURCE_SHA=e36ee7cee157657c97dc42a539eaf1909f510a33
+FINAL_CANONICAL_SHA=SELF
+RELEASE_TAG=forwarder-uat-v1.10.0
+TAG_TARGET_SHA=e36ee7cee157657c97dc42a539eaf1909f510a33
+DATABASE_HEAD=20260926_fixed_shipment_responsible_expert
+ALEMBIC_HEAD_COUNT=1
+BEHAVIORAL_FREEZE_BASELINE=PRESERVED
+P0_UAT_RELEASE_BLOCKER_COUNT=0
+P1_UAT_RELEASE_BLOCKER_COUNT=0
+PACKAGE_IMMUTABLE=YES
+PACKAGE_SHA256_RECORDED=YES
+PACKAGE_SOURCE_SHA_VERIFIED=YES
+FROZEN_RELEASE_RUNTIME_SMOKE=PASS
+CUSTOMER_UAT_REHEARSAL=PASS
+PRODUCTION_ACCESSED=NO
+PRODUCTION_CHANGED=NO
+PRODUCTION_DEPLOYMENT_PERFORMED=NO
+NOTIFICATION_ACTIVATION_CHANGED=NO
+MODULARIZATION_STARTED=NO
+DEFERRED_ENGINEERING_PRESERVED=YES
+```
