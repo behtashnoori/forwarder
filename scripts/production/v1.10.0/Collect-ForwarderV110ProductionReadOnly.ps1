@@ -13,6 +13,7 @@ param(
     [string]$PsqlPath = 'C:\Program Files\PostgreSQL\18\bin\psql.exe',
     [string]$PgDumpPath = 'C:\Program Files\PostgreSQL\18\bin\pg_dump.exe',
     [string]$PgRestorePath = 'C:\Program Files\PostgreSQL\18\bin\pg_restore.exe',
+    [ValidateRange(1,24)][int]$MaximumRestoreProvenBackupAgeHours = 8,
     [switch]$ToolingSelfTest,
     [string]$SelfTestReleaseRoot,
     [string]$SelfTestWitnessPath,
@@ -28,6 +29,7 @@ $ExpectedApplicationCommit = 'e36ee7cee157657c97dc42a539eaf1909f510a33'
 $ExpectedLegacySourceCommit = 'e97338661d7dfa40766a5a1dce1f0f2e1cdc9bc4'
 $ExpectedLegacySourceArchiveSha256 = 'e9196ad9cc10dfeef44eba40d98e50520af4c505474211d5c23397bdf7774617'
 $ExpectedLegacyInventorySha256 = '58baed2704b1301c749b2b194f203d6ffd68e9c8eb34536fb765c0e32297e1a5'
+$ExpectedPackageSha256 = '2fdef076516273f82044c9b5aa1b2ad03bb8a97423de6c4f7bcb0adec2b0eacf'
 $ExpectedDatabaseBridgeSha256 = 'a94ce7bee93508a95f8bfff36620f77653c7a7008f5c0080b3f1a20199604c19'
 $ExpectedAdr047Sha256 = '16a50c18a4e824ce35564beca18ea11131ed105d3d0d13f51e08ca021c780bae'
 $ExpectedCompatibilitySha256 = '2b43889fee11fb78673e3d36e6117684f319b54fb963f4b3cc4cf7f19682c09b'
@@ -92,6 +94,15 @@ function Get-ObjectPropertyValue([object]$Object, [string]$Name) {
 function Get-FileSha256([string]$Path) {
     return (Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash.ToLowerInvariant()
 }
+
+function Get-UtcDateOrNull([object]$Value) {
+    if ($null -eq $Value -or [string]::IsNullOrWhiteSpace([string]$Value)) { return $null }
+    try { return [DateTime]::Parse([string]$Value).ToUniversalTime() }
+    catch { return $null }
+}
+
+function Is-TrueBoolean([object]$Value) { return ($Value -is [bool] -and $Value -eq $true) }
+function Is-FalseBoolean([object]$Value) { return ($Value -is [bool] -and $Value -eq $false) }
 
 function Test-PathWithin([string]$Child, [string]$Parent) {
     $childPath = Normalize-Path $Child; $parentPath = Normalize-Path $Parent
@@ -848,42 +859,166 @@ $drives = @($driveNames | ForEach-Object {
 $backup = [ordered]@{
     root=Normalize-Path $ApprovedBackupRoot; mechanism_identified=$false; destination_ready=$false
     tooling_available=((Test-Path -LiteralPath $PgDumpPath -PathType Leaf) -and (Test-Path -LiteralPath $PgRestorePath -PathType Leaf))
-    latest_dump=$null; catalog_validation_available=$false; restore_evidence_available=$false; restore_evidence=$null
-    fresh_deployment_window_backup_present=$false; fresh_deployment_window_backup_required=$true
-    deployment_prerequisite_status='PENDING_FRESH_BACKUP_AND_RESTORE_PROOF'; capacity_status='UNKNOWN'
+    latest_dump=$null; catalog_validation_available=$false
+    backup_evidence_available=$false; backup_evidence=$null
+    restore_evidence_available=$false; restore_evidence=$null
+    pre_execute_backup_restore_proof_required=$true
+    pre_execute_backup_restore_proof_ready=$false
+    pre_execute_backup_restore_proof_status='MISSING'
+    maximum_pre_execute_backup_age_hours=$MaximumRestoreProvenBackupAgeHours
+    fresh_deployment_window_backup_present=$false
+    fresh_deployment_window_backup_required=$true
+    deployment_window_backup_timing='AFTER_WRITER_CONTAINMENT_BEFORE_MIGRATION'
+    deployment_window_backup_verification='HASH_SIZE_CATALOG_AND_BASELINE_IDENTITY'
+    deployment_window_backup_restore_basis='SEPARATE_EXACT_DUMP_RESTORE_PROOF_REQUIRED_BEFORE_EXECUTE'
+    deployment_prerequisite_status='PENDING_PRE_EXECUTE_BACKUP_RESTORE_PROOF'
+    capacity_status='UNKNOWN'
 }
 if (Test-Path -LiteralPath $ApprovedBackupRoot -PathType Container) {
     $backup.mechanism_identified=$true; $backup.destination_ready=$true
     $latest = Get-ChildItem -LiteralPath $ApprovedBackupRoot -File -Filter '*.dump' -ErrorAction SilentlyContinue | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
     if ($latest) {
+        $dumpHash = $null
+        try { $dumpHash = Get-FileSha256 $latest.FullName } catch {}
+        $dumpAgeHours = [Math]::Round(($generatedUtc-$latest.LastWriteTimeUtc).TotalHours,2)
+        $shaSidecarPath = $latest.FullName+'.sha256.txt'
+        $catalogSidecarPath = $latest.FullName+'.list.txt'
+        $restoreEvidencePath = $latest.FullName+'.restore-evidence.json'
+        $shaSidecarPresent = Test-Path -LiteralPath $shaSidecarPath -PathType Leaf
+        $catalogSidecarPresent = Test-Path -LiteralPath $catalogSidecarPath -PathType Leaf
+        $restoreSidecarPresent = Test-Path -LiteralPath $restoreEvidencePath -PathType Leaf
+        $shaSidecarValid = $false
+        if ($shaSidecarPresent -and $dumpHash) {
+            try { $shaSidecarValid = ((Get-Content -Raw -LiteralPath $shaSidecarPath).Trim() -ceq ($dumpHash+'  '+$latest.Name)) } catch {}
+        }
+        $catalogSidecarValid = $false
+        if ($catalogSidecarPresent) {
+            try { $catalogSidecarValid = ((Get-Item -LiteralPath $catalogSidecarPath).Length -gt 0) } catch {}
+        }
+        $dumpNameMatch = [regex]::Match($latest.Name, '^forwarder-v1\.10\.0-predeploy-(\d{8}T\d{6}Z)\.dump$')
+        $backupEvidencePath = $null
+        if ($dumpNameMatch.Success) {
+            $backupEvidencePath = Join-Path $ApprovedBackupRoot ('Forwarder-v1.10.0-PreDeploymentBackup-'+$dumpNameMatch.Groups[1].Value+'.json')
+        }
+        $backupEvidencePresent = ($backupEvidencePath -and (Test-Path -LiteralPath $backupEvidencePath -PathType Leaf))
         $backup.latest_dump=[pscustomobject]@{
             size_bytes=[int64]$latest.Length; timestamp_utc=$latest.LastWriteTimeUtc.ToString('o')
-            age_hours=[Math]::Round(($generatedUtc-$latest.LastWriteTimeUtc).TotalHours,2)
-            sha_sidecar_present=(Test-Path -LiteralPath ($latest.FullName+'.sha256.txt') -PathType Leaf)
-            catalog_sidecar_present=(Test-Path -LiteralPath ($latest.FullName+'.list.txt') -PathType Leaf)
-            restore_evidence_sidecar_present=(Test-Path -LiteralPath ($latest.FullName+'.restore-evidence.json') -PathType Leaf)
+            age_hours=$dumpAgeHours; dump_sha256=$dumpHash
+            sha_sidecar_present=[bool]$shaSidecarPresent; sha_sidecar_valid=[bool]$shaSidecarValid
+            catalog_sidecar_present=[bool]$catalogSidecarPresent; catalog_sidecar_valid=[bool]$catalogSidecarValid
+            backup_evidence_sidecar_present=[bool]$backupEvidencePresent
+            restore_evidence_sidecar_present=[bool]$restoreSidecarPresent
         }
-        $backup.catalog_validation_available=[bool]$backup.latest_dump.catalog_sidecar_present
-        if ($backup.latest_dump.restore_evidence_sidecar_present) {
+        $backup.catalog_validation_available=[bool]$catalogSidecarValid
+        $backupValid = $false
+        $backupCreatedUtc = $null
+        if ($backupEvidencePresent) {
             try {
-                $restoreEvidence = Get-Content -Raw -LiteralPath ($latest.FullName+'.restore-evidence.json') -ErrorAction Stop | ConvertFrom-Json
+                $backupEvidence = Get-Content -Raw -LiteralPath $backupEvidencePath -ErrorAction Stop | ConvertFrom-Json
+                $backupCreatedUtc = Get-UtcDateOrNull $backupEvidence.created_utc
+                $backupValid = (
+                    $backupEvidence.schema -eq 'forwarder-v1.10.0-predeployment-backup-evidence-v2' -and
+                    $backupEvidence.status -eq 'PASS' -and (Is-TrueBoolean $backupEvidence.verified) -and
+                    $backupEvidence.production_host -eq [Environment]::MachineName -and
+                    $backupEvidence.purpose -eq 'fresh_predeployment_backup_and_isolated_restore_input' -and
+                    $backupEvidence.product_version -eq $ExpectedProductVersion -and
+                    $backupEvidence.current_application_commit -eq $ExpectedLegacySourceCommit -and
+                    $backupEvidence.target_application_commit -eq $ExpectedApplicationCommit -and
+                    $backupEvidence.database_revision -eq $ExpectedBeforeRevision -and
+                    [int]$backupEvidence.alembic_revision_count -eq 1 -and
+                    $backupEvidence.database_state -eq 'PRIMARY' -and
+                    [string]$backupEvidence.postgresql_version -match '^18(?:\.|$)' -and
+                    [int64]$backupEvidence.database_size_bytes -gt 0 -and
+                    $backupEvidence.dump_format -eq 'custom' -and
+                    [int64]$backupEvidence.dump_size_bytes -eq [int64]$latest.Length -and
+                    ([string]$backupEvidence.dump_sha256).ToLowerInvariant() -eq $dumpHash -and
+                    (Same-Path ([string]$backupEvidence.backup_path) $latest.FullName) -and
+                    (Same-Path ([string]$backupEvidence.approved_backup_root) $ApprovedBackupRoot) -and
+                    (Same-Path ([string]$backupEvidence.catalog_path) $catalogSidecarPath) -and
+                    (Same-Path ([string]$backupEvidence.sha256_sidecar_path) $shaSidecarPath) -and
+                    [int]$backupEvidence.pg_dump_exit_code -eq 0 -and
+                    [int]$backupEvidence.pg_restore_list_exit_code -eq 0 -and
+                    $backupEvidence.catalog_verification -eq 'PASS' -and
+                    (Is-FalseBoolean $backupEvidence.production_database_mutated) -and
+                    (Is-FalseBoolean $backupEvidence.production_deployment_performed) -and
+                    (Is-FalseBoolean $backupEvidence.secret_values_emitted) -and
+                    $backupEvidence.reference_impact -eq 'NONE' -and
+                    $null -ne $backupCreatedUtc -and
+                    $dumpNameMatch.Success -and
+                    $backupCreatedUtc.ToString('yyyyMMddTHHmmssZ') -eq $dumpNameMatch.Groups[1].Value -and
+                    $shaSidecarValid -and $catalogSidecarValid
+                )
+                $backup.backup_evidence=[pscustomobject]@{
+                    state=$(if($backupValid){'VERIFIED_EXACT_DUMP'}else{'INVALID_METADATA_OR_IDENTITY'})
+                    created_utc=$(if($backupValid){$backupCreatedUtc.ToString('o')}else{$null})
+                    dump_sha256=$(if($backupValid){$dumpHash}else{$null})
+                    dump_size_bytes=$(if($backupValid){[int64]$latest.Length}else{$null})
+                    database_revision=$(if($backupValid){$ExpectedBeforeRevision}else{$null})
+                }
+                $backup.backup_evidence_available=[bool]$backupValid
+            } catch {
+                $backup.backup_evidence=[pscustomobject]@{ state='UNREADABLE_METADATA'; created_utc=$null; dump_sha256=$null; dump_size_bytes=$null; database_revision=$null }
+            }
+        }
+        $restoreValid = $false
+        $restoreTestedUtc = $null
+        if ($restoreSidecarPresent) {
+            try {
+                $restoreEvidence = Get-Content -Raw -LiteralPath $restoreEvidencePath -ErrorAction Stop | ConvertFrom-Json
+                $restoreTestedUtc = Get-UtcDateOrNull $restoreEvidence.tested_utc
                 $restoreValid = (
                     $restoreEvidence.schema -eq 'forwarder-production-restore-evidence-v1' -and
                     $restoreEvidence.restore_test_status -eq 'PASS' -and
-                    $restoreEvidence.source_dump_sha256 -match '^[0-9a-fA-F]{64}$' -and
-                    $restoreEvidence.restored_database_disposable -eq $true -and
-                    -not [string]::IsNullOrWhiteSpace([string]$restoreEvidence.tested_utc)
+                    ([string]$restoreEvidence.source_dump_sha256).ToLowerInvariant() -eq $dumpHash -and
+                    [int64]$restoreEvidence.source_dump_size_bytes -eq [int64]$latest.Length -and
+                    $restoreEvidence.source_database_revision -eq $ExpectedBeforeRevision -and
+                    (Is-TrueBoolean $restoreEvidence.restored_database_disposable) -and
+                    (Is-TrueBoolean $restoreEvidence.disposable_database_removed) -and
+                    [int]$restoreEvidence.local_postgresql_major -eq 18 -and
+                    $restoreEvidence.baseline_compatibility -eq 'PASS' -and
+                    (@($restoreEvidence.migration_sequence) -join '|') -eq '20260922_notification_foundation|20260923_notification_lifecycle|20260924_request_cargo_items|20260925_quote_communication|20260926_fixed_shipment_responsible_expert' -and
+                    $restoreEvidence.production_derived_migration_rehearsal -eq 'PASS' -and
+                    $restoreEvidence.target_database_revision -eq $ExpectedTargetRevision -and
+                    [int]$restoreEvidence.target_alembic_head_count -eq 1 -and
+                    (Is-FalseBoolean $restoreEvidence.pending_migrations) -and
+                    $restoreEvidence.post_migration_assertions -eq 'PASS' -and
+                    [int]$restoreEvidence.post_migration_assertion_count -gt 0 -and
+                    $restoreEvidence.adr047_production_data -eq 'PASS' -and
+                    [int64]$restoreEvidence.notification_migration_rows -eq 0 -and
+                    [int64]$restoreEvidence.synthetic_historical_cargo_rows -eq 0 -and
+                    $restoreEvidence.target_application_source -eq $ExpectedApplicationCommit -and
+                    ([string]$restoreEvidence.package_sha256).ToLowerInvariant() -eq $ExpectedPackageSha256 -and
+                    (Is-FalseBoolean $restoreEvidence.production_accessed) -and
+                    (Is-FalseBoolean $restoreEvidence.production_database_mutated) -and
+                    (Is-FalseBoolean $restoreEvidence.production_deployment_performed) -and
+                    (Is-FalseBoolean $restoreEvidence.customer_rows_emitted) -and
+                    (Is-FalseBoolean $restoreEvidence.credentials_emitted) -and
+                    $restoreEvidence.reference_impact -eq 'NONE' -and
+                    $null -ne $restoreTestedUtc -and $null -ne $backupCreatedUtc -and
+                    $restoreTestedUtc -ge $backupCreatedUtc -and $restoreTestedUtc -le $generatedUtc
                 )
                 $backup.restore_evidence=[pscustomobject]@{
-                    state=$(if($restoreValid){'VERIFIED_METADATA'}else{'INVALID_METADATA'})
-                    tested_utc=$(if($restoreValid){[string]$restoreEvidence.tested_utc}else{$null})
-                    source_dump_sha256=$(if($restoreValid){([string]$restoreEvidence.source_dump_sha256).ToLowerInvariant()}else{$null})
+                    state=$(if($restoreValid){'VERIFIED_EXACT_DUMP'}else{'INVALID_METADATA_OR_IDENTITY'})
+                    tested_utc=$(if($restoreValid){$restoreTestedUtc.ToString('o')}else{$null})
+                    source_dump_sha256=$(if($restoreValid){$dumpHash}else{$null})
+                    source_dump_size_bytes=$(if($restoreValid){[int64]$latest.Length}else{$null})
                     restored_database_disposable=$(if($restoreValid){$true}else{$false})
                 }
                 $backup.restore_evidence_available=[bool]$restoreValid
             } catch {
-                $backup.restore_evidence=[pscustomobject]@{ state='UNREADABLE_METADATA'; tested_utc=$null; source_dump_sha256=$null; restored_database_disposable=$false }
+                $backup.restore_evidence=[pscustomobject]@{ state='UNREADABLE_METADATA'; tested_utc=$null; source_dump_sha256=$null; source_dump_size_bytes=$null; restored_database_disposable=$false }
             }
+        }
+        $fresh = ($null -ne $backupCreatedUtc -and $backupCreatedUtc -le $generatedUtc -and ($generatedUtc-$backupCreatedUtc).TotalHours -le $MaximumRestoreProvenBackupAgeHours)
+        $backup.pre_execute_backup_restore_proof_ready=[bool]($fresh -and $backupValid -and $restoreValid)
+        $backup.pre_execute_backup_restore_proof_status = if ($backup.pre_execute_backup_restore_proof_ready) {
+            'PASS'
+        } elseif ($backupValid -and $restoreValid -and -not $fresh) {
+            'STALE'
+        } elseif ($backupEvidencePresent -or $restoreSidecarPresent) {
+            'INVALID_OR_INCOMPLETE'
+        } else {
+            'MISSING'
         }
     }
     $backupDrive = @($drives | Where-Object {$backup.root.StartsWith($_.root,[StringComparison]::OrdinalIgnoreCase)} | Select-Object -First 1)
@@ -901,7 +1036,8 @@ $runtimeAgreement = ($activeRelease -and $taskResult.status -eq 'PROVEN' -and (S
 $databaseGate = ($database.collection -eq 'AVAILABLE' -and $database.identity.alembic_revision_count -eq 1 -and $database.identity.alembic_revision -eq $ExpectedBeforeRevision -and $database.identity.primary_state -eq 'PRIMARY' -and $database.schema_drift_blocker_count -eq 0 -and $database.adr047.fixed_owner_ambiguous_count -eq 0 -and $database.adr047.fixed_owner_contradiction_count -eq 0 -and $database.adr047.fixed_owner_other_unresolved_count -eq 0)
 $configGate = ($invalidConfig -eq 0 -and $config['AUTO_MIGRATE_ON_STARTUP'].state -notin @('SAFE_VALUE_INVALID') -and $config['CORS_ALLOW_ALL_ORIGINS'].state -notin @('SAFE_VALUE_INVALID'))
 $collectorStatus = if ($CollectionErrors.Count -eq 0 -and $runtimeAgreement -and $releaseIdentityVerified -and $databaseGate -and $configGate -and $backup.mechanism_identified -and $backup.tooling_available) { 'PASS' } else { 'BLOCKED' }
-$deploymentPrerequisiteStatus = if ($collectorStatus -ne 'PASS') { 'BLOCKED_COLLECTOR' } elseif (-not $backup.restore_evidence_available -or -not $backup.fresh_deployment_window_backup_present) { 'BLOCKED_FRESH_BACKUP_AND_RESTORE_PROOF_REQUIRED' } else { 'READY_FOR_SEPARATE_GO_REVIEW' }
+$deploymentPrerequisiteStatus = if ($collectorStatus -ne 'PASS') { 'BLOCKED_COLLECTOR' } elseif (-not $backup.pre_execute_backup_restore_proof_ready) { 'BLOCKED_PRE_EXECUTE_BACKUP_RESTORE_PROOF_REQUIRED' } else { 'READY_FOR_SEPARATE_GO_REVIEW' }
+$backup.deployment_prerequisite_status=$deploymentPrerequisiteStatus
 
 $result = [ordered]@{
     schema='forwarder-v1.10.0-production-readonly-preflight-v1'

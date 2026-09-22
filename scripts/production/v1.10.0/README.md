@@ -21,8 +21,30 @@ restores only to its generated disposable PostgreSQL 18 database, rehearses the
 exact five migrations through the qualified package runtime, runs the governed
 read-only assertions, and removes the disposable database.
 
-Collector revision `r3` preserves the `r2` live-topology discovery authority
-and corrects only the selected Scheduled Task projection. It
+Collector revision `r5` preserves the qualified `r3` live-topology discovery
+and Scheduled Task projection authority. It additionally makes the two backup
+gates explicit. Before validate-only, the newest governed dump must be fresh,
+its backup evidence, size, SHA256, catalog, and sidecars must agree, and the
+isolated restore/migration evidence must bind to those exact bytes and fixed
+release identities. The collector then reports
+`READY_FOR_SEPARATE_GO_REVIEW`; it does not claim that the future
+deployment-window checkpoint already exists. During Execute, the deployer must
+create and record a second, newer backup after writer containment and before
+migration. Neither gate substitutes for the other.
+
+Deployment-tooling revision `r5` retains the `r4` Windows PowerShell 5.1
+`$listenerPid` correction and closes the observed asynchronous listener-teardown
+defect. Writer containment disables and stops the exact governed task,
+revalidates and terminates only the captured Waitress PID, then polls for at
+most 15 seconds at 250 ms intervals and requires a continuous 2-second quiet
+period. The task must remain disabled, the original listener must be gone or no
+longer own the port, `127.0.0.1:5101` must be free, and no replacement PID may
+appear. A replacement is reported and never killed. Backup and migration remain
+behind this PASS gate. A staged target left by a failed attempt remains
+preserved as evidence and is not a reusable release; the next validate-only
+must use a newly generated, absent target path.
+
+The collector
 enumerates only plausible Forwarder Scheduled Tasks and proves one against the
 active listener action; ambiguity remains BLOCKED. A missing current-format
 manifest is not treated as proof of identity: the legacy release must instead
@@ -32,7 +54,7 @@ active release's Python, python-dotenv, and SQLAlchemy URL parser, so
 command line, output, or result file. Every SQL payload retains its explicit
 read-only transaction envelope.
 
-After exactly one Scheduled Task candidate is proven, `r3` projects the
+After exactly one Scheduled Task candidate is proven, `r5` projects the
 candidate-derived action, runtime, working directory, arguments, and release
 path before adding null-safe Task Scheduler state, result, principal, trigger,
 and settings metadata. Listener ownership becomes true only when the listener

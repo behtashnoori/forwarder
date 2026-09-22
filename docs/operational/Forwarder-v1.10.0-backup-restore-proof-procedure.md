@@ -1,8 +1,8 @@
 # Forwarder v1.10.0 Fresh Backup and Restore-Proof Procedure
 
-Status: **READY FOR HUMAN BACKUP EXECUTION / RESTORE PROOF PENDING**
+Status: **BACKUP AND RESTORE PROOF COMPLETE / CORRECTED READ-ONLY RECONCILIATION PENDING**
 
-This procedure consumes the successful r3 live read-only preflight. It does not authorize Production validate-only, migration, or deployment. Codex does not access Production. A human operator runs the server command locally on `SRV8756807400`.
+This procedure consumed the successful r3 live read-only preflight. The returned backup and isolated restore proof are now evidence inputs to corrected collector `r5`; they do not by themselves authorize Production validate-only, migration, or deployment. Codex does not access Production. A human operator runs every server command locally on `SRV8756807400`.
 
 ## Fixed identities
 
@@ -86,4 +86,22 @@ PRODUCTION_DATABASE_MUTATED=NO
 PRODUCTION_DEPLOYMENT_PERFORMED=NO
 ```
 
-Until the human backup and isolated restore both complete, `FRESH_BACKUP_RESTORE_PROOF=PENDING`.
+## Phase D — authoritative read-only reconciliation
+
+Place the exact restore-evidence JSON beside its source dump on the protected Production backup root, preserving the required `<dump filename>.restore-evidence.json` name. Run only the qualified `r5` read-only collector. It independently calculates the latest dump SHA256 and requires exact agreement across the dump, hash sidecar, backup evidence, and restore evidence. It also requires the fixed source revision, target revision, application source, package SHA256, PostgreSQL major, migration rehearsal, post-migration assertions, ADR-047 result, disposable cleanup, and zero-Production-mutation declarations.
+
+The pre-Execute gate is closed only when the returned sanitized result contains:
+
+```text
+collector_status=PASS
+collection_errors=0
+backup_readiness.pre_execute_backup_restore_proof_status=PASS
+backup_readiness.pre_execute_backup_restore_proof_ready=true
+backup_readiness.restore_evidence.state=VERIFIED_EXACT_DUMP
+deployment_prerequisite_status=READY_FOR_SEPARATE_GO_REVIEW
+production_mutation_performed=false
+```
+
+`fresh_deployment_window_backup_present=false` remains correct at this read-only phase. It describes a separate checkpoint that the deployer must create after writer containment and before migration. The deployer records that checkpoint's exact identity and refuses migration if its timing, baseline revision, size, hash, catalog, ownership, retention, or mutation declarations fail.
+
+Until Phase D passes, `PRE_EXECUTE_BACKUP_RESTORE_PROOF=PENDING_RECONCILIATION`. Even after Phase D passes, `DEPLOYMENT_WINDOW_BACKUP=PENDING_EXECUTE_AFTER_WRITER_CONTAINMENT` and separate human GO remain required.

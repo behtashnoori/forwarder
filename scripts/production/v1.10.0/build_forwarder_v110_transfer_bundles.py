@@ -14,9 +14,10 @@ VERSION = "1.10.0"
 SOURCE_SHA = "e36ee7cee157657c97dc42a539eaf1909f510a33"
 BEFORE_HEAD = "20260921_shipment_evidence_ownership"
 TARGET_HEAD = "20260926_fixed_shipment_responsible_expert"
-READ_ONLY_REVISION = "r3"
+READ_ONLY_REVISION = "r5"
+DEPLOYMENT_REVISION = "r5"
 READ_ONLY_NAME = f"Forwarder-v{VERSION}-Read-Only-Preflight-Bundle-{SOURCE_SHA[:12]}-{READ_ONLY_REVISION}"
-DEPLOYMENT_NAME = f"Forwarder-v{VERSION}-Production-Deployment-Bundle-{SOURCE_SHA[:12]}"
+DEPLOYMENT_NAME = f"Forwarder-v{VERSION}-Production-Deployment-Bundle-{SOURCE_SHA[:12]}-{DEPLOYMENT_REVISION}"
 
 
 def sha256(path: Path) -> str:
@@ -71,10 +72,16 @@ def main() -> int:
     parser.add_argument("--package", required=True, type=Path)
     parser.add_argument("--output-root", required=True, type=Path)
     parser.add_argument("--tooling-root", type=Path, default=Path(__file__).resolve().parent)
-    parser.add_argument(
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument(
         "--read-only-only",
         action="store_true",
         help="Build only the corrected read-only preflight bundle; leave deployment material untouched.",
+    )
+    mode.add_argument(
+        "--deployment-only",
+        action="store_true",
+        help="Build only the corrected deployment tooling bundle; leave the read-only bundle untouched.",
     )
     args = parser.parse_args()
     package = args.package.resolve()
@@ -104,45 +111,49 @@ def main() -> int:
     deployment_root = output_root / DEPLOYMENT_NAME
     read_only_zip = output_root / f"{READ_ONLY_NAME}.zip"
     deployment_zip = output_root / f"{DEPLOYMENT_NAME}.zip"
-    outputs = [read_only_root, read_only_zip, Path(str(read_only_zip)+".sha256")]
+    outputs: list[Path] = []
+    if not args.deployment_only:
+        outputs.extend((read_only_root, read_only_zip, Path(str(read_only_zip)+".sha256")))
     if not args.read_only_only:
         outputs.extend((deployment_root, deployment_zip, Path(str(deployment_zip)+".sha256")))
     if any(item.exists() for item in outputs):
         raise RuntimeError("refusing to overwrite an existing transfer bundle")
 
-    read_only_root.mkdir()
-    for relative in (
-        "Collect-ForwarderV110ProductionReadOnly.ps1",
-        "Invoke-ForwarderV110ReadOnlySql.py",
-        "legacy-production-witness.json",
-        "sql/adr047-production-classifier.sql",
-        "sql/migration-compatibility-readonly.sql",
-    ):
-        copy_relative(tooling_root, read_only_root, relative)
-    read_only_manifest = {
-        "schema": "forwarder-v1.10.0-read-only-preflight-bundle-v2",
-        "collector_revision": READ_ONLY_REVISION,
-        "purpose": "read_only_production_fact_collection",
-        "product_version": VERSION,
-        "application_source_sha": SOURCE_SHA,
-        "expected_current_database_revision": BEFORE_HEAD,
-        "target_database_revision": TARGET_HEAD,
-        "production_mutation_authorized": False,
-        "production_accessed_during_build": False,
-        "reference_impact": "NONE",
-    }
-    (read_only_root / "BUNDLE-MANIFEST.json").write_text(json.dumps(read_only_manifest, indent=2)+"\n", encoding="utf-8")
-    (read_only_root / "README-FIRST.md").write_text(
-        "# Forwarder v1.10.0 read-only Production preflight\n\n"
-        "Copy this directory to `C:\\1-webapp\\forwarder-production-preflight\\v1.10.0-r3` on the Production server. Run only `Collect-ForwarderV110ProductionReadOnly.ps1` locally on that server. The collector makes no Production mutation and writes one sanitized JSON result beside the script. Copy that JSON back for GO/NO-GO review. This bundle does not authorize deployment.\n",
-        encoding="utf-8",
-    )
-
     result = {
-        "read_only_preflight_bundle": finish_bundle(read_only_root, read_only_zip, stamp),
         "production_package_sha256": outer_sha,
         "production_accessed": False,
     }
+    if not args.deployment_only:
+        read_only_root.mkdir()
+        for relative in (
+            "Collect-ForwarderV110ProductionReadOnly.ps1",
+            "Invoke-ForwarderV110ReadOnlySql.py",
+            "legacy-production-witness.json",
+            "sql/adr047-production-classifier.sql",
+            "sql/migration-compatibility-readonly.sql",
+        ):
+            copy_relative(tooling_root, read_only_root, relative)
+        read_only_manifest = {
+            "schema": "forwarder-v1.10.0-read-only-preflight-bundle-v3",
+            "collector_revision": READ_ONLY_REVISION,
+            "purpose": "read_only_production_fact_collection",
+            "product_version": VERSION,
+            "application_source_sha": SOURCE_SHA,
+            "expected_current_database_revision": BEFORE_HEAD,
+            "target_database_revision": TARGET_HEAD,
+            "pre_execute_gate": "exact_fresh_backup_plus_isolated_restore_proof",
+            "execute_time_gate": "new_backup_after_writer_containment_before_migration",
+            "production_mutation_authorized": False,
+            "production_accessed_during_build": False,
+            "reference_impact": "NONE",
+        }
+        (read_only_root / "BUNDLE-MANIFEST.json").write_text(json.dumps(read_only_manifest, indent=2)+"\n", encoding="utf-8")
+        (read_only_root / "README-FIRST.md").write_text(
+            "# Forwarder v1.10.0 read-only Production preflight\n\n"
+            f"Copy this directory to `C:\\1-webapp\\forwarder-production-preflight\\v1.10.0-{READ_ONLY_REVISION}` on the Production server. Run only `Collect-ForwarderV110ProductionReadOnly.ps1` locally on that server. The collector makes no Production mutation and writes one sanitized JSON result beside the script. It requires an exact, fresh dump-to-restore-proof identity before reporting `READY_FOR_SEPARATE_GO_REVIEW`; the later deployment-window backup remains an Execute-time gate after writer containment. Copy the JSON back for GO/NO-GO review. This bundle does not authorize deployment.\n",
+            encoding="utf-8",
+        )
+        result["read_only_preflight_bundle"] = finish_bundle(read_only_root, read_only_zip, stamp)
     if not args.read_only_only:
         deployment_root.mkdir()
         shutil.copy2(package, deployment_root / package.name)
@@ -157,7 +168,8 @@ def main() -> int:
         ):
             copy_relative(tooling_root, deployment_root, relative)
         deployment_manifest = {
-            "schema": "forwarder-v1.10.0-production-deployment-bundle-v1",
+            "schema": "forwarder-v1.10.0-production-deployment-bundle-v2",
+            "deployment_tooling_revision": DEPLOYMENT_REVISION,
             "purpose": "operator_mediated_production_deployment_after_separate_go",
             "product_version": VERSION,
             "application_source_sha": SOURCE_SHA,
@@ -165,22 +177,39 @@ def main() -> int:
             "target_database_revision": TARGET_HEAD,
             "production_package": package.name,
             "production_package_sha256": outer_sha,
+            "pre_execute_gate": "requires_READY_FOR_SEPARATE_GO_REVIEW_and_exact_restore_proof",
+            "execute_time_gate": "creates_and_records_backup_after_writer_containment_before_migration",
+            "writer_containment_timeout_milliseconds": 15000,
+            "writer_containment_poll_milliseconds": 250,
+            "writer_containment_quiet_milliseconds": 2000,
+            "writer_containment_process_scope": "captured_identity_revalidated_listener_pid_only",
+            "replacement_listener_disposition": "fail_closed_do_not_terminate",
+            "failed_target_disposition": "preserve_and_use_new_absent_target",
+            "known_failed_targets": [
+                r"C:\1-webapp\forwarder-production\release-20260922060617-20260926_fixed_shipment_responsible_expert",
+                r"C:\1-webapp\forwarder-production\release-20260922081228-20260926_fixed_shipment_responsible_expert",
+            ],
+            "authoritative_deployer": "bundle_root/Deploy-ForwarderV110Production.ps1",
+            "frozen_product_package_rebuilt": False,
             "production_accessed_during_build": False,
             "reference_impact": "NONE",
         }
         (deployment_root / "BUNDLE-MANIFEST.json").write_text(json.dumps(deployment_manifest, indent=2)+"\n", encoding="utf-8")
         (deployment_root / "README-FIRST.md").write_text(
             "# Forwarder v1.10.0 Production deployment bundle\n\n"
-            "Keep this bundle on the laptop until the returned live read-only preflight has been reviewed and a separate GO has been issued. On the server, verify the package, run the deployer with `-ValidateOnly`, obtain explicit human authorization, and only then use `-Execute -ConfirmDeployment` during the maintenance window. No force or safety-bypass mode exists.\n",
+            "Keep this bundle on the laptop until collector r5 reports `READY_FOR_SEPARATE_GO_REVIEW`, the returned result has been reviewed, and a separate GO has been issued. Use only the deployer at this bundle root; the frozen Product ZIP was not rebuilt and its package-internal historical tooling is not the operator entrypoint. Validate-only enforces the exact pre-Execute backup/restore-proof gate without mutation. Execute separately requires exact task disablement and exact-PID listener termination, polls for no more than 15 seconds at 250 ms intervals, and requires a continuous 2-second quiet period before creating the deployment-window backup. A replacement listener fails closed and is not killed. Preserve both failed targets ending `20260922060617-20260926_fixed_shipment_responsible_expert` and `20260922081228-20260926_fixed_shipment_responsible_expert`; do not delete or reuse them. The next validate-only must name a third, new absent immutable target path. No force or safety-bypass mode exists.\n",
             encoding="utf-8",
         )
         result["production_deployment_bundle"] = finish_bundle(deployment_root, deployment_zip, stamp)
 
-    result_path = output_root / (
-        "Forwarder-v1.10.0-read-only-preflight-r3.build-result.json"
+    result_name = (
+        f"Forwarder-v1.10.0-read-only-preflight-{READ_ONLY_REVISION}.build-result.json"
         if args.read_only_only
-        else "Forwarder-v1.10.0-transfer-bundles.build-result.json"
+        else f"Forwarder-v1.10.0-production-deployment-{DEPLOYMENT_REVISION}.build-result.json"
+        if args.deployment_only
+        else f"Forwarder-v1.10.0-release-gate-contract-bundles-{READ_ONLY_REVISION}-{DEPLOYMENT_REVISION}.build-result.json"
     )
+    result_path = output_root / result_name
     if result_path.exists():
         raise RuntimeError("refusing to overwrite transfer bundle build result")
     result_path.write_text(json.dumps(result, indent=2)+"\n", encoding="utf-8")
