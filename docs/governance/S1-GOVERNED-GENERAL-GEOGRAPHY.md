@@ -7,7 +7,7 @@
 | Domain / scope | Platform/shared reference data for the public international request selector. It is not tenant, tracking, corridor, or logistics-network data. |
 | Country authority | ISO 3166-1 alpha-2. `Country.code` is the canonical business identity for newly governed data; `IR` and `TM` are required anchors. Legacy three-character values remain readable for compatibility and are not reinterpreted by S1. |
 | International location authority | UNECE UN/LOCODE. `InternationalCity.un_locode`, when populated, stores its five-character code. It is not a Global Logistics Point identity. |
-| Approved input | `backend/reference_data/international-geography-v1.json`, dataset `forwarder-international-geography-v1`, snapshot `2025-1`. |
+| Approved input | `backend/reference_data/international-geography-v2-fwd02.json`, dataset `forwarder-international-geography-v2-fwd02`, snapshot `2025-1`, checksum `sha256:b3e71f12f7c9cc8a9c5061a9df0ed67f085636bc84bd7120400694adab2d48ca`. |
 | External authority | ISO and UNECE; the checked-in snapshot is the approved reproducible input, while the database is the runtime System of Record. |
 | Owner / change authority | Reference Data Owner. Assignment to a named business person/team remains organizational governance. |
 | Runtime network policy | No ISO/UNECE network fetch is permitted at runtime. |
@@ -17,14 +17,23 @@
 public selector's city/port/airport-like transport-location projection. A future
 rename to `InternationalLocation` requires a separate approved migration.
 
+The earlier `international-geography-v1.json` / `forwarder-international-geography-v1`
+input remains checked in as historical compatibility and regression context. It
+is not the approved input for the current worldwide catalog Apply.
+
 ## Readiness contract
 
-`backend.services.international_geography_readiness.readiness_report()` is a
-read-only diagnostic suitable for tests and release/operational checks. It
-detects invalid snapshot identity, missing required country/location records,
-invalid UN/LOCODE ancestry, duplicate approved identities, and whether a record
-exists separately from whether it is active/selectable. Intentional inactivity
-is reported; it is not repaired or automatically treated as a missing record.
+The current catalog is validated by
+`backend.international_geography_catalog.load_catalog()` and compared with the
+runtime System of Record by its read-only `plan_catalog()` path. Those controls
+bind the v2-FWD02 identity, checksum, coverage counts, location types, Iran
+projection count, and required country coverage before an explicit Apply.
+
+`backend.services.international_geography_readiness.readiness_report()` remains
+a read-only diagnostic for the historical v1 compatibility anchors used by
+legacy tests and maintenance. It reports existence separately from
+active/selectable state and never repairs or reactivates a record, but it is not
+evidence of complete v2-FWD02 catalog readiness.
 
 ## Regression memory
 
