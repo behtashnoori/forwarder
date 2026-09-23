@@ -370,8 +370,21 @@ class CustomerPortalRecoveryRequest(db.Model):
     )
     requested_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     handled_at = db.Column(db.DateTime, nullable=True)
+    purpose = db.Column(db.String(16), nullable=False, default="RESET")
+    delivery_channel = db.Column(db.String(16), nullable=False, default="EMAIL")
+    delivery_status = db.Column(db.String(24), nullable=False, default="PENDING")
+    delivery_attempted_at = db.Column(db.DateTime, nullable=True)
 
     customer = db.relationship("CustomerGamification")
+
+    __table_args__ = (
+        db.CheckConstraint("purpose IN ('RESET', 'ENROLLMENT')", name="ck_customer_portal_recovery_request_purpose"),
+        db.CheckConstraint("delivery_channel IN ('EMAIL', 'MANUAL_LINK')", name="ck_customer_portal_recovery_request_channel"),
+        db.CheckConstraint(
+            "delivery_status IN ('PENDING', 'SENT', 'FAILED', 'SUPPRESSED', 'MANUAL_ISSUED')",
+            name="ck_customer_portal_recovery_request_status",
+        ),
+    )
 
 
 class CustomerPortalRecoveryToken(db.Model):

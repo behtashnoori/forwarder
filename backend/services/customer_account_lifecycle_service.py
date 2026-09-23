@@ -16,6 +16,7 @@ from backend.models import (
     CustomerPortalRecoveryToken,
 )
 from backend.security import security
+from backend.services import customer_recovery_email_service
 from backend.services.customer_portal_auth import CustomerPortalAuthError, normalize_email, validate_password
 
 
@@ -43,20 +44,96 @@ def _audit(customer: CustomerGamification, action: str, source: str, *, actor_us
 
 
 def request_password_recovery(email: Any) -> None:
-    """Record an enumeration-safe request without choosing a delivery channel."""
+    """Attempt email delivery while preserving an account-existence-safe response."""
     customer = CustomerGamification.query.filter_by(email=normalize_email(email)).first()
     if customer is not None and customer.account_status == "ACTIVE" and customer.password_hash:
-        db.session.add(CustomerPortalRecoveryRequest(customer_id=customer.id))
-        _audit(customer, "recovery_requested", "customer_forgot")
-        db.session.commit()
+        initiate_password_recovery(customer, source="customer_forgot")
 
 
 def queue_admin_recovery_request(customer: CustomerGamification, actor_user_id: int, purpose: str) -> CustomerPortalRecoveryRequest:
-    row = CustomerPortalRecoveryRequest(customer_id=customer.id)
+    row = CustomerPortalRecoveryRequest(
+        customer_id=customer.id,
+        purpose=purpose,
+        delivery_channel="MANUAL_LINK",
+        delivery_status="PENDING",
+    )
     db.session.add(row)
     _audit(customer, "recovery_requested", "organization_admin", actor_user_id=actor_user_id, detail=f"purpose={purpose}")
     db.session.commit()
     return row
+
+
+def initiate_password_recovery(
+    customer: CustomerGamification,
+    *,
+    source: str,
+    actor_user_id: int | None = None,
+) -> str:
+    """Issue and email a reset capability without exposing it to the caller."""
+    if customer.account_status != "ACTIVE":
+        raise CustomerPortalAuthError("Account is disabled.", 409, "ACCOUNT_DISABLED")
+    if not customer.password_hash:
+        raise CustomerPortalAuthError(
+            "Account enrollment must be completed first.",
+            409,
+            "ACCOUNT_ENROLLMENT_REQUIRED",
+        )
+    row = CustomerPortalRecoveryRequest(
+        customer_id=customer.id,
+        purpose="RESET",
+        delivery_channel="EMAIL",
+        delivery_status="PENDING",
+    )
+    db.session.add(row)
+    _audit(
+        customer,
+        "recovery_requested",
+        source,
+        actor_user_id=actor_user_id,
+        detail="purpose=RESET;channel=EMAIL",
+    )
+    db.session.commit()
+
+    raw_token = issue_recovery_token(
+        customer,
+        "RESET",
+        created_by_user_id=actor_user_id,
+        recovery_request=row,
+    )
+    token = CustomerPortalRecoveryToken.query.filter_by(token_digest=_digest(raw_token)).one()
+    try:
+        reset_url = customer_recovery_email_service.build_password_reset_url(raw_token)
+        delivery_status = customer_recovery_email_service.send_password_recovery_email(
+            customer.email,
+            reset_url,
+            token.expires_at,
+        )
+    except Exception as exc:
+        current_app.logger.error(
+            "Customer recovery delivery boundary failed closed (%s).",
+            type(exc).__name__,
+        )
+        delivery_status = customer_recovery_email_service.DELIVERY_FAILED
+    if delivery_status not in {
+        customer_recovery_email_service.DELIVERY_SENT,
+        customer_recovery_email_service.DELIVERY_FAILED,
+        customer_recovery_email_service.DELIVERY_SUPPRESSED,
+    }:
+        delivery_status = customer_recovery_email_service.DELIVERY_FAILED
+    now = datetime.utcnow()
+    row.delivery_status = delivery_status
+    row.delivery_attempted_at = now
+    if delivery_status != customer_recovery_email_service.DELIVERY_SENT:
+        token.revoked_at = now
+    _audit(
+        customer,
+        f"recovery_email_{delivery_status.lower()}",
+        source,
+        actor_user_id=actor_user_id,
+        detail="purpose=RESET;channel=EMAIL",
+    )
+    db.session.commit()
+    return delivery_status
 
 
 def issue_recovery_token(
@@ -156,5 +233,6 @@ def set_account_enabled(customer: CustomerGamification, enabled: bool, actor_use
 
 __all__ = [
     "change_password", "consume_recovery_token", "issue_recovery_token",
-    "queue_admin_recovery_request", "request_password_recovery", "set_account_enabled",
+    "initiate_password_recovery", "queue_admin_recovery_request",
+    "request_password_recovery", "set_account_enabled",
 ]

@@ -11,6 +11,7 @@ import {
   setAdminPortalAccountStatus,
   type AdminPortalAccount,
   type AdminPortalCapability,
+  type AdminPortalRecoveryResult,
 } from "@/lib/customerPortalApi";
 
 function currentAuthority() {
@@ -88,6 +89,26 @@ export default function CustomerPortalAccountSupport() {
       setMessage(
         "پیوند یک‌بارمصرف صادر شد. سامانه آن را ارسال نمی‌کند؛ آن را اکنون کپی و از کانال مورد تأیید سازمان تحویل دهید.",
       );
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "عملیات انجام نشد.");
+    }
+  };
+
+  const sendRecoveryEmail = async (
+    action: () => Promise<AdminPortalRecoveryResult>,
+  ) => {
+    setError("");
+    setMessage("");
+    setCapability(null);
+    try {
+      const result = await action();
+      if (result.delivery_status === "SENT") {
+        setMessage("ایمیل بازیابی برای تحویل به سرویس ایمیل سپرده شد.");
+      } else if (result.delivery_status === "SUPPRESSED") {
+        setMessage("ارسال واقعی ایمیل در این محیط غیرفعال است؛ هیچ پیوند فعالی باقی نماند.");
+      } else {
+        setError("تحویل ایمیل بازیابی ناموفق بود؛ هیچ پیوند فعالی باقی نماند.");
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "عملیات انجام نشد.");
     }
@@ -183,9 +204,9 @@ export default function CustomerPortalAccountSupport() {
                   <Button
                     variant="outline"
                     disabled={account.account_status !== "ACTIVE" || account.enrollment_state !== "ENROLLED"}
-                    onClick={() => void issueCapability(() => initiateAdminPortalRecovery(account.public_id))}
+                    onClick={() => void sendRecoveryEmail(() => initiateAdminPortalRecovery(account.public_id))}
                   >
-                    صدور پیوند بازیابی
+                    ارسال ایمیل بازیابی
                   </Button>
                   <Button
                     variant="outline"

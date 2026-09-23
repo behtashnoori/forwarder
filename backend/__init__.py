@@ -78,6 +78,18 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         "CUSTOMER_RECOVERY_TOKEN_LIFETIME_SECONDS": int(
             os.getenv("CUSTOMER_RECOVERY_TOKEN_LIFETIME_SECONDS", "1800")
         ),
+        "FRONTEND_URL": os.getenv("FRONTEND_URL", "http://localhost:5173"),
+        "CUSTOMER_RECOVERY_EMAIL_ENABLED": os.getenv("CUSTOMER_RECOVERY_EMAIL_ENABLED", "0"),
+        "CUSTOMER_RECOVERY_EMAIL_FROM": os.getenv("CUSTOMER_RECOVERY_EMAIL_FROM", ""),
+        "CUSTOMER_RECOVERY_SMTP_HOST": os.getenv("CUSTOMER_RECOVERY_SMTP_HOST", ""),
+        "CUSTOMER_RECOVERY_SMTP_PORT": int(os.getenv("CUSTOMER_RECOVERY_SMTP_PORT", "587")),
+        "CUSTOMER_RECOVERY_SMTP_USERNAME": os.getenv("CUSTOMER_RECOVERY_SMTP_USERNAME", ""),
+        "CUSTOMER_RECOVERY_SMTP_PASSWORD": os.getenv("CUSTOMER_RECOVERY_SMTP_PASSWORD", ""),
+        "CUSTOMER_RECOVERY_SMTP_USE_STARTTLS": os.getenv("CUSTOMER_RECOVERY_SMTP_USE_STARTTLS", "1"),
+        "CUSTOMER_RECOVERY_SMTP_USE_SSL": os.getenv("CUSTOMER_RECOVERY_SMTP_USE_SSL", "0"),
+        "CUSTOMER_RECOVERY_SMTP_TIMEOUT_SECONDS": int(
+            os.getenv("CUSTOMER_RECOVERY_SMTP_TIMEOUT_SECONDS", "10")
+        ),
         "JWT_CLOCK_SKEW_SECONDS": int(os.getenv("CLOCK_SKEW_SECONDS", "60")),
         "DOCUMENT_STORAGE_ROOT": os.getenv("DOCUMENT_STORAGE_ROOT"),
     }
@@ -102,6 +114,8 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         secret_key=app.config["SECRET_KEY"],
         jwt_secret_key=app.config["JWT_SECRET_KEY"],
     )
+    from backend.services.customer_recovery_email_service import validate_recovery_email_configuration
+    validate_recovery_email_configuration(app.config)
 
     # File-backed SQLite needs its parent at application startup. Configuration
     # import and URI resolution remain side-effect free.

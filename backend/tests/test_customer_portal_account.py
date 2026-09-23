@@ -1,11 +1,12 @@
 """Focused contracts for optional Customer Portal accounts."""
 from datetime import date, datetime, timedelta
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import CustomerGamification, CustomerPortalAccountAudit, CustomerPortalRecoveryToken, ExpertQuote, ExpertUser, ShipmentRequest
+from backend.models import CustomerGamification, CustomerPortalAccountAudit, CustomerPortalRecoveryRequest, CustomerPortalRecoveryToken, ExpertQuote, ExpertUser, ShipmentRequest
 from backend.operational_models import OrganizationHostname, OperationalMembership, OperationalOrganization
 from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
@@ -111,19 +112,56 @@ def test_password_signup_fails_closed_without_server_resolved_organization(app, 
         assert CustomerGamification.query.filter_by(email="unscoped@example.com").count() == 0
 
 
-def test_forgot_is_enumeration_safe_and_reset_token_is_single_use(app, client):
+def test_forgot_is_enumeration_safe_and_emailed_token_is_single_use(app, client, monkeypatch):
+    delivered = []
+    monkeypatch.setattr(
+        "backend.services.customer_recovery_email_service.send_password_recovery_email",
+        lambda recipient, reset_url, expires_at: delivered.append((recipient, reset_url, expires_at)) or "SENT",
+    )
     _register(client)
     known = client.post("/api/customer/password/forgot", json={"email": "portal@example.com"})
     unknown = client.post("/api/customer/password/forgot", json={"email": "nobody@example.com"})
     assert known.status_code == unknown.status_code == 202
     assert known.get_json() == unknown.get_json()
+    assert len(delivered) == 1
+    assert delivered[0][0] == "portal@example.com"
+    token = parse_qs(urlparse(delivered[0][1]).query)["token"][0]
     with app.app_context():
-        customer = CustomerGamification.query.filter_by(email="portal@example.com").one()
-        token = issue_recovery_token(customer, "RESET")
+        recovery = CustomerPortalRecoveryRequest.query.one()
+        assert recovery.delivery_channel == "EMAIL"
+        assert recovery.delivery_status == "SENT"
     first = client.post("/api/customer/password/reset", json={"token": token, "new_password": "new-password-123"})
     replay = client.post("/api/customer/password/reset", json={"token": token, "new_password": "new-password-456"})
     assert first.status_code == 200
     assert replay.status_code == 400
+
+
+def test_nonproduction_recovery_suppresses_delivery_and_revokes_token(app, client):
+    _register(client)
+    response = client.post("/api/customer/password/forgot", json={"email": "portal@example.com"})
+    assert response.status_code == 202
+    with app.app_context():
+        recovery = CustomerPortalRecoveryRequest.query.one()
+        token = CustomerPortalRecoveryToken.query.one()
+        assert recovery.delivery_status == "SUPPRESSED"
+        assert recovery.delivery_attempted_at is not None
+        assert token.revoked_at is not None
+
+
+def test_unexpected_delivery_boundary_failure_is_safe_and_revokes_token(app, client, monkeypatch):
+    def fail_delivery(*args, **kwargs):
+        raise RuntimeError("unexpected provider failure containing token=secret")
+
+    monkeypatch.setattr(
+        "backend.services.customer_recovery_email_service.send_password_recovery_email",
+        fail_delivery,
+    )
+    _register(client)
+    response = client.post("/api/customer/password/forgot", json={"email": "portal@example.com"})
+    assert response.status_code == 202
+    with app.app_context():
+        assert CustomerPortalRecoveryRequest.query.one().delivery_status == "FAILED"
+        assert CustomerPortalRecoveryToken.query.one().revoked_at is not None
 
 
 def test_private_quote_response_requires_session_csrf_ownership_and_version(app, client):
@@ -231,7 +269,11 @@ def test_cross_customer_request_is_nondisclosing_and_pagination_exceeds_five(app
     assert client.get(f"/api/customer/requests/{foreign_public_id}").status_code == 404
 
 
-def test_organization_admin_support_is_same_org_and_issues_one_time_paths(app, client):
+def test_organization_admin_support_is_same_org_and_uses_email_for_reset(app, client, monkeypatch):
+    monkeypatch.setattr(
+        "backend.services.customer_recovery_email_service.send_password_recovery_email",
+        lambda recipient, reset_url, expires_at: "SENT",
+    )
     with app.app_context():
         org = OperationalOrganization(name="Synthetic Tenant")
         other_org = OperationalOrganization(name="Foreign Tenant")
@@ -265,7 +307,10 @@ def test_organization_admin_support_is_same_org_and_issues_one_time_paths(app, c
     reset = client.post(f"/api/admin/customer-portal-accounts/{enrolled_id}/recovery", headers=headers, json={})
     enrollment = client.post(f"/api/admin/customer-portal-accounts/{invite_id}/enrollment", headers=headers, json={})
     foreign_attempt = client.post(f"/api/admin/customer-portal-accounts/{foreign_id}/enrollment", headers=headers, json={})
-    assert reset.status_code == enrollment.status_code == 201
-    assert "token=" in reset.get_json()["path"] and "token=" in enrollment.get_json()["path"]
-    assert "token" not in reset.get_json() and reset.get_json()["expires_at"]
+    assert reset.status_code == 202
+    assert enrollment.status_code == 201
+    assert reset.get_json()["delivery_channel"] == "EMAIL"
+    assert reset.get_json()["delivery_status"] == "SENT"
+    assert "path" not in reset.get_json() and "token" not in reset.get_json()
+    assert "token=" in enrollment.get_json()["path"]
     assert foreign_attempt.status_code == 404

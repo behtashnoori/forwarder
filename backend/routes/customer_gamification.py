@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import Any
 from datetime import datetime, timedelta
 from flask import Blueprint, current_app, g, jsonify, request
+from backend.extensions import db
 from backend.services import customer_gamification_service
 from backend.services.admin_authorization_service import require_organization_admin_context
 from backend.services.customer_account_lifecycle_service import (
-    change_password, consume_recovery_token, issue_recovery_token, queue_admin_recovery_request,
-    request_password_recovery, set_account_enabled,
+    change_password, consume_recovery_token, initiate_password_recovery,
+    issue_recovery_token, queue_admin_recovery_request, request_password_recovery,
+    set_account_enabled,
 )
 from backend.services.customer_portal_auth import (
     CustomerPortalAuthError, clear_customer_session, customer_summary,
@@ -135,7 +137,7 @@ def password_change():
 @customer_gamification_bp.post("/password/forgot")
 def password_forgot():
     request_password_recovery(_json().get("email"))
-    return jsonify({"code": "RECOVERY_REQUEST_ACCEPTED", "message": "If the account is eligible, recovery will be initiated."}), 202
+    return jsonify({"code": "RECOVERY_REQUEST_ACCEPTED", "message": "If the account is eligible, a recovery email will be sent."}), 202
 
 def _consume_token(purpose):
     data = _json()
@@ -184,40 +186,54 @@ def admin_set_account_status(public_id):
         return jsonify({"account": customer_summary(customer)}), 200
     except CustomerPortalError as exc: return _portal_error(exc)
 
-def _issue_admin_capability(public_id, purpose):
+def _issue_admin_enrollment(public_id):
     customer = _admin_customer(public_id)
     if customer.account_status != "ACTIVE":
         return jsonify({"code": "ACCOUNT_DISABLED", "message": "Account is disabled."}), 409
-    if purpose == "ENROLLMENT" and customer.password_hash:
+    if customer.password_hash:
         return jsonify({"code": "ACCOUNT_ALREADY_ENROLLED", "message": "Account enrollment is already complete."}), 409
-    if purpose == "RESET" and not customer.password_hash:
-        return jsonify({"code": "ACCOUNT_ENROLLMENT_REQUIRED", "message": "Account enrollment must be completed first."}), 409
-    row = queue_admin_recovery_request(customer, int(g.current_user_id), purpose)
+    row = queue_admin_recovery_request(customer, int(g.current_user_id), "ENROLLMENT")
     try:
         raw_token = issue_recovery_token(
-            customer, purpose, created_by_user_id=int(g.current_user_id), recovery_request=row
+            customer, "ENROLLMENT", created_by_user_id=int(g.current_user_id), recovery_request=row
         )
     except CustomerPortalAuthError as exc:
         body, status = auth_error_payload(exc); return jsonify(body), status
+    row.delivery_status = "MANUAL_ISSUED"
+    row.delivery_attempted_at = datetime.utcnow()
+    db.session.commit()
     lifetime = int(current_app.config.get("CUSTOMER_RECOVERY_TOKEN_LIFETIME_SECONDS", 1800))
-    route = "/customer/reset-password" if purpose == "RESET" else "/customer/enroll"
     return jsonify({
         "message": "One-time customer capability issued.",
-        "purpose": purpose,
-        "path": f"{route}?token={raw_token}",
+        "purpose": "ENROLLMENT",
+        "path": f"/customer/enroll?token={raw_token}",
         "expires_at": (datetime.utcnow() + timedelta(seconds=lifetime)).isoformat(),
     }), 201
 
 @customer_portal_admin_bp.post("/<public_id>/recovery")
 @require_organization_admin_context(allow_platform=False)
 def admin_recovery(public_id):
-    try: return _issue_admin_capability(public_id, "RESET")
+    try:
+        customer = _admin_customer(public_id)
+        status = initiate_password_recovery(
+            customer,
+            source="organization_admin",
+            actor_user_id=int(g.current_user_id),
+        )
+        return jsonify({
+            "message": "Password-recovery email processing completed.",
+            "purpose": "RESET",
+            "delivery_channel": "EMAIL",
+            "delivery_status": status,
+        }), 202
+    except CustomerPortalAuthError as exc:
+        body, status = auth_error_payload(exc); return jsonify(body), status
     except CustomerPortalError as exc: return _portal_error(exc)
 
 @customer_portal_admin_bp.post("/<public_id>/enrollment")
 @require_organization_admin_context(allow_platform=False)
 def admin_enrollment(public_id):
-    try: return _issue_admin_capability(public_id, "ENROLLMENT")
+    try: return _issue_admin_enrollment(public_id)
     except CustomerPortalError as exc: return _portal_error(exc)
 
 @customer_portal_admin_bp.post("/<public_id>/recovery-requests")
@@ -227,7 +243,21 @@ def admin_initiate_recovery(public_id):
         customer = _admin_customer(public_id); purpose = _json().get("purpose")
         if purpose not in {"RESET", "ENROLLMENT"}: return jsonify({"code": "INVALID_RECOVERY_PURPOSE", "message": "Purpose must be RESET or ENROLLMENT."}), 400
         if customer.account_status != "ACTIVE": return jsonify({"code": "ACCOUNT_DISABLED", "message": "Account is disabled."}), 409
-        return _issue_admin_capability(public_id, purpose)
+        if purpose == "RESET":
+            status = initiate_password_recovery(
+                customer,
+                source="organization_admin",
+                actor_user_id=int(g.current_user_id),
+            )
+            return jsonify({
+                "message": "Password-recovery email processing completed.",
+                "purpose": "RESET",
+                "delivery_channel": "EMAIL",
+                "delivery_status": status,
+            }), 202
+        return _issue_admin_enrollment(public_id)
+    except CustomerPortalAuthError as exc:
+        body, status = auth_error_payload(exc); return jsonify(body), status
     except CustomerPortalError as exc: return _portal_error(exc)
 
 __all__ = ["customer_gamification_bp", "customer_portal_admin_bp"]

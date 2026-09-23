@@ -38,8 +38,11 @@ The existing `CustomerGamification` identity is separate from CRM `Customer`.
    the bounded discussion message remain authoritative.
 6. Password reset/enrollment capabilities are high-entropy, digest-only at
    rest, purpose-bound, expiring, and single-use. Public forgot-password
-   responses do not reveal account existence. Automated delivery remains a
-   separate Product decision; no local/UAT message is sent.
+   responses do not reveal account existence. Password-reset delivery uses the
+   account email through a narrow SMTP adapter that is enabled only by explicit
+   Production configuration. No local/test/UAT message is sent, and a token is
+   revoked immediately when delivery is suppressed or fails. This adapter does
+   not activate or redefine the general Notification architecture.
 7. Portal accounts have explicit server-owned organization scope. Routine
    support is authorized only to the Organization Admin whose active membership
    matches that scope. Platform Admin is not routine tenant account support.
@@ -68,8 +71,6 @@ the no-inference rule remains a permanent control.
 
 ## Open decisions
 
-- automated recovery delivery channel (email, SMS, or another governed
-  provider);
 - the future SOR/evidence for any explicit CRM Customer to portal identity link.
 
 These open decisions block only their affected Product journeys. They do not

@@ -159,9 +159,15 @@ export interface AdminPortalAccount {
 export const listAdminPortalAccounts = (query = "") => request<{ items: AdminPortalAccount[] }>(`/api/admin/customer-portal-accounts?q=${encodeURIComponent(query)}`);
 export interface AdminPortalCapability {
   message: string;
-  purpose: "RESET" | "ENROLLMENT";
+  purpose: "ENROLLMENT";
   path: string;
   expires_at: string;
+}
+export interface AdminPortalRecoveryResult {
+  message: string;
+  purpose: "RESET";
+  delivery_channel: "EMAIL";
+  delivery_status: "SENT" | "FAILED" | "SUPPRESSED";
 }
 
 export const setAdminPortalAccountStatus = (publicId: string, status: CustomerAccountStatus) =>
@@ -170,7 +176,7 @@ export const setAdminPortalAccountStatus = (publicId: string, status: CustomerAc
     { method: "POST", body: JSON.stringify({ status }) },
   );
 export const initiateAdminPortalRecovery = (publicId: string) =>
-  request<AdminPortalCapability>(
+  request<AdminPortalRecoveryResult>(
     `/api/admin/customer-portal-accounts/${encodeURIComponent(publicId)}/recovery`,
     { method: "POST", body: "{}" },
   );

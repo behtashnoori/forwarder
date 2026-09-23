@@ -64,16 +64,12 @@ UNKNOWN:
 
 - No governed source currently proves that a CRM `Customer` row and a legacy
   `CustomerGamification` row represent the same subject.
-- No automatic password-recovery delivery channel is selected.
 - There are currently no real Customer records to reconcile; migration and
   enrollment qualification use synthetic data only (Product Owner clarification
   on 2026-09-23).
 
 DECISION_NEEDED:
 
-- Select an automated recovery delivery channel (email, SMS, or another
-  governed provider). The channel-neutral token lifecycle and authorized
-  Admin-assisted link issuance may proceed; no real message is sent.
 - If legacy enrollment must originate from CRM `Customer`, select the governed
   evidence and authority that proves a CRM-to-portal link. This mission will
   not infer it from name, email, or mobile.
@@ -88,6 +84,10 @@ Subsequent Product Owner clarification:
   authenticated membership;
 - legacy rows without proven organization scope are not exposed to any
   Organization Admin and are never auto-scoped by contact similarity.
+- password-recovery delivery uses the account email (Product Owner response on
+  2026-09-23). The bounded implementation uses an explicitly configured,
+  Production-only SMTP adapter; local/test/UAT delivery is suppressed and the
+  general Notification architecture remains unchanged.
 
 ## Product Authority Record
 
@@ -97,10 +97,10 @@ Subsequent Product Owner clarification:
 - self-registration without mandatory initial email verification
 - authenticated, server-scoped Request list/detail
 - private current Quote/history and version-safe response
-- change password and channel-neutral reset core
+- change password and email-delivered reset
 - ACTIVE/DISABLED portal account lifecycle
-- narrow same-organization Admin account support and controlled
-  enrollment/recovery link
+- narrow same-organization Admin account support, email recovery, and
+  controlled enrollment link
 - view-only minimum portal identity/contact profile
 - preserve ADR-052 limited Public Tracking
 
@@ -120,8 +120,7 @@ Subsequent Product Owner clarification:
 
 `APPROVING_OWNER_OR_AUTHORITY`: Product Owner
 `APPROVAL_REFERENCE`: mission text supplied in the 2026-09-23 task
-`DECISIONS_NEEDED`: recovery delivery channel; proof source for any future
-CRM-to-portal legacy link
+`DECISIONS_NEEDED`: proof source for any future CRM-to-portal legacy link
 
 ## Ownership, SOR, data scope, and chain
 
@@ -147,8 +146,10 @@ Quote public_id/version -> Customer response + audit`.
 Recovery/enrollment chain:
 
 `public enumeration-safe request or exact Admin selection -> digest-only,
-purpose-bound, expiring token -> single consume -> password hash replacement ->
-session-generation increment -> replay rejection + audit metadata`.
+purpose-bound, expiring token -> Production-only email delivery for reset or
+authorized manual delivery for initial enrollment -> single consume -> password
+hash replacement -> session-generation increment -> replay rejection + audit
+metadata`. Failed or suppressed reset delivery revokes the issued token.
 
 ## Candidate reconciliation inventory (completed before product code changes)
 
@@ -214,8 +215,8 @@ Golden-based implementation. `MODIFY` and `REIMPLEMENT` never mean file-copy.
   change password, forgot core boundary, disabled message, and Admin support.
 - Migration: repository one-head check, clean upgrade, populated compatibility,
   downgrade guard/recovery behavior; no Production execution.
-- Browser: synthetic local journeys only. A missing selected automated delivery
-  channel is `BLOCKED/DECISION_NEEDED`, never reported as a Product PASS.
+- Browser: synthetic local journeys only. Real email delivery is never exercised
+  in local/test/UAT and requires separate Production configuration validation.
 
 Release boundary: implementation candidate only. No Production access,
 migration, deploy, merge, package publication, or Operational Shipment work.
@@ -224,12 +225,16 @@ migration, deploy, merge, package publication, or Operational Shipment work.
 
 Evidence captured on 2026-09-23 against the isolated candidate:
 
-- complete backend suite: `1349 passed, 106 skipped`; the three initially
+- complete backend suite after email-recovery implementation: `1355 passed,
+  106 skipped`; the three initially
   stale assertions were reconciled without removing coverage, then their
   focused contract set passed `11/11`;
 - final Customer Portal account set after hostname fail-closed hardening:
   `12/12` passed;
 - final Customer/Quote/migration/Public Tracking focused set: `66/66` passed;
+- recovery email, Customer Portal lifecycle, and lifecycle-migration focused
+  set: `21/21` passed, including fake-SMTP success, Production configuration
+  fail-closed, non-Production suppression, and token revocation on non-delivery;
 - complete frontend suite: `364/364` passed; final focused portal/API/router
   suite: `11/11` passed;
 - TypeScript check, production frontend build, backend compileall, Alembic
@@ -249,14 +254,16 @@ Qualification limits:
   `20240920_add_transport_method_to_shipment_request` migration before reaching
   this slice. The temporary synthetic database was removed. PostgreSQL
   clean-upgrade/browser qualification remains required before release;
-- automated reset delivery remains `DECISION_NEEDED`; the public forgot route,
-  digest-only token core, and same-organization Admin-issued one-time path are
-  qualified, but no email/SMS was sent;
+- the email recovery adapter, account-existence-safe public response,
+  same-organization Admin trigger, delivery evidence, and failure/suppression
+  revocation are qualified with a fake SMTP boundary. No real email was sent;
+  Production SMTP credentials and a live delivery check remain operational
+  release gates;
 - no real Customers exist. Synthetic scoped portal identities prove the exact
   enrollment mechanism, but a future CRM-to-portal proof source remains a
   separate Product decision.
 
 This evidence is sufficient for a reviewable implementation candidate, not
 for release. `PRODUCT_VALIDATION_EVIDENCE_FOR_THIS_SLICE` remains `INCOMPLETE`
-until the disposable PostgreSQL migration/browser gate and delivery-dependent
-decision are completed.
+until the disposable PostgreSQL migration/browser gate and Production email
+delivery qualification are completed.

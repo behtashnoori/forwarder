@@ -30,14 +30,14 @@ describe("customer portal API boundary",()=>{
     expect((fetchMock.mock.calls[1][1]?.headers as Record<string,string>)["X-CSRF-Token"]).toBeUndefined();
     expect(result.customerAuthenticated).toBe(false);
   });
-  it("uses tenant-scoped admin status and one-time recovery capability endpoints",async()=>{const fetchMock=vi.spyOn(globalThis,"fetch")
+  it("uses tenant-scoped admin status and email recovery endpoints",async()=>{const fetchMock=vi.spyOn(globalThis,"fetch")
     .mockResolvedValueOnce(new Response(JSON.stringify({account:{public_id:"customer-public"}}),{status:200,headers:{"Content-Type":"application/json"}}))
-    .mockResolvedValueOnce(new Response(JSON.stringify({message:"issued",purpose:"RESET",path:"/customer/reset-password?token=one-time",expires_at:"2026-09-23T21:00:00"}),{status:201,headers:{"Content-Type":"application/json"}}));
+    .mockResolvedValueOnce(new Response(JSON.stringify({message:"processed",purpose:"RESET",delivery_channel:"EMAIL",delivery_status:"SENT"}),{status:202,headers:{"Content-Type":"application/json"}}));
     await setAdminPortalAccountStatus("customer-public","DISABLED");
     const capability=await initiateAdminPortalRecovery("customer-public");
     expect(fetchMock.mock.calls[0][0]).toBe("/api/admin/customer-portal-accounts/customer-public/status");
     expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({status:"DISABLED"});
     expect(fetchMock.mock.calls[1][0]).toBe("/api/admin/customer-portal-accounts/customer-public/recovery");
-    expect(capability.path).toContain("/customer/reset-password?token=");
+    expect(capability).toMatchObject({delivery_channel:"EMAIL",delivery_status:"SENT"});
   });
 });

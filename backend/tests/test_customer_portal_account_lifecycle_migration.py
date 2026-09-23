@@ -93,6 +93,23 @@ def test_customer_portal_lifecycle_upgrade_backfills_and_roundtrips_legacy_data(
         "customer_portal_recovery_request",
         "customer_portal_recovery_token",
     } <= set(inspector.get_table_names())
+    assert {
+        "purpose",
+        "delivery_channel",
+        "delivery_status",
+        "delivery_attempted_at",
+    } <= {
+        column["name"]
+        for column in inspector.get_columns("customer_portal_recovery_request")
+    }
+    assert {
+        constraint["name"]
+        for constraint in inspector.get_check_constraints("customer_portal_recovery_request")
+    } >= {
+        "ck_customer_portal_recovery_request_purpose",
+        "ck_customer_portal_recovery_request_channel",
+        "ck_customer_portal_recovery_request_status",
+    }
     assert "response_version" in {
         column["name"] for column in inspector.get_columns("expert_quote")
     }

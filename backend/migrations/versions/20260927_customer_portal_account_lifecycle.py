@@ -102,6 +102,22 @@ def upgrade():
         sa.Column("customer_id", BIGINT, nullable=False),
         sa.Column("requested_at", sa.DateTime(), nullable=False),
         sa.Column("handled_at", sa.DateTime(), nullable=True),
+        sa.Column("purpose", sa.String(16), server_default="RESET", nullable=False),
+        sa.Column("delivery_channel", sa.String(16), server_default="EMAIL", nullable=False),
+        sa.Column("delivery_status", sa.String(24), server_default="PENDING", nullable=False),
+        sa.Column("delivery_attempted_at", sa.DateTime(), nullable=True),
+        sa.CheckConstraint(
+            "purpose IN ('RESET', 'ENROLLMENT')",
+            name="ck_customer_portal_recovery_request_purpose",
+        ),
+        sa.CheckConstraint(
+            "delivery_channel IN ('EMAIL', 'MANUAL_LINK')",
+            name="ck_customer_portal_recovery_request_channel",
+        ),
+        sa.CheckConstraint(
+            "delivery_status IN ('PENDING', 'SENT', 'FAILED', 'SUPPRESSED', 'MANUAL_ISSUED')",
+            name="ck_customer_portal_recovery_request_status",
+        ),
         sa.ForeignKeyConstraint(
             ["customer_id"], ["customer_gamification.id"], ondelete="CASCADE"
         ),
