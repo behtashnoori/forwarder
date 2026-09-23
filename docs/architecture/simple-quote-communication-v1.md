@@ -1,8 +1,17 @@
 # Simple Quote Communication — Bounded Implementation Design
 
+> **Current authority note (2026-09-23):** the Quote state/history rules in this
+> document remain applicable, but its Customer tracking-code authority,
+> client-supplied Customer handle, public Quote projection, compatibility writer,
+> and “no Customer session model” assumptions are superseded by
+> [ADR-053](../operational/adr/ADR-053-optional-customer-account-private-quote-authority.md)
+> together with [ADR-052](../operational/adr/ADR-052-public-tracking-opaque-capability-authority.md).
+> Public Tracking never reads or mutates Quote state. Customer Quote access and
+> response now require an ACTIVE, scoped Customer session.
+
 - **Status:** Approved implementation design for the bounded Build slice
 - **Date:** 2026-09-21
-- **Governing baseline:** LPAF v2.2 plus the v2.3 Product Integration / `REFERENCE_IMPACT` strong default
+- **Historical governing baseline:** LPAF v2.2 plus the v2.3 Product Integration / `REFERENCE_IMPACT` strong default; current changes use LPAF v2.6
 - **Rigor:** Level B — product / release-critical commercial state
 - **Starting canonical:** `39287f4bc44ab7d92a8a38f24a8029fae91b46a0`
 - **Branch:** `codex/simple-quote-communication`

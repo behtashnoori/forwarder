@@ -21,6 +21,7 @@ from backend.services.quote_currency import (
     QUOTE_CURRENCIES,
     SUPPORTED_QUOTE_CURRENCIES,
 )
+from backend.services.customer_portal_auth import SESSION_CSRF, SESSION_CUSTOMER_ID, SESSION_GENERATION
 
 
 @pytest.fixture()
@@ -86,6 +87,7 @@ def eur_quote_state():
             "request_id": request_row.id,
             "tracking_code": request_row.tracking_code,
             "customer_id": customer.id,
+            "request_public_id": request_row.public_id,
             "expert_token": create_session_tokens(expert.id)["access_token"],
             "outsider_token": create_session_tokens(outsider.id)["access_token"],
         }
@@ -97,6 +99,20 @@ def eur_quote_state():
 
 def _headers(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def _customer_session(client, state):
+    with client.session_transaction() as customer_session:
+        customer_session[SESSION_CUSTOMER_ID] = state["customer_id"]
+        customer_session[SESSION_GENERATION] = 0
+        customer_session[SESSION_CSRF] = "phase-b5-csrf"
+    return {"X-CSRF-Token": "phase-b5-csrf"}
+
+
+def _customer_quote_endpoint(state):
+    with state["app"].app_context():
+        quote = ExpertQuote.query.filter_by(shipment_request_id=state["request_id"]).order_by(ExpertQuote.id.desc()).first()
+        return f"/api/customer/requests/{state['request_public_id']}/quotes/{quote.public_id}/response"
 
 
 def _publish(client, state, *, currency="EUR", valid_until=None):
@@ -141,10 +157,8 @@ def test_eur_validation_persistence_expert_and_customer_reads(eur_quote_state):
     assert expert_read.get_json()["quote"]["currency"] == "EUR"
     assert expert_read.get_json()["quote"]["amount"] == 1234567
 
-    customer_read = client.get(
-        f"/api/customer/workflow/{eur_quote_state['customer_id']}"
-        f"?request_id={eur_quote_state['request_id']}"
-    )
+    _customer_session(client, eur_quote_state)
+    customer_read = client.get(f"/api/customer/requests/{eur_quote_state['request_public_id']}")
     assert customer_read.status_code == 200
     assert customer_read.get_json()["latest_quote"]["currency"] == "EUR"
     assert customer_read.get_json()["latest_quote"]["amount"] == 1234567
@@ -175,16 +189,17 @@ def test_eur_customer_response_preserves_golden_semantics(
     client = eur_quote_state["app"].test_client()
     assert _publish(client, eur_quote_state).status_code == 200
 
-    endpoint = f"/api/customer/quote-response/{eur_quote_state['tracking_code']}"
-    response = client.post(endpoint, json={"response": decision})
+    headers = _customer_session(client, eur_quote_state)
+    endpoint = _customer_quote_endpoint(eur_quote_state)
+    response = client.post(endpoint, headers=headers, json={"response": decision, "expected_response_version": 0})
     assert response.status_code == 200
     assert response.get_json()["latest_quote"]["currency"] == "EUR"
     assert response.get_json()["latest_quote"]["customer_response"] == decision
 
-    replay = client.post(endpoint, json={"response": decision})
+    replay = client.post(endpoint, headers=headers, json={"response": decision, "expected_response_version": 1})
     assert replay.status_code == 200
     assert replay.get_json()["latest_quote"]["customer_response"] == decision
-    assert client.post(endpoint, json={"response": conflict}).status_code == 409
+    assert client.post(endpoint, headers=headers, json={"response": conflict, "expected_response_version": 1}).status_code == 409
 
     with eur_quote_state["app"].app_context():
         request_row = db.session.get(ShipmentRequest, eur_quote_state["request_id"])
@@ -219,10 +234,8 @@ def test_eur_expiry_and_authorization_boundaries_are_unchanged(eur_quote_state):
         headers=_headers(eur_quote_state["outsider_token"]),
     )
     assert outsider_read.status_code == 403
-    expired = client.post(
-        f"/api/customer/quote-response/{eur_quote_state['tracking_code']}",
-        json={"response": "accepted"},
-    )
+    headers = _customer_session(client, eur_quote_state)
+    expired = client.post(_customer_quote_endpoint(eur_quote_state), headers=headers, json={"response": "accepted", "expected_response_version": 0})
     assert expired.status_code == 400
     unrelated = client.post(
         "/api/customer/quote-response/SR-PHASE-B5-UNRELATED",

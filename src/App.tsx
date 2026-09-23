@@ -13,8 +13,14 @@ import CRMDashboard from "./pages/CRMDashboard";
 import CustomerRoleManagement from "./pages/CustomerRoleManagement";
 import CustomerManagement from "./pages/CustomerManagement";
 import UserManagement from "./pages/UserManagement";
-import CustomerDashboard from "./pages/CustomerDashboard";
-import CustomerRequestDetail from "./pages/CustomerRequestDetail";
+import CustomerPortalAccess from "./pages/CustomerPortalAccess";
+import CustomerPortalRequests from "./pages/CustomerPortalRequests";
+import CustomerPortalRequestDetail from "./pages/CustomerPortalRequestDetail";
+import CustomerPortalProfile from "./pages/CustomerPortalProfile";
+import CustomerPortalChangePassword from "./pages/CustomerPortalChangePassword";
+import CustomerPortalForgotPassword from "./pages/CustomerPortalForgotPassword";
+import CustomerPortalTokenPassword from "./pages/CustomerPortalTokenPassword";
+import CustomerPortalAccountSupport from "./pages/CustomerPortalAccountSupport";
 import PublicTracking from "./pages/PublicTracking";
 import ExecutionUnits from "./pages/ExecutionUnits";
 import ProjectTracking from "./pages/ProjectTracking";
@@ -146,6 +152,7 @@ const App = () => (
                   </AdminRoute>
                 } />
                 <Route path="/admin/customers" element={<AdminRoute><PersianOnlyRoute><ErrorBoundary><CustomerRoleManagement /></ErrorBoundary></PersianOnlyRoute></AdminRoute>} />
+                <Route path="/admin/customer-portal-accounts" element={<AdminRoute><PersianOnlyRoute><ErrorBoundary><CustomerPortalAccountSupport /></ErrorBoundary></PersianOnlyRoute></AdminRoute>} />
                 <Route path="/customers" element={<ProtectedRoute><PersianOnlyRoute><ErrorBoundary><CustomerManagement /></ErrorBoundary></PersianOnlyRoute></ProtectedRoute>} />
                 <Route path="/user-management" element={
                   <AdminRoute>
@@ -166,16 +173,16 @@ const App = () => (
                 <Route path="/dashboards/:public_id/edit" element={<ProtectedRoute><DashboardBuilder /></ProtectedRoute>} />
                 <Route path="/operations/intelligence/:id" element={<ProtectedRoute><OperationalRoute><OipSituationDetail /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/projects/:projectId/units" element={<ProtectedRoute><OperationalRoute><ExecutionUnits /></OperationalRoute></ProtectedRoute>} />
-                <Route path="/customer/:customerId" element={
-                  <ErrorBoundary>
-                    <CustomerDashboard />
-                  </ErrorBoundary>
-                } />
-                <Route path="/request/:requestId" element={
-                  <ErrorBoundary>
-                    <CustomerRequestDetail />
-                  </ErrorBoundary>
-                } />
+                <Route path="/customer" element={<ErrorBoundary><CustomerPortalAccess /></ErrorBoundary>} />
+                <Route path="/customer/forgot-password" element={<ErrorBoundary><CustomerPortalForgotPassword /></ErrorBoundary>} />
+                <Route path="/customer/reset-password" element={<ErrorBoundary><CustomerPortalTokenPassword mode="reset" /></ErrorBoundary>} />
+                <Route path="/customer/enroll" element={<ErrorBoundary><CustomerPortalTokenPassword mode="enrollment" /></ErrorBoundary>} />
+                <Route path="/customer/requests" element={<ErrorBoundary><CustomerPortalRequests /></ErrorBoundary>} />
+                <Route path="/customer/requests/:requestId" element={<ErrorBoundary><CustomerPortalRequestDetail /></ErrorBoundary>} />
+                <Route path="/customer/profile" element={<ErrorBoundary><CustomerPortalProfile /></ErrorBoundary>} />
+                <Route path="/customer/change-password" element={<ErrorBoundary><CustomerPortalChangePassword /></ErrorBoundary>} />
+                <Route path="/customer/:customerId" element={<Navigate to="/customer/requests" replace />} />
+                <Route path="/request/:requestId" element={<Navigate to="/customer/requests" replace />} />
                 <Route path="/customer/track/:requestId" element={
                   <ErrorBoundary>
                     <PublicTracking />

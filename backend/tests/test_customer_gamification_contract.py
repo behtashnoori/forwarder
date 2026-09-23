@@ -18,6 +18,15 @@ from backend.models import (
 )
 from backend.routes import customer_gamification as customer_gamification_routes
 from backend.services import customer_gamification_service
+from backend.services.customer_portal_auth import SESSION_CSRF, SESSION_CUSTOMER_ID, SESSION_GENERATION
+
+
+def _customer_session(client, customer_id):
+    with client.session_transaction() as customer_session:
+        customer_session[SESSION_CUSTOMER_ID] = customer_id
+        customer_session[SESSION_GENERATION] = 0
+        customer_session[SESSION_CSRF] = "gamification-contract-csrf"
+    return {"X-CSRF-Token": "gamification-contract-csrf"}
 
 
 @pytest.fixture
@@ -286,12 +295,14 @@ def test_customer_email_verification_and_complete_step_contract(customer_gamific
             points_earned=10,
         ).count() == 1
 
-    missing_complete_fields = client.post("/api/customer/complete-step", json={})
+    csrf_headers = _customer_session(client, customer_gamification_app["customer_id"])
+    missing_complete_fields = client.post("/api/customer/complete-step", headers=csrf_headers, json={})
     assert missing_complete_fields.status_code == 400
     assert missing_complete_fields.get_json() == {"message": "تمام فیلدها الزامی است"}
 
     complete = client.post(
         "/api/customer/complete-step",
+        headers=csrf_headers,
         json={
             "customer_id": customer_gamification_app["customer_id"],
             "request_id": customer_gamification_app["request_id"],
@@ -306,6 +317,7 @@ def test_customer_email_verification_and_complete_step_contract(customer_gamific
 
     duplicate = client.post(
         "/api/customer/complete-step",
+        headers=csrf_headers,
         json={
             "customer_id": customer_gamification_app["customer_id"],
             "request_id": customer_gamification_app["request_id"],
@@ -335,11 +347,13 @@ def test_customer_email_verification_and_complete_step_contract(customer_gamific
 
 
 def test_customer_complete_step_missing_customer_contract(customer_gamification_app):
-    """Complete-step currently creates a step even when the customer lookup misses."""
+    """Complete-step ignores a client-selected customer and uses the session owner."""
     client = customer_gamification_app["app"].test_client()
+    csrf_headers = _customer_session(client, customer_gamification_app["customer_id"])
 
     response = client.post(
         "/api/customer/complete-step",
+        headers=csrf_headers,
         json={
             "customer_id": 999999,
             "request_id": customer_gamification_app["request_id"],
@@ -350,19 +364,23 @@ def test_customer_complete_step_missing_customer_contract(customer_gamification_
     assert response.status_code == 200
     payload = response.get_json()
     assert payload["points_earned"] == 100
-    assert payload["total_points"] == 0
-    assert payload["customer_level"] == "bronze"
+    assert payload["total_points"] == 250
+    assert payload["customer_level"] == "silver"
 
     with customer_gamification_app["app"].app_context():
-        missing_customer_step = CustomerWorkflowStep.query.filter_by(
+        assert CustomerWorkflowStep.query.filter_by(
             customer_id=999999,
             shipment_request_id=customer_gamification_app["request_id"],
             step_name="shipment_delivered",
-        ).first()
-        assert missing_customer_step is not None
-        assert missing_customer_step.step_order == 8
-        assert missing_customer_step.is_completed is True
-        assert missing_customer_step.points_earned == 100
+        ).first() is None
+        server_owned_step = CustomerWorkflowStep.query.filter_by(
+            customer_id=customer_gamification_app["customer_id"],
+            shipment_request_id=customer_gamification_app["request_id"],
+            step_name="shipment_delivered",
+        ).one()
+        assert server_owned_step.step_order == 8
+        assert server_owned_step.is_completed is True
+        assert server_owned_step.points_earned == 100
 
 
 def test_customer_email_verification_rollback_contract(customer_gamification_app, monkeypatch):
@@ -394,6 +412,7 @@ def test_customer_email_verification_rollback_contract(customer_gamification_app
 def test_customer_complete_step_rollback_contract(customer_gamification_app, monkeypatch):
     """Complete-step rolls back created step and point mutation when commit fails."""
     client = customer_gamification_app["app"].test_client()
+    csrf_headers = _customer_session(client, customer_gamification_app["customer_id"])
 
     def fail_commit():
         raise SQLAlchemyError("forced commit failure")
@@ -402,6 +421,7 @@ def test_customer_complete_step_rollback_contract(customer_gamification_app, mon
 
     response = client.post(
         "/api/customer/complete-step",
+        headers=csrf_headers,
         json={
             "customer_id": customer_gamification_app["customer_id"],
             "request_id": customer_gamification_app["request_id"],
@@ -425,6 +445,7 @@ def test_customer_complete_step_rollback_contract(customer_gamification_app, mon
 def test_customer_profile_and_workflow_read_contract(customer_gamification_app):
     """Profile and workflow reads keep public shape, ownership checks, quote shape, and errors."""
     client = customer_gamification_app["app"].test_client()
+    _customer_session(client, customer_gamification_app["customer_id"])
 
     missing_profile = client.get("/api/customer/profile/999999")
     assert missing_profile.status_code == 404

@@ -33,6 +33,7 @@ from backend.services import operational_service
 
 
 HEAD = "20260926_fixed_shipment_responsible_expert"
+REPOSITORY_HEAD = "20260927_customer_portal_account_lifecycle"
 PREVIOUS = "20260925_quote_communication"
 
 
@@ -208,7 +209,7 @@ def test_fixed_owner_migration_reconciles_only_exact_quote_lineage_and_is_revers
     _reset(url, PREVIOUS)
     config = alembic_config(url)
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
+    assert script.get_heads() == [REPOSITORY_HEAD]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
 
     engine = create_engine(url)

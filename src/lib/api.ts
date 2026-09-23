@@ -435,11 +435,26 @@ export function fetchInternationalCityPage(
 
 export function submitShipmentRequest(
   payload: ShipmentRequestPayload,
-): Promise<{ message: string; id: number; tracking_code: string; request_transport_intent: string | null; cargo_items: RequestCargoItem[] }> {
-  return request<{ message: string; id: number; tracking_code: string; request_transport_intent: string | null; cargo_items: RequestCargoItem[] }>(
+  customerSession?: { csrfToken: string },
+): Promise<{
+  message: string;
+  id: number;
+  tracking_code: string;
+  request_transport_intent: string | null;
+  cargo_items: RequestCargoItem[];
+  request_public_id?: string;
+  customer_workspace_path?: string;
+}> {
+  return request(
     "/api/shipment-request",
     {
       method: "POST",
+      // Public intake must not accidentally attach a same-origin Customer
+      // cookie. A verified portal session opts in explicitly and supplies CSRF.
+      credentials: customerSession ? "include" : "omit",
+      headers: customerSession
+        ? { "X-CSRF-Token": customerSession.csrfToken }
+        : undefined,
       body: JSON.stringify(payload),
     },
   );

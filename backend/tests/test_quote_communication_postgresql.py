@@ -30,7 +30,7 @@ from backend.services.quote_service import create_quote_for_request
 
 
 HEAD = "20260925_quote_communication"
-REPOSITORY_HEAD = "20260926_fixed_shipment_responsible_expert"
+REPOSITORY_HEAD = "20260927_customer_portal_account_lifecycle"
 PREVIOUS = "20260924_request_cargo_items"
 
 

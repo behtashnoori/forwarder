@@ -162,6 +162,7 @@ def build_quote_payload(quote: ExpertQuote, include_created_by: bool = False) ->
         "created_at": quote.created_at.isoformat(),
         "customer_response": quote.customer_response,
         "customer_response_message": quote.customer_response_message,
+        "response_version": int(quote.response_version or 0),
         "responded_at": quote.responded_at.isoformat() if quote.responded_at else None,
     }
     if include_created_by:

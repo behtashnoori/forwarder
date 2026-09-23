@@ -30,9 +30,9 @@ import {
   fetchCountries,
   fetchTransportMethodOptions,
   fetchRequestCargoOptions,
-  submitShipmentRequest,
   isInternationalRouteComplete,
 } from "@/lib/api";
+import { submitShipmentRequestForCurrentCustomer } from "@/lib/customerPortalApi";
 import { useI18n } from "@/i18n";
 
 interface LocationFormData {
@@ -441,6 +441,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [showOriginLocationDetails, setShowOriginLocationDetails] = useState(false);
   const [showDestinationLocationDetails, setShowDestinationLocationDetails] = useState(false);
   const [submittedTrackingCode, setSubmittedTrackingCode] = useState<string | null>(null);
+  const [submittedCustomerWorkspacePath, setSubmittedCustomerWorkspacePath] = useState<string | null>(null);
 
   // Fetch transport method options on component mount
   useEffect(() => {
@@ -935,9 +936,18 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         payload.delivery_date = formData.deliveryDate;
       }
 
-      const response = await submitShipmentRequest(payload);
+      const { response, customerAuthenticated } =
+        await submitShipmentRequestForCurrentCustomer(payload);
       const trackingCode = response.tracking_code;
       setSubmittedTrackingCode(trackingCode);
+      setSubmittedCustomerWorkspacePath(
+        customerAuthenticated
+          ? response.customer_workspace_path ??
+              (response.request_public_id
+                ? `/customer/requests/${response.request_public_id}`
+                : null)
+          : null,
+      );
       setSubmittedCargoItems(response.cargo_items || []);
       setIsSubmitted(true);
       setShowConfirmation(false);
@@ -1004,6 +1014,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     setShowOriginLocationDetails(false);
     setShowDestinationLocationDetails(false);
     setSubmittedTrackingCode(null);
+    setSubmittedCustomerWorkspacePath(null);
     // Reset international cities arrays
     setOriginInternationalCities([]);
     setDestinationInternationalCities([]);
@@ -1012,6 +1023,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const returnToLanding = () => {
     setIsSubmitted(false);
     setSubmittedTrackingCode(null);
+    setSubmittedCustomerWorkspacePath(null);
     onBack();
   };
 
@@ -1074,11 +1086,17 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           <p className="text-muted-foreground mb-6 leading-7">{t("requestForm.successHelp")}</p>
           <div className="space-y-2">
             <Button
-              onClick={() => submittedTrackingCode && navigate(`/customer/track/${submittedTrackingCode}`)}
+              onClick={() => {
+                if (submittedCustomerWorkspacePath) {
+                  navigate(submittedCustomerWorkspacePath);
+                } else if (submittedTrackingCode) {
+                  navigate(`/customer/track/${submittedTrackingCode}`);
+                }
+              }}
               className="w-full bg-gradient-primary hover:shadow-primary"
-              disabled={!submittedTrackingCode}
+              disabled={!submittedCustomerWorkspacePath && !submittedTrackingCode}
             >
-              {t("tracking.title")}
+              {submittedCustomerWorkspacePath ? t("customer.viewDetails") : t("tracking.title")}
             </Button>
             <Button onClick={resetForm} variant="outline" className="w-full">
               {t("common.createNewRequest")}

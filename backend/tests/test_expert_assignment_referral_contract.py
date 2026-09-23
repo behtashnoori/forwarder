@@ -866,6 +866,7 @@ def test_expert_assignment_status_quote_message_notification_contracts(
         "created_at",
         "customer_response",
         "customer_response_message",
+            "response_version",
         "responded_at",
         "created_by",
     }

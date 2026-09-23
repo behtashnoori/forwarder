@@ -13,6 +13,7 @@ from backend.models import (
     RequestCargoItem,
     ShipmentRequest,
 )
+from backend.services.customer_portal_auth import SESSION_CSRF, SESSION_CUSTOMER_ID, SESSION_GENERATION
 
 
 @pytest.fixture()
@@ -53,11 +54,42 @@ def _seed(valid_until=None):
     return customer.id, req.id, quote.id, req.tracking_code
 
 
+def _private_response(
+    client, *, customer_id, tracking_code, response, quote_public_id=None,
+    message=None, remote_addr=None,
+):
+    with client.application.app_context():
+        request_row = ShipmentRequest.query.filter_by(tracking_code=tracking_code).one_or_none()
+        if request_row is None:
+            request_public_id = "11111111-1111-4111-8111-111111111111"
+        else:
+            request_public_id = request_row.public_id
+        if quote_public_id is None and request_row is not None:
+            quote = ExpertQuote.query.filter_by(shipment_request_id=request_row.id).order_by(
+                ExpertQuote.created_at.desc(), ExpertQuote.id.desc()
+            ).first()
+            quote_public_id = quote.public_id if quote else "22222222-2222-4222-8222-222222222222"
+        quote = ExpertQuote.query.filter_by(public_id=quote_public_id).one_or_none()
+        expected_version = int(quote.response_version or 0) if quote else 0
+    with client.session_transaction() as customer_session:
+        customer_session[SESSION_CUSTOMER_ID] = customer_id
+        customer_session[SESSION_GENERATION] = 0
+        customer_session[SESSION_CSRF] = "quote-test-csrf"
+    payload = {"response": response, "expected_response_version": expected_version}
+    if message is not None:
+        payload["message"] = message
+    return client.post(
+        f"/api/customer/requests/{request_public_id}/quotes/{quote_public_id}/response",
+        headers={"X-CSRF-Token": "quote-test-csrf"}, json=payload,
+        environ_base={"REMOTE_ADDR": remote_addr} if remote_addr else {},
+    )
+
+
 def test_customer_can_accept_quote(app, client):
     with app.app_context():
-        _customer_id, request_id, quote_id, tracking_code = _seed(valid_until=date.today() + timedelta(days=3))
+        customer_id, request_id, quote_id, tracking_code = _seed(valid_until=date.today() + timedelta(days=3))
 
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
+    resp = _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="accepted")
     assert resp.status_code == 200
     assert resp.get_json()["latest_quote"]["customer_response"] == "accepted"
 
@@ -72,8 +104,8 @@ def test_customer_can_accept_quote(app, client):
 
 def test_customer_can_decline_quote(app, client):
     with app.app_context():
-        _customer_id, request_id, _, tracking_code = _seed()
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "declined"})
+        customer_id, request_id, _, tracking_code = _seed()
+    resp = _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="declined")
     assert resp.status_code == 200
     assert resp.get_json()["latest_quote"]["customer_response"] == "declined"
     with app.app_context():
@@ -82,26 +114,26 @@ def test_customer_can_decline_quote(app, client):
 
 def test_invalid_response_is_rejected(app, client):
     with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed()
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "maybe"})
+        customer_id, _request_id, _, tracking_code = _seed()
+    resp = _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="maybe")
     assert resp.status_code == 400
 
 
 def test_double_response_is_conflict(app, client):
     with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed()
-    first = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
+        customer_id, _request_id, _, tracking_code = _seed()
+    first = _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="accepted")
     assert first.status_code == 200
-    replay = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
+    replay = _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="accepted")
     assert replay.status_code == 200
-    second = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "declined"})
+    second = _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="declined")
     assert second.status_code == 409
 
 
 def test_expired_quote_cannot_be_answered(app, client):
     with app.app_context():
-        _customer_id, _request_id, _, tracking_code = _seed(valid_until=date.today() - timedelta(days=1))
-    resp = client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
+        customer_id, _request_id, _, tracking_code = _seed(valid_until=date.today() - timedelta(days=1))
+    resp = _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="accepted")
     assert resp.status_code == 400
 
 
@@ -119,7 +151,7 @@ def test_foreign_customer_cannot_answer(app, client):
 def test_workflow_payload_exposes_quote_response(app, client):
     with app.app_context():
         customer_id, request_id, _, tracking_code = _seed()
-        client.post(f"/api/customer/quote-response/{tracking_code}", json={"response": "accepted"})
+        _private_response(client, customer_id=customer_id, tracking_code=tracking_code, response="accepted")
 
     resp = client.get(f"/api/customer/workflow/{customer_id}?request_id={request_id}")
     assert resp.status_code == 200
@@ -138,13 +170,36 @@ def test_numeric_and_invalid_capabilities_have_same_not_found_behavior(app, clie
     assert numeric.get_json() == invalid.get_json()
 
 
+def test_both_legacy_public_quote_writers_are_removed(app, client):
+    tracking_writer = client.post(
+        "/api/customer/quote-response/SR2-REMOVED", json={"response": "accepted"}
+    )
+    quote_writer = client.post(
+        "/api/customer/quotes/11111111-1111-4111-8111-111111111111/response",
+        json={"response": "accepted"},
+    )
+    assert tracking_writer.status_code == quote_writer.status_code == 404
+    assert tracking_writer.get_json() == quote_writer.get_json() == {
+        "code": "QUOTE_NOT_FOUND", "message": "Not found"
+    }
+
+
+def test_private_quote_writer_requires_customer_authentication(app, client):
+    response = client.post(
+        "/api/customer/requests/11111111-1111-4111-8111-111111111111/quotes/"
+        "22222222-2222-4222-8222-222222222222/response",
+        json={"response": "accepted", "expected_response_version": 0},
+    )
+    assert response.status_code == 401
+    assert response.get_json()["code"] == "AUTHENTICATION_REQUIRED"
+
+
 def test_response_is_audited(app, client):
     with app.app_context():
-        _customer_id, request_id, _, tracking_code = _seed()
-    response = client.post(
-        f"/api/customer/quote-response/{tracking_code}",
-        json={"response": "accepted"},
-        environ_base={"REMOTE_ADDR": "203.0.113.9"},
+        customer_id, request_id, _, tracking_code = _seed()
+    response = _private_response(
+        client, customer_id=customer_id, tracking_code=tracking_code,
+        response="accepted", remote_addr="203.0.113.9",
     )
     assert response.status_code == 200
     with app.app_context():
@@ -164,15 +219,9 @@ def _canonical_response(
     response,
     message=None,
 ):
-    payload = {
-        "tracking_code": tracking_code,
-        "customer_id": customer_id,
-        "response": response,
-    }
-    if message is not None:
-        payload["message"] = message
-    return client.post(
-        f"/api/customer/quotes/{quote_public_id}/response", json=payload
+    return _private_response(
+        client, quote_public_id=quote_public_id, tracking_code=tracking_code,
+        customer_id=customer_id, response=response, message=message,
     )
 
 

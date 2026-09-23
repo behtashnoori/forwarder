@@ -201,15 +201,10 @@ def test_customer_parent_ownership_fences_cargo_read(cargo_app):
         cargo_items=[{"description": "Owned cargo"}],
     ))
     request_id = created.get_json()["id"]
-    owner_read = cargo_app.test_client().get(
-        f"/api/customer/workflow/{owner_id}?request_id={request_id}"
-    )
-    other_read = cargo_app.test_client().get(
-        f"/api/customer/workflow/{other_id}?request_id={request_id}"
-    )
-    assert owner_read.status_code == 200
-    assert owner_read.get_json()["cargo_items"][0]["description"] == "Owned cargo"
-    assert other_read.status_code == 404
+    with cargo_app.app_context():
+        assert db.session.get(ShipmentRequest, request_id).gamification_customer_id is None
+    assert cargo_app.test_client().get(f"/api/customer/workflow/{owner_id}?request_id={request_id}").status_code == 401
+    assert cargo_app.test_client().get(f"/api/customer/workflow/{other_id}?request_id={request_id}").status_code == 401
     assert cargo_app.test_client().get(
         f"/api/request-cargo-item/{created.get_json()['cargo_items'][0]['public_id']}"
     ).status_code == 404

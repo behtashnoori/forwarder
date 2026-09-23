@@ -464,7 +464,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-            "20260926_fixed_shipment_responsible_expert"
+            "20260927_customer_portal_account_lifecycle"
     ]
 
 

@@ -214,7 +214,7 @@ def test_existing_quote_response_and_execution_event_do_not_activate_foundation(
             f"/api/customer/quote-response/{request_tracking_code}",
             json={"response": "accepted"},
         )
-        assert response.status_code == 200
+        assert response.status_code == 404
 
         unit = client.post(
             f"/api/v2/projects/{project_public_id}/execution-units",

@@ -78,7 +78,7 @@ def test_repository_has_one_expected_alembic_head():
     script = ScriptDirectory.from_config(
         Config(str(ROOT / "backend/migrations/alembic.ini"))
     )
-    assert script.get_heads() == ["20260926_fixed_shipment_responsible_expert"]
+    assert script.get_heads() == ["20260927_customer_portal_account_lifecycle"]
 
 
 def test_packaged_frontend_is_pinned_to_same_origin():

@@ -6,6 +6,10 @@ from flask import Blueprint, jsonify, request, current_app
 
 from backend.extensions import db
 from backend.services import shipment_service
+from backend.services.customer_portal_auth import current_customer
+from backend.services.customer_portal_auth import SESSION_CSRF
+from backend.security import security
+from flask import session
 
 shipment_request_bp = Blueprint("shipment_request", __name__, url_prefix="/api")
 
@@ -45,10 +49,17 @@ def create_shipment_request():
         data.get(key) not in (None, "")
         for key in ("origin_country_id", "origin_international_city_id", "dest_country_id", "dest_international_city_id")
     )
+    customer = current_customer()
+    if customer is not None:
+        supplied = request.headers.get("X-CSRF-Token", "")
+        expected = session.get(SESSION_CSRF, "")
+        if not supplied or not expected or not security.verify_csrf_token(supplied, expected):
+            return jsonify({"code": "CSRF_FAILED", "message": "CSRF validation failed."}), 403
 
     try:
         shipment_request = shipment_service.create_shipment_request(
-            data, request.remote_addr, request.host
+            data, request.remote_addr, request.host,
+            gamification_customer_id=customer.id if customer is not None else None,
         )
     except shipment_service.ShipmentValidationError as e:
         body = {"message": e.message}
@@ -66,7 +77,13 @@ def create_shipment_request():
             500,
         )
 
-    return jsonify(shipment_service.build_shipment_request_payload(shipment_request)), 201
+    payload = shipment_service.build_shipment_request_payload(shipment_request)
+    if customer is not None:
+        payload.update({
+            "request_public_id": shipment_request.public_id,
+            "customer_workspace_path": f"/customer/requests/{shipment_request.public_id}",
+        })
+    return jsonify(payload), 201
 
 
 @shipment_request_bp.get("/shipment-request/ping")

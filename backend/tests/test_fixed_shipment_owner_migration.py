@@ -8,7 +8,8 @@ from alembic.script import ScriptDirectory
 from backend.operational_models import OperationalShipment
 
 
-HEAD = "20260926_fixed_shipment_responsible_expert"
+MIGRATION_REVISION = "20260926_fixed_shipment_responsible_expert"
+REPOSITORY_HEAD = "20260927_customer_portal_account_lifecycle"
 PREVIOUS = "20260925_quote_communication"
 MIGRATION = (
     Path(__file__).parents[1]
@@ -20,7 +21,7 @@ MIGRATION = (
 
 def test_fixed_owner_migration_is_linear_fail_closed_and_never_uses_request_assignee():
     source = MIGRATION.read_text(encoding="utf-8")
-    assert f'revision = "{HEAD}"' in source
+    assert f'revision = "{MIGRATION_REVISION}"' in source
     assert f'down_revision = "{PREVIOUS}"' in source
     assert "primary_responsible_expert_id" in source
     assert "nullable=False" in source
@@ -37,8 +38,8 @@ def test_fixed_owner_migration_is_linear_fail_closed_and_never_uses_request_assi
         "script_location", str(Path(__file__).parents[1] / "migrations")
     )
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
-    assert script.get_revision(HEAD).down_revision == PREVIOUS
+    assert script.get_heads() == [REPOSITORY_HEAD]
+    assert script.get_revision(MIGRATION_REVISION).down_revision == PREVIOUS
     assert script.get_bases() == ["20240917_initial_schema"]
 
 

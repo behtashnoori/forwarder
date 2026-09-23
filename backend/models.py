@@ -284,7 +284,28 @@ class CustomerGamification(db.Model):
     __tablename__ = "customer_gamification"
     
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid4())
+    )
     email = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=True)
+    account_status = db.Column(db.String(16), nullable=False, default="ACTIVE")
+    session_generation = db.Column(db.Integer, nullable=False, default=0)
+    password_changed_at = db.Column(db.DateTime, nullable=True)
+    disabled_at = db.Column(db.DateTime, nullable=True)
+    disabled_by_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("expert_user.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    # Portal-account tenancy is server-owned and intentionally distinct from
+    # the CRM Customer relationship on ShipmentRequest.customer_id.
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=True,
+        index=True,
+    )
     phone = db.Column(db.String(20), nullable=False)
     first_name = db.Column(db.String(100), nullable=True)
     last_name = db.Column(db.String(100), nullable=True)
@@ -302,6 +323,17 @@ class CustomerGamification(db.Model):
     
     # Relationships
     requests = db.relationship("ShipmentRequest", back_populates="gamification_customer", lazy=True)
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "account_status IN ('ACTIVE', 'DISABLED')",
+            name="ck_customer_portal_account_status",
+        ),
+        db.CheckConstraint(
+            "session_generation >= 0",
+            name="ck_customer_portal_session_generation_nonnegative",
+        ),
+    )
     
     def __repr__(self) -> str:
         return f"<CustomerGamification id={self.id} email={self.email}>"
@@ -319,6 +351,96 @@ class CustomerGamification(db.Model):
             self.customer_level = "silver"
         else:
             self.customer_level = "bronze"
+
+
+class CustomerPortalRecoveryRequest(db.Model):
+    """Enumeration-safe request for governed password-recovery assistance."""
+
+    __tablename__ = "customer_portal_recovery_request"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid4())
+    )
+    customer_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("customer_gamification.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    requested_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    handled_at = db.Column(db.DateTime, nullable=True)
+
+    customer = db.relationship("CustomerGamification")
+
+
+class CustomerPortalRecoveryToken(db.Model):
+    """Digest-only, expiring, single-use reset or enrollment capability."""
+
+    __tablename__ = "customer_portal_recovery_token"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    token_digest = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    customer_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("customer_gamification.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    purpose = db.Column(db.String(16), nullable=False)
+    recovery_request_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("customer_portal_recovery_request.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_by_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("expert_user.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
+    used_at = db.Column(db.DateTime, nullable=True)
+    revoked_at = db.Column(db.DateTime, nullable=True)
+
+    customer = db.relationship("CustomerGamification")
+    recovery_request = db.relationship("CustomerPortalRecoveryRequest")
+
+    __table_args__ = (
+        db.CheckConstraint(
+            "purpose IN ('RESET', 'ENROLLMENT')",
+            name="ck_customer_portal_recovery_token_purpose",
+        ),
+    )
+
+
+class CustomerPortalAccountAudit(db.Model):
+    """Secret-free audit evidence for portal-account lifecycle actions."""
+
+    __tablename__ = "customer_portal_account_audit"
+
+    id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
+    customer_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("customer_gamification.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    operational_organization_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    actor_user_id = db.Column(
+        SQLITE_COMPAT_BIGINT,
+        db.ForeignKey("expert_user.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    action = db.Column(db.String(48), nullable=False)
+    source = db.Column(db.String(32), nullable=False)
+    detail = db.Column(db.String(200), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
 
 class CustomerWorkflowStep(db.Model):
@@ -999,6 +1121,7 @@ class ExpertQuote(db.Model):
     # One immutable Customer response belongs to this specific official Quote.
     customer_response = db.Column(db.String(10), nullable=True)
     customer_response_message = db.Column(db.String(500), nullable=True)
+    response_version = db.Column(db.Integer, nullable=False, default=0)
     responded_by_customer_id = db.Column(
         SQLITE_COMPAT_BIGINT,
         db.ForeignKey("customer_gamification.id", ondelete="SET NULL"),
@@ -1024,6 +1147,10 @@ class ExpertQuote(db.Model):
             "(customer_response = 'discussion' AND customer_response_message IS NOT NULL "
             "AND length(trim(customer_response_message)) BETWEEN 1 AND 500)",
             name="ck_expert_quote_response_message",
+        ),
+        db.CheckConstraint(
+            "response_version >= 0",
+            name="ck_expert_quote_response_version_nonnegative",
         ),
     )
 

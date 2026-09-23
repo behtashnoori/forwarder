@@ -170,6 +170,8 @@ def create_shipment_request(
     payload: dict[str, Any],
     remote_addr: str | None = None,
     request_host: str | None = None,
+    *,
+    gamification_customer_id: int | None = None,
 ) -> ShipmentRequest:
     """Create and optionally auto-assign one request in one census-bound UoW."""
     from backend.census_context import census_unit_of_work
@@ -179,7 +181,11 @@ def create_shipment_request(
             from backend.services.organization_hostname_service import resolve_organization_for_host
 
             organization = resolve_organization_for_host(request_host)
-            shipment_request = _stage_shipment_request(payload, remote_addr, organization)
+            validate_portal_organization_binding(gamification_customer_id, organization)
+            shipment_request = _stage_shipment_request(
+                payload, remote_addr, organization,
+                gamification_customer_id=gamification_customer_id,
+            )
             assign_request_with_referral(shipment_request)
             db.session.commit()
             return shipment_request
@@ -188,8 +194,29 @@ def create_shipment_request(
         raise
 
 
+def validate_portal_organization_binding(
+    gamification_customer_id: int | None, organization
+) -> None:
+    """Fail closed when an authenticated portal identity crosses host tenancy."""
+    if gamification_customer_id is None:
+        return
+    portal_customer = db.session.get(CustomerGamification, gamification_customer_id)
+    resolved_organization_id = organization.id if organization is not None else None
+    if (
+        portal_customer is None
+        or portal_customer.account_status != "ACTIVE"
+        or portal_customer.operational_organization_id != resolved_organization_id
+    ):
+        raise ShipmentValidationError(
+            "Customer account does not belong to this organization.",
+            status_code=403,
+            code="PORTAL_ORGANIZATION_MISMATCH",
+        )
+
+
 def _stage_shipment_request(
-    payload: dict[str, Any], remote_addr: str | None = None, organization=None
+    payload: dict[str, Any], remote_addr: str | None = None, organization=None,
+    *, gamification_customer_id: int | None = None,
 ) -> ShipmentRequest:
     """Stage request creation without finalizing the caller's transaction."""
     normalized = normalize_shipment_payload(payload)
@@ -199,7 +226,9 @@ def _stage_shipment_request(
     shipment_request = ShipmentRequest(
         ownership_scope="TENANT" if organization_id is not None else "INTAKE",
         operational_organization_id=organization_id,
-        **build_shipment_request_data(normalized, timestamp),
+        **build_shipment_request_data(
+            normalized, timestamp, gamification_customer_id=gamification_customer_id
+        ),
     )
     db.session.add(shipment_request)
     db.session.flush()
@@ -229,7 +258,7 @@ def _stage_shipment_request(
     )
     db.session.add(log_entry)
 
-    handle_gamification(shipment_request, normalized.get("gamification_customer_id"), timestamp)
+    handle_gamification(shipment_request, gamification_customer_id, timestamp)
 
     # New canonical cases receive the currently applicable document policies in
     # the same transaction. Legacy cases use the idempotent documents endpoint.
@@ -296,7 +325,6 @@ def normalize_shipment_payload(payload: dict[str, Any]) -> dict[str, Any]:
         "contact_phone": contact_phone,
         "customer_first_name": payload.get("customer_first_name", "").strip() or None,
         "customer_last_name": payload.get("customer_last_name", "").strip() or None,
-        "gamification_customer_id": payload.get("gamification_customer_id"),
         "transport_method": transport_method,
         "international_transport_method": international_transport_method,
         "domestic_transport_method": domestic_transport_method,
@@ -707,7 +735,9 @@ def _parse_ref_id(value):
         raise ShipmentValidationError("شناسه مرجع مقصد در ایران نامعتبر است.") from None
 
 
-def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime) -> dict[str, Any]:
+def build_shipment_request_data(
+    normalized: dict[str, Any], timestamp: datetime, *, gamification_customer_id: int | None = None
+) -> dict[str, Any]:
     """Build ShipmentRequest constructor data from a normalized payload."""
     shipment_request_data = {
         "shipping_type": normalized["shipping_type"],
@@ -736,7 +766,7 @@ def build_shipment_request_data(normalized: dict[str, Any], timestamp: datetime)
         "priority": "normal",
         "estimated_value": None,
         "customer_id": None,
-        "gamification_customer_id": normalized["gamification_customer_id"],
+        "gamification_customer_id": gamification_customer_id,
     }
 
     if normalized["shipping_type"] == "domestic":

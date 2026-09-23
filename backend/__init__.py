@@ -67,6 +67,17 @@ def create_app(config: Mapping[str, Any] | None = None, *, skip_startup: bool = 
         "SESSION_ABSOLUTE_LIFETIME": timedelta(
             seconds=int(os.getenv("SESSION_ABSOLUTE_LIFETIME_SECONDS", "7776000"))
         ),
+        "PERMANENT_SESSION_LIFETIME": timedelta(
+            seconds=int(os.getenv("CUSTOMER_SESSION_LIFETIME_SECONDS", "2592000"))
+        ),
+        "SESSION_COOKIE_HTTPONLY": True,
+        "SESSION_COOKIE_SAMESITE": "Lax",
+        "SESSION_COOKIE_SECURE": str(
+            _cfg.get_runtime_environment(testing=is_testing_config)
+        ).lower() in {"production", "prod"},
+        "CUSTOMER_RECOVERY_TOKEN_LIFETIME_SECONDS": int(
+            os.getenv("CUSTOMER_RECOVERY_TOKEN_LIFETIME_SECONDS", "1800")
+        ),
         "JWT_CLOCK_SKEW_SECONDS": int(os.getenv("CLOCK_SKEW_SECONDS", "60")),
         "DOCUMENT_STORAGE_ROOT": os.getenv("DOCUMENT_STORAGE_ROOT"),
     }

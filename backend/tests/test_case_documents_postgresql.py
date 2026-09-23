@@ -52,7 +52,7 @@ def postgres_app():
         revision = db.session.execute(text("select version_num from alembic_version")).scalar_one()
         assert version.startswith("18.")
         assert database.startswith("dms1a_")
-        assert revision == "20260926_fixed_shipment_responsible_expert"
+        assert revision == "20260927_customer_portal_account_lifecycle"
         db.session.rollback()
     yield app, root
     with app.app_context():
