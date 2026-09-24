@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="light" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'" />
     <title>Forwarder — نمونه تعاملی تجربه پرونده حمل فاز ۳</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f6b57'/%3E%3Cpath d='M9 8h15v4H14v4h8v4h-8v7H9z' fill='white'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./styles.css" />
@@ -11,8 +12,8 @@
   <body>
     <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
     <div class="prototype-ribbon" role="note">
-      <strong>نمونه تعاملی هدف فاز ۳</strong>
-      <span>داده‌ها کاملاً ساختگی‌اند · بدون اتصال به API یا پایگاه داده</span>
+      <strong>نمونه تعاملی فاز ۳ — بازبینی دوم</strong>
+      <span>داده‌های ساختگی · فقط برای مرور طراحی · تأیید انسانی نسخه دوم انجام نشده</span>
     </div>
 
     <header class="app-header">
@@ -22,11 +23,11 @@
       </div>
       <nav class="role-switcher" aria-label="انتخاب تجربه نمونه">
         <button type="button" class="role-button is-active" data-role="expert" aria-pressed="true">کارشناس حمل</button>
-        <button type="button" class="role-button" data-role="customer" aria-pressed="false">مشتری A</button>
+        <button type="button" class="role-button" data-role="customer" aria-pressed="false">مشتری</button>
         <button type="button" class="role-button" data-role="admin" aria-pressed="false">مدیر سازمان</button>
       </nav>
-      <button type="button" class="icon-button scenario-button" aria-haspopup="dialog" data-action="open-scenarios">
-        <span aria-hidden="true">◫</span><span>حالت‌های رابط</span>
+      <button type="button" class="icon-button scenario-button" aria-haspopup="dialog" aria-label="بررسی حالت‌های صفحه" data-action="open-scenarios">
+        <span aria-hidden="true">◫</span><span>بررسی حالت‌های صفحه</span>
       </button>
     </header>
 

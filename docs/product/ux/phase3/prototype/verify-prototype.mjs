@@ -1,147 +1,59 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import {mkdir,writeFile,readFile} from "node:fs/promises";
 import path from "node:path";
-import process from "node:process";
-
-const playwrightModule = process.env.PHASE3_PLAYWRIGHT_MODULE || "@playwright/test";
-const { chromium } = await import(playwrightModule);
-
-const baseUrl = process.env.PHASE3_PROTOTYPE_URL || "http://127.0.0.1:4179/";
-const evidenceDir = path.resolve("docs/product/ux/phase3/evidence/browser");
-await mkdir(evidenceDir, { recursive: true });
-
-const browser = await chromium.launch({
-  headless: true,
-  ...(process.env.PHASE3_BROWSER_EXECUTABLE
-    ? { executablePath: process.env.PHASE3_BROWSER_EXECUTABLE }
-    : {}),
-});
-const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-const consoleErrors = [];
-const pageErrors = [];
-const networkViolations = [];
-const checks = [];
-
-page.on("console", (message) => {
-  if (message.type() === "error") consoleErrors.push(message.text());
-});
-page.on("pageerror", (error) => pageErrors.push(error.message));
-page.on("request", (request) => {
-  const url = new URL(request.url());
-  if (url.hostname !== "127.0.0.1") networkViolations.push(request.url());
-});
-
-const check = async (name, action) => {
-  try {
-    await action();
-    checks.push({ name, result: "PASS" });
-  } catch (error) {
-    checks.push({ name, result: "FAIL", error: error instanceof Error ? error.message : String(error) });
-    throw error;
-  }
-};
-
-const shot = async (name) => {
-  await page.screenshot({ path: path.join(evidenceDir, name), fullPage: true });
-};
-
+import {createHash} from "node:crypto";
+const {chromium}=await import(process.env.PHASE3_PLAYWRIGHT_MODULE||"@playwright/test");
+const base=process.env.PHASE3_PROTOTYPE_URL||"http://127.0.0.1:4182/";
+const evidence=path.resolve("docs/product/ux/phase3/evidence/browser-v2");
+await mkdir(evidence,{recursive:true});
+const browser=await chromium.launch({headless:true,channel:"chrome"});
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+const checks=[],errors=[],requests=[],audits=[];
+let completed=false;
+page.on("pageerror",e=>errors.push(e.message));
+page.on("console",e=>{if(e.type()==="error")errors.push(e.text());});
+page.on("request",r=>{if(new URL(r.url()).origin!==new URL(base).origin)requests.push(r.url());});
+const assert=(value,message)=>{if(!value)throw new Error(message);};
+async function check(name,fn){try{await fn();checks.push({name,result:"PASS"});}catch(e){checks.push({name,result:"FAIL",error:e.message});throw e;}}
+async function shot(name){await page.screenshot({path:path.join(evidence,name+".png"),fullPage:true});}
+async function section(role,key){await page.locator(`.role-button[data-role="${role}"]`).click();await page.locator(`[data-${role}-section="${key}"]`).first().click();}
+async function audit(name){const body=await page.locator('body').innerText();const terms=body.match(/\b(?:Shipment|Cargo|Carrier|DEFINE|ASSIGN|CHANGE|CONTROL|CONTEXT|visibility|projection|scope|Mode|Requirement|bypass|mandatory|degraded|customer-scoped|deterministic|Action|Attention|ETA|Timeline|BLOCKED|Evidence|Customer|Expert|history|EXCEPTION)\b/gi)||[];audits.push({page:name,forbidden:terms,industry:[...new Set(body.match(/\b(?:HS|CMR|GPS|SLA)\b/g)||[])]});assert(!terms.length,`${name}: unexplained technical copy ${terms}`);assert(await page.locator('html').getAttribute('dir')==='rtl','RTL missing');}
+async function submit(){await page.locator('.dialog-layer button[type="submit"]').click();}
+async function close(){await page.locator('.dialog-layer [aria-label="بستن"]').click();}
 try {
-  await check("local prototype loads", async () => {
-    await page.goto(baseUrl, { waitUntil: "networkidle" });
-    await page.getByRole("heading", { name: "پرونده حمل S-100" }).waitFor();
-  });
-  await shot("A-expert-shipment-overview-desktop.png");
-
-  await check("all expert sections are reachable", async () => {
-    const sections = ["مشتری‌ها و درخواست‌ها", "کالاها", "مسیر", "اجرای حمل", "تخصیص کالا", "اسناد", "اجرا و Timeline", "مشکلات و پیگیری‌ها", "تحویل‌ها", "تکمیل و بستن", "نمای کلی"];
-    for (const label of sections) {
-      await page.getByRole("button", { name: new RegExp(label) }).first().click();
-    }
-  });
-
-  await page.getByRole("button", { name: /تخصیص کالا/ }).first().click();
-  await shot("B-cargo-allocation-multi-customer.png");
-  await check("over-allocation blocks while valid allocation succeeds", async () => {
-    await page.getByRole("button", { name: "ثبت تخصیص" }).first().click();
-    const quantity = page.getByLabel("مقدار (کارتن)");
-    await quantity.fill("11");
-    await quantity.press("Enter");
-    await page.getByText(/over-allocation مسدود است/).waitFor();
-    await quantity.fill("10");
-    await quantity.press("Enter");
-    await page.getByText(/10 کارتن تخصیص یافت/).waitFor();
-    await page.waitForTimeout(3300);
-  });
-
-  await page.getByRole("button", { name: /^مسیر/ }).click();
-  await shot("C1-planned-and-branched-route.png");
-  await page.getByRole("button", { name: /اجرای حمل/ }).first().click();
-  await shot("C2-route-stage-transport-execution.png");
-
-  await page.getByRole("button", { name: /اجرا و Timeline/ }).click();
-  await shot("D-timeline-reported-location-correction.png");
-  await page.getByRole("button", { name: /مشکلات و پیگیری‌ها/ }).click();
-  await shot("E-exception-customer-safe-explanation.png");
-  await page.getByRole("button", { name: /تحویل‌ها/ }).click();
-  await shot("F-partial-delivery.png");
-  await page.getByRole("button", { name: /تکمیل و بستن/ }).click();
-  await shot("G-closure-blocker.png");
-
-  await page.locator('[data-role="customer"]').click();
-  await check("customer projection excludes other customer identities", async () => {
-    const visibleText = await page.locator("body").innerText();
-    if (visibleText.includes("آرمان تجهیز شرق") || visibleText.includes("راهکار پلیمر سپهر")) {
-      throw new Error("Another customer identity is visible in Customer A projection");
-    }
-  });
-  await shot("H1-customer-shared-shipment-desktop.png");
-
-  await page.setViewportSize({ width: 390, height: 844 });
-  await check("customer 390px layout has no horizontal page overflow", async () => {
-    const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scrollWidth: document.documentElement.scrollWidth }));
-    if (dimensions.scrollWidth > dimensions.width) throw new Error(`horizontal overflow ${dimensions.scrollWidth} > ${dimensions.width}`);
-  });
-  await shot("H2-customer-shared-shipment-mobile-390.png");
-
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.locator('[data-role="admin"]').click();
-  await shot("I-admin-reference-configuration.png");
-  await check("admin can activate an organization definition concept", async () => {
-    await page.locator('[data-toggle-catalog="reeferWagon"]').last().click();
-    await page.getByText(/تعریف برای سازمان فعال شد/).waitFor();
-    await page.waitForTimeout(3300);
-  });
-
-  await check("stale scenario is explicit and not falsely healthy", async () => {
-    await page.getByText("حالت‌های رابط", { exact: true }).click();
-    await page.getByRole("button", { name: /قدیمی \/ degraded/ }).click();
-    await page.getByText("اطلاعات پایش به‌روز نیست").waitFor();
-    await page.getByText(/نبود هشدار در این وضعیت به معنی سلامت عملیات نیست/).waitFor();
-  });
-  await shot("J-stale-degraded-state.png");
-
-  await check("no production or external network dependency", async () => {
-    if (networkViolations.length) throw new Error(networkViolations.join(", "));
-  });
-  await check("no browser console or page errors", async () => {
-    if (consoleErrors.length || pageErrors.length) throw new Error([...consoleErrors, ...pageErrors].join(" | "));
-  });
+ await page.goto(base);
+ await check('V2 identity and isolation policy',async()=>{assert((await page.locator('.prototype-ribbon').innerText()).includes('بازبینی دوم'),'V2 identity');assert((await page.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')).includes("connect-src 'none'"),'No network barrier');});
+ const heroHeight=await page.locator('.shipment-hero').evaluate(x=>x.getBoundingClientRect().height);
+ let baselineHeight=null;
+ if(process.env.PHASE3_V1_PROTOTYPE){const oldPage=await browser.newPage({viewport:{width:1440,height:1000}});await oldPage.goto(process.env.PHASE3_V1_PROTOTYPE);baselineHeight=await oldPage.locator('.shipment-hero').evaluate(x=>x.getBoundingClientRect().height);await oldPage.close();}
+ checks.push({name:'compact header measured',result:'PASS',height:heroHeight,baselineHeight,reductionPercent:baselineHeight?Math.round((1-heroHeight/baselineHeight)*1000)/10:null});
+ const experts=['overview','relations','cargo','route','transport','allocation','documents','timeline','issues','deliveries','closure'];
+ for(const s of experts)await check(`expert/${s}`,async()=>{await section('expert',s);await page.locator('main h1').first().waitFor();await audit('expert/'+s);await shot('expert-'+s);});
+ await check('closure remaining work has readable width',async()=>{await section('expert','closure');const widths=await page.locator('.task-item>div').evaluateAll(xs=>xs.map(x=>x.getBoundingClientRect().width));assert(widths.length===2&&widths.every(x=>x>500),'closure text collapsed');});
+ await check('route planned and actual, history',async()=>{await section('expert','route');await page.locator('[data-route-view="actual"]').click();assert((await page.locator('main').innerText()).includes('مسیر طی‌شده'),'actual route');await page.locator('summary').click();await audit('route-history');});
+ await check('customer grouping opens related goods and request',async()=>{await section('expert','relations');await page.locator('[data-customer-cargo="B"]').click();assert(await page.locator('tbody tr').count()===1,'cargo filter');await section('expert','relations');await page.locator('[data-dialog="request"][data-owner="A"]').click();assert((await page.locator('[role=dialog]').innerText()).includes('RQ-8421'),'request context');await audit('request-dialog');await close();});
+ await check('cargo completeness persists in local preview',async()=>{await section('expert','cargo');await page.locator('[data-dialog="cargo"]').first().click();await page.locator('#hs').fill('3901.10');await submit();assert((await page.locator('tbody').innerText()).includes('3901.10'),'HS save');});
+ await check('execution shows complete carrier/means/unit/cargo chain and contextual navigation',async()=>{await section('expert','transport');assert(await page.locator('.transport-chain').count()===5,'5 executions');assert((await page.locator('.transport-chain').nth(3).innerText()).includes('بوش فلزی'),'rail load');await page.locator('[data-unit="TR-12"]').click();assert((await page.locator('.allocation-detail').innerText()).includes('قطعات موتور'),'unit goods missing');assert((await page.locator('.allocation-detail').innerText()).includes('فیلتر صنعتی'),'shared load missing');await page.locator('[data-cargo="B1"]').click();assert((await page.locator('.allocation-detail').innerText()).includes('باقی‌مانده'),'cargo connection');});
+ await check('allocation blocks excess and invalid quantities; valid changes update both views and history',async()=>{await section('expert','allocation');await page.locator('[data-cargo="B1"]').click();await page.locator('[data-dialog="allocation"]').click();await audit('allocation-dialog');await page.locator('#allocation-quantity').fill('11');await submit();await page.locator('[data-form-error]:visible').waitFor();await page.locator('#allocation-quantity').fill('0');await submit();assert(await page.locator('#allocation-quantity').evaluate(x=>!x.validity.valid),'zero rejected');await page.locator('#allocation-unit').selectOption('TR-24');await page.locator('#allocation-quantity').fill('10');await submit();assert((await page.locator('.allocation-detail').innerText()).includes('تخصیص این کالا کامل است'),'allocation unchanged');await page.locator('[data-unit="TR-24"]').click();assert((await page.locator('.allocation-detail').innerText()).includes('۶۰ کارتن'),'unit quantity');await page.locator('summary').click();assert((await page.locator('.history').innerText()).includes('۱۰ کارتن'),'history');});
+ await check('transfer validates distinct units, preserves sum, records reason',async()=>{await page.locator('[data-cargo="B1"]').click();await page.locator('[data-dialog="transfer"]').click();await page.locator('#transfer-quantity').fill('5');await page.locator('#transfer-time').fill('2026-09-25T15:00');await page.locator('#transfer-reason').fill('تنظیم بار نمونه');await submit();await page.locator('[data-form-error]:visible').waitFor();await page.locator('#transfer-to').selectOption('TR-18');await submit();assert((await page.locator('.allocation-detail').innerText()).includes('تخصیص این کالا کامل است'),'transfer sum');});
+ await check('document filters, contextual preview and missing receipt recovery',async()=>{await section('expert','documents');for(const x of ['missing','cargo','unit','delivery','general','all']){await page.locator(`[data-doc-context="${x}"]`).click();await audit('documents-'+x);}await page.locator('[data-dialog="document-preview"][data-document="invoice"]').click();assert((await page.locator('.dialog-body').innerText()).includes('فاکتور تجاری'),'wrong preview');await close();await page.locator('[data-dialog="receipt"]').first().click();await submit();await section('expert','deliveries');assert((await page.locator('main').innerText()).includes('رسید تحویل ثبت شده'),'receipt sync');});
+ await check('reported location updates without internal data in customer timeline',async()=>{await section('expert','timeline');await page.locator('[data-dialog="update"]').click();await page.locator('[data-dialog="location"]').click();await page.locator('#location-time').fill('2026-09-25T15:20');await submit();assert((await page.locator('.shipment-hero').innerText()).includes('نزدیک آکتائو'),'location sync');});
+ await check('followup result and customer fallback',async()=>{await section('expert','issues');await page.locator('[data-dialog="followup"]').click();await page.locator('#followup-result').fill('یادداشت خصوصی آزمایش');await page.locator('[name="complete"]').check();await submit();await page.locator('[data-dialog="customer-message"]').click();await page.locator('#customer-message').fill('');await submit();await section('expert','closure');assert((await page.locator('main').innerText()).includes('۰ مورد باقی مانده'),'closure remaining state');});
+ await check('customer projection excludes newly saved internal followup',async()=>{await section('customer','timeline');const text=await page.locator('main').innerText();assert(!text.includes('یادداشت خصوصی آزمایش'),'internal followup leaked');assert(text.includes('نزدیک آکتائو'),'permitted location update missing');});
+ await page.reload();
+ const customers=['summary','timeline','cargo','documents','delivery'];
+ for(const width of [1440,390]) {await page.setViewportSize({width,height:width===390?844:1000});for(const s of customers)await check(`customer/${s}/${width}`,async()=>{await section('customer',s);await audit(`customer/${s}/${width}`);const text=await page.locator('body').innerText();for(const forbidden of ['آرمان تجهیز شرق','راهکار پلیمر سپهر','فیلتر صنعتی','رزین پلیمری','یادداشت خصوصی آزمایش','EX-204','AC-88'])assert(!text.includes(forbidden),'privacy '+forbidden);const size=await page.evaluate(()=>({w:document.documentElement.clientWidth,s:document.documentElement.scrollWidth}));assert(size.s<=size.w,`overflow ${size.s}/${size.w}`);await shot(`customer-${s}-${width}`);});}
+ await page.setViewportSize({width:1440,height:1000});
+ for(const s of ['catalog','route-times','closure-rules','closure-exceptions'])await check(`admin/${s}`,async()=>{await section('admin',s);await audit('admin/'+s);await shot('admin-'+s);});
+ await check('admin definition grouping filters search and activation',async()=>{await section('admin','catalog');await page.locator('[data-toggle-catalog="reeferWagon"]').first().click();await page.locator('#catalog-search').fill('واگن');assert((await page.locator('#catalog-results').innerText()).includes('واگن یخچالی'),'search');await page.locator('[data-catalog-filter="inactive"]').click();assert(!(await page.locator('#catalog-results').innerText()).includes('واگن یخچالی'),'activation');await page.locator('[data-catalog-filter="custom"]').click();await page.getByText('هنوز تعریف اختصاصی سازمان در این نمونه ثبت نشده است.').waitFor();});
+ await check('route reference changes only after admin input and retains history',async()=>{await section('admin','route-times');await page.locator('[data-dialog="route-reference"]').click();await page.locator('#ref-0').fill('10');await page.locator('#ref-date').fill('2026-10-01');await page.locator('#ref-reason').fill('بازبینی نمونه');await submit();await page.locator('[data-form-error]:visible').waitFor();await page.locator('#ref-0').fill('6');await page.locator('#ref-1').fill('8');await submit();await page.locator('summary').click();assert((await page.locator('.history').innerText()).includes('بازبینی نمونه'),'history missing');});
+ await check('closure exception approval and rejection both require reasons and record decision',async()=>{for(const decision of ['approve','reject']){await page.reload();await section('admin','closure-exceptions');await page.locator(`[value="${decision}"]`).click();assert(await page.locator('#decision-reason').evaluate(x=>!x.validity.valid),'reason missing allowed');await page.locator('#decision-reason').fill('دلیل نمونه مدیر');await page.locator(`[value="${decision}"]`).click();assert((await page.locator('main').innerText()).includes('دلیل نمونه مدیر'),'decision not saved');assert((await page.locator('main').innerText()).includes('سارا یوسفی'),'actor missing');}});
+ await page.reload();
+ for(const role of ['expert','customer','admin'])for(const scenario of ['normal','loading','empty','error','denied','stale','degraded'])await check(`state/${role}/${scenario}`,async()=>{await page.locator(`.role-button[data-role="${role}"]`).click();await page.locator('[data-action="open-scenarios"]').click();await page.locator(`[data-scenario="${scenario}"]`).click();await audit(`state/${role}/${scenario}`);if(scenario==='stale'||scenario==='degraded'){const t=await page.locator('main').innerText();assert(t.includes(scenario==='stale'?'اطلاعات به‌روز نیست':'اختلال در به‌روزرسانی'),'state missing');await shot(`state-${role}-${scenario}`);}if(scenario!=='normal'){await page.locator('[data-action="reset-scenario"]').click();assert(!await page.locator('.state-box').count(),'recovery failed');}});
+ await check('all secondary disclosures and exposed dialogs are readable and dismissible',async()=>{for(const s of experts){await section('expert',s);const summaries=page.locator('summary');for(let i=0;i<await summaries.count();i++)await summaries.nth(i).click();await audit('expanded-'+s);const triggers=await page.locator('[data-dialog]').evaluateAll(xs=>xs.map(x=>({key:x.dataset.dialog,doc:x.dataset.document,owner:x.dataset.owner})));for(const t of triggers){await page.locator(`[data-dialog="${t.key}"]${t.doc?`[data-document="${t.doc}"]`:''}${t.owner?`[data-owner="${t.owner}"]`:''}`).first().click();await page.locator('[role="dialog"]').waitFor();await audit('dialog-'+t.key);await page.keyboard.press('Escape');assert(await page.locator('.dialog-layer').isHidden(),'escape');}}});
+ await check('no browser errors or external network requests',async()=>{assert(!errors.length,errors.join(';'));assert(!requests.length,requests.join(';'));});
+ completed=true;
 } finally {
-  const result = {
-    prototype: "TARGET_PHASE3_UX",
-    url: baseUrl,
-    testedAt: new Date().toISOString(),
-    browser: "Chromium via Playwright",
-    desktopViewport: "1440x900",
-    mobileViewport: "390x844",
-    syntheticDataOnly: true,
-    externalNetworkRequests: networkViolations,
-    consoleErrors,
-    pageErrors,
-    checks,
-    result: checks.every((item) => item.result === "PASS") ? "PASS" : "FAIL",
-  };
-  await writeFile(path.join(evidenceDir, "result.json"), `${JSON.stringify(result, null, 2)}\n`, "utf8");
-  await browser.close();
+ const hashes={};for(const file of ['app.js','index.html','styles.css','verify-prototype.mjs'])hashes[file]=createHash('sha256').update(await readFile(new URL(file,import.meta.url))).digest('hex');
+ await writeFile(path.join(evidence,'result.json'),JSON.stringify({revision:'V2',testedAt:new Date().toISOString(),browser:await browser.version(),browserChannel:'chrome',url:base,hashes,checks,errors,externalRequests:requests,audits,completed,result:completed&&checks.every(x=>x.result==='PASS')?'PASS':'FAIL'},null,2)+'\n');
+ await browser.close();
 }
-
-if (!checks.every((item) => item.result === "PASS")) process.exitCode = 1;
