@@ -2,7 +2,9 @@
 
 وضعیت: `TARGET_PHASE3_UX`
 نسخه: `Revision v2.1 — visual fidelity candidate`
-وضعیت: `TARGET_CANDIDATE_AWAITING_PRODUCT_OWNER_APPROVAL`
+وضعیت جاری: `PHASE3_UX_BASELINE=APPROVED`
+
+> [تأیید نهایی مالک محصول](phase3/FINAL-PRODUCT-OWNER-APPROVAL.md) در مأموریت ۲۰۲۶-۰۹-۲۵ ثبت شد. شرح و وضعیت‌های مرور در بخش‌های نسخه اول، V2 و V2.1 زیر، سابقه زمان تهیه هستند؛ محدودیت‌های آن مأموریت‌ها مانع مجوز جدید ادغام و برنامه‌ریزی نیستند. معناهای طرح و DNها تغییر نکرده‌اند؛ پیاده‌سازی هنوز مجاز نیست.
 تاریخ بازبینی: `2026-09-25`؛ نسخه اول در `2026-09-24` ایجاد شد.
 مبنای حاکمیتی: `LPAF 2.7`
 مبنای Revision v2: `integration/golden-controlled@d83b1aa7c0011221188e753c0f38d2058859400b`؛ نسخه اول بر مبنای `6d7a757d84d64afe3fe8614986a9e6900fe22fad` بود.

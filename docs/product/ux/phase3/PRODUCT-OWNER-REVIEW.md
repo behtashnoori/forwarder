@@ -1,5 +1,7 @@
 # مرور نهایی ظاهر — نسخه ۲.۱
 
+> وضعیت جاری: **تأیید نهایی مالک محصول ثبت شد**؛ [رکورد اختیار، هویت و محدوده تأیید](FINAL-PRODUCT-OWNER-APPROVAL.md). جدول‌های گام‌به‌گام زیر فرم آماده‌سازی تاریخی‌اند؛ NOT_RUN در آن‌ها به معنای نبود نتیجه ثبت‌شده برای آن سطر است، نه رد تأیید کلی فعلی.
+
 نمونهٔ آماده: [باز کردن V2.1](http://127.0.0.1:4183/). نوار بالای صفحه باید «نسخه ۲.۱» باشد. همه داده‌ها نمایشی‌اند؛ بازخوانی صفحه، تغییرهای آزمایشی را پاک می‌کند.
 
 کاندید بصری: `codex/phase3-ux-visual-fidelity-v2-1@32d5a14ae70f0b74747f4ab4c3a7bea185002dc5`. تغییرهای بعدی این مأموریت فقط مدارک‌اند؛ تطبیق hash در گزارش نهایی ثبت می‌شود.
@@ -13,8 +15,9 @@ UX_STORYTELLING=PASS
 RELATIONSHIP_CLARITY=PASS
 MICROCOPY_DIRECTION=PASS
 V2_1_REVIEW_READINESS=READY_FOR_REVIEW
-V2_1_PRODUCT_OWNER_REVIEW=NOT_RUN
-UX_PRODUCT_OWNER_FINAL_APPROVAL=NOT_RUN
+V2_1_PRODUCT_OWNER_REVIEW=PASS
+UX_PRODUCT_OWNER_FINAL_APPROVAL=PASS
+PHASE3_UX_BASELINE=APPROVED
 HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN
 ```
 
@@ -90,4 +93,4 @@ HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN
 | نتیجه نهایی | NOT_RUN |
 | موارد نیازمند تغییر | پس از مرور انسانی ثبت می‌شود |
 
-DN-01 تا DN-09 Blueprint همچنان بازند. تنها قدم بعدی، مرور انسانی همین سه سفر است. برنامه‌ریزی پیاده‌سازی، ادغام در canonical و انتشار در این مأموریت مجاز نیستند.
+محدودیت مأموریت آماده‌سازی پیشین تاریخی است. دستور جدید مالک محصول، ثبت تأیید و ادغام canonical و برنامه‌ریزی را مجاز کرده است؛ اجرای محصول و انتشار همچنان مجاز نیست. DN-01 تا DN-09 در برنامه تطبیق داده می‌شوند.
