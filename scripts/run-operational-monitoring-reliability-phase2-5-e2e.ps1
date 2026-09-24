@@ -1,18 +1,24 @@
 [CmdletBinding()]
-param()
+param(
+  [switch]$FocusedFreshnessOnly,
+  [switch]$FocusedReliabilityOnly
+)
 
 $ErrorActionPreference = 'Stop'
+if ($FocusedFreshnessOnly -and $FocusedReliabilityOnly) {
+  throw 'Choose only one focused qualification mode.'
+}
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $pgBin = 'C:\Program Files\PostgreSQL\18\bin'
 $runId = [guid]::NewGuid().ToString('N')
 $runtimeParent = [System.IO.Path]::GetTempPath().TrimEnd([System.IO.Path]::DirectorySeparatorChar)
-$runtime = Join-Path $runtimeParent "forwarder-workspace-phase1-e2e-$runId"
+$runtime = Join-Path $runtimeParent "forwarder-monitoring-phase2-5-e2e-$runId"
 $pgData = Join-Path $runtime 'pgdata'
 $pgLog = Join-Path $runtime 'postgres.log'
 $fixture = Join-Path $runtime 'fixtures.json'
 $playwrightOutput = Join-Path $runtime 'playwright'
-$databaseName = "forwarder_workspace_phase1_$($runId.Substring(0, 12))"
-$evidence = Join-Path $root 'docs\operational\evidence\operational-workspace-phase-1-20260924\browser'
+$databaseName = "forwarder_workspace_phase2_oip2_gate_$($runId.Substring(0, 10))"
+$evidence = Join-Path $root 'docs\operational\evidence\operational-monitoring-reliability-phase-2-5-20260924'
 $backend = $null
 $frontend = $null
 $postgresStarted = $false
@@ -57,7 +63,7 @@ function Remove-OwnedRuntime([string]$RuntimePath) {
   $resolved = (Resolve-Path -LiteralPath $RuntimePath).Path
   $expectedParent = (Resolve-Path -LiteralPath $runtimeParent).Path
   $leaf = Split-Path -Leaf $resolved
-  if ((Split-Path -Parent $resolved) -ne $expectedParent -or $leaf -notmatch '^forwarder-workspace-phase1-e2e-[0-9a-f]{32}$') {
+  if ((Split-Path -Parent $resolved) -ne $expectedParent -or $leaf -notmatch '^forwarder-monitoring-phase2-5-e2e-[0-9a-f]{32}$') {
     throw "Refusing to remove an unowned runtime path: $resolved"
   }
   Remove-Item -LiteralPath $resolved -Recurse -Force
@@ -70,14 +76,14 @@ try {
     }
   }
   foreach ($name in @(
-    'APP_ENV', 'DATABASE_URL', 'E2E_DATABASE_URL', 'FORWARDER_E2E_PASSWORD',
-    'FORWARDER_E2E_CUSTOMER_PASSWORD', 'FORWARDER_E2E_FIXTURE_PATH',
-    'OPERATIONAL_WORKSPACE_EVIDENCE_PATH', 'SECRET_KEY', 'JWT_SECRET_KEY',
-    'E2E_SECRET_KEY', 'E2E_JWT_SECRET_KEY', 'CORS_ORIGINS', 'VITE_BACKEND_URL',
-    'PORT', 'PLAYWRIGHT_BASE_URL', 'PLAYWRIGHT_EXTERNAL_SERVER', 'PLAYWRIGHT_CHANNEL'
-  )) {
-    $old[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
-  }
+    'APP_ENV', 'DATABASE_URL', 'E2E_DATABASE_URL', 'OIP_POSTGRES_URL',
+    'FORWARDER_E2E_PASSWORD', 'FORWARDER_E2E_CUSTOMER_PASSWORD',
+    'FORWARDER_E2E_FIXTURE_PATH', 'OPERATIONAL_WORKSPACE_EVIDENCE_PATH',
+    'OPERATIONAL_MONITORING_RELIABILITY_EVIDENCE_PATH', 'SECRET_KEY',
+    'JWT_SECRET_KEY', 'E2E_SECRET_KEY', 'E2E_JWT_SECRET_KEY', 'CORS_ORIGINS',
+    'VITE_BACKEND_URL', 'PORT', 'PLAYWRIGHT_BASE_URL',
+    'PLAYWRIGHT_EXTERNAL_SERVER', 'PLAYWRIGHT_CHANNEL'
+  )) { $old[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 
   New-Item -ItemType Directory -Force -Path $runtime, $playwrightOutput, $evidence | Out-Null
   $postgresPort = Get-FreeTcpPort
@@ -97,15 +103,17 @@ try {
   if ($pgStart.ExitCode -ne 0) { throw 'Qualification step failed: start owned PostgreSQL 18 cluster' }
   $postgresStarted = $true
   & (Join-Path $pgBin 'createdb.exe') -h 127.0.0.1 -p $postgresPort -U postgres $databaseName
-  Assert-LastExit 'create owned Operational Workspace database'
+  Assert-LastExit 'create owned Phase 2.5 database'
 
   $env:APP_ENV = 'uat'
   $env:DATABASE_URL = $databaseUrl
   $env:E2E_DATABASE_URL = $databaseUrl
+  $env:OIP_POSTGRES_URL = $databaseUrl
   $env:FORWARDER_E2E_PASSWORD = $expertPassword
   $env:FORWARDER_E2E_CUSTOMER_PASSWORD = $customerPassword
   $env:FORWARDER_E2E_FIXTURE_PATH = $fixture
   $env:OPERATIONAL_WORKSPACE_EVIDENCE_PATH = $evidence
+  $env:OPERATIONAL_MONITORING_RELIABILITY_EVIDENCE_PATH = $evidence
   $env:SECRET_KEY = $secret
   $env:JWT_SECRET_KEY = $secret
   $env:E2E_SECRET_KEY = $secret
@@ -119,11 +127,44 @@ try {
     throw "Unexpected repository migration head: $repositoryHead"
   }
   python -m backend.migration_cli upgrade $repositoryHead --confirm
-  Assert-LastExit 'migrate owned Operational Workspace database'
+  Assert-LastExit 'clean PostgreSQL upgrade'
   python -m scripts.browser_migration_contract verify-database-head --expected $repositoryHead
-  Assert-LastExit 'verify exact Operational Workspace database head'
-  python (Join-Path $root 'scripts\uat\seed_operational_workspace_phase1_e2e.py')
-  Assert-LastExit 'seed synthetic Operational Workspace fixtures'
+  Assert-LastExit 'verify exact Phase 2.5 database head'
+  if (-not $FocusedFreshnessOnly) {
+    python -m alembic -c backend/migrations/alembic.ini downgrade 20260928_operational_workspace_phase2
+    Assert-LastExit 'clean PostgreSQL downgrade'
+    $downgradedStatus = python -m backend.migration_cli current
+    Assert-LastExit 'verify downgraded database head'
+    if (($downgradedStatus -join "`n") -notmatch 'current=20260928_operational_workspace_phase2') {
+      throw 'Downgraded database is not at the expected Phase 2 parent.'
+    }
+    python -m backend.migration_cli upgrade $repositoryHead --confirm
+    Assert-LastExit 'clean PostgreSQL re-upgrade'
+    python -m scripts.browser_migration_contract verify-database-head --expected $repositoryHead
+    Assert-LastExit 'verify re-upgraded database head'
+
+    python -m pytest -q backend/tests/test_oip_races_postgresql.py
+    Assert-LastExit 'PostgreSQL evaluation concurrency and idempotency races'
+  }
+
+  if ($FocusedReliabilityOnly) {
+    Write-Output 'OPERATIONAL_MONITORING_POSTGRESQL_VERSION=18'
+    Write-Output "OPERATIONAL_MONITORING_ALEMBIC_HEAD=$repositoryHead"
+    Write-Output 'FOCUSED_POSTGRESQL_MIGRATION_ROUNDTRIP=PASS'
+    Write-Output 'FOCUSED_POSTGRESQL_CONCURRENCY_FENCING=PASS'
+  } else {
+  python (Join-Path $root 'scripts\uat\seed_operational_workspace_phase2_e2e.py')
+  Assert-LastExit 'seed synthetic Phase 2.5 fixtures'
+  $manifest = Get-Content -LiteralPath $fixture -Raw | ConvertFrom-Json
+  $before = python -m backend.operational_cli evaluation-status --organization-id $manifest.organization_id
+  Assert-LastExit 'inspect stale evaluation status before browser-independent run'
+  $before | Set-Content -LiteralPath (Join-Path $evidence 'status-before-background-evaluation.log') -Encoding UTF8
+  $evaluation = python -m backend.operational_cli evaluate-sla --organization-id $manifest.organization_id --confirm
+  Assert-LastExit 'run browser-independent evaluation'
+  $evaluation | Set-Content -LiteralPath (Join-Path $evidence 'background-evaluation.log') -Encoding UTF8
+  $after = python -m backend.operational_cli evaluation-status --organization-id $manifest.organization_id
+  Assert-LastExit 'inspect recovered evaluation status'
+  $after | Set-Content -LiteralPath (Join-Path $evidence 'status-after-background-evaluation.log') -Encoding UTF8
 
   $env:PORT = "$backendPort"
   $backend = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run', 'backend' -WorkingDirectory $root -PassThru -WindowStyle Hidden
@@ -134,33 +175,45 @@ try {
   $env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:$frontendPort"
   $env:PLAYWRIGHT_EXTERNAL_SERVER = 'true'
   $env:PLAYWRIGHT_CHANNEL = 'chrome'
-  npx playwright test e2e/operational-workspace-phase1.spec.ts --reporter=line --output $playwrightOutput
-  Assert-LastExit 'real-browser Operational Workspace product journeys'
+  if (-not $FocusedFreshnessOnly) {
+    npx playwright test e2e/operational-workspace-phase1.spec.ts e2e/operational-workspace-phase2.spec.ts --reporter=line --output $playwrightOutput
+    Assert-LastExit 'real-browser Phase 1 and Phase 2 regression journeys'
+  }
+  npx playwright test e2e/operational-monitoring-reliability-phase2-5.spec.ts --reporter=line --output $playwrightOutput
+  Assert-LastExit 'real-browser reliability product journey'
 
+  $resultFile = if ($FocusedFreshnessOnly) { 'focused-control-tower-freshness-result.json' } else { 'result.json' }
+  $journeys = @(
+    'background evaluation before browser startup creates current Attention',
+    'Workspace displays current background-evaluated Action Attention',
+    'Workspace displays an honest stale evaluation warning',
+    'Control Tower consumes the same stale evaluation health'
+  )
+  if (-not $FocusedFreshnessOnly) {
+    $journeys += 'Workspace Phase 1 and Phase 2 browser regressions'
+  }
   [pscustomobject]@{
     result = 'PASS'
+    qualification_scope = if ($FocusedFreshnessOnly) { 'focused Control Tower freshness scenario' } else { 'complete Phase 2.5 browser qualification' }
     executed_at_utc = (Get-Date).ToUniversalTime().ToString('o')
     environment = 'owned disposable local/UAT PostgreSQL'
     postgresql_major = 18
     alembic_head = $repositoryHead
+    migration_roundtrip = if ($FocusedFreshnessOnly) { 'NOT_RUN_FOCUSED_SCENARIO' } else { 'PASS' }
+    browser_independent_cli_evaluation = 'PASS'
+    postgresql_concurrency = if ($FocusedFreshnessOnly) { 'NOT_RUN_FOCUSED_SCENARIO' } else { 'PASS' }
     browser = 'Google Chrome via Playwright'
     synthetic_data_only = $true
     production_accessed = $false
-    product_journeys = @(
-      'expert workspace to shipment context and history',
-      'fixed owner after request reassignment',
-      'same-organization and cross-organization denial',
-      'empty and temporary-error states',
-      'customer account quote response and recovery',
-      'organization-scoped account listing',
-      'public tracking privacy and anonymous request creation'
-    )
-  } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $evidence 'result.json') -Encoding UTF8
+    product_journeys = $journeys
+  } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $evidence $resultFile) -Encoding UTF8
 
-  Write-Output "OPERATIONAL_WORKSPACE_POSTGRESQL_VERSION=18"
-  Write-Output "OPERATIONAL_WORKSPACE_ALEMBIC_HEAD=$repositoryHead"
-  Write-Output 'OPERATIONAL_WORKSPACE_BROWSER_QUALIFICATION=PASS'
-  Write-Output "OPERATIONAL_WORKSPACE_EVIDENCE_DIRECTORY=$evidence"
+  Write-Output 'OPERATIONAL_MONITORING_POSTGRESQL_VERSION=18'
+  Write-Output "OPERATIONAL_MONITORING_ALEMBIC_HEAD=$repositoryHead"
+  Write-Output 'OPERATIONAL_MONITORING_PHASE2_5_BROWSER_QUALIFICATION=PASS'
+  if ($FocusedFreshnessOnly) { Write-Output 'CONTROL_TOWER_FRESHNESS_SCENARIO=PASS' }
+  Write-Output "OPERATIONAL_MONITORING_EVIDENCE_DIRECTORY=$evidence"
+  }
 }
 finally {
   foreach ($process in @($frontend, $backend)) {
@@ -176,14 +229,11 @@ finally {
   }
   try { Remove-OwnedRuntime $runtime } catch { $cleanupFailures.Add($_.Exception.Message) }
   foreach ($name in $old.Keys) {
-    if ($null -eq $old[$name]) {
-      Remove-Item "Env:$name" -ErrorAction SilentlyContinue
-    } else {
-      [Environment]::SetEnvironmentVariable($name, $old[$name], 'Process')
-    }
+    if ($null -eq $old[$name]) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
+    else { [Environment]::SetEnvironmentVariable($name, $old[$name], 'Process') }
   }
   if ($cleanupFailures.Count -gt 0) {
-    throw ('OPERATIONAL_WORKSPACE_E2E_CLEANUP=FAIL: ' + ($cleanupFailures -join '; '))
+    throw ('OPERATIONAL_MONITORING_PHASE2_5_E2E_CLEANUP=FAIL: ' + ($cleanupFailures -join '; '))
   }
-  Write-Output 'OPERATIONAL_WORKSPACE_E2E_CLEANUP=PASS'
+  Write-Output 'OPERATIONAL_MONITORING_PHASE2_5_E2E_CLEANUP=PASS'
 }
