@@ -57,9 +57,32 @@ export interface ControlTowerItem {
   destination: string;
 }
 
+export interface ControlTowerEvaluationHealth {
+  state: "FRESH" | "STALE" | "REBUILDING" | "DEGRADED";
+  trustworthy: boolean;
+  checkedAt: string;
+  lastAttemptAt: string | null;
+  lastSuccessAt: string | null;
+  nextEvaluationDueAt: string | null;
+  reasonCode: string | null;
+  reason: string | null;
+  lastRun: {
+    run_id?: string | null;
+    state?: string;
+    reason_code?: string;
+    completed_at?: string;
+    operation?: string;
+    outcome?: string;
+    duration_ms?: number;
+    source_items_evaluated?: number;
+    resulting_changes?: number;
+  } | null;
+}
+
 export interface ControlTowerPage {
   evaluatedAt: string;
   state: "complete";
+  attentionEvaluation: ControlTowerEvaluationHealth;
   notice: string | null;
   emptyMessage: string | null;
   summary: {
@@ -105,6 +128,7 @@ export function normalizeControlTowerPage(response: ControlTowerApiResponse): Co
   return {
     evaluatedAt: data.evaluatedAt,
     state: data.state,
+    attentionEvaluation: { ...data.attentionEvaluation },
     notice: nullable(data.notice),
     emptyMessage: nullable(data.emptyMessage),
     summary: {

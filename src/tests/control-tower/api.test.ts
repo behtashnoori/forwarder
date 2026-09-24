@@ -14,6 +14,11 @@ vi.mock("@/lib/api", async (importOriginal) => ({
 const rawPage: ControlTowerApiPage = {
   evaluatedAt: "2026-09-20T12:00:00Z",
   state: "complete",
+  attentionEvaluation: {
+    state: "FRESH", trustworthy: true, checkedAt: "2026-09-20T12:00:00Z",
+    lastAttemptAt: "2026-09-20T11:59:58Z", lastSuccessAt: "2026-09-20T12:00:00Z",
+    nextEvaluationDueAt: null, reasonCode: null, reason: null, lastRun: null,
+  },
   notice: null,
   emptyMessage: null,
   summary: {
@@ -75,6 +80,7 @@ describe("Control Tower feature adapter", () => {
     });
     expect(page.page).toMatchObject({ limit: 25, offset: 0, returned: 1, hasMore: true });
     expect(page.page.nextCursor).toBe("opaque+/cursor==");
+    expect(page.attentionEvaluation).toMatchObject({ state: "FRESH", trustworthy: true });
   });
 
   it("maps supported attention and search and passes the cursor without parsing it", async () => {

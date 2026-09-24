@@ -1846,9 +1846,25 @@ export interface OperationalWorkspaceSnapshot {
     attention_available: boolean;
     attention_projection?: {
       state: string;
+      trustworthy?: boolean;
       calculated_at?: string | null;
+      checked_at?: string | null;
       last_success_at?: string | null;
+      last_attempt_at?: string | null;
+      next_evaluation_due_at?: string | null;
+      reason_code?: string | null;
       reason?: string | null;
+      last_run?: {
+        run_id?: string | null;
+        state?: string;
+        reason_code?: string;
+        completed_at?: string;
+        operation?: string;
+        outcome?: string;
+        duration_ms?: number;
+        source_items_evaluated?: number;
+        resulting_changes?: number;
+      } | null;
     };
     calculated_at: string;
     projection_version: string;
@@ -4368,7 +4384,9 @@ export type OipSituation = {
 };
 export type OipProjectionHealth = {
   health_state: "FRESH" | "STALE" | "REBUILDING" | "DEGRADED";
-  calculated_at: string;
+  trustworthy: boolean;
+  checked_at: string;
+  calculated_at: string | null;
   source_watermark: string;
   processed_watermark?: string | null;
   projection_version: string;
@@ -4376,11 +4394,15 @@ export type OipProjectionHealth = {
   reason_code?: string | null;
   reason?: string | null;
   last_success_at?: string | null;
+  last_evaluation_attempt_at?: string | null;
+  last_evaluation_success_at?: string | null;
+  next_evaluation_due_at?: string | null;
   rebuild_started_at?: string | null;
   rebuild_completed_at?: string | null;
   last_failure_at?: string | null;
+  last_run?: Record<string, unknown> | null;
   run_id?: string | null;
-  version: number;
+  version: number | null;
 };
 export type OipSituationDetail = OipSituation & {
   projection_health: OipProjectionHealth;

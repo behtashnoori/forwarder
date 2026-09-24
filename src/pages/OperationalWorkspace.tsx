@@ -40,6 +40,12 @@ const slaTone: Record<string, string> = {
   PENDING_EVALUATION: "bg-blue-100 text-blue-900",
 };
 
+const evaluationStateLabel: Record<string, string> = {
+  STALE: "قدیمی",
+  REBUILDING: "در حال بازیابی",
+  DEGRADED: "دچار خطا",
+};
+
 export default function OperationalWorkspace() {
   const { direction, locale, businessLabel } = useI18n();
   const [snapshot, setSnapshot] = useState<OperationalWorkspaceSnapshot>();
@@ -119,9 +125,10 @@ export default function OperationalWorkspace() {
               </Card>
             </section>
 
-            {meta.attention_projection && meta.attention_projection.state !== "FRESH" && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-              وضعیت ارزیابی Attention: {meta.attention_projection.state === "NOT_EVALUATED" ? "هنوز ارزیابی زمان‌بندی‌شده اجرا نشده است" : meta.attention_projection.state}
-              {meta.attention_projection.reason ? ` · ${meta.attention_projection.reason}` : ""}. نبود هشدار در این وضعیت به‌معنی سلامت عملیات نیست.
+            {meta.attention_projection && meta.attention_projection.state !== "FRESH" && <div data-testid="attention-freshness-warning" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              آخرین ارزیابی Attention به‌روز نیست ({evaluationStateLabel[meta.attention_projection.state] ?? meta.attention_projection.state}).
+              {meta.attention_projection.last_success_at ? <> آخرین ارزیابی موفق: <time dateTime={meta.attention_projection.last_success_at}>{formatDualCalendarInstant(meta.attention_projection.last_success_at, locale, { fallback: meta.attention_projection.last_success_at })}</time>.</> : " هنوز ارزیابی موفقی ثبت نشده است."}
+              {" "}نبود هشدار در این وضعیت به‌معنی سلامت عملیات نیست.
             </div>}
 
             <section aria-labelledby="attention-heading" className="space-y-3">

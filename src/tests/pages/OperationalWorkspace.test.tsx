@@ -136,6 +136,22 @@ describe("OperationalWorkspace", () => {
     expect(screen.getByText("محدود")).toBeInTheDocument();
   });
 
+  it("shows the shared stale evaluation warning instead of implying healthy operations", async () => {
+    const stale = empty();
+    stale.meta.attention_projection = {
+      state: "STALE",
+      trustworthy: false,
+      calculated_at: "2026-09-24T08:00:00Z",
+      last_success_at: "2026-09-24T08:00:00Z",
+      reason_code: "EVALUATION_TIME_BOUNDARY_REACHED",
+    };
+    vi.mocked(getOperationalWorkspace).mockResolvedValue(stale);
+    renderWorkspace();
+    const warning = await screen.findByTestId("attention-freshness-warning");
+    expect(warning).toHaveTextContent("آخرین ارزیابی Attention به‌روز نیست");
+    expect(warning).toHaveTextContent("نبود هشدار در این وضعیت به‌معنی سلامت عملیات نیست");
+  });
+
   it("distinguishes a forbidden response from a temporary loading failure", async () => {
     vi.mocked(getOperationalWorkspace).mockRejectedValue(
       new ApiError(403, "FORBIDDEN_OPERATION", "denied"),

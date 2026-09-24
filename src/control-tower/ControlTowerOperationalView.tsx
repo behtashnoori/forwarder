@@ -42,6 +42,12 @@ const errorMessages: Record<ControlTowerFailure, string> = {
   general: "دریافت اطلاعات برج کنترل کامل نشد. دوباره تلاش کنید.",
 };
 
+const evaluationStateLabel = {
+  STALE: "قدیمی",
+  REBUILDING: "در حال بازیابی",
+  DEGRADED: "دچار خطا",
+} as const;
+
 function sessionContext(): string {
   return `${localStorage.getItem("expert_user") ?? ""}\n${localStorage.getItem("expert_token") ?? ""}`;
 }
@@ -276,6 +282,14 @@ function Tower({ context }: { context: string }) {
         <p><strong>{formatBusinessNumber(page.summary.total, { locale: "fa-IR" })}</strong> محموله مطابق</p>
         <p>نمایش {formatBusinessNumber(rangeStart, { locale: "fa-IR" })} تا {formatBusinessNumber(rangeEnd, { locale: "fa-IR" })} از {formatBusinessNumber(page.summary.total, { locale: "fa-IR" })}</p>
       </div>}
+
+      {!loading && !failure && page && page.attentionEvaluation.state !== "FRESH" && <Alert data-testid="control-tower-attention-freshness" role="status" className="border-amber-300 bg-amber-50 text-amber-950">
+        <AlertDescription>
+          ارزیابی Attention به‌روز نیست ({evaluationStateLabel[page.attentionEvaluation.state]}).
+          {page.attentionEvaluation.lastSuccessAt ? <> آخرین ارزیابی موفق: <SafeTime value={page.attentionEvaluation.lastSuccessAt} locale="fa-IR" />.</> : " هنوز ارزیابی موفقی ثبت نشده است."}
+          {" "}نبود مورد در برج کنترل، در این وضعیت اثبات سلامت عملیات نیست.
+        </AlertDescription>
+      </Alert>}
 
       {loading ? <LoadingState />
         : failure ? <Alert variant={failure === "unavailable" || failure === "general" ? "destructive" : "default"} role="alert"><AlertDescription className="space-y-3"><p>{errorMessages[failure]}</p><Button variant="outline" onClick={() => setReloadKey((value) => value + 1)}>تلاش دوباره</Button></AlertDescription></Alert>

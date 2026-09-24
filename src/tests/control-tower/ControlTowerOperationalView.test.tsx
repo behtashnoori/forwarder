@@ -5,6 +5,7 @@ import ControlTowerOperationalView from "@/control-tower/ControlTowerOperational
 import { ApiError } from "@/lib/api";
 import {
   getControlTowerPage,
+  type ControlTowerEvaluationHealth,
   type ControlTowerItem,
   type ControlTowerPage,
 } from "@/control-tower/api";
@@ -62,14 +63,28 @@ const item: ControlTowerItem = {
   destination: "/operations/shipments/shipment-1",
 };
 
+const freshEvaluation: ControlTowerEvaluationHealth = {
+  state: "FRESH",
+  trustworthy: true,
+  checkedAt: "2026-09-20T12:00:00Z",
+  lastAttemptAt: "2026-09-20T11:59:58Z",
+  lastSuccessAt: "2026-09-20T12:00:00Z",
+  nextEvaluationDueAt: null,
+  reasonCode: null,
+  reason: null,
+  lastRun: null,
+};
+
 const page = (
   items: ControlTowerItem[] = [item],
   nextCursor: string | null = null,
   offset = 0,
   total = items.length,
+  attentionEvaluation: ControlTowerEvaluationHealth = freshEvaluation,
 ): ControlTowerPage => ({
   evaluatedAt: "2026-09-20T12:00:00Z",
   state: "complete",
+  attentionEvaluation,
   notice: null,
   emptyMessage: items.length ? null : "در حال حاضر موردی برای پیگیری در برج کنترل نمایش داده نمی‌شود.",
   summary: {
@@ -176,6 +191,19 @@ describe("Golden Control Tower operational view", () => {
     vi.mocked(getControlTowerPage).mockResolvedValueOnce(page([]));
     mount();
     expect(await screen.findByText(/موردی برای پیگیری در برج کنترل/)).toBeVisible();
+  });
+
+  it("warns that an empty stale Attention result is not proof of healthy operations", async () => {
+    vi.mocked(getControlTowerPage).mockResolvedValueOnce(page([], null, 0, 0, {
+      ...freshEvaluation,
+      state: "STALE",
+      trustworthy: false,
+      reasonCode: "EVALUATION_TIME_BOUNDARY_REACHED",
+    }));
+    mount();
+    const warning = await screen.findByTestId("control-tower-attention-freshness");
+    expect(warning).toHaveTextContent("ارزیابی Attention به‌روز نیست");
+    expect(warning).toHaveTextContent("اثبات سلامت عملیات نیست");
   });
 
   it("fails closed on 503 without Semantic Analytics fallback or stale partial cards", async () => {
