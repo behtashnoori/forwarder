@@ -23,6 +23,18 @@ export function consumeReturnTo(fallback: string): string {
   return isSafeInternalReturnTo(candidate) ? candidate : fallback;
 }
 
+export function getExpertLoginFallback(
+  expert: { authority?: string | null; role?: string | null },
+  crmRoles: ReadonlySet<string> = new Set(["crm_manager", "business_expert"]),
+): string {
+  if (["PLATFORM_ADMIN", "ORGANIZATION_ADMIN"].includes(expert.authority || "") || expert.role === "admin") {
+    return "/admin";
+  }
+  if (expert.role && crmRoles.has(expert.role)) return "/crm";
+  if (expert.role === "expert") return "/operations";
+  return "/expert";
+}
+
 export function clearExpertSession(): void {
   localStorage.removeItem("expert_user");
   localStorage.removeItem("expert_token");

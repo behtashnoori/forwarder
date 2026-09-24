@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router';
 import { useToast } from '@/hooks/use-toast';
 import { env } from '@/lib/env';
 import { useSiteSettings } from '@/contexts/SiteSettingsContext';
-import { consumeReturnTo } from '@/lib/authContinuity';
+import { consumeReturnTo, getExpertLoginFallback } from '@/lib/authContinuity';
 import { useI18n } from '@/i18n';
 
 const ExpertLogin = ({ triggerClassName = "" }: { triggerClassName?: string }) => {
@@ -62,9 +62,7 @@ const ExpertLogin = ({ triggerClassName = "" }: { triggerClassName?: string }) =
           description: `به پنل ${data.expert.full_name} خوش آمدید`
         });
         
-        const roleFallback = ['PLATFORM_ADMIN', 'ORGANIZATION_ADMIN'].includes(data.expert.authority) || data.expert.role === 'admin'
-          ? '/admin'
-          : crmPrimaryRoles.has(data.expert.role) ? '/crm' : '/expert';
+        const roleFallback = getExpertLoginFallback(data.expert, crmPrimaryRoles);
         navigate(consumeReturnTo(roleFallback), { replace: true });
       } else {
         setError(data.error || 'نام کاربری یا رمز عبور اشتباه است');

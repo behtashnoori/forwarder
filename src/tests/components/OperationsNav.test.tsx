@@ -41,6 +41,7 @@ describe("OperationsNav tenant customer maintenance", () => {
 
     await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/operations",
       "/operations/shipments",
       "/operations/control-tower",
       "/operations/work-queue",
@@ -60,11 +61,18 @@ describe("OperationsNav tenant customer maintenance", () => {
 
     await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
+      "/operations",
       "/operations/shipments",
       "/operations/control-tower",
       "/operations/work-queue",
       "/dashboards",
       "/operations/shipments/new",
     ]);
+  });
+
+  it("does not expose the workspace link without shipment read permission", async () => {
+    renderNav("EXPERT", ["oip.read"]);
+    await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
+    expect(screen.queryByRole("link", { name: "فضای کار امروز" })).not.toBeInTheDocument();
   });
 });

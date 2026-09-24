@@ -887,8 +887,10 @@ def test_http_create_list_detail_and_error_envelopes(operational_app):
     assert detail.json["data"]["public_id"] == created.json["data"]["public_id"]
     assert set(detail.json["data"]) == {
         "public_id", "status", "operational_provenance", "scope",
-        "recent_events_scope", "history_scope", "version", "customer",
+        "recent_events_scope", "history_scope", "version", "created_at", "updated_at", "customer",
+        "responsible_expert",
         "project_public_id", "source", "route_plan", "route_leg", "route_legs",
+        "route_summary", "latest_update",
         "current_milestone", "overdue", "overdue_since", "open_work_item_count",
         "milestones", "recent_events", "open_work_items", "audit_summary",
     }

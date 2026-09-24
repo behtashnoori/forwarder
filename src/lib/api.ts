@@ -1687,7 +1687,10 @@ export interface OperationalShipmentSummary {
   public_id: string;
   status: string;
   version: number;
+  created_at?: string;
+  updated_at?: string;
   customer?: string | { id: number; display_name: string } | null;
+  responsible_expert?: { display_name: string } | null;
   project_public_id?: string | null;
   current_milestone?: string | null;
   overdue: boolean;
@@ -1726,6 +1729,20 @@ export interface OperationalShipmentSummary {
       actual_arrival?: string | null;
     }
   >;
+  route_summary?: {
+    origin: { display_name: string };
+    destination: { display_name: string };
+    transport_modes: string[];
+    leg_count: number;
+  } | null;
+  latest_update?: {
+    event_type: string;
+    label: string;
+    milestone_type: string;
+    occurred_at: string;
+    recorded_at: string;
+    source?: string | null;
+  } | null;
   milestones: Array<{
     id: number;
     type: string;
@@ -1772,6 +1789,62 @@ export function getOperationalContext(): Promise<{
   data: { organization_id: number; permissions: string[] };
 }> {
   return request("/api/operational-context");
+}
+
+export interface OperationalWorkspaceShipment {
+  public_id: string;
+  status: string;
+  customer?: string | { display_name: string } | null;
+  responsible_expert?: OperationalShipmentSummary["responsible_expert"];
+  route_summary?: OperationalShipmentSummary["route_summary"];
+  current_milestone?: string | null;
+  latest_update?: OperationalShipmentSummary["latest_update"];
+  overdue: boolean;
+  overdue_since?: string | null;
+  open_work_item_count: number | null;
+  updated_at?: string;
+}
+
+export interface OperationalWorkspaceSnapshot {
+  data: {
+    active_shipments: OperationalWorkspaceShipment[];
+    attention_items: Array<{
+      identity: string;
+      shipment: OperationalWorkspaceShipment;
+      kind: string;
+      label: string;
+      severity: string;
+      detected_at: string;
+      due_at: string;
+      source: { type: "OperationalWorkItem"; version: number; status: "open" };
+      source_path: string;
+    }>;
+    recent_updates: Array<{
+      event_public_id: string;
+      shipment_public_id: string;
+      customer?: string | { display_name: string } | null;
+      label: string;
+      milestone_type: string;
+      occurred_at: string;
+      recorded_at: string;
+      source?: string | null;
+    }>;
+  };
+  meta: {
+    active_shipment_count: number;
+    open_follow_up_count: number | null;
+    attention_available: boolean;
+    calculated_at: string;
+    projection_version: string;
+    sources: string[];
+    limitations: string[];
+  };
+}
+
+export function getOperationalWorkspace(
+  limit = 8,
+): Promise<OperationalWorkspaceSnapshot> {
+  return request(`/api/operational-workspace?limit=${limit}`);
 }
 
 export function listOperationalShipments(

@@ -19,6 +19,7 @@ from backend.operational_models import (
 )
 from backend.security import require_auth
 from backend.services import operational_service as service
+from backend.services import operational_workspace_service as workspace
 from backend.services import route_orchestration_service as routes
 from backend.services import external_reference_service as external_references
 from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
@@ -228,6 +229,15 @@ def context():
         return _error(exc)
 
 
+@operations_bp.get("/api/operational-workspace")
+@require_auth
+def operational_workspace():
+    try:
+        return jsonify(workspace.snapshot(_user(), request.args.get("limit")))
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
 @operations_bp.get("/api/operations/selectors/customers")
 @require_auth
 def selector_customers():
@@ -308,6 +318,19 @@ def list_shipments():
         query = operational_shipment_population(
             user, status=request.args.get("status") or None, window=window
         ).order_by(None)
+        active = request.args.get("active")
+        if active not in {None, "true", "false"}:
+            raise service.OperationalError(
+                "VALIDATION_FAILED", "active must be true or false.", 422
+            )
+        if active == "true":
+            query = query.where(
+                OperationalShipment.lifecycle_status.in_(("planned", "in_progress"))
+            )
+        elif active == "false":
+            query = query.where(
+                OperationalShipment.lifecycle_status.in_(("completed", "cancelled"))
+            )
         customer = request.args.get("customer", "").strip()
         if customer:
             pattern = f"%{customer}%"

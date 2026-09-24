@@ -1023,6 +1023,13 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
     customer = (
         {"id": customer_row.id, "display_name": display_name} if customer_row else None
     )
+    responsible_name = db.session.scalar(
+        select(ExpertUser.full_name).where(
+            ExpertUser.id == shipment.primary_responsible_expert_id
+        )
+    )
+    event_views = [reads.event_view(event, shipment) for event in events]
+    latest_event = event_views[0] if event_views else None
 
     def leg_data(row):
         return {
@@ -1052,7 +1059,12 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
         "recent_events_scope": "current_route",
         "history_scope": "shipment_history",
         "version": shipment.version,
+        "created_at": reads.iso(shipment.created_at),
+        "updated_at": reads.iso(shipment.updated_at),
         "customer": customer,
+        "responsible_expert": (
+            {"display_name": responsible_name} if responsible_name else None
+        ),
         "project_public_id": db.session.scalar(
             select(Project.public_id).where(Project.id == shipment.project_id)
         )
@@ -1081,6 +1093,34 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
         } if plan else None,
         "route_leg": leg_data(leg) if leg else None,
         "route_legs": [leg_data(row) for row in legs],
+        "route_summary": {
+            "origin": {
+                "display_name": (legs[0].origin_snapshot or {}).get("display_name")
+            },
+            "destination": {
+                "display_name": (legs[-1].destination_snapshot or {}).get(
+                    "display_name"
+                )
+            },
+            "transport_modes": list(
+                dict.fromkeys(row.transport_mode for row in legs)
+            ),
+            "leg_count": len(legs),
+        }
+        if legs
+        else None,
+        "latest_update": (
+            {
+                "event_type": latest_event["event_type"],
+                "label": latest_event["business_label"],
+                "milestone_type": latest_event["milestone_type"],
+                "occurred_at": latest_event["occurred_at"],
+                "recorded_at": latest_event["recorded_at"],
+                "source": latest_event["source_channel"],
+            }
+            if latest_event
+            else None
+        ),
         "current_milestone": current.milestone_type if current else None,
         "overdue": bool(overdue),
         "overdue_since": min((m.planned_at for m in overdue), default=None).isoformat()
@@ -1099,7 +1139,7 @@ def shipment_graph(shipment: OperationalShipment) -> dict[str, Any]:
             }
             for m in milestones
         ],
-        "recent_events": [reads.event_view(e, shipment) for e in events],
+        "recent_events": event_views,
         "open_work_items": [
             {
                 "id": w.id,

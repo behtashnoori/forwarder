@@ -28,6 +28,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ProtectedRoute from "./components/ProtectedRoute";
 import OperationalShipments from "./pages/OperationalShipments";
 import OperationalShipmentDetail from "./pages/OperationalShipmentDetail";
+import OperationalWorkspace from "./pages/OperationalWorkspace";
 import OperationalWorkQueue from "./pages/OperationalWorkQueue";
 import OperationsControlTower from "./pages/OperationsControlTower";
 import PersistedDashboard from "./pages/PersistedDashboard";
@@ -163,6 +164,7 @@ const App = () => (
                     </PersianOnlyRoute>
                   </AdminRoute>
                 } />
+                <Route path="/operations" element={<ProtectedRoute><OperationalRoute><OperationalWorkspace /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/shipments" element={<ProtectedRoute><OperationalRoute><OperationalShipments /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/shipments/new" element={<ProtectedRoute><OperationalRoute><NewOperation /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalRoute><OperationalShipmentDetail /></OperationalRoute></ProtectedRoute>} />

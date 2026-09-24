@@ -17,6 +17,7 @@ export default function OperationsNav() {
   const canManageCustomers = currentActorCanManageTenantCustomers();
   if (!permissions.length) return null;
   return <nav aria-label={t("operations.navLabel")} className="flex flex-wrap items-center gap-2 rounded-xl border bg-white p-2">
+    {canReadOperations && <Button asChild variant="ghost"><Link to="/operations">فضای کار امروز</Link></Button>}
     {canReadOperations && <Button asChild variant="ghost"><Link to="/operations/shipments">{t("operations.shipmentsTitle")}</Link></Button>}
     {canReadOperations && <Button asChild variant="ghost"><Link to="/operations/control-tower">برج کنترل عملیات</Link></Button>}
     {canReadWorkQueue && <Button asChild variant="ghost"><Link to="/operations/work-queue">{t("operations.workQueue")}</Link></Button>}

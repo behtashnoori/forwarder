@@ -46,6 +46,21 @@ const shipment = {
   overdue_since: "2026-01-01T00:00:00Z",
   open_work_item_count: 1,
   current_milestone: "departure",
+  responsible_expert: { display_name: "Fixed Owner" },
+  route_summary: {
+    origin: { display_name: "Origin" },
+    destination: { display_name: "Destination" },
+    transport_modes: ["road"],
+    leg_count: 1,
+  },
+  latest_update: {
+    event_type: "milestone_reported",
+    label: "Departure reported",
+    milestone_type: "departure",
+    occurred_at: "2026-01-01T00:30:00Z",
+    recorded_at: "2026-01-01T00:35:00Z",
+    source: "expert",
+  },
   source: { type: "accepted_quote", accepted_quote_id: 2, shipment_request_id: 3 },
   route_leg: {
     id: 4,
@@ -130,6 +145,13 @@ describe("Phase 1A operational pages", () => {
     );
     expect(screen.queryByText(/Quote #2|Request #3|#1/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("وضعیت محموله")).toBeInTheDocument();
+    expect(screen.getByText("کارشناس مسئول ثابت: Fixed Owner")).toBeInTheDocument();
+    expect(screen.getByText(/آخرین به‌روزرسانی: Departure reported/)).toBeInTheDocument();
+    expect(api.listOperationalShipments).toHaveBeenCalledWith(expect.stringContaining("active=true"));
+
+    fireEvent.click(screen.getByRole("button", { name: "نمایش همه وضعیت‌ها" }));
+    await waitFor(() => expect(api.listOperationalShipments).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(api.listOperationalShipments).mock.calls[1][0]).not.toContain("active=true");
   });
   it("renders detail milestones, work and audit sections", async () => {
     (api.getOperationalShipment as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -150,6 +172,9 @@ describe("Phase 1A operational pages", () => {
     ).toBeInTheDocument();
     expect(screen.getAllByText("arrival", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("operations.workQueue")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /بازگشت به فضای کار امروز/ })).toHaveAttribute("href", "/operations");
+    expect(screen.getByRole("link", { name: /operations.back/ })).toHaveAttribute("href", "/operations/shipments");
+    expect(screen.getByText("Fixed Owner")).toBeInTheDocument();
     expect(screen.queryByText(/Quote #2|Request #3|plan #20|Checkpoint #30|#6/)).not.toBeInTheDocument();
     expect(api.getOperationalShipment).toHaveBeenCalledWith(
       "11111111-1111-4111-8111-111111111111",

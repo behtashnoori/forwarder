@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../pages/OperationalShipments", () => ({ default: () => <p>operational shipments</p> }));
+vi.mock("../pages/OperationalWorkspace", () => ({ default: () => <p>operational workspace</p> }));
 vi.mock("../components/ProtectedRoute", () => ({ default: ({ children }: { children: ReactNode }) => children }));
 vi.mock("../components/ErrorBoundary", () => ({ default: ({ children }: { children: ReactNode }) => children }));
 vi.mock("../components/RouteScrollManager", () => ({ default: () => null }));
@@ -25,6 +26,13 @@ describe("App operational routing", () => {
     localStorage.setItem("expert_user", JSON.stringify({ authority: "ORGANIZATION_ADMIN" }));
     render(<App />);
     expect(await screen.findByText("operational shipments")).toBeInTheDocument();
+  });
+
+  it("makes the operational workspace available to organization-scoped users", async () => {
+    localStorage.setItem("expert_user", JSON.stringify({ authority: "EXPERT" }));
+    window.history.pushState({}, "", "/operations");
+    render(<App />);
+    expect(await screen.findByText("operational workspace")).toBeInTheDocument();
   });
 
   it("blocks a platform admin that has no tenant context", async () => {
@@ -56,6 +64,7 @@ describe("App operational routing", () => {
       "/admin/customer-portal-accounts",
       "/customers",
       "/user-management",
+      "/operations",
       "/operations/shipments",
       "/operations/shipments/new",
       "/operations/shipments/:id",
