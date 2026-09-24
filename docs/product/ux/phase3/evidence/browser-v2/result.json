@@ -1,0 +1,779 @@
+{
+  "revision": "V2",
+  "testedAt": "2026-09-24T21:21:27.330Z",
+  "browser": "154.0.8037.57",
+  "browserChannel": "chrome",
+  "url": "http://127.0.0.1:4182/",
+  "hashes": {
+    "app.js": "a2568a79345112c8b1b7c325301c7c872a93e10d654990eda5adbbac231671ab",
+    "index.html": "3cbed0c33ce441b0ae441c9dffe94ddcf1ecd009081b6dfd0fe1e16f40bf6340",
+    "styles.css": "daa1a1fd2de37dcc68924ba810672006f78b99ea5fa3438c327a37220830c489",
+    "verify-prototype.mjs": "1c55393d486b5dc93dbe6a29ae6d50fcfebd480b1be99bfd560a0ad343653829"
+  },
+  "checks": [
+    {
+      "name": "V2 identity and isolation policy",
+      "result": "PASS"
+    },
+    {
+      "name": "compact header measured",
+      "result": "PASS",
+      "height": 193.640625,
+      "baselineHeight": 256.765625,
+      "reductionPercent": 24.6
+    },
+    {
+      "name": "expert/overview",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/relations",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/cargo",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/route",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/transport",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/allocation",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/documents",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/timeline",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/issues",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/deliveries",
+      "result": "PASS"
+    },
+    {
+      "name": "expert/closure",
+      "result": "PASS"
+    },
+    {
+      "name": "closure remaining work has readable width",
+      "result": "PASS"
+    },
+    {
+      "name": "route planned and actual, history",
+      "result": "PASS"
+    },
+    {
+      "name": "customer grouping opens related goods and request",
+      "result": "PASS"
+    },
+    {
+      "name": "cargo completeness persists in local preview",
+      "result": "PASS"
+    },
+    {
+      "name": "execution shows complete carrier/means/unit/cargo chain and contextual navigation",
+      "result": "PASS"
+    },
+    {
+      "name": "allocation blocks excess and invalid quantities; valid changes update both views and history",
+      "result": "PASS"
+    },
+    {
+      "name": "transfer validates distinct units, preserves sum, records reason",
+      "result": "PASS"
+    },
+    {
+      "name": "document filters, contextual preview and missing receipt recovery",
+      "result": "PASS"
+    },
+    {
+      "name": "reported location updates without internal data in customer timeline",
+      "result": "PASS"
+    },
+    {
+      "name": "followup result and customer fallback",
+      "result": "PASS"
+    },
+    {
+      "name": "customer projection excludes newly saved internal followup",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/summary/1440",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/timeline/1440",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/cargo/1440",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/documents/1440",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/delivery/1440",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/summary/390",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/timeline/390",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/cargo/390",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/documents/390",
+      "result": "PASS"
+    },
+    {
+      "name": "customer/delivery/390",
+      "result": "PASS"
+    },
+    {
+      "name": "admin/catalog",
+      "result": "PASS"
+    },
+    {
+      "name": "admin/route-times",
+      "result": "PASS"
+    },
+    {
+      "name": "admin/closure-rules",
+      "result": "PASS"
+    },
+    {
+      "name": "admin/closure-exceptions",
+      "result": "PASS"
+    },
+    {
+      "name": "admin definition grouping filters search and activation",
+      "result": "PASS"
+    },
+    {
+      "name": "route reference changes only after admin input and retains history",
+      "result": "PASS"
+    },
+    {
+      "name": "closure exception approval and rejection both require reasons and record decision",
+      "result": "PASS"
+    },
+    {
+      "name": "state/expert/normal",
+      "result": "PASS"
+    },
+    {
+      "name": "state/expert/loading",
+      "result": "PASS"
+    },
+    {
+      "name": "state/expert/empty",
+      "result": "PASS"
+    },
+    {
+      "name": "state/expert/error",
+      "result": "PASS"
+    },
+    {
+      "name": "state/expert/denied",
+      "result": "PASS"
+    },
+    {
+      "name": "state/expert/stale",
+      "result": "PASS"
+    },
+    {
+      "name": "state/expert/degraded",
+      "result": "PASS"
+    },
+    {
+      "name": "state/customer/normal",
+      "result": "PASS"
+    },
+    {
+      "name": "state/customer/loading",
+      "result": "PASS"
+    },
+    {
+      "name": "state/customer/empty",
+      "result": "PASS"
+    },
+    {
+      "name": "state/customer/error",
+      "result": "PASS"
+    },
+    {
+      "name": "state/customer/denied",
+      "result": "PASS"
+    },
+    {
+      "name": "state/customer/stale",
+      "result": "PASS"
+    },
+    {
+      "name": "state/customer/degraded",
+      "result": "PASS"
+    },
+    {
+      "name": "state/admin/normal",
+      "result": "PASS"
+    },
+    {
+      "name": "state/admin/loading",
+      "result": "PASS"
+    },
+    {
+      "name": "state/admin/empty",
+      "result": "PASS"
+    },
+    {
+      "name": "state/admin/error",
+      "result": "PASS"
+    },
+    {
+      "name": "state/admin/denied",
+      "result": "PASS"
+    },
+    {
+      "name": "state/admin/stale",
+      "result": "PASS"
+    },
+    {
+      "name": "state/admin/degraded",
+      "result": "PASS"
+    },
+    {
+      "name": "all secondary disclosures and exposed dialogs are readable and dismissible",
+      "result": "PASS"
+    },
+    {
+      "name": "no browser errors or external network requests",
+      "result": "PASS"
+    }
+  ],
+  "errors": [],
+  "externalRequests": [],
+  "audits": [
+    {
+      "page": "expert/overview",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expert/relations",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expert/cargo",
+      "forbidden": [],
+      "industry": [
+        "HS"
+      ]
+    },
+    {
+      "page": "expert/route",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expert/transport",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expert/allocation",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expert/documents",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "expert/timeline",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "expert/issues",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expert/deliveries",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expert/closure",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "route-history",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "request-dialog",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "allocation-dialog",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "documents-missing",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "documents-cargo",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "documents-unit",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "documents-delivery",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "documents-general",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "documents-all",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "customer/summary/1440",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "customer/timeline/1440",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "customer/cargo/1440",
+      "forbidden": [],
+      "industry": [
+        "HS"
+      ]
+    },
+    {
+      "page": "customer/documents/1440",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "customer/delivery/1440",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "customer/summary/390",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "customer/timeline/390",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "customer/cargo/390",
+      "forbidden": [],
+      "industry": [
+        "HS"
+      ]
+    },
+    {
+      "page": "customer/documents/390",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "customer/delivery/390",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "admin/catalog",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "admin/route-times",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "admin/closure-rules",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "admin/closure-exceptions",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/expert/normal",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/expert/loading",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/expert/empty",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/expert/error",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/expert/denied",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/expert/stale",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/expert/degraded",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/customer/normal",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "state/customer/loading",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/customer/empty",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/customer/error",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/customer/denied",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/customer/stale",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "state/customer/degraded",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "state/admin/normal",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/admin/loading",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/admin/empty",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/admin/error",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/admin/denied",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/admin/stale",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "state/admin/degraded",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expanded-overview",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expanded-relations",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-request",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-request",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-request",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expanded-cargo",
+      "forbidden": [],
+      "industry": [
+        "HS"
+      ]
+    },
+    {
+      "page": "dialog-cargo",
+      "forbidden": [],
+      "industry": [
+        "HS"
+      ]
+    },
+    {
+      "page": "dialog-cargo",
+      "forbidden": [],
+      "industry": [
+        "HS"
+      ]
+    },
+    {
+      "page": "expanded-route",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expanded-transport",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-base-definition",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expanded-allocation",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-allocation",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-transfer",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expanded-documents",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "dialog-receipt",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "dialog-document-preview",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "dialog-document-preview",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "dialog-document-preview",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "dialog-document-preview",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "dialog-document-preview",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "dialog-receipt",
+      "forbidden": [],
+      "industry": [
+        "CMR"
+      ]
+    },
+    {
+      "page": "expanded-timeline",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "dialog-update",
+      "forbidden": [],
+      "industry": [
+        "GPS"
+      ]
+    },
+    {
+      "page": "expanded-issues",
+      "forbidden": [],
+      "industry": [
+        "SLA"
+      ]
+    },
+    {
+      "page": "dialog-followup",
+      "forbidden": [],
+      "industry": [
+        "SLA"
+      ]
+    },
+    {
+      "page": "dialog-customer-message",
+      "forbidden": [],
+      "industry": [
+        "SLA"
+      ]
+    },
+    {
+      "page": "expanded-deliveries",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-document-preview",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-receipt",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "expanded-closure",
+      "forbidden": [],
+      "industry": []
+    },
+    {
+      "page": "dialog-exception-request",
+      "forbidden": [],
+      "industry": []
+    }
+  ],
+  "completed": true,
+  "result": "PASS"
+}

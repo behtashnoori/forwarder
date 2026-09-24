@@ -1,0 +1,144 @@
+{
+  "testedAt": "2026-09-24T21:22:22.959901+00:00",
+  "checks": [
+    {
+      "name": "only UX documentation/prototype changes",
+      "result": "PASS",
+      "detail": [
+        "docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md",
+        "docs/product/ux/phase3/MICROCOPY-AUDIT-V2.md",
+        "docs/product/ux/phase3/PRODUCT-OWNER-REVIEW.md",
+        "docs/product/ux/phase3/README.md",
+        "docs/product/ux/phase3/REVISION-V2-AUTHORITY.md",
+        "docs/product/ux/phase3/REVISION-V2-REPORT.md",
+        "docs/product/ux/phase3/SCREEN-INVENTORY.md",
+        "docs/product/ux/phase3/STATE-MATRIX.md",
+        "docs/product/ux/phase3/STORYTELLING-AUDIT-V2.md",
+        "docs/product/ux/phase3/evidence/PRODUCT-OWNER-REVIEW-V1-SCRIPT.md",
+        "docs/product/ux/phase3/evidence/README.md",
+        "docs/product/ux/phase3/evidence/browser-v2/admin-catalog.png",
+        "docs/product/ux/phase3/evidence/browser-v2/admin-closure-exceptions.png",
+        "docs/product/ux/phase3/evidence/browser-v2/admin-closure-rules.png",
+        "docs/product/ux/phase3/evidence/browser-v2/admin-route-times.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-cargo-1440.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-cargo-390.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-delivery-1440.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-delivery-390.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-documents-1440.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-documents-390.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-summary-1440.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-summary-390.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-timeline-1440.png",
+        "docs/product/ux/phase3/evidence/browser-v2/customer-timeline-390.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-allocation.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-cargo.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-closure.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-deliveries.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-documents.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-issues.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-overview.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-relations.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-route.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-timeline.png",
+        "docs/product/ux/phase3/evidence/browser-v2/expert-transport.png",
+        "docs/product/ux/phase3/evidence/browser-v2/result.json",
+        "docs/product/ux/phase3/evidence/browser-v2/state-admin-degraded.png",
+        "docs/product/ux/phase3/evidence/browser-v2/state-admin-stale.png",
+        "docs/product/ux/phase3/evidence/browser-v2/state-customer-degraded.png",
+        "docs/product/ux/phase3/evidence/browser-v2/state-customer-stale.png",
+        "docs/product/ux/phase3/evidence/browser-v2/state-expert-degraded.png",
+        "docs/product/ux/phase3/evidence/browser-v2/state-expert-stale.png",
+        "docs/product/ux/phase3/evidence/design-validation-v2.json",
+        "docs/product/ux/phase3/prototype/app.js",
+        "docs/product/ux/phase3/prototype/index.html",
+        "docs/product/ux/phase3/prototype/styles.css",
+        "docs/product/ux/phase3/prototype/verify-prototype.mjs"
+      ]
+    },
+    {
+      "name": "git diff whitespace",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Markdown links resolve",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "name": "Markdown table columns match",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "name": "no API or persistence primitives in prototype",
+      "result": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "runtime does not import prototype",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "name": "high-confidence secret patterns absent; synthetic content reviewed",
+      "result": "PASS",
+      "detail": []
+    },
+    {
+      "name": "architecture governance",
+      "result": "PASS",
+      "detail": "Forwarder architecture governance checks passed."
+    },
+    {
+      "name": "repository structure",
+      "result": "PASS",
+      "detail": "✅ Canonical migrations directory exists: backend/migrations\n✅ backend/migrations/alembic.ini exists\n✅ Structure check passed"
+    },
+    {
+      "name": "single Alembic head (no DB operation)",
+      "result": "PASS",
+      "detail": "20260929_operational_monitoring_reliability (head)"
+    },
+    {
+      "name": "canonical remains unchanged and clean",
+      "result": "PASS",
+      "detail": {
+        "head": "d83b1aa7c0011221188e753c0f38d2058859400b",
+        "status": ""
+      }
+    },
+    {
+      "name": "canonical remote alignment fresh",
+      "result": "PASS",
+      "detail": "d83b1aa7c0011221188e753c0f38d2058859400b\trefs/heads/integration/golden-controlled"
+    },
+    {
+      "name": "V1 needs change; V2 human checkpoints not reviewed",
+      "result": "PASS",
+      "detail": {
+        "humanCheckpoints": 26
+      }
+    },
+    {
+      "name": "exact reviewed prototype asset hashes match committed candidate",
+      "result": "PASS",
+      "detail": {
+        "app.js": "a2568a79345112c8b1b7c325301c7c872a93e10d654990eda5adbbac231671ab",
+        "index.html": "3cbed0c33ce441b0ae441c9dffe94ddcf1ecd009081b6dfd0fe1e16f40bf6340",
+        "styles.css": "daa1a1fd2de37dcc68924ba810672006f78b99ea5fa3438c327a37220830c489",
+        "verify-prototype.mjs": "1c55393d486b5dc93dbe6a29ae6d50fcfebd480b1be99bfd560a0ad343653829"
+      }
+    },
+    {
+      "name": "link and whitespace recheck after final report update",
+      "result": "PASS",
+      "detail": "Report links and source hash reference rechecked; final evidence-only commit follows."
+    }
+  ],
+  "result": "PASS",
+  "prototypeCommit": "ce00433d0eff683c1b75c3d2e5e2b48dfef08d88",
+  "browserChecks": 64,
+  "browserTextAudits": 87,
+  "screenshots": 31
+}

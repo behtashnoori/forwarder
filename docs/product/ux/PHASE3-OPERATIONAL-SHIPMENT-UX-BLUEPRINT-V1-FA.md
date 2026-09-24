@@ -1,10 +1,11 @@
 # طرح مرجع تجربه کاربری پرونده حمل عملیاتی — فاز ۳
 
 وضعیت: `TARGET_PHASE3_UX`
-نسخه: `1.0`
-تاریخ: `۱۴۰۵-۰۷-۰۲ / 2026-09-24`
+نسخه: `Revision v2 — candidate`
+وضعیت: `TARGET_CANDIDATE_AWAITING_PRODUCT_OWNER_APPROVAL`
+تاریخ بازبینی: `2026-09-25`؛ نسخه اول در `2026-09-24` ایجاد شد.
 مبنای حاکمیتی: `LPAF 2.7`
-مبنای مخزن: `integration/golden-controlled@6d7a757d84d64afe3fe8614986a9e6900fe22fad`
+مبنای Revision v2: `integration/golden-controlled@d83b1aa7c0011221188e753c0f38d2058859400b`؛ نسخه اول بر مبنای `6d7a757d84d64afe3fe8614986a9e6900fe22fad` بود.
 اثر بر سفرهای جاری: `JOURNEY_IMPACT=NONE`
 اعتبارسنجی سراسری محصول: `GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING`
 آمادگی انتشار: `RELEASE_READY=NO`
@@ -17,7 +18,7 @@
 
 **پیچیدگی باید در مدل سیستم باشد، نه در ذهن کاربر.**
 
-این مأموریت `Level B` و با مسیریابی `Astra` انجام شده است؛ چون دامنه چندسطحی، چندنقشی و دارای مرزهای حساس Product و privacy است. خروجی فقط طراحی، مستندات و Prototype ایزوله است.
+مأموریت نسخه اول با `Level B / Astra` ثبت شده بود. بازبینی دوم نیز فقط طراحی، مستندات و Prototype ایزوله است؛ رکورد جاری دامنه و مسیریابی در [Revision v2 Authority](phase3/REVISION-V2-AUTHORITY.md) قرار دارد.
 
 ### خارج از محدوده قطعی
 
@@ -90,7 +91,7 @@ LPAF v2.7 مرجع حاکم است؛ نسخه‌های تاریخی یا v2.6 د
 
 - جزئیات قرارداد runtime، permission matrix نهایی و lifecycle فاز ۳ تا مأموریت implementation planning تعیین نشده است.
 - readiness فنی و انسانی سفرهای فاز ۳ سنجیده نشده است.
-- Product Owner هنوز هیچ screen، microcopy یا interaction این طرح را تأیید نکرده است.
+- Product Owner همه سطح‌های نسخه اول را مرور کرده و نتیجه `COMPLETED_NEEDS_CHANGE` داده است؛ منطق و مدل اطلاعات عموماً تأیید شده، اما روایت و زبان و رابطه‌ها نیازمند تغییر بوده‌اند. تأیید نسخه دوم هنوز انجام نشده است.
 
 ## ۵. پرسوناها و مدل ذهنی روزانه
 
@@ -258,7 +259,7 @@ Internal explanation و customer-safe explanation در دو panel جدا قرا�
 
 ## ۱۵. Delivery و Closure
 
-هر Delivery مقدار، مکان، زمان و evidence مستقل دارد. مجموع delivered و remaining در سطح Cargo دیده می‌شود. وضعیت چندمشتری نیز مستقل است: مشتری A تحویل‌شده، B در حمل، C در گمرک؛ Shipment همچنان باز می‌ماند.
+هر Delivery مقدار، مکان، زمان و evidence مستقل دارد. مجموع delivered و remaining در سطح Cargo دیده می‌شود. در نمونه مرحله بعد، قطعات موتور مشتری A تحویل‌شده، بوش فلزی او و بار B در حمل و بار C در گمرک‌اند؛ وضعیت کل حمل جداست. این نما با برچسب مرحله بعد از موقعیت جاری آلماتی جدا شده است.
 
 Closure یک checklist policy-driven است، نه نتیجه خودکار تحویل. Expert می‌بیند کدام الزام پاس، ناقص یا blocker است و به context اصلاح هدایت می‌شود. Expert bypass ندارد. درخواست استثنا به Organization Admin می‌رود و در آن:
 
@@ -288,7 +289,7 @@ Admin چهار سطح دارد:
 3. **الزامات closure:** ترکیب requirementهای عمومی و mode-specific؛
 4. **بررسی استثنای closure:** missing requirement، دلیل، approver، time و state صریح.
 
-مقایسه «مرجع فعلی ۶–۸ روز» با «عملکرد واقعی اخیر ۹–۱۱ روز» فقط پیشنهاد بازبینی می‌دهد. سامانه در طرح، مرجع را خودکار تغییر نمی‌دهد و analytics پیاده‌سازی نشده است.
+مقایسه زمان حرکت ریلی «مرجع فعلی ۴–۶ روز» با «عملکرد واقعی اخیر ۷–۹ روز» فقط پیشنهاد بازبینی می‌دهد. سامانه در طرح، مرجع را خودکار تغییر نمی‌دهد و analytics پیاده‌سازی نشده است.
 
 ## ۱۸. `DECISION_NEEDED`
 
@@ -310,22 +311,22 @@ Admin چهار سطح دارد:
 
 ## ۱۹. پوشش سفرهای Product
 
-این پوشش «طراحی» است، نه اجرای سفر یا PASS محصول.
+این نگاشت طراحی است؛ اجرای runtime یا پذیرش انسانی نیست. نام‌ها با Journey Pack v1.1 آشتی شده‌اند.
 
-| سفر | پوشش UX | وضعیت اعتبارسنجی |
-|---|---|---|
-| FWD-J03 | ایجاد/تکمیل تدریجی پرونده، اتصال Request و تعریف Cargo/route | `DESIGN_COVERED / NOT_RUN` |
-| FWD-J04 | اجرای چندمرحله‌ای، چندوسیله‌ای و Carrier per execution | `DESIGN_COVERED / NOT_RUN` |
-| FWD-J05 | reported location، Timeline، correction و Attention | `DESIGN_COVERED / NOT_RUN` |
-| FWD-J06 | Customer projection، privacy و safe communication | `DESIGN_COVERED / NOT_RUN` |
-| FWD-J07 | partial delivery، evidence و remaining quantity | `DESIGN_COVERED / NOT_RUN` |
-| FWD-J09 | closure checklist و Admin exception | `TARGET_DESIGN_COVERED / PRODUCT_NOT_IMPLEMENTED` |
-| FWD-IPJ-01 | Request → Shipment linkage و source attribution | `DESIGN_COVERED / NOT_RUN` |
-| FWD-IPJ-02 | cross-surface execution awareness | `DESIGN_COVERED / NOT_RUN` |
-| FWD-IPJ-03 | Customer-safe shared Shipment projection | `DESIGN_COVERED / NOT_RUN` |
-| FWD-IPJ-04 | end-to-end closure control | `TARGET_DESIGN_COVERED / PRODUCT_NOT_IMPLEMENTED` |
+| سفر | پوشش در طرح | وضعیت |
+| --- | --- | --- |
+| FWD-J03 — تحویل تجاری به عملیات | درخواست منبع و بار هر مشتری | `DESIGN_COVERED / PRODUCT_NOT_RUN` |
+| FWD-J04 — فضای کاری کارشناس | نمای کلی، مسیر، اجرا و تخصیص | `DESIGN_COVERED / PRODUCT_NOT_RUN` |
+| FWD-J05 — مشکل، اقدام و پیگیری | مشکل، مسئول، مهلت، نتیجه و پیام مشتری | `DESIGN_COVERED / PRODUCT_NOT_RUN` |
+| FWD-J06 — اداره سازمان | تعاریف، زمان مرجع، شرایط بستن و تصمیم مدیر | `DESIGN_COVERED / PRODUCT_NOT_RUN` |
+| FWD-J08 — جداسازی و مجوز | محدودیت داده نمای مشتری در نمونه | `PRESENTATION_ONLY / RUNTIME_NOT_VERIFIED` |
+| FWD-J09 — پرونده مشترک | کالا تا تحویل و بستن، با نماهای سه نقش | `TARGET_DESIGN_COVERED / PRODUCT_NOT_IMPLEMENTED` |
+| FWD-IPJ-01 | پیوند درخواست با پرونده | `PARTIAL_DESIGN / PRODUCT_NOT_RUN` |
+| FWD-IPJ-02 | آگاهی عملیاتی و پیگیری | `PARTIAL_DESIGN / PRODUCT_NOT_RUN` |
+| FWD-IPJ-03 | تنظیمات سازمان و مرز نقش‌ها | `PARTIAL_DESIGN / PRODUCT_NOT_RUN` |
+| FWD-IPJ-04 | پرونده مشترک از کالا تا بستن | `TARGET_DESIGN_COVERED / PRODUCT_NOT_IMPLEMENTED` |
 
-`JOURNEY_IMPACT=NONE` چون هیچ رفتار runtime تغییر نکرده است. هیچ Integrated Product Journey یا Human Product Walkthrough در این مأموریت PASS نشده است.
+FWD-J01، FWD-J02 و FWD-J07 در این نمونه مرور نمی‌شوند. `JOURNEY_IMPACT=NONE` برای runtime است چون فقط فایل‌های طراحی و مستندات تغییر دارند؛ شواهد نمونه، PASS سفر یکپارچه محصول نیستند.
 
 ## ۲۰. رویکرد responsive و accessibility
 
@@ -356,12 +357,12 @@ Admin چهار سطح دارد:
 Prototype با HTML/CSS/JS ساده در مسیر مستندات قرار دارد و:
 
 - فقط داده ساختگی دارد؛
-- با banner دائمی `TARGET_PHASE3_UX` مشخص است؛
+- با نوار دائمی «نمونه تعاملی فاز ۳ — بازبینی دوم» و هشدار داده ساختگی مشخص است؛
 - هیچ fetch، API، credential، production endpoint یا DB ندارد؛
 - هیچ فایل آن از runtime import نمی‌شود؛
 - state فقط در حافظه مرورگر و تا refresh معتبر است؛
 - role switch برای Expert، Customer A و Organization Admin دارد؛
-- stateهای normal، incomplete، empty، loading، denied، error و stale را قابل مشاهده می‌کند.
+- stateهای normal، incomplete، empty، loading، denied، error، stale و degraded را قابل مشاهده می‌کند.
 
 ## ۲۲. راهنمای مرزی برای مأموریت پیاده‌سازی بعدی
 
@@ -377,10 +378,47 @@ Prototype با HTML/CSS/JS ساده در مسیر مستندات قرار دار
 
 ## ۲۳. وضعیت بازبینی و reference
 
-`UX_PRODUCT_OWNER_REVIEW=NOT_RUN`
+`UX_PRODUCT_OWNER_REVIEW_V1=COMPLETED_NEEDS_CHANGE`
+`UX_PRODUCT_OWNER_REVIEW_V2=READY_FOR_REVIEW`
 `HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`
-`BROWSER_PROTOTYPE_REVIEW=PASS`
+`BROWSER_PROTOTYPE_REVIEW_V1=PASS`؛ نتیجه مرور تازه V2 در [شاهد Chrome](phase3/evidence/browser-v2/result.json) ثبت می‌شود.
 `REFERENCE_RECONCILIATION=PASS`
 `REFERENCE_IMPACT=NONE`
 
 در آغاز، این سند یک مرجع هدف جدید بود و `REFERENCE_IMPACT=UPDATE_REQUIRED` داشت. با افزودن pointer به نقشه‌های مرجع پروژه، اثر رفع و به `NONE` آشتی داده شد. هیچ تغییری در LPAF v2.7 انجام نشده است.
+
+## ۲۴. استاندارد بازبینی دوم
+
+بازبینی دوم در همان Prototype نسخه اول انجام شده است. [ممیزی داستان هر صفحه](phase3/STORYTELLING-AUDIT-V2.md) و [سه سفر مرور انسانی](phase3/PRODUCT-OWNER-REVIEW.md) معیار جاری ارائه‌اند. جزئیات نسخه اول که با قواعد زیر ناسازگارند، سابقه طراحی‌اند؛ معنای Product Contract تغییر نکرده است.
+
+### روایت و اولویت
+
+هر صفحه باید پاسخ دهد: کجای کار هستم؛ هدف صفحه چیست؛ عناصر چه رابطه‌ای دارند؛ چه چیزی ناقص یا مهم است؛ قدم بعد چیست. لایه اول برای وضعیت و کار امروز، لایه دوم برای زمینه لازم و لایه سوم برای شناسه، تاریخچه و دلیل تغییر است. متن توضیح معماری نباید فهم کار روزانه را شرطی کند. تاریخچه با «مشاهده تغییرات قبلی» در دسترس است.
+
+سربرگ فشرده، هویت پرونده و مسئول و مرحله و گزارش موقعیت و زمان باقی‌مانده و نقطه بعد و ارزیابی سیستم را حفظ می‌کند. زمان گزارش موقعیت و آخرین ارزیابی سیستم جدا هستند. شمارنده‌ها بدون کارت‌های بزرگ نشان داده می‌شوند؛ چهار کالا و پنج واحد حمل در نمونه جاری با هم تطبیق دارند.
+
+### زبان سه نقش
+
+کارشناس با زبان عملیات، مشتری با زبان نتیجه بار خودش و مدیر با زبان سیاست سازمان کار می‌کند. واژه‌های اصلی عبارت‌اند از پرونده حمل، کالا، شرکت حمل، روند حمل، زمان تقریبی رسیدن، پیگیری، مهلت پیگیری، مربوط به، قابل مشاهده برای و بستن پرونده. HS و CMR با زمینه فارسی و GPS فقط برای توضیح زنده نبودن موقعیت باقی می‌مانند. SLA فقط در جزئیات پیگیری است. پیام خطا اتفاق و قدم بعد را توضیح می‌دهد.
+
+### رابطه و اقدام
+
+شرکت حمل و وسیله و واحد و کالا در یک زنجیره عمودی‌اند؛ قطار، واگن و کانتینر یکی فرض نمی‌شوند. تخصیص دو نمای متصل کالا و واحد حمل دارد؛ تغییر معتبر در مقدار، نمای مقابل و تاریخچه دیده می‌شود. سند، موضوع سند و مخاطب مجاز را جدا نشان می‌دهد. مشکل، اثر، پیگیری، مسئول، مهلت و نتیجه در یک گروه‌اند. مشتری، کالا و تحویل‌ها با مقدار باقی‌مانده صریح ارائه می‌شوند. کارهای باقیمانده بستن پیش از فهرست کامل می‌آیند. تأیید استثنایی نقص مدرک را حذف نمی‌کند.
+
+### زمان سناریو و حدود تعامل
+
+وضعیت جاری نمونه در مرحله خورگوس تا آکتائو است. نماهای تحویل/اسناد تحویل در مهرماه و بستن در پایان سفر، با توضیح «نمونه مرحله بعد» نمایش داده می‌شوند؛ با وضعیت جاری مخلوط نمی‌شوند. تخصیص، برنامه جابه‌جایی است و عدد واقعی ۸۷ کارتن به جای ۹۰ برنامه، حقیقت جداگانه‌ای در مشخصات است؛ lifecycle فنی allocation هنوز DN باز است. واحدهای کارتن، پالت و جامبوبگ جمع نمی‌شوند.
+
+برخی اقدام‌ها مثل مرور شرایط نهایی، پایان بستن و ثبت تحویل تازه فقط محدوده پیش‌نمایش را نشان می‌دهند؛ جای تصمیم نهایی Product یا runtime نیستند. هیچ taxonomy نهایی رخداد ساخته نشده است؛ ثبت به‌روزرسانی فقط گزارش موقعیت و نتیجه پیگیری موجود را ارائه می‌کند.
+
+### حالت و بازیابی
+
+[ماتریس حالت‌ها](phase3/STATE-MATRIX.md) جاری است. `stale` یعنی نتیجه ممکن است قدیمی باشد؛ `degraded` یعنی به‌روزرسانی یا ارزیابی کامل نشده است. پیام، زمان و اقدام بازگشت هرکدام مستقل است. دکمه خروج از پیش‌نمایش حالت، ادعای تعمیر سیستم نیست. اطلاعات ناقص با مشکل عملیاتی و بستن تحویل با بستن پرونده یکی نمی‌شود.
+
+### مرز پذیرش
+
+`UX_PRODUCT_OWNER_REVIEW_V1=COMPLETED_NEEDS_CHANGE`
+`UX_PRODUCT_OWNER_REVIEW_V2=READY_FOR_REVIEW`
+`HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`
+
+پس از تکمیل ممیزی تازه، V2 فقط READY_FOR_REVIEW می‌شود. هیچ PASS انسانی، تغییر Contract/Journey Pack، canonical integration یا شروع برنامه‌ریزی پیاده‌سازی مجاز نیست.

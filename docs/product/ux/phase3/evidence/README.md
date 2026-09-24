@@ -1,4 +1,6 @@
-# شواهد مرورگر Prototype فاز ۳
+# شواهد تاریخی مرورگر Prototype نسخه اول
+
+**این بخش و فایل‌های browser/ شواهد تاریخی V1 هستند. نتیجه انسانی V1 اکنون COMPLETED_NEEDS_CHANGE است. نتیجه تازه V2 در [browser-v2/result.json](browser-v2/result.json) و [گزارش Revision v2](../REVISION-V2-REPORT.md) ثبت می‌شود.**
 
 نوع شاهد: `UX PROTOTYPE EVIDENCE — NOT PRODUCT RUNTIME QUALIFICATION`
 Prototype: `TARGET_PHASE3_UX`
