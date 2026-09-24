@@ -1,0 +1,463 @@
+{
+  "testedAt": "2026-09-24T21:52:36.304Z",
+  "sourceHead": "32d5a14ae70f0b74747f4ab4c3a7bea185002dc5",
+  "browser": "154.0.8037.57",
+  "url": "http://127.0.0.1:4183/",
+  "hashes": {
+    "app.js": "a2568a79345112c8b1b7c325301c7c872a93e10d654990eda5adbbac231671ab",
+    "index.html": "806d746d12112a0c290dfeffbdc62b1ede4ec71dc34a2d66b019616d68dfa1ab",
+    "styles.css": "daa1a1fd2de37dcc68924ba810672006f78b99ea5fa3438c327a37220830c489",
+    "visual-v2-1.css": "83e82ab605773c469b465661d89912e0611e6fcb008048deadb9d7310250a7ba",
+    "assets/Vazirmatn.ttf": "696249a2c74b39ffdef55de4df2809c5b639d3ff80d618d8160a095d2fd49dca",
+    "review-visual-v2-1.mjs": "2b3949a0cfa479fdc2863ebec8203d944dbe9cffccedc25035bae5485b251d86",
+    "reference-current.html": "c315b5531bef4fb3e096ab3fefb8ed3118f723c80acace0da9c8538ff7a77511",
+    "reference-current.css": "58a939c8a74e480051ff40fc41fbda71cde0b50430ce86ca6e5f3299ccc6a812"
+  },
+  "measurements": [
+    {
+      "name": "expert/overview",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/relations",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/cargo",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/route",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/transport",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/allocation",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/documents",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/timeline",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/issues",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/deliveries",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "expert/closure",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/summary",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/timeline",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/cargo",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/documents",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/delivery",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "admin/catalog",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "admin/route-times",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "admin/closure-rules",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "admin/closure-exceptions",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/summary/390",
+      "width": 390,
+      "scrollWidth": 390,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/summary/390-bottom",
+      "bottom": 731.75,
+      "navTop": 770,
+      "targets": [
+        {
+          "text": "خلاصه",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "مسیر و روند حمل",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "کالای من",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "اسناد من",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "تحویل",
+          "w": 70.40625,
+          "h": 52
+        }
+      ]
+    },
+    {
+      "name": "customer/timeline/390",
+      "width": 390,
+      "scrollWidth": 390,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/timeline/390-bottom",
+      "bottom": 731.671875,
+      "navTop": 770,
+      "targets": [
+        {
+          "text": "خلاصه",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "مسیر و روند حمل",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "کالای من",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "اسناد من",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "تحویل",
+          "w": 70.40625,
+          "h": 52
+        }
+      ]
+    },
+    {
+      "name": "customer/cargo/390",
+      "width": 390,
+      "scrollWidth": 390,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/cargo/390-bottom",
+      "bottom": 732.328125,
+      "navTop": 770,
+      "targets": [
+        {
+          "text": "خلاصه",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "مسیر و روند حمل",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "کالای من",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "اسناد من",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "تحویل",
+          "w": 70.40625,
+          "h": 52
+        }
+      ]
+    },
+    {
+      "name": "customer/documents/390",
+      "width": 390,
+      "scrollWidth": 390,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/documents/390-bottom",
+      "bottom": 732.125,
+      "navTop": 770,
+      "targets": [
+        {
+          "text": "خلاصه",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "مسیر و روند حمل",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "کالای من",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "اسناد من",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "تحویل",
+          "w": 70.40625,
+          "h": 52
+        }
+      ]
+    },
+    {
+      "name": "customer/delivery/390",
+      "width": 390,
+      "scrollWidth": 390,
+      "font": "Vazirmatn, Vazir, Tahoma, system-ui, sans-serif",
+      "fontLoaded": true,
+      "hiddenControls": 0
+    },
+    {
+      "name": "customer/delivery/390-bottom",
+      "bottom": 731.84375,
+      "navTop": 770,
+      "targets": [
+        {
+          "text": "خلاصه",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "مسیر و روند حمل",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "کالای من",
+          "w": 70.390625,
+          "h": 52
+        },
+        {
+          "text": "اسناد من",
+          "w": 70.40625,
+          "h": 52
+        },
+        {
+          "text": "تحویل",
+          "w": 70.40625,
+          "h": 52
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "text palette contrast >= 4.5 (scoped, not full WCAG certification)",
+      "result": "PASS",
+      "contrast": [
+        {
+          "name": "body",
+          "ratio": 12.401233909956938
+        },
+        {
+          "name": "metadata",
+          "ratio": 5.269001840372811
+        },
+        {
+          "name": "primary",
+          "ratio": 8.00919460278433
+        },
+        {
+          "name": "current",
+          "ratio": 7.172111730797475
+        },
+        {
+          "name": "incomplete",
+          "ratio": 6.129327300778911
+        },
+        {
+          "name": "complete",
+          "ratio": 5.87393582005813
+        },
+        {
+          "name": "problem",
+          "ratio": 7.462355692810336
+        },
+        {
+          "name": "stale",
+          "ratio": 7.7268300325794215
+        }
+      ]
+    },
+    {
+      "name": "source-rendered canonical input/button style alignment",
+      "result": "PASS",
+      "referenceStyles": {
+        "inputRadius": "12px",
+        "inputHeight": "40px",
+        "inputBackground": "rgb(248, 247, 252)",
+        "buttonRadius": "12px",
+        "buttonBackground": "rgb(13, 77, 165)"
+      },
+      "alignedStyles": {
+        "inputRadius": "12px",
+        "inputHeight": "42.5px",
+        "inputBackground": "rgb(248, 247, 252)",
+        "buttonRadius": "12px",
+        "buttonBackground": "rgb(13, 77, 165)"
+      }
+    },
+    {
+      "name": "keyboard dialog focus cycle, visible ring, Escape",
+      "result": "PASS",
+      "focus": {
+        "outline": "2px",
+        "height": 42.5,
+        "radius": "12px"
+      }
+    },
+    {
+      "name": "mobile initial ETA visible",
+      "result": "PASS",
+      "eta": {
+        "x": 37,
+        "y": 672.671875,
+        "width": 316,
+        "height": 53.1875
+      }
+    },
+    {
+      "name": "Chrome visual evidence complete; no errors, failures or external requests",
+      "result": "PASS"
+    }
+  ],
+  "errors": [],
+  "failed": [],
+  "external": [],
+  "result": "PASS"
+}

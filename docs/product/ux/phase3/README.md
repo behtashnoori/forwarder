@@ -1,33 +1,26 @@
-# نمونه تعاملی فاز ۳ — Revision v2
+# نمونه تعاملی فاز ۳ — V2.1
 
-`UX_STATUS=TARGET_CANDIDATE_AWAITING_PRODUCT_OWNER_APPROVAL`
+`VISUAL_FIDELITY_CANDIDATE=READY_FOR_FINAL_PRODUCT_OWNER_REVIEW`
 
-- [Blueprint به‌روز](../PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md)
-- [موجودی صفحه‌ها](SCREEN-INVENTORY.md)
-- [ممیزی داستان صفحه‌ها](STORYTELLING-AUDIT-V2.md)
-- [ماتریس حالت‌ها](STATE-MATRIX.md)
-- [سه سفر مرور مالک محصول](PRODUCT-OWNER-REVIEW.md)
-- [رکورد اختیار](REVISION-V2-AUTHORITY.md)
-- [شواهد مرور تازه Chrome](evidence/browser-v2/result.json)
+- [باز کردن نمونه](http://127.0.0.1:4183/)
+- [بسته مرور نهایی مالک محصول](PRODUCT-OWNER-REVIEW.md)
+- [مقایسه تصویری کنار هم](evidence/VISUAL-COMPARISON.html)
+- [Visual DNA فعلی](FORWARDER-VISUAL-DNA-INVENTORY.md)
+- [ممیزی ظاهر](VISUAL-FIDELITY-AUDIT-V2-1.md)
+- [گزارش و وضعیت‌های نهایی](VISUAL-V2-1-REPORT.md)
+- [رکورد اختیار](VISUAL-V2-1-AUTHORITY.md)
+- [Blueprint](../PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md)
+- [داستان صفحه‌ها، بدون تغییر](STORYTELLING-AUDIT-V2.md) و [موجودی صفحه‌ها](SCREEN-INVENTORY.md)
+- [آزمون رفتار](evidence/browser-v2-1/result.json) و [مرور بصری Chrome](evidence/browser-v2-1/visual-review.json)
 
-## اجرای محلی مستقل
+## اجرای مستقل محلی
 
 ```powershell
-python -m http.server 4182 --bind 127.0.0.1 --directory "D:\1-webapp\forwarder-dev\phase3-ux-prototype-revision-v2\docs\product\ux\phase3\prototype"
+python -m http.server 4183 --bind 127.0.0.1 --directory "D:\1-webapp\forwarder-dev\phase3-ux-visual-fidelity-v2-1\docs\product\ux\phase3\prototype"
 ```
 
-نشانی: [باز کردن Revision v2](http://127.0.0.1:4182/)
+فقط CSS مستقل و فونت محلی به V2 اضافه شده‌اند؛ app.js و متن/ترتیب صفحه‌ها همان V2 هستند. برچسب نسخه و وضعیت مرور در index.html به‌روز شده است. داده‌ها ساختگی و تغییرهای تعاملی در حافظه‌اند. اتصال API، auth، پایگاه داده و درخواست خارجی مرورگر وجود ندارد.
 
-نمونه فعلی در همان پوشه نسخه اول بازبینی شده است؛ نمونه جداگانه‌ای ایجاد نشده است. داده‌ها ساختگی‌اند. تغییرات فقط در حافظه مرورگرند و با بازخوانی صفحه پاک می‌شوند. سیاست امنیت محتوای صفحه، اتصال شبکه و ارسال فرم را مسدود می‌کند. سرور فقط روی رایانه محلی گوش می‌دهد؛ به محصول یا پایگاه داده دسترسی ندارد.
+[مرجع محلی کد فعلی](http://127.0.0.1:4183/reference-current.html) فقط componentهای نمایشی canonical را با props ساختگی رندر می‌کند؛ صفحه واقعی محصول یا محیط عملیاتی نیست. نمونه اصلی هیچ وابستگی به آن ندارد.
 
-## سه سفر
-
-کارشناس: نمای کلی ← مشتری‌ها/کالا ← مسیر ← اجرا ← تخصیص ← اسناد ← روند حمل ← مشکلات/پیگیری ← تحویل ← بستن.
-
-مشتری: خلاصه ← مسیر/موقعیت/روند ← کالا ← اسناد ← تحویل، روی دسکتاپ و عرض ۳۹۰.
-
-مدیر: تعاریف پایه ← زمان‌های معمول ← شرایط بستن ← تصمیم استثنایی.
-
-V1: `COMPLETED_NEEDS_CHANGE`. تأیید انسانی V2 انجام نشده است. کد محصول، canonical و Production تغییر نمی‌کنند. پیاده‌سازی و برنامه‌ریزی آن تا مرور V2 شروع نمی‌شوند.
-
-[گزارش نهایی و همه وضعیت‌ها](REVISION-V2-REPORT.md) · [ممیزی زبان](MICROCOPY-AUDIT-V2.md)
+V1: COMPLETED_NEEDS_CHANGE. V2: COMPLETED_CONDITIONAL_PASS_VISUAL_ALIGNMENT_REQUIRED. V2.1 و تأیید نهایی انسانی: NOT_RUN؛ بسته آماده مرور است. کد محصول و canonical دست‌نخورده‌اند؛ ادغام، push، انتشار و برنامه‌ریزی پیاده‌سازی انجام نشده است.

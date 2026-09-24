@@ -1,3 +1,11 @@
+# شواهد جاری V2.1
+
+[مرور رفتاری تازه](browser-v2-1/result.json) · [مرور بصری تازه](browser-v2-1/visual-review.json) · [مقایسه کنار هم](VISUAL-COMPARISON.html) · [گزارش](../VISUAL-V2-1-REPORT.md)
+
+شواهد browser/ و browser-v2/ و گزارش‌های V1/V2 تاریخی‌اند؛ دست‌نخورده حفظ شده‌اند. نتیجه انسانی V2 اکنون COMPLETED_CONDITIONAL_PASS_VISUAL_ALIGNMENT_REQUIRED است. V2.1 آماده مرور است و نتیجه انسانی NOT_RUN می‌ماند.
+
+---
+
 # شواهد تاریخی مرورگر Prototype نسخه اول
 
 **این بخش و فایل‌های browser/ شواهد تاریخی V1 هستند. نتیجه انسانی V1 اکنون COMPLETED_NEEDS_CHANGE است. نتیجه تازه V2 در [browser-v2/result.json](browser-v2/result.json) و [گزارش Revision v2](../REVISION-V2-REPORT.md) ثبت می‌شود.**

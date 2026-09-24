@@ -1,0 +1,40 @@
+{
+  "canonical": "D:/1-webapp/15-forwarder-golden-20260921",
+  "head": "d83b1aa7c0011221188e753c0f38d2058859400b",
+  "hashes": {
+    "src/index.css": "7109832694fbf2a2792004b00d0da75e1b5655a57915a599219f94c9ab1c3426",
+    "tailwind.config.ts": "21f500a9757578e46dbdfa57f251b112ce76ea2791fffd457abba9b0f453a5d3",
+    "src/components/ui/button.tsx": "ae79c4e2faf27cf6596ac044fb0c554cfe784560df76f2357ee36964f5bc8cba",
+    "src/components/ui/input.tsx": "64610739d4c9d05b86ef4b31b7afb1e9e80d05af108cf1b02ee69a5679a717cd",
+    "src/components/ui/card.tsx": "88e728bd33911310f5e8018409448cef61147c841683bb0ed243bac2e2c96895",
+    "src/components/ui/tabs.tsx": "ea49795ab5cc253c7d2ab1138f27cb7807b19e254c5e661141cde7aa8c4187d4",
+    "src/components/ui/table.tsx": "5cee937c372bce9af767f5d87e57c3220694d0c29b682bb6f1c834c4fff888ec",
+    "src/components/ui/badge.tsx": "b82f8dfedd3c17c96d5660d4b2b83dec832b1c72631919dd1ff595b62086d7c5",
+    "src/components/ui/switch.tsx": "82d20b0bbe0880e62ab6471e3ba5f1f5a5f8337e1a5420420380314a653cfea7",
+    "src/components/ui/textarea.tsx": "c798930ad1ad118c15ea7b1dc4b0f355003d866b5dabd37b59ee3c3cbdc51af9",
+    "src/components/ui/select.tsx": "c1abebfb497eee64157a7546984dfc113b6dd8a17937cf40ce29c81d422b17a6",
+    "src/components/ui/dialog.tsx": "137f3e8fa158010e1b113034d89ef3f808f4eaae4d9555f6c281ae003680befb",
+    "src/components/Header.tsx": "879ba0b4915e576e9b8a91f9ce0e78dc4bd1c92554b08c70d7374252bd21f792",
+    "src/components/ApplicationNavigation.tsx": "b0ff8a36f876fbd159d3034a27d22ab2b14f85de051da3c2c6d80a7f2cc5019b",
+    "src/components/CustomerPortalLayout.tsx": "53db635d77754b6e7f76d282dfc7a0744417dfd44f8217f72f94b8b30be704d4"
+  },
+  "renderedComponents": [
+    "Button",
+    "Input",
+    "Textarea",
+    "Card",
+    "Tabs",
+    "Table",
+    "Badge",
+    "Switch"
+  ],
+  "sourceOnly": [
+    "Select",
+    "Dialog",
+    "Header",
+    "ApplicationNavigation",
+    "CustomerPortalLayout"
+  ],
+  "data": "SYNTHETIC_ONLY",
+  "runtimeMounted": false
+}

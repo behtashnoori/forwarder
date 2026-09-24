@@ -1,7 +1,7 @@
 # طرح مرجع تجربه کاربری پرونده حمل عملیاتی — فاز ۳
 
 وضعیت: `TARGET_PHASE3_UX`
-نسخه: `Revision v2 — candidate`
+نسخه: `Revision v2.1 — visual fidelity candidate`
 وضعیت: `TARGET_CANDIDATE_AWAITING_PRODUCT_OWNER_APPROVAL`
 تاریخ بازبینی: `2026-09-25`؛ نسخه اول در `2026-09-24` ایجاد شد.
 مبنای حاکمیتی: `LPAF 2.7`
@@ -18,7 +18,7 @@
 
 **پیچیدگی باید در مدل سیستم باشد، نه در ذهن کاربر.**
 
-مأموریت نسخه اول با `Level B / Astra` ثبت شده بود. بازبینی دوم نیز فقط طراحی، مستندات و Prototype ایزوله است؛ رکورد جاری دامنه و مسیریابی در [Revision v2 Authority](phase3/REVISION-V2-AUTHORITY.md) قرار دارد.
+مأموریت نسخه اول با `Level B / Astra` ثبت شده بود. بازبینی دوم نیز فقط طراحی، مستندات و Prototype ایزوله است؛ رکورد V2 در [Revision v2 Authority](phase3/REVISION-V2-AUTHORITY.md) و رکورد جاریِ هم‌راستاسازی بصری در [V2.1 Authority](phase3/VISUAL-V2-1-AUTHORITY.md) قرار دارد.
 
 ### خارج از محدوده قطعی
 
@@ -91,7 +91,7 @@ LPAF v2.7 مرجع حاکم است؛ نسخه‌های تاریخی یا v2.6 د
 
 - جزئیات قرارداد runtime، permission matrix نهایی و lifecycle فاز ۳ تا مأموریت implementation planning تعیین نشده است.
 - readiness فنی و انسانی سفرهای فاز ۳ سنجیده نشده است.
-- Product Owner همه سطح‌های نسخه اول را مرور کرده و نتیجه `COMPLETED_NEEDS_CHANGE` داده است؛ منطق و مدل اطلاعات عموماً تأیید شده، اما روایت و زبان و رابطه‌ها نیازمند تغییر بوده‌اند. تأیید نسخه دوم هنوز انجام نشده است.
+- Product Owner همه سطح‌های نسخه اول را مرور کرده و نتیجه `COMPLETED_NEEDS_CHANGE` داده است؛ منطق و مدل اطلاعات عموماً تأیید شده، اما روایت و زبان و رابطه‌ها نیازمند تغییر بوده‌اند. مرور نسخه دوم با نتیجه `COMPLETED_CONDITIONAL_PASS_VISUAL_ALIGNMENT_REQUIRED` تکمیل شده؛ جریان، روایت، رابطه‌ها و جهت نگارش تأیید شده‌اند. تأیید نهایی ظاهر V2.1 هنوز انجام نشده است.
 
 ## ۵. پرسوناها و مدل ذهنی روزانه
 
@@ -357,7 +357,7 @@ FWD-J01، FWD-J02 و FWD-J07 در این نمونه مرور نمی‌شوند. 
 Prototype با HTML/CSS/JS ساده در مسیر مستندات قرار دارد و:
 
 - فقط داده ساختگی دارد؛
-- با نوار دائمی «نمونه تعاملی فاز ۳ — بازبینی دوم» و هشدار داده ساختگی مشخص است؛
+- با نوار دائمی «نمونه تعاملی فاز ۳ — نسخه ۲.۱» و هشدار داده ساختگی مشخص است؛
 - هیچ fetch، API، credential، production endpoint یا DB ندارد؛
 - هیچ فایل آن از runtime import نمی‌شود؛
 - state فقط در حافظه مرورگر و تا refresh معتبر است؛
@@ -379,9 +379,10 @@ Prototype با HTML/CSS/JS ساده در مسیر مستندات قرار دار
 ## ۲۳. وضعیت بازبینی و reference
 
 `UX_PRODUCT_OWNER_REVIEW_V1=COMPLETED_NEEDS_CHANGE`
-`UX_PRODUCT_OWNER_REVIEW_V2=READY_FOR_REVIEW`
+`UX_PRODUCT_OWNER_REVIEW_V2=COMPLETED_CONDITIONAL_PASS_VISUAL_ALIGNMENT_REQUIRED`
+`V2_1_PRODUCT_OWNER_REVIEW=NOT_RUN`
 `HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`
-`BROWSER_PROTOTYPE_REVIEW_V1=PASS`؛ نتیجه مرور تازه V2 در [شاهد Chrome](phase3/evidence/browser-v2/result.json) ثبت می‌شود.
+`BROWSER_PROTOTYPE_REVIEW_V1=PASS`؛ شاهد V2 تاریخی است؛ نتیجه تازه V2.1 در [شاهد Chrome](phase3/evidence/browser-v2-1/result.json) ثبت می‌شود.
 `REFERENCE_RECONCILIATION=PASS`
 `REFERENCE_IMPACT=NONE`
 
@@ -418,7 +419,18 @@ Prototype با HTML/CSS/JS ساده در مسیر مستندات قرار دار
 ### مرز پذیرش
 
 `UX_PRODUCT_OWNER_REVIEW_V1=COMPLETED_NEEDS_CHANGE`
-`UX_PRODUCT_OWNER_REVIEW_V2=READY_FOR_REVIEW`
+`UX_PRODUCT_OWNER_REVIEW_V2=COMPLETED_CONDITIONAL_PASS_VISUAL_ALIGNMENT_REQUIRED`
+`V2_1_PRODUCT_OWNER_REVIEW=NOT_RUN`
 `HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`
 
-پس از تکمیل ممیزی تازه، V2 فقط READY_FOR_REVIEW می‌شود. هیچ PASS انسانی، تغییر Contract/Journey Pack، canonical integration یا شروع برنامه‌ریزی پیاده‌سازی مجاز نیست.
+پس از تکمیل ممیزی بصری، V2.1 فقط آماده مرور نهایی می‌شود؛ نتیجه انسانی آن NOT_RUN است. هیچ PASS انسانی، تغییر Contract/Journey Pack، canonical integration یا شروع برنامه‌ریزی پیاده‌سازی مجاز نیست.
+
+## ۲۵. مبنای بصری Forwarder — V2.1
+
+**FORWARDER VISUAL DNA IS THE BASELINE.** فاز ۳ ادامهٔ بصری Forwarder است؛ هویت تازه‌ای تعریف نمی‌کند. منبع، کد canonical در `d83b1aa7c0011221188e753c0f38d2058859400b` است، نه الگوهای عمومی داشبورد.
+
+خانواده Vazirmatn، آبی اصلی، زمینه روشن، شعاع کنترل ۱۲ و پنل ۱۶ پیکسل، سایه‌های نرم و فاصله‌های واقعی محصول در Prototype-local CSS ترجمه شده‌اند. سلسله‌مراتب با اندازه متن، فاصله و گروه‌بندی ایجاد می‌شود؛ رنگ نقش پشتیبان دارد. وضعیت ناقص با خطای عملیاتی یکی نیست. کارت‌های تو‌در‌تو و دکمه‌های پررنگ تکراری کاهش یافته‌اند.
+
+ساختار و داستان مصوب V2، متن صفحه‌ها، نقش‌ها و تمام رفتار app.js ثابت می‌مانند. تراکم کارشناس حفظ می‌شود؛ مشتری و مدیر با همین زبان بصری و تراکم مناسب نقش خود ارائه می‌شوند. ناوبری پایین موبایل، زنجیره اجرای حمل، نشانگرهای روایت زمانی و شدت کمتر رنگ وضعیت‌ها تکامل عمدی فاز ۳ هستند؛ ادعای کپی دقیق صفحه قدیمی ندارند.
+
+[موجودی Visual DNA](phase3/FORWARDER-VISUAL-DNA-INVENTORY.md)، [ممیزی](phase3/VISUAL-FIDELITY-AUDIT-V2-1.md) و [مرور نهایی](phase3/PRODUCT-OWNER-REVIEW.md) معیار این بازبینی‌اند. Product Contract و Journey Pack تغییر نکرده‌اند.
