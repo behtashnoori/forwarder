@@ -326,4 +326,3 @@ def action_history(
         }
         for event in events
     ]
-

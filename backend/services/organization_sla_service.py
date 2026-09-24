@@ -636,4 +636,3 @@ def shipment_status(
         "status_label": "در انتظار ارزیابی SLA" if pending else "فرایند مشمول فعالی وجود ندارد" if configured_rules else "SLA تعریف نشده",
         "commitments": [],
     }
-

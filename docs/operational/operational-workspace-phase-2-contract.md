@@ -155,4 +155,3 @@ Journeys:
 | canonical LPAF v2.6 | `NONE` — applied unchanged |
 | Forwarder Product references | `NONE` expected — mission implements already approved meaning |
 | Forwarder architecture | `UPDATE_REQUIRED` — ADR-054 records the bounded SLA/Action/OIP extension |
-

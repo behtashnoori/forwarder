@@ -341,4 +341,3 @@ def downgrade():
         batch_op.drop_constraint("uq_exception_id_shipment", type_="unique")
         batch_op.drop_column("evidence_summary")
         batch_op.drop_column("impact_summary")
-

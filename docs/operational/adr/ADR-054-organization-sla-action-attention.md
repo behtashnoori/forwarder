@@ -49,4 +49,3 @@ The accepted product model separates Status, Event, Exception, Action, and Atten
 - a new worker/service/queue topology;
 - a separate Action or Attention v2 system;
 - external-party assignee accounts, generic task management, hidden scores, AI, inferred durations, or retroactive rule rewriting.
-
