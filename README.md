@@ -89,6 +89,7 @@ export DB_PASSWORD="your-secure-database-password"
 | **[docs/API.md](docs/API.md)** | 🔌 مستندات API |
 | **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** | 👤 راهنمای کاربر |
 | **[docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)** | 🏗️ معماری سیستم |
+| **[docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1-FA.md](docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1-FA.md)** | ✅ مرجع رسمی سفرهای حیاتی، پذیرش یکپارچه و مرور انسانی محصول |
 | **[scripts/README.md](scripts/README.md)** | 🧰 کاتالوگ اسکریپت‌ها و قواعد استفاده |
 
 ## تکنولوژی‌های استفاده شده
