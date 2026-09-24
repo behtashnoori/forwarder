@@ -52,8 +52,9 @@ def _assert_owned_database() -> None:
     if os.environ.get("APP_ENV") != "uat":
         raise RuntimeError("Workspace E2E seed requires APP_ENV=uat")
     parsed = make_url(os.environ["DATABASE_URL"])
-    if parsed.host != "127.0.0.1" or not (parsed.database or "").startswith(
-        "forwarder_workspace_phase1_"
+    database = parsed.database or ""
+    if parsed.host != "127.0.0.1" or not database.startswith(
+        ("forwarder_workspace_phase1_", "forwarder_workspace_phase2_")
     ):
         raise RuntimeError(
             "Workspace E2E seed is restricted to its owned loopback database"

@@ -1,0 +1,19 @@
+﻿{
+    "result":  "PASS",
+    "executed_at_utc":  "2026-09-24T10:39:24.8987242Z",
+    "environment":  "owned disposable local/UAT PostgreSQL",
+    "postgresql_major":  18,
+    "alembic_head":  "20260928_operational_workspace_phase2",
+    "browser":  "Google Chrome via Playwright",
+    "synthetic_data_only":  true,
+    "production_accessed":  false,
+    "product_journeys":  [
+                             "organization-admin SLA create, prospective version update, and history",
+                             "tenant isolation and fixed shipment-owner authorization",
+                             "healthy, warning, and breached SLA evaluation without false SLA risk",
+                             "exception impact and evidence capture",
+                             "Action creation, follow-up, independent resolution, and preserved history",
+                             "Workspace explainable Attention and Control Tower integration",
+                             "Customer Account and Public Tracking regressions"
+                         ]
+}

@@ -6,13 +6,13 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $pgBin = 'C:\Program Files\PostgreSQL\18\bin'
 $runId = [guid]::NewGuid().ToString('N')
 $runtimeParent = [System.IO.Path]::GetTempPath().TrimEnd([System.IO.Path]::DirectorySeparatorChar)
-$runtime = Join-Path $runtimeParent "forwarder-workspace-phase1-e2e-$runId"
+$runtime = Join-Path $runtimeParent "forwarder-workspace-phase2-e2e-$runId"
 $pgData = Join-Path $runtime 'pgdata'
 $pgLog = Join-Path $runtime 'postgres.log'
 $fixture = Join-Path $runtime 'fixtures.json'
 $playwrightOutput = Join-Path $runtime 'playwright'
-$databaseName = "forwarder_workspace_phase1_$($runId.Substring(0, 12))"
-$evidence = Join-Path $root 'docs\operational\evidence\operational-workspace-phase-1-20260924\browser'
+$databaseName = "forwarder_workspace_phase2_$($runId.Substring(0, 12))"
+$evidence = Join-Path $root 'docs\operational\evidence\operational-workspace-phase-2-20260924\browser'
 $backend = $null
 $frontend = $null
 $postgresStarted = $false
@@ -57,7 +57,7 @@ function Remove-OwnedRuntime([string]$RuntimePath) {
   $resolved = (Resolve-Path -LiteralPath $RuntimePath).Path
   $expectedParent = (Resolve-Path -LiteralPath $runtimeParent).Path
   $leaf = Split-Path -Leaf $resolved
-  if ((Split-Path -Parent $resolved) -ne $expectedParent -or $leaf -notmatch '^forwarder-workspace-phase1-e2e-[0-9a-f]{32}$') {
+  if ((Split-Path -Parent $resolved) -ne $expectedParent -or $leaf -notmatch '^forwarder-workspace-phase2-e2e-[0-9a-f]{32}$') {
     throw "Refusing to remove an unowned runtime path: $resolved"
   }
   Remove-Item -LiteralPath $resolved -Recurse -Force
@@ -75,9 +75,7 @@ try {
     'OPERATIONAL_WORKSPACE_EVIDENCE_PATH', 'SECRET_KEY', 'JWT_SECRET_KEY',
     'E2E_SECRET_KEY', 'E2E_JWT_SECRET_KEY', 'CORS_ORIGINS', 'VITE_BACKEND_URL',
     'PORT', 'PLAYWRIGHT_BASE_URL', 'PLAYWRIGHT_EXTERNAL_SERVER', 'PLAYWRIGHT_CHANNEL'
-  )) {
-    $old[$name] = [Environment]::GetEnvironmentVariable($name, 'Process')
-  }
+  )) { $old[$name] = [Environment]::GetEnvironmentVariable($name, 'Process') }
 
   New-Item -ItemType Directory -Force -Path $runtime, $playwrightOutput, $evidence | Out-Null
   $postgresPort = Get-FreeTcpPort
@@ -97,7 +95,7 @@ try {
   if ($pgStart.ExitCode -ne 0) { throw 'Qualification step failed: start owned PostgreSQL 18 cluster' }
   $postgresStarted = $true
   & (Join-Path $pgBin 'createdb.exe') -h 127.0.0.1 -p $postgresPort -U postgres $databaseName
-  Assert-LastExit 'create owned Operational Workspace database'
+  Assert-LastExit 'create owned Workspace Phase 2 database'
 
   $env:APP_ENV = 'uat'
   $env:DATABASE_URL = $databaseUrl
@@ -119,11 +117,11 @@ try {
     throw "Unexpected repository migration head: $repositoryHead"
   }
   python -m backend.migration_cli upgrade $repositoryHead --confirm
-  Assert-LastExit 'migrate owned Operational Workspace database'
+  Assert-LastExit 'migrate owned Workspace Phase 2 database'
   python -m scripts.browser_migration_contract verify-database-head --expected $repositoryHead
-  Assert-LastExit 'verify exact Operational Workspace database head'
-  python (Join-Path $root 'scripts\uat\seed_operational_workspace_phase1_e2e.py')
-  Assert-LastExit 'seed synthetic Operational Workspace fixtures'
+  Assert-LastExit 'verify exact Workspace Phase 2 database head'
+  python (Join-Path $root 'scripts\uat\seed_operational_workspace_phase2_e2e.py')
+  Assert-LastExit 'seed synthetic Workspace Phase 2 fixtures'
 
   $env:PORT = "$backendPort"
   $backend = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run', 'backend' -WorkingDirectory $root -PassThru -WindowStyle Hidden
@@ -134,8 +132,8 @@ try {
   $env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:$frontendPort"
   $env:PLAYWRIGHT_EXTERNAL_SERVER = 'true'
   $env:PLAYWRIGHT_CHANNEL = 'chrome'
-  npx playwright test e2e/operational-workspace-phase1.spec.ts --reporter=line --output $playwrightOutput
-  Assert-LastExit 'real-browser Operational Workspace product journeys'
+  npx playwright test e2e/operational-workspace-phase1.spec.ts e2e/operational-workspace-phase2.spec.ts --reporter=line --output $playwrightOutput
+  Assert-LastExit 'real-browser Workspace Phase 1 and Phase 2 product journeys'
 
   [pscustomobject]@{
     result = 'PASS'
@@ -147,19 +145,19 @@ try {
     synthetic_data_only = $true
     production_accessed = $false
     product_journeys = @(
-      'expert workspace to shipment context and history',
-      'fixed owner after request reassignment',
-      'same-organization and cross-organization denial',
-      'empty and temporary-error states',
-      'customer account quote response and recovery',
-      'organization-scoped account listing',
-      'public tracking privacy and anonymous request creation'
+      'organization-admin SLA create, prospective version update, and history',
+      'tenant isolation and fixed shipment-owner authorization',
+      'healthy, warning, and breached SLA evaluation without false SLA risk',
+      'exception impact and evidence capture',
+      'Action creation, follow-up, independent resolution, and preserved history',
+      'Workspace explainable Attention and Control Tower integration',
+      'Customer Account and Public Tracking regressions'
     )
   } | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $evidence 'result.json') -Encoding UTF8
 
   Write-Output "OPERATIONAL_WORKSPACE_POSTGRESQL_VERSION=18"
   Write-Output "OPERATIONAL_WORKSPACE_ALEMBIC_HEAD=$repositoryHead"
-  Write-Output 'OPERATIONAL_WORKSPACE_BROWSER_QUALIFICATION=PASS'
+  Write-Output 'OPERATIONAL_WORKSPACE_PHASE2_BROWSER_QUALIFICATION=PASS'
   Write-Output "OPERATIONAL_WORKSPACE_EVIDENCE_DIRECTORY=$evidence"
 }
 finally {
@@ -176,14 +174,11 @@ finally {
   }
   try { Remove-OwnedRuntime $runtime } catch { $cleanupFailures.Add($_.Exception.Message) }
   foreach ($name in $old.Keys) {
-    if ($null -eq $old[$name]) {
-      Remove-Item "Env:$name" -ErrorAction SilentlyContinue
-    } else {
-      [Environment]::SetEnvironmentVariable($name, $old[$name], 'Process')
-    }
+    if ($null -eq $old[$name]) { Remove-Item "Env:$name" -ErrorAction SilentlyContinue }
+    else { [Environment]::SetEnvironmentVariable($name, $old[$name], 'Process') }
   }
   if ($cleanupFailures.Count -gt 0) {
-    throw ('OPERATIONAL_WORKSPACE_E2E_CLEANUP=FAIL: ' + ($cleanupFailures -join '; '))
+    throw ('OPERATIONAL_WORKSPACE_PHASE2_E2E_CLEANUP=FAIL: ' + ($cleanupFailures -join '; '))
   }
-  Write-Output 'OPERATIONAL_WORKSPACE_E2E_CLEANUP=PASS'
+  Write-Output 'OPERATIONAL_WORKSPACE_PHASE2_E2E_CLEANUP=PASS'
 }

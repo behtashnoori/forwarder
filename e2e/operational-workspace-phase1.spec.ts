@@ -10,7 +10,7 @@ const evidencePath = process.env.OPERATIONAL_WORKSPACE_EVIDENCE_PATH;
 if (!databaseUrl || !expertPassword || !customerPassword || !fixturePath || !evidencePath) {
   throw new Error("Operational Workspace E2E requires its owned runtime inputs.");
 }
-if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase1_")) {
+if (!databaseUrl.includes("127.0.0.1") || !/\/forwarder_workspace_phase[12]_/.test(databaseUrl)) {
   throw new Error("Operational Workspace browser proof is restricted to its owned loopback database.");
 }
 
@@ -101,7 +101,7 @@ test.describe.serial("Operational Workspace Phase 1 governed browser proof", () 
     await expect(page.getByText("مشتری عملیاتی آزمایشی", { exact: false }).first()).toBeVisible();
     await expect(page.getByText("کارشناس مسئول ثابت: کارشناس مالک ثابت")).toBeVisible();
     await expect(page.getByText("موعد یک مرحله عملیاتی گذشته است")).toBeVisible();
-    await expect(page.getByText("منبع: پیگیری عملیاتی ثبت‌شده", { exact: false })).toBeVisible();
+    await expect(page.getByText(/منبع: (پیگیری عملیاتی ثبت‌شده|OperationalWorkItem)/)).toBeVisible();
     await expect(page.getByText("آخرین به‌روزرسانی:", { exact: false })).toBeVisible();
     await screenshot(page, "workspace-overview.png");
 

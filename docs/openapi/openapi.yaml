@@ -651,6 +651,34 @@ components:
         type: { type: string }
         status: { type: string }
         version: { type: integer, minimum: 1 }
+    OperationalAction:
+      type: object
+      required: [public_id, context, what, responsible, due_at, status, version]
+      properties:
+        public_id: { type: string, format: uuid }
+        context: { type: object, additionalProperties: true }
+        what: { type: string, maxLength: 1000 }
+        expected_result: { type: string, nullable: true, maxLength: 2000 }
+        responsible: { type: object, additionalProperties: true }
+        due_at: { type: string, format: date-time }
+        status: { type: string, enum: [open, resolved] }
+        latest_follow_up: { type: string, nullable: true, maxLength: 4000 }
+        latest_follow_up_at: { type: string, format: date-time, nullable: true }
+        result: { type: string, nullable: true, maxLength: 4000 }
+        resolved_at: { type: string, format: date-time, nullable: true }
+        version: { type: integer, minimum: 1 }
+    OrganizationSlaRule:
+      type: object
+      required: [public_id, process_type, name, duration_minutes, is_active, effective_from, version]
+      properties:
+        public_id: { type: string, format: uuid }
+        process_type: { type: string, enum: [EXCEPTION_RESPONSE, ACTION_FOLLOW_UP] }
+        name: { type: string, maxLength: 120 }
+        duration_minutes: { type: integer, minimum: 1, maximum: 525600 }
+        warning_minutes: { type: integer, nullable: true, minimum: 1, maximum: 525599 }
+        is_active: { type: boolean }
+        effective_from: { type: string, format: date-time }
+        version: { type: integer, minimum: 1 }
     ProjectConfigurationPage:
       type: object
       additionalProperties: false
@@ -1196,6 +1224,19 @@ paths:
   /api/operational-shipments/{shipment_id}/route-exceptions/reconcile:
     parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
     post: { tags: [Operational Shipments], summary: Reconcile route exceptions using expected_route_plan_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Reconciled or replayed. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version or idempotency conflict. } } }
+  /api/operational-shipments/{shipment_id}/actions:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }]
+    get: { tags: [Operational Shipments], summary: List bounded operational Actions for an authorized Shipment, security: [{ bearerAuth: [] }], responses: { '200': { description: Action list. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
+    post: { tags: [Operational Shipments], summary: Create a fixed-owner Shipment follow-up Action, security: [{ bearerAuth: [] }], responses: { '201': { description: Action created. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '422': { description: Invalid Action context or deadline. } } }
+  /api/operational-shipments/{shipment_id}/actions/{action_id}/follow-ups:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: action_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Operational Shipments], summary: Record the latest follow-up using expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Follow-up recorded. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
+  /api/operational-shipments/{shipment_id}/actions/{action_id}/resolve:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: action_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    post: { tags: [Operational Shipments], summary: Resolve an Action with a required result and expected_version, security: [{ bearerAuth: [] }], responses: { '200': { description: Action resolved. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. }, '422': { description: Result is required. } } }
+  /api/operational-shipments/{shipment_id}/actions/{action_id}/history:
+    parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: action_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Operational Shipments], summary: Read immutable Action change history, security: [{ bearerAuth: [] }], responses: { '200': { description: Action history. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
   /api/operational-shipments/{shipment_id}/milestones/{milestone_id}/events:
     parameters: [{ $ref: '#/components/parameters/ShipmentPublicId' }, { name: milestone_id, in: path, required: true, schema: { type: integer } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }]
     post: { tags: [Operational Shipments], summary: Append milestone event, security: [{ bearerAuth: [] }], responses: { '201': { description: Event appended. }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Idempotency conflict. } } }
@@ -1209,10 +1250,19 @@ paths:
     get: { tags: [Operational Shipments], summary: List tenant work queue with opaque shipment references, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_public_id, in: query, schema: { type: string, format: uuid } }], responses: { '200': { description: Work item page., content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/OperationalWorkItem' } } } } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
   /api/operational-work-items/{item_id}/resolve:
     post: { tags: [Operational Shipments], summary: Resolve a work item using expected_version, security: [{ bearerAuth: [] }], parameters: [{ name: item_id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: Work item resolved. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
+  /api/organization-sla-rules:
+    get: { tags: [Operational Shipments], summary: List the authenticated Organization Admin tenant SLA catalog and rules, security: [{ bearerAuth: [] }], responses: { '200': { description: Tenant SLA rules and explicitly unconfigured processes. }, '403': { $ref: '#/components/responses/Forbidden' } } }
+    post: { tags: [Operational Shipments], summary: Create one prospective organization-owned SLA rule, security: [{ bearerAuth: [] }], responses: { '201': { description: SLA rule created. }, '403': { $ref: '#/components/responses/Forbidden' }, '409': { description: Rule already exists. }, '422': { description: Unsupported process or invalid timing. } } }
+  /api/organization-sla-rules/{rule_id}:
+    parameters: [{ name: rule_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    patch: { tags: [Operational Shipments], summary: Create a prospective new version of an own-tenant SLA rule, security: [{ bearerAuth: [] }], responses: { '200': { description: SLA rule updated. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
+  /api/organization-sla-rules/{rule_id}/history:
+    parameters: [{ name: rule_id, in: path, required: true, schema: { type: string, format: uuid } }]
+    get: { tags: [Operational Shipments], summary: Read own-tenant SLA rule audit history, security: [{ bearerAuth: [] }], responses: { '200': { description: Rule history. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' } } }
   /api/oip/policies:
     get:
       tags: [Operational Intelligence]
-      summary: Read the seven approved Signal policies and configuration requirements
+      summary: Read the nine approved Signal policies and configuration requirements
       description: Governed families expose INACTIVE_UNCONFIGURED abstention when no authoritative effective threshold exists.
       security: [{ bearerAuth: [] }]
       responses:

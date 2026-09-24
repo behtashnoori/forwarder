@@ -13,6 +13,7 @@ from backend.migration_runtime import alembic_config
 
 PREVIOUS = "20260926_fixed_shipment_responsible_expert"
 HEAD = "20260927_customer_portal_account_lifecycle"
+REPOSITORY_HEAD = "20260928_operational_workspace_phase2"
 
 
 def _legacy_schema(url: str) -> sa.Engine:
@@ -66,7 +67,7 @@ def _upgrade(tmp_path: Path, name: str) -> tuple[sa.Engine, object]:
 def test_customer_portal_lifecycle_is_the_single_linear_repository_head():
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
+    assert script.get_heads() == [REPOSITORY_HEAD]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
     assert script.get_bases() == ["20240917_initial_schema"]
 
