@@ -31,12 +31,12 @@ def threshold(app, signal_type, *, scope_type="ENTERPRISE", scope_public_id="ENT
     row=OipThresholdPolicy(organization_id=ids["org"],signal_type=signal_type,scope_type=scope_type,scope_public_id=scope_public_id,value=value,unit=unit,authority="OIP-POL-001 approved governance",source="test governed policy",version=version,is_active=active,effective_from=effective_from or now-timedelta(days=1),effective_to=effective_to,created_by_user_id=ids["user"],updated_by_user_id=ids["user"])
     db.session.add(row);db.session.flush();return row
 
-def test_exact_seven_catalog_and_threshold_gaps(app):
+def test_exact_nine_catalog_and_threshold_gaps(app):
     with app.app_context():
-        catalog=oip.policy_catalog();assert len(catalog)==7
+        catalog=oip.policy_catalog();assert len(catalog)==9
         assert {x["situation_type"] for x in catalog}==set(oip.POLICIES)
         governed={x["situation_type"] for x in catalog if x["configured"]=="GOVERNED"}
-        assert governed=={"NEXT_MILESTONE_OVERDUE","EXECUTION_UNIT_STALE"}
+        assert governed=={"NEXT_MILESTONE_OVERDUE","EXECUTION_UNIT_STALE","SLA_COMMITMENT_RISK"}
         assert observation(app,"NEXT_MILESTONE_OVERDUE")["status"]=="INACTIVE_UNCONFIGURED"
         assert observation(app,"EXECUTION_UNIT_STALE")["status"]=="INACTIVE_UNCONFIGURED"
         assert OipSituation.query.count()==0

@@ -483,7 +483,7 @@ def test_read_only_bounded_queries_and_no_autoflush(attention):
 
 
 def test_translation_catalog_covers_all_semantics_and_rejects_protected_labels():
-    assert len(Semantic) == 8
+    assert len(Semantic) == 11
     for semantic in Semantic:
         title, explanation = translate(semantic)
         assert title and explanation and "WorkItem" not in title + explanation

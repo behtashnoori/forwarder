@@ -1090,6 +1090,9 @@ class OperationalDelay(db.Model):
 class OperationalException(db.Model):
     __tablename__ = "operational_exception"
     __table_args__ = (
+        db.UniqueConstraint(
+            "id", "operational_shipment_id", name="uq_exception_id_shipment"
+        ),
         db.ForeignKeyConstraint(
             ["operational_shipment_id", "organization_id"],
             ["operational_shipment.id", "operational_shipment.organization_id"],
@@ -1134,6 +1137,8 @@ class OperationalException(db.Model):
     occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
     resolved_at = db.Column(db.DateTime(timezone=True), nullable=True)
     note = db.Column(db.Text, nullable=True)
+    impact_summary = db.Column(db.Text, nullable=True)
+    evidence_summary = db.Column(db.Text, nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     created_by_user_id = db.Column(
         BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
@@ -1148,7 +1153,7 @@ class OperationalWorkItem(db.Model):
     __tablename__ = "operational_work_item"
     __table_args__ = (
         db.CheckConstraint(
-            "work_type IN ('OVERDUE_MILESTONE','CHECKPOINT_OVERDUE','ROUTE_DEPENDENCY_BLOCKED','REPLAN_REQUIRED')",
+            "work_type IN ('OVERDUE_MILESTONE','CHECKPOINT_OVERDUE','ROUTE_DEPENDENCY_BLOCKED','REPLAN_REQUIRED','FOLLOW_UP')",
             name="ck_operational_work_item_type",
         ),
         db.CheckConstraint(
@@ -1161,8 +1166,24 @@ class OperationalWorkItem(db.Model):
         db.CheckConstraint(
             "(work_type = 'OVERDUE_MILESTONE' AND milestone_id IS NOT NULL AND route_plan_id IS NULL AND checkpoint_id IS NULL) "
             "OR (work_type IN ('CHECKPOINT_OVERDUE','ROUTE_DEPENDENCY_BLOCKED','REPLAN_REQUIRED') "
-            "AND milestone_id IS NULL AND route_plan_id IS NOT NULL AND checkpoint_id IS NOT NULL)",
+            "AND milestone_id IS NULL AND route_plan_id IS NOT NULL AND checkpoint_id IS NOT NULL) "
+            "OR (work_type = 'FOLLOW_UP' AND milestone_id IS NULL AND route_plan_id IS NULL AND checkpoint_id IS NULL)",
             name="ck_operational_work_item_owner_scope",
+        ),
+        db.CheckConstraint(
+            "action_context_type IS NULL OR action_context_type IN ('SHIPMENT','EXCEPTION','PROCESS')",
+            name="ck_operational_work_item_action_context",
+        ),
+        db.CheckConstraint(
+            "process_type IS NULL OR process_type IN ('EXCEPTION_RESPONSE','ACTION_FOLLOW_UP')",
+            name="ck_operational_work_item_process_type",
+        ),
+        db.CheckConstraint(
+            "work_type != 'FOLLOW_UP' OR "
+            "(action_context_type = 'SHIPMENT' AND exception_id IS NULL AND process_type IS NULL) OR "
+            "(action_context_type = 'EXCEPTION' AND exception_id IS NOT NULL AND process_type IS NULL) OR "
+            "(action_context_type = 'PROCESS' AND exception_id IS NULL AND process_type IS NOT NULL)",
+            name="ck_operational_work_item_follow_up_context",
         ),
         db.ForeignKeyConstraint(
             ["operational_shipment_id", "organization_id"],
@@ -1181,6 +1202,12 @@ class OperationalWorkItem(db.Model):
             ["operational_checkpoint.id", "operational_checkpoint.route_plan_id"],
             name="fk_work_item_checkpoint_same_plan",
             ondelete="CASCADE",
+        ),
+        db.ForeignKeyConstraint(
+            ["exception_id", "operational_shipment_id"],
+            ["operational_exception.id", "operational_exception.operational_shipment_id"],
+            name="fk_work_item_exception_same_shipment",
+            ondelete="RESTRICT",
         ),
         db.Index(
             "uq_operational_work_item_open",
@@ -1208,6 +1235,9 @@ class OperationalWorkItem(db.Model):
         ),
     )
     id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
     organization_id = db.Column(
         BIGINT,
         db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
@@ -1232,6 +1262,9 @@ class OperationalWorkItem(db.Model):
         db.ForeignKey("operational_checkpoint.id", ondelete="CASCADE"),
         nullable=True,
     )
+    exception_id = db.Column(BIGINT, nullable=True)
+    action_context_type = db.Column(db.String(16), nullable=True)
+    process_type = db.Column(db.String(40), nullable=True)
     severity = db.Column(db.String(16), nullable=False, default="warning")
     detected_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     resolution_reason = db.Column(db.Text, nullable=True)
@@ -1245,12 +1278,161 @@ class OperationalWorkItem(db.Model):
         BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
     )
     reason = db.Column(db.Text, nullable=False)
+    expected_result = db.Column(db.Text, nullable=True)
+    latest_follow_up = db.Column(db.Text, nullable=True)
+    latest_follow_up_at = db.Column(db.DateTime(timezone=True), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     resolved_at = db.Column(db.DateTime(timezone=True), nullable=True)
     resolved_by_user_id = db.Column(
         BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
     )
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="SET NULL"), nullable=True
+    )
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+
+class OrganizationSlaRule(db.Model):
+    """Organization-owned prospective timing expectation for a supported process."""
+
+    __tablename__ = "organization_sla_rule"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "id", "organization_id", name="uq_organization_sla_rule_id_org"
+        ),
+        db.UniqueConstraint(
+            "organization_id", "process_type", name="uq_organization_sla_process"
+        ),
+        db.CheckConstraint(
+            "process_type IN ('EXCEPTION_RESPONSE','ACTION_FOLLOW_UP')",
+            name="ck_organization_sla_process",
+        ),
+        db.CheckConstraint(
+            "duration_minutes > 0 AND duration_minutes <= 525600",
+            name="ck_organization_sla_duration",
+        ),
+        db.CheckConstraint(
+            "warning_minutes IS NULL OR (warning_minutes > 0 AND warning_minutes < duration_minutes)",
+            name="ck_organization_sla_warning",
+        ),
+        db.CheckConstraint("version >= 1", name="ck_organization_sla_version"),
+        db.Index(
+            "ix_organization_sla_rule_active",
+            "organization_id",
+            "is_active",
+            "effective_from",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(
+        BIGINT,
+        db.ForeignKey("operational_organization.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    process_type = db.Column(db.String(40), nullable=False)
+    name = db.Column(db.String(120), nullable=False)
+    duration_minutes = db.Column(db.Integer, nullable=False)
+    warning_minutes = db.Column(db.Integer, nullable=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    effective_from = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    updated_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+
+class OperationalSlaCommitment(db.Model):
+    """Pinned rule version and deterministic evaluation for one existing process."""
+
+    __tablename__ = "operational_sla_commitment"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "organization_id",
+            "process_type",
+            "source_public_id",
+            name="uq_operational_sla_source",
+        ),
+        db.ForeignKeyConstraint(
+            ["rule_id", "organization_id"],
+            ["organization_sla_rule.id", "organization_sla_rule.organization_id"],
+            name="fk_operational_sla_rule_org",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["operational_shipment_id", "organization_id"],
+            ["operational_shipment.id", "operational_shipment.organization_id"],
+            name="fk_operational_sla_shipment_org",
+            ondelete="RESTRICT",
+        ),
+        db.CheckConstraint(
+            "process_type IN ('EXCEPTION_RESPONSE','ACTION_FOLLOW_UP')",
+            name="ck_operational_sla_process",
+        ),
+        db.CheckConstraint(
+            "source_type IN ('OperationalException','OperationalWorkItem')",
+            name="ck_operational_sla_source_type",
+        ),
+        db.CheckConstraint(
+            "evaluation_status IN ('WITHIN','WARNING','BREACHED','MET')",
+            name="ck_operational_sla_status",
+        ),
+        db.CheckConstraint(
+            "warning_at IS NULL OR (warning_at >= started_at AND warning_at < due_at)",
+            name="ck_operational_sla_warning_at",
+        ),
+        db.CheckConstraint("due_at > started_at", name="ck_operational_sla_due_at"),
+        db.CheckConstraint("rule_version >= 1", name="ck_operational_sla_rule_version"),
+        db.CheckConstraint("version >= 1", name="ck_operational_sla_version"),
+        db.Index(
+            "ix_operational_sla_shipment_status",
+            "organization_id",
+            "operational_shipment_id",
+            "evaluation_status",
+            "due_at",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(BIGINT, nullable=False)
+    rule_id = db.Column(BIGINT, nullable=False)
+    rule_version = db.Column(db.Integer, nullable=False)
+    process_type = db.Column(db.String(40), nullable=False)
+    operational_shipment_id = db.Column(BIGINT, nullable=False)
+    responsible_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    source_type = db.Column(db.String(40), nullable=False)
+    source_public_id = db.Column(db.String(36), nullable=False)
+    source_version = db.Column(db.Integer, nullable=False)
+    started_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    warning_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    due_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    completed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    evaluation_status = db.Column(db.String(16), nullable=False)
+    evaluated_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    source_watermark = db.Column(db.String(160), nullable=False)
+    rule_snapshot = db.Column(db.JSON, nullable=False)
+    explanation = db.Column(db.JSON, nullable=False)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
 
 
 class OperationalAudit(db.Model):

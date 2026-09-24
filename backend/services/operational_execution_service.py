@@ -872,6 +872,20 @@ def update_reason(kind, public_id, payload, user):
     return _reason_view(row)
 
 
+def _optional_condition_text(payload, field, maximum):
+    value = payload.get(field)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise OperationalError("VALIDATION_FAILED", f"{field} must be text.", 422)
+    value = value.strip()
+    if len(value) > maximum:
+        raise OperationalError(
+            "VALIDATION_FAILED", f"{field} must not exceed {maximum} characters.", 422
+        )
+    return value or None
+
+
 def condition_collection(kind, shipment_id, user, payload=None):
     shipment = _shipment(
         shipment_id,
@@ -926,7 +940,19 @@ def condition_collection(kind, shipment_id, user, payload=None):
             operational_shipment_id=shipment.id,
             milestone_id=milestone.id if milestone else None,
             reason_id=reason.id,
-            note=payload.get("note"),
+            note=_optional_condition_text(payload, "note", 4000),
+            **(
+                {
+                    "impact_summary": _optional_condition_text(
+                        payload, "impact_summary", 2000
+                    ),
+                    "evidence_summary": _optional_condition_text(
+                        payload, "evidence_summary", 4000
+                    ),
+                }
+                if kind == "exception"
+                else {}
+            ),
             created_by_user_id=user["id"],
             **{instant: _parse_utc(payload.get(instant), instant)},
         )
@@ -938,7 +964,18 @@ def condition_collection(kind, shipment_id, user, payload=None):
                 resource_type="shipment", command_resource_id=shipment.id,
                 idempotency_key=key, request_hash=request_hash, result_resource_id=row.id,
             ))
-        _audit(shipment, user, f"operational_{kind}.created", model.__name__, row.id)
+        _audit(
+            shipment,
+            user,
+            f"operational_{kind}.created",
+            model.__name__,
+            row.id,
+            {
+                "public_id": row.public_id,
+                "impact_summary": getattr(row, "impact_summary", None),
+                "evidence_summary": getattr(row, "evidence_summary", None),
+            },
+        )
         db.session.commit()
     rows = db.session.scalars(
         select(model)
@@ -966,6 +1003,8 @@ def _condition_view(r, reason_model, instant):
         "resolved_at": r.resolved_at.isoformat() if r.resolved_at else None,
         "active": r.resolved_at is None,
         "note": r.note,
+        "impact_summary": getattr(r, "impact_summary", None),
+        "evidence_summary": getattr(r, "evidence_summary", None),
         "duration_seconds": max(0, int((ended_utc - began_utc).total_seconds())),
         "version": r.version,
     }

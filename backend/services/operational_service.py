@@ -1499,6 +1499,13 @@ def resolve_work_item(
     )
     if item is None:
         raise OperationalError("RESOURCE_NOT_FOUND", "Work item was not found.", 404)
+    scoped_shipment(item.operational_shipment_id, user)
+    if item.work_type == "FOLLOW_UP":
+        raise OperationalError(
+            "ACTION_RESULT_REQUIRED",
+            "Operational Actions must be resolved through the Action result command.",
+            422,
+        )
     if item.status == "resolved":
         raise OperationalError(
             "WORK_ITEM_ALREADY_RESOLVED", "Work item is already resolved.", 409

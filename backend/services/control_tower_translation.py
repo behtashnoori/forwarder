@@ -23,6 +23,9 @@ class Semantic(str, Enum):
     OVERDUE_MILESTONE_FOLLOW_UP = "stage_confirmation_follow_up"
     READINESS_BLOCKED = "documents_blocked"
     READINESS_REVIEW = "document_need_review"
+    ACTION_FOLLOW_UP = "action_follow_up"
+    SLA_WARNING = "sla_warning"
+    SLA_BREACH = "sla_breach"
 
 
 # Only governed display fields may call this guard. It does not make arbitrary
@@ -64,6 +67,7 @@ _TIME_LABELS = {
     "expected_due": "زمان مورد انتظار",
     "work_open": "پیگیری باز از",
     "evaluated": "بررسی‌شده در",
+    "sla_started": "شروع تعهد",
 }
 
 
@@ -81,6 +85,9 @@ _CATALOG = {
     Semantic.OVERDUE_MILESTONE_FOLLOW_UP: ("پیگیری تأیید یکی از مراحل هنوز باز است", "برای این مرحله، پیگیری عبور از زمان برنامه و تأیید نشدن ثبت شده است."),
     Semantic.READINESS_BLOCKED: ("مدارک لازم برای مرحله بعد آماده نیست", "یک مانع مربوط به مدارک برای ادامه این مرحله وجود دارد."),
     Semantic.READINESS_REVIEW: ("لزوم ارائه یکی از مدارک باید بررسی شود", "لزوم ارائه این سند هنوز مشخص نشده است."),
+    Semantic.ACTION_FOLLOW_UP: ("یک اقدام عملیاتی هنوز باز است", "نتیجه مورد انتظار این اقدام هنوز ثبت نشده است."),
+    Semantic.SLA_WARNING: ("زمان پاسخ به محدوده هشدار رسیده است", "تعهد زمانی سازمان هنوز نقض نشده، اما به موعد خود نزدیک شده است."),
+    Semantic.SLA_BREACH: ("تعهد زمانی سازمان نقض شده است", "این فرایند از زمان مورد انتظار سازمان عبور کرده است."),
 }
 _BLOCKERS = {
     "DOC_ARTIFACT_MISSING": "سند {label} در دسترس نیست.",

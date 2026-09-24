@@ -260,6 +260,7 @@ def seed_phase1b_uat(app, password: str) -> dict:
 def main(argv=None) -> int:
     parser=argparse.ArgumentParser(); sub=parser.add_subparsers(dest="command", required=True)
     reconcile=sub.add_parser("reconcile-overdue"); reconcile.add_argument("--organization-id", type=int, required=True); reconcile.add_argument("--confirm", action="store_true")
+    evaluate_sla=sub.add_parser("evaluate-sla"); evaluate_sla.add_argument("--organization-id", type=int, required=True); evaluate_sla.add_argument("--confirm", action="store_true")
     expert_baseline=sub.add_parser("reconcile-expert-baseline"); expert_baseline.add_argument("--apply", action="store_true")
     bootstrap=sub.add_parser("bootstrap-organization"); bootstrap.add_argument("--name", required=True); bootstrap.add_argument("--user-id", type=int, required=True); bootstrap.add_argument("--permissions", required=True); bootstrap.add_argument("--confirm", action="store_true")
     scope_quote=sub.add_parser("scope-quote"); scope_quote.add_argument("--quote-id", type=int, required=True); scope_quote.add_argument("--organization-id", type=int, required=True); scope_quote.add_argument("--confirm", action="store_true")
@@ -333,6 +334,10 @@ def main(argv=None) -> int:
             db.session.commit();print("uat cleanup completed")
         elif args.command == "reconcile-overdue":
             count=reconcile_overdue(organization_id=args.organization_id); print(f"reconciled organization={args.organization_id} opened={count}")
+        elif args.command == "evaluate-sla":
+            from backend.services.oip_service import reconcile as reconcile_attention
+            result=reconcile_attention(None, organization_id=args.organization_id)
+            print(json.dumps({"command":"evaluate-sla","result":"ready",**result},sort_keys=True))
         elif args.command == "reconcile-expert-baseline":
             result = reconcile_expert_baseline_permissions(apply=args.apply)
             if args.apply:

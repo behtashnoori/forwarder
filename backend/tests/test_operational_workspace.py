@@ -244,8 +244,8 @@ def test_workspace_does_not_disclose_followups_without_existing_permission(
         "/api/operational-workspace", headers=_auth(operational_app)
     )
     assert response.status_code == 200
-    assert response.json["meta"]["attention_available"] is False
-    assert response.json["meta"]["open_follow_up_count"] is None
+    assert response.json["meta"]["attention_available"] is True
+    assert response.json["meta"]["open_follow_up_count"] == 0
     assert response.json["data"]["attention_items"] == []
     card, = response.json["data"]["active_shipments"]
     assert card["open_work_item_count"] is None

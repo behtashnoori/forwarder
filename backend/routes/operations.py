@@ -19,6 +19,8 @@ from backend.operational_models import (
 )
 from backend.security import require_auth
 from backend.services import operational_service as service
+from backend.services import operational_action_service as actions
+from backend.services import organization_sla_service as organization_sla
 from backend.services import operational_workspace_service as workspace
 from backend.services import route_orchestration_service as routes
 from backend.services import external_reference_service as external_references
@@ -234,6 +236,136 @@ def context():
 def operational_workspace():
     try:
         return jsonify(workspace.snapshot(_user(), request.args.get("limit")))
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.get("/api/organization-sla-rules")
+@require_auth
+def organization_sla_rules():
+    try:
+        return jsonify({"data": organization_sla.list_rules(_user())})
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.post("/api/organization-sla-rules")
+@require_auth
+def organization_sla_rule_create():
+    try:
+        return jsonify(
+            {"data": organization_sla.create_rule(request.get_json(silent=True) or {}, _user())}
+        ), 201
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.patch("/api/organization-sla-rules/<uuid:rule_id>")
+@require_auth
+def organization_sla_rule_update(rule_id):
+    try:
+        return jsonify(
+            {
+                "data": organization_sla.update_rule(
+                    str(rule_id), request.get_json(silent=True) or {}, _user()
+                )
+            }
+        )
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.get("/api/organization-sla-rules/<uuid:rule_id>/history")
+@require_auth
+def organization_sla_rule_history(rule_id):
+    try:
+        return jsonify({"data": organization_sla.rule_history(str(rule_id), _user())})
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.get("/api/operational-shipments/<uuid:shipment_id>/actions")
+@require_auth
+def operational_actions(shipment_id):
+    try:
+        return jsonify({"data": actions.list_actions(str(shipment_id), _user())})
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.post("/api/operational-shipments/<uuid:shipment_id>/actions")
+@require_auth
+def operational_action_create(shipment_id):
+    try:
+        return jsonify(
+            {
+                "data": actions.create_action(
+                    str(shipment_id), request.get_json(silent=True) or {}, _user()
+                )
+            }
+        ), 201
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/operational-shipments/<uuid:shipment_id>/actions/<uuid:action_id>/follow-ups"
+)
+@require_auth
+def operational_action_follow_up(shipment_id, action_id):
+    try:
+        return jsonify(
+            {
+                "data": actions.record_follow_up(
+                    str(shipment_id),
+                    str(action_id),
+                    request.get_json(silent=True) or {},
+                    _user(),
+                )
+            }
+        )
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/operational-shipments/<uuid:shipment_id>/actions/<uuid:action_id>/resolve"
+)
+@require_auth
+def operational_action_resolve(shipment_id, action_id):
+    try:
+        return jsonify(
+            {
+                "data": actions.resolve_action(
+                    str(shipment_id),
+                    str(action_id),
+                    request.get_json(silent=True) or {},
+                    _user(),
+                )
+            }
+        )
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.get(
+    "/api/operational-shipments/<uuid:shipment_id>/actions/<uuid:action_id>/history"
+)
+@require_auth
+def operational_action_history(shipment_id, action_id):
+    try:
+        return jsonify(
+            {
+                "data": actions.action_history(
+                    str(shipment_id), str(action_id), _user()
+                )
+            }
+        )
     except service.OperationalError as exc:
         return _error(exc)
 
@@ -923,6 +1055,7 @@ def work_queue():
             data.append(
                 {
                     "id": r.id,
+                    "public_id": r.public_id,
                     "shipment_public_id": graph["public_id"],
                     "milestone_id": r.milestone_id,
                     "checkpoint_id": r.checkpoint_id,
@@ -952,6 +1085,13 @@ def work_queue():
                     "route_leg": graph["route_leg"],
                     "reason": r.reason,
                     "assignee_user_id": r.assignee_user_id,
+                    "action_context_type": r.action_context_type,
+                    "process_type": r.process_type,
+                    "expected_result": r.expected_result,
+                    "latest_follow_up": r.latest_follow_up,
+                    "latest_follow_up_at": r.latest_follow_up_at.isoformat()
+                    if r.latest_follow_up_at
+                    else None,
                     "version": r.version,
                 }
             )

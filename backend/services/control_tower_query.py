@@ -53,6 +53,7 @@ from backend.operational_models import (
     OperationalException,
     OperationalMembership,
     OperationalOrganization,
+    OperationalSlaCommitment,
     OperationalShipment,
     OperationalWorkItem,
     RouteLeg,
@@ -611,7 +612,60 @@ def _work_reasons(population, promotions, at):
         )),
         or_(checkpoint.c.route_leg_id.is_(None), checkpoint_leg.c.id.is_not(None)),
     )
-    return milestone_reasons, checkpoint_reasons
+    action_promoted = _oip_promotion(
+        promotions,
+        organization_id=population.c.organization_id,
+        shipment_public_id=population.c.shipment_public_id,
+        situation_type="ACTION_FOLLOW_UP",
+        source_type="OperationalWorkItem",
+        source_public_id=OperationalWorkItem.public_id,
+        source_version=OperationalWorkItem.version,
+        occurred_at=OperationalWorkItem.detected_at,
+        due_at=OperationalWorkItem.due_at,
+        authoritative_due=literal(True),
+        work_item_id=OperationalWorkItem.id,
+        at=at,
+    )
+    action_reasons = _reason_select(
+        population.c.shipment_id,
+        case(
+            (or_(OperationalWorkItem.due_at < at, action_promoted), 0),
+            else_=1,
+        ),
+        OperationalWorkItem.due_at,
+        OperationalWorkItem.detected_at,
+    ).select_from(
+        population.join(
+            OperationalWorkItem,
+            OperationalWorkItem.operational_shipment_id == population.c.shipment_id,
+        )
+    ).where(
+        OperationalWorkItem.organization_id == population.c.organization_id,
+        OperationalWorkItem.status == "open",
+        OperationalWorkItem.work_type == "FOLLOW_UP",
+    )
+    return milestone_reasons, checkpoint_reasons, action_reasons
+
+
+def _sla_reasons(population):
+    return _reason_select(
+        population.c.shipment_id,
+        case(
+            (OperationalSlaCommitment.evaluation_status == "BREACHED", 0),
+            else_=1,
+        ),
+        OperationalSlaCommitment.due_at,
+        OperationalSlaCommitment.started_at,
+    ).select_from(
+        population.join(
+            OperationalSlaCommitment,
+            OperationalSlaCommitment.operational_shipment_id == population.c.shipment_id,
+        )
+    ).where(
+        OperationalSlaCommitment.organization_id == population.c.organization_id,
+        OperationalSlaCommitment.completed_at.is_(None),
+        OperationalSlaCommitment.evaluation_status.in_(("WARNING", "BREACHED")),
+    )
 
 
 def _readiness_reasons(population, at):
@@ -775,6 +829,7 @@ def _ranked_population(actor, at: datetime, search: str | None):
     reason_queries = [
         *_execution_reasons(population, promotions, at),
         *_work_reasons(population, promotions, at),
+        _sla_reasons(population),
     ]
     if has_request:
         reason_queries.append(_readiness_reasons(population, at))

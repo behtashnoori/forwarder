@@ -20,7 +20,8 @@ from backend.mdpm_models import ArtifactAssociation, DocumentAssessment, Operati
 from backend.oip_models import OipSituation
 from backend.operational_models import (
     CanonicalLocation, DelayReason, ExceptionReason, Milestone, OperationalCheckpoint,
-    OperationalDelay, OperationalException, OperationalShipment, OperationalWorkItem, RouteLeg, RoutePlan,
+    OperationalDelay, OperationalException, OperationalShipment, OperationalSlaCommitment,
+    OperationalWorkItem, RouteLeg, RoutePlan,
 )
 from backend.services import document_readiness_service as readiness
 from backend.services.control_tower_scope import (
@@ -42,6 +43,7 @@ _WORK = {
     "ROUTE_DEPENDENCY_BLOCKED": Semantic.DEPENDENCY_BLOCKED,
     "REPLAN_REQUIRED": Semantic.REPLAN_REQUIRED,
     "OVERDUE_MILESTONE": Semantic.OVERDUE_MILESTONE_FOLLOW_UP,
+    "FOLLOW_UP": Semantic.ACTION_FOLLOW_UP,
 }
 
 
@@ -262,6 +264,17 @@ def _bounded_work_links(contexts, rows):
         context = contexts.get(row.operational_shipment_id)
         if context is None:
             continue
+        if row.work_type == "FOLLOW_UP":
+            result[row.id] = (
+                row.due_at,
+                None,
+                None,
+                "OperationalWorkItem",
+                row.public_id,
+                row.version,
+                "ACTION_FOLLOW_UP",
+            )
+            continue
         if row.work_type == "OVERDUE_MILESTONE":
             milestone = milestones.get(row.milestone_id)
             plan = plans.get(milestone.route_plan_id) if milestone else None
@@ -359,6 +372,12 @@ def _open_work(
             if link is None:
                 continue
             due, label, checkpoint_type, source_type, source_public_id, source_version, situation_type = link
+        elif row.work_type == "FOLLOW_UP":
+            due = row.due_at
+            source_type, source_public_id, source_version = (
+                "OperationalWorkItem", row.public_id, row.version
+            )
+            situation_type = "ACTION_FOLLOW_UP"
         elif row.work_type == "OVERDUE_MILESTONE":
             milestone = _milestone(context, row.milestone_id)
             plan = _active_plan(context, milestone.route_plan_id) if milestone else None
@@ -394,6 +413,8 @@ def _open_work(
         # Only the existing route producer's comparable critical cohort.
         if row.work_type in {"ROUTE_DEPENDENCY_BLOCKED", "REPLAN_REQUIRED"} and row.severity == "critical":
             level = AttentionLevel.URGENT
+        if row.work_type == "FOLLOW_UP" and utc(row.due_at) < at:
+            level = AttentionLevel.URGENT
         enrichment = ()
         # Invalid/stale authoritative due cannot support milestone enrichment.
         if not skip_enrichment and (
@@ -409,6 +430,39 @@ def _open_work(
             label=label, checkpoint_type=checkpoint_type, level=level,
             times=(time_context("expected_due", due), time_context("work_open", row.detected_at)),
             enrichment=enrichment, source_severity=row.severity if row.severity in {"critical", "warning"} else None))
+    return tuple(result)
+
+
+def _sla_reasons(rows):
+    result = []
+    for row in rows:
+        if row.completed_at is not None or row.evaluation_status not in {"WARNING", "BREACHED"}:
+            continue
+        semantic = (
+            Semantic.SLA_BREACH
+            if row.evaluation_status == "BREACHED"
+            else Semantic.SLA_WARNING
+        )
+        level = (
+            AttentionLevel.URGENT
+            if row.evaluation_status == "BREACHED"
+            else AttentionLevel.FOLLOW_UP
+        )
+        result.append(_reason(
+            semantic,
+            SourceIdentity(
+                "OperationalSlaCommitment",
+                row.public_id,
+                row.version,
+                (row.process_type, row.rule_id, row.rule_version),
+            ),
+            level=level,
+            times=(
+                time_context("expected_due", row.due_at),
+                time_context("sla_started", row.started_at),
+                time_context("evaluated", row.evaluated_at),
+            ),
+        ))
     return tuple(result)
 
 
@@ -469,6 +523,21 @@ def evaluate_bounded_sources(actor, contexts, *, at=None):
         except Exception as exc:
             _logger.error("control_tower_source_failure source=bounded_batch error_type=%s", type(exc).__name__)
             raise ControlTowerSourceFailure("bounded_batch") from None
+        sla_by_shipment = {shipment_id: [] for shipment_id in shipment_ids}
+        try:
+            for row in _all(select(OperationalSlaCommitment).where(
+                OperationalSlaCommitment.organization_id == organization_id,
+                OperationalSlaCommitment.operational_shipment_id.in_(shipment_ids),
+                OperationalSlaCommitment.completed_at.is_(None),
+                OperationalSlaCommitment.evaluation_status.in_(("WARNING", "BREACHED")),
+            )):
+                sla_by_shipment[row.operational_shipment_id].append(row)
+        except Exception as exc:
+            _logger.error(
+                "control_tower_source_failure source=sla_batch error_type=%s",
+                type(exc).__name__,
+            )
+            raise ControlTowerSourceFailure("sla_batch") from None
         delay_reason_ids = {row.reason_id for values in grouped[OperationalDelay].values() for row in values}
         exception_reason_ids = {row.reason_id for values in grouped[OperationalException].values() for row in values}
         reason_labels = {}
@@ -531,7 +600,8 @@ def evaluate_bounded_sources(actor, contexts, *, at=None):
                 shipment=shipment,
                 readiness_batch=readiness_batch,
             )
-            result.append((context, execution + work + readiness_reasons))
+            sla_reasons = _sla_reasons(sla_by_shipment[context.shipment_id])
+            result.append((context, execution + work + readiness_reasons + sla_reasons))
         if refresh_summary_contexts(actor, current) != current:
             raise ControlTowerScopeDenied()
         return tuple(result)
