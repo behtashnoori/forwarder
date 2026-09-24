@@ -1,12 +1,12 @@
 # طرح مرجع تجربه کاربری پرونده حمل عملیاتی — فاز ۳
 
-وضعیت: `TARGET_PHASE3_UX`  
-نسخه: `1.0`  
-تاریخ: `۱۴۰۵-۰۷-۰۲ / 2026-09-24`  
-مبنای حاکمیتی: `LPAF 2.7`  
-مبنای مخزن: `integration/golden-controlled@6d7a757d84d64afe3fe8614986a9e6900fe22fad`  
-اثر بر سفرهای جاری: `JOURNEY_IMPACT=NONE`  
-اعتبارسنجی سراسری محصول: `GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING`  
+وضعیت: `TARGET_PHASE3_UX`
+نسخه: `1.0`
+تاریخ: `۱۴۰۵-۰۷-۰۲ / 2026-09-24`
+مبنای حاکمیتی: `LPAF 2.7`
+مبنای مخزن: `integration/golden-controlled@6d7a757d84d64afe3fe8614986a9e6900fe22fad`
+اثر بر سفرهای جاری: `JOURNEY_IMPACT=NONE`
+اعتبارسنجی سراسری محصول: `GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING`
 آمادگی انتشار: `RELEASE_READY=NO`
 
 > این سند، رفتار موجود محصول را گزارش نمی‌کند. یک مرجع هدف برای طراحی تجربه فاز ۳ است و هیچ مجوزی برای پیاده‌سازی Product، تغییر API، مدل داده، نقش، دسترسی یا چرخه‌عمر ایجاد نمی‌کند.
@@ -377,11 +377,10 @@ Prototype با HTML/CSS/JS ساده در مسیر مستندات قرار دار
 
 ## ۲۳. وضعیت بازبینی و reference
 
-`UX_PRODUCT_OWNER_REVIEW=NOT_RUN`  
-`HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`  
-`BROWSER_PROTOTYPE_REVIEW=PASS`  
-`REFERENCE_RECONCILIATION=PASS`  
+`UX_PRODUCT_OWNER_REVIEW=NOT_RUN`
+`HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`
+`BROWSER_PROTOTYPE_REVIEW=PASS`
+`REFERENCE_RECONCILIATION=PASS`
 `REFERENCE_IMPACT=NONE`
 
 در آغاز، این سند یک مرجع هدف جدید بود و `REFERENCE_IMPACT=UPDATE_REQUIRED` داشت. با افزودن pointer به نقشه‌های مرجع پروژه، اثر رفع و به `NONE` آشتی داده شد. هیچ تغییری در LPAF v2.7 انجام نشده است.
-

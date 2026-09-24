@@ -33,4 +33,3 @@ Prototype هیچ وابستگی build ندارد، به API یا production وص
 ## مرز
 
 این پوشه طراحی و شواهد است. هیچ فایل آن نباید از runtime application import شود. تبدیل این UI به Product code فقط در مأموریت مستقل implementation planning و پس از Product Owner review مجاز است.
-

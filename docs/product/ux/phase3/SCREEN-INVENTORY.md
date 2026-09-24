@@ -1,6 +1,6 @@
 # موجودی سطح‌های تجربه کاربری فاز ۳
 
-وضعیت: `TARGET_PHASE3_UX`  
+وضعیت: `TARGET_PHASE3_UX`
 مرجع اصلی: `../PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md`
 
 این inventory «سطح تجربه» را فهرست می‌کند، نه الزام URL یا component runtime. سطح‌ها می‌توانند در یک Workspace، tab، panel، drawer یا detail view ارائه شوند.
@@ -91,4 +91,3 @@
 9. EXP-11 برای closure blocker و مسیر Admin؛
 10. CUS-01 تا CUS-05 برای projection مشتری؛
 11. ADM-01 تا ADM-04 برای catalog، reference time، closure rules و exception.
-

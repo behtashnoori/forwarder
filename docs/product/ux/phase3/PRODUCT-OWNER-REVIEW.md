@@ -1,7 +1,7 @@
 # بسته بازبینی Product Owner — تجربه فاز ۳
 
-وضعیت: `TARGET_PHASE3_UX`  
-`UX_PRODUCT_OWNER_REVIEW=NOT_RUN`  
+وضعیت: `TARGET_PHASE3_UX`
+`UX_PRODUCT_OWNER_REVIEW=NOT_RUN`
 `HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`
 
 این سند اسکریپت بازبینی است، نه مدرک تأیید. ستون نتیجه عمداً `NOT_REVIEWED` است و فقط Product Owner انسانی می‌تواند آن را به `PASS`، `NEEDS_CHANGE` یا `DECISION_NEEDED` تغییر دهد.
@@ -91,8 +91,7 @@ python -m http.server 4179 --directory docs/product/ux/phase3/prototype
 
 تا زمان اجرای واقعی جلسه:
 
-`UX_PRODUCT_OWNER_REVIEW=NOT_RUN`  
+`UX_PRODUCT_OWNER_REVIEW=NOT_RUN`
 `HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN`
 
 بازبینی browser خودکار و تصویری فقط سلامت Prototype و presentation را پشتیبانی می‌کند؛ جای Product Owner approval را نمی‌گیرد.
-
