@@ -39,11 +39,13 @@ human delegate under LPAF v2.7. An agent may prepare evidence but cannot grant
 the human PASS. The actual Forwarder critical-journey list is defined only in a
 separate Product mission; this instruction does not invent that list.
 
-Canonical Forwarder Product Acceptance Journey Pack:
+Canonical Forwarder Product references:
 
-`docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1-FA.md`
+- `docs/product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md`
+- `docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md`
 
-Every future mission must apply that Pack's `JOURNEY_IMPACT` and evidence
+Every future mission must apply the Product Contract within its approved scope
+and the Journey Pack's `JOURNEY_IMPACT` and evidence
 staleness rules. Product-changing work must name affected `FWD-J*` and
 `FWD-IPJ-*` journeys and the required slice, integrated, and human reruns.
 `JOURNEY_IMPACT=NONE` requires an evidence-backed rationale.

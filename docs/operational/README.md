@@ -1,5 +1,12 @@
 # Forwarder Architecture Handbook
 
+## Current Product contract references
+
+- [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) — approved `TARGET_PHASE3` meaning; no runtime implementation claim.
+- [Product Acceptance Journey Pack v1.1](../product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md) — `FWD-J01..J08` preserved, `FWD-J09` critical target and `FWD-IPJ-04` defined but not run.
+
+These Product references control their expressly approved Product scope. They do not rewrite historical ADR/PDR text, authorize implementation, or turn target behavior into current runtime evidence.
+
 ## MDPM-1 document readiness
 
 - [ADR-030 — MDPM Document Readiness Policy](adr/ADR-030-mdpm-document-readiness-policy.md)

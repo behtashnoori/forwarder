@@ -1,5 +1,14 @@
 # Architecture and Governance Decision Index
 
+## Current Product contract references
+
+| Reference | Status | Governing scope | Relationship to existing decisions |
+| --- | --- | --- | --- |
+| [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) | `ACTIVE / APPROVED TARGET_PHASE3 / NOT_IMPLEMENTED` | Multi-customer/multi-cargo Shipment, quantities/allocation, route execution, privacy/tracking, delivery/closure and UX target | Preserves historical ADR/PDR text; supersedes ADR-047 only for the newly approved exceptional Organization-Admin owner transfer target; records Product intent for Proposed ADR-020/023 areas without granting architecture/schema implementation authority. |
+| [Product Acceptance Journey Pack v1.1](../product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md) | `ACTIVE / DEFINED` | Product journey set and acceptance evidence rules | Preserves `FWD-J01..J08`; adds `FWD-J09=CRITICAL_TARGET_PHASE3` and `FWD-IPJ-04=DEFINED_TARGET_NOT_RUN`; no journey or walkthrough PASS is implied. |
+
+These references are Product authority/index records, not new ADR or PDR identifiers. Implementation still requires a bounded design/build mission and all applicable LPAF gates.
+
 ## Release 1.9.1 accepted architecture records
 
 Implementation state: **Slice 1 contract only — runtime implementation not started; not published; not deployed**. Production 1.9.0 remains immutable.
