@@ -258,7 +258,23 @@ def reconcile(user=None, calculation_time=None, _failure_point=None, *, organiza
             dimensions={"work_type":item.work_type,"milestone_id":item.milestone_id,"checkpoint_id":item.checkpoint_id,"route_plan_id":item.route_plan_id}
             if item.work_type=="FOLLOW_UP":dimensions["work_item_public_id"]=item.public_id
             if typ == "NEXT_MILESTONE_OVERDUE":
-                project=db.session.get(Project,shipment.project_id);milestone=db.session.get(Milestone,item.milestone_id)
+                project=(
+                    db.session.get(Project, shipment.project_id)
+                    if shipment.project_id is not None
+                    else None
+                )
+                milestone=(
+                    db.session.get(Milestone, item.milestone_id)
+                    if item.milestone_id is not None
+                    else None
+                )
+                # Historical/direct shipments can legitimately carry the legacy
+                # workspace work item without a Project-owned OIP policy scope.
+                # That source remains visible in the Workspace, but it cannot be
+                # evaluated as a governed next-milestone signal and must not abort
+                # reconciliation for otherwise valid Action/SLA sources.
+                if project is None or milestone is None:
+                    continue
                 result=evaluate_next_milestone_overdue(organization_id=org,project_public_id=project.public_id,subject_public_id=shipment.public_id,dimensions=dimensions,source_public_id=milestone.public_id,source_version=milestone.version,due_at=item.due_at,occurred_at=item.detected_at,lifecycle_status=milestone.lifecycle_status,calculated_at=now,due_source="RUNTIME_OPERATIONAL_WORK_ITEM_DUE")
             else:
                 overdue=_utc_aware(item.due_at)<=now

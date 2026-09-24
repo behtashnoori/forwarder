@@ -62,6 +62,11 @@ export default function OperationalConditionsSection({ shipmentPublicId }: { shi
         } : {}),
         idempotency_key: commandKeys.current[kind],
       });
+      if (kind === "exception") {
+        window.dispatchEvent(new CustomEvent("operational-exceptions-changed", {
+          detail: { shipmentPublicId },
+        }));
+      }
       commandKeys.current[kind] = crypto.randomUUID();
       setSelected(previous => ({ ...previous, [kind]: "" }));
       setTimes(previous => ({ ...previous, [kind]: "" }));

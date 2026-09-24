@@ -7,6 +7,7 @@ from backend.models import ExpertUser
 from backend.oip_models import OipSituation
 from backend.operational_models import (
     ExceptionReason,
+    Milestone,
     OperationalException,
     OperationalMembership,
     OperationalSlaCommitment,
@@ -338,3 +339,31 @@ def test_rule_edit_catches_up_old_version_before_prospective_change(operational_
         assert commitment.rule_snapshot["duration_minutes"] == 30
         assert updated["version"] == 2
         assert OrganizationSlaRule.query.one().duration_minutes == 90
+
+
+def test_reconcile_skips_legacy_direct_overdue_source_without_project_policy(operational_app):
+    with operational_app.app_context():
+        shipment = _shipment(operational_app, "phase2-direct-overdue-oip")
+        milestone = Milestone.query.filter_by(
+            operational_shipment_id=shipment.id
+        ).first()
+        db.session.add(
+            OperationalWorkItem(
+                organization_id=shipment.organization_id,
+                operational_shipment_id=shipment.id,
+                milestone_id=milestone.id,
+                work_type="OVERDUE_MILESTONE",
+                severity="warning",
+                detected_at=utcnow(),
+                due_at=utcnow() - timedelta(minutes=1),
+                reason="Legacy direct-shipment workspace signal",
+            )
+        )
+        db.session.commit()
+
+        result = oip_service.reconcile(organization_id=shipment.organization_id)
+
+        assert result["status"] == "FRESH"
+        assert all(
+            row["type"] != "NEXT_MILESTONE_OVERDUE" for row in result["results"]
+        )

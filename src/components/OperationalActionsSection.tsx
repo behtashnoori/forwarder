@@ -59,6 +59,18 @@ export default function OperationalActionsSection({ shipmentPublicId }: { shipme
     }).catch(() => setCanRead(false));
   }, [load]);
 
+  useEffect(() => {
+    if (!canRead) return undefined;
+    const refreshExceptions = (event: Event) => {
+      const changedShipment = (event as CustomEvent<{ shipmentPublicId?: string }>).detail?.shipmentPublicId;
+      if (!changedShipment || changedShipment === shipmentPublicId) {
+        void load().catch(caught => setError(message(caught)));
+      }
+    };
+    window.addEventListener("operational-exceptions-changed", refreshExceptions);
+    return () => window.removeEventListener("operational-exceptions-changed", refreshExceptions);
+  }, [canRead, load, shipmentPublicId]);
+
   const run = async (key: string, operation: () => Promise<unknown>) => {
     setBusy(key);
     setError("");

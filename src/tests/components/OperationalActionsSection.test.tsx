@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import OperationalActionsSection from "@/components/OperationalActionsSection";
 
@@ -55,5 +55,21 @@ describe("operational actions", () => {
     await user.click(screen.getByRole("button", { name: "ثبت پیگیری" }));
     await waitFor(() => expect(api.followUp).toHaveBeenCalledWith(shipment, action, "تماس انجام شد"));
     expect(screen.getByText(/مالک داخلی آن همان کارشناس مسئول ثابت/)).toBeInTheDocument();
+  });
+
+  it("refreshes exception contexts after an exception is created on the same page", async () => {
+    api.exceptions
+      .mockResolvedValueOnce({ data: [] })
+      .mockResolvedValue({ data: [{ public_id: "exception-2", reason: { fa_name: "اختلال هماهنگی" }, active: true }] });
+    render(<OperationalActionsSection shipmentPublicId={shipment} />);
+    await screen.findByText("اقدام جدید");
+
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent("operational-exceptions-changed", { detail: { shipmentPublicId: shipment } }));
+    });
+
+    await userEvent.selectOptions(screen.getByLabelText("زمینه"), "EXCEPTION");
+    await waitFor(() => expect(screen.getByRole("option", { name: "اختلال هماهنگی · باز" })).toBeInTheDocument());
+    expect(api.exceptions).toHaveBeenCalledTimes(2);
   });
 });
