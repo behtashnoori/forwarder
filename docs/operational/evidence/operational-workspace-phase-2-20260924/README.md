@@ -4,16 +4,32 @@ Date: 2026-09-24
 
 Branch: `codex/operational-workspace-phase-2`
 
+Repository/worktree: `D:\1-webapp\forwarder-dev\operational-workspace-phase-2`
+
+Qualified Product HEAD: `4129badaad5bb4a425cd4685b6a15c81db11f5e1`
+
+Qualification completed at: `2026-09-24T11:55:18.3156910Z`
+
 Target baseline: `integration/golden-controlled` at `97edd38d752259f0babcf8f43867b028511c874d`
 
 Migration head: `20260928_operational_workspace_phase2`
+
+Migration head count: `1`
 
 ## Scope and safety
 
 - Qualification used synthetic data in owned disposable local/UAT databases only.
 - PostgreSQL 18 was the database engine for clean upgrade, downgrade/upgrade, and browser qualification.
 - No production system was accessed or mutated and no deployment was performed.
+- Browser and automated qualification were run against the complete 40-character Product HEAD `4129badaad5bb4a425cd4685b6a15c81db11f5e1`.
 - The repository-wide LPAF product-validation state remains `EVIDENCE_PENDING`; evidence for this bounded slice is complete.
+
+## Product Authority and integrity repair
+
+- `AUTHORIZED_PRODUCT_CHANGE=NONE` for this repair mission.
+- `RUNTIME_BEHAVIOR_CHANGED=NO`: the repair commit removed exactly one terminal blank line from each of five files; normalized content comparison proved no executable statement or semantic text changed.
+- Product Authority reconciliation: `PASS`; no `VIOLATION`, no slice-local `UNKNOWN`, and no product meaning was changed by evidence/reference reconciliation.
+- Phase 3, AI, Finance, Carrier Portal, Driver Portal, Production access, deployment, and release creation were not started.
 
 ## Migration evidence
 
@@ -31,7 +47,7 @@ Command:
 powershell -ExecutionPolicy Bypass -File .\scripts\run-operational-workspace-phase2-e2e.ps1
 ```
 
-Result: 8/8 journeys PASS in Google Chrome via Playwright against PostgreSQL 18. The runner created random credentials and an owned database, verified the exact Alembic head, then removed every server process and runtime database it created.
+Result: 8/8 journeys PASS in Google Chrome via Playwright against PostgreSQL 18 and exact Product HEAD `4129badaad5bb4a425cd4685b6a15c81db11f5e1`. The runner created random credentials and an owned database, verified the exact Alembic head, then removed every server process and runtime database it created.
 
 Covered journeys:
 
@@ -52,6 +68,7 @@ Artifacts:
 - [Exception, Action, resolution, and history](browser/phase2-exception-action-history.png)
 - [Control Tower](browser/phase2-control-tower.png)
 - [Machine-readable browser result](browser/result.json)
+- [SHA-bound screenshot manifest](browser/manifest.json)
 
 ## Automated qualification
 
@@ -62,9 +79,17 @@ Artifacts:
 - ESLint (`--quiet`): PASS.
 - Production frontend build: PASS; the existing large-chunk advisory remains non-blocking.
 - Repository structure check: PASS.
+- Architecture governance check: PASS.
 - `git diff --check`: PASS.
 - Full backend regression: 1,369 passed, 106 skipped.
 
 ## Reference impact
 
-`REFERENCE_IMPACT=UPDATE_REQUIRED`: the OpenAPI contract, tenant-ownership inventory, ADR index, Phase 1 browser harness compatibility, and migration-head assertions were updated for the new bounded capabilities.
+`REFERENCE_IMPACT=NONE`:
+
+- OpenAPI accurately describes the accepted SLA, Action, Exception, Workspace, and OIP surface.
+- The tenant-ownership inventory records the new organization-owned SLA rule and pinned commitment data.
+- ADR-054 is accepted and indexed without rewriting historical ADRs.
+- Migration-head assertions identify the sole head `20260928_operational_workspace_phase2`.
+- The Phase 1 harness remains compatible with its historical owned database and the Phase 2 owned database; the combined Chrome run re-executed and passed the Phase 1 Customer Account, Public Tracking, Request/Shipment separation, fixed-owner, tenant-isolation, empty, and error journeys.
+- The historical Phase 1 evidence remains bound to its original candidate and migration head; a successor-compatibility addendum records the current Phase 2 result without retroactive rewriting.

@@ -195,3 +195,14 @@ The browser proof covers: expert login and Workspace entry; overview/Attention; 
 - Database/migration change: `NO`
 - Reference impact: `UPDATE_REQUIRED`, satisfied by adding the approved product references and v2.6 repository entry instructions on the correct line
 - Phase 2: `NOT_STARTED`
+
+## Successor compatibility status — Phase 2
+
+This is a current successor-status addendum, not a rewrite of the historical Phase 1 evidence above. The original Phase 1 candidate, migration head, test counts, reference result, and `Phase 2: NOT_STARTED` statement remain the facts recorded when Phase 1 was qualified.
+
+- Historical Phase 1 candidate: `1c93abb375c59bae650bbc11fb70b8cf4b3ecc9f`.
+- Current qualified Phase 2 Product HEAD: `4129badaad5bb4a425cd4685b6a15c81db11f5e1`.
+- Current sole migration head: `20260928_operational_workspace_phase2` (head count `1`).
+- The current Phase 1 runner and seed retain their original owned `forwarder_workspace_phase1_*` boundary and also permit the Phase 2 runner's owned `forwarder_workspace_phase2_*` database so the same protected journeys can be re-used without changing their meaning.
+- The combined Google Chrome qualification on 2026-09-24 re-executed all five Phase 1 scenarios against the exact Phase 2 Product HEAD and PostgreSQL 18; fixed Shipment owner, tenant isolation, empty/error states, Customer Account, Public Tracking, Request/Shipment separation, numeric-ID rejection, and anonymous Request creation all passed.
+- `PHASE1_COMPATIBILITY_REFERENCE_STATUS=CURRENT`.

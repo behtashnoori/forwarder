@@ -153,5 +153,7 @@ Journeys:
 | Reference | Result |
 | --- | --- |
 | canonical LPAF v2.6 | `NONE` — applied unchanged |
-| Forwarder Product references | `NONE` expected — mission implements already approved meaning |
-| Forwarder architecture | `UPDATE_REQUIRED` — ADR-054 records the bounded SLA/Action/OIP extension |
+| Forwarder Product/API references | `NONE` — OpenAPI describes the accepted SLA, Action, Exception, Workspace, and OIP contracts without changing Product meaning |
+| Forwarder architecture/ownership | `NONE` — ADR-054 is accepted and indexed, and the tenant-ownership inventory records the organization-owned SLA data |
+| migration assertions | `NONE` — the repository and browser contracts identify the sole head `20260928_operational_workspace_phase2` |
+| Phase 1 compatibility status | `NONE` — the preserved Phase 1 harness accepts its own and Phase 2 owned disposable databases, and the combined browser qualification re-runs the protected Phase 1 journeys |

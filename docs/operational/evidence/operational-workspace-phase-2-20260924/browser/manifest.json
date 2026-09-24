@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "phase2_browser_product_qualification",
+  "generated_at_utc": "2026-09-24T11:55:18.3156910Z",
+  "branch": "codex/operational-workspace-phase-2",
+  "repository_worktree": "D:\\1-webapp\\forwarder-dev\\operational-workspace-phase-2",
+  "product_head": "4129badaad5bb4a425cd4685b6a15c81db11f5e1",
+  "browser_result": "result.json",
+  "screenshots": [
+    { "path": "phase2-control-tower.png", "sha256": "dcb0868a0d032690d8c76128e9d0cd17e9643e6c8023b5c141d6491babbe65c2" },
+    { "path": "phase2-exception-action-history.png", "sha256": "38a39112cfc9bd19ee36fb1db11a870890a350dab191c24064539bbc00c891da" },
+    { "path": "phase2-sla-administration.png", "sha256": "ce69abd4cdc0f368d5bcb723f4e7beade305a865122490dd86da951c436805f7" },
+    { "path": "phase2-workspace-sla-attention.png", "sha256": "31afcdabacb489b6451f750087ff933aec3182b9e8d1b95ca9f30d12f7a4d9b9" },
+    { "path": "shipment-context-history.png", "sha256": "d2e234edfdea68465d22cceb0abdb6f9c9e42eabc60c52f0a84590e8d6483753" },
+    { "path": "workspace-empty.png", "sha256": "0a214c0792d445b040136fada2fd8ddaa62ab975360522e0d5b8f6def2607cef" },
+    { "path": "workspace-overview.png", "sha256": "2db628c8f588d5991552f5bd72f4b484808cee45fa623508a024e546a7fba661" }
+  ]
+}
