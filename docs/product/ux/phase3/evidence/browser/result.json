@@ -1,0 +1,51 @@
+{
+  "prototype": "TARGET_PHASE3_UX",
+  "url": "http://127.0.0.1:4179/",
+  "testedAt": "2026-09-24T20:10:56.771Z",
+  "browser": "Chromium via Playwright",
+  "desktopViewport": "1440x900",
+  "mobileViewport": "390x844",
+  "syntheticDataOnly": true,
+  "externalNetworkRequests": [],
+  "consoleErrors": [],
+  "pageErrors": [],
+  "checks": [
+    {
+      "name": "local prototype loads",
+      "result": "PASS"
+    },
+    {
+      "name": "all expert sections are reachable",
+      "result": "PASS"
+    },
+    {
+      "name": "over-allocation blocks while valid allocation succeeds",
+      "result": "PASS"
+    },
+    {
+      "name": "customer projection excludes other customer identities",
+      "result": "PASS"
+    },
+    {
+      "name": "customer 390px layout has no horizontal page overflow",
+      "result": "PASS"
+    },
+    {
+      "name": "admin can activate an organization definition concept",
+      "result": "PASS"
+    },
+    {
+      "name": "stale scenario is explicit and not falsely healthy",
+      "result": "PASS"
+    },
+    {
+      "name": "no production or external network dependency",
+      "result": "PASS"
+    },
+    {
+      "name": "no browser console or page errors",
+      "result": "PASS"
+    }
+  ],
+  "result": "PASS"
+}

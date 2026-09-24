@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <title>Forwarder — نمونه تعاملی تجربه پرونده حمل فاز ۳</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f6b57'/%3E%3Cpath d='M9 8h15v4H14v4h8v4h-8v7H9z' fill='white'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">رفتن به محتوای اصلی</a>
+    <div class="prototype-ribbon" role="note">
+      <strong>نمونه تعاملی هدف فاز ۳</strong>
+      <span>داده‌ها کاملاً ساختگی‌اند · بدون اتصال به API یا پایگاه داده</span>
+    </div>
+
+    <header class="app-header">
+      <div class="brand" aria-label="Forwarder">
+        <span class="brand-mark" aria-hidden="true">F</span>
+        <span><b>Forwarder</b><small>عملیات حمل یکپارچه</small></span>
+      </div>
+      <nav class="role-switcher" aria-label="انتخاب تجربه نمونه">
+        <button type="button" class="role-button is-active" data-role="expert" aria-pressed="true">کارشناس حمل</button>
+        <button type="button" class="role-button" data-role="customer" aria-pressed="false">مشتری A</button>
+        <button type="button" class="role-button" data-role="admin" aria-pressed="false">مدیر سازمان</button>
+      </nav>
+      <button type="button" class="icon-button scenario-button" aria-haspopup="dialog" data-action="open-scenarios">
+        <span aria-hidden="true">◫</span><span>حالت‌های رابط</span>
+      </button>
+    </header>
+
+    <div id="app" class="app-shell" aria-live="polite"></div>
+
+    <div class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div class="dialog-layer" hidden></div>
+
+    <template id="dialog-template">
+      <div class="dialog-backdrop" data-action="close-dialog"></div>
+      <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+        <header class="dialog-header">
+          <div><p class="eyebrow" id="dialog-eyebrow"></p><h2 id="dialog-title"></h2></div>
+          <button type="button" class="icon-button close-button" data-action="close-dialog" aria-label="بستن">×</button>
+        </header>
+        <div class="dialog-body"></div>
+      </section>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
