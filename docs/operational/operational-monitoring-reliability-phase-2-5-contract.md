@@ -1,7 +1,7 @@
 # Operational Monitoring Reliability Phase 2.5 — governed mission contract
 
 - Date: 2026-09-24
-- Baseline: LPAF v2.6 — `ACTIVE / FROZEN / CANONICAL`
+- Baseline: LPAF v2.7 — `ACTIVE / FROZEN / CANONICAL`
 - Lifecycle: M0 Mission through M6 Verify; no Release, deployment, Production, or Operate claim
 - Rigor / routing: Level B (Product), Sol
 - Owner / authority: Product Owner through the supplied mission `Forwarder — Operational Monitoring Reliability Phase 2.5`
@@ -27,6 +27,25 @@ Out of scope: a new service or deployment topology, scheduler installation, Prod
 Stop the affected work if reliable evaluation requires a new independently deployed component, a business-calendar decision, a user-visible freshness commitment, or any protected Product behavior change.
 
 Definition of Done: the required A–J qualification scenarios pass against owned synthetic data, PostgreSQL 18 and browser evidence; full backend/frontend/static/build/governance gates pass; the candidate is committed in bounded commits and the worktree is clean.
+
+## LPAF v2.7 journey impact and acceptance boundary
+
+`JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY`.
+
+The affected existing journeys are Transport Expert Workspace, Attention
+consumption, and Control Tower operational attention/freshness. Phase 2.5 adds
+no actor or primary workflow; it changes the reliability and freshness behavior
+visible inside those already-approved journeys.
+
+The rebased Product candidate requires a candidate-bound Slice Journey rerun.
+Whole-Product integrated journeys and the authorized Human Product Walkthrough
+remain separate pre-release gates and are not part of this canonical integration
+mission. Therefore this mission preserves:
+
+- `INTEGRATED_PRODUCT_JOURNEYS=NOT_YET_RUN_PRE_RELEASE`;
+- `HUMAN_PRODUCT_WALKTHROUGH=NOT_YET_RUN_PRE_RELEASE`;
+- `GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING`;
+- `RELEASE_READY=NO`.
 
 ## FACT / ASSUMPTION / UNKNOWN / DECISION_NEEDED
 
@@ -79,7 +98,7 @@ Definition of Done: the required A–J qualification scenarios pass against owne
 
 `DECISIONS_NEEDED`: business-calendar semantics and any user-visible freshness service commitment remain open and are not required by this implementation.
 
-`APPROVING_OWNER_OR_AUTHORITY`: Product Owner through the supplied Phase 2.5 mission; LPAF v2.6 for governance and authority boundaries.
+`APPROVING_OWNER_OR_AUTHORITY`: Product Owner through the supplied Phase 2.5 mission; LPAF v2.7 for governance and authority boundaries.
 
 `APPROVAL_REFERENCE`: the supplied `Forwarder — Operational Monitoring Reliability Phase 2.5` mission, the accepted Phase 2 contract/evidence, `FORWARDER-OPERATIONAL-MODEL-V1-FA.md`, and `FORWARDER-OPERATIONAL-WORKSPACE-PRODUCT-DESIGN-V1-FA.md`.
 
@@ -113,6 +132,6 @@ Required evidence is candidate-bound: focused unit/integration tests, PostgreSQL
 
 Provisional reference impact:
 
-- canonical LPAF v2.6: `NONE`;
+- canonical LPAF v2.7: `NONE`;
 - Forwarder project architecture and Phase 2 reliability contract: `UPDATE_REQUIRED` for the bounded health/fencing decision and final evidence;
 - OpenAPI and tenant/migration inventories: `UPDATE_REQUIRED` only where the implemented response/persistence contract changes.

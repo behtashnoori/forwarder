@@ -2,7 +2,7 @@
 
 - Status: ACCEPTED for the Product-approved Phase 2.5 reliability mission
 - Date: 2026-09-24
-- Owners / authority: Product Owner (mission); OIP/Operations architecture under LPAF v2.6
+- Owners / authority: Product Owner (mission); OIP/Operations architecture under LPAF v2.7
 - Extends: ADR-031, ADR-032, ADR-054
 
 ## Context
