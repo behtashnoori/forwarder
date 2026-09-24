@@ -1,20 +1,20 @@
-# مرجع پذیرش سفرهای محصول Forwarder — نسخه ۱
+# مرجع پذیرش سفرهای محصول Forwarder — نسخه ۱.۱
 
 ## ۱. شناسنامه و وضعیت
 
 | فیلد | مقدار |
 | --- | --- |
-| شناسه مرجع | `FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1-FA` |
+| شناسه مرجع | `FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA` |
 | وضعیت مرجع | `ACTIVE / CANONICAL PRODUCT REFERENCE` |
 | خط مبنای حاکم | `LPAF v2.7 — ACTIVE / FROZEN / CANONICAL` |
-| مرجع تصویب | مأموریت صریح Product Owner برای ساخت Journey Pack v1 |
+| مرجع تصویب | مأموریت صریح Product Owner برای تکامل Journey Pack از v1 به v1.1 و افزودن سفر هدف `FWD-J09` |
 | شعبه مبنا | `integration/golden-controlled` |
 | HEAD مبنای مخزن | `48833131073d4b5c0a5229550e4391abe44e5704` |
 | Product SHA آخرین بستهٔ رفتاری واجد شواهد | `1aea4bebdde7e240a903baea1b7b678993f3c505` |
 | توضیح اختلاف دو SHA | تغییر بعدی تا HEAD مبنا فقط بستهٔ شواهد Phase 2.5 را افزوده و فایل Product/runtime را تغییر نداده است؛ این توضیح جای اجرای دقیق Candidate آینده را نمی‌گیرد. |
 | Alembic head در زمان تدوین | `20260929_operational_monitoring_reliability`، یکتا |
-| تعداد سفرهای حیاتی فعلی | ۸ |
-| تعداد سفرهای یکپارچه | ۳ |
+| تعداد سفرهای حیاتی تعریف‌شده | ۹؛ هشت سفر فعلی و یک سفر هدف فاز ۳ |
+| تعداد سفرهای یکپارچه | ۴؛ سه سفر فعلی و یک سفر هدف فاز ۳ |
 | وضعیت Pack | `DEFINED` |
 | وضعیت شواهد Slice | `MAPPED` |
 | سفرهای یکپارچه | `DEFINED_NOT_RUN` |
@@ -23,7 +23,7 @@
 | اعتبارسنجی سراسری Product | `EVIDENCE_PENDING` |
 | آمادگی Release | `NO` |
 
-این سند مرجع دائمی سفرهای پذیرش Forwarder است. ساخت این مرجع به معنای اجرای سفرها، پذیرش انسانی یا اجازهٔ Release نیست. نتیجه‌های تاریخی و Slice فقط ورودی‌اند؛ هیچ‌کدام به‌تنهایی PASS یک سفر یکپارچه محسوب نمی‌شوند.
+این سند مرجع دائمی سفرهای پذیرش Forwarder است. نسخه ۱.۱ تکامل مستقیم نسخه ۱ در commit `71131e672ee349773c09b124451fd0953c2e5c75` است و شناسه‌های `FWD-J01` تا `FWD-J08` را بدون renumber حفظ می‌کند. تعریف `FWD-J09` به معنای پیاده‌سازی آن، اجرای سفر، پذیرش انسانی یا اجازهٔ Release نیست. نتیجه‌های تاریخی و Slice فقط ورودی‌اند؛ هیچ‌کدام به‌تنهایی PASS یک سفر یکپارچه محسوب نمی‌شوند.
 
 ## ۲. روش استفاده
 
@@ -43,6 +43,11 @@
 | `EVIDENCE_GAP` | سطح محصول وجود دارد، اما مدرک لازم برای ادعای جاری کافی نیست. |
 | `DECISION_NEEDED` | تصمیم Product Owner لازم است. |
 | `HISTORICAL_ONLY` | مدرک فقط برای شناخت گذشته قابل استفاده است. |
+| `CURRENT_AND_PROVEN` | رفتار فعلی در محدوده مدرک موجود اثبات شده است. |
+| `CURRENT_PARTIAL` | بخشی از foundation فعلی وجود دارد، اما قرارداد کامل هدف را ثابت نمی‌کند. |
+| `TARGET_PHASE3` | رفتار هدف توسط Product Owner تصویب شده، اما هنوز پیاده یا qualified نشده است. |
+| `EVIDENCE_GAP` | برای ادعای موردنظر مدرک کافی یا تازه وجود ندارد. |
+| `DECISION_NEEDED` | تصمیم Product Owner یا مرجع دارای اختیار لازم است. |
 
 طبقه‌بندی نگاشت شواهد:
 
@@ -56,17 +61,19 @@
 
 | کنترل | ثبت |
 | --- | --- |
-| سطح مأموریت | `Level B`، مرجع Product بدون تغییر رفتار |
-| مسیر قابلیت | `Sol` برای تدوین و تطبیق مرجع |
+| سطح مأموریت | `Level B`، تعریف Product target و مرجع Journey بدون تغییر runtime |
+| مسیر قابلیت | `Astra` برای آشتی تصمیم‌های وابسته، مراجع متعدد و وضعیت current/target |
 | Product Owner | مالک تصویب فهرست سفرهای حیاتی و تغییرات آیندهٔ آن |
-| `AUTHORIZED_PRODUCT_CHANGES` | `NONE` |
-| تغییرات محافظت‌شده | نقش‌ها، مرز Tenant، Request در برابر Shipment، Quote، مالک ثابت Shipment، SLA، Attention، Control Tower، Public Tracking، Customer Account، DB/API/runtime |
-| محدودهٔ مجاز | ساخت ساختار سند، شناسه‌ها، نگاشت مدارک، اسکریپت مرور انسانی و پیوندهای حداقلی مرجع |
-| `JOURNEY_IMPACT` | `NONE`؛ این مأموریت رفتار Product را تغییر نمی‌دهد و فقط مرجع پذیرش را تعریف می‌کند. |
-| `REFERENCE_IMPACT` | `UPDATE_REQUIRED`؛ این سند، `AGENTS.md` و فهرست مستندات ریشه باید به هم متصل شوند. |
+| `AUTHORIZED_PRODUCT_CHANGES` | تعریف target Product طبق قرارداد Shipment عملیاتی v1؛ افزودن `FWD-J09` و `FWD-IPJ-04`؛ بدون تغییر runtime |
+| تغییرات محافظت‌شده | رفتار، نقش، Tenant، DB/API/UI/runtime فعلی؛ وضعیت `NOT_RUN`؛ evidence تاریخی؛ موضوعات عمداً باز |
+| محدودهٔ مجاز | تکامل v1 به v1.1، نگاشت اثرها، اسکریپت مرور هدف و پیوندهای مرجع |
+| `JOURNEY_IMPACT` | `NEW_JOURNEY_REQUIRED` |
+| `NEW_JOURNEY` | `FWD-J09` |
+| `REFERENCE_IMPACT` | `NONE`؛ Product Contract، Pack v1.1، `AGENTS.md` و indexهای پروژه با هم آشتی داده شده‌اند. |
 
 مرجع‌های اصلی Product برای این Pack:
 
+- [قرارداد محصول پرونده حمل عملیاتی v1](./FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md)
 - [مدل عملیاتی Forwarder](./FORWARDER-OPERATIONAL-MODEL-V1-FA.md)
 - [طراحی Product فضای کاری عملیاتی](./FORWARDER-OPERATIONAL-WORKSPACE-PRODUCT-DESIGN-V1-FA.md)
 - [مدل دسترسی CRM](./FORWARDER-CRM-ACCESS-MODEL.md)
@@ -100,6 +107,20 @@
 
 ۱۰. هر سفر باید پس از refresh و بازگشایی، حقیقت ماندگار مورد انتظار را نشان دهد.
 
+اصول افزوده‌شده در v1.1 برای هدف فاز ۳:
+
+۱۱. یک Shipment می‌تواند Cargo چند Request و چند Customer را در خود داشته باشد، اما چندمشتری‌بودن از Customer attribution هر Cargo مشتق می‌شود؛ Shipment به فهرست مستقل عضویت مشتری تبدیل نمی‌شود.
+
+۱۲. `REQUESTED`، `PLANNED` و `ACTUAL` سه حقیقت مقدارند و یکدیگر را بازنویسی نمی‌کنند.
+
+۱۳. Cargo می‌تواند میان چند وسیله/ظرف حمل تخصیص یابد و یک وسیله می‌تواند Cargo چند Customer را حمل کند؛ over-allocation مسدود و باقی‌مانده تخصیص‌نیافته آشکار می‌شود.
+
+۱۴. Planned Route و Actual Route، وسیله حمل و واحد/ظرف حمل، Document scope و visibility و اطلاعات ناقص و مشکل عملیاتی مفاهیم جدا هستند.
+
+۱۵. Product truth هدف می‌تواند مشترک باشد، اما Customer projection همیشه privacy-safe و customer-scoped است.
+
+۱۶. همه اصول ۱۱ تا ۱۵ `TARGET_PHASE3` هستند و صرف ثبت در این Pack، runtime یا evidence فعلی ایجاد نمی‌کند.
+
 ## ۵. فهرست سفرهای حیاتی فعلی
 
 | شناسه | نام ساده | بازیگر اصلی | وضعیت نیت/پیاده‌سازی | شواهد Slice فعلی | سفر یکپارچه مرتبط |
@@ -112,8 +133,9 @@
 | `FWD-J06` | ادارهٔ سازمان | مدیر سازمان | `IMPLEMENTATION_GAP + EVIDENCE_GAP` | `PARTIAL_EXISTING_EVIDENCE` | `FWD-IPJ-03` |
 | `FWD-J07` | برج کنترل | کارشناس/ناظر مجاز | `ALIGNED + EVIDENCE_GAP` | `FULL_EXISTING_SLICE_EVIDENCE` | `FWD-IPJ-02` |
 | `FWD-J08` | حفاظت Tenant و مجوز | چند نقش | `ALIGNED + EVIDENCE_GAP` | `PARTIAL_EXISTING_EVIDENCE` | `FWD-IPJ-03` |
+| `FWD-J09` | پرونده حمل مشترک چندمشتری / چندکالا | کارشناس حمل و مشتری‌های مرتبط | `TARGET_PHASE3 + EVIDENCE_GAP` | `NO_IMPLEMENTATION_OR_QUALIFICATION_EVIDENCE` | `FWD-IPJ-04` |
 
-برای هر هشت سفر، `NO_INTEGRATED_EVIDENCE_YET` برقرار است.
+برای هر نه سفر، `NO_INTEGRATED_EVIDENCE_YET` برقرار است. `FWD-J01` تا `FWD-J08` سفرهای فعلی‌اند؛ `FWD-J09` سفر حیاتی هدف است و وضعیت آن `CRITICAL_TARGET_PHASE3 / DEFINED_NOT_IMPLEMENTED` است.
 
 ## ۶. رکورد سفرهای حیاتی
 
@@ -358,9 +380,49 @@
 | مالک | Product Owner برای سیاست نقش؛ backend authorization و tenant authority برای enforcement. |
 | محرک تغییر | نقش/permission، membership، hostname/session، public capability، query population، direct route، search/count/download یا admin support. |
 
+### FWD-J09 — پرونده حمل مشترک چندمشتری / چندکالا
+
+| فیلد | تعریف |
+| --- | --- |
+| طبقه‌بندی | `CRITICAL_TARGET_PHASE3` |
+| وضعیت | `DEFINED_NOT_IMPLEMENTED / NOT_RUN` |
+| هدف | کارشناس بتواند Cargo چند Request و چند Customer را با حفظ lineage و privacy در یک Shipment مشترک برنامه‌ریزی و اجرا کند و هر Customer فقط projection امن خود را ببیند. |
+| بازیگران | Transport Expert مالک Shipment؛ Customerهای مرتبط؛ Organization Admin فقط در اختیارهای تنظیمات، انتقال استثنایی مالک و استثنای بستن |
+| محدوده Tenant و داده | یک سازمان؛ Customer attribution برای هر Cargo؛ هیچ scope ورودی کاربر یا رابطه shared transport اختیار دیدن Customer دیگر ایجاد نمی‌کند. |
+| نقطه شروع | Workspace کارشناس و عملیات معنادار ایجاد/بازکردن Shipment؛ برای Customer، Customer Account یا Public Tracking مجاز |
+| پیش‌نیاز | چند Request/Customer/Cargo معتبر یا Shipment مستقیم مجاز؛ تعریف‌های پایه فعال سازمان؛ نقش‌ها و مجوزهای معتبر؛ هیچ فرضی درباره کامل‌بودن اولیه route، HS Code، Carrier یا سند وجود ندارد. |
+| ناوبری هدف | Workspace ← Shipment ← مشتری‌ها/Requestها ← Cargo ← Route Legs ← Means/Equipment/Allocation ← Documents/Timeline/Problems ← Deliveries ← Completion/Closure؛ جزئیات navigation در مأموریت UX بعدی تعیین می‌شود. |
+| گام ۱ — assembly | Cargoهای چند Request/Customer به Shipment افزوده می‌شوند؛ هر Cargo، Customer و Request منبع خود را حفظ می‌کند. |
+| گام ۲ — مقدار | برای Cargoهای نماینده، `REQUESTED`، `PLANNED` و بعداً `ACTUAL` جدا ثبت/دیده می‌شوند؛ مقدار قبلی overwrite نمی‌شود. |
+| گام ۳ — تخصیص | یک Cargo میان چند وسیله/ظرف حمل تقسیم می‌شود؛ یک وسیله Cargo چند Customer را می‌گیرد؛ over-allocation رد و unallocated remainder آشکار است. |
+| گام ۴ — مسیر | Planned Route به Route Legها تکمیل می‌شود؛ Cargoها پس از مسیر مشترک مقصدهای متفاوت می‌گیرند؛ Actual Route و deviation بدون پاک‌کردن plan ثبت می‌شود. |
+| گام ۵ — اجرا | برای هر Route Leg یک یا چند Transport Means، Equipment و Carrier واقعی مرتبط می‌شوند؛ Means و Equipment یکی نمی‌شوند. |
+| گام ۶ — اسناد | سند در scope Shipment/Cargo/Equipment/Leg/Delivery ثبت می‌شود؛ visibility جدا تعیین می‌شود و Customer فقط سند خود یا سند مشترک صریحاً مجاز را می‌بیند. |
+| گام ۷ — موقعیت و Timeline | reported location با زمان و منبع ساده ثبت می‌شود؛ گزارش نادرست با correction و history اصلاح می‌شود؛ Customer Timeline فقط رخداد مجاز را نشان می‌دهد. |
+| گام ۸ — مشکل و اثر | مشکل داخلی و Customer-facing effect جدا ثبت می‌شوند؛ Customer متأثر پیام امن می‌بیند و Customer نامرتبط هیچ علت یا داده خصوصی نمی‌بیند. |
+| گام ۹ — تحویل | Cargoها به مقصدهای متفاوت و در Deliveryهای جزئی تحویل می‌شوند؛ evidence هر Delivery به Cargo/Customer درست محدود می‌شود. |
+| گام ۱۰ — تکمیل | تحویل یک Customer Shipment را نمی‌بندد؛ checklist سازمان و modeهای قابل اعمال ارزیابی می‌شود؛ bypass Expert ممنوع و استثنای Admin audit می‌شود. |
+| نتیجه قابل مشاهده Expert | Customer/Request lineage، Cargo/quantity، allocation و remainder، Route Legs، Means/Equipment/Carrier، نقص اطلاعات، Attention، Timeline، Delivery و closure state بدون نیاز به فهم ساختار ذخیره‌سازی. |
+| نتیجه قابل مشاهده Customer | وضعیت مجاز، نشانه shared transport، Cargo/quantity/document/delivery خود، route ساده، reported location، ETA و اثر امن مشکلات؛ بدون داده Customer دیگر. |
+| حقیقت ماندگار هدف | current truth به‌همراه history معنادار Cargo، quantity، allocation، route، execution، document، report/correction، problem/action، ETA، delivery، ownership و closure. |
+| نتیجه نهایی | همه Cargoها تعیین تکلیف و Deliveryهای لازم ثبت شده‌اند؛ requirementهای closure یا استثنای Admin روشن‌اند؛ Shipment فقط پس از کنترل formal بسته می‌شود. |
+| refresh/reopen | Expert و هر Customer پس از خروج/ورود فقط scope خود و history مجاز را می‌بینند؛ allocation، correction، Delivery و checklist حفظ می‌شود. |
+| خروج/ادامه | بازگشت به Workspace/Control Tower برای Expert؛ Customer Account/Public Tracking مجاز برای Customer؛ هیچ deep link خارجی اختیار تازه ایجاد نمی‌کند. |
+| حالت ناقص | route/HS Code/vehicle/Carrier/document نامعلوم با برچسب `INCOMPLETE_INFORMATION` و next action مناسب؛ تا نقطه الزام، success جعلی یا block بی‌مورد ایجاد نمی‌شود. |
+| حالت denied | Customer A یا actor خارجی به Cargo، سند، علت مشکل، delivery یا identity Customer B دسترسی ندارد؛ پاسخ بدون نشت است. |
+| حالت error/conflict | over-allocation، UOM ناسازگار، stale update، تعریف پایه غیرفعال و conflict نسخه بدون mutation جزئی یا success جعلی رد می‌شوند. |
+| must-not | حذف lineage؛ یک customer list اصلی روی Shipment؛ overwrite مقدار/route/report؛ Means=Equipment؛ یک Carrier روی کل Shipment؛ افشای داده Customer دیگر؛ GPS جعلی؛ بستن با Delivery اول؛ bypass checklist؛ ادعای AI. |
+| قابلیت‌های مجاور | `FWD-J01` تا `FWD-J08`، Product Contract v1، Public Tracking، Customer Account، Documents، Timeline، Workspace، Control Tower و Admin references. |
+| انتظار شواهد آینده | normal-navigation browser journey چندنقشی و چندCustomer روی Candidate دقیق؛ PostgreSQL disposable؛ persistence/reopen؛ privacy negatives؛ allocation limits؛ correction history؛ partial delivery؛ closure checklist؛ بدون Production. |
+| انتظار انسانی | سادگی Workspace، فهم allocation/remaining، تمایز ناقص/مشکل، privacy، Timeline و کنترل closure توسط Product Owner بررسی شود. |
+| شواهد فعلی | `NO_IMPLEMENTATION_OR_QUALIFICATION_EVIDENCE`؛ foundationهای پراکنده به معنی اجرای این journey نیستند. |
+| شکاف/تصمیم باز | تمام جزئیات UI و schema، الگوریتم ETA، GPS، lifecycle فنی allocation، driver/carrier portals و موارد باز Product Contract؛ Journey با همین تصمیم‌های باز `DEFINED` است اما قابل PASS نیست. |
+| مالک | Product Owner؛ SORهای فنی و commands در مأموریت‌های طراحی/معماری بعدی تعیین می‌شوند. |
+| محرک بازاجرا | هر تغییر در مدل چندمشتری/Cargo، quantity/allocation، route/execution، document/privacy، tracking/timeline، delivery/closure یا owner transfer. |
+
 ## ۷. سفرهای یکپارچهٔ Product
 
-هر سه سفر زیر برای اجرای خودکار Release و مرور انسانی تعریف شده‌اند. وضعیت فعلی هر سه `NO_INTEGRATED_EVIDENCE_YET / NOT_RUN` است.
+چهار سفر زیر برای اجرای خودکار Release و مرور انسانی تعریف شده‌اند. سه سفر نخست قراردادهای فعلی v1 را حفظ می‌کنند. `FWD-IPJ-04` سفر هدف فاز ۳ است. وضعیت فعلی هر چهار سفر `NO_INTEGRATED_EVIDENCE_YET / NOT_RUN` است.
 
 ### FWD-IPJ-01 — از نیاز مشتری تا Shipment عملیاتی
 
@@ -384,6 +446,7 @@
 | نتیجهٔ انسانی | `NOT_RUN` |
 | وضعیت فعلی | `DEFINED_NOT_RUN` و Release blocker |
 | محرک بازاجرا | هر تغییر در `FWD-J01/J02/J03`، auth/session، Quote یا ساخت Shipment. |
+| اثر هدف v1.1 | تبدیل چند Request/Customer/Cargo به Shipment مشترک در `FWD-IPJ-04` آزموده می‌شود؛ تعریف فعلی این سفر و وضعیت `NOT_RUN` آن حفظ شده است. |
 
 ### FWD-IPJ-02 — از Shipment فعال تا حل عملیاتی
 
@@ -407,6 +470,7 @@
 | نتیجهٔ انسانی | `NOT_RUN` |
 | وضعیت فعلی | `DEFINED_NOT_RUN` و Release blocker |
 | محرک بازاجرا | هر تغییر در Workspace/Tower، Exception/Action/SLA، owner، evaluator/freshness یا history. |
+| اثر هدف v1.1 | customer-safe effect، reported-location correction و Timeline چندمشتری در `FWD-IPJ-04` افزوده می‌شود؛ این سفر همچنان برای رفتار فعلی خود جدا می‌ماند. |
 
 ### FWD-IPJ-03 — ادارهٔ سازمان و جداسازی Tenant
 
@@ -431,6 +495,31 @@
 | شکاف اجرای فعلی | لینک visible پشتیبانی حساب در پنل Admin وجود ندارد؛ تا رفع و بازآزمایی، این سفر نمی‌تواند PASS بگیرد. |
 | وضعیت فعلی | `DEFINED_NOT_RUN` و Release blocker |
 | محرک بازاجرا | هر تغییر در admin navigation، role/membership، account/session، SLA یا tenant authorization. |
+| اثر هدف v1.1 | governance catalog، closure checklist و authority استثناهای Admin بر آینده این سفر اثر دارند؛ هیچ‌کدام در این مأموریت اجرا یا PASS نشده‌اند. |
+
+### FWD-IPJ-04 — Shipment مشترک چندمشتری از assembly تا closure
+
+| فیلد | تعریف |
+| --- | --- |
+| سفرهای پایه | `FWD-J09` با اثر هدف بر `FWD-J01` تا `FWD-J08` |
+| طبقه‌بندی | `TARGET_PHASE3` |
+| هدف | اتصال assembly چند Request/Customer/Cargo به planning، execution، privacy-safe customer views، deliveryهای جزئی و closure کنترل‌شده. |
+| بازیگران | Transport Expert مالک Shipment، چند Customer، Organization Admin در نقاط اختیار مصوب |
+| شروع | Workspace کارشناس؛ Customerها از surface مجاز خود وارد می‌شوند. |
+| پیش‌نیاز | Contract v1، fixture چندTenant/چندCustomer، catalogهای لازم، داده نماینده و Candidate پیاده‌سازی‌شده آینده؛ وضعیت امروز این پیش‌نیازها را کامل نمی‌کند. |
+| جریان عادی | Cargoهای چند Request/Customer assembly می‌شوند؛ quantityها جدا می‌مانند؛ Cargo تخصیص می‌یابد؛ Route Legs و Means/Equipment/Carrier اجرا می‌شوند؛ document/location/timeline/problem به projection امن تبدیل می‌شوند؛ Deliveryهای جزئی ثبت و checklist closure اعمال می‌شود. |
+| نتیجه قابل مشاهده | Expert حقیقت کامل و next action را می‌بیند؛ هر Customer فقط حقیقت و اثر مجاز خود را می‌بیند؛ Public Tracking فقط allowlist مشترک امن دارد. |
+| حقیقت ماندگار هدف | lineage، attribution، allocation، route/execution، history/correction، documents، problems/actions، deliveries، owner و closure بدون بازنویسی خام. |
+| refresh/reopen | همه نقش‌ها پس از بازگشایی scope و history مجاز خود را می‌بینند. |
+| منفی اصلی | over-allocation، Customer cross-scope، document leakage، علت خصوصی Exception، گزارش موقعیت اصلاح‌نشده، checklist bypass و owner transfer بی‌اختیار. |
+| must-not | یکسان‌گرفتن Means/Equipment، Shipment/Request، scope/visibility، incomplete/problem یا Delivery/Closure؛ نمایش target به‌عنوان current. |
+| empty/error | داده ناقص به‌صورت incomplete؛ خطا و conflict بدون partial-success جعلی؛ absence اطلاعات Customer دیگر به‌صورت leakage قابل استنتاج نیست. |
+| شواهد Slice | foundationهای فعلی فقط `CURRENT_PARTIAL` هستند و qualification این journey نیستند. |
+| شواهد یکپارچه | `NOT_RUN` |
+| نتیجهٔ خودکار Release | `NOT_RUN` |
+| نتیجهٔ انسانی | `NOT_RUN` |
+| وضعیت فعلی | `DEFINED_TARGET_NOT_RUN`؛ implementation و qualification نشده است. |
+| محرک بازاجرا | هر تغییر در Contract v1 یا هر capability پایه `FWD-J09`. |
 
 ## ۸. اسکریپت مرور انسانی
 
@@ -487,6 +576,23 @@
 
 نتیجهٔ کل مرور `FWD-IPJ-03`: `NOT_RUN`. گام ۲ با وضعیت فعلی محصول دارای شکاف پیاده‌سازی شناخته‌شده است.
 
+### مرور انسانی FWD-IPJ-04 — هدف فاز ۳
+
+| گام | بازیگر | شروع | اقدام | انتظار قابل مشاهده | نباید رخ دهد | مشاهده | نتیجه | مدرک |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| ۱ | Expert | Workspace | Shipment هدف را با Cargo چند Request/Customer تشکیل دهد | attribution و lineage روشن | customer list مستقل یا حذف lineage | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۲ | Expert | Cargo | requested/planned/actual را ثبت و مقایسه کند | هر سه مقدار و history جدا | overwrite مقدار قبلی | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۳ | Expert | Allocation | یک Cargo را تقسیم و یک وسیله را shared کند | remainder روشن و over-allocation مسدود | جمع ناسازگار یا success جعلی | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۴ | Expert | Route/Execution | Route Legs، Means، Equipment و Carrierها را تنظیم کند | plan/actual و مفاهیم جدا | Means=Equipment یا Carrier روی کل Shipment | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۵ | Expert/Customerها | Documents | اسناد cargo/shared/internal را بررسی کنند | هر Customer فقط scope مجاز | invoice/packing list Customer دیگر | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۶ | Expert/Customerها | Timeline | موقعیت را گزارش و سپس اصلاح کند | time/source و correction صادقانه | ادعای live GPS یا حذف گزارش قبلی | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۷ | Expert/Customerها | Problems | مشکل Customer B با اثر مشترک ثبت کند | A فقط اثر امن را می‌بیند | علت خصوصی B یا سکوت کامل برای A متأثر | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۸ | Expert | Deliveries | Delivery جزئی در مقصدهای متفاوت ثبت کند | quantity/location/evidence هر Delivery | بسته‌شدن Shipment با Delivery اول | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۹ | Admin/Expert | Closure | checklist و استثنای مجاز را بررسی کند | closure کنترل‌شده و audit | bypass توسط Expert | ثبت نشده | `NOT_RUN` | ثبت نشده |
+| ۱۰ | همه نقش‌ها | خروج/ورود تازه | Shipment را بازگشایی کنند | history، privacy و next action پایدار | نشت cache یا target-as-current | ثبت نشده | `NOT_RUN` | ثبت نشده |
+
+نتیجهٔ کل مرور `FWD-IPJ-04`: `NOT_RUN`. این اسکریپت فقط برای Candidate پیاده‌سازی‌شده آینده قابل اجراست و تعریف آن به معنی شروع Phase 3 نیست.
+
 ## ۹. نگاشت شواهد موجود
 
 ### ۹.۱ نگاشت سفر به شواهد
@@ -501,9 +607,11 @@
 | `FWD-J06` | Phase 2 SLA admin/foreign denial؛ Phase 1 account admin API؛ آزمون‌های کاربران | `PARTIAL_EXISTING_EVIDENCE` | سفر UI یکپارچه نیست و لینک visible پشتیبانی حساب مفقود است. | `NO_INTEGRATED_EVIDENCE_YET` |
 | `FWD-J07` | Phase 2 Control Tower/drill-down؛ Phase 2.5 shared stale truth | `FULL_EXISTING_SLICE_EVIDENCE` | release candidate exact و human هنوز اجرا نشده‌اند. | `NO_INTEGRATED_EVIDENCE_YET` |
 | `FWD-J08` | MT-1/MT-3، authorization ledger و منفی‌های Phase 1/2 | `PARTIAL_EXISTING_EVIDENCE` | یک ماتریس release-wide چندنقشیِ واحد روی Candidate دقیق وجود ندارد. | `NO_INTEGRATED_EVIDENCE_YET` |
+| `FWD-J09` | Product Contract v1 و تصمیم صریح Product Owner؛ foundationهای پراکنده current | `TARGET_DEFINITION_ONLY` | هیچ implementation، Slice qualification یا journey execution برای قرارداد کامل وجود ندارد. | `NOT_RUN` |
 | `FWD-IPJ-01` | فقط ورودی‌های Slice بالا | `PARTIAL_EXISTING_EVIDENCE` | جمع Sliceها PASS یکپارچه نمی‌سازد. | `NOT_RUN` |
 | `FWD-IPJ-02` | فقط ورودی‌های Slice بالا | `FULL_EXISTING_SLICE_EVIDENCE` | زنجیرهٔ کامل Pack به‌عنوان یک Release journey اجرا نشده است. | `NOT_RUN` |
 | `FWD-IPJ-03` | فقط ورودی‌های Slice بالا | `PARTIAL_EXISTING_EVIDENCE` | navigation gap و نبود اجرای ترکیبی. | `NOT_RUN` |
+| `FWD-IPJ-04` | فقط تعریف هدف `FWD-J09` و Product Contract v1 | `TARGET_DEFINITION_ONLY` | implementation و Candidate واجد اجرا وجود ندارد. | `NOT_RUN` |
 
 ### ۹.۲ آشتی مواد Journey قدیمی
 
@@ -516,7 +624,8 @@
 | [Product Reality Walkthrough v1](../operational/evidence/product-reality-walkthrough-v1.md) | `HISTORICAL_REFERENCE_ONLY / PARTIALLY_REUSED` | نشانه‌های reachability و Product reality؛ Candidate و دامنهٔ آن متفاوت است. |
 | [Final Product Acceptance after ADR-047](../operational/evidence/final-product-acceptance-after-adr047-20260921.md) | `HISTORICAL_REFERENCE_ONLY / SUPERSEDED_FOR_CURRENT_RELEASE_CLAIM` | پوشش گستردهٔ قبلی برای کشف خطرها؛ نه پذیرش یکپارچهٔ LPAF v2.7 و نه Candidate جاری. |
 | اسناد readiness/UAT قدیمی در `docs/product` | `HISTORICAL_REFERENCE_ONLY` | برای ریشه‌یابی و فهم شکاف؛ وضعیت‌های قبلی را به امروز منتقل نمی‌کند. |
-| این سند | `NEWLY_CREATED_CANONICAL_REFERENCE` | فهرست فعال، نگاشت، Release gates، impact/staleness و human scripts. |
+| Journey Pack v1 | `HISTORICAL_VERSION_IN_GIT` | نسخه پایه commit `71131e672ee349773c09b124451fd0953c2e5c75`؛ شناسه‌های `FWD-J01..J08` حفظ شده‌اند. |
+| این سند v1.1 | `CURRENT_CANONICAL_REFERENCE` | فهرست فعال، `FWD-J09`، `FWD-IPJ-04`، نگاشت، Release gates، impact/staleness و human scripts. |
 
 ### ۹.۳ حقیقت Candidate و اعتبار مدرک
 
@@ -532,6 +641,7 @@
 | `FWD-AUTO-IPJ-01` | `FWD-IPJ-01` | مرورگر واقعی، چند نشست نقش، PostgreSQL disposable، normal navigation، persistence/reopen و منفی‌های مجوز | `DEFINED_NOT_RUN` |
 | `FWD-AUTO-IPJ-02` | `FWD-IPJ-02` | مرورگر واقعی + evaluator بیرون مرورگر، Workspace/Tower مشترک، history و resolution مستقل | `DEFINED_NOT_RUN` |
 | `FWD-AUTO-IPJ-03` | `FWD-IPJ-03` | دو Tenant و چند نقش، admin normal navigation، session invalidation و direct negative probes | `DEFINED_NOT_RUN` |
+| `FWD-AUTO-IPJ-04` | `FWD-IPJ-04` | Candidate آینده؛ چند Request/Customer/Cargo، allocation، route/execution، privacy، correction، partial delivery و closure | `DEFINED_TARGET_NOT_RUN` |
 
 حداقل ثبت هر اجرا:
 
@@ -552,7 +662,7 @@
 
 | Gate | انتظار برای Candidate Release | وضعیت فعلی | مانع Release؟ |
 | --- | --- | --- | --- |
-| Journey Pack v1 | هشت Critical و سه Integrated تعریف و نسخه‌بندی شده | `DEFINED` | خیر، خود تعریف کامل است |
+| Journey Pack v1.1 | نه Critical (هشت current + یک target) و چهار Integrated تعریف و نسخه‌بندی شده | `DEFINED` | خیر، خود تعریف کامل است |
 | Product Authority | تغییرات مشاهده‌پذیر Candidate دارای approval و reconciliation | `UNTESTED_FOR_FUTURE_CANDIDATE` | بله |
 | Candidate identity | branch/SHA/clean/ahead-behind و artifact دقیق ثبت شده | `UNTESTED_FOR_FUTURE_CANDIDATE` | بله |
 | Migration/runtime identity | یک head، DB و runtime مطابق Candidate | `UNTESTED_FOR_FUTURE_CANDIDATE` | بله |
@@ -560,12 +670,14 @@
 | `FWD-AUTO-IPJ-01` | PASS روی Candidate دقیق | `NOT_RUN` | بله |
 | `FWD-AUTO-IPJ-02` | PASS روی Candidate دقیق | `NOT_RUN` | بله |
 | `FWD-AUTO-IPJ-03` | PASS روی Candidate دقیق | `NOT_RUN` | بله |
+| `FWD-AUTO-IPJ-04` | PASS روی Candidate پیاده‌سازی‌شده آینده | `NOT_RUN` | بله برای Release شامل Phase 3 |
 | Authorization/Tenant matrix | positive normal journeys و negative direct access PASS | `NOT_RUN_AS_RELEASE_SET` | بله |
 | Freshness/reliability | evaluator و Workspace/Tower truth روی محیط Release معتبر | `NOT_RUN_AS_RELEASE_SET` | بله |
 | Error/empty/denied | حالت‌های لازم بدون success جعلی PASS | `NOT_RUN_AS_RELEASE_SET` | بله |
 | Human `FWD-IPJ-01` | PASS انسانی مجاز با مدرک | `NOT_RUN` | بله |
 | Human `FWD-IPJ-02` | PASS انسانی مجاز با مدرک | `NOT_RUN` | بله |
 | Human `FWD-IPJ-03` | PASS انسانی مجاز با مدرک | `NOT_RUN` | بله |
+| Human `FWD-IPJ-04` | PASS انسانی مجاز با مدرک | `NOT_RUN` | بله برای Release شامل Phase 3 |
 | Known gaps | همهٔ gapهای Release بسته یا صریحاً خارج scope با authority | `OPEN` | بله |
 | Global Product validation | مدرک کامل زیر LPAF | `EVIDENCE_PENDING` | بله |
 
@@ -583,7 +695,7 @@ JOURNEY_IMPACT_RATIONALE=<مدرک اینکه رفتار، نقش، داده، �
 یا:
 
 ```text
-JOURNEY_IMPACT=AFFECTED
+JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
 AFFECTED_JOURNEYS=FWD-J..,FWD-IPJ-..
 OBSERVABLE_CHANGE=<تغییر ساده و قابل فهم برای Product Owner>
 REQUIRED_SLICE_RERUN=<شناسه‌ها>
@@ -607,6 +719,8 @@ HUMAN_WALKTHROUGH_RERUN=YES|NO_WITH_AUTHORITY
 
 یک diff صرفاً مستنداتی می‌تواند برای «نگاشت Slice» با تحلیل مسیرها reuse شود، اما Integrated Release Journey باید روی SHA دقیق Candidate آینده اجرا شود. evidence بدون full SHA، محیط، نتیجهٔ سناریو، negative/error audit یا cleanup برای Release برابر `UNKNOWN` است. هر `STALE` یا `UNKNOWN` مانع Release است.
 
+افزودن قرارداد هدف و `FWD-J09` در این مأموریت، چون هیچ runtime Product را تغییر نمی‌دهد، evidence رفتار فعلی `FWD-J01..J08` را صرفاً به دلیل تغییر مستندات stale نمی‌کند. در اولین Candidate که بخشی از target فاز ۳ را پیاده کند، Journey Impact باید دوباره ارزیابی و `FWD-J09/FWD-IPJ-04` و سفرهای فعلی متاثر روی همان Candidate اجرا شوند.
+
 ## ۱۴. شکاف‌های فعلی
 
 | شناسه | نوع | شرح ساده | اثر |
@@ -618,6 +732,7 @@ HUMAN_WALKTHROUGH_RERUN=YES|NO_WITH_AUTHORITY
 | `FWD-GAP-05` | `EVIDENCE_GAP` | Customer Account با دادهٔ synthetic آزموده شده و تحویل واقعی email recovery در محیط Release اثبات نشده است. | بخش محیطی `FWD-J02/J06` باز است. |
 | `FWD-GAP-06` | `EVIDENCE_GAP` | ماتریس چندنقشی Tenant/Authorization به‌صورت یک Release journey واحد اجرا نشده است. | `FWD-J08/FWD-IPJ-03` بازند. |
 | `FWD-GAP-07` | `EVIDENCE_GAP` | وضعیت جهانی Product زیر LPAF همچنان `EVIDENCE_PENDING` است. | ادعای Product validation سراسری ممنوع است. |
+| `FWD-GAP-08` | `TARGET_PHASE3 / IMPLEMENTATION_GAP` | `FWD-J09` و `FWD-IPJ-04` تعریف شده‌اند، اما هیچ بخش از قرارداد کامل چندمشتری به‌عنوان Candidate فاز ۳ پیاده یا qualified نشده است. | هیچ PASS یا Release claim برای سفر جدید مجاز نیست. |
 
 ## ۱۵. Journeyهای پیشنهادی، نه Critical فعلی
 
@@ -628,7 +743,7 @@ HUMAN_WALKTHROUGH_RERUN=YES|NO_WITH_AUTHORITY
 | `FWD-PJ-01` | بازیابی رمز و enrollment حساب مشتری | راه بازگشت مشتری به حساب و امنیت session است. | قفل‌شدن مشتری، enumeration یا معتبرماندن نشست قدیمی. | پیاده‌سازی و Slice دارد؛ `PROPOSED_NOT_CRITICAL` |
 | `FWD-PJ-02` | ساخت مستقیم Shipment بدون Request/Quote | عملیات واقعی همیشه از Quote شروع نمی‌شود. | جعل lineage، مالک نامعتبر یا اجبار Request ساختگی. | پیاده‌سازی شده؛ `PROPOSED_NOT_CRITICAL` |
 | `FWD-PJ-03` | اسناد Shipment و آمادگی مدارک | سند برای اجرای حمل و اثبات تصمیم‌ها مهم است. | نشت فایل، نسخهٔ اشتباه، گم‌شدن history یا readiness نادرست. | پیاده‌سازی/شواهد تاریخی دارد؛ `PROPOSED_NOT_CRITICAL` |
-| `FWD-PJ-04` | چند Cargo و حمل ترکیبی | یک Request/Shipment می‌تواند چند قلم یا اجرای ترکیبی داشته باشد. | حذف Cargo، نسبت اشتباه به Shipment/Customer یا بازگشایی ناسازگار. | پیاده‌سازی/شواهد تاریخی دارد؛ `PROPOSED_NOT_CRITICAL` |
+| `FWD-PJ-04` | حمل ترکیبی / چندوجهی | یک Request intent می‌تواند combined باشد و اجرای واقعی چند mode داشته باشد. این بعد با چندمشتری/چندکالا یکی نیست. | مخلوط‌شدن intent تجاری با Route Legs واقعی یا از دست‌رفتن تغییر mode. | مستقل از `FWD-J09`؛ `PROPOSED_TARGET_NOT_CRITICAL` |
 | `FWD-PJ-05` | نقاط لجستیکی خصوصی سازمان | شبکهٔ عملیاتی سازمان باید از مرجع پلتفرم جدا و Tenant-safe باشد. | استفادهٔ cross-Tenant، مکان ساختگی یا تغییر ناخواستهٔ snapshot. | سطح فعلی دارد؛ `PROPOSED_NOT_CRITICAL` |
 | `FWD-PJ-06` | پیگیری عمومی Project در کنار Request tracking | محصول دو نوع public tracking جدا دارد. | اشتباه‌گرفتن capabilityها، هدایت غلط یا گسترش allowlist. | route جدا موجود است؛ `PROPOSED_NOT_CRITICAL` |
 
@@ -636,7 +751,7 @@ HUMAN_WALKTHROUGH_RERUN=YES|NO_WITH_AUTHORITY
 
 موارد زیر Critical Journey فعلی نیستند و تا تصویب Product Owner و وجود implementation scope نباید وارد Release requirements این Pack شوند:
 
-- قابلیت‌های آیندهٔ Phase 3؛
+- implementation و qualification رفتارهای `TARGET_PHASE3`؛
 - AI؛
 - Finance؛
 - Carrier Portal؛
@@ -651,7 +766,7 @@ HUMAN_WALKTHROUGH_RERUN=YES|NO_WITH_AUTHORITY
 
 | شناسه | تصمیم لازم | گزینه/اثر ساده |
 | --- | --- | --- |
-| `FWD-DEC-01` | آیا هر Journey پیشنهادی `FWD-PJ-01..06` به Critical تبدیل شود؟ | پذیرش، آن را وارد gates و rerunهای Release می‌کند؛ رد، آن را غیرحیاتی نگه می‌دارد. |
+| `FWD-DEC-01` | آیا هر Journey پیشنهادی `FWD-PJ-01..06` به Critical تبدیل شود؟ | پذیرش، آن را وارد gates و rerunهای Release می‌کند؛ `FWD-PJ-04` فقط Combined/Multimodal است و با `FWD-J09` ادغام نمی‌شود. |
 | `FWD-DEC-02` | اولویت رفع navigation پشتیبانی حساب چیست؟ | بدون لینک visible، `FWD-IPJ-03` normal-navigation PASS نمی‌شود. |
 | `FWD-DEC-03` | معیار محیطی تحویل ایمیل recovery برای Release چیست؟ | باید محیط، provider و evidence لازم مشخص شود؛ این سند production را فعال نمی‌کند. |
 | `FWD-DEC-04` | آیا Project Public Tracking باید سفر حیاتی مستقل باشد؟ | اگر بله، capability/allowlist و جدایی از Request tracking gate جدا می‌خواهد. |
@@ -682,17 +797,17 @@ HUMAN_WALKTHROUGH_RERUN=YES|NO_WITH_AUTHORITY
 
 ### A. سفرهای حیاتی پذیرفته‌شده در این مأموریت
 
-`FWD-J01` مشتری ناشناس، `FWD-J02` مشتری حساب‌دار، `FWD-J03` تحویل تجاری به عملیات، `FWD-J04` Workspace روزانه، `FWD-J05` مشکل/پیگیری، `FWD-J06` مدیر سازمان، `FWD-J07` برج کنترل و `FWD-J08` حفاظت Tenant/Authorization.
+`FWD-J01` مشتری ناشناس، `FWD-J02` مشتری حساب‌دار، `FWD-J03` تحویل تجاری به عملیات، `FWD-J04` Workspace روزانه، `FWD-J05` مشکل/پیگیری، `FWD-J06` مدیر سازمان، `FWD-J07` برج کنترل و `FWD-J08` حفاظت Tenant/Authorization، همگی با هویت قبلی حفظ شده‌اند. `FWD-J09` پرونده حمل مشترک چندمشتری/چندکالا به‌عنوان `CRITICAL_TARGET_PHASE3` افزوده شده است.
 
-سه زنجیرهٔ پذیرش: `FWD-IPJ-01` نیاز تا Shipment، `FWD-IPJ-02` Shipment فعال تا حل عملیاتی و `FWD-IPJ-03` ادارهٔ سازمان/جداسازی Tenant.
+چهار زنجیرهٔ پذیرش: `FWD-IPJ-01` نیاز تا Shipment، `FWD-IPJ-02` Shipment فعال تا حل عملیاتی، `FWD-IPJ-03` ادارهٔ سازمان/جداسازی Tenant و `FWD-IPJ-04` Shipment مشترک از assembly تا delivery/closure. هر چهار `NOT_RUN` هستند.
 
 ### B. پیشنهادهای نیازمند قبول یا رد
 
-بازیابی رمز، Shipment مستقیم، اسناد Shipment، چند Cargo/حمل ترکیبی، نقاط لجستیکی خصوصی و Project Public Tracking. این‌ها فعلاً Critical نیستند.
+بازیابی رمز، Shipment مستقیم، اسناد Shipment، Combined/Multimodal، نقاط لجستیکی خصوصی و Project Public Tracking. چندمشتری/چندکالا دیگر proposal نیست و با شناسه `FWD-J09` هدف حیاتی مصوب است؛ Combined همچنان جدا و غیرحیاتی است.
 
 ### C. شکاف‌های مهم فعلی
 
-لینک visible پشتیبانی حساب در Admin وجود ندارد؛ integrated release set و human walkthrough اجرا نشده‌اند؛ anonymous full-UI، email delivery و ماتریس چندنقشی release-wide مدرک جاری ندارند.
+لینک visible پشتیبانی حساب در Admin وجود ندارد؛ integrated release set و human walkthrough اجرا نشده‌اند؛ anonymous full-UI، email delivery و ماتریس چندنقشی release-wide مدرک جاری ندارند؛ `FWD-J09/FWD-IPJ-04` نیز فقط تعریف هدف‌اند و implementation/evidence ندارند.
 
 ### D. تصمیم‌های لازم پیش از پذیرش Release آینده
 
@@ -700,16 +815,25 @@ HUMAN_WALKTHROUGH_RERUN=YES|NO_WITH_AUTHORITY
 
 ### E. حوزه‌های عمداً آینده
 
-Phase 3، AI، Finance، Carrier Portal، Driver Portal، Customs توسعه‌نیافته، business calendar و external assignee.
+پیاده‌سازی Phase 3، AI، Finance، Carrier Portal، Driver Portal، Customs توسعه‌نیافته، business calendar و external assignee. مأموریت بعدی فقط UX/Wireframe/Prototype فاز ۳ است.
 
 ## ۲۰. وضعیت نهایی همین مرجع
 
 ```text
+JOURNEY_PACK_VERSION=1.1
 JOURNEY_PACK=DEFINED
+FWD_J01_TO_J08_PRESERVED=PASS
+FWD_J09=CRITICAL_TARGET_PHASE3
+FWD_J09_STATUS=DEFINED_NOT_IMPLEMENTED
+FWD_IPJ_04=DEFINED_TARGET_NOT_RUN
 SLICE_EVIDENCE=MAPPED
 INTEGRATED_PRODUCT_JOURNEYS=DEFINED_NOT_RUN
 AUTOMATED_PRODUCT_JOURNEYS=DEFINED_NOT_RUN_AS_RELEASE_SET
 HUMAN_PRODUCT_WALKTHROUGH=DEFINED_NOT_RUN
+JOURNEY_IMPACT=NEW_JOURNEY_REQUIRED
+NEW_JOURNEY=FWD-J09
+CURRENT_IMPLEMENTATION_DISTINGUISHED_FROM_TARGET=PASS
+REFERENCE_IMPACT=NONE
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING
 RELEASE_READY=NO
 ```
