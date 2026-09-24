@@ -4,7 +4,8 @@
 
 - [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) — approved `TARGET_PHASE3` meaning; no runtime implementation claim.
 - [Product Acceptance Journey Pack v1.1](../product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md) — `FWD-J01..J08` preserved, `FWD-J09` critical target and `FWD-IPJ-04` defined but not run.
-- [Phase 3 Operational Shipment UX Blueprint v1](../product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md) — `TARGET_PHASE3_UX` presentation reference and isolated clickable prototype; Product Owner review and runtime implementation are not implied.
+- [Phase 3 Operational Shipment UX Blueprint v1](../product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md) — approved V2.1 presentation baseline and isolated prototype; [final Product Owner approval](../product/ux/phase3/FINAL-PRODUCT-OWNER-APPROVAL.md) is recorded; no runtime implementation or Human Product Walkthrough PASS is implied.
+- [Phase 3 Implementation Plan v1](../product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md) — 15 bounded slices with Product decision gates and migration/privacy/history/qualification plans; implementation is not started and requires a later explicit authorization.
 
 These Product references control their expressly approved Product scope. They do not rewrite historical ADR/PDR text, authorize implementation, or turn target behavior into current runtime evidence.
 

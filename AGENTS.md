@@ -43,7 +43,8 @@ Canonical Forwarder Product references:
 
 - `docs/product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md`
 - `docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md`
-- `docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md` — target UX/presentation only; Product Owner review is not yet run and it grants no runtime implementation authority.
+- `docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md` — approved Phase 3 UX/presentation baseline; final Product Owner approval is recorded in `docs/product/ux/phase3/FINAL-PRODUCT-OWNER-APPROVAL.md`. This grants no runtime implementation or Human Product Walkthrough PASS.
+- `docs/product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md` — current implementation planning reference: 15 bounded slices, explicit Product decision gates, migration/privacy/history and qualification plans. Phase 3 implementation requires a later explicit start instruction; open decisions are not approved by this plan.
 
 Every future mission must apply the Product Contract within its approved scope
 and the Journey Pack's `JOURNEY_IMPACT` and evidence

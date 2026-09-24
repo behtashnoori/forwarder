@@ -1,0 +1,1186 @@
+{
+  "schema": "forwarder-phase3-plan-validation-v1",
+  "validated_at_utc": "2026-09-24T22:43:03.589962+00:00",
+  "scope": "Documentation and planning validation only; no runtime/product tests or database operation performed.",
+  "result": "PASS",
+  "failures": [],
+  "initial_canonical_head": "d83b1aa7c0011221188e753c0f38d2058859400b",
+  "ux_integrated_and_inspected_head": "8995812d979e5121f57d9d08c7055256451bcf13",
+  "approved_prototype_head": "32d5a14ae70f0b74747f4ab4c3a7bea185002dc5",
+  "reviewed_package_head": "39af12a814f3cddcb294ff5f5e3b8299ba1fa4aa",
+  "preexisting_prototype_documentation_delta_from_artifact": [
+    "docs/product/ux/phase3/prototype/assets/OFL.txt",
+    "docs/product/ux/phase3/prototype/assets/README.md"
+  ],
+  "prototype_delta_explanation": "Reviewed commit added font provenance README and normalized trailing whitespace in license; code, rendered assets and font unchanged from approved artifact. Entire reviewed package unchanged during this mission.",
+  "validation_checkout_head": "8995812d979e5121f57d9d08c7055256451bcf13",
+  "branch": "codex/phase3-implementation-plan-v1",
+  "plan": {
+    "path": "docs/product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md",
+    "sha256": "0700005c267f1386baadf79b2b8704fefcabeeec81a333c1942d5672997cc830",
+    "sha256_lf_normalized": "0700005c267f1386baadf79b2b8704fefcabeeec81a333c1942d5672997cc830",
+    "git_blob_oid": "ba86edba3ccce7c65a7476d14a9819c8b71c6fb4"
+  },
+  "working_tree_at_validation": "EXPECTED_DOCUMENTATION_CHANGES_BEFORE_COMMIT",
+  "binding_note": "Plan and source hashes bind the checked content. Final containing commit and remote alignment are reported after commit/fetch; this manifest does not claim its own future commit hash.",
+  "changed_tracked_paths_since_initial": [
+    "AGENTS.md",
+    "README.md",
+    "docs/operational/README.md",
+    "docs/operational/decision-index.md",
+    "docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md",
+    "docs/product/ux/phase3/FINAL-PRODUCT-OWNER-APPROVAL.md",
+    "docs/product/ux/phase3/FORWARDER-VISUAL-DNA-INVENTORY.md",
+    "docs/product/ux/phase3/MICROCOPY-AUDIT-V2.md",
+    "docs/product/ux/phase3/PRODUCT-OWNER-REVIEW-V2-PREPARED.md",
+    "docs/product/ux/phase3/PRODUCT-OWNER-REVIEW.md",
+    "docs/product/ux/phase3/README.md",
+    "docs/product/ux/phase3/REVISION-V2-AUTHORITY.md",
+    "docs/product/ux/phase3/REVISION-V2-REPORT.md",
+    "docs/product/ux/phase3/SCREEN-INVENTORY.md",
+    "docs/product/ux/phase3/STATE-MATRIX.md",
+    "docs/product/ux/phase3/STORYTELLING-AUDIT-V2.md",
+    "docs/product/ux/phase3/VISUAL-FIDELITY-AUDIT-V2-1.md",
+    "docs/product/ux/phase3/VISUAL-V2-1-AUTHORITY.md",
+    "docs/product/ux/phase3/VISUAL-V2-1-REPORT.md",
+    "docs/product/ux/phase3/evidence/FINAL-APPROVAL-PREFLIGHT.json",
+    "docs/product/ux/phase3/evidence/PRODUCT-OWNER-REVIEW-V1-SCRIPT.md",
+    "docs/product/ux/phase3/evidence/README.md",
+    "docs/product/ux/phase3/evidence/VISUAL-COMPARISON.html",
+    "docs/product/ux/phase3/evidence/browser-v2-1/admin-catalog.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/admin-closure-exceptions.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/admin-closure-rules.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/admin-route-times.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/aligned-allocation-controls.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/aligned-allocation-form.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/aligned-form-focus.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/boundaries.json",
+    "docs/product/ux/phase3/evidence/browser-v2-1/comparison-gallery.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-cargo-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-cargo-390-viewport.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-cargo-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-cargo.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-delivery-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-delivery-390-viewport.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-delivery-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-delivery.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-documents-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-documents-390-viewport.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-documents-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-documents.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-summary-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-summary-390-viewport.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-summary-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-summary.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-timeline-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-timeline-390-viewport.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-timeline-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/customer-timeline.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-allocation-unit.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-allocation.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-cargo.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-closure.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-deliveries.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-documents.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-issues.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-overview.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-relations.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-route-actual.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-route.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-timeline-correction-history.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-timeline.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/expert-transport.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/gallery-review.json",
+    "docs/product/ux/phase3/evidence/browser-v2-1/reference-current-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/reference-current-desktop.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/reference-current-form.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/reference-current-panel.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/reference-current-tabs.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/reference-source.json",
+    "docs/product/ux/phase3/evidence/browser-v2-1/result.json",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-admin-degraded.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-admin-denied.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-admin-empty.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-admin-error.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-admin-loading.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-admin-stale.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-customer-degraded.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-customer-denied.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-customer-empty.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-customer-error.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-customer-loading.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-customer-stale.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-expert-degraded.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-expert-denied.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-expert-empty.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-expert-error.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-expert-loading.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-expert-stale.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/state-switcher.png",
+    "docs/product/ux/phase3/evidence/browser-v2-1/visual-review.json",
+    "docs/product/ux/phase3/evidence/browser-v2/admin-catalog.png",
+    "docs/product/ux/phase3/evidence/browser-v2/admin-closure-exceptions.png",
+    "docs/product/ux/phase3/evidence/browser-v2/admin-closure-rules.png",
+    "docs/product/ux/phase3/evidence/browser-v2/admin-route-times.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-cargo-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-cargo-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-delivery-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-delivery-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-documents-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-documents-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-summary-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-summary-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-timeline-1440.png",
+    "docs/product/ux/phase3/evidence/browser-v2/customer-timeline-390.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-allocation.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-cargo.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-closure.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-deliveries.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-documents.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-issues.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-overview.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-relations.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-route.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-timeline.png",
+    "docs/product/ux/phase3/evidence/browser-v2/expert-transport.png",
+    "docs/product/ux/phase3/evidence/browser-v2/result.json",
+    "docs/product/ux/phase3/evidence/browser-v2/state-admin-degraded.png",
+    "docs/product/ux/phase3/evidence/browser-v2/state-admin-stale.png",
+    "docs/product/ux/phase3/evidence/browser-v2/state-customer-degraded.png",
+    "docs/product/ux/phase3/evidence/browser-v2/state-customer-stale.png",
+    "docs/product/ux/phase3/evidence/browser-v2/state-expert-degraded.png",
+    "docs/product/ux/phase3/evidence/browser-v2/state-expert-stale.png",
+    "docs/product/ux/phase3/evidence/design-validation-v2.json",
+    "docs/product/ux/phase3/evidence/verify-gallery.mjs",
+    "docs/product/ux/phase3/evidence/verify-visual-boundaries.py",
+    "docs/product/ux/phase3/prototype/app.js",
+    "docs/product/ux/phase3/prototype/assets/OFL.txt",
+    "docs/product/ux/phase3/prototype/assets/README.md",
+    "docs/product/ux/phase3/prototype/assets/Vazirmatn.ttf",
+    "docs/product/ux/phase3/prototype/build-reference.mjs",
+    "docs/product/ux/phase3/prototype/index.html",
+    "docs/product/ux/phase3/prototype/reference-current.css",
+    "docs/product/ux/phase3/prototype/reference-current.html",
+    "docs/product/ux/phase3/prototype/review-visual-v2-1.mjs",
+    "docs/product/ux/phase3/prototype/styles.css",
+    "docs/product/ux/phase3/prototype/verify-prototype.mjs",
+    "docs/product/ux/phase3/prototype/verify-visual-v2-1.mjs",
+    "docs/product/ux/phase3/prototype/visual-v2-1.css"
+  ],
+  "untracked_documentation_paths": [
+    "docs/product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md"
+  ],
+  "slice_count": 15,
+  "required_standard_fields": [
+    "SLICE_ID",
+    "NAME",
+    "PRODUCT_OUTCOME",
+    "USER / ACTOR",
+    "CURRENT_STATE",
+    "TARGET_STATE",
+    "AUTHORIZED_PRODUCT_BEHAVIOR",
+    "PROTECTED_BEHAVIOR",
+    "REUSED_FOUNDATIONS",
+    "LIKELY_SCHEMA_IMPACT",
+    "API_IMPACT",
+    "FRONTEND_IMPACT",
+    "AUTHORIZATION_IMPACT",
+    "HISTORY_IMPACT",
+    "JOURNEY_IMPACT",
+    "AFFECTED_JOURNEYS",
+    "DEPENDENCIES",
+    "DECISIONS_REQUIRED_BEFORE_START",
+    "QUALIFICATION_PLAN",
+    "MIGRATION_REQUIRED",
+    "REFERENCE_IMPACT",
+    "STOP_CONDITIONS",
+    "DONE_CRITERIA"
+  ],
+  "slices": [
+    {
+      "id": "P3-01",
+      "dependencies": [],
+      "journeys": [
+        "FWD-J06",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-02",
+      "dependencies": [
+        "P3-01"
+      ],
+      "journeys": [
+        "FWD-J02",
+        "FWD-J03",
+        "FWD-J04",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-01",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-03",
+      "dependencies": [
+        "P3-02"
+      ],
+      "journeys": [
+        "FWD-J03",
+        "FWD-J04",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-01",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-04",
+      "dependencies": [
+        "P3-01",
+        "P3-03"
+      ],
+      "journeys": [
+        "FWD-J04",
+        "FWD-J07",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-02",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-05",
+      "dependencies": [
+        "P3-02",
+        "P3-04"
+      ],
+      "journeys": [
+        "FWD-J04",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-06",
+      "dependencies": [
+        "P3-02",
+        "P3-03",
+        "P3-04"
+      ],
+      "journeys": [
+        "FWD-J02",
+        "FWD-J04",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-07",
+      "dependencies": [
+        "P3-03",
+        "P3-04",
+        "P3-05"
+      ],
+      "journeys": [
+        "FWD-J01",
+        "FWD-J04",
+        "FWD-J05",
+        "FWD-J07",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-02",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-08",
+      "dependencies": [
+        "P3-02",
+        "P3-03",
+        "P3-05",
+        "P3-06"
+      ],
+      "journeys": [
+        "FWD-J02",
+        "FWD-J04",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-09",
+      "dependencies": [
+        "P3-02",
+        "P3-05",
+        "P3-06",
+        "P3-07",
+        "P3-08"
+      ],
+      "journeys": [
+        "FWD-J01",
+        "FWD-J02",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "UNKNOWN",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-10",
+      "dependencies": [
+        "P3-01",
+        "P3-03"
+      ],
+      "journeys": [
+        "FWD-J06",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-11",
+      "dependencies": [
+        "P3-02",
+        "P3-03",
+        "P3-05",
+        "P3-07",
+        "P3-10"
+      ],
+      "journeys": [
+        "FWD-J02",
+        "FWD-J04",
+        "FWD-J06",
+        "FWD-J07",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-02",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-12",
+      "dependencies": [
+        "P3-06",
+        "P3-07",
+        "P3-08"
+      ],
+      "journeys": [
+        "FWD-J04",
+        "FWD-J05",
+        "FWD-J06",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-02",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-13",
+      "dependencies": [
+        "P3-02",
+        "P3-06"
+      ],
+      "journeys": [
+        "FWD-J03",
+        "FWD-J04",
+        "FWD-J06",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-01",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "YES",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-14",
+      "dependencies": [
+        "P3-09",
+        "P3-11",
+        "P3-12",
+        "P3-13"
+      ],
+      "journeys": [
+        "FWD-J01",
+        "FWD-J02",
+        "FWD-J03",
+        "FWD-J04",
+        "FWD-J05",
+        "FWD-J06",
+        "FWD-J07",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-01",
+        "FWD-IPJ-02",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "NO",
+      "standard_fields": 23
+    },
+    {
+      "id": "P3-15",
+      "dependencies": [
+        "P3-14"
+      ],
+      "journeys": [
+        "FWD-J01",
+        "FWD-J02",
+        "FWD-J03",
+        "FWD-J04",
+        "FWD-J05",
+        "FWD-J06",
+        "FWD-J07",
+        "FWD-J08",
+        "FWD-J09",
+        "FWD-IPJ-01",
+        "FWD-IPJ-02",
+        "FWD-IPJ-03",
+        "FWD-IPJ-04"
+      ],
+      "migration": "NO",
+      "standard_fields": 23
+    }
+  ],
+  "dag_acyclic": true,
+  "longest_dependency_path_nodes": 9,
+  "critical_dependency_path": [
+    "P3-01",
+    "P3-02",
+    "P3-03",
+    "P3-04",
+    "P3-05",
+    "P3-08",
+    "P3-09",
+    "P3-14",
+    "P3-15"
+  ],
+  "migration_forecast": {
+    "YES": [
+      "P3-01",
+      "P3-02",
+      "P3-03",
+      "P3-04",
+      "P3-05",
+      "P3-06",
+      "P3-07",
+      "P3-08",
+      "P3-10",
+      "P3-11",
+      "P3-12",
+      "P3-13"
+    ],
+    "NO": [
+      "P3-14",
+      "P3-15"
+    ],
+    "UNKNOWN": [
+      "P3-09"
+    ]
+  },
+  "target_areas": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "E",
+    "F",
+    "G",
+    "H",
+    "I",
+    "J",
+    "K",
+    "L",
+    "M",
+    "N",
+    "O",
+    "P",
+    "Q",
+    "R",
+    "S",
+    "T",
+    "U",
+    "V",
+    "W"
+  ],
+  "ux_screens": [
+    "EXP-01",
+    "EXP-02",
+    "EXP-03",
+    "EXP-04",
+    "EXP-05",
+    "EXP-06",
+    "EXP-07",
+    "EXP-08",
+    "EXP-09",
+    "EXP-10",
+    "EXP-11",
+    "CUS-01",
+    "CUS-02",
+    "CUS-03",
+    "CUS-04",
+    "CUS-05",
+    "ADM-01",
+    "ADM-02",
+    "ADM-03",
+    "ADM-04"
+  ],
+  "open_product_decision_count": 14,
+  "open_product_decisions": [
+    "DN01",
+    "DN02",
+    "DN03",
+    "DN04",
+    "DN05",
+    "DN06",
+    "DN07",
+    "DN08",
+    "DN09",
+    "DN10",
+    "FWD-DEC-01",
+    "FWD-DEC-02",
+    "FWD-DEC-03",
+    "FWD-DEC-04"
+  ],
+  "manual_authority_review": {
+    "result": "PASS",
+    "approved_behavior_reference": "Product Contract v1 and final UX approval; slice AUTHORIZED_PRODUCT_BEHAVIOR fields",
+    "new_product_decisions_resolved": false,
+    "unknowns_remain_gated": true,
+    "duplicate_sor_proposed": false,
+    "human_product_walkthrough": "NOT_RUN",
+    "global_product_validation": "EVIDENCE_PENDING",
+    "release_ready": "NO"
+  },
+  "read_only_checks": [
+    {
+      "command": [
+        "python",
+        "scripts/check_architecture_governance.py"
+      ],
+      "exit_code": 0,
+      "stdout": "Forwarder architecture governance checks passed.",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "node",
+        "scripts/check-structure.js"
+      ],
+      "exit_code": 0,
+      "stdout": "✅ Canonical migrations directory exists: backend/migrations\n✅ backend/migrations/alembic.ini exists\n✅ Structure check passed",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "python",
+        "-m",
+        "alembic",
+        "-c",
+        "backend/migrations/alembic.ini",
+        "heads"
+      ],
+      "exit_code": 0,
+      "stdout": "20260929_operational_monitoring_reliability (head)",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "runtime_git_trees": {
+    "backend": {
+      "before": "614041ccbed712d51f4559870d542f6ed853e90f",
+      "inspection_baseline": "614041ccbed712d51f4559870d542f6ed853e90f"
+    },
+    "src": {
+      "before": "07146d1e2f977f4fd3e8d8a72ba3411dc802bf0e",
+      "inspection_baseline": "07146d1e2f977f4fd3e8d8a72ba3411dc802bf0e"
+    },
+    "e2e": {
+      "before": "8f5e6e0aacd7919f6a1f9433bde69280508ff465",
+      "inspection_baseline": "8f5e6e0aacd7919f6a1f9433bde69280508ff465"
+    },
+    "scripts": {
+      "before": "2d33f7d2e5f2f84c27f5281fcea222ed2f5538d5",
+      "inspection_baseline": "2d33f7d2e5f2f84c27f5281fcea222ed2f5538d5"
+    }
+  },
+  "protected_references_unchanged": true,
+  "approved_prototype_unchanged": true,
+  "source_ledger": [
+    {
+      "path": "backend/cargo_models.py",
+      "sha256": "250b11bfc97c34971494a0591190429eeee3b006a9f66fa909bdf889e69103af",
+      "sha256_lf_normalized": "9d3ad1c951fad5a32a928c6c1c837cfa6da81122bdeb6b94fcbf1644bf639e02"
+    },
+    {
+      "path": "backend/global_logistics_point_models.py",
+      "sha256": "21f7266abb97b65688bf6a2d45378bb6e6d0d1aeb1a3d113fea334b049d16348",
+      "sha256_lf_normalized": "0999f5947faf1c6e3ad124832d80bb80658b9d0c16d456e70529a4ea691ee6a8"
+    },
+    {
+      "path": "backend/logistics_network_models.py",
+      "sha256": "4b41a57a832d76e459c151eb822d8f51dcb91cbedd5cc0254d8bdc7ef16f5d21",
+      "sha256_lf_normalized": "8e753e83d316bc9de395a286e87df4ed1b021c7564b320e93650a610757d806c"
+    },
+    {
+      "path": "backend/mdpm_models.py",
+      "sha256": "2242b05f74faa09690ee2aab383cea8249eed4142863c127df11568f2ef68fb4",
+      "sha256_lf_normalized": "8e051a342e31061a4eb10d49c8fce46b707c53b6cb3112ba4d76cf9150a29a17"
+    },
+    {
+      "path": "backend/migrations/versions/20260917_shared_transport_execution.py",
+      "sha256": "b8459aba06d51a27060aef105f55ed12b2c4f19836c8e1c73358297e08527b7e",
+      "sha256_lf_normalized": "c487b6d9bee955bc12a230dded7e13f58ea609f0e89b0982bc8361ce980ed3cf"
+    },
+    {
+      "path": "backend/migrations/versions/20260929_operational_monitoring_reliability.py",
+      "sha256": "e8835289f3dfc1219282a4916a3fc1f518c8749e3cd4b260f7f200014f9fb016",
+      "sha256_lf_normalized": "f7b1cc47130e0590deed5981566519f025c72fbc7f7f2168b3985fd6c32b1e35"
+    },
+    {
+      "path": "backend/models.py",
+      "sha256": "1c63f42e2cfccf7f39112040e69fcd846db3cb8f1aec4428137212626bd62286",
+      "sha256_lf_normalized": "06df6592a0ee49d864b9c7ff4c59b6f663406288a96604c8bb3af260bf58c194"
+    },
+    {
+      "path": "backend/operational_models.py",
+      "sha256": "70a7f30b806d12c0af3f47ccd093c2b50430adac60f9a771142495892c683773",
+      "sha256_lf_normalized": "d650c53c9bfd1c890d143d364dfdeddc7518222e2315644fd88b139e6776f87a"
+    },
+    {
+      "path": "backend/routes/cargo.py",
+      "sha256": "835fc68f6bac056f214a7f2db5ff0b19763e45f27d229c4040351b8ac3032e95",
+      "sha256_lf_normalized": "18180d48b09218b6b7f851ad25ae7e16eebbfe8c05cfcec36c768c5354ae635c"
+    },
+    {
+      "path": "backend/routes/case_documents.py",
+      "sha256": "717d67441df3ae53579825ee10bd2374e4833be7dc76d09321aad8fa2842ae84",
+      "sha256_lf_normalized": "035154f09de924a362f4a00c1438ffb5dae0cc53351646a44986b0e7e09c5646"
+    },
+    {
+      "path": "backend/routes/control_tower.py",
+      "sha256": "418688f69e3a6225c2be5bfdfce3d4ae04473e56bd44e069d87eb3e9015af16e",
+      "sha256_lf_normalized": "74e18720c62133bdee2da6205c9e3bc954edd8e243df98f13f5d8e84c45fb60e"
+    },
+    {
+      "path": "backend/routes/customer_gamification.py",
+      "sha256": "61b5ac0aa42bf59d20e6b2a672f834d66e926182326e35c3a7685fd49a2f0429",
+      "sha256_lf_normalized": "33b792a43f41084d94352471e9f7aef6657cb35b08d6bf2e40fdb5ec423d0010"
+    },
+    {
+      "path": "backend/routes/document_readiness.py",
+      "sha256": "b18e700cc4ed43fe13836c14a15e8ba627f420ce210efbd6e31d2aa7e9eb7069",
+      "sha256_lf_normalized": "26a3515cf5892815cabf70da92956d335937803be84d38359827174e4f28b1f6"
+    },
+    {
+      "path": "backend/routes/execution_units.py",
+      "sha256": "17e5ee513de50612c5d99e718ab4e68edb6486edc1e4160f120bfe5e7cae0858",
+      "sha256_lf_normalized": "2f106445d119dd194b044c459f44ed1f852b24981bf0e29ff3e3a6e1f56b3ca5"
+    },
+    {
+      "path": "backend/routes/global_logistics_point_adoptions.py",
+      "sha256": "074084779fae6662d0a5886cd1e685082c2768d76c17f6210b8405b84d83817e",
+      "sha256_lf_normalized": "595102697393b237fdd612633f20e9190b325ef478b5781db8f024789a4fd576"
+    },
+    {
+      "path": "backend/routes/master_data.py",
+      "sha256": "dc996a3b9418e6fc25da7eabb7ab25a733a458e2b6bfff422c110b01a435c3fd",
+      "sha256_lf_normalized": "27d36885aac92ef85b6033d4415c8633fe4593cb261e4f50e2f6e7704099fa8a"
+    },
+    {
+      "path": "backend/routes/oip.py",
+      "sha256": "fbb0d7f5d26be036107a1ad4a9fc700bc18b52cb906c328cd48a57311974a485",
+      "sha256_lf_normalized": "bfdcbd0beb55089d74dad5df36f39c6147153ec2e3626022b8f55efffcbb93b0"
+    },
+    {
+      "path": "backend/routes/operational_execution.py",
+      "sha256": "3824827426c804fd0d541241e9ebdec6ea28830ecdcc61268af36915f2e6b8b7",
+      "sha256_lf_normalized": "02ec16cfe85ec6b14c65eba7b53ee36d50f82dffe240ba13d6c977a4e4342ff8"
+    },
+    {
+      "path": "backend/routes/operations.py",
+      "sha256": "75eef1bdd1d1c9909c1917841f86537b27286f85bca05c783695524c65faca3d",
+      "sha256_lf_normalized": "193459eb63e0b8213243872149a8f80e7a41a8f50f1897782e7ef17a53a7c3d3"
+    },
+    {
+      "path": "backend/routes/public_tracking.py",
+      "sha256": "263278d75079c5b012cc2ae362851557c18eb030a6de33eeee5e2055d7d0e518",
+      "sha256_lf_normalized": "c73017c61a9022ac73fcffef61160724d201dd8e7abadf72ba4b4fca0c363aab"
+    },
+    {
+      "path": "backend/services/cargo_service.py",
+      "sha256": "4e717f764f153ce04d390d5a7935a9c32a319d0004802544a4f6a7a8d3af8c03",
+      "sha256_lf_normalized": "ce030d5ed5862e95ac851ed5f5b2da37e739bc1a2b626325eb16bbe82a5dd55e"
+    },
+    {
+      "path": "backend/services/control_tower_read_model.py",
+      "sha256": "b478d859658b879795c1c6a5ebe30496374a18cedbe7366dba120b2b4393ca48",
+      "sha256_lf_normalized": "e21acc5654f8e6cb31b43ab89561acac73a1cd040f7c484abd4f6b97e425aa6c"
+    },
+    {
+      "path": "backend/services/customer_portal_auth.py",
+      "sha256": "c92b09b575cc64bd9207e2d88c024c4a9a73d0b39d8e6d4594b3ebbe98773fd6",
+      "sha256_lf_normalized": "0e0995362f56445ef6f5b4372afdcc0bdcb890198f296635b46d988c17d41b33"
+    },
+    {
+      "path": "backend/services/customer_portal_service.py",
+      "sha256": "9924ca50ce9ea0b2f312a34a72d2e11b5d099502bb4f1b80cf60ee25c3987f2d",
+      "sha256_lf_normalized": "e2a65d598792853dbd49171b11148746136919f26db57bbdae941efa252623fc"
+    },
+    {
+      "path": "backend/services/execution_unit_service.py",
+      "sha256": "e0bee28558be166e5ca0363bba3e4ac5d77ebc268fe505a5f760cb77cebebf11",
+      "sha256_lf_normalized": "3b05f4ac35f4ea2eae41b14cc56890e1f708736a160b939687af4e6083c584d4"
+    },
+    {
+      "path": "backend/services/master_data_service.py",
+      "sha256": "d278caeabbaa831781495a06029fa59d46600b838814570161eaef150b49f941",
+      "sha256_lf_normalized": "c0a6b2eee614d4806675ef82528e27788b51cd30a186605533a59be0c1279d9b"
+    },
+    {
+      "path": "backend/services/multi_unit_tracking_service.py",
+      "sha256": "393db82d01c2acad3032fe2a9ddeabbf7369b9096d47577c39c04e8dfdde7950",
+      "sha256_lf_normalized": "1a3085fae3093a1a34fa7f73539cef5fea04ece069e79edee2cc2c35b17a5d6a"
+    },
+    {
+      "path": "backend/services/oip_service.py",
+      "sha256": "5052f73cdae7186243a3f950c4466ae2e72d076a0cc2d763ee2a77f84d73c686",
+      "sha256_lf_normalized": "eff8483ff9377f46542579c0bb5799b613137bf7706e136d57a4757b0789f72f"
+    },
+    {
+      "path": "backend/services/operational_service.py",
+      "sha256": "7f28ab1871653a76ebdf096a3ece99e05bce4cabc23995c7c220dbbe5ea9abcf",
+      "sha256_lf_normalized": "f17c1d8fb8e9aa96f7a34bfb350fa5702b992c591e144e38be0b43f5a976cb4c"
+    },
+    {
+      "path": "backend/services/operational_workspace_service.py",
+      "sha256": "b5f4f436dfbf6ddf3816cc13a7dbea14b72ebb0fc9634dac31f9f4f591a7989f",
+      "sha256_lf_normalized": "dea495eb601e070ec1b541f43c13f1f399761fc8ad8c6a1f2d2621c58c890963"
+    },
+    {
+      "path": "backend/services/route_orchestration_service.py",
+      "sha256": "de026924bb851ef6b84f6e9b41da7fdda6c1ce029d1f5b0eb998a3bfc8f7c92d",
+      "sha256_lf_normalized": "39f1324ee68a9d9ac3626bc96e3203bc4abbffb64ebe246fd328475d8c60f598"
+    },
+    {
+      "path": "backend/services/shared_transport_service.py",
+      "sha256": "3b6d36e14c457824dd59db4b0d7f504213fd6224ee302532dc847021b658f5b8",
+      "sha256_lf_normalized": "7c720db48ba09ef36ffed1c5754a35f637161dee0f29dd59d6e476f1813a7875"
+    },
+    {
+      "path": "backend/services/shipment_document_service.py",
+      "sha256": "130284853823853d51c798bd5050e9d34fef60929a6fb56fd3150c875e8e2092",
+      "sha256_lf_normalized": "e490cf07b5357b254c404376cbcf960a85979c9ffe87569746c89db5e26ba9f9"
+    },
+    {
+      "path": "backend/services/tracking_projection_service.py",
+      "sha256": "40dca2a4a64b358b7b26fbe8d6f045d24fcbbfdb524043f387a9abe1694af088",
+      "sha256_lf_normalized": "dd5da2f8c84989888accbb37e78abf22b5b8508ab581c21ce7292cb2c86ce492"
+    },
+    {
+      "path": "backend/services/unified_shipment_history.py",
+      "sha256": "c565b44e6730726068948c11e86f839d16b5433e99c2e94a3f5534eb19cc6ebf",
+      "sha256_lf_normalized": "cfba22eb2ce486cfa0b6c9ba22242a88fca39ce6a238b1b1222c84b0b0964129"
+    },
+    {
+      "path": "backend/tests/test_case_documents.py",
+      "sha256": "07bf83eaf10a5e1cd7e529e5c6575c159c9bb7b6b33b84b83a8a0f44234dc675",
+      "sha256_lf_normalized": "0eb5c402f1105ce9eeb87370a900a3c44108f6facdaf495fcabfff1d28397ebc"
+    },
+    {
+      "path": "backend/tests/test_customer_portal_account.py",
+      "sha256": "3171893173025468f649c5b945a6be2e08cdf187b6d8123cb8cf928e4d0b2f2c",
+      "sha256_lf_normalized": "9f47cfb2c619d90adddeb5c695c54c208c0141a3bb215ab260bb282c24034519"
+    },
+    {
+      "path": "backend/tests/test_execution_units.py",
+      "sha256": "f34c9d4670a134f6f805d73292705f62764a6f1a3d0982f43da3cea80d3015b7",
+      "sha256_lf_normalized": "a063d06cfebb3e8e7e740dde2fdd8a947b07298975c6883b798038a9f9f29420"
+    },
+    {
+      "path": "backend/tests/test_fixed_shipment_owner_postgresql.py",
+      "sha256": "b3be7ad33175bd6e835aeadd39aaad898a019bf1a176c0de51c50b9198204927",
+      "sha256_lf_normalized": "82d0dfacce215814a7e6d3e9db2358712c3e16e261384af67320a36beaca9257"
+    },
+    {
+      "path": "backend/tests/test_operational_workspace.py",
+      "sha256": "f9f37d6fca6938201a241682089238a6bae619c15f8bd811f2915651d9a91587",
+      "sha256_lf_normalized": "8b206934aed8ae6b3d4653842523e41c9cc4d1c8355fd43d8ae33508922efa85"
+    },
+    {
+      "path": "backend/tests/test_request_cargo.py",
+      "sha256": "1b0a75e48bda84b6d44b8b77a922676b3ebb6218c751ea314290486d8a38a96b",
+      "sha256_lf_normalized": "a86278f1c90669a9b118d67956955bf571657a3f0d333e55e1775911927d0ab8"
+    },
+    {
+      "path": "docs/architecture/ADR-INDEX.md",
+      "sha256": "c8ab8a7a5dfc0bf5e80c976fcb494c9034e88d3b79d597be21ae749a5ed36386",
+      "sha256_lf_normalized": "6927fb1fbbf71fc79dcd20bd32004d373caedaf29197a8f9cf6469281ca2e623"
+    },
+    {
+      "path": "docs/architecture/CODEX-DEVELOPMENT-GATE.md",
+      "sha256": "6241c60cdc644e9ab3752fbb6a297b7609e88339922d608ecd1b630556b69c72",
+      "sha256_lf_normalized": "60d4241e3b84c7132f08dde135455e1fed2a5fe83fbe07577a342753aa48e8ff"
+    },
+    {
+      "path": "docs/architecture/FORWARDER-ARCHITECTURE-BASELINE.md",
+      "sha256": "77f5eb7a2628f40214ebf4087e4e8a12bdad75a9b65daabe5932ca04b243bc69",
+      "sha256_lf_normalized": "dc767bcf386163620b0a1d38d84d840f5acbb7e6b831ba2363d08b525ea6724a"
+    },
+    {
+      "path": "docs/architecture/tenant-ownership-inventory.yaml",
+      "sha256": "81cfc4a99fb2e7637aa7a46270082a7f484e13a30562a965151f14efcee2fcff",
+      "sha256_lf_normalized": "cffb5f2e39c807b281c0f2025332c65e076d925ae396318dad00f62a0db707f7"
+    },
+    {
+      "path": "docs/openapi/openapi.yaml",
+      "sha256": "9fd319f387bacd932362ced68f3fa0879b33f94f18b6611632a199b6642c35a0",
+      "sha256_lf_normalized": "17b557ec9b65ca4b2e784d2abd3daf769a94b04c2c9f4c731203186aa238d1aa"
+    },
+    {
+      "path": "docs/operational/FDM-001-forwarder-domain-map.md",
+      "sha256": "1f8ae723e5e3e1aaa26463ceb6738c1f24eee58206ea596e28f0a5b4dddd55b1",
+      "sha256_lf_normalized": "e0f50e9e49a99ba327ab60761043d1fb65c148b8cb3060bdb81c01f1eac546cf"
+    },
+    {
+      "path": "docs/operational/PDR-019-post-d2-product-reference-contract.md",
+      "sha256": "dab69bdb50faf567199f91cf12cdfdb2c384fe16c9dc714253b7910e5e964030",
+      "sha256_lf_normalized": "778c077f48bf0d4b795eed306d826836cb3e4dc468437a3266f9b669f291f68a"
+    },
+    {
+      "path": "docs/operational/PDR-020-documents-expert-only-management.md",
+      "sha256": "a8943f8ed3545d4de5940690088bf0cc0eeff06c903cd2dda4663e191bf3b938",
+      "sha256_lf_normalized": "c90c7e16a056f04ef6287296da9b2d05ec93d81c62426c73fc70d467b293424c"
+    },
+    {
+      "path": "docs/operational/adr/ADR-004-route-leg-milestone-model.md",
+      "sha256": "fede332f236505b827aa6b8d1e83c12ef85dc468f30d1aeddd556dabd6dc60cf",
+      "sha256_lf_normalized": "e156b51d1404044cf5ec07247a77e2093e157d59d29004ec627f7c116b54369e"
+    },
+    {
+      "path": "docs/operational/adr/ADR-006-additive-migration.md",
+      "sha256": "c7b97b87657ca2dfe773ff1ff42bd2f99ab683a08575f44ecacf1d6de3ebabc3",
+      "sha256_lf_normalized": "09fbe6602b4c856ad6ddc615aa8beabfbc94ad531b1dded23ab2fb04923cc9dc"
+    },
+    {
+      "path": "docs/operational/adr/ADR-010-idempotency-locking.md",
+      "sha256": "b3752e7d64358706d0bd4585c99cd11fd1ece044982141b88b3ad2f0b416c0db",
+      "sha256_lf_normalized": "4c98a94a7b6ee71f93ba5eb02c4d521abf7d16fd67674758d23191b70b3ededc"
+    },
+    {
+      "path": "docs/operational/adr/ADR-019-unified-timeline-operational-event-model.md",
+      "sha256": "bf3b07459bf72b1e54ca82a82c53fd2acff9b7e96ebc98ee6d945bbe9f25d209",
+      "sha256_lf_normalized": "e8f0697a4bd1b775d914692a42a03b0ffa66445fbcd71565377a546404d9e84a"
+    },
+    {
+      "path": "docs/operational/adr/ADR-021-master-data-governance-explicit-domain-tables.md",
+      "sha256": "c40a12f7fef6237f70fbaf9bbea27ff059f109033e0dfdda1a8587d589f0131f",
+      "sha256_lf_normalized": "6da9591c4e111ece45929936214aa8cb9ce58a47851e8e797cf75dc6367d9c54"
+    },
+    {
+      "path": "docs/operational/adr/ADR-022-cargo-catalog-transaction-snapshot.md",
+      "sha256": "16293a208719778d91d8c3a2ccde2b154c4e0caf33ce19719aaec6d2fbf4a04d",
+      "sha256_lf_normalized": "ae8943005bcaf2a3adf13994c77466eba28532e02eea8d345040d6a9b51308d1"
+    },
+    {
+      "path": "docs/operational/adr/ADR-023-cargo-allocation-integrity-concurrency.md",
+      "sha256": "9ce80946d76b0b8371228c76ed9baf96aec8563d180bdb6121a72287ff10e27c",
+      "sha256_lf_normalized": "a0b817c4965c1b41fbdb39d24e619b349432442a57e73245d8c20cb980323a78"
+    },
+    {
+      "path": "docs/operational/adr/ADR-028-administrator-managed-reference-data.md",
+      "sha256": "947e8c14669613f43e4318cb1f70b4c6abec31260cfdcdde30a0b63e2e29da0a",
+      "sha256_lf_normalized": "f8e517adb81aadd01bf3620710aec9a78fc886b971cd2cc396f7244cb4703652"
+    },
+    {
+      "path": "docs/operational/adr/ADR-029-operational-milestone-event-boundaries.md",
+      "sha256": "0eb1486757286f36e3ddb4cc13e168885579f5a0546a0a02c449cd22e56d4250",
+      "sha256_lf_normalized": "76412561ac5f684f5016fa874bac5695b31388329735e47ba1a4e244b7f7e6d7"
+    },
+    {
+      "path": "docs/operational/adr/ADR-030-mdpm-document-readiness-policy.md",
+      "sha256": "f3208d1a82df801f2139ef007c93484ce2e3f594f2318e8f84fd3f3cc0a01ffd",
+      "sha256_lf_normalized": "74d1a74440b00580327a0650833aff4540cc6c7fc8e855c4f6288d22a35ec952"
+    },
+    {
+      "path": "docs/operational/adr/ADR-031-oip-deterministic-attention.md",
+      "sha256": "7dd0106d8bfbaff5c7e248374cc20ccb1b5625137994368b812fd357762490ee",
+      "sha256_lf_normalized": "a8420a3a2d85ca4bf938750672e7526c67f1d86fb21b4c4e7f551e3839826929"
+    },
+    {
+      "path": "docs/operational/adr/ADR-032-oip-projection-health-lifecycle.md",
+      "sha256": "679eaf7c6d18a44279265848ea000b1483dd83dde5e27a9aa60a7ad9e091d1a6",
+      "sha256_lf_normalized": "dfbe5d2592288dabe85789c374bfaa8e97702986c8d17add010fb24e2eece0b4"
+    },
+    {
+      "path": "docs/operational/adr/ADR-040-tracking-current-location-status-authority.md",
+      "sha256": "cdcce60e938f03dbfb91a8e6ca11c119a0c6c10d766b7eef00ecafa7cdba97e3",
+      "sha256_lf_normalized": "6c15ca0e798e229df0c1eb72e407f11198e00cacf71780518ae8deff594d4c3c"
+    },
+    {
+      "path": "docs/operational/adr/ADR-041-platform-global-logistics-point-catalog-and-organization-adoption.md",
+      "sha256": "c5491b58070c59a368b4ef13ad86e7099c91be0634e5cd65a1cd8efe57d55ff1",
+      "sha256_lf_normalized": "38d89f96daf138df7d3aa47cadaad6ae4d3c2ba9b2638ea08094c75229f2c7a7"
+    },
+    {
+      "path": "docs/operational/adr/ADR-046-shared-transport-execution.md",
+      "sha256": "5e9198e80322986e110b1dbf2df5dc017955f2763bc9720436f49161ea99e6dd",
+      "sha256_lf_normalized": "da82e0adcc1cda63a0177880ce1ed8abeebbff8e488c5350ac2f2aafc485e233"
+    },
+    {
+      "path": "docs/operational/adr/ADR-047-fixed-operational-shipment-responsible-expert.md",
+      "sha256": "28c7fd749869ede3389b5c41bfaa094d8cbef9be394cae116fc3571657b33407",
+      "sha256_lf_normalized": "f477038d8419c58b44aee7a81f3732d00a9d5c82e0c86dd984eb031443373c3a"
+    },
+    {
+      "path": "docs/operational/adr/ADR-050-owning-expert-document-management-history.md",
+      "sha256": "d4d653dc25e067180d5ee58ff4e1c794909455006075149607589b44daf5f990",
+      "sha256_lf_normalized": "e3d59ddd205ccef32995c68626f0ad1f423216d1b5ad435c8d7c40411858ea11"
+    },
+    {
+      "path": "docs/operational/adr/ADR-051-control-tower-scalable-read-model.md",
+      "sha256": "6e23bd36c7eb1791547fbac395c032314b7e7a9e93bb562de1757617bfffde78",
+      "sha256_lf_normalized": "240af368f976e32fcd604565074ff29f7f195052e8a19d6ea0d0193b4c3630e8"
+    },
+    {
+      "path": "docs/operational/adr/ADR-052-public-tracking-opaque-capability-authority.md",
+      "sha256": "ac0cf8407e5235edb1c2211996547ecc71f3635835cc904d9fae8ae72e1ca587",
+      "sha256_lf_normalized": "c6f12e027395c7322bcbdd76004471b29647a3a13ec57b0fe88c3baf6ba744d5"
+    },
+    {
+      "path": "docs/operational/adr/ADR-053-optional-customer-account-private-quote-authority.md",
+      "sha256": "f1fb3d4d8b817d1bde8028c04103e28509875cce1495b3ef4834691286c9014b",
+      "sha256_lf_normalized": "92e4dce7ae7b7be1395ed9e72d53a290f68df81860d42ef592cff7d36b04f5af"
+    },
+    {
+      "path": "docs/operational/adr/ADR-054-organization-sla-action-attention.md",
+      "sha256": "50876084a76e6c77f10e5a0b8e9ac7445f78aec9d13ab5e0b94bfe0c820696f8",
+      "sha256_lf_normalized": "0524e118b24b3cd64d9ee03c0c71b74827ba1066729a6c67cd2783e23ed0d4d0"
+    },
+    {
+      "path": "docs/operational/adr/ADR-055-operational-monitoring-reliability.md",
+      "sha256": "09573cf0a2771b946156a7a62e96a33605cdfe8b0abd51ff60bab9b0ba58064b",
+      "sha256_lf_normalized": "6b3ae263ce62789d432b0ac4b7c18182efaa1f14667717e3b0da849d4d06b51a"
+    },
+    {
+      "path": "docs/operational/decision-index.md",
+      "sha256": "e489a435690282b7c56b2cdb4862c933e51e8235649c578a1d889f3e0c2ed62e",
+      "sha256_lf_normalized": "b3e6251783b924cd29b04c9c79802523cb93614741e13d8f8cfd140fa777b048"
+    },
+    {
+      "path": "docs/operational/evidence/operational-monitoring-reliability-phase-2-5-20260924/README.md",
+      "sha256": "63c8c222ae8496a380cdbaac8d7b0a5157203db91e772b028ab8eeb2d3fbac65",
+      "sha256_lf_normalized": "407f769c6b47320df9be2f23db30233b6a97122eda7fc9553f0a5e0b0d4219c4"
+    },
+    {
+      "path": "docs/product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md",
+      "sha256": "f1ecc505eff03b7978b3501aadc773ccb561077af2ee8fe45d0b5c4987fb0660",
+      "sha256_lf_normalized": "d48b31fbd987064bb821edf3d88ec54c79f70259ae0f445420a3277e171290b4"
+    },
+    {
+      "path": "docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md",
+      "sha256": "0ce5a9e89caf142ce2f6ef9fc315bbafb1c49b97be7eb13bda5a06b9a505876a",
+      "sha256_lf_normalized": "7d45ee0188a74d7de3d84023a1a17971f32fc65bc9b4463bb9cd436d3fbaed19"
+    },
+    {
+      "path": "docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md",
+      "sha256": "d09b8033c937af6072dc3b3aef7da5fb91be0b098f216073b3bbde99024afed8",
+      "sha256_lf_normalized": "e60ca410d9cd6f89688175adb33202bd8fc76d94ed73c8c0c7c03acb1b56a140"
+    },
+    {
+      "path": "docs/product/ux/phase3/FINAL-PRODUCT-OWNER-APPROVAL.md",
+      "sha256": "a907098431635f73d1a92ff3aceb00b45107d71968b2a5a95d8e86899d0ecd3e",
+      "sha256_lf_normalized": "0d79a40b2b907da7a491be710f592d12bf8e30361803c32fab113af16089ba13"
+    },
+    {
+      "path": "docs/product/ux/phase3/FORWARDER-VISUAL-DNA-INVENTORY.md",
+      "sha256": "181172bdf47a7021381b9f99304d3c682d115bf62882d9a54b36e7d4edbdb048",
+      "sha256_lf_normalized": "f3af98ff4459c56eb40c55b19070004e4e3cfc04704dc75028da78a4fe53a23d"
+    },
+    {
+      "path": "docs/product/ux/phase3/SCREEN-INVENTORY.md",
+      "sha256": "cd478d53c9eeb378735d15c3b4896ba5202f6dc748d66ba878ff285344f5fcf5",
+      "sha256_lf_normalized": "5a0be06af3835037b8392df6c65b79c05a83ed5c327f3da957fd08376e289184"
+    },
+    {
+      "path": "e2e/documents-multi-file.spec.ts",
+      "sha256": "741f2d7e60afdf35fbe3670fa72104c0460d945e4e2f14f1c29e48d43cbe69e5",
+      "sha256_lf_normalized": "b5fca7f22434f3a7f275a6494d91bb20b6a65d0f57c4847a8a84001574e8806d"
+    },
+    {
+      "path": "e2e/fixed-shipment-owner.spec.ts",
+      "sha256": "8938b10bb7bfb88e0481c595843ee459f0a1ab5bcf91774c3471462a0cc53a71",
+      "sha256_lf_normalized": "c63f2876e8ef8d9e9c0ff2809889aebd20d89771a9ab7ccec1db6cfa12786e68"
+    },
+    {
+      "path": "e2e/mt3-public-tracking-security.spec.ts",
+      "sha256": "113bfff4fc307d862a7e521a11a6fbea9881de566198ed370e585a3dfd50ce79",
+      "sha256_lf_normalized": "b1d02ded4a270cad5386976fb5b2cc9c13bf634062f0e4e33bc19fe20960ecd3"
+    },
+    {
+      "path": "e2e/operational-monitoring-reliability-phase2-5.spec.ts",
+      "sha256": "0dbb476fc7b207ee2bfb70a18f29488b0beb44f7ca7231b48c8873cf9bc81c44",
+      "sha256_lf_normalized": "74ac68d67f6362f0e3c9876962977d5a35235de3901f4c79c1bbad67d97b5729"
+    },
+    {
+      "path": "e2e/operational-workspace-phase2.spec.ts",
+      "sha256": "e7d86ad9f4a2a388a47d79a7b45892a3c9f8c8ad6451ca4ba0d3ca9e21029bf5",
+      "sha256_lf_normalized": "16e37ce9708abf1c4478a690bee6e1b8329ca914751c5028f51066a009fe7e14"
+    },
+    {
+      "path": "e2e/request-cargo.spec.ts",
+      "sha256": "fe47486db7dfe2c23f569e832e42c41becbf51d3e80b131af4a18befc1bd9121",
+      "sha256_lf_normalized": "b26ddc8e1d8e84e3839c2b01ae9d6e5b0a135fa9678ebe2a19b00e472f5e9a5b"
+    },
+    {
+      "path": "src/App.tsx",
+      "sha256": "2e1d6b0d38c99a2ba6b74adcf5e6fc8c18dbdb38caa4d4c1a60eeea1947f806f",
+      "sha256_lf_normalized": "597dc3b5499734c33174af67df4a6d8343dc8179f11e8ae9aba8b4378463f5cd"
+    },
+    {
+      "path": "src/components/CustomerPortalLayout.tsx",
+      "sha256": "53db635d77754b6e7f76d282dfc7a0744417dfd44f8217f72f94b8b30be704d4",
+      "sha256_lf_normalized": "9e2f4198c060fe40047d149e70ea923d44b9576cbbb288695dd246a6339f476d"
+    },
+    {
+      "path": "src/components/OperationalExecutionSection.tsx",
+      "sha256": "e1db266f69be144a66562525ad099783994887b61c3b2fac70f17850143535c2",
+      "sha256_lf_normalized": "51545f313ca91a5acee3b496adbbce26be3546bc16948b8a3a4a340b1aad6e45"
+    },
+    {
+      "path": "src/components/RouteAuthoringSection.tsx",
+      "sha256": "3c89140a23de693e366f720e56d25866349abb9627a28c7b61f12fefe90b6299",
+      "sha256_lf_normalized": "17ae4c836e79a3d19a03d19684a8f92d29170155615659426943f406b6e4d540"
+    },
+    {
+      "path": "src/components/ShipmentCargoItems.tsx",
+      "sha256": "d185f58e1deb9f1afc7adc51dc088261cc52f6b08b546b9278d265f3858387d9",
+      "sha256_lf_normalized": "478bccf186fab20f949b7bbf6a3bf0a924c6b12f6dea28cb942122647d06f207"
+    },
+    {
+      "path": "src/components/UnifiedShipmentHistory.tsx",
+      "sha256": "d61d3b8d6fabf2c268cfbea8bbadd3b5125e722555cd08cb5d0d943e266d0c1b",
+      "sha256_lf_normalized": "8838e6d6516af45d4d02ab4c00ecef6c9f822ce4fea75be3b1ee8853518ef751"
+    },
+    {
+      "path": "src/control-tower/api.ts",
+      "sha256": "5e660249a7336e99178d76e925e16c75307966b667d782f7cdf22715d93e12f6",
+      "sha256_lf_normalized": "66a359d9eb7d50ca969317cc662e1a5b0333cb2219f454c120037ba92fc2936b"
+    },
+    {
+      "path": "src/index.css",
+      "sha256": "7109832694fbf2a2792004b00d0da75e1b5655a57915a599219f94c9ab1c3426",
+      "sha256_lf_normalized": "69f3fa9850634af6a69b47a7213230c84ec83c1b71b9862573ed0ac458d22d5c"
+    },
+    {
+      "path": "src/lib/api.ts",
+      "sha256": "286dd64683101b8aadae37331acff3eeede72fc4f03cadf8262fc497912f3af1",
+      "sha256_lf_normalized": "e847fc65b8df3802c574e98a922c55e772bd3773d5dd013ff840241df0420f32"
+    },
+    {
+      "path": "src/lib/customerPortalApi.ts",
+      "sha256": "24e60738a8dcceba154465701e2ec81df7a3445def9b67fd805a535b1e5cae4f",
+      "sha256_lf_normalized": "d2ecc7cc19686a61179e8a74fe20a73a2edb797aae8f7b0a77a8e47393b80a42"
+    },
+    {
+      "path": "src/pages/AdminPanel.tsx",
+      "sha256": "de0c5eb275a35bbae042fab0ae195c9a604d1dbb6b8b70b1f21e2633bba1104a",
+      "sha256_lf_normalized": "20ba8943260c7a25828f4280c4a5638e05ba53aed77aaa1b75725454561393f5"
+    },
+    {
+      "path": "src/pages/NewOperation.tsx",
+      "sha256": "6648f5530daea2ecfbe254dd77eda85519c4fc33f04fcf5e4699b7cbd5672f63",
+      "sha256_lf_normalized": "10c3bcd48ae3061d10cbe8b4525f203d4d2c9fd91fea9241b054e4ecdb0c895a"
+    },
+    {
+      "path": "src/pages/OperationalShipmentDetail.tsx",
+      "sha256": "560087514af2c4a8fc65c65c5fae7825fcb9cad75a25e3ec68cdc1e0d9545b81",
+      "sha256_lf_normalized": "e24c4eb8fd2e83adcf690b52461c8b505311328265a86579740a0093d5743e42"
+    },
+    {
+      "path": "src/pages/OperationalWorkspace.tsx",
+      "sha256": "a9c211def0f3271893b85a83f3cf9c1fdd8b18515a1369a7bbc1cfd90843c370",
+      "sha256_lf_normalized": "7bd8bebaca76d1e05cda6cfcf30133daecc8083dda35af43209996aec855860b"
+    },
+    {
+      "path": "src/pages/OperationsControlTower.tsx",
+      "sha256": "d159d7fa287c2a956ef6c6824915a5fdf92e0037f861a07fc187af14924a13f3",
+      "sha256_lf_normalized": "8070a09b91f093c7e7382d80b8b4cc3e85051a824f864cced774f8ebf8f71b5e"
+    },
+    {
+      "path": "src/tests/components/ShipmentCargoItems.presentation.test.ts",
+      "sha256": "c187beffaa50e15694a555f6268223be3fe821979f1eb94692250bc4892768c2",
+      "sha256_lf_normalized": "1e9ab9bc5bfa5d562cd62343276e759834c9e250543c18bd6d468849e42f3d6a"
+    },
+    {
+      "path": "src/tests/pages/OperationalShipmentDetail.behavior.test.tsx",
+      "sha256": "5eea0ebf049ea6c95c0bc54e4b0ca84c4dc9e0c5793f3d2deed0f21da81e1441",
+      "sha256_lf_normalized": "5874a767615d7187f48d19b552dfc7d9e43b13344a9be93173c060a6b7b35bf6"
+    }
+  ],
+  "lpaf_normative_sources": [
+    {
+      "path": "D:\\1-webapp\\29-lpaf\\29-lpaf (1)\\29-lpaf\\lpaf\\current\\LPAF-v2.7-Architecture-Framework-FA.md",
+      "sha256": "5dd86d364a67127d14002b8465eb36281fb893fd2bc8922bde7e264c54f66cb6"
+    },
+    {
+      "path": "D:\\1-webapp\\29-lpaf\\29-lpaf (1)\\29-lpaf\\lpaf\\current\\LPAF-v2.7-Agent-Entry-Protocol.md",
+      "sha256": "5e9a1061eb5880beabb6735d35de0d5ad37bdd8486560d194cf0eede0205c0d0"
+    },
+    {
+      "path": "D:\\1-webapp\\29-lpaf\\29-lpaf (1)\\29-lpaf\\lpaf\\LPAF-v2.7-BASELINE-ACCEPTANCE.md",
+      "sha256": "b7cb5d6e8046315306d251a475e0cf537055768958cdec542e7d27efb3647231"
+    }
+  ],
+  "implementation_started": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "hash_encoding_note": "sha256 binds raw bytes in the validation checkout. sha256_lf_normalized and Git blob identity allow verification after Windows Git checkout line-ending conversion; no semantic difference is ignored."
+}
