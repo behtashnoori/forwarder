@@ -1,0 +1,19 @@
+﻿[startup] DATABASE_URL detected=yes, dialect=postgresql, host=127.0.0.1, database=forwarder_workspace_phase2_oip2_gate_20d00baaca
+[startup] CORS configured.
+CORS Configuration:
+   Environment: uat
+   Total Origins: 247
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:55188
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      ... and 242 more
+
+[startup] Routes registered.
+{"calculated_at": "2026-09-24T14:18:55.985463+00:00", "checked_at": "2026-09-24T14:18:59.826703+00:00", "command": "evaluation-status", "health_state": "FRESH", "last_evaluation_attempt_at": "2026-09-24T14:18:55.985463+00:00", "last_evaluation_success_at": "2026-09-24T14:18:55.985463+00:00", "last_failure_at": null, "last_run": {"attention_active": 5, "attention_cleared": 1, "completed_at": "2026-09-24T14:18:55.985463+00:00", "duration_ms": 300, "operation": "evaluation", "outcome": "FRESH", "reason_code": "RECONCILIATION_SUCCEEDED", "resulting_changes": 9, "run_id": "979e3be6-5a7e-4199-88c9-1ada191a35f9", "source_items_evaluated": 9, "state": "FRESH"}, "last_success_at": "2026-09-24T14:18:55.985463+00:00", "next_evaluation_due_at": "2026-09-24T14:28:55.985463+00:00", "organization_id": 29, "policy_version": "oip-health-watermark-v1", "processed_watermark": "src:17976e4097f49ba628c59107185319ea763c5aefac914fb8", "projection_version": "oip-attention-v1", "reason": null, "reason_code": null, "rebuild_completed_at": "2026-09-24T14:18:55.985463+00:00", "rebuild_started_at": "2026-09-24T14:18:55.985463+00:00", "run_id": "979e3be6-5a7e-4199-88c9-1ada191a35f9", "source_watermark": "src:17976e4097f49ba628c59107185319ea763c5aefac914fb8", "trustworthy": true, "version": 3}

@@ -1,0 +1,19 @@
+﻿[startup] DATABASE_URL detected=yes, dialect=postgresql, host=127.0.0.1, database=forwarder_workspace_phase2_oip2_gate_20d00baaca
+[startup] CORS configured.
+CORS Configuration:
+   Environment: uat
+   Total Origins: 247
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:55188
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      ... and 242 more
+
+[startup] Routes registered.
+{"calculated_at": "2026-09-24T14:19:02.531443+00:00", "command": "evaluate-sla", "policy_gaps": [], "projection_health": {"calculated_at": "2026-09-24T14:19:02.531443+00:00", "checked_at": "2026-09-24T14:19:02.531443+00:00", "health_state": "FRESH", "last_evaluation_attempt_at": "2026-09-24T14:19:02.531443+00:00", "last_evaluation_success_at": "2026-09-24T14:19:02.531443+00:00", "last_failure_at": null, "last_run": {"attention_active": 5, "attention_cleared": 1, "completed_at": "2026-09-24T14:19:02.531443+00:00", "duration_ms": 620, "operation": "evaluation", "outcome": "FRESH", "reason_code": "RECONCILIATION_SUCCEEDED", "resulting_changes": 0, "run_id": "6e0b6ac4-3f67-4962-a15f-808a5c17dccf", "source_items_evaluated": 9, "state": "FRESH"}, "last_success_at": "2026-09-24T14:19:02.531443+00:00", "next_evaluation_due_at": "2026-09-24T14:28:55.985463+00:00", "policy_version": "oip-health-watermark-v1", "processed_watermark": "src:17976e4097f49ba628c59107185319ea763c5aefac914fb8", "projection_version": "oip-attention-v1", "reason": null, "reason_code": null, "rebuild_completed_at": "2026-09-24T14:19:02.531443+00:00", "rebuild_started_at": "2026-09-24T14:19:02.531443+00:00", "run_id": "6e0b6ac4-3f67-4962-a15f-808a5c17dccf", "source_watermark": "src:17976e4097f49ba628c59107185319ea763c5aefac914fb8", "trustworthy": true, "version": 5}, "result": "ready", "results": [{"changed": false, "public_id": "51a6a335-8f3d-46e4-9303-af0ecff6f179", "status": "ACTIVE"}, {"changed": false, "public_id": "61199e8f-fce8-4cb3-9996-c0daa7667996", "status": "ACTIVE"}, {"changed": false, "public_id": "f264b85a-82e1-4a85-9344-e6c8cb9d8382", "status": "ACTIVE"}, {"changed": false, "public_id": "594765a6-1af4-4b79-a7e5-1d6e79202486", "status": "ACTIVE"}, {"changed": false, "public_id": "e0dad803-4c75-42c7-b3ff-3e3d9a44ceb6", "status": "ACTIVE"}, {"changed": false, "public_id": null, "status": "CLEARED"}], "run_summary": {"attention_active": 5, "attention_cleared": 1, "duration_ms": 620, "operation": "evaluation", "outcome": "FRESH", "resulting_changes": 0, "source_items_evaluated": 9}, "sla_evaluation": {"calculated_at": "2026-09-24T14:19:02.531443+00:00", "changed_commitments": 0, "created_commitments": 0, "evaluated_commitments": 3, "organization_id": 29}, "status": "FRESH"}

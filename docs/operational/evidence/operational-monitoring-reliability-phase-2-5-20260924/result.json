@@ -1,0 +1,100 @@
+{
+  "schema_version": "phase2-5-lpaf-v2-7-requalification-v1",
+  "result": "PASS",
+  "verdict": "PASS — PHASE 2.5 REQUALIFIED ON THE LPAF v2.7 CANDIDATE",
+  "qualification_completed_at_utc": "2026-09-24T14:34:08.1837468Z",
+  "lpaf_baseline": "2.7",
+  "ancestry_case": "B",
+  "original_phase2_5_product_head": "de94df0413fb68c5a542e1887476477da3295f24",
+  "phase2_5_product_head": "1aea4bebdde7e240a903baea1b7b678993f3c505",
+  "canonical_governance_parent": "9b4298c0e89fb2b444bf159ba8e7a744d0eb88e4",
+  "branch": "codex/phase2-5-v27-integration-requalification",
+  "alembic_head": "20260929_operational_monitoring_reliability",
+  "alembic_head_count": 1,
+  "postgresql_version": "18.0",
+  "browser": "Google Chrome via Playwright",
+  "environment": "owned disposable local/UAT PostgreSQL",
+  "synthetic_data_only": true,
+  "product_equivalence": {
+    "result": "PASS",
+    "runtime_schema_frontend_diff_from_original_product_head": "NONE",
+    "governance_only_files_changed": [
+      "AGENTS.md",
+      "docs/operational/adr/ADR-055-operational-monitoring-reliability.md",
+      "docs/operational/operational-monitoring-reliability-phase-2-5-contract.md"
+    ]
+  },
+  "focused_qualification": {
+    "backend_tests": { "passed": 44, "failed": 0 },
+    "frontend_files": 3,
+    "frontend_tests": { "passed": 20, "failed": 0 },
+    "postgresql_concurrency_tests": { "passed": 14, "failed": 0 },
+    "migration_clean_upgrade": "PASS",
+    "migration_roundtrip": "PASS"
+  },
+  "browser_qualification": {
+    "result": "PASS",
+    "tests_passed": 9,
+    "tests_failed": 0,
+    "phase_1_phase_2_tests_passed": 8,
+    "phase_2_5_tests_passed": 1,
+    "browser_independent_evaluation": "PASS",
+    "idempotent_evaluation": "PASS",
+    "catch_up": "PASS",
+    "retry_recovery": "PASS",
+    "concurrency_safety": "PASS",
+    "evaluation_health": "PASS",
+    "freshness_visibility": "PASS",
+    "workspace_stale_state": "PASS",
+    "control_tower_stale_state": "PASS",
+    "tenant_isolation": "PASS",
+    "customer_account_regression": "PASS",
+    "public_tracking_regression": "PASS",
+    "request_shipment_separation": "PASS",
+    "phase_1_regression": "PASS",
+    "phase_2_regression": "PASS"
+  },
+  "full_regression": {
+    "backend": { "result": "PASS", "passed": 1373, "skipped": 107, "failed": 0 },
+    "frontend": { "result": "PASS", "files": 78, "passed": 383, "failed": 0 },
+    "typescript": "PASS",
+    "eslint": "PASS",
+    "production_build": "PASS",
+    "python_compileall": "PASS",
+    "structure_check": "PASS",
+    "architecture_governance": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "product_authority": {
+    "result": "PASS",
+    "pda_07_reconciliation": "PASS",
+    "violation": false,
+    "slice_local_unknown": false,
+    "reference_impact": "NONE"
+  },
+  "journey": {
+    "journey_impact": "AFFECTS_EXISTING_JOURNEY",
+    "affected_existing_journeys": [
+      "Transport Expert Workspace",
+      "Attention consumption",
+      "Control Tower operational attention/freshness"
+    ],
+    "slice_journey": "PASS",
+    "integrated_product_journeys": "NOT_YET_RUN_PRE_RELEASE",
+    "human_product_walkthrough": "NOT_YET_RUN_PRE_RELEASE",
+    "product_validation_evidence_for_this_slice": "COMPLETE",
+    "global_product_validation": "EVIDENCE_PENDING",
+    "release_ready": "NO"
+  },
+  "safety": {
+    "production_accessed": false,
+    "production_mutated": false,
+    "deployment_performed": false,
+    "release_created": false,
+    "phase_3_started": false,
+    "ai_implemented": false,
+    "finance_implemented": false,
+    "carrier_portal_implemented": false,
+    "driver_portal_implemented": false
+  }
+}
