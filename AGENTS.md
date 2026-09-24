@@ -43,6 +43,7 @@ Canonical Forwarder Product references:
 
 - `docs/product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md`
 - `docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md`
+- `docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md` — target UX/presentation only; Product Owner review is not yet run and it grants no runtime implementation authority.
 
 Every future mission must apply the Product Contract within its approved scope
 and the Journey Pack's `JOURNEY_IMPACT` and evidence

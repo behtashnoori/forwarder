@@ -6,6 +6,7 @@
 | --- | --- | --- | --- |
 | [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) | `ACTIVE / APPROVED TARGET_PHASE3 / NOT_IMPLEMENTED` | Multi-customer/multi-cargo Shipment, quantities/allocation, route execution, privacy/tracking, delivery/closure and UX target | Preserves historical ADR/PDR text; supersedes ADR-047 only for the newly approved exceptional Organization-Admin owner transfer target; records Product intent for Proposed ADR-020/023 areas without granting architecture/schema implementation authority. |
 | [Product Acceptance Journey Pack v1.1](../product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md) | `ACTIVE / DEFINED` | Product journey set and acceptance evidence rules | Preserves `FWD-J01..J08`; adds `FWD-J09=CRITICAL_TARGET_PHASE3` and `FWD-IPJ-04=DEFINED_TARGET_NOT_RUN`; no journey or walkthrough PASS is implied. |
+| [Phase 3 Operational Shipment UX Blueprint v1](../product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md) | `ACTIVE / TARGET_PHASE3_UX / PRODUCT_OWNER_REVIEW_NOT_RUN` | UX hierarchy, interactions, responsive and privacy-safe presentation for approved Phase 3 behavior | Presentation reference only; does not change ADR/PDR meaning, grant implementation authority, or claim current runtime behavior. |
 
 These references are Product authority/index records, not new ADR or PDR identifiers. Implementation still requires a bounded design/build mission and all applicable LPAF gates.
 

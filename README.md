@@ -91,6 +91,7 @@ export DB_PASSWORD="your-secure-database-password"
 | **[docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)** | 🏗️ معماری سیستم |
 | **[docs/product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md](docs/product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md)** | 📋 قرارداد رسمی Product برای Shipment عملیاتی و هدف فاز ۳؛ بدون ادعای پیاده‌سازی |
 | **[docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md](docs/product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md)** | ✅ Journey Pack رسمی v1.1؛ هشت سفر فعلی و `FWD-J09` هدف، همگی با وضعیت شواهد صریح |
+| **[docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md](docs/product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md)** | 🧭 مرجع هدف UX فاز ۳ و Prototype قابل کلیک؛ طراحی فقط، نه رفتار runtime یا تأیید Product Owner |
 | **[scripts/README.md](scripts/README.md)** | 🧰 کاتالوگ اسکریپت‌ها و قواعد استفاده |
 
 ## تکنولوژی‌های استفاده شده
