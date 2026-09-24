@@ -1802,6 +1802,11 @@ export interface OperationalWorkspaceShipment {
   overdue: boolean;
   overdue_since?: string | null;
   open_work_item_count: number | null;
+  sla?: {
+    status: "WITHIN" | "WARNING" | "BREACHED" | "MET" | "PENDING_EVALUATION" | "NO_ACTIVE_COMMITMENT" | "NOT_CONFIGURED" | "UNAVAILABLE";
+    status_label: string;
+    commitments: OperationalSlaCommitment[];
+  } | null;
   updated_at?: string;
 }
 
@@ -1813,10 +1818,15 @@ export interface OperationalWorkspaceSnapshot {
       shipment: OperationalWorkspaceShipment;
       kind: string;
       label: string;
+      why?: string | null;
+      time_effect?: string | null;
+      next_action?: string | null;
       severity: string;
+      priority?: string;
       detected_at: string;
-      due_at: string;
-      source: { type: "OperationalWorkItem"; version: number; status: "open" };
+      due_at?: string | null;
+      source: { type: string; public_id?: string | null; version: number; status?: string };
+      freshness?: { status: string; calculated_at?: string | null; source_watermark?: string | null };
       source_path: string;
     }>;
     recent_updates: Array<{
@@ -1834,6 +1844,12 @@ export interface OperationalWorkspaceSnapshot {
     active_shipment_count: number;
     open_follow_up_count: number | null;
     attention_available: boolean;
+    attention_projection?: {
+      state: string;
+      calculated_at?: string | null;
+      last_success_at?: string | null;
+      reason?: string | null;
+    };
     calculated_at: string;
     projection_version: string;
     sources: string[];
@@ -1846,6 +1862,59 @@ export function getOperationalWorkspace(
 ): Promise<OperationalWorkspaceSnapshot> {
   return request(`/api/operational-workspace?limit=${limit}`);
 }
+
+export type OrganizationSlaProcess = {
+  process_type: "EXCEPTION_RESPONSE" | "ACTION_FOLLOW_UP";
+  label_fa: string;
+  start_reference: string;
+  completion_reference: string;
+  responsibility: string;
+};
+
+export type OrganizationSlaRule = OrganizationSlaProcess & {
+  public_id: string;
+  name: string;
+  duration_minutes: number;
+  warning_minutes?: number | null;
+  is_active: boolean;
+  effective_from: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrganizationSlaRulesPayload = {
+  catalog: OrganizationSlaProcess[];
+  rules: OrganizationSlaRule[];
+  unconfigured_processes: Array<Pick<OrganizationSlaProcess, "process_type" | "label_fa"> & { status_label: string }>;
+};
+
+export const listOrganizationSlaRules = () =>
+  request<{ data: OrganizationSlaRulesPayload }>("/api/organization-sla-rules");
+
+export const createOrganizationSlaRule = (payload: {
+  process_type: OrganizationSlaProcess["process_type"];
+  name: string;
+  duration_minutes: number;
+  warning_minutes?: number | null;
+  is_active: boolean;
+}) => request<{ data: OrganizationSlaRule }>("/api/organization-sla-rules", {
+  method: "POST",
+  body: JSON.stringify(payload),
+});
+
+export const updateOrganizationSlaRule = (
+  rule: OrganizationSlaRule,
+  payload: Partial<Pick<OrganizationSlaRule, "name" | "duration_minutes" | "warning_minutes" | "is_active">>,
+) => request<{ data: OrganizationSlaRule }>(`/api/organization-sla-rules/${rule.public_id}`, {
+  method: "PATCH",
+  body: JSON.stringify({ ...payload, expected_version: rule.version }),
+});
+
+export const getOrganizationSlaRuleHistory = (rule: OrganizationSlaRule) =>
+  request<{ data: Array<{ action: string; actor_user_id: number; occurred_at: string; change: Record<string, unknown> }> }>(
+    `/api/organization-sla-rules/${rule.public_id}/history`,
+  );
 
 export function listOperationalShipments(
   params = "",
@@ -3905,6 +3974,8 @@ export type ExecutionCondition = {
   resolved_at?: string | null;
   active: boolean;
   note?: string | null;
+  impact_summary?: string | null;
+  evidence_summary?: string | null;
   duration_seconds: number;
   version: number;
 };
@@ -4185,6 +4256,85 @@ export const resolveExecutionCondition = (
   request<{ data: ExecutionCondition }>(
     `/api/v2/operational-shipments/${shipmentId}/execution/${kind}s/${row.public_id}/resolve`,
     { method: "POST", body: JSON.stringify({ expected_version: row.version }) },
+  );
+
+export type OperationalSlaCommitment = {
+  public_id: string;
+  process_type: "EXCEPTION_RESPONSE" | "ACTION_FOLLOW_UP";
+  process_label: string;
+  status: "WITHIN" | "WARNING" | "BREACHED" | "MET";
+  rule: OrganizationSlaRule;
+  source: { type: string; public_id: string; version: number };
+  responsible_user_id: number;
+  started_at: string;
+  warning_at?: string | null;
+  due_at: string;
+  completed_at?: string | null;
+  evaluated_at: string;
+  version: number;
+};
+
+export type OperationalAction = {
+  public_id: string;
+  context: {
+    type: "SHIPMENT" | "EXCEPTION" | "PROCESS";
+    exception_public_id?: string | null;
+    process_type?: "EXCEPTION_RESPONSE" | "ACTION_FOLLOW_UP" | null;
+  };
+  what: string;
+  why?: string | null;
+  expected_result?: string | null;
+  responsible: { user_id: number; display_name?: string | null; basis: "SHIPMENT_TRANSPORT_EXPERT" };
+  due_at: string;
+  status: "open" | "resolved";
+  latest_follow_up?: string | null;
+  latest_follow_up_at?: string | null;
+  result?: string | null;
+  resolved_at?: string | null;
+  created_at: string;
+  updated_at: string;
+  version: number;
+};
+
+export const listOperationalActions = (shipmentId: string) =>
+  request<{ data: OperationalAction[] }>(`/api/operational-shipments/${shipmentId}/actions`);
+
+export const createOperationalAction = (
+  shipmentId: string,
+  payload: {
+    what: string;
+    expected_result?: string | null;
+    due_at: string;
+    context_type: "SHIPMENT" | "EXCEPTION" | "PROCESS";
+    exception_public_id?: string;
+    process_type?: "EXCEPTION_RESPONSE" | "ACTION_FOLLOW_UP";
+  },
+) => request<{ data: OperationalAction }>(`/api/operational-shipments/${shipmentId}/actions`, {
+  method: "POST",
+  body: JSON.stringify(payload),
+});
+
+export const recordOperationalActionFollowUp = (
+  shipmentId: string,
+  action: OperationalAction,
+  note: string,
+) => request<{ data: OperationalAction }>(
+  `/api/operational-shipments/${shipmentId}/actions/${action.public_id}/follow-ups`,
+  { method: "POST", body: JSON.stringify({ note, expected_version: action.version }) },
+);
+
+export const resolveOperationalAction = (
+  shipmentId: string,
+  action: OperationalAction,
+  result: string,
+) => request<{ data: OperationalAction }>(
+  `/api/operational-shipments/${shipmentId}/actions/${action.public_id}/resolve`,
+  { method: "POST", body: JSON.stringify({ result, expected_version: action.version }) },
+);
+
+export const getOperationalActionHistory = (shipmentId: string, action: OperationalAction) =>
+  request<{ data: Array<{ action: string; actor_user_id: number; occurred_at: string; details: Record<string, unknown> }> }>(
+    `/api/operational-shipments/${shipmentId}/actions/${action.public_id}/history`,
   );
 
 export type OipSituation = {

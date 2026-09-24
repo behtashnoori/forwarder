@@ -21,6 +21,8 @@ export default function OperationalConditionsSection({ shipmentPublicId }: { shi
   const [selected, setSelected] = useState<Record<Kind, string>>({ delay: "", exception: "" });
   const [times, setTimes] = useState<Record<Kind, string>>({ delay: "", exception: "" });
   const [notes, setNotes] = useState<Record<Kind, string>>({ delay: "", exception: "" });
+  const [impacts, setImpacts] = useState<Record<Kind, string>>({ delay: "", exception: "" });
+  const [evidence, setEvidence] = useState<Record<Kind, string>>({ delay: "", exception: "" });
   const [canManage, setCanManage] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -50,11 +52,22 @@ export default function OperationalConditionsSection({ shipmentPublicId }: { shi
     if (!value || Number.isNaN(parsed.getTime())) { setError("زمان وقوع را وارد کنید."); return; }
     const field = kind === "delay" ? "started_at" : "occurred_at";
     void run(async () => {
-      await createExecutionCondition(shipmentPublicId, kind, { reason_public_id: selected[kind], [field]: parsed.toISOString(), note: notes[kind] || null, idempotency_key: commandKeys.current[kind] });
+      await createExecutionCondition(shipmentPublicId, kind, {
+        reason_public_id: selected[kind],
+        [field]: parsed.toISOString(),
+        note: notes[kind] || null,
+        ...(kind === "exception" ? {
+          impact_summary: impacts[kind] || null,
+          evidence_summary: evidence[kind] || null,
+        } : {}),
+        idempotency_key: commandKeys.current[kind],
+      });
       commandKeys.current[kind] = crypto.randomUUID();
       setSelected(previous => ({ ...previous, [kind]: "" }));
       setTimes(previous => ({ ...previous, [kind]: "" }));
       setNotes(previous => ({ ...previous, [kind]: "" }));
+      setImpacts(previous => ({ ...previous, [kind]: "" }));
+      setEvidence(previous => ({ ...previous, [kind]: "" }));
     });
   };
   return <section dir="rtl" className="grid gap-6 lg:grid-cols-2" aria-label="تأخیرها و استثناهای عملیاتی">
@@ -67,12 +80,18 @@ export default function OperationalConditionsSection({ shipmentPublicId }: { shi
         <p>{row.active ? "فعال" : "رفع‌شده"} · شروع: {formatDualCalendarInstant(kind === "delay" ? row.started_at : row.occurred_at, "fa-IR", { fallback: "ثبت نشده" })}</p>
         {row.resolved_at && <p>رفع: {formatDualCalendarInstant(row.resolved_at, "fa-IR")}</p>}
         {row.note && <p className="break-words">{row.note}</p>}
+        {kind === "exception" && row.impact_summary && <p className="break-words"><b>اثر بر عملیات:</b> {row.impact_summary}</p>}
+        {kind === "exception" && row.evidence_summary && <p className="break-words"><b>شواهد:</b> {row.evidence_summary}</p>}
         {row.active && canManage && <Button disabled={busy} onClick={() => void run(() => resolveExecutionCondition(shipmentPublicId, kind, row))}>رفع {label(kind)}</Button>}
       </article>)}
       {canManage && <div className="space-y-2">
         <label className="block">دلیل مصوب {label(kind)}<select className="mt-1 min-h-11 w-full rounded border px-2" value={selected[kind]} onChange={event => { changed(kind); setSelected(previous => ({ ...previous, [kind]: event.target.value })); }}><option value="">انتخاب دلیل</option>{reasons[kind].map(reason => <option key={reason.public_id} value={reason.public_id}>{reason.fa_name}</option>)}</select></label>
         <label className="block">زمان وقوع<Input className="mt-1" type="datetime-local" value={times[kind]} onChange={event => { changed(kind); setTimes(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>
         <label className="block">یادداشت اختیاری<Input className="mt-1" value={notes[kind]} onChange={event => { changed(kind); setNotes(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>
+        {kind === "exception" && <>
+          <label className="block">اثر بر عملیات<Input className="mt-1" maxLength={2000} value={impacts[kind]} onChange={event => { changed(kind); setImpacts(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>
+          <label className="block">شواهد موجود<Input className="mt-1" maxLength={4000} value={evidence[kind]} onChange={event => { changed(kind); setEvidence(previous => ({ ...previous, [kind]: event.target.value })); }} /></label>
+        </>}
         <Button disabled={busy || !selected[kind] || !times[kind]} onClick={() => create(kind)}>ثبت {label(kind)} عملیاتی</Button>
         {!reasons[kind].length && <p role="status">دلیل مصوب فعالی برای ثبت وجود ندارد.</p>}
       </div>}

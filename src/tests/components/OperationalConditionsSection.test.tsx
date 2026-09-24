@@ -40,4 +40,22 @@ describe("shipment operational conditions", () => {
     expect(await screen.findByText("رفع‌شده", { exact: false })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ثبت تأخیر عملیاتی" })).not.toBeInTheDocument();
   });
+  it("records and presents the bounded impact and evidence of an exception", async () => {
+    const user = userEvent.setup();
+    render(<OperationalConditionsSection shipmentPublicId={shipment} />);
+    await screen.findByRole("button", { name: "ثبت استثنا عملیاتی" });
+    await user.selectOptions(screen.getByLabelText("دلیل مصوب استثنا"), "reason-1");
+    await user.type(screen.getAllByLabelText("زمان وقوع")[1], "2026-09-14T10:00");
+    await user.type(screen.getByLabelText("اثر بر عملیات"), "نیاز به هماهنگی مجدد");
+    await user.type(screen.getByLabelText("شواهد موجود"), "گزارش ثبت‌شده");
+    await user.click(screen.getByRole("button", { name: "ثبت استثنا عملیاتی" }));
+    await waitFor(() => expect(api.create).toHaveBeenCalledWith(
+      shipment,
+      "exception",
+      expect.objectContaining({
+        impact_summary: "نیاز به هماهنگی مجدد",
+        evidence_summary: "گزارش ثبت‌شده",
+      }),
+    ));
+  });
 });

@@ -32,6 +32,7 @@ import TrackingLocationsAdminTab from "@/components/TrackingLocationsAdminTab";
 import LocationsAdminTab from "@/components/LocationsAdminTab";
 import DocumentDefinitionsTab from "@/components/DocumentDefinitionsTab";
 import OrganizationDocumentPolicyTab from "@/components/OrganizationDocumentPolicyTab";
+import OrganizationSlaRulesTab from "@/components/OrganizationSlaRulesTab";
 import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
 import LogisticsNetworkAdminTab from "@/components/LogisticsNetworkAdminTab";
@@ -333,6 +334,7 @@ const AdminPanel = () => {
             {isPlatformAdmin && <TabsTrigger value="tracking-locations" className="gap-2 rounded-2xl py-3">نقاط ردیابی</TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>کاتالوگ اسناد</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>الزامات مستندات سازمان</TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger value="organization-sla" className="gap-2 rounded-2xl py-3"><Clock className="h-4 w-4"/>SLA سازمان</TabsTrigger>}
             {canManageCustomers && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/customers")}><Users className="h-4 w-4"/>مشتریان</Button>}
             {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>داده‌های مرجع</TabsTrigger>}
             <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>
@@ -530,6 +532,7 @@ const AdminPanel = () => {
           {isPlatformAdmin && <TabsContent value="tracking-locations" className="space-y-4"><TrackingLocationsAdminTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="documents" className="space-y-4"><DocumentDefinitionsTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="organization-documents" className="space-y-4"><OrganizationDocumentPolicyTab /></TabsContent>}
+          {isOrganizationAdmin && <TabsContent value="organization-sla" className="space-y-4"><OrganizationSlaRulesTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>}
           <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>
           <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab isPlatformAdmin={isPlatformAdmin} /></TabsContent>

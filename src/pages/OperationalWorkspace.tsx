@@ -32,6 +32,14 @@ const severityLabel: Record<string, string> = {
   info: "اطلاع عملیاتی",
 };
 
+const slaTone: Record<string, string> = {
+  BREACHED: "bg-red-100 text-red-800",
+  WARNING: "bg-amber-100 text-amber-900",
+  WITHIN: "bg-emerald-100 text-emerald-900",
+  MET: "bg-emerald-100 text-emerald-900",
+  PENDING_EVALUATION: "bg-blue-100 text-blue-900",
+};
+
 export default function OperationalWorkspace() {
   const { direction, locale, businessLabel } = useI18n();
   const [snapshot, setSnapshot] = useState<OperationalWorkspaceSnapshot>();
@@ -72,7 +80,7 @@ export default function OperationalWorkspace() {
             امروز چه چیزی نیاز به توجه من دارد؟
           </h1>
           <p className="max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-            تصویر امروز از محموله‌های فعال و پیگیری‌های موجود؛ بر پایه اطلاعات ثبت‌شده و بدون اولویت‌گذاری هوشمند یا قواعد SLA جدید.
+            تصویر امروز از محموله‌های فعال، استثناها، اقدام‌ها و SLAهای تعریف‌شده سازمان؛ کاملاً بر پایه واقعیت‌های ثبت‌شده و بدون تصمیم‌گیری خودکار.
           </p>
         </header>
 
@@ -111,8 +119,13 @@ export default function OperationalWorkspace() {
               </Card>
             </section>
 
+            {meta.attention_projection && meta.attention_projection.state !== "FRESH" && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              وضعیت ارزیابی Attention: {meta.attention_projection.state === "NOT_EVALUATED" ? "هنوز ارزیابی زمان‌بندی‌شده اجرا نشده است" : meta.attention_projection.state}
+              {meta.attention_projection.reason ? ` · ${meta.attention_projection.reason}` : ""}. نبود هشدار در این وضعیت به‌معنی سلامت عملیات نیست.
+            </div>}
+
             <section aria-labelledby="attention-heading" className="space-y-3">
-              <div><h2 id="attention-heading" className="text-xl font-bold">موارد مهم برای پیگیری</h2><p className="text-sm text-slate-600">این موارد فقط از پیگیری‌های باز موجود به دست آمده‌اند.</p></div>
+              <div><h2 id="attention-heading" className="text-xl font-bold">موارد مهم برای پیگیری</h2><p className="text-sm text-slate-600">هر مورد از یک Exception، Action، SLA یا واقعیت عملیاتی قابل ردیابی به دست آمده است.</p></div>
               {!meta.attention_available ? (
                 <Card><CardContent className="p-6 text-center text-slate-600">جزئیات پیگیری‌ها با دسترسی فعلی شما قابل نمایش نیست.</CardContent></Card>
               ) : !data.attention_items.length ? (
@@ -128,8 +141,10 @@ export default function OperationalWorkspace() {
                             <span className="rounded-full bg-amber-100 px-2 py-1 text-xs text-amber-900">{severityLabel[item.severity] || item.severity}</span>
                           </div>
                           <p>{customerName(item.shipment)} · {routeLabel(item.shipment, direction)}</p>
-                          <p className="text-sm text-slate-500">موعد ثبت‌شده: {formatDualCalendarInstant(item.due_at, locale, { fallback: "نامعلوم" })}</p>
-                          <p className="text-xs text-slate-500">منبع: پیگیری عملیاتی ثبت‌شده · نسخه {item.source.version}</p>
+                          {item.why && <p className="text-sm"><b>چرا:</b> {item.why}</p>}
+                          <p className="text-sm text-slate-600"><b>اثر زمان:</b> {item.time_effect || formatDualCalendarInstant(item.due_at, locale, { fallback: "موعد مستقلی ثبت نشده" })}</p>
+                          {item.next_action && <p className="text-sm text-blue-800"><b>پیگیری بعدی:</b> {item.next_action}</p>}
+                          <p className="text-xs text-slate-500">منبع: {item.source.type} · نسخه {item.source.version}{item.freshness?.status ? ` · تازگی: ${item.freshness.status}` : ""}</p>
                         </CardContent>
                       </Card>
                     </Link>
@@ -157,6 +172,7 @@ export default function OperationalWorkspace() {
                           <p className="text-sm text-slate-600">کارشناس مسئول ثابت: {shipment.responsible_expert?.display_name || "نامعلوم"}</p>
                           <p className="text-sm text-slate-600">زمینه جاری: {shipment.current_milestone ? businessLabel(shipment.current_milestone) : "ثبت نشده"}</p>
                           <p className="text-sm text-slate-600">آخرین به‌روزرسانی: {shipment.latest_update ? `${shipment.latest_update.label} · ${formatDualCalendarInstant(shipment.latest_update.recorded_at, locale, { fallback: "نامعلوم" })}` : "رویدادی ثبت نشده است"}</p>
+                          {shipment.sla && <p className={`w-fit rounded-full px-2 py-1 text-xs ${slaTone[shipment.sla.status] || "bg-slate-100 text-slate-700"}`}>{shipment.sla.status_label}</p>}
                         </CardContent>
                       </Card>
                     </Link>

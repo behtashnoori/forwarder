@@ -41,6 +41,7 @@ const shipment = {
   overdue: true,
   overdue_since: "2026-09-24T06:00:00Z",
   open_work_item_count: 1,
+  sla: { status: "WARNING" as const, status_label: "نزدیک به نقض SLA", commitments: [] },
   updated_at: "2026-09-24T07:05:00Z",
 };
 
@@ -52,10 +53,14 @@ const populated: OperationalWorkspaceSnapshot = {
       shipment,
       kind: "OVERDUE_MILESTONE",
       label: "مرحله عقب‌افتاده",
+      why: "تأیید مرحله هنوز ثبت نشده است.",
+      time_effect: "موعد این مرحله گذشته است.",
+      next_action: "وضعیت مرحله را پیگیری کنید.",
       severity: "warning",
       detected_at: "2026-09-24T06:00:00Z",
       due_at: "2026-09-24T06:00:00Z",
       source: { type: "OperationalWorkItem", version: 3, status: "open" },
+      freshness: { status: "FRESH", calculated_at: "2026-09-24T08:00:00Z" },
       source_path: "/operations/shipments/11111111-1111-4111-8111-111111111111",
     }],
     recent_updates: [{
@@ -73,8 +78,9 @@ const populated: OperationalWorkspaceSnapshot = {
     active_shipment_count: 1,
     open_follow_up_count: 1,
     attention_available: true,
+    attention_projection: { state: "FRESH", calculated_at: "2026-09-24T08:00:00Z" },
     calculated_at: "2026-09-24T08:00:00Z",
-    projection_version: "operational-workspace.phase-1",
+    projection_version: "operational-workspace-phase-2-v1",
     sources: ["OperationalShipment", "OperationalWorkItem", "OperationalEvent"],
     limitations: ["No SLA inference"],
   },
@@ -106,7 +112,10 @@ describe("OperationalWorkspace", () => {
     expect(screen.getByText("کارشناس مسئول ثابت: کارشناس مالک")).toBeInTheDocument();
     expect(screen.getAllByText("تهران ← تبریز", { exact: false }).length).toBeGreaterThan(0);
     expect(screen.getByText("آخرین به‌روزرسانی:", { exact: false })).toHaveTextContent("خروج ثبت شد");
-    expect(screen.getByText("منبع: پیگیری عملیاتی ثبت‌شده · نسخه 3")).toBeInTheDocument();
+    expect(screen.getByText("منبع: OperationalWorkItem · نسخه 3 · تازگی: FRESH")).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === "چرا: تأیید مرحله هنوز ثبت نشده است.")).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.textContent === "پیگیری بعدی: وضعیت مرحله را پیگیری کنید.")).toBeInTheDocument();
+    expect(screen.getByText("نزدیک به نقض SLA")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /باز کردن منبع پیگیری/ })).toHaveAttribute(
       "href",
       `/operations/shipments/${shipment.public_id}`,
