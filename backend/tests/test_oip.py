@@ -46,10 +46,13 @@ def test_projection_health_exact_watermark_stale_rebuild_degraded_and_recovery(a
         user={"id":app.config["oip_ids"]["user"]}
         initial=oip.projection_health(user)
         assert initial["health_state"]=="STALE" and initial["processed_watermark"] is None
+        evaluated=oip.reconcile(organization_id=app.config["oip_ids"]["org"])
+        assert evaluated["projection_health"]["health_state"]=="FRESH"
+        assert evaluated["projection_health"]["last_evaluation_success_at"]
         rebuilt=oip.rebuild_attention_projections(user)
         assert rebuilt["health_state"]=="FRESH"
         state=db.session.get(OipProjectionState,app.config["oip_ids"]["org"])
-        assert state.source_watermark==state.processed_watermark and state.last_success_at
+        assert state.source_watermark==state.processed_watermark and state.last_evaluation_success_at
         # A real authoritative-source version change produces exact controlled lag.
         org=OperationalOrganization.query.get(app.config["oip_ids"]["org"]);org.name="OIP Synthetic renamed"
         # Organization metadata is not an OIP source, so it cannot manufacture STALE.
@@ -62,6 +65,7 @@ def test_projection_health_exact_watermark_stale_rebuild_degraded_and_recovery(a
         assert "controlled" not in (degraded["reason"] or "")
         assert oip.rebuild_attention_projections(user)["health_state"]=="FRESH"
         assert {h.to_state for h in OipProjectionHealthHistory.query.all()} >= {"STALE","REBUILDING","DEGRADED","FRESH"}
+        assert any((h.details_json or {}).get("duration_ms") is not None for h in OipProjectionHealthHistory.query.all())
 
 def test_threshold_precedence_effectivity_and_abstention(app):
     with app.app_context():

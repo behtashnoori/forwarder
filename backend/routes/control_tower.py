@@ -4,12 +4,14 @@ from flask import Blueprint, jsonify, request
 from backend.auth import get_current_user
 from backend.extensions import db
 from backend.security import require_auth
+from backend.services import oip_service
 from backend.services.control_tower_read_model import compose_control_tower, ControlTowerCursorInvalid
 from backend.services.control_tower_scope import (
     ControlTowerResponsibilityInvariant,
     ControlTowerScopeDenied,
 )
 from backend.services.control_tower_translation import UNAVAILABLE_MESSAGE
+from backend.services.operational_service import OperationalError, organization_for_user
 
 control_tower_bp = Blueprint("control_tower", __name__)
 
@@ -36,11 +38,15 @@ def private_response(response):
 @require_auth
 def shipments():
     try:
+        actor = get_current_user()
         page_size = int(request.args.get("page_size", "25"))
         result = compose_control_tower(
-            get_current_user(), page_size=page_size, cursor=request.args.get("cursor"),
+            actor, page_size=page_size, cursor=request.args.get("cursor"),
             attention=request.args.get("attention"),
             search=request.args.get("search"),
+        )
+        health = oip_service.projection_health_for_organization(
+            organization_for_user(int(actor["id"]))
         )
     except ControlTowerScopeDenied:
         return _error("FORBIDDEN_OPERATION", "دسترسی به این صفحه امکان‌پذیر نیست.", 403)
@@ -50,11 +56,25 @@ def shipments():
         return _error("VALIDATION_ERROR", "درخواست معتبر نیست.", 400)
     except ControlTowerResponsibilityInvariant:
         return _error("EVALUATION_UNAVAILABLE", UNAVAILABLE_MESSAGE, 503)
+    except OperationalError:
+        return _error("EVALUATION_UNAVAILABLE", UNAVAILABLE_MESSAGE, 503)
     if result.state != "complete":
         return _error("EVALUATION_UNAVAILABLE", UNAVAILABLE_MESSAGE, 503)
+    empty_message = result.empty_message
+    if result.summary.total == 0 and health["health_state"] != "FRESH":
+        empty_message = "در داده‌های آخرین ارزیابی هشدار فعالی دیده نمی‌شود؛ ارزیابی Attention به‌روز نیست و این نتیجه اثبات سلامت عملیات نیست."
     return jsonify({"data": {
         "evaluatedAt": result.evaluated_at.isoformat(), "state": result.state,
-        "notice": result.notice, "emptyMessage": result.empty_message,
+        "notice": result.notice, "emptyMessage": empty_message,
+        "attentionEvaluation": {
+            "state": health["health_state"], "trustworthy": health["trustworthy"],
+            "checkedAt": health["checked_at"],
+            "lastAttemptAt": health["last_evaluation_attempt_at"],
+            "lastSuccessAt": health["last_evaluation_success_at"],
+            "nextEvaluationDueAt": health["next_evaluation_due_at"],
+            "reasonCode": health["reason_code"], "reason": health["reason"],
+            "lastRun": health["last_run"],
+        },
         "summary": {
             "total": result.summary.total,
             "attentionCounts": {

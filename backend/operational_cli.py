@@ -261,6 +261,7 @@ def main(argv=None) -> int:
     parser=argparse.ArgumentParser(); sub=parser.add_subparsers(dest="command", required=True)
     reconcile=sub.add_parser("reconcile-overdue"); reconcile.add_argument("--organization-id", type=int, required=True); reconcile.add_argument("--confirm", action="store_true")
     evaluate_sla=sub.add_parser("evaluate-sla"); evaluate_sla.add_argument("--organization-id", type=int, required=True); evaluate_sla.add_argument("--confirm", action="store_true")
+    evaluation_status=sub.add_parser("evaluation-status"); evaluation_status.add_argument("--organization-id", type=int, required=True)
     expert_baseline=sub.add_parser("reconcile-expert-baseline"); expert_baseline.add_argument("--apply", action="store_true")
     bootstrap=sub.add_parser("bootstrap-organization"); bootstrap.add_argument("--name", required=True); bootstrap.add_argument("--user-id", type=int, required=True); bootstrap.add_argument("--permissions", required=True); bootstrap.add_argument("--confirm", action="store_true")
     scope_quote=sub.add_parser("scope-quote"); scope_quote.add_argument("--quote-id", type=int, required=True); scope_quote.add_argument("--organization-id", type=int, required=True); scope_quote.add_argument("--confirm", action="store_true")
@@ -269,7 +270,7 @@ def main(argv=None) -> int:
     personal_analytics=sub.add_parser("seed-personal-analytics-uat"); personal_analytics.add_argument("--confirm", action="store_true")
     cleanup=sub.add_parser("cleanup-uat"); cleanup.add_argument("--confirm", action="store_true")
     args=parser.parse_args(argv)
-    if args.command != "reconcile-expert-baseline" and not args.confirm:
+    if args.command not in {"reconcile-expert-baseline","evaluation-status"} and not args.confirm:
         print("Refusing operational write without --confirm.", file=sys.stderr); return 2
     if args.command in {"provision-uat","cleanup-uat"} and os.getenv("APP_ENV", "").lower() not in {"test","development"}:
         print("UAT commands are restricted to APP_ENV=test or development.", file=sys.stderr); return 2
@@ -338,6 +339,13 @@ def main(argv=None) -> int:
             from backend.services.oip_service import reconcile as reconcile_attention
             result=reconcile_attention(None, organization_id=args.organization_id)
             print(json.dumps({"command":"evaluate-sla","result":"ready",**result},sort_keys=True))
+        elif args.command == "evaluation-status":
+            from backend.services.oip_service import projection_health_for_organization
+            organization=db.session.get(OperationalOrganization,args.organization_id)
+            if organization is None:
+                raise OperationalError("RESOURCE_NOT_FOUND","Operational organization was not found.",404)
+            result=projection_health_for_organization(args.organization_id)
+            print(json.dumps({"command":"evaluation-status","organization_id":args.organization_id,**result},sort_keys=True))
         elif args.command == "reconcile-expert-baseline":
             result = reconcile_expert_baseline_permissions(apply=args.apply)
             if args.apply:

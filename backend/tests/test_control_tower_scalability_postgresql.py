@@ -49,7 +49,7 @@ from backend.services.control_tower_scope import ControlTowerScopeDenied
 from backend.services import oip_service as oip
 
 
-HEAD = "20260928_operational_workspace_phase2"
+HEAD = "20260929_operational_monitoring_reliability"
 NOW = datetime(2026, 9, 21, 12, tzinfo=timezone.utc)
 ACTIVE_COUNT = 500
 

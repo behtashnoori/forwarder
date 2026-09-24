@@ -4,7 +4,7 @@ import pytest
 
 from backend.extensions import db
 from backend.models import ExpertUser
-from backend.oip_models import OipSituation
+from backend.oip_models import OipProjectionHealthHistory, OipProjectionState, OipSituation, OipSituationHistory
 from backend.operational_models import (
     ExceptionReason,
     Milestone,
@@ -366,4 +366,132 @@ def test_reconcile_skips_legacy_direct_overdue_source_without_project_policy(ope
         assert result["status"] == "FRESH"
         assert all(
             row["type"] != "NEXT_MILESTONE_OVERDUE" for row in result["results"]
+        )
+
+
+def test_background_catch_up_retry_idempotency_and_clock_freshness(operational_app):
+    with operational_app.app_context():
+        _permission(
+            operational_app,
+            "user",
+            "operational_execution.read",
+            "operational_execution.manage",
+        )
+        sla_service.create_rule(
+            {
+                "process_type": "EXCEPTION_RESPONSE",
+                "name": "پایداری ارزیابی مصنوعی",
+                "duration_minutes": 60,
+                "warning_minutes": 15,
+                "is_active": True,
+            },
+            _admin(operational_app),
+        )
+        shipment = _shipment(operational_app, "phase25-reliability")
+        started = utcnow() + timedelta(seconds=1)
+        _exception(operational_app, shipment, started)
+        healthy_at = started + timedelta(minutes=10)
+        warning_at = started + timedelta(minutes=50)
+        breached_at = started + timedelta(hours=3)
+
+        healthy = oip_service.reconcile(
+            organization_id=shipment.organization_id,
+            calculation_time=healthy_at,
+        )
+        assert healthy["status"] == "FRESH"
+        assert healthy["run_summary"]["source_items_evaluated"] >= 1
+        assert healthy["projection_health"]["next_evaluation_due_at"]
+
+        stale = oip_service.projection_health_for_organization(
+            shipment.organization_id,
+            checked_at=warning_at,
+        )
+        assert stale["health_state"] == "STALE"
+        assert stale["reason_code"] == "EVALUATION_TIME_BOUNDARY_REACHED"
+
+        caught_up = oip_service.reconcile(
+            organization_id=shipment.organization_id,
+            calculation_time=breached_at,
+        )
+        commitment = OperationalSlaCommitment.query.one()
+        situation = OipSituation.query.filter_by(
+            situation_type="SLA_COMMITMENT_RISK"
+        ).one()
+        assert caught_up["status"] == "FRESH"
+        assert commitment.evaluation_status == "BREACHED"
+        assert oip_service._utc_aware(commitment.due_at) < oip_service._utc_aware(commitment.evaluated_at)
+        assert oip_service._utc_aware(situation.first_detected_at) == breached_at
+        assert oip_service._utc_aware(situation.first_detected_at) > oip_service._utc_aware(commitment.due_at)
+
+        situation_id = situation.public_id
+        situation_history_count = OipSituationHistory.query.filter_by(
+            situation_id=situation.id
+        ).count()
+        repeated = oip_service.reconcile(
+            organization_id=shipment.organization_id,
+            calculation_time=breached_at,
+        )
+        assert repeated["run_summary"]["resulting_changes"] == 0
+        assert OipSituation.query.filter_by(
+            situation_type="SLA_COMMITMENT_RISK"
+        ).one().public_id == situation_id
+        assert OipSituationHistory.query.filter_by(
+            situation_id=situation.id
+        ).count() == situation_history_count
+
+        with pytest.raises(operational_service.OperationalError):
+            oip_service.reconcile(
+                organization_id=shipment.organization_id,
+                calculation_time=breached_at + timedelta(minutes=1),
+                _failure_point="after_work_items",
+            )
+        degraded = oip_service.projection_health_for_organization(
+            shipment.organization_id,
+            checked_at=breached_at + timedelta(minutes=1),
+        )
+        assert degraded["health_state"] == "DEGRADED"
+        assert degraded["last_evaluation_success_at"] == breached_at.isoformat()
+        recovered = oip_service.reconcile(
+            organization_id=shipment.organization_id,
+            calculation_time=breached_at + timedelta(minutes=2),
+        )
+        assert recovered["status"] == "FRESH"
+        assert OipSituation.query.filter_by(
+            situation_type="SLA_COMMITMENT_RISK"
+        ).count() == 1
+        terminal_runs = [
+            row.details_json
+            for row in OipProjectionHealthHistory.query.filter_by(
+                organization_id=shipment.organization_id
+            ).all()
+            if row.details_json and row.details_json.get("duration_ms") is not None
+        ]
+        assert {row["outcome"] for row in terminal_runs} >= {"FRESH", "FAILED"}
+
+
+def test_abandoned_evaluation_is_degraded_then_recovered(operational_app):
+    with operational_app.app_context():
+        shipment = _shipment(operational_app, "phase25-abandoned")
+        oip_service.reconcile(organization_id=shipment.organization_id)
+        state = db.session.get(OipProjectionState, shipment.organization_id)
+        abandoned_run = "11111111-1111-4111-8111-111111111111"
+        state.status = "REBUILDING"
+        state.active_run_id = abandoned_run
+        state.rebuild_started_at = utcnow() - timedelta(minutes=30)
+        db.session.commit()
+
+        abandoned = oip_service.projection_health_for_organization(
+            shipment.organization_id
+        )
+        assert abandoned["health_state"] == "DEGRADED"
+        assert abandoned["reason_code"] == "ABANDONED_EVALUATION_RUN"
+
+        recovered = oip_service.reconcile(organization_id=shipment.organization_id)
+        assert recovered["status"] == "FRESH"
+        assert any(
+            row.reason_code == "ABANDONED_EVALUATION_RUN"
+            and (row.details_json or {}).get("abandoned_run_id") == abandoned_run
+            for row in OipProjectionHealthHistory.query.filter_by(
+                organization_id=shipment.organization_id
+            ).all()
         )

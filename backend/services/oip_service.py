@@ -1,10 +1,12 @@
 """Deterministic OIP-2 policies, reconciliation, lifecycle and read projections."""
 from __future__ import annotations
+from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib, json
+import threading
 import time
 from uuid import uuid4
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import delete, select, text, update
 
 from backend.extensions import db
 from backend.oip_models import OipAttentionProjection, OipFactReference, OipProjectionHealthHistory, OipProjectionState, OipSignal, OipSituation, OipSituationEvidence, OipSituationHistory, OipThresholdPolicy
@@ -26,6 +28,8 @@ POLICIES = {
  "SLA_COMMITMENT_RISK": {"id":"SIG-OIP-009","version":"1.0.0","configured":"GOVERNED","gap":"an active organization SLA rule and pinned commitment are required","recommendation":"Review the governed SLA commitment and its linked Exception or Action."},
 }
 RANK = {"CRITICAL":0,"HIGH":1,"MEDIUM":2,"LOW":3}
+_LOCAL_RUN_LOCKS: dict[int, threading.Lock] = {}
+_LOCAL_RUN_LOCKS_GUARD = threading.Lock()
 
 def _hash(value): return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(",",":"),default=str).encode()).hexdigest()
 def policy_catalog(): return [{"situation_type":k,**v} for k,v in POLICIES.items()]
@@ -35,30 +39,106 @@ def _projection_lock(org):
         db.session.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": int(org)})
 
 def _source_watermark(org):
-    """Fingerprint authoritative OIP inputs; equality is the governed freshness policy."""
+    """Fingerprint every authoritative input identity/version in stable order."""
     snapshots=[]
-    for model in (OperationalWorkItem, OperationalDelay, OperationalException):
-        snapshots.append(db.session.execute(select(func.count(model.id),func.max(model.id),func.max(model.version)).where(model.organization_id==org)).one())
-    for model in (OrganizationSlaRule, OperationalSlaCommitment):
-        snapshots.append(db.session.execute(select(func.count(model.id),func.max(model.id),func.max(model.version)).where(model.organization_id==org)).one())
-    snapshots.append(db.session.execute(select(func.count(ExecutionUnit.id),func.max(ExecutionUnit.id),func.max(ExecutionUnit.version)).join(Project,ExecutionUnit.project_id==Project.id).where(Project.organization_id==org)).one())
-    return "src:" + _hash([[v for v in row] for row in snapshots])[:48]
+    for label, model in (
+        ("work_item", OperationalWorkItem),
+        ("delay", OperationalDelay),
+        ("exception", OperationalException),
+        ("sla_rule", OrganizationSlaRule),
+        ("sla_commitment", OperationalSlaCommitment),
+        ("threshold_policy", OipThresholdPolicy),
+        ("shipment", OperationalShipment),
+        ("milestone", Milestone),
+    ):
+        rows=db.session.execute(
+            select(model.id,model.version)
+            .where(model.organization_id==org)
+            .order_by(model.id)
+        ).all()
+        snapshots.append([label,[[row[0],row[1]] for row in rows]])
+    units=db.session.execute(
+        select(ExecutionUnit.id,ExecutionUnit.version)
+        .join(Project,ExecutionUnit.project_id==Project.id)
+        .where(Project.organization_id==org)
+        .order_by(ExecutionUnit.id)
+    ).all()
+    snapshots.append(["execution_unit",[[row[0],row[1]] for row in units]])
+    return "src:" + _hash(snapshots)[:48]
 
-def _health_history(state, old, new, code, reason=None):
+
+def _local_run_lock(org):
+    with _LOCAL_RUN_LOCKS_GUARD:
+        return _LOCAL_RUN_LOCKS.setdefault(int(org),threading.Lock())
+
+
+@contextmanager
+def _evaluation_run_guard(org):
+    """Fence the complete run; PostgreSQL releases the lock if the process dies."""
+    org=int(org)
+    if db.session.get_bind().dialect.name != "postgresql":
+        lock=_local_run_lock(org)
+        if not lock.acquire(blocking=False):
+            raise OperationalError("PROJECTION_OPERATION_IN_PROGRESS","A projection operation is already active.",409)
+        try:
+            yield
+        finally:
+            lock.release()
+        return
+    connection=db.engine.connect()
+    key=f"oip-evaluation-run:{org}"
+    acquired=False
+    try:
+        acquired=bool(connection.execute(
+            text("SELECT pg_try_advisory_lock(hashtextextended(:key, 0))"),
+            {"key":key},
+        ).scalar_one())
+        if not acquired:
+            raise OperationalError("PROJECTION_OPERATION_IN_PROGRESS","A projection operation is already active.",409)
+        yield
+    finally:
+        if acquired:
+            connection.execute(
+                text("SELECT pg_advisory_unlock(hashtextextended(:key, 0))"),
+                {"key":key},
+            )
+        connection.close()
+
+
+def _evaluation_run_active(org):
+    if db.session.get_bind().dialect.name != "postgresql":
+        return _local_run_lock(org).locked()
+    connection=db.engine.connect();key=f"oip-evaluation-run:{int(org)}"
+    try:
+        acquired=bool(connection.execute(
+            text("SELECT pg_try_advisory_lock(hashtextextended(:key, 0))"),
+            {"key":key},
+        ).scalar_one())
+        if acquired:
+            connection.execute(
+                text("SELECT pg_advisory_unlock(hashtextextended(:key, 0))"),
+                {"key":key},
+            )
+        return not acquired
+    finally:
+        connection.close()
+
+def _health_history(state, old, new, code, reason=None, details=None):
     db.session.add(OipProjectionHealthHistory(
         organization_id=state.organization_id,from_state=old,to_state=new,
         reason_code=code,reason=reason,projection_version=state.projection_version,
         policy_version=state.policy_version,run_id=state.active_run_id,
         source_watermark=state.source_watermark,processed_watermark=state.processed_watermark,
+        details_json=details,
         occurred_at=state.calculated_at,
     ))
 
-def _set_health(state, new, *, code, now, reason=None):
+def _set_health(state, new, *, code, now, reason=None, details=None):
     if new not in HEALTH_STATES: raise ValueError("unsupported OIP projection health state")
     old=state.status
     state.status=new;state.calculated_at=now;state.version=(state.version or 0)+1
     if old != new or code.endswith("FAILED"):
-        _health_history(state,old,new,code,reason)
+        _health_history(state,old,new,code,reason,details)
 
 def _safe_failure(exc):
     if isinstance(exc, OperationalError): return "RECONCILIATION_FAILED", "Projection reconciliation failed."
@@ -76,27 +156,82 @@ def _state(org, *, lock=False, create=False, now=None):
         db.session.add(state);db.session.flush();_health_history(state,None,"STALE","PROJECTION_NOT_YET_RECONCILED")
     return state
 
-def projection_health(user, *, refresh=True):
-    require_permission(user,"oip.read");org=organization_for_user(user["id"]);now=utcnow()
-    _projection_lock(org);state=_state(org,lock=True,create=True,now=now)
-    if refresh and state.status in ("FRESH","STALE"):
-        current=_source_watermark(org);state.source_watermark=current
-        target="FRESH" if state.processed_watermark == current else "STALE"
-        _set_health(state,target,code="WATERMARKS_MATCH" if target=="FRESH" else "SOURCE_AHEAD_OF_PROJECTION",now=now)
-        db.session.commit()
-    return _serialize_health(state)
+def _latest_run_details(organization_id):
+    row=db.session.scalar(
+        select(OipProjectionHealthHistory)
+        .where(
+            OipProjectionHealthHistory.organization_id==organization_id,
+            OipProjectionHealthHistory.details_json.is_not(None),
+        )
+        .order_by(OipProjectionHealthHistory.occurred_at.desc(),OipProjectionHealthHistory.id.desc())
+        .limit(1)
+    )
+    if row is None:return None
+    return {"run_id":row.run_id,"state":row.to_state,"reason_code":row.reason_code,
+        "completed_at":_utc_aware(row.occurred_at).isoformat(),**(row.details_json or {})}
 
-def _serialize_health(state):
-    return {"health_state":state.status,"calculated_at":state.calculated_at.isoformat(),
+
+def _serialize_health(state, *, effective_state=None, reason_code=None, reason=None, checked_at=None):
+    effective_state=effective_state or state.status
+    if reason_code is None:
+        reason_code=state.failure_code if effective_state=="DEGRADED" else (
+            "SOURCE_AHEAD_OF_PROJECTION" if effective_state=="STALE" else (
+                "REBUILD_IN_PROGRESS" if effective_state=="REBUILDING" else None
+            )
+        )
+    if reason is None and effective_state=="DEGRADED":reason=state.last_error
+    return {"health_state":effective_state,"trustworthy":effective_state=="FRESH",
+        "checked_at":_utc_aware(checked_at or utcnow()).isoformat(),
+        "calculated_at":_utc_aware(state.calculated_at).isoformat(),
         "source_watermark":state.source_watermark,"processed_watermark":state.processed_watermark,
         "projection_version":state.projection_version,"policy_version":state.policy_version,
-        "reason_code":state.failure_code if state.status=="DEGRADED" else ("SOURCE_AHEAD_OF_PROJECTION" if state.status=="STALE" else ("REBUILD_IN_PROGRESS" if state.status=="REBUILDING" else None)),
-        "reason":state.last_error if state.status=="DEGRADED" else None,
-        "last_success_at":state.last_success_at.isoformat() if state.last_success_at else None,
-        "rebuild_started_at":state.rebuild_started_at.isoformat() if state.rebuild_started_at else None,
-        "rebuild_completed_at":state.rebuild_completed_at.isoformat() if state.rebuild_completed_at else None,
-        "last_failure_at":state.last_failure_at.isoformat() if state.last_failure_at else None,
+        "reason_code":reason_code,"reason":reason,
+        "last_success_at":_utc_aware(state.last_success_at).isoformat() if state.last_success_at else None,
+        "last_evaluation_attempt_at":_utc_aware(state.last_evaluation_attempt_at).isoformat() if state.last_evaluation_attempt_at else None,
+        "last_evaluation_success_at":_utc_aware(state.last_evaluation_success_at).isoformat() if state.last_evaluation_success_at else None,
+        "next_evaluation_due_at":_utc_aware(state.next_evaluation_due_at).isoformat() if state.next_evaluation_due_at else None,
+        "rebuild_started_at":_utc_aware(state.rebuild_started_at).isoformat() if state.rebuild_started_at else None,
+        "rebuild_completed_at":_utc_aware(state.rebuild_completed_at).isoformat() if state.rebuild_completed_at else None,
+        "last_failure_at":_utc_aware(state.last_failure_at).isoformat() if state.last_failure_at else None,
+        "last_run":_latest_run_details(state.organization_id),
         "run_id":state.active_run_id,"version":state.version}
+
+
+def projection_health_for_organization(organization_id, *, checked_at=None):
+    """Return the effective tenant health without making a read path a writer."""
+    org=int(organization_id);now=_utc_aware(checked_at or utcnow())
+    state=_state(org)
+    if state is None:
+        return {"health_state":"STALE","trustworthy":False,"checked_at":now.isoformat(),
+            "calculated_at":None,"source_watermark":_source_watermark(org),"processed_watermark":None,
+            "projection_version":PROJECTION_VERSION,"policy_version":HEALTH_POLICY_VERSION,
+            "reason_code":"PROJECTION_NOT_YET_RECONCILED","reason":"Attention evaluation has not completed yet.",
+            "last_success_at":None,"last_evaluation_attempt_at":None,"last_evaluation_success_at":None,
+            "next_evaluation_due_at":None,"rebuild_started_at":None,"rebuild_completed_at":None,
+            "last_failure_at":None,"last_run":None,"run_id":None,"version":None}
+    if state.status=="REBUILDING":
+        if _evaluation_run_active(org):
+            return _serialize_health(state,effective_state="REBUILDING",reason_code="REBUILD_IN_PROGRESS",checked_at=now)
+        return _serialize_health(state,effective_state="DEGRADED",reason_code="ABANDONED_EVALUATION_RUN",
+            reason="The previous evaluation process ended before completion.",checked_at=now)
+    if state.status=="DEGRADED":
+        return _serialize_health(state,effective_state="DEGRADED",checked_at=now)
+    current=_source_watermark(org)
+    if state.processed_watermark != current:
+        return _serialize_health(state,effective_state="STALE",reason_code="SOURCE_AHEAD_OF_PROJECTION",
+            reason="Authoritative operational facts changed after the last successful evaluation.",checked_at=now)
+    if state.next_evaluation_due_at and now >= _utc_aware(state.next_evaluation_due_at):
+        return _serialize_health(state,effective_state="STALE",reason_code="EVALUATION_TIME_BOUNDARY_REACHED",
+            reason="A governed time boundary passed after the last successful evaluation.",checked_at=now)
+    if state.status=="STALE":
+        return _serialize_health(state,effective_state="STALE",reason_code="RECONCILIATION_INCOMPLETE",
+            reason="The last evaluation did not reconcile one stable source snapshot.",checked_at=now)
+    return _serialize_health(state,effective_state="FRESH",reason_code=None,reason=None,checked_at=now)
+
+
+def projection_health(user, *, refresh=True):
+    require_permission(user,"oip.read");org=organization_for_user(user["id"])
+    return projection_health_for_organization(org)
 
 _UNIT_SECONDS = {"MINUTE": 60, "HOUR": 3600, "DAY": 86400}
 
@@ -123,6 +258,64 @@ def resolve_threshold(*, organization_id, signal_type, project_public_id=None, s
             seconds = policy.value * _UNIT_SECONDS[policy.unit]
             return {"status":"CONFIGURED","duration":timedelta(seconds=seconds),"value":policy.value,"unit":policy.unit,"scope":policy.scope_type,"scope_public_id":policy.scope_public_id,"policy_public_id":policy.public_id,"policy_version":policy.version,"authority":policy.authority,"source":policy.source}
     return {"status":"INACTIVE_UNCONFIGURED","reason":"NO_ACTIVE_EFFECTIVE_AUTHORITATIVE_THRESHOLD","signal_type":signal_type}
+
+
+def _next_evaluation_due_at(organization_id, now):
+    """Find the next approved time boundary that can change derived Attention."""
+    now=_utc_aware(now);candidates=[]
+    def future(value, *, strict=False):
+        if value is None:return
+        boundary=_utc_aware(value)+(timedelta(microseconds=1) if strict else timedelta())
+        if boundary>now:candidates.append(boundary)
+
+    for commitment in db.session.scalars(select(OperationalSlaCommitment).where(
+        OperationalSlaCommitment.organization_id==organization_id,
+        OperationalSlaCommitment.completed_at.is_(None),
+    )):
+        if commitment.evaluation_status=="WITHIN":future(commitment.warning_at)
+        if commitment.evaluation_status in {"WITHIN","WARNING"}:future(commitment.due_at)
+
+    for item in db.session.scalars(select(OperationalWorkItem).where(
+        OperationalWorkItem.organization_id==organization_id,
+        OperationalWorkItem.status=="open",
+    )):
+        if item.work_type!="OVERDUE_MILESTONE":
+            future(item.due_at);continue
+        shipment=db.session.get(OperationalShipment,item.operational_shipment_id)
+        project=db.session.get(Project,shipment.project_id) if shipment and shipment.project_id else None
+        if project is None:continue
+        threshold=resolve_threshold(
+            organization_id=organization_id,signal_type="NEXT_MILESTONE_OVERDUE",
+            project_public_id=project.public_id,at=now,
+        )
+        if threshold.get("status")=="CONFIGURED":
+            future(_utc_aware(item.due_at)+threshold["duration"],strict=True)
+
+    for unit,project in db.session.execute(
+        select(ExecutionUnit,Project)
+        .join(Project,ExecutionUnit.project_id==Project.id)
+        .where(Project.organization_id==organization_id)
+    ):
+        if not unit.is_active or unit.lifecycle_status not in {"ready","in_progress","arrived"}:
+            continue
+        threshold=resolve_threshold(
+            organization_id=organization_id,signal_type="EXECUTION_UNIT_STALE",
+            project_public_id=project.public_id,at=now,
+        )
+        if threshold.get("status")=="CONFIGURED" and unit.last_event_at is not None:
+            future(_utc_aware(unit.last_event_at)+threshold["duration"],strict=True)
+
+    for rule in db.session.scalars(select(OrganizationSlaRule).where(
+        OrganizationSlaRule.organization_id==organization_id,
+        OrganizationSlaRule.is_active.is_(True),
+    )):
+        future(rule.effective_from)
+    for policy in db.session.scalars(select(OipThresholdPolicy).where(
+        OipThresholdPolicy.organization_id==organization_id,
+        OipThresholdPolicy.is_active.is_(True),
+    )):
+        future(policy.effective_from);future(policy.effective_to)
+    return min(candidates) if candidates else None
 
 def evaluate_next_milestone_overdue(*, organization_id, project_public_id, subject_public_id, dimensions, source_public_id, source_version, due_at, occurred_at, lifecycle_status, calculated_at=None, due_source="RUNTIME_OPERATIONAL_DUE"):
     now = calculated_at or utcnow()
@@ -166,144 +359,177 @@ def observe(*, organization_id, situation_type, subject_type, subject_public_id,
     if policy["configured"] == "GOVERNED" and not policy_evaluation: return {"status":"INACTIVE_UNCONFIGURED","reason":"GOVERNED_EVALUATION_REQUIRED","policy":policy,"situation_type":situation_type}
     now=calculated_at or utcnow(); watermark=source_watermark or f"{source_type}:{source_public_id}:{source_version}"
     identity=_hash([organization_id,situation_type,subject_public_id,dimensions,policy["id"],policy["version"].split(".")[0]])
-    _lock_identity(identity)
+    _lock_identity(identity);semantic_changed=False
     fact=db.session.scalar(select(OipFactReference).where(OipFactReference.organization_id==organization_id,OipFactReference.source_domain==source_domain,OipFactReference.source_type==source_type,OipFactReference.source_public_id==source_public_id,OipFactReference.source_version==str(source_version)))
     if not fact:
-        fact=OipFactReference(public_id=str(uuid4()),organization_id=organization_id,source_domain=source_domain,source_type=source_type,source_public_id=source_public_id,subject_type=subject_type,subject_public_id=subject_public_id,occurred_at=occurred_at,recorded_at=recorded_at,source_version=str(source_version),correlation_id=correlation_id,evidence_reference=evidence or {"kind":source_type,"public_id":source_public_id},validity="CURRENT",resolved_at=now);db.session.add(fact);db.session.flush()
+        fact=OipFactReference(public_id=str(uuid4()),organization_id=organization_id,source_domain=source_domain,source_type=source_type,source_public_id=source_public_id,subject_type=subject_type,subject_public_id=subject_public_id,occurred_at=occurred_at,recorded_at=recorded_at,source_version=str(source_version),correlation_id=correlation_id,evidence_reference=evidence or {"kind":source_type,"public_id":source_public_id},validity="CURRENT",resolved_at=now);db.session.add(fact);db.session.flush();semantic_changed=True
     signal=db.session.scalar(select(OipSignal).where(OipSignal.organization_id==organization_id,OipSignal.dedup_key==identity,OipSignal.source_watermark==watermark))
     if not signal:
-        signal=OipSignal(public_id=str(uuid4()),organization_id=organization_id,signal_type=situation_type,policy_id=policy["id"],policy_version=str(policy_evaluation.get("policy_version")) if policy_evaluation else policy["version"],subject_type=subject_type,subject_public_id=subject_public_id,dedup_key=identity,active=active,derivation={"condition":"authoritative source predicate","inputs":dimensions,"evaluation":policy_evaluation},observed_at=now,source_watermark=watermark);db.session.add(signal);db.session.flush()
+        signal=OipSignal(public_id=str(uuid4()),organization_id=organization_id,signal_type=situation_type,policy_id=policy["id"],policy_version=str(policy_evaluation.get("policy_version")) if policy_evaluation else policy["version"],subject_type=subject_type,subject_public_id=subject_public_id,dedup_key=identity,active=active,derivation={"condition":"authoritative source predicate","inputs":dimensions,"evaluation":policy_evaluation},observed_at=now,source_watermark=watermark);db.session.add(signal);db.session.flush();semantic_changed=True
     s=db.session.scalar(select(OipSituation).where(OipSituation.organization_id==organization_id,OipSituation.identity_key==identity).with_for_update())
     if s and _utc_aware(now) < _utc_aware(s.calculated_at):
         return {"status":"STALE_OBSERVATION","public_id":s.public_id,"current_watermark":s.source_watermark}
     if not active:
         if s and s.status not in ("RESOLVED","EXPIRED"):
-            old=s.status;s.status="RESOLVED";s.resolved_at=now;s.disposition_reason="AUTHORITATIVE_CONDITION_CLEARED";s.last_changed_at=now;s.version+=1;_history(s,"AUTO_RESOLVED",old,s.status,reason=s.disposition_reason)
-        return {"status":"CLEARED","public_id":s.public_id if s else None}
+            old=s.status;s.status="RESOLVED";s.resolved_at=now;s.disposition_reason="AUTHORITATIVE_CONDITION_CLEARED";s.last_changed_at=now;s.version+=1;_history(s,"AUTO_RESOLVED",old,s.status,reason=s.disposition_reason);semantic_changed=True
+        return {"status":"CLEARED","public_id":s.public_id if s else None,"changed":semantic_changed}
     priority="CRITICAL" if severity=="CRITICAL" or urgency=="CRITICAL" else "HIGH" if severity=="HIGH" or urgency=="HIGH" else "MEDIUM" if severity=="MEDIUM" or urgency=="MEDIUM" else "LOW"
     explanation={"policy":"lexicographic-v1","drivers":[{"name":"urgency","value":urgency},{"name":"severity","value":severity},{"name":"due_at","value":due_at.isoformat() if due_at else None}],"tie_breaker":"public_id"}
     if not s:
-        s=OipSituation(public_id=str(uuid4()),organization_id=organization_id,identity_key=identity,situation_type=situation_type,subject_type=subject_type,subject_public_id=subject_public_id,identity_dimensions=dimensions,status="OPEN",severity=severity,urgency=urgency,priority=priority,priority_explanation={**explanation,"evaluation":policy_evaluation},first_detected_at=now,last_detected_at=now,last_changed_at=now,due_at=due_at,occurrence_count=1,policy_id=policy["id"],policy_version=str(policy_evaluation.get("policy_version")) if policy_evaluation else policy["version"],projection_version=PROJECTION_VERSION,calculated_at=now,source_watermark=watermark,freshness_status="FRESH",version=1);db.session.add(s);db.session.flush();_history(s,"DETECTED",None,"OPEN")
+        s=OipSituation(public_id=str(uuid4()),organization_id=organization_id,identity_key=identity,situation_type=situation_type,subject_type=subject_type,subject_public_id=subject_public_id,identity_dimensions=dimensions,status="OPEN",severity=severity,urgency=urgency,priority=priority,priority_explanation={**explanation,"evaluation":policy_evaluation},first_detected_at=now,last_detected_at=now,last_changed_at=now,due_at=due_at,occurrence_count=1,policy_id=policy["id"],policy_version=str(policy_evaluation.get("policy_version")) if policy_evaluation else policy["version"],projection_version=PROJECTION_VERSION,calculated_at=now,source_watermark=watermark,freshness_status="FRESH",version=1);db.session.add(s);db.session.flush();_history(s,"DETECTED",None,"OPEN");semantic_changed=True
     else:
         if s.status == "SNOOZED" and s.snoozed_until and _utc_aware(s.snoozed_until) <= _utc_aware(now):
             old=s.status;s.status="OPEN";s.last_changed_at=now;s.version+=1
-            _history(s,"RETURNED_TO_ATTENTION",old,"OPEN",reason="SNOOZE_EXPIRED",metadata={"snoozed_until":s.snoozed_until.isoformat()})
+            _history(s,"RETURNED_TO_ATTENTION",old,"OPEN",reason="SNOOZE_EXPIRED",metadata={"snoozed_until":s.snoozed_until.isoformat()});semantic_changed=True
         if s.status in ("RESOLVED","DISMISSED","EXPIRED") and watermark != s.source_watermark:
-            old=s.status;s.status="OPEN";s.occurrence_count+=1;s.resolved_at=None;s.disposition_reason=None;_history(s,"REOPENED",old,"OPEN")
+            old=s.status;s.status="OPEN";s.occurrence_count+=1;s.resolved_at=None;s.disposition_reason=None;_history(s,"REOPENED",old,"OPEN");semantic_changed=True
         elif s.status in ("RESOLVED","DISMISSED","EXPIRED"):
-            return {"status":"TERMINAL_PRESERVED","public_id":s.public_id}
+            return {"status":"TERMINAL_PRESERVED","public_id":s.public_id,"changed":False}
         changed=(s.severity,s.urgency,s.priority,s.due_at)!=(severity,urgency,priority,due_at)
         s.severity=severity;s.urgency=urgency;s.priority=priority;s.priority_explanation={**explanation,"evaluation":policy_evaluation};s.due_at=due_at;s.last_detected_at=now;s.calculated_at=now;s.source_watermark=watermark;s.freshness_status="FRESH";s.policy_version=str(policy_evaluation.get("policy_version")) if policy_evaluation else policy["version"]
-        if changed:s.last_changed_at=now;s.version+=1
+        if changed:s.last_changed_at=now;s.version+=1;semantic_changed=True
     db.session.execute(update(OipSituationEvidence).where(
         OipSituationEvidence.situation_id==s.id,
         OipSituationEvidence.fact_reference_id!=fact.id,
         OipSituationEvidence.is_current.is_(True),
     ).values(is_current=False))
     link=db.session.get(OipSituationEvidence,(s.id,fact.id,signal.id))
-    if not link: db.session.add(OipSituationEvidence(situation_id=s.id,fact_reference_id=fact.id,signal_id=signal.id,is_current=True,linked_at=now))
+    if not link: db.session.add(OipSituationEvidence(situation_id=s.id,fact_reference_id=fact.id,signal_id=signal.id,is_current=True,linked_at=now));semantic_changed=True
     else: link.is_current=True
     projection=db.session.get(OipAttentionProjection,s.id)
-    if not projection: db.session.add(OipAttentionProjection(situation_id=s.id,operational_work_item_id=work_item_id,calculated_at=now,source_watermark=watermark,projection_version=PROJECTION_VERSION))
+    if not projection: db.session.add(OipAttentionProjection(situation_id=s.id,operational_work_item_id=work_item_id,calculated_at=now,source_watermark=watermark,projection_version=PROJECTION_VERSION));semantic_changed=True
     else: projection.operational_work_item_id=work_item_id or projection.operational_work_item_id;projection.calculated_at=now;projection.source_watermark=watermark
-    return {"status":"ACTIVE","public_id":s.public_id}
+    return {"status":"ACTIVE","public_id":s.public_id,"changed":semantic_changed}
+
+def _begin_operation(org, now, run_id, operation):
+    _projection_lock(org);state=_state(org,lock=True,create=True,now=now);recovered=None
+    if state.status=="REBUILDING":
+        recovered=state.active_run_id
+        state.last_failure_at=now;state.failure_code="ABANDONED_EVALUATION_RUN"
+        state.last_error="The previous evaluation process ended before completion."
+        _set_health(state,"DEGRADED",code="ABANDONED_EVALUATION_RUN",now=now,
+            reason=state.last_error,details={"operation":"recovery","outcome":"ABANDONED","abandoned_run_id":recovered})
+    state.active_run_id=run_id;state.rebuild_started_at=now;state.rebuild_completed_at=None
+    state.source_watermark=_source_watermark(org);state.failure_code=None;state.last_error=None
+    if operation=="evaluation":state.last_evaluation_attempt_at=now
+    _set_health(state,"REBUILDING",code="RECONCILIATION_STARTED" if operation=="evaluation" else "REBUILD_STARTED",
+        now=now,details={"operation":operation,"outcome":"STARTED","recovered_run_id":recovered})
+    db.session.commit();return recovered
+
+
+def _record_failure(org, run_id, operation, started_clock, exc, counts=None):
+    db.session.rollback();failed_at=_utc_aware(utcnow());_projection_lock(org)
+    state=_state(org,lock=True,create=True,now=failed_at);code,reason=_safe_failure(exc)
+    if operation=="rebuild":code,reason="REBUILD_FAILED","Projection rebuild failed."
+    state.active_run_id=run_id;state.last_failure_at=failed_at;state.failure_code=code;state.last_error=reason
+    details={"operation":operation,"outcome":"FAILED","duration_ms":max(0,int((time.perf_counter()-started_clock)*1000)),**(counts or {})}
+    _set_health(state,"DEGRADED",code=code,now=failed_at,reason=reason,details=details);db.session.commit()
+    return code,reason
+
 
 def rebuild_attention_projections(user, calculation_time=None, _failure_point=None, _test_pause_seconds=0):
-    """Recreate only disposable attention rows; durable Situation state is untouched."""
-    require_permission(user,"oip.reconcile");org=organization_for_user(user["id"]);now=calculation_time or utcnow();run_id=str(uuid4())
-    _projection_lock(org);state=_state(org,lock=True,create=True,now=now)
-    if state.status == "REBUILDING":
-        db.session.rollback();raise OperationalError("PROJECTION_OPERATION_IN_PROGRESS","A projection operation is already active.",409)
-    state.active_run_id=run_id;state.rebuild_started_at=now;state.source_watermark=_source_watermark(org);state.failure_code=None;state.last_error=None
-    _set_health(state,"REBUILDING",code="REBUILD_STARTED",now=now);db.session.commit()
-    if _test_pause_seconds:
-        time.sleep(_test_pause_seconds)
-    try:
-        _projection_lock(org);state=_state(org,lock=True);source=_source_watermark(org)
-        if state.active_run_id != run_id: raise OperationalError("REBUILD_SUPERSEDED","Projection rebuild was superseded.",409)
-        db.session.execute(delete(OipAttentionProjection).where(OipAttentionProjection.situation_id.in_(select(OipSituation.id).where(OipSituation.organization_id==org))))
-        db.session.flush()
-        if _failure_point == "after_delete": raise RuntimeError("controlled projection rebuild failure")
-        for situation in db.session.scalars(select(OipSituation).where(OipSituation.organization_id==org).with_for_update()):
-            db.session.add(OipAttentionProjection(situation_id=situation.id,calculated_at=now,source_watermark=situation.source_watermark,projection_version=PROJECTION_VERSION))
-        state.source_watermark=source;state.processed_watermark=source;state.last_success_at=now;state.rebuild_completed_at=now;state.failure_code=None;state.last_error=None
-        _set_health(state,"FRESH",code="REBUILD_SUCCEEDED",now=now);db.session.commit()
-        return {"status":state.status,**_serialize_health(state)}
-    except Exception as exc:
-        db.session.rollback();_projection_lock(org);state=_state(org,lock=True,create=True,now=now);code,reason=_safe_failure(exc)
-        state.active_run_id=run_id;state.last_failure_at=utcnow();state.failure_code="REBUILD_FAILED";state.last_error="Projection rebuild failed."
-        _set_health(state,"DEGRADED",code="REBUILD_FAILED",now=state.last_failure_at,reason=state.last_error);db.session.commit()
-        raise OperationalError("REBUILD_FAILED",reason,503) from exc
+    """Recreate disposable attention rows without claiming stale sources are current."""
+    require_permission(user,"oip.reconcile");org=organization_for_user(user["id"])
+    now=_utc_aware(calculation_time or utcnow());run_id=str(uuid4());started_clock=time.perf_counter()
+    with _evaluation_run_guard(org):
+        _begin_operation(org,now,run_id,"rebuild")
+        if _test_pause_seconds:time.sleep(_test_pause_seconds)
+        try:
+            _projection_lock(org);state=_state(org,lock=True)
+            if state.active_run_id!=run_id:raise OperationalError("REBUILD_SUPERSEDED","Projection rebuild was superseded.",409)
+            source_before=_source_watermark(org);processed_before=state.processed_watermark
+            existing={row.situation_id:row.operational_work_item_id for row in db.session.scalars(
+                select(OipAttentionProjection).join(OipSituation,OipSituation.id==OipAttentionProjection.situation_id)
+                .where(OipSituation.organization_id==org)
+            )}
+            db.session.execute(delete(OipAttentionProjection).where(OipAttentionProjection.situation_id.in_(select(OipSituation.id).where(OipSituation.organization_id==org))))
+            db.session.flush()
+            if _failure_point=="after_delete":raise RuntimeError("controlled projection rebuild failure")
+            situations=db.session.scalars(select(OipSituation).where(OipSituation.organization_id==org).with_for_update()).all()
+            for situation in situations:
+                db.session.add(OipAttentionProjection(situation_id=situation.id,
+                    operational_work_item_id=existing.get(situation.id),calculated_at=now,
+                    source_watermark=situation.source_watermark,projection_version=PROJECTION_VERSION))
+            source_after=_source_watermark(org)
+            clock_due=bool(state.next_evaluation_due_at and now>=_utc_aware(state.next_evaluation_due_at))
+            fresh=processed_before==source_before==source_after and not clock_due
+            state.source_watermark=source_after;state.processed_watermark=source_after if fresh else processed_before
+            state.last_success_at=now;state.rebuild_completed_at=now;state.failure_code=None;state.last_error=None
+            details={"operation":"rebuild","outcome":"FRESH" if fresh else "STALE",
+                "duration_ms":max(0,int((time.perf_counter()-started_clock)*1000)),
+                "projection_rows_rebuilt":len(situations),"source_items_evaluated":0,"resulting_changes":len(situations)}
+            _set_health(state,"FRESH" if fresh else "STALE",
+                code="REBUILD_SUCCEEDED" if fresh else "REBUILD_SUCCEEDED_STALE",now=now,details=details)
+            db.session.commit();health=projection_health_for_organization(org,checked_at=now)
+            return {"status":health["health_state"],**health}
+        except Exception as exc:
+            code,reason=_record_failure(org,run_id,"rebuild",started_clock,exc)
+            raise OperationalError(code,reason,503) from exc
 
-def reconcile(user=None, calculation_time=None, _failure_point=None, *, organization_id=None):
+
+def reconcile(user=None, calculation_time=None, _failure_point=None, _test_pause_seconds=0, *, organization_id=None):
     if organization_id is None:
         require_permission(user,"oip.reconcile");org=organization_for_user(user["id"])
-    else:
-        org=int(organization_id)
-    now=_utc_aware(calculation_time or utcnow());run_id=str(uuid4())
-    _projection_lock(org);state=_state(org,lock=True,create=True,now=now)
-    if state.status == "REBUILDING":
-        db.session.rollback();raise OperationalError("PROJECTION_OPERATION_IN_PROGRESS","A projection operation is already active.",409)
-    # Reconciliation is a governed recovery operation and truthfully exposes REBUILDING.
-    state.active_run_id=run_id;state.rebuild_started_at=now;state.source_watermark=_source_watermark(org);state.failure_code=None;state.last_error=None
-    _set_health(state,"REBUILDING",code="RECONCILIATION_STARTED",now=now);db.session.commit();seen=[]
-    try:
-        _projection_lock(org);state=_state(org,lock=True)
-        if state.active_run_id != run_id: raise OperationalError("RECONCILIATION_SUPERSEDED","Projection reconciliation was superseded.",409)
-        from backend.services.organization_sla_service import evaluate_organization
-        sla_result=evaluate_organization(org,calculation_time=now)
-        mapping={"OVERDUE_MILESTONE":"NEXT_MILESTONE_OVERDUE","CHECKPOINT_OVERDUE":"CHECKPOINT_OVERDUE","ROUTE_DEPENDENCY_BLOCKED":"ROUTE_DEPENDENCY_BLOCKED","REPLAN_REQUIRED":"REPLAN_REQUIRED","FOLLOW_UP":"ACTION_FOLLOW_UP"}
-        for item in db.session.scalars(select(OperationalWorkItem).where(OperationalWorkItem.organization_id==org,OperationalWorkItem.status=="open")):
-            shipment=db.session.get(OperationalShipment,item.operational_shipment_id);typ=mapping[item.work_type]
-            dimensions={"work_type":item.work_type,"milestone_id":item.milestone_id,"checkpoint_id":item.checkpoint_id,"route_plan_id":item.route_plan_id}
-            if item.work_type=="FOLLOW_UP":dimensions["work_item_public_id"]=item.public_id
-            if typ == "NEXT_MILESTONE_OVERDUE":
-                project=(
-                    db.session.get(Project, shipment.project_id)
-                    if shipment.project_id is not None
-                    else None
-                )
-                milestone=(
-                    db.session.get(Milestone, item.milestone_id)
-                    if item.milestone_id is not None
-                    else None
-                )
-                # Historical/direct shipments can legitimately carry the legacy
-                # workspace work item without a Project-owned OIP policy scope.
-                # That source remains visible in the Workspace, but it cannot be
-                # evaluated as a governed next-milestone signal and must not abort
-                # reconciliation for otherwise valid Action/SLA sources.
-                if project is None or milestone is None:
-                    continue
-                result=evaluate_next_milestone_overdue(organization_id=org,project_public_id=project.public_id,subject_public_id=shipment.public_id,dimensions=dimensions,source_public_id=milestone.public_id,source_version=milestone.version,due_at=item.due_at,occurred_at=item.detected_at,lifecycle_status=milestone.lifecycle_status,calculated_at=now,due_source="RUNTIME_OPERATIONAL_WORK_ITEM_DUE")
-            else:
-                overdue=_utc_aware(item.due_at)<=now
-                result=observe(organization_id=org,situation_type=typ,subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions=dimensions,source_domain="OPERATIONAL_EXECUTION",source_type="OperationalWorkItem",source_public_id=item.public_id if item.work_type=="FOLLOW_UP" else f"owi-{item.id}",source_version=item.version,occurred_at=item.detected_at,due_at=item.due_at,severity="HIGH" if item.work_type=="FOLLOW_UP" and overdue else item.severity.upper() if item.severity.upper() in RANK else "MEDIUM",urgency="HIGH" if overdue else "MEDIUM",work_item_id=item.id,calculated_at=now,evidence={"kind":"operational_action" if item.work_type=="FOLLOW_UP" else "operational_work_item","shipment_public_id":shipment.public_id,"public_id":item.public_id,"what":item.reason,"expected_result":item.expected_result})
-            seen.append(result)
-        for item in db.session.scalars(select(OperationalWorkItem).where(OperationalWorkItem.organization_id==org,OperationalWorkItem.work_type=="FOLLOW_UP",OperationalWorkItem.status=="resolved")):
-            shipment=db.session.get(OperationalShipment,item.operational_shipment_id);dimensions={"work_type":item.work_type,"milestone_id":None,"checkpoint_id":None,"route_plan_id":None,"work_item_public_id":item.public_id}
-            seen.append(observe(organization_id=org,situation_type="ACTION_FOLLOW_UP",subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions=dimensions,source_domain="OPERATIONAL_EXECUTION",source_type="OperationalWorkItem",source_public_id=item.public_id,source_version=item.version,occurred_at=item.detected_at,due_at=item.due_at,severity="MEDIUM",urgency="MEDIUM",active=False,work_item_id=item.id,calculated_at=now,evidence={"kind":"operational_action","shipment_public_id":shipment.public_id,"public_id":item.public_id}))
-        if _failure_point == "after_work_items": raise RuntimeError("controlled reconciliation failure")
-        for model,source_type,time_field in ((OperationalDelay,"OperationalDelay","started_at"),(OperationalException,"OperationalException","occurred_at")):
-            for row in db.session.scalars(select(model).where(model.organization_id==org)):
-                shipment=db.session.get(OperationalShipment,row.operational_shipment_id)
-                seen.append(observe(organization_id=org,situation_type="ACTIVE_DELAY_OR_EXCEPTION",subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions={"source_type":source_type,"source_public_id":row.public_id},source_domain="OPERATIONAL_EXECUTION",source_type=source_type,source_public_id=row.public_id,source_version=row.version,occurred_at=getattr(row,time_field),severity="HIGH",urgency="HIGH",active=row.resolved_at is None,calculated_at=now,evidence={"kind":source_type,"public_id":row.public_id,"impact_summary":getattr(row,"impact_summary",None),"evidence_summary":getattr(row,"evidence_summary",None)}))
-        for commitment in db.session.scalars(select(OperationalSlaCommitment).where(OperationalSlaCommitment.organization_id==org)):
-            shipment=db.session.get(OperationalShipment,commitment.operational_shipment_id)
-            evaluation={"status":"CONFIGURED","policy_version":commitment.rule_version,"rule_public_id":commitment.rule_snapshot.get("public_id"),"rule_name":commitment.rule_snapshot.get("name"),"process_type":commitment.process_type,"process_label":commitment.explanation.get("process_label"),"evaluation_status":commitment.evaluation_status,"effective_due_at":commitment.due_at.isoformat(),"evaluated_at":commitment.evaluated_at.isoformat(),"source_type":commitment.source_type,"source_public_id":commitment.source_public_id,"reason":"SLA_WARNING_WINDOW" if commitment.evaluation_status=="WARNING" else "SLA_DEADLINE_BREACHED" if commitment.evaluation_status=="BREACHED" else "SLA_NOT_AT_RISK"}
-            active=commitment.completed_at is None and commitment.evaluation_status in {"WARNING","BREACHED"}
-            seen.append(observe(organization_id=org,situation_type="SLA_COMMITMENT_RISK",subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions={"commitment_public_id":commitment.public_id,"process_type":commitment.process_type},source_domain="OPERATIONAL_SLA",source_type="OperationalSlaCommitment",source_public_id=commitment.public_id,source_version=commitment.version,occurred_at=commitment.started_at,recorded_at=commitment.evaluated_at,due_at=commitment.due_at,severity="HIGH" if commitment.evaluation_status=="BREACHED" else "MEDIUM",urgency="HIGH" if commitment.evaluation_status=="BREACHED" else "MEDIUM",active=active,source_watermark=commitment.source_watermark,calculated_at=now,evidence={"kind":"operational_sla_commitment","commitment_public_id":commitment.public_id,"rule":commitment.rule_snapshot,"evaluation":commitment.explanation},policy_evaluation=evaluation))
-        for unit,project in db.session.execute(select(ExecutionUnit,Project).join(Project,ExecutionUnit.project_id==Project.id).where(Project.organization_id==org)):
-            seen.append(evaluate_execution_unit_stale(organization_id=org,project_public_id=project.public_id,unit=unit,calculated_at=now))
-        source=_source_watermark(org);state.source_watermark=source;state.processed_watermark=source;state.last_success_at=now;state.rebuild_completed_at=now;state.failure_code=None;state.last_error=None
-        _set_health(state,"FRESH",code="RECONCILIATION_SUCCEEDED",now=now);db.session.commit()
-        return {"status":state.status,"calculated_at":now.isoformat(),"projection_health":_serialize_health(state),"sla_evaluation":sla_result,"results":seen,"policy_gaps":[p for p in policy_catalog() if not p["configured"]]}
-    except Exception as exc:
-        db.session.rollback();_projection_lock(org);state=_state(org,lock=True,create=True,now=now);code,reason=_safe_failure(exc)
-        state.active_run_id=run_id;state.last_failure_at=utcnow();state.failure_code=code;state.last_error=reason
-        _set_health(state,"DEGRADED",code=code,now=state.last_failure_at,reason=reason);db.session.commit()
-        if isinstance(exc,OperationalError): raise
-        raise OperationalError(code,reason,503) from exc
+    else:org=int(organization_id)
+    now=_utc_aware(calculation_time or utcnow());run_id=str(uuid4());started_clock=time.perf_counter();seen=[]
+    with _evaluation_run_guard(org):
+        _begin_operation(org,now,run_id,"evaluation")
+        if _test_pause_seconds:time.sleep(_test_pause_seconds)
+        try:
+            _projection_lock(org);state=_state(org,lock=True)
+            if state.active_run_id!=run_id:raise OperationalError("RECONCILIATION_SUPERSEDED","Projection reconciliation was superseded.",409)
+            from backend.services.organization_sla_service import evaluate_organization
+            sla_result=evaluate_organization(org,calculation_time=now)
+            evaluated_watermark=_source_watermark(org)
+            mapping={"OVERDUE_MILESTONE":"NEXT_MILESTONE_OVERDUE","CHECKPOINT_OVERDUE":"CHECKPOINT_OVERDUE","ROUTE_DEPENDENCY_BLOCKED":"ROUTE_DEPENDENCY_BLOCKED","REPLAN_REQUIRED":"REPLAN_REQUIRED","FOLLOW_UP":"ACTION_FOLLOW_UP"}
+            for item in db.session.scalars(select(OperationalWorkItem).where(OperationalWorkItem.organization_id==org,OperationalWorkItem.status=="open")):
+                shipment=db.session.get(OperationalShipment,item.operational_shipment_id);typ=mapping[item.work_type]
+                dimensions={"work_type":item.work_type,"milestone_id":item.milestone_id,"checkpoint_id":item.checkpoint_id,"route_plan_id":item.route_plan_id}
+                if item.work_type=="FOLLOW_UP":dimensions["work_item_public_id"]=item.public_id
+                if typ=="NEXT_MILESTONE_OVERDUE":
+                    project=db.session.get(Project,shipment.project_id) if shipment.project_id is not None else None
+                    milestone=db.session.get(Milestone,item.milestone_id) if item.milestone_id is not None else None
+                    if project is None or milestone is None:continue
+                    result=evaluate_next_milestone_overdue(organization_id=org,project_public_id=project.public_id,subject_public_id=shipment.public_id,dimensions=dimensions,source_public_id=milestone.public_id,source_version=milestone.version,due_at=item.due_at,occurred_at=item.detected_at,lifecycle_status=milestone.lifecycle_status,calculated_at=now,due_source="RUNTIME_OPERATIONAL_WORK_ITEM_DUE")
+                else:
+                    overdue=_utc_aware(item.due_at)<=now
+                    result=observe(organization_id=org,situation_type=typ,subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions=dimensions,source_domain="OPERATIONAL_EXECUTION",source_type="OperationalWorkItem",source_public_id=item.public_id if item.work_type=="FOLLOW_UP" else f"owi-{item.id}",source_version=item.version,occurred_at=item.detected_at,due_at=item.due_at,severity="HIGH" if item.work_type=="FOLLOW_UP" and overdue else item.severity.upper() if item.severity.upper() in RANK else "MEDIUM",urgency="HIGH" if overdue else "MEDIUM",work_item_id=item.id,calculated_at=now,evidence={"kind":"operational_action" if item.work_type=="FOLLOW_UP" else "operational_work_item","shipment_public_id":shipment.public_id,"public_id":item.public_id,"what":item.reason,"expected_result":item.expected_result})
+                seen.append(result)
+            for item in db.session.scalars(select(OperationalWorkItem).where(OperationalWorkItem.organization_id==org,OperationalWorkItem.work_type=="FOLLOW_UP",OperationalWorkItem.status=="resolved")):
+                shipment=db.session.get(OperationalShipment,item.operational_shipment_id);dimensions={"work_type":item.work_type,"milestone_id":None,"checkpoint_id":None,"route_plan_id":None,"work_item_public_id":item.public_id}
+                seen.append(observe(organization_id=org,situation_type="ACTION_FOLLOW_UP",subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions=dimensions,source_domain="OPERATIONAL_EXECUTION",source_type="OperationalWorkItem",source_public_id=item.public_id,source_version=item.version,occurred_at=item.detected_at,due_at=item.due_at,severity="MEDIUM",urgency="MEDIUM",active=False,work_item_id=item.id,calculated_at=now,evidence={"kind":"operational_action","shipment_public_id":shipment.public_id,"public_id":item.public_id}))
+            if _failure_point=="after_work_items":raise RuntimeError("controlled reconciliation failure")
+            for model,source_type,time_field in ((OperationalDelay,"OperationalDelay","started_at"),(OperationalException,"OperationalException","occurred_at")):
+                for row in db.session.scalars(select(model).where(model.organization_id==org)):
+                    shipment=db.session.get(OperationalShipment,row.operational_shipment_id)
+                    seen.append(observe(organization_id=org,situation_type="ACTIVE_DELAY_OR_EXCEPTION",subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions={"source_type":source_type,"source_public_id":row.public_id},source_domain="OPERATIONAL_EXECUTION",source_type=source_type,source_public_id=row.public_id,source_version=row.version,occurred_at=getattr(row,time_field),severity="HIGH",urgency="HIGH",active=row.resolved_at is None,calculated_at=now,evidence={"kind":source_type,"public_id":row.public_id,"impact_summary":getattr(row,"impact_summary",None),"evidence_summary":getattr(row,"evidence_summary",None)}))
+            for commitment in db.session.scalars(select(OperationalSlaCommitment).where(OperationalSlaCommitment.organization_id==org)):
+                shipment=db.session.get(OperationalShipment,commitment.operational_shipment_id)
+                evaluation={"status":"CONFIGURED","policy_version":commitment.rule_version,"rule_public_id":commitment.rule_snapshot.get("public_id"),"rule_name":commitment.rule_snapshot.get("name"),"process_type":commitment.process_type,"process_label":commitment.explanation.get("process_label"),"evaluation_status":commitment.evaluation_status,"effective_due_at":commitment.due_at.isoformat(),"evaluated_at":commitment.evaluated_at.isoformat(),"source_type":commitment.source_type,"source_public_id":commitment.source_public_id,"reason":"SLA_WARNING_WINDOW" if commitment.evaluation_status=="WARNING" else "SLA_DEADLINE_BREACHED" if commitment.evaluation_status=="BREACHED" else "SLA_NOT_AT_RISK"}
+                active=commitment.completed_at is None and commitment.evaluation_status in {"WARNING","BREACHED"}
+                seen.append(observe(organization_id=org,situation_type="SLA_COMMITMENT_RISK",subject_type="SHIPMENT",subject_public_id=shipment.public_id,dimensions={"commitment_public_id":commitment.public_id,"process_type":commitment.process_type},source_domain="OPERATIONAL_SLA",source_type="OperationalSlaCommitment",source_public_id=commitment.public_id,source_version=commitment.version,occurred_at=commitment.started_at,recorded_at=commitment.evaluated_at,due_at=commitment.due_at,severity="HIGH" if commitment.evaluation_status=="BREACHED" else "MEDIUM",urgency="HIGH" if commitment.evaluation_status=="BREACHED" else "MEDIUM",active=active,source_watermark=commitment.source_watermark,calculated_at=now,evidence={"kind":"operational_sla_commitment","commitment_public_id":commitment.public_id,"rule":commitment.rule_snapshot,"evaluation":commitment.explanation},policy_evaluation=evaluation))
+            for unit,project in db.session.execute(select(ExecutionUnit,Project).join(Project,ExecutionUnit.project_id==Project.id).where(Project.organization_id==org)):
+                seen.append(evaluate_execution_unit_stale(organization_id=org,project_public_id=project.public_id,unit=unit,calculated_at=now))
+            source=_source_watermark(org);next_due=_next_evaluation_due_at(org,now);fresh=source==evaluated_watermark
+            state.source_watermark=source;state.processed_watermark=source if fresh else evaluated_watermark
+            state.next_evaluation_due_at=next_due;state.rebuild_completed_at=now;state.failure_code=None;state.last_error=None
+            changes=sla_result["created_commitments"]+sla_result["changed_commitments"]+sum(1 for item in seen if item.get("changed"))
+            counts={"source_items_evaluated":sla_result["evaluated_commitments"]+len(seen),
+                "resulting_changes":changes,"attention_active":sum(1 for item in seen if item.get("status")=="ACTIVE"),
+                "attention_cleared":sum(1 for item in seen if item.get("status")=="CLEARED")}
+            details={"operation":"evaluation","outcome":"FRESH" if fresh else "STALE",
+                "duration_ms":max(0,int((time.perf_counter()-started_clock)*1000)),**counts}
+            if fresh:state.last_success_at=now;state.last_evaluation_success_at=now
+            _set_health(state,"FRESH" if fresh else "STALE",code="RECONCILIATION_SUCCEEDED" if fresh else "SOURCE_CHANGED_DURING_RECONCILIATION",now=now,details=details)
+            db.session.commit();health=projection_health_for_organization(org,checked_at=now)
+            return {"status":health["health_state"],"calculated_at":now.isoformat(),"projection_health":health,
+                "sla_evaluation":sla_result,"run_summary":details,"results":seen,
+                "policy_gaps":[p for p in policy_catalog() if not p["configured"]]}
+        except Exception as exc:
+            counts={"source_items_evaluated":len(seen),"resulting_changes":0}
+            code,reason=_record_failure(org,run_id,"evaluation",started_clock,exc,counts)
+            if isinstance(exc,OperationalError):raise
+            raise OperationalError(code,reason,503) from exc
 
 def _get(public_id,user,permission="oip.read",lock=False):
     require_permission(user,permission);org=organization_for_user(user["id"]);q=select(OipSituation).where(OipSituation.organization_id==org,OipSituation.public_id==public_id)

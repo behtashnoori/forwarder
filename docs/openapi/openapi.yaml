@@ -906,10 +906,12 @@ components:
     OipProjectionHealth:
       type: object
       additionalProperties: false
-      required: [health_state, calculated_at, source_watermark, projection_version, policy_version, version]
+      required: [health_state, trustworthy, checked_at, calculated_at, source_watermark, projection_version, policy_version, version]
       properties:
         health_state: { type: string, enum: [FRESH, STALE, REBUILDING, DEGRADED] }
-        calculated_at: { type: string, format: date-time }
+        trustworthy: { type: boolean, description: True only while the effective evaluation health is FRESH. }
+        checked_at: { type: string, format: date-time, description: Time at which source and clock freshness were checked. }
+        calculated_at: { type: string, format: date-time, nullable: true }
         source_watermark: { type: string }
         processed_watermark: { type: string, nullable: true }
         projection_version: { type: string }
@@ -917,11 +919,15 @@ components:
         reason_code: { type: string, nullable: true, description: Stable sanitized code when non-FRESH. }
         reason: { type: string, nullable: true, description: Sanitized reason; never includes internal exception detail. }
         last_success_at: { type: string, format: date-time, nullable: true }
+        last_evaluation_attempt_at: { type: string, format: date-time, nullable: true }
+        last_evaluation_success_at: { type: string, format: date-time, nullable: true }
+        next_evaluation_due_at: { type: string, format: date-time, nullable: true }
         rebuild_started_at: { type: string, format: date-time, nullable: true }
         rebuild_completed_at: { type: string, format: date-time, nullable: true }
         last_failure_at: { type: string, format: date-time, nullable: true }
+        last_run: { type: object, nullable: true, additionalProperties: true, description: Sanitized count-level and duration evidence for the latest completed run. }
         run_id: { type: string, format: uuid, nullable: true }
-        version: { type: integer, minimum: 1 }
+        version: { type: integer, minimum: 1, nullable: true }
     SelectorMeta:
       type: object
       additionalProperties: false
@@ -1283,7 +1289,7 @@ paths:
   /api/oip/projection/status:
     get:
       tags: [Operational Intelligence]
-      summary: Read and refresh OIP projection health
+      summary: Read OIP projection health without mutating operational truth
       description: Applies the governed exact-watermark freshness policy. This describes derived intelligence, never operational status or readiness.
       security: [{ bearerAuth: [] }]
       responses:

@@ -16,7 +16,6 @@ from backend.extensions import db
 from backend.oip_models import (
     OipAttentionProjection,
     OipFactReference,
-    OipProjectionState,
     OipSituation,
     OipSituationEvidence,
 )
@@ -34,6 +33,7 @@ from backend.operational_models import (
 )
 from backend.services import operational_read_service
 from backend.services import operational_service
+from backend.services import oip_service
 from backend.services.organization_sla_service import shipment_status
 from backend.services.shipment_population_service import operational_shipment_population
 
@@ -133,21 +133,16 @@ def _work_item_attention(item, shipment, card):
 
 
 def _projection_health(organization_id: int) -> dict:
-    state = db.session.get(OipProjectionState, organization_id)
-    if state is None:
-        return {
-            "state": "NOT_EVALUATED",
-            "calculated_at": None,
-            "last_success_at": None,
-            "reason": "ارزیابی زمان‌بندی‌شده هنوز اجرا نشده است.",
-        }
+    health=oip_service.projection_health_for_organization(organization_id)
     return {
-        "state": state.status,
-        "calculated_at": operational_read_service.iso(state.calculated_at),
-        "last_success_at": operational_read_service.iso(state.last_success_at),
-        "reason": state.last_error,
-        "source_watermark": state.source_watermark,
-        "processed_watermark": state.processed_watermark,
+        "state":health["health_state"],"trustworthy":health["trustworthy"],
+        "calculated_at":health["calculated_at"],"checked_at":health["checked_at"],
+        "last_success_at":health["last_evaluation_success_at"],
+        "last_attempt_at":health["last_evaluation_attempt_at"],
+        "next_evaluation_due_at":health["next_evaluation_due_at"],
+        "reason_code":health["reason_code"],"reason":health["reason"],
+        "source_watermark":health["source_watermark"],
+        "processed_watermark":health["processed_watermark"],"last_run":health["last_run"],
     }
 
 

@@ -10,7 +10,8 @@ from backend.migration_runtime import alembic_config
 
 
 PREVIOUS = "20260927_customer_portal_account_lifecycle"
-HEAD = "20260928_operational_workspace_phase2"
+PHASE2 = "20260928_operational_workspace_phase2"
+HEAD = "20260929_operational_monitoring_reliability"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
@@ -86,6 +87,42 @@ def _parent_schema(url):
             name="ck_operational_work_item_owner_scope",
         ),
     )
+    sa.Table(
+        "oip_projection_state",
+        metadata,
+        sa.Column("organization_id", BIGINT, primary_key=True),
+        sa.Column("status", sa.String(16), nullable=False),
+        sa.Column("source_watermark", sa.String(160), nullable=False),
+        sa.Column("projection_version", sa.String(32), nullable=False),
+        sa.Column("calculated_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("last_error", sa.Text),
+        sa.Column("processed_watermark", sa.String(160)),
+        sa.Column("policy_version", sa.String(32), nullable=False),
+        sa.Column("last_success_at", sa.DateTime(timezone=True)),
+        sa.Column("rebuild_started_at", sa.DateTime(timezone=True)),
+        sa.Column("rebuild_completed_at", sa.DateTime(timezone=True)),
+        sa.Column("last_failure_at", sa.DateTime(timezone=True)),
+        sa.Column("failure_code", sa.String(64)),
+        sa.Column("active_run_id", sa.String(36)),
+        sa.Column("version", sa.Integer, nullable=False),
+    )
+    sa.Table(
+        "oip_projection_health_history",
+        metadata,
+        sa.Column("id", BIGINT, primary_key=True),
+        sa.Column("public_id", sa.String(36), nullable=False, unique=True),
+        sa.Column("organization_id", BIGINT, nullable=False),
+        sa.Column("from_state", sa.String(16)),
+        sa.Column("to_state", sa.String(16), nullable=False),
+        sa.Column("reason_code", sa.String(64), nullable=False),
+        sa.Column("reason", sa.String(200)),
+        sa.Column("projection_version", sa.String(32), nullable=False),
+        sa.Column("policy_version", sa.String(32), nullable=False),
+        sa.Column("run_id", sa.String(36)),
+        sa.Column("source_watermark", sa.String(160)),
+        sa.Column("processed_watermark", sa.String(160)),
+        sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
+    )
     metadata.create_all(engine)
     now = datetime(2026, 9, 24, 8, 0, tzinfo=timezone.utc)
     with engine.begin() as connection:
@@ -125,11 +162,12 @@ def _parent_schema(url):
     return engine
 
 
-def test_phase2_is_the_single_linear_repository_head():
+def test_phase2_and_reliability_are_the_single_linear_repository_head():
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
     assert script.get_heads() == [HEAD]
-    assert script.get_revision(HEAD).down_revision == PREVIOUS
+    assert script.get_revision(HEAD).down_revision == PHASE2
+    assert script.get_revision(PHASE2).down_revision == PREVIOUS
     assert script.get_bases() == ["20240917_initial_schema"]
 
 
@@ -138,7 +176,7 @@ def test_phase2_upgrade_backfills_work_identity_and_roundtrips(tmp_path: Path):
     engine = _parent_schema(url)
     config = alembic_config(url)
     command.stamp(config, PREVIOUS)
-    command.upgrade(config, HEAD)
+    command.upgrade(config, PHASE2)
     inspector = sa.inspect(engine)
 
     assert {"organization_sla_rule", "operational_sla_commitment"} <= set(
@@ -176,4 +214,43 @@ def test_phase2_upgrade_backfills_work_identity_and_roundtrips(tmp_path: Path):
         assert connection.execute(
             sa.text("SELECT reason FROM operational_work_item WHERE id = 40")
         ).scalar_one() == "legacy row"
+    engine.dispose()
+
+
+def test_reliability_migration_is_additive_and_cleanly_roundtrips(tmp_path: Path):
+    url = f"sqlite:///{(tmp_path / 'phase2-5-roundtrip.db').as_posix()}"
+    engine = _parent_schema(url)
+    config = alembic_config(url)
+    command.stamp(config, PREVIOUS)
+    command.upgrade(config, HEAD)
+    inspector = sa.inspect(engine)
+    state_columns = {
+        column["name"] for column in inspector.get_columns("oip_projection_state")
+    }
+    history_columns = {
+        column["name"]
+        for column in inspector.get_columns("oip_projection_health_history")
+    }
+    assert {
+        "last_evaluation_attempt_at",
+        "last_evaluation_success_at",
+        "next_evaluation_due_at",
+    } <= state_columns
+    assert "details_json" in history_columns
+
+    command.downgrade(config, PHASE2)
+    downgraded = sa.inspect(engine)
+    assert "last_evaluation_attempt_at" not in {
+        column["name"] for column in downgraded.get_columns("oip_projection_state")
+    }
+    assert "details_json" not in {
+        column["name"]
+        for column in downgraded.get_columns("oip_projection_health_history")
+    }
+
+    command.upgrade(config, HEAD)
+    assert "last_evaluation_success_at" in {
+        column["name"]
+        for column in sa.inspect(engine).get_columns("oip_projection_state")
+    }
     engine.dispose()

@@ -128,3 +128,17 @@ def test_race_13_rebuild_while_human_interaction_changes(pg_app):
     assert all(x[0]=="ok" for x in results)
     with pg_app.app_context():
         row=OipSituation.query.one();assert row.assignee_user_id==pg_app.config["race"]["b"]["id"] and OipAttentionProjection.query.count()==1
+
+def test_race_14_complete_evaluation_run_is_single_work(pg_app):
+    org=pg_app.config["race"]["org"]
+    results=_pair(
+        pg_app,
+        lambda:oip.reconcile(organization_id=org,_test_pause_seconds=0.5),
+        lambda:oip.reconcile(organization_id=org,_test_pause_seconds=0.5),
+    )
+    assert sorted(result[0] for result in results)==["PROJECTION_OPERATION_IN_PROGRESS","ok"]
+    with pg_app.app_context():
+        state=db.session.get(OipProjectionState,org)
+        assert state.status=="FRESH" and state.last_evaluation_success_at is not None
+        completed=[row for row in OipProjectionHealthHistory.query.filter_by(organization_id=org).all() if (row.details_json or {}).get("outcome")=="FRESH"]
+        assert len(completed)==1
