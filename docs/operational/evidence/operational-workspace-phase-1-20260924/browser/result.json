@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "candidate_code_commit": "1c93abb375c59bae650bbc11fb70b8cf4b3ecc9f",
+  "candidate_parent": "fbc0c1156eb08ac8f2b287320dda67df8ee4c9bd",
+  "executed_at_utc": "2026-09-24T04:20:55.4226497Z",
+  "environment": "owned disposable local/UAT PostgreSQL",
+  "postgresql_major": 18,
+  "alembic_head": "20260927_customer_portal_account_lifecycle",
+  "browser": "Google Chrome via Playwright",
+  "synthetic_data_only": true,
+  "production_accessed": false,
+  "product_journeys": [
+    "expert workspace to shipment context and history",
+    "fixed owner after request reassignment",
+    "same-organization and cross-organization denial",
+    "empty and temporary-error states",
+    "customer account quote response and recovery",
+    "organization-scoped account listing",
+    "public tracking privacy and anonymous request creation"
+  ]
+}
