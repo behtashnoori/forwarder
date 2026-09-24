@@ -1,6 +1,6 @@
 # Forwarder repository governance
 
-This repository operates under **LPAF v2.6 — ACTIVE / FROZEN / CANONICAL**.
+This repository operates under **LPAF v2.7 — ACTIVE / FROZEN / CANONICAL**.
 
 Canonical LPAF workspace:
 
@@ -8,18 +8,18 @@ Canonical LPAF workspace:
 
 Normative documents:
 
-1. `current\LPAF-v2.6-Architecture-Framework-FA.md`
-2. `current\LPAF-v2.6-Agent-Entry-Protocol.md`
-3. `LPAF-v2.6-BASELINE-ACCEPTANCE.md`
+1. `current\LPAF-v2.7-Architecture-Framework-FA.md`
+2. `current\LPAF-v2.7-Agent-Entry-Protocol.md`
+3. `LPAF-v2.7-BASELINE-ACCEPTANCE.md`
 
 Before architecture, implementation, remediation, validation, release, or substantial planning work:
 
-- read and apply the applicable LPAF v2.6 normative documents;
+- read and apply the applicable LPAF v2.7 normative documents;
 - apply LPAF capability routing, escalation, decomposition, handoff, and verification rules;
 - preserve authority boundaries and current Product behavior outside the specifically approved mission scope;
 - do not treat historical versions, candidates, examples, tests, or implementation evidence as normative authority.
 
-Every product-changing mission must apply the Product Authority controls in LPAF v2.6 §5.4:
+Every product-changing mission must apply the Product Authority controls in LPAF v2.7 §5.5:
 
 - `PDA-01`: obtain specific Product Owner approval for reserved product behavior changes;
 - `PDA-02`: maintain a queryable Product Authority Record before Solution or Build;
@@ -30,6 +30,15 @@ Every product-changing mission must apply the Product Authority controls in LPAF
 - `PDA-07`: reconcile every material observable difference as AUTHORIZED, PRESERVED, VIOLATION, or UNKNOWN;
 - `PDA-08`: stop the affected work when specific product authority is missing.
 
+Before Release Ready for an applicable user-facing release, this project must
+maintain and use its own version-controlled critical Product Acceptance Journey
+Pack (or equivalent project reference), run the applicable slice and integrated
+automated Product journeys on the exact candidate, and obtain a recorded
+Human Product Walkthrough result from the Product Owner or an explicitly authorized
+human delegate under LPAF v2.7. An agent may prepare evidence but cannot grant
+the human PASS. The actual Forwarder critical-journey list is defined only in a
+separate Product mission; this instruction does not invent that list.
+
 Known evidence gap: global LPAF Product validation remains `EVIDENCE_PENDING`.
 
-Task-specific instructions may further constrain a mission but must not silently redefine or weaken LPAF v2.6.
+Task-specific instructions may further constrain a mission but must not silently redefine or weaken LPAF v2.7.
