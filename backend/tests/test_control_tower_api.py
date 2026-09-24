@@ -8,6 +8,7 @@ from backend.extensions import db
 from backend.notification_models import NotificationAction, NotificationAttempt
 from backend.services.auth_session_service import create_session_tokens
 from backend.services import control_tower_sources as sources
+from backend.routes import control_tower as control_tower_route
 from backend.services.control_tower_translation import AttentionLevel, EMPTY_MESSAGE, UNAVAILABLE_MESSAGE
 from backend.tests.test_control_tower_scope import tower  # noqa: F401
 from backend.tests.test_control_tower_sources import attention  # noqa: F401
@@ -75,6 +76,21 @@ def test_request_or_owner_mutation_cannot_transfer_fixed_scope(tower, monkeypatc
 
 def test_complete_empty_and_failure_are_distinct(tower, monkeypatch):
     client, auth = tower.app.test_client(), headers(tower.a)
+    monkeypatch.setattr(
+        control_tower_route.oip_service,
+        "projection_health_for_organization",
+        lambda _organization_id: {
+            "health_state": "FRESH",
+            "trustworthy": True,
+            "checked_at": "2026-09-24T12:00:00+00:00",
+            "last_evaluation_attempt_at": "2026-09-24T12:00:00+00:00",
+            "last_evaluation_success_at": "2026-09-24T12:00:00+00:00",
+            "next_evaluation_due_at": None,
+            "reason_code": None,
+            "reason": None,
+            "last_run": None,
+        },
+    )
     response = client.get(PATH, headers=auth)
     assert response.status_code == 200
     assert response.json["data"]["emptyMessage"] == EMPTY_MESSAGE
@@ -85,6 +101,16 @@ def test_complete_empty_and_failure_are_distinct(tower, monkeypatch):
     response = client.get(PATH, headers=auth)
     assert response.status_code == 503
     assert response.json == {"error": {"code": "EVALUATION_UNAVAILABLE", "message": UNAVAILABLE_MESSAGE}}
+
+
+def test_stale_empty_result_never_claims_healthy_operations(tower):
+    response = tower.app.test_client().get(PATH, headers=headers(tower.a))
+    assert response.status_code == 200
+    data = response.json["data"]
+    assert data["attentionEvaluation"]["state"] == "STALE"
+    assert data["attentionEvaluation"]["trustworthy"] is False
+    assert data["emptyMessage"] != EMPTY_MESSAGE
+    assert "Attention" in data["emptyMessage"]
 
 
 def test_invalid_responsibility_not_successful_empty(tower):

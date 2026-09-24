@@ -925,7 +925,23 @@ components:
         rebuild_started_at: { type: string, format: date-time, nullable: true }
         rebuild_completed_at: { type: string, format: date-time, nullable: true }
         last_failure_at: { type: string, format: date-time, nullable: true }
-        last_run: { type: object, nullable: true, additionalProperties: true, description: Sanitized count-level and duration evidence for the latest completed run. }
+        last_run:
+          type: object
+          nullable: true
+          additionalProperties: false
+          description: Sanitized count-level and duration evidence for the latest completed run.
+          properties:
+            run_id: { type: string, format: uuid, nullable: true }
+            state: { type: string, enum: [FRESH, STALE, REBUILDING, DEGRADED] }
+            reason_code: { type: string, nullable: true }
+            completed_at: { type: string, format: date-time }
+            operation: { type: string, enum: [RECONCILE, REBUILD] }
+            outcome: { type: string, enum: [FRESH, STALE, FAILED] }
+            duration_ms: { type: integer, minimum: 0 }
+            source_items_evaluated: { type: integer, minimum: 0 }
+            resulting_changes: { type: integer, minimum: 0 }
+            attention_active: { type: integer, minimum: 0 }
+            projection_rows_rebuilt: { type: integer, minimum: 0 }
         run_id: { type: string, format: uuid, nullable: true }
         version: { type: integer, minimum: 1, nullable: true }
     SelectorMeta:
