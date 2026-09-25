@@ -71,7 +71,8 @@ See `LEGACY-CANONICAL-MAP.md`.
 
 | Data | Canonical owner |
 | --- | --- |
-| Platform vocabulary | Platform: `DocumentDefinition`, governed shared types and approved platform catalogs |
+| Platform vocabulary | Platform: `DocumentDefinition`, `CargoType`, `UnitOfMeasure`, `PackagingType`, `TransportMeansType`, `TransportEquipmentType`, governed shared types and approved platform catalogs |
+| Organization reference availability | Organization: explicit tenant-owned activation of central Cargo Type, UOM, Packaging Type, Transport Means Type and Transport Equipment Type under ADR-056; activation does not copy or own the platform definition |
 | Organization configuration/master data | Organization: `OrganizationDocumentRequirement`, `CargoCatalogItem`, `LogisticsPoint`, memberships and organization policies |
 | Project configuration | Project: services, `ProjectDocumentRequirement`, milestones, ordered `ProjectLogisticsPoint` associations |
 | Commercial request | `ShipmentRequest`: intake, quote/referral lineage, legacy compatibility fields |
@@ -86,7 +87,7 @@ See `LEGACY-CANONICAL-MAP.md`.
 | Cargo master | Organization-owned `CargoCatalogItem` |
 | Shipment cargo truth | `ShipmentCargoItem` immutable descriptive snapshot plus mutable controlled quantity/version |
 | CRM | Organization-scoped internal `Customer`, contacts, opportunities, activities and link audit |
-| Logistics place master | Platform-owned `GlobalLogisticsPoint` Phase 1 empty catalog/read API; target tenant-owned `OrganizationGlobalLogisticsPoint` adoption; organization-owned `LogisticsPoint`; platform-owned `LogisticsPointType` (ADR-041; adoption/population pending) |
+| Logistics place master | Platform-owned `GlobalLogisticsPoint` governance; tenant-owned `OrganizationGlobalLogisticsPointAdoption`; optional explicit organization-owned `LogisticsPoint` materialization; current organization `LogisticsPoint`-based project/tracking consumption; platform-owned `LogisticsPointType` (ADR-041; catalog population and legacy reconciliation remain separately controlled) |
 | Route location identity/history | `CanonicalLocation` bridge plus immutable location snapshots |
 | Operational tracking/history | `OperationalEvent` and specialized event/audit models under their Accepted ADRs |
 
@@ -148,6 +149,9 @@ CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment (operational)
 - Catalog items are organization-owned reusable master data, not transactional truth.
 - Shipment cargo lines snapshot catalog identity and descriptive fields so later catalog edits do not rewrite history.
 - A manual shipment line may exist without a catalog item but still uses governed CargoType and UOM.
+- ADR-056 makes central CargoType and UOM availability explicit per organization. The authenticated internal Cargo options projection returns only active central definitions with active tenant activations; there is no global-active compatibility fallback on that governed Expert path.
+- `PackagingType`, `TransportMeansType`, and `TransportEquipmentType` are explicit empty-capable platform catalogs with tenant-owned activation foundations. P3-01 does not add them to Cargo, Route, Execution Unit, or another operational record.
+- Public Request Cargo options and validation remain unchanged by P3-01. Legacy `TransportMethod` remains the Request/intake and specialization compatibility catalog and is not reinterpreted as `TransportMeansType`.
 - Cross-tenant catalog selection is rejected.
 - No direct cargo allocation to `ExecutionUnit` currently exists. ADR-023 is PROPOSED; allocation must not be inferred or implemented until accepted.
 
@@ -157,7 +161,7 @@ CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment (operational)
 
 `TrackingLocationReference` is a legacy platform tracking selector. It is not an alias of `LogisticsPoint`; new runtime dependence on it requires explicit authorization. Convergence needs an Accepted ADR covering tenant ownership, mapping, historical snapshots, free text, API compatibility, and rollback.
 
-ADR-041 accepts a platform-owned `GlobalLogisticsPoint` and tenant-owned adoption boundary without changing current tenant master ownership. Phase 1 implements only the empty platform schema, normalized support structures, and Platform-Admin-only list/detail API. Organizations will approve global points through future `OrganizationGlobalLogisticsPoint`; current `LogisticsPoint` remains non-null tenant-owned and may later represent an adoption or remain an organization-only facility. Expert, project and tracking selectors are unchanged. The 64 legacy tracking rows are not a seed and require reviewed many-capable mapping; adoption, population and reconciliation remain pending separate goals.
+ADR-041 accepts a platform-owned `GlobalLogisticsPoint` and tenant-owned adoption boundary without changing tenant master ownership. The local implementation includes the empty platform schema/read boundary, Platform-Admin governance, tenant-owned `OrganizationGlobalLogisticsPointAdoption`, explicit optional materialization into a non-null tenant-owned `LogisticsPoint`, and certified current project/tracking consumption through existing `LogisticsPoint` identities and snapshots. Direct operational references to `GlobalLogisticsPoint` remain prohibited. Catalog population, existing-point linking, and reviewed legacy reconciliation remain separately controlled; the 64 legacy tracking rows are not a seed and are not mapped by name.
 
 ## 11. CRM architecture
 
@@ -183,6 +187,8 @@ For Operational Shipment access, the owning active Transport Expert may act with
 - New migrations are additive, preserve a sole Alembic head, include downgrade/rollback policy, and never run at import/startup.
 - Master/reference data uses explicit domain tables. Catalog import, when used, is versioned, checksummed, planned, explicitly applied, conflict-aware, transactional, and audited.
 - Administrator-managed creation remains valid under ADR-028; a catalog is not a hidden deployment prerequisite.
+- ADR-056 installation creates no central values and no organization activations. `CargoType`, UOM, Packaging, Means, and Equipment activation state belongs to the server-derived organization; Platform Admin authority over the central catalog grants no tenant mutation authority.
+- Organization-specific reference definitions and promotion remain stopped on `DN08`; no local-definition or promotion route is part of the baseline.
 
 ## 14. Enforcement
 
