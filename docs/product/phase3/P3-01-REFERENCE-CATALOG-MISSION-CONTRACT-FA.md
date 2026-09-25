@@ -1,10 +1,10 @@
 # قرارداد مأموریت P3-01 — کاتالوگ مرجع و انتخاب سازمانی
 
-وضعیت: `ACTIVE_IMPLEMENTATION_MISSION`  
-مبنای حاکمیتی: `LPAF v2.7`  
-سطح سخت‌گیری: `Level B`  
-مسیر قابلیت: `Sol/Astra`  
-مبنای کد: `integration/golden-controlled@5ebb8c3fb54b0a18898fe04db6ec4135bf41ef7e`  
+وضعیت: `ACTIVE_IMPLEMENTATION_MISSION`
+مبنای حاکمیتی: `LPAF v2.7`
+سطح سخت‌گیری: `Level B`
+مسیر قابلیت: `Sol/Astra`
+مبنای کد: `integration/golden-controlled@5ebb8c3fb54b0a18898fe04db6ec4135bf41ef7e`
 شاخهٔ نامزد: `codex/phase3-p3-01-reference-catalog`
 
 ## نتیجه، دامنه و توقف
