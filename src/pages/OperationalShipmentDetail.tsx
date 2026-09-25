@@ -40,6 +40,7 @@ import OperationsNav from "@/components/OperationsNav";
 import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 import RouteAuthoringSection from "@/components/RouteAuthoringSection";
 import RouteActualSection from "@/components/RouteActualSection";
+import RouteStageTransportExecutionSection from "@/components/RouteStageTransportExecutionSection";
 import {
   formatRouteTransportModes,
   getRequestTransportMethod,
@@ -214,6 +215,7 @@ export default function OperationalShipmentDetail() {
               {!!plan?.cargo_destinations?.length && <section className="space-y-2 border-t pt-3"><h3 className="font-semibold">مقصد شاخه‌ای کالاها</h3><p className="text-slate-600">هر کالا به مقصد برنامه‌ریزی‌شده خودش متصل است؛ کالا و محموله تکثیر نشده‌اند.</p>{plan.cargo_destinations.map((destination) => { const leg = plan.legs.find((item) => item.id === destination.destination_route_leg_id); return <p className="rounded bg-slate-50 p-2" key={destination.id}><strong>{destination.cargo_display_name || "کالای ثبت‌شده"}</strong> · {leg?.branch_label || leg?.destination.display_name || "مقصد ثبت‌شده"}</p>; })}</section>}
             </CardContent>
           </Card>
+          {activePlan && <RouteStageTransportExecutionSection shipmentId={shipmentPublicId} planId={activePlan.id} />}
           {plan && <RouteActualSection shipmentId={shipmentPublicId} plan={plan} reload={load} />}
           </section>
 

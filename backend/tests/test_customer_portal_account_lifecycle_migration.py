@@ -13,7 +13,7 @@ from backend.migration_runtime import alembic_config
 
 PREVIOUS = "20260926_fixed_shipment_responsible_expert"
 HEAD = "20260927_customer_portal_account_lifecycle"
-REPOSITORY_HEAD = "20261002_phase3_branched_route"
+REPOSITORY_HEAD = "20261003_phase3_transport_execution"
 
 
 def _legacy_schema(url: str) -> sa.Engine:

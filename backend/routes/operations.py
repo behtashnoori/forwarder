@@ -23,6 +23,7 @@ from backend.services import operational_action_service as actions
 from backend.services import organization_sla_service as organization_sla
 from backend.services import operational_workspace_service as workspace
 from backend.services import route_orchestration_service as routes
+from backend.services import transport_execution_service as transport_executions
 from backend.services import external_reference_service as external_references
 from backend.services.shipment_request_identity_service import resolve_tenant_request_by_public_id
 from backend.services.shipment_population_service import (
@@ -594,6 +595,105 @@ def route_plan_get(shipment_id, plan_id):
     try:
         return jsonify({"data": routes.get_plan(shipment_id, plan_id, _user())})
     except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.get(
+    "/api/operational-shipments/<uuid:shipment_id>/transport-execution-options"
+)
+@require_auth
+def transport_execution_options(shipment_id):
+    try:
+        return jsonify(
+            {"data": transport_executions.options(str(shipment_id), _user())}
+        )
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+@operations_bp.get(
+    "/api/operational-shipments/<uuid:shipment_id>/route-plans/<int:plan_id>/transport-executions"
+)
+@require_auth
+def route_transport_execution_list(shipment_id, plan_id):
+    try:
+        return jsonify(
+            {
+                "data": transport_executions.list_for_plan(
+                    str(shipment_id), plan_id, _user()
+                )
+            }
+        )
+    except service.OperationalError as exc:
+        return _error(exc)
+
+
+def _execution_from_plan(payload: dict, execution_public_id: str) -> dict:
+    for stage in payload["stages"]:
+        for execution in stage["executions"]:
+            if execution["execution_public_id"] == execution_public_id:
+                return execution
+    raise service.OperationalError(
+        "TRANSPORT_EXECUTION_NOT_FOUND", "Transport execution was not found.", 404
+    )
+
+
+@operations_bp.post(
+    "/api/operational-shipments/<uuid:shipment_id>/route-plans/<int:plan_id>/legs/<int:leg_id>/transport-executions"
+)
+@require_auth
+def route_transport_execution_create(shipment_id, plan_id, leg_id):
+    try:
+        row, created = transport_executions.create(
+            str(shipment_id),
+            plan_id,
+            leg_id,
+            request.get_json(silent=True) or {},
+            _user(),
+            request.headers.get("Idempotency-Key", ""),
+        )
+        execution_public_id = row.execution_unit.public_id
+        db.session.commit()
+        snapshot = transport_executions.list_for_plan(
+            str(shipment_id), plan_id, _user()
+        )
+        return jsonify(
+            {
+                "data": _execution_from_plan(snapshot, execution_public_id),
+                "meta": {"created": created},
+            }
+        ), 201 if created else 200
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/operational-shipments/<uuid:shipment_id>/route-plans/<int:plan_id>/transport-executions/<uuid:execution_id>/revisions"
+)
+@require_auth
+def route_transport_execution_revise(shipment_id, plan_id, execution_id):
+    try:
+        _, _, created = transport_executions.revise(
+            str(shipment_id),
+            plan_id,
+            str(execution_id),
+            request.get_json(silent=True) or {},
+            _user(),
+            request.headers.get("Idempotency-Key", ""),
+        )
+        db.session.commit()
+        snapshot = transport_executions.list_for_plan(
+            str(shipment_id), plan_id, _user()
+        )
+        return jsonify(
+            {
+                "data": _execution_from_plan(snapshot, str(execution_id)),
+                "meta": {"created": created},
+            }
+        ), 201 if created else 200
+    except service.OperationalError as exc:
+        db.session.rollback()
         return _error(exc)
 
 

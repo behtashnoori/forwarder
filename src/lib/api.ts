@@ -2249,6 +2249,79 @@ export interface RoutePlanDetail extends RoutePlanSummary {
   is_complete?: boolean;
   incomplete_fields?: string[];
 }
+export interface TransportExecutionReferenceOption {
+  public_id: string;
+  code: string;
+  fa_name: string;
+  en_name: string;
+}
+export interface TransportExecutionOptions {
+  means: TransportExecutionReferenceOption[];
+  equipment: TransportExecutionReferenceOption[];
+  carriers: Array<{ id: number; label: string }>;
+}
+export interface TransportExecutionEquipment {
+  sequence: number;
+  type: TransportExecutionReferenceOption & { currently_active: boolean };
+  identifier: string | null;
+  details: string | null;
+}
+export interface TransportExecutionRevision {
+  public_id: string;
+  revision_number: number;
+  means: TransportExecutionReferenceOption & { currently_active: boolean };
+  carrier: { id: number; label: string; currently_active: boolean } | null;
+  means_identifier: string | null;
+  means_details: string | null;
+  driver: { name: string | null; contact: string | null };
+  equipment: TransportExecutionEquipment[];
+  effective_at: string;
+  recorded_at: string;
+  recorded_by_user_id: number;
+  reason: string | null;
+  incomplete_fields: string[];
+}
+export interface RouteStageTransportExecution {
+  public_id: string;
+  execution_public_id: string;
+  unit_version: number;
+  created_at: string;
+  current: TransportExecutionRevision;
+  history: TransportExecutionRevision[];
+}
+export interface RouteStageTransportExecutionList {
+  plan: {
+    id: number;
+    revision_number: number;
+    status: string;
+    is_active: boolean;
+  };
+  can_manage: boolean;
+  stages: Array<{
+    id: number;
+    sequence_number: number;
+    branch_label: string | null;
+    origin: { display_name?: string };
+    destination: { display_name?: string };
+    executions: RouteStageTransportExecution[];
+  }>;
+}
+export interface TransportExecutionDraft {
+  transport_means_type_public_id: string;
+  carrier_customer_id: number | null;
+  means_identifier: string | null;
+  means_details: string | null;
+  driver_name: string | null;
+  driver_contact: string | null;
+  equipment: Array<{
+    type_public_id: string;
+    identifier: string | null;
+    details: string | null;
+  }>;
+  effective_at?: string;
+  reason?: string | null;
+  expected_version?: number;
+}
 export interface TimelinePoint {
   checkpoint_id: number;
   arrival_at: string | null;
@@ -2296,6 +2369,47 @@ export function getRoutePlan(
     `/api/operational-shipments/${shipmentId}/route-plans/${planId}`,
   );
 }
+export const getTransportExecutionOptions = (shipmentId: string) =>
+  request<{ data: TransportExecutionOptions }>(
+    `/api/operational-shipments/${shipmentId}/transport-execution-options`,
+  );
+export const listRouteStageTransportExecutions = (
+  shipmentId: string,
+  planId: number,
+) =>
+  request<{ data: RouteStageTransportExecutionList }>(
+    `/api/operational-shipments/${shipmentId}/route-plans/${planId}/transport-executions`,
+  );
+export const createRouteStageTransportExecution = (
+  shipmentId: string,
+  planId: number,
+  legId: number,
+  payload: TransportExecutionDraft,
+  idempotencyKey: string,
+) =>
+  request<{ data: RouteStageTransportExecution; meta: { created: boolean } }>(
+    `/api/operational-shipments/${shipmentId}/route-plans/${planId}/legs/${legId}/transport-executions`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(payload),
+    },
+  );
+export const reviseRouteStageTransportExecution = (
+  shipmentId: string,
+  planId: number,
+  executionId: string,
+  payload: TransportExecutionDraft,
+  idempotencyKey: string,
+) =>
+  request<{ data: RouteStageTransportExecution; meta: { created: boolean } }>(
+    `/api/operational-shipments/${shipmentId}/route-plans/${planId}/transport-executions/${executionId}/revisions`,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(payload),
+    },
+  );
 export const createRoutePlan = (shipmentId: string) =>
   request<{ data: RoutePlanDetail }>(`/api/operational-shipments/${shipmentId}/route-plans`, { method: "POST", body: JSON.stringify({}) });
 export const addRouteLeg = (shipmentId: string, planId: number, payload: RouteLegDraft) =>

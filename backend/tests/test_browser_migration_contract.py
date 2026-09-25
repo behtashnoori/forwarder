@@ -8,7 +8,7 @@ from backend.migration_runtime import RevisionStatus
 from scripts import browser_migration_contract as contract
 
 
-EXPECTED_HEAD = "20261002_phase3_branched_route"
+EXPECTED_HEAD = "20261003_phase3_transport_execution"
 STALE_HEAD = "20260918_customer_carrier_role"
 ROOT = Path(__file__).resolve().parents[2]
 

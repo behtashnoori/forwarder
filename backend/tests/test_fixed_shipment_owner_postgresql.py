@@ -33,7 +33,7 @@ from backend.services import operational_service
 
 
 HEAD = "20260926_fixed_shipment_responsible_expert"
-REPOSITORY_HEAD = "20261002_phase3_branched_route"
+REPOSITORY_HEAD = "20261003_phase3_transport_execution"
 PREVIOUS = "20260925_quote_communication"
 
 

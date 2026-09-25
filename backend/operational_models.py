@@ -186,6 +186,9 @@ class ExecutionUnit(db.Model):
     __tablename__ = "execution_unit"
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_execution_unit_public_id"),
+        db.UniqueConstraint(
+            "id", "organization_id", name="uq_execution_unit_id_org"
+        ),
         # project_id remains a legacy compatibility reference.  New unit codes
         # are unique within the tenant because an execution is no longer owned
         # by one project.
@@ -258,6 +261,224 @@ class ExecutionUnit(db.Model):
     events = db.relationship(
         "OperationalEvent", back_populates="execution_unit", lazy="raise"
     )
+    transport_revisions = db.relationship(
+        "ExecutionTransportRevision",
+        back_populates="execution_unit",
+        # Transport history is only needed by the governed execution-detail
+        # projections.  Loading it implicitly for every ExecutionUnit list
+        # would add a query to unrelated high-volume operational reads.
+        lazy="raise",
+        order_by="ExecutionTransportRevision.revision_number",
+    )
+
+
+class RouteStageExecution(db.Model):
+    """Participation of one tenant-owned execution in one exact route stage."""
+
+    __tablename__ = "route_stage_execution"
+    __table_args__ = (
+        db.UniqueConstraint("public_id", name="uq_route_stage_execution_public_id"),
+        db.UniqueConstraint(
+            "route_leg_id",
+            "execution_unit_id",
+            name="uq_route_stage_execution_leg_unit",
+        ),
+        db.UniqueConstraint(
+            "organization_id",
+            "idempotency_key",
+            name="uq_route_stage_execution_org_idempotency",
+        ),
+        db.ForeignKeyConstraint(
+            ["operational_shipment_id", "organization_id"],
+            ["operational_shipment.id", "operational_shipment.organization_id"],
+            name="fk_route_stage_execution_shipment_org",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["route_plan_id", "operational_shipment_id"],
+            ["route_plan.id", "route_plan.operational_shipment_id"],
+            name="fk_route_stage_execution_plan_shipment",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["route_leg_id", "route_plan_id"],
+            ["route_leg.id", "route_leg.route_plan_id"],
+            name="fk_route_stage_execution_leg_plan",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["execution_unit_id", "organization_id"],
+            ["execution_unit.id", "execution_unit.organization_id"],
+            name="fk_route_stage_execution_unit_org",
+            ondelete="RESTRICT",
+        ),
+        db.Index(
+            "ix_route_stage_execution_shipment_plan_leg",
+            "operational_shipment_id",
+            "route_plan_id",
+            "route_leg_id",
+        ),
+        db.Index(
+            "ix_route_stage_execution_org_created",
+            "organization_id",
+            "created_at",
+        ),
+    )
+
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(BIGINT, nullable=False)
+    operational_shipment_id = db.Column(BIGINT, nullable=False)
+    route_plan_id = db.Column(BIGINT, nullable=False)
+    route_leg_id = db.Column(BIGINT, nullable=False)
+    execution_unit_id = db.Column(BIGINT, nullable=False)
+    idempotency_key = db.Column(db.String(100), nullable=False)
+    request_hash = db.Column(db.String(64), nullable=False)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+    execution_unit = db.relationship("ExecutionUnit", lazy="selectin")
+    route_leg = db.relationship("RouteLeg", lazy="selectin")
+
+
+class ExecutionTransportRevision(db.Model):
+    """Immutable effective transport configuration for an ExecutionUnit."""
+
+    __tablename__ = "execution_transport_revision"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "public_id", name="uq_execution_transport_revision_public_id"
+        ),
+        db.UniqueConstraint(
+            "execution_unit_id",
+            "revision_number",
+            name="uq_execution_transport_revision_unit_number",
+        ),
+        db.UniqueConstraint(
+            "execution_unit_id",
+            "idempotency_key",
+            name="uq_execution_transport_revision_unit_idempotency",
+        ),
+        db.UniqueConstraint(
+            "id",
+            "execution_unit_id",
+            name="uq_execution_transport_revision_id_unit",
+        ),
+        db.ForeignKeyConstraint(
+            ["execution_unit_id", "organization_id"],
+            ["execution_unit.id", "execution_unit.organization_id"],
+            name="fk_execution_transport_revision_unit_org",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["carrier_customer_id", "organization_id"],
+            ["customer.id", "customer.operational_organization_id"],
+            name="fk_execution_transport_revision_carrier_org",
+            ondelete="RESTRICT",
+        ),
+        db.CheckConstraint(
+            "revision_number >= 1",
+            name="ck_execution_transport_revision_number_positive",
+        ),
+        db.Index(
+            "ix_execution_transport_revision_unit_recorded",
+            "execution_unit_id",
+            "recorded_at",
+            "id",
+        ),
+    )
+
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, default=lambda: str(uuid.uuid4())
+    )
+    organization_id = db.Column(BIGINT, nullable=False)
+    execution_unit_id = db.Column(BIGINT, nullable=False)
+    revision_number = db.Column(db.Integer, nullable=False)
+    transport_means_type_id = db.Column(
+        BIGINT,
+        db.ForeignKey("transport_means_type.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    means_type_code_snapshot = db.Column(db.String(64), nullable=False)
+    means_type_fa_snapshot = db.Column(db.String(160), nullable=False)
+    means_type_en_snapshot = db.Column(db.String(160), nullable=False)
+    carrier_customer_id = db.Column(BIGINT, nullable=True)
+    carrier_label_snapshot = db.Column(db.String(200), nullable=True)
+    means_identifier = db.Column(db.String(160), nullable=True)
+    means_details = db.Column(db.String(500), nullable=True)
+    driver_name = db.Column(db.String(160), nullable=True)
+    driver_contact = db.Column(db.String(160), nullable=True)
+    effective_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    recorded_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    reason = db.Column(db.String(500), nullable=True)
+    idempotency_key = db.Column(db.String(100), nullable=False)
+    request_hash = db.Column(db.String(64), nullable=False)
+
+    execution_unit = db.relationship(
+        "ExecutionUnit", back_populates="transport_revisions"
+    )
+    transport_means_type = db.relationship("TransportMeansType")
+    carrier_customer = db.relationship(
+        "Customer", overlaps="execution_unit,transport_revisions"
+    )
+    equipment = db.relationship(
+        "ExecutionTransportEquipmentSnapshot",
+        back_populates="revision",
+        lazy="selectin",
+        order_by="ExecutionTransportEquipmentSnapshot.sequence_number",
+    )
+
+
+class ExecutionTransportEquipmentSnapshot(db.Model):
+    """One governed equipment/load-unit item in an immutable revision chain."""
+
+    __tablename__ = "execution_transport_equipment_snapshot"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "transport_revision_id",
+            "sequence_number",
+            name="uq_execution_transport_equipment_revision_sequence",
+        ),
+        db.CheckConstraint(
+            "sequence_number >= 1",
+            name="ck_execution_transport_equipment_sequence_positive",
+        ),
+        db.Index(
+            "ix_execution_transport_equipment_type",
+            "transport_equipment_type_id",
+        ),
+    )
+
+    id = db.Column(BIGINT, primary_key=True)
+    transport_revision_id = db.Column(
+        BIGINT,
+        db.ForeignKey("execution_transport_revision.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    sequence_number = db.Column(db.Integer, nullable=False)
+    transport_equipment_type_id = db.Column(
+        BIGINT,
+        db.ForeignKey("transport_equipment_type.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    equipment_type_code_snapshot = db.Column(db.String(64), nullable=False)
+    equipment_type_fa_snapshot = db.Column(db.String(160), nullable=False)
+    equipment_type_en_snapshot = db.Column(db.String(160), nullable=False)
+    identifier = db.Column(db.String(160), nullable=True)
+    details = db.Column(db.String(500), nullable=True)
+
+    revision = db.relationship(
+        "ExecutionTransportRevision", back_populates="equipment"
+    )
+    transport_equipment_type = db.relationship("TransportEquipmentType")
 
 
 class OperationalEvent(db.Model):
@@ -270,6 +491,15 @@ class OperationalEvent(db.Model):
             "execution_unit_id",
             "idempotency_key",
             name="uq_operational_event_unit_idempotency",
+        ),
+        db.ForeignKeyConstraint(
+            ["transport_revision_id", "execution_unit_id"],
+            [
+                "execution_transport_revision.id",
+                "execution_transport_revision.execution_unit_id",
+            ],
+            name="fk_operational_event_transport_revision_unit",
+            ondelete="RESTRICT",
         ),
         db.CheckConstraint(
             "visibility IN ('internal','customer')",
@@ -297,6 +527,7 @@ class OperationalEvent(db.Model):
     execution_unit_id = db.Column(
         BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=False
     )
+    transport_revision_id = db.Column(BIGINT, nullable=True, index=True)
     event_type = db.Column(db.String(64), nullable=False)
     lifecycle_status = db.Column(db.String(24), nullable=True)
     checkpoint_text = db.Column(db.String(255), nullable=True)
@@ -323,6 +554,9 @@ class OperationalEvent(db.Model):
     threshold_policy_version = db.Column(db.String(32), nullable=True)
 
     execution_unit = db.relationship("ExecutionUnit", back_populates="events")
+    transport_revision = db.relationship(
+        "ExecutionTransportRevision", viewonly=True, lazy="selectin"
+    )
     location_evidence = db.relationship(
         "OperationalEventLocationEvidence", back_populates="event", uselist=False,
         lazy="selectin", cascade="all, delete-orphan"

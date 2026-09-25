@@ -10,6 +10,7 @@ param(
   [switch]$Phase3ReferenceCatalog,
   [switch]$Phase3CargoLineage,
   [switch]$Phase3BranchedRoute,
+  [switch]$Phase3TransportExecution,
   [string]$PartyRoleGrep,
   [switch]$MigrationBootstrapOnly,
   [switch]$KeepEvidence
@@ -20,10 +21,10 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runId = [guid]::NewGuid().ToString('N')
 $runtimeRoot = [System.IO.Path]::GetTempPath()
 $runtimePrefix = 'forwarder-shared-e2e-'
-$modeCount = @($CatalogJourney, $ProductReality, $PersonalAnalytics, $PartyRoleQualification, $Phase3ReferenceCatalog, $Phase3CargoLineage, $Phase3BranchedRoute).Where({ $_ }).Count
+$modeCount = @($CatalogJourney, $ProductReality, $PersonalAnalytics, $PartyRoleQualification, $Phase3ReferenceCatalog, $Phase3CargoLineage, $Phase3BranchedRoute, $Phase3TransportExecution).Where({ $_ }).Count
 if ($modeCount -gt 1) { throw 'Qualification modes are mutually exclusive.' }
-$purpose = if ($PersonalAnalytics) { 'personal-analytics-e2e' } elseif ($Phase3ReferenceCatalog) { 'phase3-reference-catalog-e2e' } elseif ($Phase3CargoLineage) { 'phase3-cargo-lineage-e2e' } elseif ($Phase3BranchedRoute) { 'phase3-branched-route-e2e' } else { 'shared-transport-e2e' }
-$databaseMode = if ($PersonalAnalytics) { 'personal_analytics' } elseif ($Phase3ReferenceCatalog) { 'p3_reference_catalog' } elseif ($Phase3CargoLineage) { 'p3_cargo_lineage' } elseif ($Phase3BranchedRoute) { 'p3_branched_route' } else { 'shared' }
+$purpose = if ($PersonalAnalytics) { 'personal-analytics-e2e' } elseif ($Phase3ReferenceCatalog) { 'phase3-reference-catalog-e2e' } elseif ($Phase3CargoLineage) { 'phase3-cargo-lineage-e2e' } elseif ($Phase3BranchedRoute) { 'phase3-branched-route-e2e' } elseif ($Phase3TransportExecution) { 'phase3-transport-execution-e2e' } else { 'shared-transport-e2e' }
+$databaseMode = if ($PersonalAnalytics) { 'personal_analytics' } elseif ($Phase3ReferenceCatalog) { 'p3_reference_catalog' } elseif ($Phase3CargoLineage) { 'p3_cargo_lineage' } elseif ($Phase3BranchedRoute) { 'p3_branched_route' } elseif ($Phase3TransportExecution) { 'p3_transport_execution' } else { 'shared' }
 $dbName = "forwarder_integrated_cert_$($databaseMode)_$runId"
 $runtime = Join-Path $runtimeRoot "$runtimePrefix$runId"
 $fixture = Join-Path $runtime 'fixtures.json'
@@ -63,7 +64,7 @@ function Test-QualificationRuntimeOwnership([System.IO.DirectoryInfo]$Directory,
   if (Test-Path -LiteralPath $manifest -PathType Leaf) {
     try {
       $owner = Get-Content -LiteralPath $manifest -Raw | ConvertFrom-Json
-      return $owner.purpose -in @('shared-transport-e2e','personal-analytics-e2e','phase3-reference-catalog-e2e','phase3-cargo-lineage-e2e','phase3-branched-route-e2e') -and $owner.run_id -eq $Matches[1] -and $owner.repository -eq $root
+      return $owner.purpose -in @('shared-transport-e2e','personal-analytics-e2e','phase3-reference-catalog-e2e','phase3-cargo-lineage-e2e','phase3-branched-route-e2e','phase3-transport-execution-e2e') -and $owner.run_id -eq $Matches[1] -and $owner.repository -eq $root
     } catch { return $false }
   }
   # Backward-compatible recovery for runtimes produced by the pre-manifest runner.
@@ -135,7 +136,7 @@ try {
     Write-Output "BROWSER_MIGRATION_BOOTSTRAP = PASS; head=$repositoryHead"
     return
   }
-  $seed = if ($PersonalAnalytics) { 'scripts\uat\seed_personal_analytics_e2e.py' } elseif ($Phase3ReferenceCatalog) { 'scripts\uat\seed_phase3_reference_catalog_e2e.py' } elseif ($Phase3CargoLineage) { 'scripts\uat\seed_phase3_cargo_lineage_e2e.py' } elseif ($Phase3BranchedRoute) { 'scripts\uat\seed_phase3_branched_route_e2e.py' } elseif ($CatalogJourney) { 'scripts\uat\seed_catalog_journey_e2e.py' } else { 'scripts\uat\seed_shared_transport_e2e.py' }
+  $seed = if ($PersonalAnalytics) { 'scripts\uat\seed_personal_analytics_e2e.py' } elseif ($Phase3ReferenceCatalog) { 'scripts\uat\seed_phase3_reference_catalog_e2e.py' } elseif ($Phase3CargoLineage) { 'scripts\uat\seed_phase3_cargo_lineage_e2e.py' } elseif ($Phase3BranchedRoute) { 'scripts\uat\seed_phase3_branched_route_e2e.py' } elseif ($Phase3TransportExecution) { 'scripts\uat\seed_phase3_transport_execution_e2e.py' } elseif ($CatalogJourney) { 'scripts\uat\seed_catalog_journey_e2e.py' } else { 'scripts\uat\seed_shared_transport_e2e.py' }
   python (Join-Path $root $seed)
   Assert-LastExit 'deterministic fixture seed'
   $env:PORT = '5011'
@@ -155,6 +156,9 @@ try {
   } elseif ($Phase3BranchedRoute) {
     npx playwright test e2e/phase3-branched-route.spec.ts --output $evidence
     Assert-LastExit 'Phase 3 P3-03 branched route browser qualification'
+  } elseif ($Phase3TransportExecution) {
+    npx playwright test e2e/phase3-transport-execution.spec.ts --output $evidence
+    Assert-LastExit 'Phase 3 P3-04 route-stage transport execution browser qualification'
   } elseif ($PartyRoleQualification) {
     if ($PartyRoleGrep) {
       npx playwright test e2e/party-role-provider-eligibility.spec.ts --grep $PartyRoleGrep --output $evidence

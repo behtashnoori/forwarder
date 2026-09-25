@@ -14,6 +14,7 @@ from backend.extensions import db
 from backend.models import ExpertUser
 from backend.operational_models import (
     CanonicalLocation,
+    ExecutionTransportRevision,
     ExecutionUnit,
     OperationalEvent,
     OperationalEventLocationEvidence,
@@ -307,8 +308,18 @@ def create_event(unit: ExecutionUnit, payload: dict, user: dict, idempotency_key
     internal_note = str(payload.get("internal_note", "")).strip() or None
     if visibility == "customer" and not customer_message: raise OperationalError("VALIDATION_FAILED", "customer_message is required for customer visibility.")
     occurred = _parse_time(payload.get("occurred_at"))
+    transport_revision = db.session.scalar(
+        select(ExecutionTransportRevision)
+        .where(ExecutionTransportRevision.execution_unit_id == unit.id)
+        .order_by(
+            ExecutionTransportRevision.revision_number.desc(),
+            ExecutionTransportRevision.id.desc(),
+        )
+        .limit(1)
+    )
     event = OperationalEvent(
         project_id=unit.project_id, execution_unit_id=unit.id,
+        transport_revision_id=(transport_revision.id if transport_revision else None),
         event_type=str(payload.get("event_type", "unit_updated")).strip()[:64] or "unit_updated",
         lifecycle_status=status, checkpoint_text=(str(payload.get("checkpoint_text", "")).strip()[:255] or None),
         customer_message=customer_message, internal_note=internal_note, visibility=visibility,
@@ -339,12 +350,21 @@ def timeline(unit: ExecutionUnit, args: dict, *, customer: bool = False) -> dict
     if customer: query=query.where(OperationalEvent.visibility == "customer")
     total=db.session.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows=db.session.scalars(query.order_by(OperationalEvent.occurred_at.desc(),OperationalEvent.id.desc()).offset((page-1)*per_page).limit(per_page)).all()
+    if not customer:
+        from backend.services.transport_execution_service import (
+            active_reference_ids,
+            revision_projection,
+        )
+        active_means_ids, active_equipment_ids, active_carrier_ids = (
+            active_reference_ids(unit.organization_id)
+        )
     data=[]
     for row in rows:
         evidence = row.location_evidence
         location = None if evidence is None else {"source_type": evidence.source_type, "source_identity": evidence.source_identity, "display_name": evidence.display_name_snapshot, "country_code": evidence.country_code_snapshot, "name_en": evidence.name_en_snapshot, "location_type": evidence.location_type_snapshot, "city_name": evidence.city_name_snapshot, "location_text": evidence.location_text_snapshot}
         item={"public_id":row.public_id,"event_type":row.event_type,"lifecycle_status":row.lifecycle_status,"checkpoint_text":row.checkpoint_text,"location":location,"customer_message":row.customer_message,"visibility":row.visibility,"occurred_at":_iso(row.occurred_at),"recorded_at":_iso(row.recorded_at),"alerts":{"attention_required":row.attention_required,"delayed":row.delayed}}
-        if not customer: item.update({"internal_note":row.internal_note,"source":row.source,"correlation_id":row.correlation_id,"batch_id":row.batch_id,"threshold_policy_version":row.threshold_policy_version})
+        if not customer:
+            item.update({"internal_note":row.internal_note,"source":row.source,"correlation_id":row.correlation_id,"batch_id":row.batch_id,"threshold_policy_version":row.threshold_policy_version,"transport_context":revision_projection(row.transport_revision,active_means_ids,active_equipment_ids,active_carrier_ids)})
         data.append(item)
     return {"data":data,"meta":{"page":page,"per_page":per_page,"total":total,"pages":(total+per_page-1)//per_page}}
 

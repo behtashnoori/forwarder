@@ -12,6 +12,7 @@ from backend.migration_runtime import alembic_config
 
 PREVIOUS = "20261001_phase3_cargo_lineage"
 HEAD = "20261002_phase3_branched_route"
+REPOSITORY_HEAD = "20261003_phase3_transport_execution"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
@@ -84,7 +85,7 @@ def _parent_schema(url):
 def test_p3_03_is_single_head_additive_seed_free_and_round_trips(tmp_path):
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
+    assert script.get_heads() == [REPOSITORY_HEAD]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
 
     source = (

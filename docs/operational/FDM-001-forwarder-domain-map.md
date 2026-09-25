@@ -44,10 +44,13 @@ flowchart LR
   P --> SR --> OS["OperationalShipment"]
   Q -->|"accepted lineage"| OS
   TE["One fixed responsible Transport Expert"] --> OS
-  P --> EU["ExecutionUnit"]
+  O["OperationalOrganization"] --> EU["ExecutionUnit — tenant-owned"]
   OS --> RP["RoutePlan"]
   OS --> SC["ShipmentCargoItem"]
   RP --> RL["RouteLeg — shared section / destination branches"]
+  RL --> RSE["RouteStageExecution — exact participation"] --> EU
+  EU --> TR["ExecutionTransportRevision — immutable Means / Carrier"]
+  TR --> EQ["Ordered Equipment snapshots"]
   SC --> RCD["RouteCargoDestination"] --> RL
   RP --> RT["RouteTraversalFact — actual evidence"]
   EU --> EV["OperationalEvent"]
@@ -85,7 +88,23 @@ flowchart LR
   RP --> AT["RouteTraversalFact — append-only actual evidence"]
 ```
 
-ADR-058 keeps `RoutePlan/RouteLeg` as the planned-route SOR. Draft legs can be honestly incomplete without synthetic times or milestones; activation requires complete and cycle-free topology. Cargo points to a terminal branch without duplication. Actual traversal is revision-bound evidence and never replaces plan history or automatically creates an Operational Exception. Fixed Shipment ownership and tenant scope authorize writes; Carrier/vehicle/equipment, ETA, reported-location taxonomy and Customer projection remain later concerns.
+ADR-058 keeps `RoutePlan/RouteLeg` as the planned-route SOR. Draft legs can be honestly incomplete without synthetic times or milestones; activation requires complete and cycle-free topology. Cargo points to a terminal branch without duplication. Actual traversal is revision-bound evidence and never replaces plan history or automatically creates an Operational Exception. ADR-059 now consumes an exact stage through the existing tenant-owned ExecutionUnit, with distinct governed Means, ordered Equipment, per-execution Carrier and immutable history. ETA, reported-location taxonomy and Customer projection remain later concerns.
+
+## 3B. Route-stage transport execution
+
+```mermaid
+flowchart LR
+  OS["OperationalShipment"] --> RP["RoutePlan revision"] --> RL["RouteLeg stage"]
+  RL --> RSE["RouteStageExecution 0..N"] --> EU["ExecutionUnit — tenant SOR"]
+  EU --> REV["ExecutionTransportRevision — immutable current/history"]
+  MT["TransportMeansType — active tenant choice"] --> REV
+  C["Customer with active CARRIER role"] -. "optional" .-> REV
+  REV --> ES["Equipment snapshots — ordered 0..N"]
+  ET["TransportEquipmentType — active tenant choice"] --> ES
+  REV --> OE["OperationalEvent pins effective revision"]
+```
+
+Means performs movement; Equipment/load units remain distinct ordered execution context. A Train with Wagon and Container is represented without a reusable fleet or containment registry. Missing optional Carrier, identifier, Equipment or driver detail is progressive incompleteness, not an Exception. Existing Cargo allocations are unchanged: P3-04 creates no quantity allocation, split, transfer or remaining-quantity semantics.
 
 ## 4. Logistics Network boundaries
 
