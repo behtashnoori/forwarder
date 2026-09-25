@@ -34,6 +34,7 @@ from .dashboards import dashboard_bp
 from .saved_views import saved_view_bp
 from .project_access import project_access_bp
 from .control_tower import control_tower_bp
+from .organization_reference_catalog import organization_reference_catalog_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -74,3 +75,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(saved_view_bp)
     app.register_blueprint(project_access_bp)
     app.register_blueprint(control_tower_bp)
+    app.register_blueprint(organization_reference_catalog_bp)

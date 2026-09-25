@@ -14,14 +14,22 @@ from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ExecutionUnit
 from backend.extensions import db
 from backend.models import Customer, CargoType, ShipmentRequest, ShipmentTracking, ShipmentTransportUnit, UnitOfMeasure
 from backend.operational_models import ExecutionUnit, OperationalShipment, Project
+from backend.organization_reference_catalog_models import (
+    OrganizationCargoTypeActivation,
+    OrganizationUnitOfMeasureActivation,
+)
 from backend.services import operational_service
+from backend.services.organization_reference_catalog_service import (
+    is_definition_active_for_organization,
+)
 from backend.services.tracking_projection_service import project_operational_shipments
 
 
 class CargoError(ValueError):
-    def __init__(self, message: str, status: int = 400):
+    def __init__(self, message: str, status: int = 400, code: str | None = None):
         super().__init__(message)
         self.status = status
+        self.code = code
 
 
 SHIPMENT_STATUSES = frozenset({"planned", "in_progress", "completed", "cancelled"})
@@ -270,12 +278,31 @@ def catalog_shipment_usage(user, public_id, args):
     }
 
 
-def _references(data):
+def _require_organization_activation(
+    activation_model, definition_fk, definition_id, organization_id
+):
+    if not is_definition_active_for_organization(
+        activation_model, definition_fk, definition_id, organization_id
+    ):
+        raise CargoError(
+            "این نوع در تعاریف سازمان موجود نیست. برای ادامه، مدیر سازمان باید آن را تعریف یا فعال کند.",
+            409,
+            "ORGANIZATION_REFERENCE_NOT_ACTIVE",
+        )
+
+
+def _references(data, organization_id):
     ct = db.session.scalar(
         select(CargoType).where(CargoType.public_id == data.get("cargo_type_public_id"))
     )
     if not ct or not ct.is_active:
         raise CargoError("active cargo_type is required", 422)
+    _require_organization_activation(
+        OrganizationCargoTypeActivation,
+        "cargo_type_id",
+        ct.id,
+        organization_id,
+    )
     uom = None
     if data.get("default_uom_public_id"):
         uom = db.session.scalar(
@@ -285,6 +312,12 @@ def _references(data):
         )
         if not uom or not uom.is_active:
             raise CargoError("default_uom is invalid", 422)
+        _require_organization_activation(
+            OrganizationUnitOfMeasureActivation,
+            "unit_of_measure_id",
+            uom.id,
+            organization_id,
+        )
     return ct, uom
 
 
@@ -306,10 +339,11 @@ def _refresh_search(row):
 
 
 def create_catalog(user, data):
-    ct, uom = _references(data)
+    organization_id = org_for(user)
+    ct, uom = _references(data, organization_id)
     code = _required(data, "immutable_code", 64)
     row = CargoCatalogItem(
-        organization_id=org_for(user),
+        organization_id=organization_id,
         immutable_code=code,
         fa_name=_required(data, "fa_name", 160),
         en_name=_optional(data, "en_name", 160),
@@ -350,7 +384,7 @@ def update_catalog(user, row, data):
                 row.default_uom.public_id if row.default_uom else None,
             ),
         }
-        row.cargo_type, row.default_uom = _references(merged)
+        row.cargo_type, row.default_uom = _references(merged, row.organization_id)
     if "fa_name" in data:
         row.fa_name = _required(data, "fa_name", 160)
     for field in (
@@ -636,6 +670,18 @@ def create_shipment_item(user, shipment, data):
     )
     if not ct or not uom:
         raise CargoError("active cargo_type and uom are required", 422)
+    _require_organization_activation(
+        OrganizationCargoTypeActivation,
+        "cargo_type_id",
+        ct.id,
+        shipment.organization_id,
+    )
+    _require_organization_activation(
+        OrganizationUnitOfMeasureActivation,
+        "unit_of_measure_id",
+        uom.id,
+        shipment.organization_id,
+    )
     catalog = (
         scoped_catalog(user, data["catalog_item_public_id"], True)
         if data.get("catalog_item_public_id")

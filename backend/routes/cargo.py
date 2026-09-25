@@ -28,6 +28,10 @@ from backend.services.admin_authorization_service import (
 )
 from backend.models import ExpertUser
 from backend.operational_models import ExecutionUnit, Project
+from backend.organization_reference_catalog_models import (
+    OrganizationCargoTypeActivation,
+    OrganizationUnitOfMeasureActivation,
+)
 
 cargo_bp = Blueprint("cargo", __name__, url_prefix="/api/internal")
 
@@ -43,6 +47,8 @@ def _error(exc):
         return jsonify(tracking_svc.legacy_write_mapping_payload()), 409
     if isinstance(exc, IntegrityError):
         return jsonify({"error": "conflicting cargo data"}), 409
+    if getattr(exc, "code", None):
+        return jsonify({"error": {"code": exc.code, "message": str(exc)}}), exc.status
     return jsonify({"error": str(exc)}), getattr(exc, "status", 400)
 
 
@@ -334,12 +340,29 @@ def cargo_options():
         ).all()
         cargo_types = db.session.scalars(
             select(CargoType)
-            .where(CargoType.is_active.is_(True))
+            .join(
+                OrganizationCargoTypeActivation,
+                OrganizationCargoTypeActivation.cargo_type_id == CargoType.id,
+            )
+            .where(
+                CargoType.is_active.is_(True),
+                OrganizationCargoTypeActivation.organization_id == org,
+                OrganizationCargoTypeActivation.status == "ACTIVE",
+            )
             .order_by(CargoType.display_order)
         ).all()
         uoms = db.session.scalars(
             select(UnitOfMeasure)
-            .where(UnitOfMeasure.is_active.is_(True))
+            .join(
+                OrganizationUnitOfMeasureActivation,
+                OrganizationUnitOfMeasureActivation.unit_of_measure_id
+                == UnitOfMeasure.id,
+            )
+            .where(
+                UnitOfMeasure.is_active.is_(True),
+                OrganizationUnitOfMeasureActivation.organization_id == org,
+                OrganizationUnitOfMeasureActivation.status == "ACTIVE",
+            )
             .order_by(UnitOfMeasure.display_order)
         ).all()
         return jsonify(
@@ -503,12 +526,12 @@ def canonical_transport_allocations(shipment_id):
             rows = db.session.scalars(select(shared_transport_svc.ExecutionUnitCargoAllocation).where(
                 shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id
             )).all()
-            return jsonify({"allocations": [shared_transport_svc.canonical_allocation_dict(row) for row in rows], "items": [svc.shipment_item_dict(item) for item in db.session.scalars(select(ShipmentCargoItem).where(ShipmentCargoItem.operational_shipment_id == shipment.id)).all()]})
+            return jsonify({"allocations": [svc.canonical_allocation_dict(row) for row in rows], "items": [svc.shipment_item_dict(item) for item in db.session.scalars(select(ShipmentCargoItem).where(ShipmentCargoItem.operational_shipment_id == shipment.id)).all()]})
         payload = request.get_json(silent=True) or {}
         unit = _shipment_unit(shipment, str(payload.get("execution_unit_public_id", "")))
         row = shared_transport_svc.allocate(execution_public_id=unit.public_id, cargo_public_id=str(payload.get("cargo_item_public_id", "")), allocated_quantity=payload.get("allocated_quantity"), user=_user())
         db.session.commit()
-        return jsonify({"allocation": shared_transport_svc.canonical_allocation_dict(row)}), 201
+        return jsonify({"allocation": svc.canonical_allocation_dict(row)}), 201
     except Exception as exc:
         return _error(exc)
 
@@ -528,7 +551,7 @@ def canonical_transport_allocation_update(shipment_id, allocation_id):
         payload = request.get_json(silent=True) or {}
         updated = shared_transport_svc.allocate(execution_public_id=unit.public_id, cargo_public_id=row.cargo_item.public_id, allocated_quantity=payload.get("allocated_quantity"), user=_user())
         db.session.commit()
-        return jsonify({"allocation": shared_transport_svc.canonical_allocation_dict(updated)})
+        return jsonify({"allocation": svc.canonical_allocation_dict(updated)})
     except Exception as exc:
         return _error(exc)
 

@@ -7,7 +7,15 @@ from sqlalchemy import or_
 from sqlalchemy.orm.exc import StaleDataError
 
 from backend.extensions import db
-from backend.models import CargoType, MASTER_DATA_DIMENSIONS, ServiceType, UnitOfMeasure
+from backend.models import (
+    CargoType,
+    MASTER_DATA_DIMENSIONS,
+    PackagingType,
+    ServiceType,
+    TransportEquipmentType,
+    TransportMeansType,
+    UnitOfMeasure,
+)
 
 
 class MasterDataValidationError(ValueError):
@@ -22,6 +30,9 @@ RESOURCES = {
     "cargo-types": CargoType,
     "service-types": ServiceType,
     "units-of-measure": UnitOfMeasure,
+    "packaging-types": PackagingType,
+    "transport-means-types": TransportMeansType,
+    "transport-equipment-types": TransportEquipmentType,
 }
 COMMON_CREATE_FIELDS = {"immutable_code", "fa_name", "en_name", "description", "display_order", "is_active"}
 COMMON_UPDATE_FIELDS = {"immutable_code", "fa_name", "en_name", "description", "display_order", "version"}
@@ -29,6 +40,9 @@ RESOURCE_FIELDS = {
     "cargo-types": {"parent_id"},
     "service-types": set(),
     "units-of-measure": {"symbol", "measurement_dimension"},
+    "packaging-types": set(),
+    "transport-means-types": set(),
+    "transport-equipment-types": set(),
 }
 
 

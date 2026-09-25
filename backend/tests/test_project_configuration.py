@@ -21,6 +21,10 @@ from backend.operational_models import (
     Project,
     ProjectAccess,
 )
+from backend.organization_reference_catalog_models import (
+    OrganizationCargoTypeActivation,
+    OrganizationUnitOfMeasureActivation,
+)
 from backend.project_configuration_models import (
     MilestoneType,
     ProjectMilestoneDefinition,
@@ -175,7 +179,26 @@ def configured_app():
             created_by=outsider.id,
             updated_by=outsider.id,
         )
-        db.session.add_all([preferred_catalog, fallback_catalog, inactive_catalog, foreign_catalog])
+        db.session.add_all([
+            preferred_catalog,
+            fallback_catalog,
+            inactive_catalog,
+            foreign_catalog,
+            OrganizationCargoTypeActivation(
+                organization_id=org.id,
+                cargo_type_id=cargo_type.id,
+                status="ACTIVE",
+                created_by=admin.id,
+                updated_by=admin.id,
+            ),
+            OrganizationUnitOfMeasureActivation(
+                organization_id=org.id,
+                unit_of_measure_id=uom.id,
+                status="ACTIVE",
+                created_by=admin.id,
+                updated_by=admin.id,
+            ),
+        ])
         db.session.flush()
         db.session.add(CargoItemAlias(
             catalog_item_id=preferred_catalog.id,
@@ -226,7 +249,7 @@ def test_identity_catalog_and_single_head(configured_app):
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20260929_operational_monitoring_reliability"
+        "20260930_phase3_reference_catalog"
     ]
     migration = (
         root / "migrations" / "versions" / "20260911_project_cargo_preference.py"

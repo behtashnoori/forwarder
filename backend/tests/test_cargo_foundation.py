@@ -31,6 +31,7 @@ def test_alias_normalization_uses_nfc_without_false_merging():
 
 
 def test_catalog_reference_validation_returns_precise_active_reference_errors(monkeypatch):
+    monkeypatch.setattr(svc, "org_for", lambda _user: 1)
     monkeypatch.setattr(svc.db.session, "scalar", lambda _query: None)
     with pytest.raises(svc.CargoError, match="active cargo_type is required") as missing_type:
         svc.create_catalog({"id": 7}, {"immutable_code": "ITEM", "fa_name": "catalog"})
@@ -62,6 +63,7 @@ def _capture_create(monkeypatch, *, catalog=None, overrides=None):
     monkeypatch.setattr(svc.db.session, "add", lambda _row: None)
     monkeypatch.setattr(svc.db.session, "commit", lambda: None)
     monkeypatch.setattr(svc.operational_service, "require_permission", lambda *_args: None)
+    monkeypatch.setattr(svc, "_require_organization_activation", lambda *_args: None)
     if catalog is not None:
         monkeypatch.setattr(svc, "scoped_catalog", lambda *_args, **_kwargs: catalog)
     payload = {
@@ -103,6 +105,7 @@ def test_cargo_owner_defaults_or_fails_closed_outside_active_tenant(monkeypatch)
     monkeypatch.setattr(svc.db.session, "add", lambda _row: None)
     monkeypatch.setattr(svc.db.session, "commit", lambda: None)
     monkeypatch.setattr(svc.operational_service, "require_permission", lambda *_args: None)
+    monkeypatch.setattr(svc, "_require_organization_activation", lambda *_args: None)
     row = svc.create_shipment_item(
         {"id": 7},
         SimpleNamespace(id=99, customer_id=41, organization_id=1),
@@ -189,9 +192,10 @@ def test_inactive_or_cross_organization_catalog_selection_fails_closed(monkeypat
     scalars = iter((cargo_type, uom))
     monkeypatch.setattr(svc.db.session, "scalar", lambda _query: next(scalars))
     monkeypatch.setattr(svc.operational_service, "require_permission", lambda *_args: None)
+    monkeypatch.setattr(svc, "_require_organization_activation", lambda *_args: None)
     monkeypatch.setattr(svc, "scoped_catalog", lambda *_args, **_kwargs: (_ for _ in ()).throw(svc.CargoError("not found", 404)))
     with pytest.raises(svc.CargoError) as exc:
-        svc.create_shipment_item({"id": 7}, SimpleNamespace(id=99), {
+        svc.create_shipment_item({"id": 7}, SimpleNamespace(id=99, organization_id=1), {
             "line_number": 1, "cargo_type_public_id": cargo_type.public_id,
             "uom_public_id": uom.public_id, "quantity": "1",
             "catalog_item_public_id": "forbidden",

@@ -11,7 +11,8 @@ from backend.migration_runtime import alembic_config
 
 PREVIOUS = "20260927_customer_portal_account_lifecycle"
 PHASE2 = "20260928_operational_workspace_phase2"
-HEAD = "20260929_operational_monitoring_reliability"
+RELIABILITY = "20260929_operational_monitoring_reliability"
+HEAD = "20260930_phase3_reference_catalog"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
@@ -166,7 +167,8 @@ def test_phase2_and_reliability_are_the_single_linear_repository_head():
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
     assert script.get_heads() == [HEAD]
-    assert script.get_revision(HEAD).down_revision == PHASE2
+    assert script.get_revision(HEAD).down_revision == RELIABILITY
+    assert script.get_revision(RELIABILITY).down_revision == PHASE2
     assert script.get_revision(PHASE2).down_revision == PREVIOUS
     assert script.get_bases() == ["20240917_initial_schema"]
 

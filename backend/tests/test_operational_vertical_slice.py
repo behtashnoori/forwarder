@@ -34,6 +34,10 @@ from backend.operational_models import (
     RouteLeg,
     RoutePlan,
 )
+from backend.organization_reference_catalog_models import (
+    OrganizationCargoTypeActivation,
+    OrganizationUnitOfMeasureActivation,
+)
 from backend.services import operational_service as service
 from backend.services.request_transport_projection import project_existing_request_transport
 from backend.request_transport_catalog import COMBINED_TRANSPORT_CODE
@@ -494,10 +498,20 @@ def test_direct_and_request_operation_catalog_cargo_allocation_tracking_and_scop
         )
         db.session.add_all([active, inactive, foreign, peer])
         db.session.flush()
-        db.session.add(OperationalMembership(
-            organization_id=ids["org"], user_id=peer.id,
-            permissions=list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS),
-        ))
+        db.session.add_all([
+            OperationalMembership(
+                organization_id=ids["org"], user_id=peer.id,
+                permissions=list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS),
+            ),
+            OrganizationCargoTypeActivation(
+                organization_id=ids["org"], cargo_type_id=cargo_type.id,
+                status="ACTIVE", created_by=ids["user"], updated_by=ids["user"],
+            ),
+            OrganizationUnitOfMeasureActivation(
+                organization_id=ids["org"], unit_of_measure_id=uom.id,
+                status="ACTIVE", created_by=ids["user"], updated_by=ids["user"],
+            ),
+        ])
         db.session.commit()
         peer_id = peer.id
 
