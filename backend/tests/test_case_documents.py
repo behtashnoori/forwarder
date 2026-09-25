@@ -578,5 +578,9 @@ def test_inactive_or_revoked_owner_is_denied_at_action_time_without_side_effect(
 
 def test_customer_document_management_surface_is_not_registered(document_app):
     app, _ = document_app
-    routes = {rule.rule for rule in app.url_map.iter_rules()}
-    assert not any("customer" in rule and "document" in rule for rule in routes)
+    routes = [rule for rule in app.url_map.iter_rules()
+              if rule.rule.startswith("/api/customer/documents")]
+    assert {rule.rule for rule in routes} == {
+        "/api/customer/documents", "/api/customer/documents/<document_id>/download",
+    }
+    assert all(not (rule.methods & {"POST", "PUT", "PATCH", "DELETE"}) for rule in routes)

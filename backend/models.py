@@ -2315,6 +2315,8 @@ class CaseDocumentFile(db.Model):
             name="ck_case_document_file_requirement",
         ),
         db.UniqueConstraint("case_requirement_id", "version_number", name="uq_case_document_file_requirement_version"),
+        db.UniqueConstraint("id", "operational_shipment_id", "operational_organization_id",
+                            name="uq_case_document_file_shipment_org"),
     )
 
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
@@ -2415,6 +2417,11 @@ from backend.mdpm_models import (  # noqa: E402,F401
     OperationalDocumentRequirement,
     RequirementApplicabilityDecision,
     TransitionOverride,
+)
+from backend.document_context_models import (  # noqa: E402,F401
+    OperationalDocumentContext,
+    OperationalDocumentAudience,
+    OperationalDocumentContextEvent,
 )
 from backend.economics_models import (  # noqa: E402
     EconomicAudit, EconomicEvidenceAssociation, EconomicFxRate, EconomicObservationFx,
@@ -2518,6 +2525,9 @@ __all__ = [
     "CaseDocumentRequirement",
     "CaseDocumentFile",
     "DocumentAuditEvent",
+    "OperationalDocumentContext",
+    "OperationalDocumentAudience",
+    "OperationalDocumentContextEvent",
     "OperationalOrganization",
     "Project",
     "OperationalMembership",

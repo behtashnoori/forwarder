@@ -22,8 +22,27 @@ from backend.services import document_catalog_service as catalog_service
 from backend.services import shipment_document_service as shipment_documents
 from backend.services.assigned_work_authorization import authorize_document_management, authorize_work_action
 from backend.operational_models import OperationalShipment
+from backend.cargo_models import ShipmentCargoItem
+from backend.operational_models import ExecutionUnit, RouteLeg, RoutePlan, RouteStageExecution
+from backend.document_context_models import OperationalDocumentContext, OperationalDocumentAudience
+from backend.models import CustomerGamification
+from backend.services import document_context_service as contexts
+from backend.services.customer_portal_auth import require_customer
+from sqlalchemy import select
 
 document_bp = Blueprint("case_documents", __name__)
+
+
+@document_bp.after_request
+def _customer_document_no_store(response):
+    if request.path.startswith("/api/customer/documents"):
+        response.cache_control.no_store = True
+    return response
+
+
+def _customer_download_name(document: CaseDocumentFile) -> str:
+    # The original/internal filename is not a Customer-facing contract.
+    return f"document-v{document.version_number}.{document.canonical_extension}"
 
 
 def _resolve_opaque_case_route(handler):
@@ -180,11 +199,102 @@ def shipment_document_upload(shipment_id: str):
             return jsonify({"error": "فایل یافت نشد", "code": "DOCUMENT_PARENT_NOT_FOUND"}), 404
         row = shipment_documents.upload(shipment, _current(), upload_file,
             request.form.get("title", ""), request.form.get("description"),
-            request.headers.get("Idempotency-Key", "").strip(), replacement)
+            request.headers.get("Idempotency-Key", "").strip(), replacement,
+            context_type=request.form.get("context_type") or None,
+            target_public_id=request.form.get("context_target_public_id") or None,
+            visibility=request.form.get("visibility", "INTERNAL"),
+            audience_public_ids=request.form.getlist("audience_public_ids"))
         item = next(item for item in shipment_documents.documents(shipment) if item["public_id"] == row.public_id)
         return jsonify({"data": item}), 201
     except service.DocumentError as exc:
-        return jsonify({"error": exc.message}), exc.status
+        return _document_error(exc)
+
+
+@document_bp.get("/api/internal/operational-shipments/<shipment_id>/document-context-options")
+@require_auth
+def shipment_document_context_options(shipment_id: str):
+    shipment, error = _shipment_or_error(shipment_id)
+    if error:
+        return error
+    cargo = db.session.scalars(select(ShipmentCargoItem).where(
+        ShipmentCargoItem.operational_shipment_id == shipment.id,
+    ).order_by(ShipmentCargoItem.line_number)).all()
+    legs = db.session.scalars(select(RouteLeg).join(
+        RoutePlan, RoutePlan.id == RouteLeg.route_plan_id,
+    ).where(RoutePlan.operational_shipment_id == shipment.id).order_by(
+        RoutePlan.revision_number.desc(), RouteLeg.sequence_number,
+    )).all()
+    units = db.session.scalars(select(ExecutionUnit).join(
+        RouteStageExecution, RouteStageExecution.execution_unit_id == ExecutionUnit.id,
+    ).join(RoutePlan, RoutePlan.id == RouteStageExecution.route_plan_id).where(
+        RoutePlan.operational_shipment_id == shipment.id,
+        ExecutionUnit.organization_id == shipment.organization_id,
+    ).distinct().order_by(ExecutionUnit.id)).all()
+    accounts = db.session.scalars(select(CustomerGamification).where(
+        CustomerGamification.operational_organization_id == shipment.organization_id,
+        CustomerGamification.account_status == "ACTIVE",
+    ).order_by(CustomerGamification.id).limit(100)).all()
+    return jsonify({"data": {
+        "shipment": [{"id": shipment.public_id, "label": "پرونده حمل"}],
+        "cargo": [{"id": row.public_id, "label": f"کالا {row.line_number}: {row.display_name_snapshot}"} for row in cargo],
+        "route_leg": [{"id": str(row.id), "label": f"مرحله {row.sequence_number} · طرح {row.route_plan_id}"} for row in legs],
+        "execution_unit": [{"id": row.public_id, "label": row.unit_code} for row in units],
+        "audience": [{"id": row.public_id, "label": f"{row.first_name or ''} {row.last_name or ''}".strip() or row.email}
+                     for row in accounts],
+    }})
+
+
+@document_bp.get("/api/internal/operational-shipments/<shipment_id>/documents/<document_id>/context-history")
+@require_auth
+def shipment_document_context_history(shipment_id: str, document_id: str):
+    shipment, error = _shipment_or_error(shipment_id)
+    if error:
+        return error
+    row = db.session.scalar(select(CaseDocumentFile).where(
+        CaseDocumentFile.public_id == document_id,
+        CaseDocumentFile.operational_shipment_id == shipment.id,
+        CaseDocumentFile.operational_organization_id == shipment.organization_id,
+    ))
+    if row is None:
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    return jsonify({"data": contexts.history(shipment, row)})
+
+
+@document_bp.patch("/api/internal/operational-shipments/<shipment_id>/documents/<document_id>/context")
+@require_auth
+def shipment_document_context_change(shipment_id: str, document_id: str):
+    shipment, error = _shipment_or_error(shipment_id, "document.manage")
+    if error:
+        return error
+    if not authorize_document_management(_current(), shipment).allowed:
+        return jsonify({"error": "مدیریت سند مجاز نیست", "code": "DOCUMENT_MUTATION_FORBIDDEN"}), 403
+    row = db.session.scalar(select(CaseDocumentFile).where(
+        CaseDocumentFile.public_id == document_id,
+        CaseDocumentFile.owner_type == "SHIPMENT",
+        CaseDocumentFile.operational_shipment_id == shipment.id,
+        CaseDocumentFile.operational_organization_id == shipment.organization_id,
+    ))
+    if row is None:
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    data = request.get_json(silent=True) or {}
+    try:
+        expected = int(data.get("expected_version"))
+    except (ValueError, TypeError):
+        return jsonify({"error": "نسخه فعلی الزامی است", "code": "DOCUMENT_CONTEXT_VERSION_REQUIRED"}), 422
+    try:
+        context = contexts.revise(
+            shipment, row, int(_current()["id"]),
+            context_type=data.get("context_type"),
+            target_public_id=data.get("context_target_public_id"),
+            visibility=data.get("visibility"),
+            audience_public_ids=data.get("audience_public_ids"),
+            expected_version=expected, reason=data.get("reason"),
+        )
+        db.session.commit()
+        return jsonify({"data": contexts.project(shipment, row), "version": context.version})
+    except service.DocumentError as exc:
+        db.session.rollback()
+        return _document_error(exc)
 
 
 @document_bp.get("/api/internal/operational-shipments/<shipment_id>/documents/<document_id>/download")
@@ -221,6 +331,71 @@ def shipment_document_delete(shipment_id: str, document_id: str):
         return jsonify({"data": {"public_id": row.public_id, "lifecycle_state": row.status}})
     except service.DocumentError as exc:
         return jsonify({"error": exc.message}), exc.status
+
+
+@document_bp.get("/api/customer/documents")
+@require_customer
+def customer_visible_documents():
+    """Only exact current versions explicitly addressed to this portal account."""
+    account = g.current_customer
+    try:
+        page = max(1, int(request.args.get("page", "1")))
+    except ValueError:
+        page = 1
+    page = min(page, 1000)
+    contexts_query = select(OperationalDocumentContext, CaseDocumentFile).join(
+        OperationalDocumentAudience,
+        OperationalDocumentAudience.context_id == OperationalDocumentContext.id,
+    ).join(
+        CaseDocumentFile, CaseDocumentFile.id == OperationalDocumentContext.document_file_id,
+    ).where(
+        OperationalDocumentAudience.customer_portal_account_id == account.id,
+        OperationalDocumentAudience.organization_id == account.operational_organization_id,
+        OperationalDocumentContext.organization_id == account.operational_organization_id,
+        OperationalDocumentContext.visibility == "EXPLICIT_SHARED",
+        OperationalDocumentContext.context_type != "CARGO",
+        CaseDocumentFile.status == "active",
+        CaseDocumentFile.operational_organization_id == account.operational_organization_id,
+    ).order_by(CaseDocumentFile.uploaded_at.desc(), CaseDocumentFile.id.desc()).limit(20).offset((page - 1) * 20)
+    rows = db.session.execute(contexts_query).all()
+    response = jsonify({"data": [{
+        "public_id": document.public_id,
+        "filename": _customer_download_name(document),
+        "version": document.version_number,
+        "context_type": context.context_type,
+    } for context, document in rows]})
+    response.cache_control.no_store = True
+    return response
+
+
+@document_bp.get("/api/customer/documents/<document_id>/download")
+@require_customer
+def customer_document_download(document_id: str):
+    account = g.current_customer
+    row = db.session.scalar(select(CaseDocumentFile).where(
+        CaseDocumentFile.public_id == document_id,
+        CaseDocumentFile.operational_organization_id == account.operational_organization_id,
+        CaseDocumentFile.status == "active",
+    ))
+    if row is None:
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    context = db.session.scalar(select(OperationalDocumentContext).where(
+        OperationalDocumentContext.document_file_id == row.id,
+        OperationalDocumentContext.organization_id == account.operational_organization_id,
+    ))
+    if context is None or not contexts.authorized_customer_context(account, context):
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    shipment = db.session.get(OperationalShipment, context.operational_shipment_id)
+    if shipment is None or shipment.organization_id != account.operational_organization_id:
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    try:
+        path = PrivateDocumentStorage().resolve_for_shipment_download(row, shipment=shipment)
+    except (DocumentStorageError, QuarantinedResource):
+        return jsonify({"error": "فایل یافت نشد"}), 404
+    response = send_file(path, as_attachment=True, download_name=_customer_download_name(row),
+                         mimetype=row.detected_mime_type)
+    response.cache_control.no_store = True
+    return response
 
 
 @document_bp.get("/api/admin/document-definitions")

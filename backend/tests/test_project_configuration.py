@@ -249,7 +249,7 @@ def test_identity_catalog_and_single_head(configured_app):
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20261004_phase3_cargo_allocation_trace"
+        "20261005_phase3_contextual_documents"
     ]
     migration = (
         root / "migrations" / "versions" / "20260911_project_cargo_preference.py"

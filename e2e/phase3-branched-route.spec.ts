@@ -252,9 +252,9 @@ test("P3-03 — progressive branched plan, actual deviation, history, and author
   await page.getByRole("button", { name: "فعال‌سازی مسیر", exact: true }).click();
   expect((await activated).status()).toBe(200);
 
-  await expect(page.getByText("بخش مسیر 1 · بخش مشترک", { exact: true })).toBeVisible();
-  await expect(page.getByText("بخش مسیر 2 · مقصد تهران", { exact: true })).toBeVisible();
-  await expect(page.getByText("بخش مسیر 3 · مقصد قزوین", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "بخش مسیر 1 · بخش مشترک", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "بخش مسیر 2 · مقصد تهران", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "بخش مسیر 3 · مقصد قزوین", exact: true })).toBeVisible();
   const cargoBranches = page.getByRole("heading", { name: "مقصد شاخه‌ای کالاها", exact: true }).locator("..");
   await expect(cargoBranches).toContainText("[P3-03-E2E] کالای مقصد تهران");
   await expect(cargoBranches).toContainText("[P3-03-E2E] کالای مقصد قزوین");
@@ -325,7 +325,7 @@ test("P3-03 — progressive branched plan, actual deviation, history, and author
   expect(currentDetail.legs.map(item => item.branch_label)).toEqual(["بخش مشترک", "مقصد تهران", "مقصد قزوین"]);
 
   await page.reload();
-  await expect(page.getByText("بخش مسیر 2 · مقصد تهران", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "بخش مسیر 2 · مقصد تهران", exact: true })).toBeVisible();
   await page.locator("summary", { hasText: "جزئیات عملیاتی بیشتر" }).click();
   await expect(page.getByText("نسخه مسیر 1", { exact: true })).toBeVisible();
   await expect(page.getByText("نسخه مسیر 2", { exact: true })).toBeVisible();

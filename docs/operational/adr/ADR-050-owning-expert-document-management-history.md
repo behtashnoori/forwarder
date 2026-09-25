@@ -150,3 +150,4 @@ DOCUMENTS_IMPLEMENTATION_GATE=READY_FOR_DESIGN
 ## Status history
 
 - 2026-09-20: ACCEPTED — owning-Expert-only management, system-owned history, multi-file/retry/readiness boundaries recorded; no implementation authority.
+- 2026-09-25: P3-06 implementation is bounded by [ADR-061](ADR-061-contextual-document-version-visibility.md). The owning-Expert rule remains; ADR-061 adds typed exact-version context, explicit visibility/audience and audit without broadening Customer or Admin management.

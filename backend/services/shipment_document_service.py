@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 from datetime import datetime
 from typing import Any
 from werkzeug.datastructures import FileStorage
@@ -17,6 +18,7 @@ from backend.operational_models import OperationalAudit, OperationalIdempotency,
 from backend.services.case_document_service import DocumentError, FORMAT_CATALOG, _safe_original, detect_format
 from backend.services.document_storage_service import PrivateDocumentStorage
 from backend.services.assigned_work_authorization import authorize_document_management
+from backend.services import document_context_service as contexts
 
 
 def documents(shipment: OperationalShipment) -> list[dict]:
@@ -69,6 +71,7 @@ def documents(shipment: OperationalShipment) -> list[dict]:
             "owner": row.owner_type, "lifecycle_state": row.status,
             "description": row.description, "references": reference_by_file.get(row.id, []),
             "requirements": requirement_by_file.get(row.id, []),
+            "context": contexts.project(shipment, row),
         })
     return result
 
@@ -80,7 +83,9 @@ def _actor_context(actor: dict[str, Any] | int) -> tuple[dict[str, Any], int]:
     return {"id": actor_id}, actor_id
 
 
-def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: FileStorage, title: str, description: str | None, key: str, replacement: CaseDocumentFile | None = None) -> CaseDocumentFile:
+def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: FileStorage, title: str, description: str | None, key: str, replacement: CaseDocumentFile | None = None,
+           *, context_type: str | None = None, target_public_id: str | None = None,
+           visibility: str = "INTERNAL", audience_public_ids: list[str] | None = None) -> CaseDocumentFile:
     actor_context, actor_id = _actor_context(actor)
     shipment = db.session.scalar(select(OperationalShipment).where(
         OperationalShipment.id == shipment.id
@@ -105,7 +110,19 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
     format_id, mime = detected
     if extension not in FORMAT_CATALOG[format_id][0]:
         raise DocumentError("پسوند فایل با محتوای آن مطابقت ندارد")
-    request_hash = hashlib.sha256((title + "\0" + (description or "") + "\0").encode() + data).hexdigest()
+    if replacement is not None and context_type is None:
+        old_context = contexts.project(shipment, replacement)
+        if old_context:
+            context_type = old_context["type"]
+            target_public_id = old_context["target_public_id"]
+    context_type = context_type or "SHIPMENT"
+    prepared = contexts.prepare(shipment, context_type, target_public_id, visibility, audience_public_ids)
+    policy_fingerprint = json.dumps({
+        "type": prepared["type"], "target": prepared["target_public_id"],
+        "visibility": prepared["visibility"],
+        "audiences": sorted(row.public_id for row in prepared["audiences"]),
+    }, sort_keys=True)
+    request_hash = hashlib.sha256((title + "\0" + (description or "") + "\0" + policy_fingerprint + "\0").encode() + data).hexdigest()
     replay = db.session.scalar(select(OperationalIdempotency).where(
         OperationalIdempotency.organization_id == shipment.organization_id,
         OperationalIdempotency.operation == "shipment_document.upload",
@@ -143,6 +160,7 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
             canonical_extension=extension, detected_mime_type=mime, file_size_bytes=size,
             sha256_hash=digest, version_number=version, uploaded_by=actor_id)
         db.session.add(row); db.session.flush()
+        contexts.attach(shipment, row, actor_id, prepared, replacement_of=locked_replacement)
         if locked_replacement is not None:
             locked_replacement.status, locked_replacement.superseded_at, locked_replacement.superseded_by = "superseded", datetime.utcnow(), row.id
         db.session.add(OperationalIdempotency(organization_id=shipment.organization_id,

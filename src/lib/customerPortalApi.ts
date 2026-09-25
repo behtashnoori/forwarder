@@ -34,6 +34,29 @@ async function customerRequest<T>(path: string, init?: RequestInit): Promise<T> 
   return data as T;
 }
 
+export interface CustomerSharedDocument {
+  public_id: string;
+  filename: string;
+  version: number;
+  context_type: "SHIPMENT" | "ROUTE_LEG" | "EXECUTION_UNIT";
+}
+
+export const fetchCustomerSharedDocuments = (page = 1) =>
+  customerRequest<{ data: CustomerSharedDocument[] }>(`/api/customer/documents?page=${page}`);
+
+export async function downloadCustomerSharedDocument(documentId: string, filename: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/customer/documents/${encodeURIComponent(documentId)}/download`, {
+    credentials: "include", cache: "no-store",
+  });
+  if (!response.ok) throw new CustomerPortalApiError(response.status, "DOCUMENT_NOT_FOUND", "سند در دسترس نیست");
+  const url = URL.createObjectURL(await response.blob());
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export type CustomerAccountStatus = "ACTIVE" | "DISABLED";
 export type CustomerQuoteResponse = "accepted" | "discussion" | "declined";
 
