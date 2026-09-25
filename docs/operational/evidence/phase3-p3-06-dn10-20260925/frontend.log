@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-06-contextual-documents
+
+
+ Test Files  86 passed (86)
+      Tests  408 passed (408)
+   Start at  22:02:38
+   Duration  243.82s (transform 4.38s, setup 20.28s, import 20.80s, tests 67.73s, environment 111.85s)
+

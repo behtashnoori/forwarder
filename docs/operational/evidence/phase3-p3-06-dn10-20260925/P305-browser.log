@@ -1,0 +1,9 @@
+
+Running 1 test using 1 worker
+
+(node:30028) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/1] e2e\phase3-cargo-allocation.spec.ts:37:1 › P3-05 — normal Chrome Cargo plan, actual, correction, transfer and reopen
+  1 passed (27.1s)
