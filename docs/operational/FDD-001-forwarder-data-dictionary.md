@@ -186,10 +186,10 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - **Canonical/Persian:** ShipmentCargoItem / قلم کالای محموله; **definition/rationale:** OperationalShipment-owned transaction snapshot of carried cargo meaning.
 - **Class/owners:** Transaction snapshot; Product/Operations; CAP-002.
 - **Lifecycle/identity/scope:** shipment line lifecycle; UUID and shipment-unique line; inherits organization.
-- **Relationships:** OperationalShipment, CargoType, UOM, optional catalog lineage. **Mutable/immutable:** quantity handling bounded; snapshot facts immutable after creation.
-- **Activation/history:** destructive rewrite prohibited; correction design deferred. **API/UI/reporting:** internal shipment cargo; cargo visibility foundation.
-- **Version/state/future/exclusions:** 1.6.0; Implemented and Deployed; allocation/search later; no allocation/delivery semantics.
-- **Governance/source:** PDR-013 D07, ADR-022; `backend.cargo_models.ShipmentCargoItem`.
+- **Relationships:** OperationalShipment authority root; exactly one active same-tenant CRM Customer for each new P3-02 row; optional authorized ShipmentRequest/RequestCargoItem source; CargoType and UOM; optional catalog and governed Packaging; optional weight/volume dimension UOM. **Mutable/immutable:** requested/planned/actual facts are distinct; legacy quantity meaning stays unknown unless explicitly corrected; catalog identity/type/UOM snapshots remain immutable; progressive detail is controlled mutable state.
+- **Activation/history:** destructive rewrite prohibited; owning Transport Expert corrections are optimistic-versioned and append bounded OperationalAudit history. **API/UI/reporting:** internal shipment Cargo only; no Customer Portal projection.
+- **Version/state/future/exclusions:** 1.6.0 foundation plus P3-02 additive extension; existing ADR-046 allocation unchanged; no conversion, delivered quantity, new lifecycle, route, customer search or public projection semantics.
+- **Governance/source:** PDR-013 D07, Product Contract, ADR-022/057; `backend.cargo_models.ShipmentCargoItem`.
 
 ## FDD-001-018 — ReferenceDataSeedRun
 
@@ -318,7 +318,7 @@ Under PDR-020/ADR-050 the active owning Transport Expert is the only management 
 - Named business owner and deletion lifecycle for ExpertUser require explicit identity-governance confirmation.
 - Documents management actor/history ambiguity is closed by PDR-020/ADR-050 and the qualified bounded implementation: the owning Transport Expert alone manages; Customer, Admin/Manager, other Expert, other tenant, and inactive/revoked actor cannot manage; the System preserves immutable version history. Generalized read/download visibility and retention remain separately Proposed under PDR-008/ADR-020 and PDR-011, with no new Customer visibility granted.
 - ServiceType relationships remain unresolved under PDR-013 D02/D03.
-- ShipmentCargoItem correction/supersession, allocation, and customer search remain deferred/proposed.
+- Broader ShipmentCargoItem supersession, allocation redesign, delivery semantics and customer search remain deferred/proposed. P3-02's bounded owning-Expert field correction/audit is implemented without a lifecycle or Customer visibility change.
 - Logistics Network physical/API choices are Accepted and implemented in Release 1.7.0 source; Production migration, catalog apply, packaging, and deployment remain separately governed.
 
 ## Release 1.8.0 implemented definitions — not deployed
@@ -367,7 +367,7 @@ These entries remain accepted domain/reference truth. The bounded Golden-control
 - **Canonical/Persian:** RequestCargoItem / قلم کالای درخواست; Customer-provided commercial Cargo information belonging to one ShipmentRequest.
 - **Class/owners/scope:** Transaction child; Commercial/Request owner and SOR; Customer/request authorization; inherits Request organization/customer scope.
 - **Cardinality and submission:** `ShipmentRequest 0..N RequestCargoItems`; Cargo is optional for submission and no item field is currently mandatory.
-- **Relationships/exclusions:** may later provide traceable input to operational planning; is not `ShipmentCargoItem`, an allocation, Execution Unit, vehicle/container, Route Leg, or Shipment split decision.
+- **Relationships/exclusions:** may be referenced as exact source lineage by an owning Expert's `ShipmentCargoItem`; remains commercial evidence and is not itself operational Cargo, an allocation, Execution Unit, vehicle/container, Route Leg, or Shipment split decision.
 - **Compatibility:** historical Requests without Cargo remain valid; legacy scalar Cargo is not guessed into items; future mandatory policy is deferred.
 - **Implementation/status:** Implemented and qualified in the Golden-controlled source with additive migration `20260924_request_cargo_items`; zero-Cargo and ordered multi-Cargo journeys are supported without guessed backfill.
 - **Governance/source:** PDR-019, ADR-002, Post-D2 Cargo amendment, `cargo-multi-item-build-20260920.md`.

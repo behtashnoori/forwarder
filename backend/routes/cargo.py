@@ -26,10 +26,11 @@ from backend.services.admin_authorization_service import (
     organization_context_for_authenticated_user,
     require_organization_admin_context,
 )
-from backend.models import ExpertUser
+from backend.models import ExpertUser, PackagingType
 from backend.operational_models import ExecutionUnit, Project
 from backend.organization_reference_catalog_models import (
     OrganizationCargoTypeActivation,
+    OrganizationPackagingTypeActivation,
     OrganizationUnitOfMeasureActivation,
 )
 
@@ -256,6 +257,12 @@ def shipment_items(shipment_id):
                 selectinload(ShipmentCargoItem.catalog_item),
                 selectinload(ShipmentCargoItem.cargo_type),
                 selectinload(ShipmentCargoItem.uom),
+                selectinload(ShipmentCargoItem.packaging_type),
+                selectinload(ShipmentCargoItem.gross_weight_uom),
+                selectinload(ShipmentCargoItem.volume_uom),
+                selectinload(ShipmentCargoItem.cargo_owner_customer),
+                selectinload(ShipmentCargoItem.source_shipment_request),
+                selectinload(ShipmentCargoItem.source_request_cargo_item),
             )
             .order_by(ShipmentCargoItem.line_number)
         ).all()
@@ -365,6 +372,20 @@ def cargo_options():
             )
             .order_by(UnitOfMeasure.display_order)
         ).all()
+        packaging_types = db.session.scalars(
+            select(PackagingType)
+            .join(
+                OrganizationPackagingTypeActivation,
+                OrganizationPackagingTypeActivation.packaging_type_id
+                == PackagingType.id,
+            )
+            .where(
+                PackagingType.is_active.is_(True),
+                OrganizationPackagingTypeActivation.organization_id == org,
+                OrganizationPackagingTypeActivation.status == "ACTIVE",
+            )
+            .order_by(PackagingType.display_order)
+        ).all()
         return jsonify(
             {
                 "catalog": [
@@ -397,12 +418,32 @@ def cargo_options():
                         "code": r.immutable_code,
                         "name": r.fa_name,
                         "symbol": r.symbol,
+                        "measurement_dimension": r.measurement_dimension,
                     }
                     for r in uoms
+                ],
+                "packaging_types": [
+                    {
+                        "public_id": r.public_id,
+                        "code": r.immutable_code,
+                        "name": r.fa_name,
+                    }
+                    for r in packaging_types
                 ],
             }
         )
     except (svc.CargoError, svc.operational_service.OperationalError, AdminAuthorizationError) as exc:
+        return _error(exc)
+
+
+@cargo_bp.get("/operational-shipments/<shipment_id>/cargo-lineage-options")
+@require_auth
+def cargo_lineage_options(shipment_id):
+    try:
+        user = _user()
+        shipment = svc.scoped_shipment(user, shipment_id)
+        return jsonify(svc.cargo_lineage_options(user, shipment))
+    except svc.CargoError as exc:
         return _error(exc)
 
 
@@ -445,6 +486,19 @@ def shipment_item_detail(shipment_id, item_id):
         return jsonify(
             {"item": svc.shipment_item_dict(_shipment_item(shipment, item_id))}
         )
+    except svc.CargoError as exc:
+        return _error(exc)
+
+
+@cargo_bp.get(
+    "/operational-shipments/<shipment_id>/cargo-items/<item_id>/history"
+)
+@require_auth
+def shipment_item_history(shipment_id, item_id):
+    try:
+        shipment = svc.scoped_shipment(_user(), shipment_id)
+        row = _shipment_item(shipment, item_id)
+        return jsonify({"history": svc.cargo_history(row)})
     except svc.CargoError as exc:
         return _error(exc)
 

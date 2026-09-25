@@ -85,7 +85,7 @@ See `LEGACY-CANONICAL-MAP.md`.
 | Document management entitlement | Authoritative Shipment/Case parent; owning active Transport Expert only under PDR-020/ADR-050 |
 | Document version/history | System-owned immutable file/version lineage, private bytes, and audit; initiating Expert is not the history owner |
 | Cargo master | Organization-owned `CargoCatalogItem` |
-| Shipment cargo truth | `ShipmentCargoItem` immutable descriptive snapshot plus mutable controlled quantity/version |
+| Shipment cargo truth | `ShipmentCargoItem` operational snapshot with per-line Customer, optional Request/RequestCargo lineage, separate requested/planned/actual facts, governed references, progressive detail and audited/versioned correction; historical unknowns are not inferred |
 | CRM | Organization-scoped internal `Customer`, contacts, opportunities, activities and link audit |
 | Logistics place master | Platform-owned `GlobalLogisticsPoint` governance; tenant-owned `OrganizationGlobalLogisticsPointAdoption`; optional explicit organization-owned `LogisticsPoint` materialization; current organization `LogisticsPoint`-based project/tracking consumption; platform-owned `LogisticsPointType` (ADR-041; catalog population and legacy reconciliation remain separately controlled) |
 | Route location identity/history | `CanonicalLocation` bridge plus immutable location snapshots |
@@ -140,6 +140,9 @@ The qualified bounded implementation provides multiple current operational assoc
 
 ```text
 ShipmentRequest -> 0..N RequestCargoItem (commercial, optional)
+       | optional exact source lineage
+       v
+ShipmentCargoItem -> exactly one Cargo Customer (new P3-02 rows)
 
 CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment (operational)
 ```
@@ -150,10 +153,12 @@ CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment (operational)
 - Shipment cargo lines snapshot catalog identity and descriptive fields so later catalog edits do not rewrite history.
 - A manual shipment line may exist without a catalog item but still uses governed CargoType and UOM.
 - ADR-056 makes central CargoType and UOM availability explicit per organization. The authenticated internal Cargo options projection returns only active central definitions with active tenant activations; there is no global-active compatibility fallback on that governed Expert path.
-- `PackagingType`, `TransportMeansType`, and `TransportEquipmentType` are explicit empty-capable platform catalogs with tenant-owned activation foundations. P3-01 does not add them to Cargo, Route, Execution Unit, or another operational record.
+- ADR-057 consumes an active organization PackagingType for optional Cargo packaging. Weight and volume use active governed units of the matching dimension; no unit conversion is performed. TransportMeansType and TransportEquipmentType remain unconsumed until a later authorized slice.
+- Requested, planned and actual quantities remain independent facts. Direct Cargo has no fabricated Request; legacy `quantity` rows retain an explicit unknown semantic state unless an owning Expert records a correction.
+- Cargo correction advances optimistic version and appends bounded audit history. Catalog identity/type/UOM snapshots remain immutable; progressive HS/description, Packaging, weight, volume and destination facts may be completed or corrected.
 - Public Request Cargo options and validation remain unchanged by P3-01. Legacy `TransportMethod` remains the Request/intake and specialization compatibility catalog and is not reinterpreted as `TransportMeansType`.
 - Cross-tenant catalog selection is rejected.
-- No direct cargo allocation to `ExecutionUnit` currently exists. ADR-023 is PROPOSED; allocation must not be inferred or implemented until accepted.
+- Existing ADR-046 `ExecutionUnitCargoAllocation` remains the canonical bounded allocation path and is unchanged by P3-02. ADR-023's wider allocation concurrency proposal remains Proposed; no allocation redesign is inferred here.
 
 ## 10. Logistics and location architecture
 

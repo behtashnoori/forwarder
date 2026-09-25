@@ -12,13 +12,33 @@ from sqlalchemy.orm import selectinload
 
 from backend.cargo_models import CargoCatalogItem, CargoItemAlias, ExecutionUnitCargoAllocation, ShipmentCargoItem, ShipmentCargoTransportAllocation
 from backend.extensions import db
-from backend.models import Customer, CargoType, ShipmentRequest, ShipmentTracking, ShipmentTransportUnit, UnitOfMeasure
-from backend.operational_models import ExecutionUnit, OperationalShipment, Project
+from backend.models import (
+    Customer,
+    CargoType,
+    PackagingType,
+    RequestCargoItem,
+    ShipmentRequest,
+    ShipmentTracking,
+    ShipmentTransportUnit,
+    UnitOfMeasure,
+)
+from backend.operational_models import (
+    ExecutionUnit,
+    OperationalAudit,
+    OperationalShipment,
+    Project,
+)
 from backend.organization_reference_catalog_models import (
     OrganizationCargoTypeActivation,
+    OrganizationPackagingTypeActivation,
     OrganizationUnitOfMeasureActivation,
 )
 from backend.services import operational_service
+from backend.services.assigned_work_authorization import (
+    assigned_request_scope,
+    authorize_document_management,
+    authorize_work_action,
+)
 from backend.services.organization_reference_catalog_service import (
     is_definition_active_for_organization,
 )
@@ -491,6 +511,115 @@ def scoped_shipment(user, public_id):
         raise CargoError("not found", 404) from exc
 
 
+def _require_cargo_mutation(user, shipment):
+    try:
+        operational_service.require_permission(user, "operational_shipment.create")
+    except operational_service.OperationalError as exc:
+        raise CargoError(exc.message, exc.status, exc.code) from exc
+    decision = authorize_document_management(user, shipment)
+    if not decision.allowed:
+        raise CargoError(
+            "Only the owning Transport Expert can change Cargo.",
+            403,
+            "OWNING_TRANSPORT_EXPERT_REQUIRED",
+        )
+
+
+def _decimal(value, field, *, required=False):
+    if value in (None, ""):
+        if required:
+            raise CargoError(f"{field} must be positive", 422)
+        return None
+    if isinstance(value, bool):
+        raise CargoError(f"{field} must be positive", 422)
+    try:
+        result = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise CargoError(f"{field} must be positive", 422) from exc
+    if result <= 0:
+        raise CargoError(f"{field} must be positive", 422)
+    return result
+
+
+def _active_uom(public_id, organization_id, *, dimension=None, field="uom"):
+    row = db.session.scalar(
+        select(UnitOfMeasure).where(
+            UnitOfMeasure.public_id == public_id,
+            UnitOfMeasure.is_active.is_(True),
+        )
+    )
+    if not row:
+        raise CargoError(f"active {field} is required", 422)
+    _require_organization_activation(
+        OrganizationUnitOfMeasureActivation,
+        "unit_of_measure_id",
+        row.id,
+        organization_id,
+    )
+    if dimension and row.measurement_dimension != dimension:
+        raise CargoError(f"{field} must use a {dimension.lower()} unit", 422)
+    return row
+
+
+def _active_packaging(public_id, organization_id):
+    if not public_id:
+        return None
+    row = db.session.scalar(
+        select(PackagingType).where(
+            PackagingType.public_id == public_id,
+            PackagingType.is_active.is_(True),
+        )
+    )
+    if not row:
+        raise CargoError("active packaging_type is required", 422)
+    _require_organization_activation(
+        OrganizationPackagingTypeActivation,
+        "packaging_type_id",
+        row.id,
+        organization_id,
+    )
+    return row
+
+
+def _quantity_payload(row):
+    return {
+        "requested": str(row.requested_quantity)
+        if row.requested_quantity is not None
+        else None,
+        "planned": str(row.planned_quantity)
+        if row.planned_quantity is not None
+        else None,
+        "actual": str(row.actual_quantity)
+        if row.actual_quantity is not None
+        else None,
+        "legacy": str(row.quantity),
+        "legacy_meaning": "PLANNED_COMPATIBILITY"
+        if row.planned_quantity is not None
+        else "UNKNOWN",
+    }
+
+
+def _lineage_kind(row):
+    if row.source_shipment_request_id:
+        return "REQUEST"
+    if row.planned_quantity is not None:
+        return "DIRECT"
+    return "UNKNOWN"
+
+
+def _incomplete_fields(row):
+    missing = []
+    if not row.hs_code_snapshot:
+        missing.append("HS_CODE")
+    if row.packaging_type_id is None:
+        missing.append("PACKAGING_TYPE")
+    if row.gross_weight is None:
+        missing.append("WEIGHT")
+    if row.volume is None:
+        missing.append("VOLUME")
+    return missing
+
+
 def shipment_item_dict(row):
     # Canonical execution allocations win for a cargo line.  A legacy row is
     # historical compatibility data only and is shown only when no canonical
@@ -507,6 +636,7 @@ def shipment_item_dict(row):
         "cargo_type_public_id": row.cargo_type.public_id,
         "uom_public_id": row.uom.public_id,
         "quantity": str(row.quantity),
+        "quantities": _quantity_payload(row),
         "allocated_quantity": str(allocated),
         "remaining_quantity": str(row.quantity - allocated),
         "display_name_snapshot": row.display_name_snapshot,
@@ -521,6 +651,52 @@ def shipment_item_dict(row):
         "brand_snapshot": row.brand_snapshot,
         "model_snapshot": row.model_snapshot,
         "description_snapshot": row.description_snapshot,
+        "source_lineage": {
+            "kind": _lineage_kind(row),
+            "request_public_id": row.source_shipment_request.public_id
+            if row.source_shipment_request
+            else None,
+            "request_reference": (
+                row.source_shipment_request.tracking_code
+                or row.source_shipment_request.public_id[:8]
+            )
+            if row.source_shipment_request
+            else None,
+            "request_cargo_item_public_id": row.source_request_cargo_item.public_id
+            if row.source_request_cargo_item
+            else None,
+            "request_cargo_position": row.source_request_cargo_item.position
+            if row.source_request_cargo_item
+            else None,
+        },
+        "packaging": None
+        if not row.packaging_type_id
+        else {
+            "public_id": row.packaging_type.public_id if row.packaging_type else None,
+            "code": row.packaging_code_snapshot,
+            "fa_name": row.packaging_fa_snapshot,
+            "en_name": row.packaging_en_snapshot,
+        },
+        "gross_weight": None
+        if row.gross_weight is None
+        else {
+            "value": str(row.gross_weight),
+            "uom_public_id": row.gross_weight_uom.public_id
+            if row.gross_weight_uom
+            else None,
+            "uom_code": row.gross_weight_uom_code_snapshot,
+            "uom_symbol": row.gross_weight_uom_symbol_snapshot,
+        },
+        "volume": None
+        if row.volume is None
+        else {
+            "value": str(row.volume),
+            "uom_public_id": row.volume_uom.public_id if row.volume_uom else None,
+            "uom_code": row.volume_uom_code_snapshot,
+            "uom_symbol": row.volume_uom_symbol_snapshot,
+        },
+        "destination_description": row.destination_description,
+        "incomplete_fields": _incomplete_fields(row),
         "cargo_owner": None
         if not row.cargo_owner_customer
         else {
@@ -538,18 +714,224 @@ def _cargo_owner(shipment, data):
     explicit_owner = "cargo_owner_customer_id" in data
     raw_id = data.get("cargo_owner_customer_id", shipment.customer_id)
     if raw_id in (None, ""):
-        return None
+        raise CargoError("cargo_owner_customer_id is required", 422)
     try:
         customer_id = int(raw_id)
     except (TypeError, ValueError) as exc:
         raise CargoError("cargo_owner_customer_id must be an integer", 422) from exc
-    query = select(Customer).where(Customer.id == customer_id, Customer.status == "active")
-    if explicit_owner:
-        query = query.where(Customer.operational_organization_id == shipment.organization_id)
+    query = select(Customer).where(
+        Customer.id == customer_id,
+        Customer.status == "active",
+        Customer.ownership_scope == "TENANT",
+        Customer.operational_organization_id == shipment.organization_id,
+    )
     owner = db.session.scalar(query)
     if not owner:
         raise CargoError("active cargo owner was not found", 422)
     return owner
+
+
+def _authorized_source_request(user, shipment, public_id):
+    if not public_id:
+        return None
+    row = db.session.scalar(
+        select(ShipmentRequest).where(
+            ShipmentRequest.public_id == str(public_id),
+            ShipmentRequest.ownership_scope == "TENANT",
+            ShipmentRequest.operational_organization_id == shipment.organization_id,
+        )
+    )
+    if not row:
+        raise CargoError("source request was not found", 422, "INVALID_SOURCE_REQUEST")
+    decision = authorize_work_action(user, row, "request.read")
+    if not decision.allowed:
+        raise CargoError("source request was not found", 422, "INVALID_SOURCE_REQUEST")
+    return row
+
+
+def _source_request_cargo(request_row, public_id):
+    if not public_id:
+        return None
+    if request_row is None:
+        raise CargoError(
+            "source_request_public_id is required for Request Cargo lineage",
+            422,
+            "SOURCE_REQUEST_REQUIRED",
+        )
+    row = db.session.scalar(
+        select(RequestCargoItem).where(
+            RequestCargoItem.public_id == str(public_id),
+            RequestCargoItem.shipment_request_id == request_row.id,
+        )
+    )
+    if not row:
+        raise CargoError(
+            "source Request Cargo was not found",
+            422,
+            "INVALID_SOURCE_REQUEST_CARGO",
+        )
+    return row
+
+
+def _lineage(user, shipment, data, owner, uom):
+    request_row = _authorized_source_request(
+        user, shipment, data.get("source_request_public_id")
+    )
+    request_cargo = _source_request_cargo(
+        request_row, data.get("source_request_cargo_item_public_id")
+    )
+    requested = _decimal(data.get("requested_quantity"), "requested_quantity")
+    if requested is not None and request_row is None:
+        raise CargoError(
+            "requested_quantity requires a real source Request",
+            422,
+            "REQUESTED_SOURCE_REQUIRED",
+        )
+    if request_row and request_row.customer_id and request_row.customer_id != owner.id:
+        raise CargoError(
+            "Cargo Customer must match the source Request Customer",
+            422,
+            "SOURCE_CUSTOMER_MISMATCH",
+        )
+    if request_cargo and request_cargo.quantity is not None:
+        if request_cargo.uom_id != uom.id:
+            raise CargoError(
+                "source Request Cargo uses a different UOM; conversion is not allowed",
+                422,
+                "SOURCE_UOM_MISMATCH",
+            )
+        source_quantity = Decimal(request_cargo.quantity)
+        if requested is not None and requested != source_quantity:
+            raise CargoError(
+                "requested_quantity must match the source Request Cargo",
+                422,
+                "SOURCE_QUANTITY_MISMATCH",
+            )
+        requested = source_quantity
+    return request_row, request_cargo, requested
+
+
+def _audit_value(field, value):
+    if field in {"hs_code_snapshot", "description_snapshot", "destination_description"}:
+        return "SET" if value not in (None, "") else "MISSING"
+    if isinstance(value, Decimal):
+        return str(value)
+    if hasattr(value, "public_id"):
+        return value.public_id
+    return value
+
+
+def _cargo_audit(user, shipment, row, action, changes):
+    db.session.add(
+        OperationalAudit(
+            organization_id=shipment.organization_id,
+            actor_user_id=user["id"],
+            action=action,
+            entity_type="ShipmentCargoItem",
+            entity_id=row.id,
+            metadata_json={
+                "cargo_public_id": row.public_id,
+                "shipment_public_id": shipment.public_id,
+                "version": row.version,
+                "changed_fields": sorted(changes),
+                "changes": {
+                    field: {
+                        "before": _audit_value(field, before),
+                        "after": _audit_value(field, after),
+                    }
+                    for field, (before, after) in changes.items()
+                },
+            },
+        )
+    )
+
+
+def cargo_history(row):
+    audits = db.session.scalars(
+        select(OperationalAudit)
+        .where(
+            OperationalAudit.entity_type == "ShipmentCargoItem",
+            OperationalAudit.entity_id == row.id,
+        )
+        .order_by(OperationalAudit.recorded_at, OperationalAudit.id)
+    ).all()
+    return [
+        {
+            "action": audit.action,
+            "recorded_at": audit.recorded_at.isoformat(),
+            "actor_user_id": audit.actor_user_id,
+            **(audit.metadata_json or {}),
+        }
+        for audit in audits
+    ]
+
+
+def cargo_lineage_options(user, shipment):
+    _require_cargo_mutation(user, shipment)
+    customers = db.session.scalars(
+        select(Customer)
+        .where(
+            Customer.operational_organization_id == shipment.organization_id,
+            Customer.ownership_scope == "TENANT",
+            Customer.status == "active",
+        )
+        .order_by(Customer.company_name, Customer.last_name, Customer.first_name, Customer.id)
+        .limit(200)
+    ).all()
+    requests = db.session.scalars(
+        select(ShipmentRequest)
+        .where(
+            ShipmentRequest.public_id.is_not(None),
+            assigned_request_scope(user, "request.read"),
+        )
+        .options(
+            selectinload(ShipmentRequest.customer),
+            selectinload(ShipmentRequest.request_cargo_items).selectinload(
+                RequestCargoItem.cargo_type
+            ),
+            selectinload(ShipmentRequest.request_cargo_items).selectinload(
+                RequestCargoItem.uom
+            ),
+        )
+        .order_by(ShipmentRequest.created_at.desc(), ShipmentRequest.id.desc())
+        .limit(200)
+    ).all()
+    return {
+        "customers": [
+            {"id": customer.id, "label": operational_service._customer_label(customer)}
+            for customer in customers
+        ],
+        "requests": [
+            {
+                "public_id": request_row.public_id,
+                "label": f"درخواست {request_row.tracking_code or request_row.public_id[:8]}",
+                "customer_id": request_row.customer_id,
+                "customer_label": operational_service._customer_label(request_row.customer)
+                if request_row.customer
+                else None,
+                "cargo_items": [
+                    {
+                        "public_id": item.public_id,
+                        "position": item.position,
+                        "description": item.description,
+                        "quantity": str(item.quantity)
+                        if item.quantity is not None
+                        else None,
+                        "cargo_type_public_id": item.cargo_type.public_id
+                        if item.cargo_type
+                        else None,
+                        "cargo_type_name": item.cargo_type.fa_name
+                        if item.cargo_type
+                        else None,
+                        "uom_public_id": item.uom.public_id if item.uom else None,
+                        "uom_symbol": item.uom.symbol if item.uom else None,
+                    }
+                    for item in request_row.request_cargo_items
+                ],
+            }
+            for request_row in requests
+        ],
+    }
 
 
 def _allocation_quantity(value):
@@ -649,39 +1031,40 @@ def delete_allocation(user, shipment, public_id):
 
 
 def create_shipment_item(user, shipment, data):
-    operational_service.require_permission(user, "operational_shipment.create")
+    _require_cargo_mutation(user, shipment)
+    planned = _decimal(data.get("planned_quantity"), "planned_quantity")
+    quantity = _decimal(
+        data.get("quantity", planned), "quantity", required=True
+    )
+    if planned is not None and quantity != planned:
+        raise CargoError(
+            "quantity compatibility value must equal planned_quantity",
+            422,
+            "PLANNED_QUANTITY_MISMATCH",
+        )
+    requested_input = data.get("requested_quantity")
+    actual = _decimal(data.get("actual_quantity"), "actual_quantity")
     try:
-        quantity = Decimal(str(data.get("quantity")))
-    except (InvalidOperation, TypeError):
-        raise CargoError("quantity must be positive", 422)
-    if quantity <= 0:
-        raise CargoError("quantity must be positive", 422)
+        line_number = int(data.get("line_number", 0))
+    except (TypeError, ValueError) as exc:
+        raise CargoError("line_number must be positive", 422) from exc
+    if line_number < 1:
+        raise CargoError("line_number must be positive", 422)
     ct = db.session.scalar(
         select(CargoType).where(
             CargoType.public_id == data.get("cargo_type_public_id"),
             CargoType.is_active.is_(True),
         )
     )
-    uom = db.session.scalar(
-        select(UnitOfMeasure).where(
-            UnitOfMeasure.public_id == data.get("uom_public_id"),
-            UnitOfMeasure.is_active.is_(True),
-        )
-    )
-    if not ct or not uom:
-        raise CargoError("active cargo_type and uom are required", 422)
+    if not ct:
+        raise CargoError("active cargo_type is required", 422)
     _require_organization_activation(
         OrganizationCargoTypeActivation,
         "cargo_type_id",
         ct.id,
         shipment.organization_id,
     )
-    _require_organization_activation(
-        OrganizationUnitOfMeasureActivation,
-        "unit_of_measure_id",
-        uom.id,
-        shipment.organization_id,
-    )
+    uom = _active_uom(data.get("uom_public_id"), shipment.organization_id)
     catalog = (
         scoped_catalog(user, data["catalog_item_public_id"], True)
         if data.get("catalog_item_public_id")
@@ -691,14 +1074,55 @@ def create_shipment_item(user, shipment, data):
         raise CargoError("cargo_type must match catalog item", 422)
     name = catalog.fa_name if catalog else _required(data, "display_name", 200)
     owner = _cargo_owner(shipment, data)
+    lineage_data = dict(data)
+    lineage_data["requested_quantity"] = requested_input
+    source_request, source_request_cargo, requested = _lineage(
+        user, shipment, lineage_data, owner, uom
+    )
+    packaging = _active_packaging(
+        data.get("packaging_type_public_id"), shipment.organization_id
+    )
+    gross_weight = _decimal(data.get("gross_weight"), "gross_weight")
+    gross_weight_uom = None
+    if gross_weight is not None:
+        gross_weight_uom = _active_uom(
+            data.get("gross_weight_uom_public_id"),
+            shipment.organization_id,
+            dimension="WEIGHT",
+            field="gross_weight_uom",
+        )
+    elif data.get("gross_weight_uom_public_id"):
+        raise CargoError("gross_weight is required with its UOM", 422)
+    volume = _decimal(data.get("volume"), "volume")
+    volume_uom = None
+    if volume is not None:
+        volume_uom = _active_uom(
+            data.get("volume_uom_public_id"),
+            shipment.organization_id,
+            dimension="VOLUME",
+            field="volume_uom",
+        )
+    elif data.get("volume_uom_public_id"):
+        raise CargoError("volume is required with its UOM", 422)
     row = ShipmentCargoItem(
         operational_shipment_id=shipment.id,
-        line_number=int(data.get("line_number", 0)),
+        line_number=line_number,
         catalog_item=catalog,
         cargo_type=ct,
         quantity=quantity,
+        requested_quantity=requested,
+        planned_quantity=planned,
+        actual_quantity=actual,
         uom=uom,
         cargo_owner_customer=owner,
+        source_shipment_request=source_request,
+        source_request_cargo_item=source_request_cargo,
+        packaging_type=packaging,
+        gross_weight=gross_weight,
+        gross_weight_uom=gross_weight_uom,
+        volume=volume,
+        volume_uom=volume_uom,
+        destination_description=_optional(data, "destination_description", 300),
         display_name_snapshot=name,
         cargo_type_code_snapshot=ct.immutable_code,
         cargo_type_fa_snapshot=ct.fa_name,
@@ -717,29 +1141,105 @@ def create_shipment_item(user, shipment, data):
         "description_snapshot": "description",
     }
     for target, source in mapping.items():
+        supplied_progressive = (
+            source in {"hs_code", "description"}
+            and data.get(source) not in (None, "")
+        )
         setattr(
             row,
             target,
-            getattr(catalog, source, None)
-            if catalog
-            else _optional(data, source, 2000 if source == "description" else 160),
+            _optional(data, source, 2000 if source == "description" else 160)
+            if supplied_progressive or not catalog
+            else getattr(catalog, source, None),
         )
+    if packaging:
+        row.packaging_code_snapshot = packaging.immutable_code
+        row.packaging_fa_snapshot = packaging.fa_name
+        row.packaging_en_snapshot = packaging.en_name
+    if gross_weight_uom:
+        row.gross_weight_uom_code_snapshot = gross_weight_uom.immutable_code
+        row.gross_weight_uom_symbol_snapshot = gross_weight_uom.symbol
+    if volume_uom:
+        row.volume_uom_code_snapshot = volume_uom.immutable_code
+        row.volume_uom_symbol_snapshot = volume_uom.symbol
     db.session.add(row)
+    db.session.flush()
+    _cargo_audit(
+        user,
+        shipment,
+        row,
+        "SHIPMENT_CARGO_CREATED",
+        {
+            "cargo_owner_customer_id": (None, owner.id),
+            "source_request_public_id": (
+                None,
+                source_request.public_id if source_request else None,
+            ),
+            "source_request_cargo_item_public_id": (
+                None,
+                source_request_cargo.public_id if source_request_cargo else None,
+            ),
+            "requested_quantity": (None, requested),
+            "planned_quantity": (None, planned),
+            "actual_quantity": (None, actual),
+            "packaging_type": (None, packaging),
+            "gross_weight": (None, gross_weight),
+            "volume": (None, volume),
+        },
+    )
     db.session.commit()
     return row
 
 
 def update_shipment_item(user, row, data):
-    operational_service.require_permission(user, "operational_shipment.create")
-    if int(data.get("version", 0)) != row.version:
+    shipment = db.session.get(OperationalShipment, row.operational_shipment_id)
+    if shipment is None:
+        raise CargoError("shipment not found", 404)
+    _require_cargo_mutation(user, shipment)
+    if isinstance(data.get("version"), bool):
         raise CargoError("version conflict", 409)
-    if "quantity" in data:
-        try:
-            q = Decimal(str(data["quantity"]))
-            assert q > 0
-        except (InvalidOperation, TypeError, AssertionError):
-            raise CargoError("quantity must be positive", 422)
-        row.quantity = q
+    try:
+        expected_version = int(data.get("version", 0))
+    except (TypeError, ValueError):
+        expected_version = 0
+    if expected_version != row.version:
+        raise CargoError("version conflict", 409)
+    changes = {}
+
+    def change(field, value):
+        before = getattr(row, field)
+        if before != value:
+            changes[field] = (before, value)
+            setattr(row, field, value)
+
+    if "planned_quantity" in data:
+        planned = _decimal(data.get("planned_quantity"), "planned_quantity")
+        if planned is None:
+            raise CargoError("planned_quantity must be positive", 422)
+        if "quantity" in data and _decimal(
+            data.get("quantity"), "quantity", required=True
+        ) != planned:
+            raise CargoError(
+                "quantity compatibility value must equal planned_quantity",
+                422,
+                "PLANNED_QUANTITY_MISMATCH",
+            )
+        change("planned_quantity", planned)
+        change("quantity", planned)
+    elif "quantity" in data:
+        if row.planned_quantity is not None:
+            raise CargoError(
+                "planned_quantity is required for this Cargo",
+                422,
+                "PLANNED_QUANTITY_REQUIRED",
+            )
+        change("quantity", _decimal(data.get("quantity"), "quantity", required=True))
+
+    if "actual_quantity" in data:
+        change(
+            "actual_quantity",
+            _decimal(data.get("actual_quantity"), "actual_quantity"),
+        )
     immutable_inputs = {
         "catalog_item_public_id",
         "cargo_type_public_id",
@@ -747,19 +1247,133 @@ def update_shipment_item(user, row, data):
         "display_name",
         "part_number",
         "customer_item_code",
-        "hs_code",
         "brand",
         "model",
-        "description",
     }
     if immutable_inputs.intersection(data):
         raise CargoError("shipment cargo snapshots cannot be changed", 422)
-    if "cargo_owner_customer_id" in data:
-        shipment = db.session.get(OperationalShipment, row.operational_shipment_id)
-        if shipment is None:
-            raise CargoError("shipment not found", 404)
-        row.cargo_owner_customer = _cargo_owner(shipment, data)
+    lineage_fields = {
+        "cargo_owner_customer_id",
+        "source_request_public_id",
+        "source_request_cargo_item_public_id",
+        "requested_quantity",
+    }
+    if lineage_fields.intersection(data):
+        owner_data = {
+            "cargo_owner_customer_id": data.get(
+                "cargo_owner_customer_id", row.cargo_owner_customer_id
+            )
+        }
+        owner = _cargo_owner(shipment, owner_data)
+        lineage_data = {
+            "source_request_public_id": row.source_shipment_request.public_id
+            if row.source_shipment_request
+            else None,
+            "source_request_cargo_item_public_id": row.source_request_cargo_item.public_id
+            if row.source_request_cargo_item
+            else None,
+            "requested_quantity": row.requested_quantity,
+        }
+        lineage_data.update({key: data[key] for key in lineage_fields if key in data})
+        source_request, source_request_cargo, requested = _lineage(
+            user, shipment, lineage_data, owner, row.uom
+        )
+        if row.cargo_owner_customer_id != owner.id:
+            changes["cargo_owner_customer_id"] = (
+                row.cargo_owner_customer_id,
+                owner.id,
+            )
+            row.cargo_owner_customer = owner
+        if row.source_shipment_request_id != (
+            source_request.id if source_request else None
+        ):
+            changes["source_request_public_id"] = (
+                row.source_shipment_request.public_id
+                if row.source_shipment_request
+                else None,
+                source_request.public_id if source_request else None,
+            )
+            row.source_shipment_request = source_request
+        if row.source_request_cargo_item_id != (
+            source_request_cargo.id if source_request_cargo else None
+        ):
+            changes["source_request_cargo_item_public_id"] = (
+                row.source_request_cargo_item.public_id
+                if row.source_request_cargo_item
+                else None,
+                source_request_cargo.public_id if source_request_cargo else None,
+            )
+            row.source_request_cargo_item = source_request_cargo
+        change("requested_quantity", requested)
+
+    if "packaging_type_public_id" in data:
+        packaging = _active_packaging(
+            data.get("packaging_type_public_id"), shipment.organization_id
+        )
+        if row.packaging_type_id != (packaging.id if packaging else None):
+            changes["packaging_type"] = (row.packaging_type, packaging)
+            row.packaging_type = packaging
+            row.packaging_code_snapshot = (
+                packaging.immutable_code if packaging else None
+            )
+            row.packaging_fa_snapshot = packaging.fa_name if packaging else None
+            row.packaging_en_snapshot = packaging.en_name if packaging else None
+
+    def update_dimension(prefix, dimension):
+        value_field = "gross_weight" if prefix == "gross_weight" else "volume"
+        uom_field = f"{prefix}_uom"
+        public_field = f"{prefix}_uom_public_id"
+        if value_field not in data and public_field not in data:
+            return
+        raw_value = data.get(value_field, getattr(row, value_field))
+        value = _decimal(raw_value, value_field)
+        current_uom = getattr(row, uom_field)
+        public_id = data.get(
+            public_field, current_uom.public_id if current_uom else None
+        )
+        if value is None:
+            if public_field in data and public_id:
+                raise CargoError(f"{value_field} is required with its UOM", 422)
+            uom_value = None
+        else:
+            uom_value = _active_uom(
+                public_id,
+                shipment.organization_id,
+                dimension=dimension,
+                field=uom_field,
+            )
+        change(value_field, value)
+        if getattr(row, f"{uom_field}_id") != (uom_value.id if uom_value else None):
+            changes[uom_field] = (current_uom, uom_value)
+            setattr(row, uom_field, uom_value)
+        setattr(
+            row,
+            f"{uom_field}_code_snapshot",
+            uom_value.immutable_code if uom_value else None,
+        )
+        setattr(
+            row,
+            f"{uom_field}_symbol_snapshot",
+            uom_value.symbol if uom_value else None,
+        )
+
+    update_dimension("gross_weight", "WEIGHT")
+    update_dimension("volume", "VOLUME")
+
+    if "hs_code" in data:
+        change("hs_code_snapshot", _optional(data, "hs_code", 32))
+    if "description" in data:
+        change("description_snapshot", _optional(data, "description", 2000))
+    if "destination_description" in data:
+        change(
+            "destination_description",
+            _optional(data, "destination_description", 300),
+        )
+    if not changes:
+        return row
     row.updated_by = user["id"]
     row.version += 1
+    db.session.flush()
+    _cargo_audit(user, shipment, row, "SHIPMENT_CARGO_UPDATED", changes)
     db.session.commit()
     return row

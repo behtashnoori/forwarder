@@ -504,6 +504,7 @@ export default function NewOperation() {
           catalog_item_public_id: selectedCargo.public_id,
           cargo_type_public_id: selectedCargo.cargo_type_public_id,
           quantity: cargoQuantity,
+          planned_quantity: cargoQuantity,
           uom_public_id: cargoUomId,
           ...(customerId ? { cargo_owner_customer_id: Number(customerId) } : {}),
         });

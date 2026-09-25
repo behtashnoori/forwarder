@@ -12,7 +12,8 @@ from backend.migration_runtime import alembic_config
 PREVIOUS = "20260927_customer_portal_account_lifecycle"
 PHASE2 = "20260928_operational_workspace_phase2"
 RELIABILITY = "20260929_operational_monitoring_reliability"
-HEAD = "20260930_phase3_reference_catalog"
+P3_REFERENCE = "20260930_phase3_reference_catalog"
+REPOSITORY_HEAD = "20261001_phase3_cargo_lineage"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
@@ -166,8 +167,9 @@ def _parent_schema(url):
 def test_phase2_and_reliability_are_the_single_linear_repository_head():
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
-    assert script.get_revision(HEAD).down_revision == RELIABILITY
+    assert script.get_heads() == [REPOSITORY_HEAD]
+    assert script.get_revision(REPOSITORY_HEAD).down_revision == P3_REFERENCE
+    assert script.get_revision(P3_REFERENCE).down_revision == RELIABILITY
     assert script.get_revision(RELIABILITY).down_revision == PHASE2
     assert script.get_revision(PHASE2).down_revision == PREVIOUS
     assert script.get_bases() == ["20240917_initial_schema"]
@@ -224,7 +226,7 @@ def test_reliability_migration_is_additive_and_cleanly_roundtrips(tmp_path: Path
     engine = _parent_schema(url)
     config = alembic_config(url)
     command.stamp(config, PREVIOUS)
-    command.upgrade(config, HEAD)
+    command.upgrade(config, RELIABILITY)
     inspector = sa.inspect(engine)
     state_columns = {
         column["name"] for column in inspector.get_columns("oip_projection_state")
@@ -250,7 +252,7 @@ def test_reliability_migration_is_additive_and_cleanly_roundtrips(tmp_path: Path
         for column in downgraded.get_columns("oip_projection_health_history")
     }
 
-    command.upgrade(config, HEAD)
+    command.upgrade(config, RELIABILITY)
     assert "last_evaluation_success_at" in {
         column["name"]
         for column in sa.inspect(engine).get_columns("oip_projection_state")

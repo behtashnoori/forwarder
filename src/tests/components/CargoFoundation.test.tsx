@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   setCargoCatalogActive: vi.fn(), createCargoAlias: vi.fn(), updateCargoAlias: vi.fn(),
   getCargoCatalogShipmentUsage: vi.fn(),
   listShipmentCargoItems: vi.fn(), createShipmentCargoItem: vi.fn(), updateShipmentCargoItem: vi.fn(), searchOperationalCustomers: vi.fn(), request: vi.fn(), getShipmentCargoOptions: vi.fn(),
+  getShipmentCargoLineageOptions: vi.fn(), getShipmentCargoHistory: vi.fn(),
   getCargoTransportAllocations: vi.fn(), createCargoTransportAllocation: vi.fn(),
   deleteCargoTransportAllocation: vi.fn(), getOperationalTransportTracking: vi.fn(),
   enableOperationalTransportTracking: vi.fn(), addOperationalTransportTrackingUpdate: vi.fn(),
@@ -33,6 +34,10 @@ const shipmentItem = {
   customer_item_code_snapshot:"CC-1", hs_code_snapshot:null, brand_snapshot:null,
   model_snapshot:null, description_snapshot:"Historical snapshot", version:1,
   cargo_owner:null,
+  quantities:{requested:null,planned:null,actual:null,legacy:"2.000000",legacy_meaning:"UNKNOWN"},
+  source_lineage:{kind:"UNKNOWN",request_public_id:null,request_reference:null,request_cargo_item_public_id:null,request_cargo_position:null},
+  packaging:null,gross_weight:null,volume:null,destination_description:null,
+  incomplete_fields:["HS_CODE","PACKAGING_TYPE","WEIGHT","VOLUME"],
 };
 
 describe("Cargo foundation UI", () => {
@@ -41,7 +46,8 @@ describe("Cargo foundation UI", () => {
     api.listCargoCatalog.mockResolvedValue({items:[catalog],page:1,per_page:20,total:1,pages:1});
     api.listShipmentCargoItems.mockResolvedValue({items:[shipmentItem]});
     api.request.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1"}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea"}]});
-    api.getShipmentCargoOptions.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:true},{public_id:"catalog-2",code:"ITEM-2",name:"کالای سازمان",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:false}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea"}]});
+    api.getShipmentCargoOptions.mockResolvedValue({catalog:[{public_id:"catalog-1",code:"ITEM-1",name:"کالا",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:true},{public_id:"catalog-2",code:"ITEM-2",name:"کالای سازمان",cargo_type_public_id:"ct-1",default_uom_public_id:"uom-1",preferred:false}],cargo_types:[{public_id:"ct-1",code:"CARGO_GENERAL",name:"عمومی"}],uoms:[{public_id:"uom-1",code:"UOM_EA",name:"عدد",symbol:"ea",measurement_dimension:"COUNT"}],packaging_types:[{public_id:"package-1",code:"BOX",name:"جعبه"}]});
+    api.getShipmentCargoLineageOptions.mockResolvedValue({customers:[{id:1,label:"Customer A"},{id:2,label:"Multi-role Customer"},{id:3,label:"Same Name"}],requests:[]});
     api.searchOperationalCustomers.mockResolvedValue({items:[{id:1,label:"Customer A"}],meta:{count:1,limit:100}});
     api.updateShipmentCargoItem.mockResolvedValue({item:{...shipmentItem,quantity:"3",version:2}});
     api.getCargoTransportAllocations.mockResolvedValue({allocations:[],transport_units:[]});
@@ -83,7 +89,7 @@ describe("Cargo foundation UI", () => {
     await waitFor(()=>expect(api.createCargoAlias).toHaveBeenCalledWith("catalog-1",expect.objectContaining({alias_type:"COMMON_NAME",language:"und"})));
   });
 
-  it("shows legacy cargo separately and updates quantity without snapshot fields", async () => {
+  it("shows legacy quantity as unknown and records an explicit planned meaning", async () => {
     render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1" legacyDescription="Legacy machinery"/>);
     expect(await screen.findByText("Legacy machinery")).toBeTruthy();
     expect(api.getShipmentCargoOptions).toHaveBeenCalledWith("project-1","");
@@ -92,9 +98,35 @@ describe("Cargo foundation UI", () => {
     expect(screen.getByRole("option",{name:"بدون کالای استاندارد؛ شرح فقط برای این محموله"})).toBeTruthy();
     expect(screen.getByPlaceholderText("شرح نمایشی این قلم؛ فقط برای این محموله")).toBeTruthy();
     expect(screen.getByText("Historical snapshot")).toBeTruthy();
-    fireEvent.change(screen.getByLabelText("Edit quantity line 1"),{target:{value:"3"}});
-    fireEvent.click(screen.getByRole("button",{name:/Save/}));
-    await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",{quantity:"3",cargo_owner_customer_id:null,version:1}));
+    expect(screen.getByText(/معنای مقدار این داده پیشین مشخص نیست/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("Edit cargo customer line 1"),{target:{value:"1"}});
+    fireEvent.change(screen.getByLabelText("Edit planned quantity line 1"),{target:{value:"3"}});
+    fireEvent.click(screen.getByRole("button",{name:"ذخیره اطلاعات کالا"}));
+    await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",expect.objectContaining({planned_quantity:"3",cargo_owner_customer_id:1,version:1})));
+  });
+
+  it("creates Request-sourced Cargo with explicit customer and three quantity meanings", async () => {
+    api.getShipmentCargoLineageOptions.mockResolvedValue({customers:[{id:1,label:"Customer A"}],requests:[{
+      public_id:"request-1",label:"درخواست SR2-ONE",customer_id:1,customer_label:"Customer A",
+      cargo_items:[{public_id:"request-cargo-1",position:1,description:"Requested cargo",quantity:"12.000000",cargo_type_public_id:"ct-1",cargo_type_name:"عمومی",uom_public_id:"uom-1",uom_symbol:"ea"}],
+    }]});
+    api.createShipmentCargoItem.mockResolvedValue({item:{...shipmentItem,version:1}});
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1"/>);
+    await screen.findByText("Historical snapshot");
+    fireEvent.change(screen.getByLabelText("Source request"),{target:{value:"request-1"}});
+    fireEvent.change(screen.getByLabelText("Source request cargo"),{target:{value:"request-cargo-1"}});
+    fireEvent.change(screen.getByLabelText("Planned quantity"),{target:{value:"10"}});
+    fireEvent.change(screen.getByLabelText("Actual quantity"),{target:{value:"9"}});
+    fireEvent.click(screen.getByRole("button",{name:"افزودن کالا"}));
+    await waitFor(()=>expect(api.createShipmentCargoItem).toHaveBeenCalledWith("shipment-1",expect.objectContaining({
+      cargo_owner_customer_id:1,
+      source_request_public_id:"request-1",
+      source_request_cargo_item_public_id:"request-cargo-1",
+      requested_quantity:"12.000000",
+      planned_quantity:"10",
+      actual_quantity:"9",
+      quantity:"10",
+    })));
   });
 
   it("uses explicit Persian quantity allocation and preserves remaining cargo", async () => {
@@ -168,19 +200,15 @@ describe("Cargo foundation UI", () => {
     api.listShipmentCargoItems
       .mockResolvedValueOnce({items:[ownedItem]})
       .mockResolvedValue({items:[{...ownedItem,cargo_owner:{id:2,label:"Multi-role Customer"},version:2}]});
-    api.searchOperationalCustomers.mockResolvedValue({
-      items:[
-        {id:1,label:"Same Name"},
-        {id:2,label:"Multi-role Customer"},
-        {id:2,label:"Multi-role Customer"},
-        {id:3,label:"Same Name"},
-      ],
-      meta:{count:4,limit:100},
-    });
+    api.getShipmentCargoLineageOptions.mockResolvedValue({customers:[
+      {id:1,label:"Same Name"},
+      {id:2,label:"Multi-role Customer"},
+      {id:3,label:"Same Name"},
+    ],requests:[]});
 
     render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1"/>);
 
-    const selector = await screen.findByLabelText("Cargo owner line 1") as HTMLSelectElement;
+    const selector = await screen.findByLabelText("Edit cargo customer line 1") as HTMLSelectElement;
     expect(selector.querySelectorAll('option[value="1"]')).toHaveLength(1);
     expect(selector.querySelectorAll('option[value="2"]')).toHaveLength(1);
     expect(selector.querySelectorAll('option[value="3"]')).toHaveLength(1);
@@ -188,11 +216,12 @@ describe("Cargo foundation UI", () => {
     expect(consoleError).not.toHaveBeenCalled();
 
     fireEvent.change(selector,{target:{value:"2"}});
-    fireEvent.click(screen.getByRole("button",{name:/Save/}));
-    await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",{
-      quantity:"2.000000",cargo_owner_customer_id:"2",version:1,
-    }));
-    await waitFor(()=>expect((screen.getByLabelText("Cargo owner line 1") as HTMLSelectElement).value).toBe("2"));
+    fireEvent.change(screen.getByLabelText("Edit planned quantity line 1"),{target:{value:"2"}});
+    fireEvent.click(screen.getByRole("button",{name:"ذخیره اطلاعات کالا"}));
+    await waitFor(()=>expect(api.updateShipmentCargoItem).toHaveBeenCalledWith("shipment-1","line-1",expect.objectContaining({
+      planned_quantity:"2",cargo_owner_customer_id:2,version:1,
+    })));
+    await waitFor(()=>expect((screen.getByLabelText("Edit cargo customer line 1") as HTMLSelectElement).value).toBe("2"));
     consoleError.mockRestore();
   });
 

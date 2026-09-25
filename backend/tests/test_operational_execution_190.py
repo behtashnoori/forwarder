@@ -464,7 +464,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20260930_phase3_reference_catalog"
+        "20261001_phase3_cargo_lineage"
     ]
 
 

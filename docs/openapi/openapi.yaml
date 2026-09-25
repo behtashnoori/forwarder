@@ -406,17 +406,19 @@ components:
       allOf:
         - { $ref: '#/components/schemas/CargoReferenceOption' }
         - type: object
-          required: [symbol]
+          required: [symbol, measurement_dimension]
           properties:
             symbol: { type: string }
+            measurement_dimension: { type: string, enum: [COUNT, WEIGHT, VOLUME, LENGTH, OTHER_GOVERNED] }
     CargoOptionsResponse:
       type: object
       additionalProperties: false
-      required: [catalog, cargo_types, uoms]
+      required: [catalog, cargo_types, uoms, packaging_types]
       properties:
         catalog: { type: array, items: { $ref: '#/components/schemas/CargoCatalogOption' } }
         cargo_types: { type: array, items: { $ref: '#/components/schemas/CargoReferenceOption' }, description: Active central CargoType definitions with an active activation for the authenticated organization. }
         uoms: { type: array, items: { $ref: '#/components/schemas/CargoUomOption' }, description: Active central UnitOfMeasure definitions with an active activation for the authenticated organization. }
+        packaging_types: { type: array, items: { $ref: '#/components/schemas/CargoReferenceOption' }, description: Active central PackagingType definitions with an active activation for the authenticated organization. }
     ErrorResponse:
       type: object
       additionalProperties: true
@@ -691,7 +693,7 @@ components:
         updated_at: { type: string, format: date-time }
     ShipmentCargoItem:
       type: object
-      required: [public_id, line_number, source, cargo_type_public_id, uom_public_id, quantity, display_name_snapshot, cargo_type_code_snapshot, uom_code_snapshot, uom_symbol_snapshot, version]
+      required: [public_id, line_number, source, cargo_type_public_id, uom_public_id, quantity, quantities, source_lineage, display_name_snapshot, cargo_type_code_snapshot, uom_code_snapshot, uom_symbol_snapshot, packaging, gross_weight, volume, incomplete_fields, version]
       properties:
         public_id: { type: string, format: uuid }
         line_number: { type: integer, minimum: 1 }
@@ -699,7 +701,27 @@ components:
         catalog_item_public_id: { type: string, format: uuid, nullable: true }
         cargo_type_public_id: { type: string, format: uuid }
         uom_public_id: { type: string, format: uuid }
-        quantity: { type: string, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        quantity: { type: string, pattern: '^[0-9]+(?:\.[0-9]+)?$', description: Compatibility allocation value. It equals planned_quantity only for explicitly created or corrected P3-02 rows; legacy meaning is never inferred. }
+        quantities:
+          type: object
+          additionalProperties: false
+          required: [requested, planned, actual, legacy, legacy_meaning]
+          properties:
+            requested: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+            planned: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+            actual: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+            legacy: { type: string, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+            legacy_meaning: { type: string, enum: [PLANNED_COMPATIBILITY, UNKNOWN] }
+        source_lineage:
+          type: object
+          additionalProperties: false
+          required: [kind, request_public_id, request_reference, request_cargo_item_public_id, request_cargo_position]
+          properties:
+            kind: { type: string, enum: [REQUEST, DIRECT, UNKNOWN] }
+            request_public_id: { type: string, format: uuid, nullable: true }
+            request_reference: { type: string, nullable: true }
+            request_cargo_item_public_id: { type: string, format: uuid, nullable: true }
+            request_cargo_position: { type: integer, minimum: 1, nullable: true }
         display_name_snapshot: { type: string }
         cargo_type_code_snapshot: { type: string }
         cargo_type_fa_snapshot: { type: string }
@@ -712,7 +734,82 @@ components:
         brand_snapshot: { type: string, nullable: true }
         model_snapshot: { type: string, nullable: true }
         description_snapshot: { type: string, nullable: true }
+        cargo_owner:
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [id, label]
+          properties:
+            id: { type: integer }
+            label: { type: string }
+        packaging:
+          type: object
+          nullable: true
+          additionalProperties: false
+          required: [public_id, code, fa_name, en_name]
+          properties:
+            public_id: { type: string, format: uuid, nullable: true }
+            code: { type: string, nullable: true }
+            fa_name: { type: string, nullable: true }
+            en_name: { type: string, nullable: true }
+        gross_weight: { $ref: '#/components/schemas/CargoDimensionValue' }
+        volume: { $ref: '#/components/schemas/CargoDimensionValue' }
+        destination_description: { type: string, nullable: true }
+        incomplete_fields: { type: array, items: { type: string, enum: [HS_CODE, PACKAGING_TYPE, WEIGHT, VOLUME] } }
         version: { type: integer, minimum: 1 }
+    CargoDimensionValue:
+      type: object
+      nullable: true
+      additionalProperties: false
+      required: [value, uom_public_id, uom_code, uom_symbol]
+      properties:
+        value: { type: string, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        uom_public_id: { type: string, format: uuid, nullable: true }
+        uom_code: { type: string, nullable: true }
+        uom_symbol: { type: string, nullable: true }
+    ShipmentCargoWrite:
+      type: object
+      additionalProperties: false
+      properties:
+        line_number: { type: integer, minimum: 1 }
+        catalog_item_public_id: { type: string, format: uuid }
+        display_name: { type: string, maxLength: 200 }
+        cargo_type_public_id: { type: string, format: uuid }
+        cargo_owner_customer_id: { type: integer }
+        source_request_public_id: { type: string, format: uuid, nullable: true }
+        source_request_cargo_item_public_id: { type: string, format: uuid, nullable: true }
+        requested_quantity: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        planned_quantity: { type: string, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        actual_quantity: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        quantity: { type: string, description: Compatibility value; when supplied with planned_quantity it must be identical. }
+        uom_public_id: { type: string, format: uuid }
+        packaging_type_public_id: { type: string, format: uuid, nullable: true }
+        hs_code: { type: string, maxLength: 32, nullable: true }
+        description: { type: string, maxLength: 2000, nullable: true }
+        gross_weight: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        gross_weight_uom_public_id: { type: string, format: uuid, nullable: true }
+        volume: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
+        volume_uom_public_id: { type: string, format: uuid, nullable: true }
+        destination_description: { type: string, maxLength: 300, nullable: true }
+        version: { type: integer, minimum: 1 }
+    CargoLineageOptions:
+      type: object
+      additionalProperties: false
+      required: [customers, requests]
+      properties:
+        customers: { type: array, items: { type: object, additionalProperties: false, required: [id, label], properties: { id: { type: integer }, label: { type: string } } } }
+        requests:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [public_id, label, customer_id, customer_label, cargo_items]
+            properties:
+              public_id: { type: string, format: uuid }
+              label: { type: string }
+              customer_id: { type: integer, nullable: true }
+              customer_label: { type: string, nullable: true }
+              cargo_items: { type: array, items: { type: object, additionalProperties: true } }
     OperationalShipmentSummary:
       type: object
       required: [public_id, status, version]
@@ -3354,6 +3451,18 @@ paths:
         '200': { description: Organization catalog and organization-approved master-data options., content: { application/json: { schema: { $ref: '#/components/schemas/CargoOptionsResponse' } } } }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+  /api/internal/operational-shipments/{shipment_id}/cargo-lineage-options:
+    get:
+      tags: [Internal Cargo]
+      summary: List tenant-safe Customer and assigned Request lineage candidates
+      description: Only the active owning Transport Expert may read these selectors. Customers are active tenant CRM identities; Requests are current authorized assignments. Direct Cargo requires no synthetic Request.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Cargo lineage selector options., content: { application/json: { schema: { $ref: '#/components/schemas/CargoLineageOptions' } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/internal/operational-shipments/{shipment_id}/cargo-items:
     parameters:
       - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -3362,16 +3471,19 @@ paths:
       summary: List snapshot cargo lines for an authorized OperationalShipment
       security: [{ bearerAuth: [] }]
       responses:
-        '200': { description: Shipment cargo line list. }
+        '200': { description: Shipment cargo line list., content: { application/json: { schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: '#/components/schemas/ShipmentCargoItem' } } } } } } }
         '404': { $ref: '#/components/responses/NotFound' }
     post:
       tags: [Internal Cargo]
-      summary: Create a manual or catalog-linked shipment cargo snapshot
+      summary: Create an operational Cargo line with explicit Customer and optional Request lineage
+      description: Only the active owning Transport Expert may mutate Cargo. New P3-02 rows require Cargo Customer, positive planned quantity, CargoType and UOM approved for the authenticated organization. Requested quantity requires a real authorized Request. Actual quantity and progressive details may remain unknown. No unit conversion is performed.
       security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ShipmentCargoWrite' } } } }
       responses:
-        '201': { description: Created shipment cargo snapshot. }
+        '201': { description: Created shipment cargo line., content: { application/json: { schema: { type: object, required: [item], properties: { item: { $ref: '#/components/schemas/ShipmentCargoItem' } } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '409': { description: Duplicate line number. }
-        '422': { description: Invalid quantity, master data, catalog state, or snapshot evidence. }
+        '422': { description: Invalid lineage, Customer, quantity meaning, master data, UOM dimension, catalog state, or progressive detail pairing. }
   /api/internal/operational-shipments/{shipment_id}/cargo-items/{item_id}:
     parameters:
       - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -3385,13 +3497,28 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [Internal Cargo]
-      summary: Update mutable quantity without regenerating snapshots
+      summary: Correct mutable Cargo lineage, semantic quantities, and progressive details
+      description: Only the active owning Transport Expert may update. Changes are versioned and audited; governed identity snapshots remain immutable, while HS, description, Packaging, weight, volume and destination may be progressively completed or corrected.
       security: [{ bearerAuth: [] }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/ShipmentCargoWrite' } } } }
       responses:
-        '200': { description: Updated quantity and version. }
+        '200': { description: Updated Cargo line and version., content: { application/json: { schema: { type: object, required: [item], properties: { item: { $ref: '#/components/schemas/ShipmentCargoItem' } } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { description: Version conflict. }
-        '422': { description: Snapshot rewrite or quantity validation rejected. }
+        '422': { description: Immutable identity rewrite, lineage, or quantity/detail validation rejected. }
+  /api/internal/operational-shipments/{shipment_id}/cargo-items/{item_id}/history:
+    get:
+      tags: [Internal Cargo]
+      summary: Read auditable Cargo change history
+      description: Uses the parent OperationalShipment read boundary and exposes field-level before/after audit metadata without Customer Portal publication.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: item_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Ordered Cargo history., content: { application/json: { schema: { type: object, required: [history], properties: { history: { type: array, items: { type: object, additionalProperties: true } } } } } } }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/admin/logistics-point-types:
     get:
       tags: [Logistics Network]

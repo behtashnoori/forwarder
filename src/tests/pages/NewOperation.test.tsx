@@ -651,6 +651,7 @@ describe("Slice 5 governed creation", () => {
             catalog_item_public_id: "catalog-active",
             cargo_type_public_id: "cargo-type-1",
             quantity: "4.5",
+            planned_quantity: "4.5",
             uom_public_id: "uom-ea",
             ...(source === "direct" ? { cargo_owner_customer_id: 7 } : {}),
           },

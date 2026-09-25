@@ -7,7 +7,7 @@ ROOT=Path(__file__).resolve().parents[2]
 
 def test_materialization_is_sole_additive_head_and_bounded():
     script=ScriptDirectory.from_config(Config(str(ROOT/"backend"/"migrations"/"alembic.ini")))
-    assert script.get_heads()==["20260930_phase3_reference_catalog"]
+    assert script.get_heads()==["20261001_phase3_cargo_lineage"]
     revision=script.get_revision("20260906_global_logistics_point_materialization")
     assert revision.down_revision=="20260905_global_logistics_point_adoption"
     source=(ROOT/"backend"/"migrations"/"versions"/"20260906_global_logistics_point_materialization.py").read_text("utf-8")

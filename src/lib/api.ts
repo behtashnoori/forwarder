@@ -3462,6 +3462,13 @@ export interface ShipmentCargoItem {
   cargo_type_public_id: string;
   uom_public_id: string;
   quantity: string;
+  quantities: {
+    requested: string | null;
+    planned: string | null;
+    actual: string | null;
+    legacy: string;
+    legacy_meaning: "PLANNED_COMPATIBILITY" | "UNKNOWN";
+  };
   allocated_quantity?: string;
   remaining_quantity?: string;
   display_name_snapshot: string;
@@ -3477,6 +3484,33 @@ export interface ShipmentCargoItem {
   model_snapshot?: string | null;
   description_snapshot?: string | null;
   cargo_owner: { id: number; label: string } | null;
+  source_lineage: {
+    kind: "REQUEST" | "DIRECT" | "UNKNOWN";
+    request_public_id: string | null;
+    request_reference: string | null;
+    request_cargo_item_public_id: string | null;
+    request_cargo_position: number | null;
+  };
+  packaging: {
+    public_id: string | null;
+    code: string | null;
+    fa_name: string | null;
+    en_name: string | null;
+  } | null;
+  gross_weight: {
+    value: string;
+    uom_public_id: string | null;
+    uom_code: string | null;
+    uom_symbol: string | null;
+  } | null;
+  volume: {
+    value: string;
+    uom_public_id: string | null;
+    uom_code: string | null;
+    uom_symbol: string | null;
+  } | null;
+  destination_description?: string | null;
+  incomplete_fields: Array<"HS_CODE" | "PACKAGING_TYPE" | "WEIGHT" | "VOLUME">;
   version: number;
 }
 export interface ShipmentCargoOption {
@@ -3486,6 +3520,7 @@ export interface ShipmentCargoOption {
   cargo_type_public_id?: string;
   default_uom_public_id?: string | null;
   symbol?: string;
+  measurement_dimension?: "COUNT" | "WEIGHT" | "VOLUME" | "LENGTH" | "OTHER_GOVERNED";
   preferred?: boolean;
   preference_order?: number | null;
   selectable?: boolean;
@@ -3493,6 +3528,7 @@ export interface ShipmentCargoOption {
 export interface CargoReferenceMissingConfiguration {
   cargo_types?: boolean;
   uoms?: boolean;
+  packaging_types?: boolean;
   resources?: string[];
   message?: string;
 }
@@ -3500,6 +3536,7 @@ export interface ShipmentCargoOptions {
   catalog: ShipmentCargoOption[];
   cargo_types: ShipmentCargoOption[];
   uoms: ShipmentCargoOption[];
+  packaging_types?: ShipmentCargoOption[];
   missing_configuration?: CargoReferenceMissingConfiguration | null;
 }
 export const getShipmentCargoOptions = (projectPublicId?: string, q?: string) =>
@@ -3508,6 +3545,30 @@ export const getShipmentCargoOptions = (projectPublicId?: string, q?: string) =>
       project_public_id: projectPublicId || undefined,
       q: q || undefined,
     }),
+  );
+export interface ShipmentCargoLineageOption {
+  public_id: string;
+  label: string;
+  customer_id: number | null;
+  customer_label: string | null;
+  cargo_items: Array<{
+    public_id: string;
+    position: number;
+    description: string | null;
+    quantity: string | null;
+    cargo_type_public_id: string | null;
+    cargo_type_name: string | null;
+    uom_public_id: string | null;
+    uom_symbol: string | null;
+  }>;
+}
+export interface ShipmentCargoLineageOptions {
+  customers: OperationalCustomerSelector[];
+  requests: ShipmentCargoLineageOption[];
+}
+export const getShipmentCargoLineageOptions = (shipmentId: string) =>
+  request<ShipmentCargoLineageOptions>(
+    `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-lineage-options`,
   );
 export interface CargoTransportAllocation { public_id:string; cargo_item_public_id:string; transport_unit_id:number; allocated_quantity:string; uom_symbol:string; cargo_name:string; transport_unit_code:string; transport_unit_type:string; }
 export interface ShipmentTransportUnitOption { id:number; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null; }
@@ -3547,6 +3608,17 @@ export const updateShipmentCargoItem = (
   request<{ item: ShipmentCargoItem }>(
     `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items/${encodeURIComponent(itemId)}`,
     { method: "PATCH", body: JSON.stringify(payload) },
+  );
+export interface ShipmentCargoHistoryEntry {
+  action: string;
+  recorded_at: string;
+  actor_user_id: number;
+  version: number;
+  changed_fields: string[];
+}
+export const getShipmentCargoHistory = (shipmentId: string, itemId: string) =>
+  request<{ history: ShipmentCargoHistoryEntry[] }>(
+    `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items/${encodeURIComponent(itemId)}/history`,
   );
 export interface ExecutionEventView {
   public_id: string;

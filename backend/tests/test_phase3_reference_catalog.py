@@ -34,6 +34,7 @@ from backend.services.auth_session_service import create_session_tokens
 
 PREVIOUS = "20260929_operational_monitoring_reliability"
 HEAD = "20260930_phase3_reference_catalog"
+REPOSITORY_HEAD = "20261001_phase3_cargo_lineage"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
@@ -522,7 +523,7 @@ def _migration_parent_schema(url):
 def test_phase3_migration_is_single_head_seed_free_roundtrip_and_guarded(tmp_path):
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == [HEAD]
+    assert script.get_heads() == [REPOSITORY_HEAD]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
 
     source = (

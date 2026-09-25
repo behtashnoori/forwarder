@@ -659,6 +659,11 @@ class RequestCargoItem(db.Model):
     __table_args__ = (
         db.UniqueConstraint("public_id", name="uq_request_cargo_item_public_id"),
         db.UniqueConstraint(
+            "id",
+            "shipment_request_id",
+            name="uq_request_cargo_item_id_request",
+        ),
+        db.UniqueConstraint(
             "shipment_request_id",
             "position",
             name="uq_request_cargo_item_request_position",

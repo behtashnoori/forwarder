@@ -58,11 +58,25 @@ def _master_data():
 
 def _capture_create(monkeypatch, *, catalog=None, overrides=None):
     cargo_type, uom = _master_data()
-    scalars = iter((cargo_type, uom))
+    owner = Customer(
+        id=41,
+        first_name="Owner",
+        last_name="A",
+        status="active",
+        ownership_scope="TENANT",
+        operational_organization_id=1,
+    )
+    scalars = iter((cargo_type, uom, owner))
     monkeypatch.setattr(svc.db.session, "scalar", lambda _query: next(scalars))
     monkeypatch.setattr(svc.db.session, "add", lambda _row: None)
+    monkeypatch.setattr(svc.db.session, "flush", lambda: None)
     monkeypatch.setattr(svc.db.session, "commit", lambda: None)
-    monkeypatch.setattr(svc.operational_service, "require_permission", lambda *_args: None)
+    shipment = SimpleNamespace(
+        id=99, public_id="shipment-public", customer_id=41, organization_id=1
+    )
+    monkeypatch.setattr(svc.db.session, "get", lambda *_args: shipment)
+    monkeypatch.setattr(svc, "_require_cargo_mutation", lambda *_args: None)
+    monkeypatch.setattr(svc, "_cargo_audit", lambda *_args: None)
     monkeypatch.setattr(svc, "_require_organization_activation", lambda *_args: None)
     if catalog is not None:
         monkeypatch.setattr(svc, "scoped_catalog", lambda *_args, **_kwargs: catalog)
@@ -81,7 +95,7 @@ def _capture_create(monkeypatch, *, catalog=None, overrides=None):
     }
     payload.update(overrides or {})
     row = svc.create_shipment_item(
-        {"id": 7}, SimpleNamespace(id=99, customer_id=None, organization_id=1), payload
+        {"id": 7}, shipment, payload
     )
     return row, cargo_type, uom
 
@@ -99,16 +113,18 @@ def test_manual_shipment_item_captures_supplied_creation_snapshot(monkeypatch):
 
 def test_cargo_owner_defaults_or_fails_closed_outside_active_tenant(monkeypatch):
     cargo_type, uom = _master_data()
-    owner = Customer(id=41, first_name="Owner", last_name="A", status="active", operational_organization_id=1)
+    owner = Customer(id=41, first_name="Owner", last_name="A", status="active", ownership_scope="TENANT", operational_organization_id=1)
     scalars = iter((cargo_type, uom, owner))
     monkeypatch.setattr(svc.db.session, "scalar", lambda _query: next(scalars))
     monkeypatch.setattr(svc.db.session, "add", lambda _row: None)
+    monkeypatch.setattr(svc.db.session, "flush", lambda: None)
     monkeypatch.setattr(svc.db.session, "commit", lambda: None)
-    monkeypatch.setattr(svc.operational_service, "require_permission", lambda *_args: None)
+    monkeypatch.setattr(svc, "_require_cargo_mutation", lambda *_args: None)
+    monkeypatch.setattr(svc, "_cargo_audit", lambda *_args: None)
     monkeypatch.setattr(svc, "_require_organization_activation", lambda *_args: None)
     row = svc.create_shipment_item(
         {"id": 7},
-        SimpleNamespace(id=99, customer_id=41, organization_id=1),
+        SimpleNamespace(id=99, public_id="shipment-public", customer_id=41, organization_id=1),
         {"line_number": 1, "cargo_type_public_id": cargo_type.public_id, "uom_public_id": uom.public_id, "quantity": "1", "display_name": "Cargo"},
     )
     assert row.cargo_owner_customer is owner
@@ -118,7 +134,7 @@ def test_cargo_owner_defaults_or_fails_closed_outside_active_tenant(monkeypatch)
     with pytest.raises(svc.CargoError, match="active cargo owner"):
         svc.create_shipment_item(
             {"id": 7},
-            SimpleNamespace(id=99, customer_id=None, organization_id=1),
+            SimpleNamespace(id=99, public_id="shipment-public", customer_id=None, organization_id=1),
             {"line_number": 2, "cargo_type_public_id": cargo_type.public_id, "uom_public_id": uom.public_id, "quantity": "1", "display_name": "Cargo", "cargo_owner_customer_id": 999},
         )
 
@@ -159,7 +175,7 @@ def test_catalog_linked_creation_captures_catalog_and_master_snapshots(monkeypat
     assert row.uom_symbol_snapshot == "ea"
 
 
-def test_catalog_linked_creation_uses_catalog_values_not_payload_overrides(monkeypatch):
+def test_catalog_linked_creation_keeps_catalog_identity_and_accepts_progressive_details(monkeypatch):
     cargo_type, uom = _master_data()
     catalog = CargoCatalogItem(
         id=10, public_id="catalog-public", organization_id=1, immutable_code="ITEM-1",
@@ -173,7 +189,8 @@ def test_catalog_linked_creation_uses_catalog_values_not_payload_overrides(monke
         overrides={"catalog_item_public_id": catalog.public_id},
     )
     assert row.part_number_snapshot == "PN-OLD"
-    assert row.description_snapshot == "D-OLD"
+    assert row.description_snapshot == "Creation evidence"
+    assert row.hs_code_snapshot == "1234"
 
 
 def test_ordinary_update_changes_quantity_but_rejects_snapshot_rewrite(monkeypatch):
@@ -191,7 +208,7 @@ def test_inactive_or_cross_organization_catalog_selection_fails_closed(monkeypat
     cargo_type, uom = _master_data()
     scalars = iter((cargo_type, uom))
     monkeypatch.setattr(svc.db.session, "scalar", lambda _query: next(scalars))
-    monkeypatch.setattr(svc.operational_service, "require_permission", lambda *_args: None)
+    monkeypatch.setattr(svc, "_require_cargo_mutation", lambda *_args: None)
     monkeypatch.setattr(svc, "_require_organization_activation", lambda *_args: None)
     monkeypatch.setattr(svc, "scoped_catalog", lambda *_args, **_kwargs: (_ for _ in ()).throw(svc.CargoError("not found", 404)))
     with pytest.raises(svc.CargoError) as exc:
@@ -225,5 +242,5 @@ def test_cargo_migration_is_additive_seed_free_and_scoped():
 def test_forbidden_capabilities_and_fields_are_absent_from_models_and_routes():
     root = Path(__file__).parents[1]
     source = (root / "cargo_models.py").read_text(encoding="utf-8") + (root / "routes" / "cargo.py").read_text(encoding="utf-8")
-    for forbidden in ("delivered_quantity", "allocation_quantity", "PackagingType", "pg_trgm"):
+    for forbidden in ("delivered_quantity", "allocation_quantity", "pg_trgm"):
         assert forbidden not in source

@@ -61,11 +61,13 @@ This is conceptual flow: ShipmentRequest commercial state, optional Request Carg
 flowchart LR
   SR["ShipmentRequest"] -->|"0..N optional"| RI["RequestCargoItem — commercial intent"]
   CT["CargoType — Reference Data"] --> CC["CargoCatalogItem — Master Data"] --> SI["ShipmentCargoItem — Transaction Snapshot"]
-  RI -. "later explicit planning/traceability; no automatic allocation" .-> SI
-  SI -. "future; deferred" .-> AL["Cargo-to-ExecutionUnit Link / Allocation"]
+  RI -. "optional exact source; no automatic allocation" .-> SI
+  CU["Customer — tenant CRM identity"] -->|"one per new Cargo line"| SI
+  PK["PackagingType — active tenant selection"] -. "optional" .-> SI
+  SI --> AL["ExecutionUnitCargoAllocation — existing bounded allocation"]
 ```
 
-`RequestCargoItem` and `ShipmentCargoItem` are distinct. Request submission permits zero Cargo Items and no Cargo field is mandatory. Catalog changes never rewrite ShipmentCargoItem snapshots. Any Request-to-Shipment Cargo lineage/allocation is later operational planning, not Customer-authored execution. Allocation remains separately governed.
+`RequestCargoItem` and `ShipmentCargoItem` are distinct. Request submission permits zero Cargo Items and no Cargo field is mandatory. ADR-057 adds optional exact source lineage from an operational Cargo line to one authorized Request/RequestCargo, without copying Customer intake into execution or fabricating a Request for direct Cargo. Each new Cargo line has one same-tenant CRM Customer and independent requested/planned/actual meanings. Catalog changes never silently rewrite ShipmentCargoItem identity snapshots. Existing allocation remains separately governed by ADR-046 and is not redesigned by P3-02.
 
 ## 4. Logistics Network boundaries
 

@@ -198,6 +198,12 @@ class ProjectCargoCatalogItem(db.Model):
 class ShipmentCargoItem(db.Model):
     __tablename__ = "shipment_cargo_item"
     __table_args__ = (
+        db.ForeignKeyConstraint(
+            ["source_request_cargo_item_id", "source_shipment_request_id"],
+            ["request_cargo_item.id", "request_cargo_item.shipment_request_id"],
+            name="fk_shipment_cargo_source_item_request",
+            ondelete="RESTRICT",
+        ),
         db.UniqueConstraint(
             "operational_shipment_id",
             "line_number",
@@ -210,6 +216,36 @@ class ShipmentCargoItem(db.Model):
             "quantity > 0", name="ck_shipment_cargo_item_quantity_positive"
         ),
         db.CheckConstraint(
+            "requested_quantity IS NULL OR requested_quantity > 0",
+            name="ck_shipment_cargo_requested_quantity_positive",
+        ),
+        db.CheckConstraint(
+            "planned_quantity IS NULL OR planned_quantity > 0",
+            name="ck_shipment_cargo_planned_quantity_positive",
+        ),
+        db.CheckConstraint(
+            "actual_quantity IS NULL OR actual_quantity > 0",
+            name="ck_shipment_cargo_actual_quantity_positive",
+        ),
+        db.CheckConstraint(
+            "requested_quantity IS NULL OR source_shipment_request_id IS NOT NULL",
+            name="ck_shipment_cargo_requested_has_source",
+        ),
+        db.CheckConstraint(
+            "source_request_cargo_item_id IS NULL OR source_shipment_request_id IS NOT NULL",
+            name="ck_shipment_cargo_source_item_has_request",
+        ),
+        db.CheckConstraint(
+            "(gross_weight IS NULL AND gross_weight_uom_id IS NULL) OR "
+            "(gross_weight > 0 AND gross_weight_uom_id IS NOT NULL)",
+            name="ck_shipment_cargo_weight_pair",
+        ),
+        db.CheckConstraint(
+            "(volume IS NULL AND volume_uom_id IS NULL) OR "
+            "(volume > 0 AND volume_uom_id IS NOT NULL)",
+            name="ck_shipment_cargo_volume_pair",
+        ),
+        db.CheckConstraint(
             "version >= 1", name="ck_shipment_cargo_item_version_positive"
         ),
         db.Index(
@@ -218,6 +254,20 @@ class ShipmentCargoItem(db.Model):
         db.Index(
             "ix_shipment_cargo_item_catalog_shipment",
             "catalog_item_id",
+            "operational_shipment_id",
+        ),
+        db.Index(
+            "ix_shipment_cargo_item_source_request",
+            "source_shipment_request_id",
+            "operational_shipment_id",
+        ),
+        db.Index(
+            "ix_shipment_cargo_item_source_request_cargo",
+            "source_request_cargo_item_id",
+        ),
+        db.Index(
+            "ix_shipment_cargo_item_customer_shipment",
+            "cargo_owner_customer_id",
             "operational_shipment_id",
         ),
     )
@@ -235,6 +285,12 @@ class ShipmentCargoItem(db.Model):
     cargo_owner_customer_id = db.Column(
         BIGINT, db.ForeignKey("customer.id", ondelete="RESTRICT"), nullable=True, index=True
     )
+    source_shipment_request_id = db.Column(
+        BIGINT,
+        db.ForeignKey("shipment_request.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+    source_request_cargo_item_id = db.Column(BIGINT, nullable=True)
     line_number = db.Column(db.Integer, nullable=False)
     catalog_item_id = db.Column(
         BIGINT,
@@ -245,8 +301,22 @@ class ShipmentCargoItem(db.Model):
         BIGINT, db.ForeignKey("cargo_type.id", ondelete="RESTRICT"), nullable=False
     )
     quantity = db.Column(db.Numeric(18, 6), nullable=False)
+    requested_quantity = db.Column(db.Numeric(18, 6), nullable=True)
+    planned_quantity = db.Column(db.Numeric(18, 6), nullable=True)
+    actual_quantity = db.Column(db.Numeric(18, 6), nullable=True)
     uom_id = db.Column(
         BIGINT, db.ForeignKey("unit_of_measure.id", ondelete="RESTRICT"), nullable=False
+    )
+    packaging_type_id = db.Column(
+        BIGINT, db.ForeignKey("packaging_type.id", ondelete="RESTRICT"), nullable=True
+    )
+    gross_weight = db.Column(db.Numeric(18, 6), nullable=True)
+    gross_weight_uom_id = db.Column(
+        BIGINT, db.ForeignKey("unit_of_measure.id", ondelete="RESTRICT"), nullable=True
+    )
+    volume = db.Column(db.Numeric(18, 6), nullable=True)
+    volume_uom_id = db.Column(
+        BIGINT, db.ForeignKey("unit_of_measure.id", ondelete="RESTRICT"), nullable=True
     )
     display_name_snapshot = db.Column(db.String(200), nullable=False)
     cargo_type_code_snapshot = db.Column(db.String(64), nullable=False)
@@ -260,6 +330,14 @@ class ShipmentCargoItem(db.Model):
     brand_snapshot = db.Column(db.String(120), nullable=True)
     model_snapshot = db.Column(db.String(120), nullable=True)
     description_snapshot = db.Column(db.Text, nullable=True)
+    packaging_code_snapshot = db.Column(db.String(64), nullable=True)
+    packaging_fa_snapshot = db.Column(db.String(160), nullable=True)
+    packaging_en_snapshot = db.Column(db.String(160), nullable=True)
+    gross_weight_uom_code_snapshot = db.Column(db.String(64), nullable=True)
+    gross_weight_uom_symbol_snapshot = db.Column(db.String(32), nullable=True)
+    volume_uom_code_snapshot = db.Column(db.String(64), nullable=True)
+    volume_uom_symbol_snapshot = db.Column(db.String(32), nullable=True)
+    destination_description = db.Column(db.String(300), nullable=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(
@@ -273,8 +351,19 @@ class ShipmentCargoItem(db.Model):
     )
     catalog_item = db.relationship("CargoCatalogItem")
     cargo_type = db.relationship("CargoType")
-    uom = db.relationship("UnitOfMeasure")
+    uom = db.relationship("UnitOfMeasure", foreign_keys=[uom_id])
+    packaging_type = db.relationship("PackagingType")
+    gross_weight_uom = db.relationship(
+        "UnitOfMeasure", foreign_keys=[gross_weight_uom_id]
+    )
+    volume_uom = db.relationship("UnitOfMeasure", foreign_keys=[volume_uom_id])
     cargo_owner_customer = db.relationship("Customer", foreign_keys=[cargo_owner_customer_id])
+    source_shipment_request = db.relationship(
+        "ShipmentRequest", foreign_keys=[source_shipment_request_id]
+    )
+    source_request_cargo_item = db.relationship(
+        "RequestCargoItem", foreign_keys=[source_request_cargo_item_id]
+    )
 
     __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
 
@@ -349,10 +438,8 @@ _SHIPMENT_SNAPSHOT_FIELDS = (
     "uom_symbol_snapshot",
     "part_number_snapshot",
     "customer_item_code_snapshot",
-    "hs_code_snapshot",
     "brand_snapshot",
     "model_snapshot",
-    "description_snapshot",
 )
 
 
