@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 if (!password || !fixturePath) throw new Error("P3-01 qualification must use its disposable local runner.");
-const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as { shipment_a: string };
+const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as { shipment_a: string; owner_a_id: number };
 test.setTimeout(120_000);
 
 type Evidence = { console: string[]; page: string[]; failed: string[]; unexpected: string[] };
@@ -77,7 +77,7 @@ async function openOrganizationFamily(page: Page, tab: string) {
 
 async function openCargoEditor(page: Page) {
   await page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }).click();
-  await page.locator("summary", { hasText: "افزودن کالا" }).click();
+  await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
 }
 
 async function activateForOrganization(page: Page, definition: typeof definitions[number]) {
@@ -136,7 +136,8 @@ test("P3-01 — central definitions → organization activation → expert use �
   await page.getByLabel("Cargo line number").fill("2");
   await page.getByLabel("Cargo display name").fill("[P3-01-E2E] کالای فعال سازمان");
   await page.getByLabel("Cargo type").selectOption({ label: "کالای مرجع پی‌سه" });
-  await page.getByLabel("Cargo quantity").fill("7.25");
+  await page.getByLabel("Cargo customer", { exact: true }).selectOption(String(fixture.owner_a_id));
+  await page.getByLabel("Planned quantity", { exact: true }).fill("7.25");
   await page.getByLabel("Unit of measure").selectOption({ label: "واحد مرجع پی‌سه (P3U)" });
   const createCargo = page.waitForResponse(item =>
     item.request().method() === "POST" && item.url().includes(`/operational-shipments/${fixture.shipment_a}/cargo-items`)
@@ -163,7 +164,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   await page.locator(`a[href="/operations/shipments/${fixture.shipment_a}"]`).click();
   await page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }).click();
   await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
-  await page.locator("summary", { hasText: "افزودن کالا" }).click();
+  await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
   await expect(page.getByText("این نوع در تعاریف سازمان موجود نیست. برای ادامه، مدیر سازمان باید آن را تعریف یا فعال کند.")).toBeVisible();
   await expect(page.getByRole("button", { name: "افزودن کالا", exact: true })).toBeDisabled();
 
