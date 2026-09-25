@@ -41,6 +41,7 @@ import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 import RouteAuthoringSection from "@/components/RouteAuthoringSection";
 import RouteActualSection from "@/components/RouteActualSection";
 import RouteStageTransportExecutionSection from "@/components/RouteStageTransportExecutionSection";
+import ReportedFactsSection from "@/components/ReportedFactsSection";
 import CargoAllocationTraceSection from "@/components/CargoAllocationTraceSection";
 import {
   formatRouteTransportModes,
@@ -84,6 +85,7 @@ export default function OperationalShipmentDetail() {
   const [draftPlan, setDraftPlan] = useState<RoutePlanDetail>();
   const [routePlansLoaded, setRoutePlansLoaded] = useState(false);
   const [cargoTraceOpen, setCargoTraceOpen] = useState(false);
+  const [reportsOpen, setReportsOpen] = useState(false);
   const [timeline, setTimeline] = useState<RouteTimeline>();
   const [exceptions, setExceptions] = useState<RouteException[]>([]);
   const [error, setError] = useState("");
@@ -223,6 +225,7 @@ export default function OperationalShipmentDetail() {
             {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} /></div>}
           </details>}
           {plan && <RouteActualSection shipmentId={shipmentPublicId} plan={plan} reload={load} />}
+          <details className="rounded-xl border bg-white" onToggle={event => setReportsOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">گزارش موقعیت و تغییرات حمل</summary>{reportsOpen && <div className="border-t p-3 sm:p-4"><ReportedFactsSection shipmentId={shipmentPublicId} /></div>}</details>
           </section>
 
           <details className="rounded border bg-white">

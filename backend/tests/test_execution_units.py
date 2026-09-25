@@ -161,7 +161,7 @@ def test_summary_alerts_stale_policy_and_500_unit_10000_event_bounded_queries(eu
             units.append(unit)
         db.session.add_all(units); db.session.flush()
         for unit in units:
-            for j in range(20): events.append(OperationalEvent(project_id=project.id,execution_unit_id=unit.id,event_type="checkpoint",visibility="internal",occurred_at=now-timedelta(minutes=j),actor_user_id=actor.id,idempotency_key=f"{unit.id}-{j}",request_hash="x"*64))
+            for j in range(20): events.append(OperationalEvent(organization_id=unit.organization_id, project_id=project.id,execution_unit_id=unit.id,event_type="checkpoint",visibility="internal",occurred_at=now-timedelta(minutes=j),actor_user_id=actor.id,idempotency_key=f"{unit.id}-{j}",request_hash="x"*64))
         db.session.add_all(events); db.session.commit()
         first_unit_public_id=units[0].public_id; first_unit_id=units[0].id; project_id=project.id
     queries=[]
@@ -192,7 +192,7 @@ def test_summary_alerts_stale_policy_and_500_unit_10000_event_bounded_queries(eu
 
 def test_execution_unit_migration_is_single_head():
     root=Path(__file__).resolve().parents[1]; config=Config(str(root/"migrations"/"alembic.ini")); config.set_main_option("script_location",str(root/"migrations"))
-    assert ScriptDirectory.from_config(config).get_heads() == ["20261006_customer_entitlement"]
+    assert ScriptDirectory.from_config(config).get_heads() == ["20261007_phase3_reported_facts"]
 
 
 def test_execution_unit_migration_parent_round_trip_and_indexes(tmp_path):

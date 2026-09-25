@@ -259,7 +259,7 @@ class ExecutionUnit(db.Model):
     project = db.relationship("Project", back_populates="execution_units")
     carrier_customer = db.relationship("Customer", foreign_keys=[carrier_customer_id])
     events = db.relationship(
-        "OperationalEvent", back_populates="execution_unit", lazy="raise"
+        "OperationalEvent", back_populates="execution_unit", lazy="raise", foreign_keys="OperationalEvent.execution_unit_id"
     )
     transport_revisions = db.relationship(
         "ExecutionTransportRevision",
@@ -486,6 +486,14 @@ class OperationalEvent(db.Model):
 
     __tablename__ = "operational_event"
     __table_args__ = (
+        db.UniqueConstraint("id", "execution_unit_id", name="uq_operational_event_id_unit"),
+        db.UniqueConstraint("id", "organization_id", name="uq_operational_event_id_org"),
+        db.ForeignKeyConstraint(["execution_unit_id", "organization_id"], ["execution_unit.id", "execution_unit.organization_id"], name="fk_operational_event_unit_org", ondelete="RESTRICT"),
+        db.CheckConstraint("execution_unit_id IS NOT NULL OR event_type = 'phase3_reported_fact'", name="ck_event_report_or_unit"),
+        db.CheckConstraint("event_type <> 'phase3_reported_fact' OR source IN ('CARRIER_REPORT','DRIVER_REPORT','INTERNAL_EXPERT','OTHER_OPERATIONAL_SOURCE')", name="ck_event_report_source"),
+        db.Index("uq_report_event_successor", "supersedes_event_id", unique=True,
+                 postgresql_where=db.text("event_type = 'phase3_reported_fact' AND supersedes_event_id IS NOT NULL"),
+                 sqlite_where=db.text("event_type = 'phase3_reported_fact' AND supersedes_event_id IS NOT NULL")),
         db.UniqueConstraint("public_id", name="uq_operational_event_public_id"),
         db.UniqueConstraint(
             "execution_unit_id",
@@ -524,8 +532,9 @@ class OperationalEvent(db.Model):
         BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=True
     )
 
+    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
     execution_unit_id = db.Column(
-        BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=False
+        BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"), nullable=True
     )
     transport_revision_id = db.Column(BIGINT, nullable=True, index=True)
     event_type = db.Column(db.String(64), nullable=False)
@@ -553,7 +562,7 @@ class OperationalEvent(db.Model):
     )
     threshold_policy_version = db.Column(db.String(32), nullable=True)
 
-    execution_unit = db.relationship("ExecutionUnit", back_populates="events")
+    execution_unit = db.relationship("ExecutionUnit", back_populates="events", foreign_keys=[execution_unit_id])
     transport_revision = db.relationship(
         "ExecutionTransportRevision", viewonly=True, lazy="selectin"
     )
@@ -561,6 +570,21 @@ class OperationalEvent(db.Model):
         "OperationalEventLocationEvidence", back_populates="event", uselist=False,
         lazy="selectin", cascade="all, delete-orphan"
     )
+
+
+@event.listens_for(OperationalEvent, "before_update")
+def _reported_event_is_immutable(_mapper, _connection, target):
+    was_report = "phase3_reported_fact" in inspect(target).attrs.event_type.history.deleted
+    if (target.event_type == "phase3_reported_fact" or was_report) and any(
+        inspect(target).attrs[column.key].history.has_changes() for column in target.__table__.columns
+    ):
+        raise ValueError("reported operational facts are immutable; append a correction")
+
+
+@event.listens_for(OperationalEvent, "before_delete")
+def _reported_event_cannot_be_deleted(_mapper, _connection, target):
+    if target.event_type == "phase3_reported_fact":
+        raise ValueError("reported operational facts are immutable; append a correction")
 
 
 class OperationalEventLocationEvidence(db.Model):

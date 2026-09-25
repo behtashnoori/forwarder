@@ -385,6 +385,7 @@ def _seed(app):
         db.session.flush()
         for index, unit in enumerate(units):
             row = OperationalEvent(
+        organization_id=unit.organization_id,
                 project_id=project.id,
                 execution_unit_id=unit.id,
                 event_type="arrived",

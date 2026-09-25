@@ -53,7 +53,7 @@ def traceability_app():
         terminal_unit = ExecutionUnit(project_id=project.id, operational_shipment_id=terminal.id, unit_code="U-2", unit_type="truck", latest_checkpoint="Warehouse", last_event_at=datetime(2026, 8, 19, 8, 0, tzinfo=timezone.utc), created_by_user_id=user.id)
         db.session.add_all([unit, terminal_unit])
         db.session.flush()
-        db.session.add(OperationalEvent(project_id=project.id, execution_unit_id=unit.id, event_type="checkpoint", checkpoint_text="Border gate", occurred_at=datetime(2026, 8, 20, 9, 25, tzinfo=timezone.utc), actor_user_id=user.id, idempotency_key="cargo-location", request_hash="hash"))
+        db.session.add(OperationalEvent(organization_id=unit.organization_id, project_id=project.id, execution_unit_id=unit.id, event_type="checkpoint", checkpoint_text="Border gate", occurred_at=datetime(2026, 8, 20, 9, 25, tzinfo=timezone.utc), actor_user_id=user.id, idempotency_key="cargo-location", request_hash="hash"))
         db.session.commit()
         yield {"app": app, "user": user, "other_user": other_user, "membership": membership}
         db.session.remove()

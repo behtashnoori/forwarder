@@ -31,7 +31,7 @@ def test_quote_communication_migration_is_single_head_and_additive():
         "script_location", str(Path(__file__).parents[1] / "migrations")
     )
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20261006_customer_entitlement"]
+    assert script.get_heads() == ["20261007_phase3_reported_facts"]
     assert script.get_revision("20260925_quote_communication").down_revision == (
         "20260924_request_cargo_items"
     )

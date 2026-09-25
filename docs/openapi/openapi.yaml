@@ -3990,3 +3990,61 @@ paths:
     get: { tags: [Documents], summary: Page current exact versions allowed by live DN10 own-Cargo entitlement or explicit sharing, security: [{ customerSession: [] }], parameters: [{ name: page, in: query, schema: { type: integer, minimum: 1 } }], responses: { '200': { description: Post-authorization list with no foreign metadata or count. }, '401': { description: Active Customer session required. } } }
   /api/customer/documents/{document_id}/download:
     get: { tags: [Documents], summary: Reauthorize tenant, exact current version and current own-Cargo entitlement or explicit audience on every download, security: [{ customerSession: [] }], parameters: [{ name: document_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Authorized private bytes without cache. }, '404': { description: Unknown and unauthorized files indistinguishable. } } }
+  /api/operational-shipments/{shipment_id}/reported-facts:
+    parameters:
+      - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [OperationalShipments]
+      summary: Authorized internal scoped reported facts and retained correction history
+      description: No-store; existing Shipment read authorization. Latest locations remain scoped by target. Raw notes and actor are internal only. No Public Tracking publication or full Customer endpoint.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        '200': { description: Data with twenty paged items, total, page, per-scope reported_locations, typed target and Cargo options, and owner-only can_manage. Items retain source, scope, occurred_at, recorded_at, actor, reason and CURRENT or SUPERSEDED status. }
+        '403': { description: Missing read permission. }
+        '404': { description: Missing or inaccessible Shipment. }
+    post:
+      tags: [OperationalShipments]
+      summary: Owning Expert appends a report or correction on the existing OperationalEvent SOR
+      description: No-store. Active owning Expert with Shipment create permission only. Shipment lock serializes idempotent commands and corrections; one successor per report. No automatic Exception, Action, Attention, SLA, location cache or public projection update.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [scope, kind, source, occurred_at]
+              properties:
+                scope: { type: string, enum: [SHIPMENT, ROUTE_STAGE, EXECUTION_UNIT, CARGO] }
+                target_public_id: { type: string, nullable: true, description: Cargo or Unit UUID; route stage decimal ID; absent for Shipment. Target must belong to this Shipment and tenant. }
+                kind: { type: string, enum: [LOCATION, PROGRESS, TRANSPORT_CHANGE, EFFECT] }
+                source: { type: string, enum: [CARRIER_REPORT, DRIVER_REPORT, INTERNAL_EXPERT, OTHER_OPERATIONAL_SOURCE] }
+                occurred_at: { type: string, format: date-time, description: Explicit timezone required; late entry allowed. recorded_at is backend UTC and cannot be supplied. }
+                location:
+                  type: object
+                  nullable: true
+                  additionalProperties: false
+                  description: Exactly one identity or manual text; required for LOCATION. Immutable existing evidence snapshot. No coordinate or GPS inference.
+                  properties:
+                    location_text: { type: string, maxLength: 255 }
+                    logistics_point_public_id: { type: string, format: uuid }
+                    canonical_location_public_id: { type: string, format: uuid }
+                    tracking_location_reference_id: { type: integer }
+                internal_note: { type: string, nullable: true, maxLength: 4000 }
+                customer_message: { type: string, nullable: true, maxLength: 1000, description: Explicit safe text only; absence uses approved fixed generic or DELAY fallback. Never synthesized from internal content. }
+                customer_effect: { type: string, enum: [CHANGE, DELAY], default: CHANGE }
+                impacted_cargo_public_ids: { type: array, maxItems: 1000, uniqueItems: true, items: { type: string, format: uuid }, description: Explicit same-Shipment impacts; absent or empty means no Customer projection. Live DN10 applies before projection limits. }
+                corrects_public_id: { type: string, format: uuid, description: Still-current report from the same Shipment. New complete payload supersedes it; original remains immutable. }
+                reason: { type: string, nullable: true, maxLength: 500 }
+      responses:
+        '201': { description: New report public_id and created true. }
+        '200': { description: Exact command replay with original public_id and created false. }
+        '403': { description: Actor is not the authorized owning Expert. }
+        '404': { description: Inaccessible Shipment, scope target, Cargo or original report. }
+        '409': { description: Changed replay payload or already-corrected report; reread current history. }
+        '422': { description: Invalid source, scope, time, target or location. }

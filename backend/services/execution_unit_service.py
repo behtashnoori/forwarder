@@ -290,6 +290,8 @@ def _event_location_evidence(unit: ExecutionUnit, payload: dict) -> OperationalE
 
 
 def create_event(unit: ExecutionUnit, payload: dict, user: dict, idempotency_key: str) -> tuple[OperationalEvent, bool]:
+    if str(payload.get("event_type", "")).strip()[:64] == "phase3_reported_fact":
+        raise OperationalError("SCOPED_REPORT_REQUIRED", "این گزارش باید با دامنه صریح پرونده حمل ثبت شود.")
     if not idempotency_key or len(idempotency_key) > 100:
         raise OperationalError("VALIDATION_FAILED", "A valid Idempotency-Key header is required.")
     request_hash = _hash(payload)
@@ -318,6 +320,7 @@ def create_event(unit: ExecutionUnit, payload: dict, user: dict, idempotency_key
         .limit(1)
     )
     event = OperationalEvent(
+        organization_id=unit.organization_id,
         project_id=unit.project_id, execution_unit_id=unit.id,
         transport_revision_id=(transport_revision.id if transport_revision else None),
         event_type=str(payload.get("event_type", "unit_updated")).strip()[:64] or "unit_updated",
@@ -346,7 +349,8 @@ def create_event(unit: ExecutionUnit, payload: dict, user: dict, idempotency_key
 
 def timeline(unit: ExecutionUnit, args: dict, *, customer: bool = False) -> dict:
     page,per_page=_page(args)
-    query=select(OperationalEvent).where(OperationalEvent.execution_unit_id == unit.id)
+    query=select(OperationalEvent).where(OperationalEvent.execution_unit_id == unit.id,
+        OperationalEvent.event_type != "phase3_reported_fact")
     if customer: query=query.where(OperationalEvent.visibility == "customer")
     total=db.session.scalar(select(func.count()).select_from(query.subquery())) or 0
     rows=db.session.scalars(query.order_by(OperationalEvent.occurred_at.desc(),OperationalEvent.id.desc()).offset((page-1)*per_page).limit(per_page)).all()

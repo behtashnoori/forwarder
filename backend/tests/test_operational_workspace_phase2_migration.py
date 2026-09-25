@@ -15,7 +15,7 @@ RELIABILITY = "20260929_operational_monitoring_reliability"
 P3_REFERENCE = "20260930_phase3_reference_catalog"
 P3_CARGO = "20261001_phase3_cargo_lineage"
 P3_ROUTE = "20261002_phase3_branched_route"
-REPOSITORY_HEAD = "20261006_customer_entitlement"
+REPOSITORY_HEAD = "20261007_phase3_reported_facts"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 
@@ -170,7 +170,8 @@ def test_phase2_and_reliability_are_the_single_linear_repository_head():
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
     assert script.get_heads() == [REPOSITORY_HEAD]
-    assert script.get_revision(REPOSITORY_HEAD).down_revision == "20261005_phase3_contextual_documents"
+    assert script.get_revision(REPOSITORY_HEAD).down_revision == "20261006_customer_entitlement"
+    assert script.get_revision("20261006_customer_entitlement").down_revision == "20261005_phase3_contextual_documents"
     assert script.get_revision("20261005_phase3_contextual_documents").down_revision == "20261004_phase3_cargo_allocation_trace"
     assert script.get_revision("20261004_phase3_cargo_allocation_trace").down_revision == "20261003_phase3_transport_execution"
     assert script.get_revision("20261003_phase3_transport_execution").down_revision == P3_ROUTE

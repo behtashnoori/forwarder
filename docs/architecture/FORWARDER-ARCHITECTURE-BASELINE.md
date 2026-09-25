@@ -5,6 +5,8 @@ Authority: repository implementation plus Accepted ADRs indexed in `ADR-INDEX.md
 
 ## 1. Product architecture principles
 
+P3-07 bounded extension: [ADR-063](../operational/adr/ADR-063-scoped-reported-facts-and-safe-effects.md) reuses OperationalEvent with a mandatory tenant key, typed Shipment/Stage/Unit/Cargo context, immutable location and correction history. Explicit Cargo impacts feed a separate live-DN10 safe projection; legacy/public tracking excludes this family. No GPS, automatic Exception/Action/SLA or Customer Shipment page is implied.
+
 Current bounded extension: [ADR-062](../operational/adr/ADR-062-explicit-customer-entitlement.md)
 records the Product Owner's explicit DN10 authorization and delegated minimal
 relational implementation. Portal Account and CRM Customer remain separate;

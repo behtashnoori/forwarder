@@ -47,7 +47,9 @@ def _event_location_text(event: OperationalEvent | None) -> str | None:
 
 
 def _effective_events(events: Iterable[OperationalEvent]) -> list[OperationalEvent]:
-    rows = list(events)
+    # Scoped reports have their own Shipment/Cargo-aware projection. Unit-wide
+    # legacy/public consumers must not publish them or collapse their scope.
+    rows = [row for row in events if row.event_type != "phase3_reported_fact"]
     superseded_ids = {row.supersedes_event_id for row in rows if row.supersedes_event_id}
     return sorted(
         (row for row in rows if row.id not in superseded_ids),

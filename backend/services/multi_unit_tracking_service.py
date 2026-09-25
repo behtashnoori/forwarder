@@ -346,6 +346,7 @@ def add_update(
         "is_customer_visible": is_customer_visible,
     }
     event = OperationalEvent(
+        organization_id=execution.organization_id,
         project_id=execution.project_id,
         execution_unit_id=execution.id,
         event_type="legacy_tracking_update",

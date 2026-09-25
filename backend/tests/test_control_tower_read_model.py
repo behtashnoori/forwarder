@@ -227,6 +227,7 @@ def test_canonical_tracking_progress_preserves_occurred_and_recorded(attention):
     occurred = NOW - timedelta(hours=3)
     recorded = NOW - timedelta(hours=1)
     event_row = OperationalEvent(
+        organization_id=unit.organization_id,
         project_id=project.id,
         execution_unit_id=unit.id,
         event_type="arrived",

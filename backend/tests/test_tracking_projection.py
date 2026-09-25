@@ -102,6 +102,7 @@ def _unit(ctx, code, *, shipment=None, checkpoint=None, event_at=None, active=Tr
 
 def _event(ctx, unit, key, occurred_at, *, recorded_at=None, location=None, status=None, supersedes=None):
     row = OperationalEvent(
+        organization_id=unit.organization_id,
         project_id=unit.project_id,
         execution_unit_id=unit.id,
         event_type=key,
