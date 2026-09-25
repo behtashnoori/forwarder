@@ -1132,8 +1132,8 @@ def test_legacy_operational_openapi_exact_runtime_parity_and_opacity(operational
             documented[current].add(method.group(1).upper())
     runtime: dict[str, set[str]] = {}
     for rule in operational_app.url_map.iter_rules():
-        if not rule.endpoint.startswith("operations."):
-            continue
+        # The namespace also contains bounded extension blueprints. Compare
+        # every registered operation, not just the original blueprint owner.
         path = re.sub(r"<(?:(?:int|uuid):)?([^>]+)>", r"{\1}", str(rule))
         if path.startswith(
             ("/api/operational-shipments", "/api/operational-work-items")

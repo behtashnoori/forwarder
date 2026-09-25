@@ -123,3 +123,10 @@ deterministic delayed-refresh test preserves the approved independent quantity
 semantics. This is AUTHORIZED preservation under the mission's P3-05 regression
 gate, not a new quantity rule. It requires a fresh Product identity and full
 qualification; the failed run remains preliminary evidence only.
+
+The complete backend run also exposed a contract-test ownership assumption:
+OpenAPI covered every operational Shipment route, but runtime collection only
+covered the original `operations` blueprint. The parity check now includes all
+registered routes in the same two API namespaces, including the bounded report
+blueprint. Exact method/path equality and opaque-ID checks remain; no route or
+expected behavior is excluded to obtain a pass.
