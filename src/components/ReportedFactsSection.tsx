@@ -65,7 +65,7 @@ export default function ReportedFactsSection({ shipmentId }: { shipmentId: strin
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const command = useRef<{ body: string; key: string }>();
+  const command = useRef<{ body: string; key: string } | undefined>(undefined);
   const load = useCallback(async () => {
     try { setError(""); setData((await listReportedFacts(shipmentId, page)).data); }
     catch (caught) { setData(undefined); setError(message(caught)); }

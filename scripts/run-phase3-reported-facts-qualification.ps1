@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$IncludeRegressions)
+param([Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$IncludeRegressions, [switch]$PostgresOnly)
 $ErrorActionPreference = 'Stop'
 $workspace = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $pgBin = 'C:\Program Files\PostgreSQL\18\bin'
@@ -87,6 +87,7 @@ try {
       @{ name='P301'; seed='reference_catalog'; spec='reference-catalog' }
     )
   }
+  if ($PostgresOnly) { $journeys = @() }
   foreach ($journey in $journeys) {
     $name = $journey.name
     $env:DATABASE_URL = New-Database "forwarder_integrated_cert_p3_06_documents_$($name.ToLower())"

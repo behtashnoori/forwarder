@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem, ExecutionUnitCargoAllocation
@@ -63,11 +63,6 @@ def _contexts(shipment):
         OperationalEvent.event_type == REPORTED_EVENT_TYPE)
 
 
-def _all(shipment):
-    return db.session.scalars(_contexts(shipment).order_by(
-        OperationalEvent.occurred_at.desc(), OperationalEvent.recorded_at.desc(), OperationalEvent.id.desc())).all()
-
-
 def _target(shipment, scope, identity):
     values = {"route_plan_id": None, "route_leg_id": None, "execution_unit_id": None, "cargo_item_id": None}
     if scope == "SHIPMENT":
@@ -83,7 +78,7 @@ def _target(shipment, scope, identity):
         if row: values["cargo_item_id"] = row.id
     elif scope == "EXECUTION_UNIT":
         row = db.session.scalar(select(ExecutionUnit).where(ExecutionUnit.public_id == identity,
-            ExecutionUnit.organization_id == shipment.organization_id, ExecutionUnit.is_active.is_(True),
+            ExecutionUnit.organization_id == shipment.organization_id,
             select(RouteStageExecution.id).where(RouteStageExecution.execution_unit_id == ExecutionUnit.id,
                 RouteStageExecution.operational_shipment_id == shipment.id,
                 RouteStageExecution.organization_id == shipment.organization_id).exists()))
@@ -174,6 +169,10 @@ def create(shipment_public_id, user, payload, key):
         if "location_text" in location and not isinstance(location["location_text"], str):
             fail("متن موقعیت معتبر نیست.")
     evidence = _event_location_evidence(shipment, payload)
+    if evidence is not None and evidence.source_type == "manual":
+        # Manual text permits 255 chars; the master-data label column holds 200.
+        # Preserve the complete report in its existing manual snapshot column.
+        evidence.display_name_snapshot = None
     if kind == "LOCATION" and evidence is None:
         fail("موقعیت گزارش‌شده را وارد کنید.")
     event.location_evidence = evidence
@@ -195,7 +194,7 @@ def create(shipment_public_id, user, payload, key):
 
 def _location(row):
     evidence = row.event.location_evidence
-    return (evidence.display_name_snapshot or evidence.location_text_snapshot) if evidence else None
+    return (evidence.location_text_snapshot or evidence.display_name_snapshot) if evidence else None
 
 
 def _target_identity(row):
@@ -215,14 +214,15 @@ def options(shipment):
     legs = db.session.execute(select(RouteLeg, RoutePlan).join(RoutePlan).where(
         RoutePlan.operational_shipment_id == shipment.id).order_by(RoutePlan.id, RouteLeg.sequence_number)).all()
     units = db.session.scalars(select(ExecutionUnit).where(ExecutionUnit.organization_id == shipment.organization_id,
-        ExecutionUnit.is_active.is_(True), select(RouteStageExecution.id).where(
+        select(RouteStageExecution.id).where(
             RouteStageExecution.execution_unit_id == ExecutionUnit.id,
             RouteStageExecution.operational_shipment_id == shipment.id).exists()).order_by(ExecutionUnit.id)).all()
     unit_options = []
     for unit in units:
         revision = db.session.scalar(select(ExecutionTransportRevision).where(
             ExecutionTransportRevision.execution_unit_id == unit.id).order_by(ExecutionTransportRevision.revision_number.desc()).limit(1))
-        unit_options.append({"public_id": unit.public_id, "label": f"{revision.means_identifier} · {unit.unit_code}" if revision and revision.means_identifier else unit.unit_code})
+        label = f"{revision.means_identifier} · {unit.unit_code}" if revision and revision.means_identifier else unit.unit_code
+        unit_options.append({"public_id": unit.public_id, "label": label if unit.is_active else f"{label} · سابقه اجرای غیرفعال"})
     return {"cargo": cargo_options,
             "ROUTE_STAGE": [{"public_id": str(leg.id), "label": f"مسیر {plan.revision_number} · بخش {leg.sequence_number}"} for leg, plan in legs],
             "EXECUTION_UNIT": unit_options,
@@ -233,15 +233,32 @@ def listing(shipment_public_id, user, page=1):
     shipment = scoped_shipment(shipment_public_id, user)
     try: page = max(1, int(page))
     except (ValueError, TypeError): fail("شماره صفحه معتبر نیست.")
-    rows = _all(shipment)
-    superseded = {r.event.supersedes_event_id for r in rows if r.event.supersedes_event_id}
+    order = (OperationalEvent.occurred_at.desc(), OperationalEvent.recorded_at.desc(), OperationalEvent.id.desc())
+    base = _contexts(shipment)
+    total = db.session.scalar(select(func.count()).select_from(base.subquery())) or 0
+    page_rows = db.session.scalars(base.order_by(*order).offset((page-1)*20).limit(20)).all()
+    successors = select(OperationalEvent.supersedes_event_id).join(Context,
+        Context.operational_event_id == OperationalEvent.id).where(
+            Context.operational_shipment_id == shipment.id,
+            OperationalEvent.supersedes_event_id.is_not(None))
+    ranked = select(Context.operational_event_id.label("event_id"), func.row_number().over(
+        partition_by=(Context.scope, Context.route_leg_id, Context.execution_unit_id, Context.cargo_item_id),
+        order_by=order).label("position")).join(OperationalEvent, OperationalEvent.id == Context.operational_event_id).where(
+            Context.organization_id == shipment.organization_id, Context.operational_shipment_id == shipment.id,
+            Context.kind == "LOCATION", OperationalEvent.id.not_in(successors)).subquery()
+    latest_rows = db.session.scalars(base.where(Context.operational_event_id.in_(
+        select(ranked.c.event_id).where(ranked.c.position == 1))).order_by(*order)).all()
+    rows = list({r.operational_event_id: r for r in [*page_rows, *latest_rows]}.values())
+    row_ids = [r.operational_event_id for r in rows]
+    superseded = set(db.session.scalars(successors.where(OperationalEvent.supersedes_event_id.in_(row_ids))).all())
     choices = options(shipment)
     labels = {scope: {x["public_id"]: x["label"] for x in choices[scope]} for scope in SCOPES}
     impacts = db.session.execute(select(Impact.operational_event_id, ShipmentCargoItem.public_id).join(
-        ShipmentCargoItem, ShipmentCargoItem.id == Impact.cargo_item_id).where(Impact.operational_shipment_id == shipment.id)).all()
+        ShipmentCargoItem, ShipmentCargoItem.id == Impact.cargo_item_id).where(Impact.operational_shipment_id == shipment.id,
+            Impact.operational_event_id.in_(row_ids))).all()
     impacted = {}
     for event_id, cargo_id in impacts: impacted.setdefault(event_id, []).append(cargo_id)
-    items, latest = [], {}
+    items = {}
     for row in rows:
         event = row.event
         actor = db.session.get(ExpertUser, event.actor_user_id)
@@ -256,11 +273,10 @@ def listing(shipment_public_id, user, page=1):
             "impacted_cargo_public_ids": impacted.get(event.id, []), "reason": row.correction_reason,
             "corrects_public_id": db.session.get(OperationalEvent, event.supersedes_event_id).public_id if event.supersedes_event_id else None,
             "status": "SUPERSEDED" if event.id in superseded else "CURRENT"}
-        items.append(item)
-        if row.kind == "LOCATION" and event.id not in superseded:
-            latest.setdefault((row.scope, target), item)
-    return {"items": items[(page-1)*20:page*20], "page": page, "total": len(items),
-            "reported_locations": list(latest.values()), "options": choices, "can_manage": _can_manage(user, shipment)}
+        items[event.id] = item
+    return {"items": [items[r.operational_event_id] for r in page_rows], "page": page, "total": total,
+            "reported_locations": [items[r.operational_event_id] for r in latest_rows],
+            "options": choices, "can_manage": _can_manage(user, shipment)}
 
 
 def customer_timeline(shipment, account, *, limit=50):

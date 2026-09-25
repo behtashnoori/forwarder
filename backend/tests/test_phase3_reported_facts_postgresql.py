@@ -60,10 +60,18 @@ def test_postgresql18_report_history_constraints_migration_and_races():
     with engine.connect() as connection:
         assert connection.execute(sa.text("SELECT count(*) FROM operational_event_report_context")).scalar_one() == 0
         assert connection.execute(sa.text("SELECT internal_note FROM operational_event WHERE id=:id"), {"id": legacy_id}).scalar_one() == "Retain legacy evidence"
+    with engine.begin() as connection:
+        inherited = connection.execute(sa.text("""INSERT INTO operational_event
+            (public_id, execution_unit_id, event_type, source, occurred_at, recorded_at, actor_user_id,
+             visibility, idempotency_key, request_hash, attention_required, delayed)
+            VALUES ('70000000-0000-4000-8000-000000000008', :unit, 'legacy_report', 'expert',
+             CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, :actor, 'internal', 'legacy-writer-bridge', 'synthetic', false, false)
+             RETURNING organization_id"""), {"unit": unit_pk, "actor": ctx["owner"]}).scalar_one()
+        assert inherited == connection.execute(sa.text("SELECT organization_id FROM execution_unit WHERE id=:unit"), {"unit": unit_pk}).scalar_one()
     command.downgrade(config, PARENT)
     command.upgrade(config, HEAD)
     payload = {"scope": "EXECUTION_UNIT", "target_public_id": unit_id, "kind": "LOCATION",
-        "source": "DRIVER_REPORT", "occurred_at": "2026-09-20T07:00:00Z", "location": {"location_text": "Reported border"}}
+        "source": "DRIVER_REPORT", "occurred_at": "2026-09-20T07:00:00Z", "location": {"location_text": "م" * 255}}
     barrier = Barrier(2)
     def worker(data, key):
         with app.app_context():
@@ -109,6 +117,7 @@ def test_postgresql18_report_history_constraints_migration_and_races():
     with app.app_context():
         listing = reports.listing(ctx["shipment"], {"id": ctx["owner"]})
         assert len(listing["items"]) == 2 and len(listing["reported_locations"]) == 1
+        assert listing["reported_locations"][0]["location"] == "م" * 255
         assert {x["status"] for x in listing["items"]} == {"CURRENT", "SUPERSEDED"}
         with pytest.raises(OperationalError) as denied:
             reports.listing(ctx["shipment"], {"id": ctx["outsider"]})

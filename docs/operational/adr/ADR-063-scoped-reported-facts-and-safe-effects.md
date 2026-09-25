@@ -42,7 +42,13 @@ ownership aborts migration. This materializes existing authority, not inferred
 reporting history. A composite FK requires unit and event tenant equality; the
 typed context also binds its event and Shipment to that tenant. Thus no optional
 unit reference becomes an optional ownership path. Legacy event payloads, actor,
-times and location snapshots remain unchanged. Current code is tested against
+times and location snapshots remain unchanged. A database insert bridge allows
+the old Unit-bound writer shape to obtain only that mandatory Unit's tenant;
+an explicit mismatched tenant still fails its composite FK. No identity guess
+or report context is created. Application rollback after new reports exist is
+unsupported because old public readers lack the new family exclusion; populated
+schema downgrade is refused. This is local qualification, not deployment.
+Current code is tested against
 the current schema; historical migration tests retain their original revisions.
 
 ExecutionUnit becomes nullable only for the dedicated reported fact event type,
@@ -55,6 +61,10 @@ is enforced for this event family; no original fact is overwritten or deleted.
 An explicit occurred instant with timezone is required; recorded time is trusted
 backend UTC. Location ordering excludes superseded facts and uses occurred,
 recorded and event ID deterministically. No last-unit-to-whole-Shipment collapse.
+History is paginated in SQL; latest per-scope locations use a separate ranked
+query and do not change with the selected history page. A retained inactive
+ExecutionUnit remains a valid target for late reporting/correction, clearly
+labelled as inactive history; the report never reactivates the unit.
 
 ## DN06 and DN07
 

@@ -247,3 +247,32 @@ def test_report_openapi_runtime_contract():
     assert set(schema["properties"]["source"]["enum"]) == set(SOURCES)
     assert schema["additionalProperties"] is False
     assert "recorded_at" not in schema["properties"]
+
+
+def test_history_paging_keeps_latest_scoped_location_independent_of_page(operational_app):
+    app = operational_app
+    with app.app_context():
+        ctx = setup(app)
+        for minute in range(23):
+            record(app, ctx, payload(ctx, occurred_at=f"2026-09-20T10:{minute:02d}:00Z",
+                location={"location_text": f"Reported position {minute}"}))
+        page = reports.listing(ctx["shipment"], _user(app), page=2)
+        assert page["total"] == 23 and len(page["items"]) == 3
+        assert page["reported_locations"][0]["location"] == "Reported position 22"
+        assert page["items"][0]["location"] == "Reported position 2"
+
+
+def test_late_correction_retains_access_to_inactive_execution_history(operational_app):
+    app = operational_app
+    with app.app_context():
+        ctx = setup(app)
+        first, _ = record(app, ctx)
+        unit = db.session.scalar(select(ExecutionUnit).where(ExecutionUnit.public_id == ctx["units"][0]))
+        unit.is_active = False
+        db.session.commit()
+        correction, _ = record(app, ctx, payload(ctx, corrects_public_id=first.event.public_id,
+            location={"location_text": "Corrected past position"}))
+        rows = reports.listing(ctx["shipment"], _user(app))
+        assert rows["reported_locations"][0]["public_id"] == correction.event.public_id
+        assert "غیرفعال" in rows["reported_locations"][0]["scope_label"]
+        assert unit.is_active is False

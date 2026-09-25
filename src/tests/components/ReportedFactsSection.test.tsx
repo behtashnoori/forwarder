@@ -18,9 +18,9 @@ describe("scoped operational reports", () => {
     fireEvent.change(screen.getByLabelText("موقعیت گزارش‌شده"), { target: { value: "نزدیک مرز" } });
     fireEvent.change(screen.getByLabelText("یادداشت داخلی گزارش"), { target: { value: "علت خصوصی" } });
     fireEvent.click(screen.getByLabelText("کالای من"));
-    fireEvent.click(screen.getByRole("button", { name: "ثبت گزارش", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "ثبت گزارش" }));
     await screen.findByRole("alert");
-    fireEvent.click(screen.getByRole("button", { name: "ثبت گزارش", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "ثبت گزارش" }));
     await screen.findByText("گزارش ثبت شد.");
     const calls = vi.mocked(recordReportedFact).mock.calls;
     expect(calls).toHaveLength(2);

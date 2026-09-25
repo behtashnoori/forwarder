@@ -26,6 +26,14 @@ def upgrade():
     op.create_foreign_key("fk_operational_event_organization", "operational_event", "operational_organization", ["organization_id"], ["id"], ondelete="RESTRICT")
     op.create_unique_constraint("uq_operational_event_id_org", "operational_event", ["id", "organization_id"])
     op.create_foreign_key("fk_operational_event_unit_org", "operational_event", "execution_unit", ["execution_unit_id", "organization_id"], ["id", "organization_id"], ondelete="RESTRICT")
+    op.execute("""CREATE FUNCTION inherit_legacy_event_tenant() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF NEW.organization_id IS NULL AND NEW.execution_unit_id IS NOT NULL THEN
+        SELECT organization_id INTO NEW.organization_id FROM execution_unit WHERE id=NEW.execution_unit_id;
+      END IF;
+      RETURN NEW;
+    END $$""")
+    op.execute("CREATE TRIGGER inherit_event_tenant BEFORE INSERT ON operational_event FOR EACH ROW EXECUTE FUNCTION inherit_legacy_event_tenant()")
     op.alter_column("operational_event", "execution_unit_id", existing_type=BIGINT, nullable=True)
     op.create_unique_constraint("uq_operational_event_id_unit", "operational_event", ["id", "execution_unit_id"])
     op.create_check_constraint("ck_event_report_or_unit", "operational_event", "execution_unit_id IS NOT NULL OR event_type = 'phase3_reported_fact'")
@@ -92,6 +100,8 @@ def downgrade():
     op.drop_constraint("ck_event_report_or_unit", "operational_event", type_="check")
     op.drop_constraint("uq_operational_event_id_unit", "operational_event", type_="unique")
     op.drop_constraint("fk_operational_event_unit_org", "operational_event", type_="foreignkey")
+    op.execute("DROP TRIGGER inherit_event_tenant ON operational_event")
+    op.execute("DROP FUNCTION inherit_legacy_event_tenant()")
     op.drop_constraint("uq_operational_event_id_org", "operational_event", type_="unique")
     op.drop_constraint("fk_operational_event_organization", "operational_event", type_="foreignkey")
     op.drop_column("operational_event", "organization_id")
