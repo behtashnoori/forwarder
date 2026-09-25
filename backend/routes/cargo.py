@@ -1,7 +1,7 @@
 """Internal-only cargo catalog and shipment cargo APIs."""
 
 from datetime import datetime
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import and_, case, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
@@ -16,6 +16,7 @@ from backend.cargo_models import (
 from backend.extensions import db
 from backend.security import require_auth
 from backend.services import cargo_service as svc
+from backend.services import cargo_allocation_service as allocation_svc
 from backend.services import execution_unit_service as execution_svc
 from backend.services import multi_unit_tracking_service as tracking_svc
 from backend.services import shared_transport_service as shared_transport_svc
@@ -578,7 +579,9 @@ def canonical_transport_allocations(shipment_id):
         shipment = svc.scoped_shipment(_user(), shipment_id)
         if request.method == "GET":
             rows = db.session.scalars(select(shared_transport_svc.ExecutionUnitCargoAllocation).where(
-                shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id
+                shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id,
+                shared_transport_svc.ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+                shared_transport_svc.ExecutionUnitCargoAllocation.is_current.is_(True),
             )).all()
             return jsonify({"allocations": [svc.canonical_allocation_dict(row) for row in rows], "items": [svc.shipment_item_dict(item) for item in db.session.scalars(select(ShipmentCargoItem).where(ShipmentCargoItem.operational_shipment_id == shipment.id)).all()]})
         payload = request.get_json(silent=True) or {}
@@ -590,6 +593,55 @@ def canonical_transport_allocations(shipment_id):
         return _error(exc)
 
 
+@cargo_bp.get("/operational-shipments/<shipment_id>/cargo-items/<cargo_id>/allocation-trace")
+@require_auth
+def cargo_allocation_trace(shipment_id, cargo_id):
+    try:
+        return jsonify({"trace": allocation_svc.trace(shipment_id, cargo_id, _user())})
+    except (allocation_svc.OperationalError, IntegrityError) as exc:
+        return _error(exc)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Cargo allocation trace failed")
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "Cargo trace is temporarily unavailable."}}), 500
+
+
+@cargo_bp.put("/operational-shipments/<shipment_id>/cargo-items/<cargo_id>/stage-executions/<stage_id>/allocation")
+@require_auth
+def stage_cargo_allocation(shipment_id, cargo_id, stage_id):
+    try:
+        row, replay = allocation_svc.set_allocation(
+            shipment_id, cargo_id, stage_id, request.get_json(silent=True) or {},
+            _user(), request.headers.get("Idempotency-Key", ""),
+        )
+        db.session.commit()
+        return jsonify({"allocation": allocation_svc._allocation_view(row), "replayed": replay}), 200 if replay else 201
+    except (allocation_svc.OperationalError, IntegrityError) as exc:
+        return _error(exc)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Stage Cargo allocation failed")
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "Cargo allocation could not be saved."}}), 500
+
+
+@cargo_bp.post("/operational-shipments/<shipment_id>/cargo-items/<cargo_id>/allocation-transfers")
+@require_auth
+def cargo_allocation_transfer(shipment_id, cargo_id):
+    try:
+        row, replay = allocation_svc.transfer(
+            shipment_id, cargo_id, request.get_json(silent=True) or {},
+            _user(), request.headers.get("Idempotency-Key", ""),
+        )
+        db.session.commit()
+        return jsonify({"transfer_public_id": row.public_id, "replayed": replay}), 200 if replay else 201
+    except (allocation_svc.OperationalError, IntegrityError) as exc:
+        return _error(exc)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.exception("Cargo transfer failed")
+        return jsonify({"error": {"code": "INTERNAL_ERROR", "message": "Cargo transfer could not be saved."}}), 500
+
+
 @cargo_bp.patch("/operational-shipments/<shipment_id>/canonical-transport-allocations/<allocation_id>")
 @require_auth
 def canonical_transport_allocation_update(shipment_id, allocation_id):
@@ -598,6 +650,8 @@ def canonical_transport_allocation_update(shipment_id, allocation_id):
         row = db.session.scalar(select(shared_transport_svc.ExecutionUnitCargoAllocation).where(
             shared_transport_svc.ExecutionUnitCargoAllocation.public_id == allocation_id,
             shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id,
+            shared_transport_svc.ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+            shared_transport_svc.ExecutionUnitCargoAllocation.is_current.is_(True),
         ))
         if not row:
             raise svc.CargoError("allocation not found", 404)
@@ -618,6 +672,8 @@ def canonical_transport_allocation_delete(shipment_id, allocation_id):
         row = db.session.scalar(select(shared_transport_svc.ExecutionUnitCargoAllocation).where(
             shared_transport_svc.ExecutionUnitCargoAllocation.public_id == allocation_id,
             shared_transport_svc.ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id,
+            shared_transport_svc.ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+            shared_transport_svc.ExecutionUnitCargoAllocation.is_current.is_(True),
         ))
         if not row:
             raise svc.CargoError("allocation not found", 404)

@@ -204,7 +204,7 @@ export default function RouteStageTransportExecutionSection({ shipmentId, planId
   };
 
   return <Card className="border-slate-200 shadow-sm" dir="rtl">
-    <CardHeader><CardTitle>وسیله و شرکت حمل هر بخش مسیر</CardTitle><p className="text-sm text-slate-600">برای هر بخش مسیر می‌توان یک یا چند اجرای مستقل ثبت کرد. کالا در این بخش تخصیص داده نمی‌شود.</p></CardHeader>
+    <CardHeader><CardTitle>وسیله و شرکت حمل هر بخش مسیر</CardTitle><p className="text-sm text-slate-600">برای هر بخش مسیر می‌توان یک یا چند اجرای مستقل ثبت کرد. پس از آن، کالا را در بخش تخصیص همان مسیر ثبت کنید.</p></CardHeader>
     <CardContent className="space-y-4">
       {error && <p role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{error} <Button variant="link" onClick={() => void load()}>تلاش دوباره</Button></p>}
       {notice && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-emerald-800">{notice}</p>}

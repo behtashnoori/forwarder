@@ -404,11 +404,16 @@ class ExecutionUnitCargoAllocation(db.Model):
     """
     __tablename__ = "execution_unit_cargo_allocation"
     __table_args__ = (
-        db.UniqueConstraint("shipment_cargo_item_id", "execution_unit_id", name="uq_execution_unit_cargo_allocation_pair"),
         db.CheckConstraint("allocated_quantity > 0", name="ck_execution_unit_cargo_allocation_positive"),
+        db.CheckConstraint("dimension IS NULL OR dimension IN ('PLANNED','ACTUAL')", name="ck_execution_cargo_allocation_dimension"),
+        db.CheckConstraint("version >= 1", name="ck_execution_cargo_allocation_version"),
+        db.CheckConstraint("(route_stage_execution_id IS NULL AND dimension IS NULL) OR (route_stage_execution_id IS NOT NULL AND dimension IS NOT NULL)", name="ck_execution_cargo_allocation_stage_dimension"),
+        db.Index("uq_execution_cargo_allocation_current_stage", "shipment_cargo_item_id", "route_stage_execution_id", "dimension", unique=True, postgresql_where=db.text("is_current AND route_stage_execution_id IS NOT NULL"), sqlite_where=db.text("is_current = 1 AND route_stage_execution_id IS NOT NULL")),
+        db.Index("uq_execution_cargo_allocation_current_legacy", "shipment_cargo_item_id", "execution_unit_id", unique=True, postgresql_where=db.text("is_current AND route_stage_execution_id IS NULL"), sqlite_where=db.text("is_current = 1 AND route_stage_execution_id IS NULL")),
         db.Index("ix_execution_unit_cargo_allocation_execution", "execution_unit_id"),
         db.Index("ix_execution_unit_cargo_allocation_shipment", "operational_shipment_id"),
         db.Index("ix_execution_unit_cargo_allocation_project", "project_id"),
+        db.Index("ix_execution_cargo_allocation_stage", "route_stage_execution_id", "dimension"),
     )
     id = db.Column(BIGINT, primary_key=True)
     public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
@@ -416,6 +421,11 @@ class ExecutionUnitCargoAllocation(db.Model):
     shipment_cargo_item_id = db.Column(BIGINT, db.ForeignKey("shipment_cargo_item.id", ondelete="RESTRICT"), nullable=False)
     operational_shipment_id = db.Column(BIGINT, db.ForeignKey("operational_shipment.id", ondelete="RESTRICT"), nullable=False)
     project_id = db.Column(BIGINT, db.ForeignKey("project.id", ondelete="RESTRICT"), nullable=True)
+    # NULL on pre-P3-05 rows means the stage and plan/actual meaning are unknown.
+    route_stage_execution_id = db.Column(BIGINT, db.ForeignKey("route_stage_execution.id", ondelete="RESTRICT"), nullable=True)
+    dimension = db.Column(db.String(8), nullable=True)
+    is_current = db.Column(db.Boolean, nullable=False, default=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
     allocated_quantity = db.Column(db.Numeric(18, 6), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
@@ -423,6 +433,68 @@ class ExecutionUnitCargoAllocation(db.Model):
     updated_by = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
     execution_unit = db.relationship("ExecutionUnit")
     cargo_item = db.relationship("ShipmentCargoItem")
+    route_stage_execution = db.relationship("RouteStageExecution")
+
+
+class CargoAllocationTransfer(db.Model):
+    """One atomic movement between two ACTUAL allocations of the same Cargo."""
+
+    __tablename__ = "cargo_allocation_transfer"
+    __table_args__ = (
+        db.UniqueConstraint("organization_id", "idempotency_key", name="uq_cargo_allocation_transfer_key"),
+        db.CheckConstraint("quantity > 0", name="ck_cargo_allocation_transfer_positive"),
+        db.CheckConstraint("source_allocation_id <> target_allocation_id", name="ck_cargo_allocation_transfer_distinct"),
+        db.Index("ix_cargo_allocation_transfer_cargo_time", "shipment_cargo_item_id", "recorded_at"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    shipment_cargo_item_id = db.Column(BIGINT, db.ForeignKey("shipment_cargo_item.id", ondelete="RESTRICT"), nullable=False)
+    source_allocation_id = db.Column(BIGINT, db.ForeignKey("execution_unit_cargo_allocation.id", ondelete="RESTRICT"), nullable=False)
+    target_allocation_id = db.Column(BIGINT, db.ForeignKey("execution_unit_cargo_allocation.id", ondelete="RESTRICT"), nullable=False)
+    quantity = db.Column(db.Numeric(18, 6), nullable=False)
+    occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    recorded_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    context = db.Column(db.String(300), nullable=True)
+    reason = db.Column(db.String(500), nullable=True)
+    idempotency_key = db.Column(db.String(100), nullable=False)
+    request_hash = db.Column(db.String(64), nullable=False)
+
+
+class CargoAllocationRevision(db.Model):
+    """Immutable before/after fact for a planned, actual or legacy allocation."""
+
+    __tablename__ = "cargo_allocation_revision"
+    __table_args__ = (
+        db.UniqueConstraint("allocation_id", "revision_number", name="uq_cargo_allocation_revision_number"),
+        db.UniqueConstraint("organization_id", "idempotency_key", name="uq_cargo_allocation_revision_key"),
+        db.CheckConstraint("revision_number >= 1", name="ck_cargo_allocation_revision_number"),
+        db.CheckConstraint("before_quantity >= 0 AND after_quantity >= 0", name="ck_cargo_allocation_revision_quantities"),
+        db.Index("ix_cargo_allocation_revision_cargo_time", "shipment_cargo_item_id", "recorded_at"),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(db.String(36), nullable=False, unique=True, default=lambda: str(uuid4()))
+    organization_id = db.Column(BIGINT, db.ForeignKey("operational_organization.id", ondelete="RESTRICT"), nullable=False)
+    shipment_cargo_item_id = db.Column(BIGINT, db.ForeignKey("shipment_cargo_item.id", ondelete="RESTRICT"), nullable=False)
+    allocation_id = db.Column(BIGINT, db.ForeignKey("execution_unit_cargo_allocation.id", ondelete="RESTRICT"), nullable=False)
+    revision_number = db.Column(db.Integer, nullable=False)
+    action = db.Column(db.String(24), nullable=False)
+    before_quantity = db.Column(db.Numeric(18, 6), nullable=False)
+    after_quantity = db.Column(db.Numeric(18, 6), nullable=False)
+    occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    recorded_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)
+    reason = db.Column(db.String(500), nullable=True)
+    transfer_id = db.Column(BIGINT, db.ForeignKey("cargo_allocation_transfer.id", ondelete="RESTRICT"), nullable=True)
+    idempotency_key = db.Column(db.String(100), nullable=False)
+    request_hash = db.Column(db.String(64), nullable=False)
+
+
+@event.listens_for(CargoAllocationRevision, "before_update")
+@event.listens_for(CargoAllocationTransfer, "before_update")
+def _prevent_allocation_history_rewrite(_mapper, _connection, _target) -> None:
+    raise ValueError("Cargo allocation history is immutable")
 
 
 @event.listens_for(CargoCatalogItem, "before_update")

@@ -791,7 +791,68 @@ components:
         volume: { type: string, nullable: true, pattern: '^[0-9]+(?:\.[0-9]+)?$' }
         volume_uom_public_id: { type: string, format: uuid, nullable: true }
         destination_description: { type: string, maxLength: 300, nullable: true }
+        reason: { type: string, maxLength: 500, nullable: true, description: Optional reason stored with a versioned Cargo correction. }
         version: { type: integer, minimum: 1 }
+    StageCargoAllocationWrite:
+      type: object
+      additionalProperties: false
+      required: [dimension, quantity, expected_version]
+      properties:
+        dimension: { type: string, enum: [PLANNED, ACTUAL] }
+        quantity: { type: string, pattern: '^(?:0|[0-9]+(?:\.[0-9]{1,6})?)$', description: 'Zero releases an existing current row; excess or shortfall is non-blocking and returned as a trace warning.' }
+        expected_version: { type: integer, minimum: 0 }
+        occurred_at: { type: string, format: date-time }
+        reason: { type: string, maxLength: 500, nullable: true }
+    CargoAllocationTransferWrite:
+      type: object
+      additionalProperties: false
+      required: [source_stage_execution_public_id, target_stage_execution_public_id, quantity, expected_source_version, expected_target_version]
+      properties:
+        source_stage_execution_public_id: { type: string, format: uuid }
+        target_stage_execution_public_id: { type: string, format: uuid }
+        quantity: { type: string, pattern: '^[0-9]+(?:\.[0-9]{1,6})?$' }
+        expected_source_version: { type: integer, minimum: 1 }
+        expected_target_version: { type: integer, minimum: 0 }
+        occurred_at: { type: string, format: date-time }
+        context: { type: string, maxLength: 300, nullable: true }
+        reason: { type: string, maxLength: 500, nullable: true }
+    CargoAllocationTraceRead:
+      type: object
+      additionalProperties: false
+      required: [cargo, stages, legacy_allocations, history, transfers]
+      properties:
+        cargo:
+          type: object
+          required: [public_id, name, requested_quantity, planned_quantity, actual_quantity, uom]
+          properties:
+            public_id: { type: string, format: uuid }
+            name: { type: string }
+            requested_quantity: { type: string, nullable: true }
+            planned_quantity: { type: string, nullable: true }
+            actual_quantity: { type: string, nullable: true }
+            uom: { type: string }
+        stages:
+          type: array
+          items:
+            type: object
+            required: [route_plan_id, route_leg_id, sequence_number, executions, planned_total, actual_total, planned_remaining, actual_unrecorded, planned_recorded, actual_recorded, warnings]
+            properties:
+              route_plan_id: { type: integer }
+              route_leg_id: { type: integer }
+              sequence_number: { type: integer }
+              origin: { type: object, additionalProperties: true }
+              destination: { type: object, additionalProperties: true }
+              planned_total: { type: string, description: Total in this route stage only. }
+              actual_total: { type: string, description: Total in this route stage only; never sum across sequential stages. }
+              planned_remaining: { type: string, nullable: true, description: Cargo plan minus this stage's planned total; negative means over allocation. }
+              actual_unrecorded: { type: string, nullable: true, description: Known Cargo actual minus this stage's actual total; negative means excess reporting. }
+              planned_recorded: { type: boolean }
+              actual_recorded: { type: boolean }
+              warnings: { type: array, items: { type: object, required: [code, difference], properties: { code: { type: string, enum: [PLAN_UNDER, PLAN_OVER, ACTUAL_VS_PLAN, ACTUAL_VS_CARGO_PLAN, ACTUAL_VS_KNOWN, STAGE_CONTINUITY] }, difference: { type: string } } } }
+              executions: { type: array, items: { type: object, required: [stage_execution_public_id, execution_unit_public_id, unit_code, allocations], properties: { stage_execution_public_id: { type: string, format: uuid }, execution_unit_public_id: { type: string, format: uuid }, unit_code: { type: string }, means: { type: string, nullable: true }, means_identifier: { type: string, nullable: true }, equipment: { type: array, items: { type: object } }, allocations: { type: array, items: { type: object } } } } }
+        legacy_allocations: { type: array, items: { type: object }, description: Pre-P3-05 rows with unknown stage and dimension. }
+        history: { type: array, items: { type: object }, description: Recorded allocation revisions with before/after, actor and reason. }
+        transfers: { type: array, items: { type: object }, description: Explicit atomic transfer or downstream handoff records. }
     CargoLineageOptions:
       type: object
       additionalProperties: false
@@ -3537,6 +3598,56 @@ paths:
       responses:
         '200': { description: Ordered Cargo history., content: { application/json: { schema: { type: object, required: [history], properties: { history: { type: array, items: { type: object, additionalProperties: true } } } } } } }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/internal/operational-shipments/{shipment_id}/cargo-items/{cargo_id}/allocation-trace:
+    get:
+      tags: [Internal Cargo]
+      summary: Read the stage-scoped planned and actual Cargo journey
+      description: Authorize Shipment and Cargo before returning stage executions, current plan and actual totals, non-blocking discrepancy warnings, legacy unknown rows, immutable correction history and explicit transfers. Sequential stage totals never become a Cargo quantity sum. No Customer or Public projection is added.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: cargo_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Authorized end-to-end Cargo trace and warning projection., content: { application/json: { schema: { type: object, required: [trace], properties: { trace: { $ref: '#/components/schemas/CargoAllocationTraceRead' } } } } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/internal/operational-shipments/{shipment_id}/cargo-items/{cargo_id}/stage-executions/{stage_id}/allocation:
+    put:
+      tags: [Internal Cargo]
+      summary: Create, revise, correct or release one planned or actual stage allocation
+      description: Only the owning Transport Expert. Requires Idempotency-Key, exact Cargo/route-stage relationship and expected version. Quantity mismatch is a warning, never an automatic Exception or status transition. History is immutable; legacy rows are not reinterpreted.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: cargo_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: stage_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/StageCargoAllocationWrite' } } } }
+      responses:
+        '200': { description: Exact idempotent replay. }
+        '201': { description: Allocation recorded with revision. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Version, idempotency or route-stage conflict. }
+        '422': { description: Invalid quantity, precision or dimension. }
+  /api/internal/operational-shipments/{shipment_id}/cargo-items/{cargo_id}/allocation-transfers:
+    post:
+      tags: [Internal Cargo]
+      summary: Atomically transfer actual Cargo between executions or hand off downstream
+      description: Source and target effects and append-only transfer/revisions commit together. In-stage transfer decrements source; downstream handoff keeps the source stage history and records the same physical Cargo in the next stage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: cargo_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CargoAllocationTransferWrite' } } } }
+      responses:
+        '200': { description: Exact idempotent replay. }
+        '201': { description: Atomic transfer and immutable history recorded. }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Version, branch, source quantity or idempotency conflict. }
+        '422': { description: Invalid quantity, precision or context. }
   /api/admin/logistics-point-types:
     get:
       tags: [Logistics Network]

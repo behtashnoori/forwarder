@@ -3723,6 +3723,40 @@ export interface CargoTransportAllocation { public_id:string; cargo_item_public_
 export interface ShipmentTransportUnitOption { id:number; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null; }
 export interface CanonicalShipmentTransportUnit { public_id:string; unit_code:string; unit_type:string; display_name?:string|null; vehicle_reference?:string|null; version:number; }
 export interface CanonicalCargoAllocation { public_id:string; cargo_item_public_id:string; execution_unit_public_id:string; allocated_quantity:string; uom_symbol:string; cargo_name:string; }
+export interface StageCargoAllocation {
+  public_id: string;
+  stage_execution_public_id: string | null;
+  execution_unit_public_id: string;
+  dimension: "PLANNED" | "ACTUAL" | null;
+  quantity: string;
+  version: number;
+  current: boolean;
+}
+export interface CargoAllocationTrace {
+  cargo: { public_id: string; name: string; requested_quantity: string | null; planned_quantity: string | null; actual_quantity: string | null; uom: string };
+  stages: Array<{
+    route_plan_id: number;
+    route_leg_id: number;
+    sequence_number: number;
+    origin: { display_name?: string };
+    destination: { display_name?: string };
+    planned_total: string;
+    actual_total: string;
+    planned_remaining: string | null;
+    actual_unrecorded: string | null;
+    planned_recorded: boolean;
+    actual_recorded: boolean;
+    warnings: Array<{ code: "PLAN_UNDER" | "PLAN_OVER" | "ACTUAL_VS_PLAN" | "ACTUAL_VS_CARGO_PLAN" | "ACTUAL_VS_KNOWN" | "STAGE_CONTINUITY"; difference: string }>;
+    executions: Array<{ stage_execution_public_id: string; execution_unit_public_id: string; unit_code: string; means: string | null; means_identifier: string | null; equipment: Array<{ type: string; identifier: string | null }>; allocations: StageCargoAllocation[] }>;
+  }>;
+  legacy_allocations: StageCargoAllocation[];
+  history: Array<{ public_id: string; allocation_public_id: string; action: string; before: string; after: string; recorded_at: string; occurred_at: string; actor_name: string; reason: string | null; transfer_public_id: string | null }>;
+  transfers: Array<{ public_id: string; quantity: string; source_allocation_public_id: string; target_allocation_public_id: string; occurred_at: string; recorded_at: string; actor_name: string; context: string | null; reason: string | null }>;
+}
+const cargoAllocationPath = (shipmentId: string, cargoId: string) => `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items/${encodeURIComponent(cargoId)}`;
+export const getCargoAllocationTrace = (shipmentId: string, cargoId: string) => request<{ trace: CargoAllocationTrace }>(`${cargoAllocationPath(shipmentId, cargoId)}/allocation-trace`);
+export const setStageCargoAllocation = (shipmentId: string, cargoId: string, stageId: string, payload: { dimension: "PLANNED" | "ACTUAL"; quantity: string; expected_version: number; reason?: string }, key: string) => request<{ allocation: StageCargoAllocation; replayed: boolean }>(`${cargoAllocationPath(shipmentId, cargoId)}/stage-executions/${encodeURIComponent(stageId)}/allocation`, { method: "PUT", headers: { "Idempotency-Key": key }, body: JSON.stringify(payload) });
+export const transferCargoAllocation = (shipmentId: string, cargoId: string, payload: { source_stage_execution_public_id: string; target_stage_execution_public_id: string; quantity: string; expected_source_version: number; expected_target_version: number; context?: string; reason?: string }, key: string) => request<{ transfer_public_id: string; replayed: boolean }>(`${cargoAllocationPath(shipmentId, cargoId)}/allocation-transfers`, { method: "POST", headers: { "Idempotency-Key": key }, body: JSON.stringify(payload) });
 export const getCanonicalShipmentTransportUnits=(shipmentId:string)=>request<{units:CanonicalShipmentTransportUnit[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/canonical-transport-units`);
 export const createCanonicalShipmentTransportUnit=(shipmentId:string,payload:{unit_type:string;display_name?:string;vehicle_reference?:string})=>request<{unit:CanonicalShipmentTransportUnit}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/canonical-transport-units`,{method:"POST",body:JSON.stringify(payload)});
 export const getCanonicalCargoAllocations=(shipmentId:string)=>request<{allocations:CanonicalCargoAllocation[];items:ShipmentCargoItem[]}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/canonical-transport-allocations`);
@@ -3762,8 +3796,11 @@ export interface ShipmentCargoHistoryEntry {
   action: string;
   recorded_at: string;
   actor_user_id: number;
+  actor_name: string;
   version: number;
   changed_fields: string[];
+  reason?: string | null;
+  changes?: Record<string, { before: string | null; after: string | null }>;
 }
 export const getShipmentCargoHistory = (shipmentId: string, itemId: string) =>
   request<{ history: ShipmentCargoHistoryEntry[] }>(

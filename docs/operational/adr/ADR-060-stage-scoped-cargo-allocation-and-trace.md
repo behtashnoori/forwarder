@@ -1,0 +1,27 @@
+# ADR-060: Stage-scoped Cargo allocation and immutable transfer trace
+
+**Status:** ACCEPTED — bounded P3-05 implementation. **Date:** 2026-09-25. **Authority:** explicit Product Owner P3-05 mission and [Product Authority Record](../../product/phase3/P3-05-CARGO-ALLOCATION-MISSION-CONTRACT-FA.md). **Extends:** ADR-022/046/057/058/059. **Supersedes:** the proposed hard aggregate cap in ADR-023 for P3-05 only; ADR-023 is historical proposal, not a retroactively edited decision.
+
+## Context
+
+`ShipmentCargoItem` owns the requested, planned and known actual quantity. `RoutePlan/RouteLeg` own the route, `RouteStageExecution` owns the exact participation of a tenant-owned `ExecutionUnit`, and `ExecutionUnitCargoAllocation` is the canonical Cargo-to-execution allocation fact. The old allocation row has one quantity and no stage or plan/actual meaning. Its command caps aggregate allocation against a Cargo compatibility quantity and release deletes the row. That cannot express the Product Owner's approved split, non-blocking mismatch, correction, transfer and stage continuity.
+
+## Decision
+
+Extend `ExecutionUnitCargoAllocation` with a nullable exact `route_stage_execution_id`, `PLANNED | ACTUAL` dimension, current marker and optimistic version. New P3-05 rows have both stage and dimension. Pre-P3-05 rows retain both as NULL; no plan, actual, stage, reason, occurred time or revision history is inferred. Partial unique indexes keep one current Cargo/stage-execution/dimension row and preserve the existing current legacy pair rule. Superseded/released rows remain in place.
+
+`CargoAllocationRevision` is append-only and records before/after, actor, occurred/recorded time, reason and idempotency identity. `CargoAllocationTransfer` records an explicit atomic operation from one current ACTUAL allocation to another with quantity and optional location/context and reason. Transfer in one stage decrements source and increments target. Handoff to a downstream stage preserves the source stage's historical actual distribution and increments the downstream stage; it is the same Cargo continuing, not a second physical Cargo total. Both effects and their revisions commit in one transaction. Cargo row locking serializes writes for a Cargo; current allocation rows are locked in primary-key order; expected versions and idempotency keys reject stale or conflicting commands.
+
+Allocation mismatch is a read projection warning. Planned underage and overage, actual-versus-plan, actual-versus-known-Cargo and stage-to-stage differences do not block valid records, mutate `ShipmentCargoItem.actual_quantity`, create an Exception/Attention/SLA or change Shipment status. Invalid sign, precision, parent, tenant, branch or UOM still fails. All allocation rows use the Cargo's one governed UOM; no conversion is attempted. A formal Cargo-level plan or known-actual correction uses the P3-02 versioned Cargo update and `OperationalAudit` before/after, now with optional reason. No new user-visible allocation lifecycle is introduced; DN01 remains open for future Shipment/closure meaning.
+
+The owning Transport Expert alone may mutate through active tenant membership and exact persisted Shipment ownership. Every command resolves Shipment, Cargo and Cargo-owner Customer, exact route-plan/leg association and tenant-owned ExecutionUnit server-side. The trace is Shipment-scoped and presents stage totals, executions, current plan and actual, discrepancies, corrections and transfers. `UnifiedShipmentHistory` may compose it but cannot own it. Tracking sees only current ACTUAL or legacy unknown rows, never planned or released rows; sequential stages are never summed into Cargo quantity. Organization Admin oversight does not grant allocation commands, Platform Admin has no tenant command, and Customer/Public receive no new Cargo projection.
+
+## Migration and rollback
+
+`20261004_phase3_cargo_allocation_trace` follows the verified `20261003_phase3_transport_execution` head. It adds nullable legacy-safe columns, partial indexes, typed transfer and revision tables. It performs no guessed backfill. Empty downgrade/re-upgrade is supported. Downgrade refuses if any P3-05 row or immutable history exists; retaining the expanded schema during application rollback is safer than erasing operational facts. PostgreSQL 18 qualification remains mandatory before integration.
+
+## Consequences and verification
+
+An execution can carry different Cargo quantities at each route stage and in plan versus actual. Split uses multiple rows for the same Cargo, not duplicate Cargo records. An explicit transfer conveys what changed, who recorded it and when. Legacy allocation commands retain one unknown-dimension compatibility path but now preserve revisions and do not impose the superseded hard quantity cap. The approved stage-scoped UI is the primary surface once a route plan exists.
+
+Verification must prove Decimal precision, warning-only mismatch, stage continuity without double counting, plan and actual correction history, same-stage transfer, downstream handoff, owner/tenant/branch negatives, version conflict, replay, deterministic locks, atomic rollback, PostgreSQL migration round-trip/guard, ordinary Chrome journey and full regression. `JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY`: `FWD-J04,FWD-J08,FWD-J09,FWD-IPJ-04`. This ADR does not claim integrated global Product journeys, Human Product Walkthrough, release, deployment or Production.

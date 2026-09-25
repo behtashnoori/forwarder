@@ -41,6 +41,7 @@ import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 import RouteAuthoringSection from "@/components/RouteAuthoringSection";
 import RouteActualSection from "@/components/RouteActualSection";
 import RouteStageTransportExecutionSection from "@/components/RouteStageTransportExecutionSection";
+import CargoAllocationTraceSection from "@/components/CargoAllocationTraceSection";
 import {
   formatRouteTransportModes,
   getRequestTransportMethod,
@@ -82,6 +83,7 @@ export default function OperationalShipmentDetail() {
   const [plan, setPlan] = useState<RoutePlanDetail>();
   const [draftPlan, setDraftPlan] = useState<RoutePlanDetail>();
   const [routePlansLoaded, setRoutePlansLoaded] = useState(false);
+  const [cargoTraceOpen, setCargoTraceOpen] = useState(false);
   const [timeline, setTimeline] = useState<RouteTimeline>();
   const [exceptions, setExceptions] = useState<RouteException[]>([]);
   const [error, setError] = useState("");
@@ -216,12 +218,16 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
           {activePlan && <RouteStageTransportExecutionSection shipmentId={shipmentPublicId} planId={activePlan.id} />}
+          {activePlan && <details className="rounded border bg-white" onToggle={(event) => setCargoTraceOpen(event.currentTarget.open)}>
+            <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">تخصیص و مسیر هر کالا</summary>
+            {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} /></div>}
+          </details>}
           {plan && <RouteActualSection shipmentId={shipmentPublicId} plan={plan} reload={load} />}
           </section>
 
           <details className="rounded border bg-white">
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات کالا، وسیله حمل و پیگیری</summary>
-            <div className="border-t p-3 sm:p-4"><ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} /></div>
+            <div className="border-t p-3 sm:p-4"><ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} stageScoped={Boolean(activePlan)} /></div>
           </details>
 
           <details className="rounded border bg-white" open={false}>

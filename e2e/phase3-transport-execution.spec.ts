@@ -182,7 +182,7 @@ test("P3-04 — stage executions, progressive detail, rail chain, history, and s
   await expect(railCard.getByText("شرکت حمل", { exact: true }).first()).toBeVisible();
   await expect(railCard.getByText("وسیله حمل", { exact: true }).first()).toBeVisible();
   await expect(railCard.getByText("واحد / ظرف حمل 1", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/کالا در این بخش تخصیص داده نمی‌شود/)).toBeVisible();
+  await expect(page.getByText(/پس از آن، کالا را در بخش تخصیص همان مسیر ثبت کنید/)).toBeVisible();
 
   const firstCard = roadStage.getByRole("article").filter({ hasText: "TRUCK-A" });
   await firstCard.locator("summary", { hasText: "تکمیل یا تغییر اطلاعات" }).click();

@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import uuid
+from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 
 from backend.extensions import db
@@ -501,6 +502,8 @@ def build_internal_tracking_for_shipment(shipment: OperationalShipment):
         .join(ExecutionUnit, ExecutionUnit.id == ExecutionUnitCargoAllocation.execution_unit_id)
         .where(
             ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id,
+            ExecutionUnitCargoAllocation.is_current.is_(True),
+            or_(ExecutionUnitCargoAllocation.dimension == "ACTUAL", ExecutionUnitCargoAllocation.dimension.is_(None)),
             ExecutionUnit.organization_id == shipment.organization_id,
         )
         .options(
@@ -508,11 +511,20 @@ def build_internal_tracking_for_shipment(shipment: OperationalShipment):
             selectinload(ExecutionUnitCargoAllocation.execution_unit),
         )
     ).all()
+    canonical_rows.sort(key=lambda row: (
+        row.route_stage_execution.route_plan_id if row.route_stage_execution else -1,
+        row.route_stage_execution.route_leg.sequence_number if row.route_stage_execution else -1,
+    ), reverse=True)
     canonical_cargo_ids = {
         row.shipment_cargo_item_id for row in canonical_rows
     }
     canonical_by_unit = {}
+    seen_unit_cargo = set()
     for row in canonical_rows:
+        pair = (row.execution_unit_id, row.shipment_cargo_item_id)
+        if pair in seen_unit_cargo:
+            continue
+        seen_unit_cargo.add(pair)
         cargo = row.cargo_item
         canonical_by_unit.setdefault(row.execution_unit_id, []).append({
             "cargo_item_public_id": cargo.public_id,

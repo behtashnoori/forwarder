@@ -107,7 +107,7 @@ describe("route-stage transport execution", () => {
     expect(screen.getByText("دلیل آخرین تغییر: تعویض وسیله")).toBeInTheDocument();
     fireEvent.click(screen.getByText("سابقه تغییرات (1)"));
     expect(screen.getByText("TRUCK-A", { exact: false })).toBeInTheDocument();
-    expect(screen.getByText(/کالا در این بخش تخصیص داده نمی‌شود/)).toBeInTheDocument();
+    expect(screen.getByText(/پس از آن، کالا را در بخش تخصیص همان مسیر ثبت کنید/)).toBeInTheDocument();
   });
 
   it("creates a progressive rail execution with ordered wagon and container", async () => {

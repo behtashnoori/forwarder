@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 import pytest
 
-from backend.cargo_models import ExecutionUnitCargoAllocation, ShipmentCargoItem, ShipmentCargoTransportAllocation
+from backend.cargo_models import CargoAllocationRevision, ExecutionUnitCargoAllocation, ShipmentCargoItem, ShipmentCargoTransportAllocation
 from backend.extensions import db
 from backend.models import Customer, ShipmentTransportUnit
 from backend.operational_models import ExecutionUnit, OperationalMembership, OperationalShipment
@@ -123,15 +123,15 @@ def test_tracking_prefers_canonical_shared_execution_allocation(traceability_app
 
         # Releasing the canonical fact makes the retained compatibility fact
         # readable again; no mutable tracking allocation is created.
-        db.session.delete(db.session.scalar(db.select(ExecutionUnitCargoAllocation)))
+        db.session.scalar(db.select(ExecutionUnitCargoAllocation)).is_current = False
         db.session.commit()
         released = tracking_service.build_internal_tracking_for_shipment(shipment)
         assert not any(unit.get("source") == "canonical_execution" for unit in released["units"])
         assert next(unit for unit in released["units"] if unit["id"] == legacy.id)["allocated_cargo"]
 
 
-def test_direct_shipment_split_allocation_enforces_aggregate_limit(traceability_app):
-    """Direct shipment units use canonical truth and cannot over-allocate."""
+def test_direct_shipment_split_allocation_preserves_overage_as_recorded(traceability_app):
+    """The newer P3-05 Product decision permits overage and preserves revisions."""
     with traceability_app["app"].app_context():
         user = {"id": traceability_app["user"].id}
         membership = db.session.get(OperationalMembership, traceability_app["membership"].id)
@@ -150,5 +150,7 @@ def test_direct_shipment_split_allocation_enforces_aggregate_limit(traceability_
         shared_transport_service.allocate(execution_public_id=first.public_id, cargo_public_id=cargo.public_id, allocated_quantity="600", user=user)
         shared_transport_service.allocate(execution_public_id=second.public_id, cargo_public_id=cargo.public_id, allocated_quantity="400", user=user)
         db.session.commit()
-        with pytest.raises(Exception, match="remaining quantity"):
-            shared_transport_service.allocate(execution_public_id=second.public_id, cargo_public_id=cargo.public_id, allocated_quantity="500", user=user)
+        updated = shared_transport_service.allocate(execution_public_id=second.public_id, cargo_public_id=cargo.public_id, allocated_quantity="500", user=user)
+        db.session.commit()
+        assert updated.allocated_quantity == 500
+        assert [(row.before_quantity, row.after_quantity) for row in db.session.scalars(db.select(CargoAllocationRevision).where(CargoAllocationRevision.allocation_id == updated.id).order_by(CargoAllocationRevision.revision_number))] == [(0, 400), (400, 500)]

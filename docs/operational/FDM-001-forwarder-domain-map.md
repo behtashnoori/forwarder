@@ -106,6 +106,19 @@ flowchart LR
 
 Means performs movement; Equipment/load units remain distinct ordered execution context. A Train with Wagon and Container is represented without a reusable fleet or containment registry. Missing optional Carrier, identifier, Equipment or driver detail is progressive incompleteness, not an Exception. Existing Cargo allocations are unchanged: P3-04 creates no quantity allocation, split, transfer or remaining-quantity semantics.
 
+## 3C. Stage-scoped Cargo distribution and trace
+
+```mermaid
+flowchart LR
+  SI["ShipmentCargoItem — one physical Cargo and known quantity"] --> AL["ExecutionUnitCargoAllocation — plan or actual in one stage"]
+  RL["RoutePlan / RouteLeg"] --> RSE["RouteStageExecution"] --> AL
+  AL --> EU["ExecutionUnit — tenant execution SOR"]
+  AL --> AR["CargoAllocationRevision — before/after history"]
+  AL --> TR["CargoAllocationTransfer — atomic movement or handoff"]
+```
+
+ADR-060 extends the same allocation SOR. Stage planned and actual distributions remain separate. One Cargo may split across several executions; downstream actual stage totals show continuity and are not added to Cargo's known physical quantity. Underage, overage and stage differences are warnings only, with no automatic Exception, Attention, SLA or status effect. The owning Transport Expert records correction or transfer with immutable history. Legacy allocation rows have unknown stage/dimension and are never assigned guessed history. Tracking reads current actual or legacy unknown allocation, not plans or released rows. P3-06 documents and P3-07 location meaning remain later slices.
+
 ## 4. Logistics Network boundaries
 
 ```mermaid

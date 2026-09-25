@@ -1,7 +1,8 @@
 """Canonical tenant-scoped shared transport allocation commands (ADR-046)."""
 from decimal import Decimal, InvalidOperation
+from uuid import uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import or_, select
 
 from backend.cargo_models import ExecutionUnitCargoAllocation, ShipmentCargoItem
 from backend.extensions import db
@@ -9,6 +10,9 @@ from backend.models import Customer, CustomerRoleAssignment
 from backend.operational_models import ExecutionUnit, OperationalShipment, Project
 from backend.services.operational_service import OperationalError, organization_for_user, require_permission
 from backend.services.assigned_work_authorization import authorize_work_action
+from backend.services.assigned_work_authorization import authorize_document_management
+from backend.services import cargo_allocation_service as allocation_history
+from backend.operational_models import utcnow
 
 
 def _authorized_shipment(cargo: ShipmentCargoItem, user: dict) -> OperationalShipment:
@@ -101,6 +105,8 @@ def allocate(*, execution_public_id: str, cargo_public_id: str, allocated_quanti
     if not unit or not cargo:
         raise OperationalError("NOT_FOUND", "Execution or cargo not found.", 404)
     shipment = _authorized_shipment(cargo, user)
+    if not authorize_document_management(user, shipment).allowed:
+        raise OperationalError("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
     if cargo.cargo_owner_customer_id is None:
         raise OperationalError("CARGO_OWNER_REQUIRED", "Cargo owner is required for a new shared transport allocation.", 422)
     owner = db.session.get(Customer, cargo.cargo_owner_customer_id)
@@ -112,24 +118,31 @@ def allocate(*, execution_public_id: str, cargo_public_id: str, allocated_quanti
         quantity = Decimal(str(allocated_quantity))
     except (InvalidOperation, TypeError):
         raise OperationalError("VALIDATION_FAILED", "allocated_quantity must be positive.", 422)
-    row = db.session.scalar(select(ExecutionUnitCargoAllocation).where(ExecutionUnitCargoAllocation.execution_unit_id == unit.id, ExecutionUnitCargoAllocation.shipment_cargo_item_id == cargo.id))
-    allocated_total = db.session.scalar(
-        select(func.coalesce(func.sum(ExecutionUnitCargoAllocation.allocated_quantity), 0)).where(
-            ExecutionUnitCargoAllocation.shipment_cargo_item_id == cargo.id
-        )
-    ) or Decimal("0")
-    current_quantity = row.allocated_quantity if row else Decimal("0")
-    if quantity <= 0 or allocated_total - current_quantity + quantity > cargo.quantity:
-        raise OperationalError("ALLOCATION_QUANTITY_EXCEEDS_REMAINING", "allocated_quantity exceeds the cargo remaining quantity.", 422)
+    row = db.session.scalar(select(ExecutionUnitCargoAllocation).where(
+        ExecutionUnitCargoAllocation.execution_unit_id == unit.id,
+        ExecutionUnitCargoAllocation.shipment_cargo_item_id == cargo.id,
+        ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+        ExecutionUnitCargoAllocation.is_current.is_(True),
+    ).with_for_update())
+    if not quantity.is_finite() or quantity <= 0 or quantity.as_tuple().exponent < -6 or quantity > Decimal("999999999999.999999"):
+        raise OperationalError("INVALID_QUANTITY", "allocated_quantity has invalid sign or precision.", 422)
+    before = row.allocated_quantity if row else Decimal("0")
     if row:
-        row.allocated_quantity = quantity; row.updated_by = int(user["id"])
-        return row
-    row = ExecutionUnitCargoAllocation(
-        execution_unit_id=unit.id, shipment_cargo_item_id=cargo.id,
-        operational_shipment_id=shipment.id, project_id=shipment.project_id,
-        allocated_quantity=quantity, created_by=int(user["id"]), updated_by=int(user["id"]),
-    )
-    db.session.add(row)
+        if before == quantity:
+            return row
+        row.allocated_quantity = quantity
+        row.version += 1
+        row.updated_by = int(user["id"])
+    else:
+        row = ExecutionUnitCargoAllocation(
+            execution_unit_id=unit.id, shipment_cargo_item_id=cargo.id,
+            operational_shipment_id=shipment.id, project_id=shipment.project_id,
+            allocated_quantity=quantity, created_by=int(user["id"]), updated_by=int(user["id"]),
+        )
+        db.session.add(row)
+    db.session.flush()
+    key = f"legacy-{uuid4()}"
+    allocation_history._revision(row, shipment, before, quantity, "LEGACY_RECORD", user, key, allocation_history._payload_hash({"execution": unit.public_id, "cargo": cargo.public_id, "quantity": str(quantity)}), utcnow(), None)
     return row
 
 
@@ -139,19 +152,32 @@ def release(*, execution_public_id: str, allocation_public_id: str, user: dict) 
     row = db.session.scalar(select(ExecutionUnitCargoAllocation).where(
         ExecutionUnitCargoAllocation.public_id == allocation_public_id,
         ExecutionUnitCargoAllocation.execution_unit_id == unit.id,
+        ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+        ExecutionUnitCargoAllocation.is_current.is_(True),
     ))
     if not row:
         raise OperationalError("NOT_FOUND", "Allocation not found.", 404)
     # Re-check source authorization on destructive actions as well.
-    _authorized_shipment(db.session.get(ShipmentCargoItem, row.shipment_cargo_item_id), user)
-    db.session.delete(row)
+    cargo = db.session.scalar(select(ShipmentCargoItem).where(ShipmentCargoItem.id == row.shipment_cargo_item_id).with_for_update())
+    shipment = _authorized_shipment(cargo, user)
+    if not authorize_document_management(user, shipment).allowed:
+        raise OperationalError("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
+    before = row.allocated_quantity
+    row.is_current = False
+    row.version += 1
+    row.updated_by = int(user["id"])
+    db.session.flush()
+    key = f"legacy-{uuid4()}"
+    allocation_history._revision(row, shipment, before, Decimal("0"), "LEGACY_RELEASE", user, key, allocation_history._payload_hash({"allocation": row.public_id, "action": "release"}), utcnow(), None)
 
 
 def allocations(*, execution_public_id: str, user: dict) -> dict:
     require_permission(user, "execution_unit.read")
     unit = _unit(execution_public_id, user)
     rows = db.session.scalars(select(ExecutionUnitCargoAllocation).where(
-        ExecutionUnitCargoAllocation.execution_unit_id == unit.id
+        ExecutionUnitCargoAllocation.execution_unit_id == unit.id,
+        ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+        ExecutionUnitCargoAllocation.is_current.is_(True),
     ).order_by(ExecutionUnitCargoAllocation.created_at, ExecutionUnitCargoAllocation.public_id)).all()
     items = []
     visible_owner_ids = set()
@@ -226,9 +252,14 @@ def assign_carrier(*, execution_public_id: str, carrier_customer_id: int | None,
 
 def classification(execution_unit_id: int) -> str:
     """Derived groupage classification; unknown never becomes same-owner."""
-    rows = db.session.scalars(select(ShipmentCargoItem.cargo_owner_customer_id).join(ExecutionUnitCargoAllocation, ExecutionUnitCargoAllocation.shipment_cargo_item_id == ShipmentCargoItem.id).where(ExecutionUnitCargoAllocation.execution_unit_id == execution_unit_id)).all()
+    rows = db.session.execute(select(ShipmentCargoItem.id, ShipmentCargoItem.cargo_owner_customer_id).join(ExecutionUnitCargoAllocation, ExecutionUnitCargoAllocation.shipment_cargo_item_id == ShipmentCargoItem.id).where(
+        ExecutionUnitCargoAllocation.execution_unit_id == execution_unit_id,
+        ExecutionUnitCargoAllocation.is_current.is_(True),
+        or_(ExecutionUnitCargoAllocation.dimension == "ACTUAL", ExecutionUnitCargoAllocation.dimension.is_(None)),
+    ).distinct()).all()
     if len(rows) <= 1:
         return "single_cargo"
-    if any(owner is None for owner in rows):
+    owners = [owner for _, owner in rows]
+    if any(owner is None for owner in owners):
         return "multi_cargo_owner_unknown"
-    return "multi_customer_groupage" if len(set(rows)) > 1 else "multi_cargo_same_owner"
+    return "multi_customer_groupage" if len(set(owners)) > 1 else "multi_cargo_same_owner"

@@ -15,6 +15,7 @@ from backend.extensions import db
 from backend.models import (
     Customer,
     CargoType,
+    ExpertUser,
     PackagingType,
     RequestCargoItem,
     ShipmentRequest,
@@ -624,7 +625,13 @@ def shipment_item_dict(row):
     # Canonical execution allocations win for a cargo line.  A legacy row is
     # historical compatibility data only and is shown only when no canonical
     # allocation exists for that line.
-    canonical = db.session.scalar(select(func.coalesce(func.sum(ExecutionUnitCargoAllocation.allocated_quantity), 0)).where(ExecutionUnitCargoAllocation.shipment_cargo_item_id == row.id))
+    # The compatibility summary has no stage dimension. Summing successive
+    # route stages would count the same physical Cargo repeatedly.
+    canonical = db.session.scalar(select(func.coalesce(func.sum(ExecutionUnitCargoAllocation.allocated_quantity), 0)).where(
+        ExecutionUnitCargoAllocation.shipment_cargo_item_id == row.id,
+        ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+        ExecutionUnitCargoAllocation.is_current.is_(True),
+    ))
     allocated = canonical or db.session.scalar(select(func.coalesce(func.sum(ShipmentCargoTransportAllocation.allocated_quantity), 0)).where(ShipmentCargoTransportAllocation.shipment_cargo_item_id == row.id))
     return {
         "public_id": row.public_id,
@@ -821,7 +828,7 @@ def _audit_value(field, value):
     return value
 
 
-def _cargo_audit(user, shipment, row, action, changes):
+def _cargo_audit(user, shipment, row, action, changes, reason=None):
     db.session.add(
         OperationalAudit(
             organization_id=shipment.organization_id,
@@ -834,6 +841,7 @@ def _cargo_audit(user, shipment, row, action, changes):
                 "shipment_public_id": shipment.public_id,
                 "version": row.version,
                 "changed_fields": sorted(changes),
+                "reason": reason,
                 "changes": {
                     field: {
                         "before": _audit_value(field, before),
@@ -860,6 +868,7 @@ def cargo_history(row):
             "action": audit.action,
             "recorded_at": audit.recorded_at.isoformat(),
             "actor_user_id": audit.actor_user_id,
+            "actor_name": db.session.get(ExpertUser, audit.actor_user_id).full_name,
             **(audit.metadata_json or {}),
         }
         for audit in audits
@@ -1021,6 +1030,8 @@ def delete_allocation(user, shipment, public_id):
     canonical = db.session.scalar(select(ExecutionUnitCargoAllocation).where(
         ExecutionUnitCargoAllocation.execution_unit_id == execution.id,
         ExecutionUnitCargoAllocation.shipment_cargo_item_id == row.shipment_cargo_item_id,
+        ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None),
+        ExecutionUnitCargoAllocation.is_current.is_(True),
     ))
     if not canonical:
         raise CargoError("LEGACY_WRITE_MAPPING = NEEDS_DECISION", 409)
@@ -1196,6 +1207,9 @@ def update_shipment_item(user, row, data):
     if shipment is None:
         raise CargoError("shipment not found", 404)
     _require_cargo_mutation(user, shipment)
+    reason = data.get("reason")
+    if reason is not None and (not isinstance(reason, str) or len(reason.strip()) > 500):
+        raise CargoError("reason must be short text", 422)
     if isinstance(data.get("version"), bool):
         raise CargoError("version conflict", 409)
     try:
@@ -1374,6 +1388,6 @@ def update_shipment_item(user, row, data):
     row.updated_by = user["id"]
     row.version += 1
     db.session.flush()
-    _cargo_audit(user, shipment, row, "SHIPMENT_CARGO_UPDATED", changes)
+    _cargo_audit(user, shipment, row, "SHIPMENT_CARGO_UPDATED", changes, (reason.strip() or None) if isinstance(reason, str) else None)
     db.session.commit()
     return row
