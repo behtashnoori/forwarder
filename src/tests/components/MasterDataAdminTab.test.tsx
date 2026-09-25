@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 
@@ -32,5 +33,20 @@ describe("MasterDataAdminTab", () => {
     expect((screen.getByPlaceholderText("کد ثابت") as HTMLInputElement).disabled).toBe(false);
     expect(screen.getByPlaceholderText("نام فارسی")).toBeTruthy();
     expect(screen.getByPlaceholderText("نام انگلیسی")).toBeTruthy();
+  });
+
+  it("extends central authority to the three Phase 3 reference families", async () => {
+    const user = userEvent.setup();
+    render(<MasterDataAdminTab />);
+    expect(await screen.findByText("این کاتالوگ مرجع مرکزی فقط زیر اختیار مدیر پلتفرم است. سازمان‌ها حقیقت مرکزی را تغییر نمی‌دهند و فقط تعریف‌های مجاز را برای استفادهٔ خود فعال یا غیرفعال می‌کنند.")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "انواع بسته‌بندی" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "انواع وسیله حمل" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "تجهیزات و واحدهای بار" })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "انواع بسته‌بندی" }));
+    await waitFor(() => expect(api.fetchMasterData).toHaveBeenCalledWith("packaging-types", expect.any(Object)));
+    fireEvent.click(screen.getByRole("button", { name: "ایجاد" }));
+    expect(screen.getByLabelText("کد ثابت تعریف مرکزی")).toBeInTheDocument();
+    expect(screen.getByLabelText("نام فارسی تعریف مرکزی")).toBeInTheDocument();
+    expect(screen.getByLabelText("نام انگلیسی تعریف مرکزی")).toBeInTheDocument();
   });
 });

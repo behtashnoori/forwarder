@@ -89,7 +89,8 @@ describe("Cargo foundation UI", () => {
     expect(api.getShipmentCargoOptions).toHaveBeenCalledWith("project-1","");
     expect(screen.getByRole("group",{name:"کالاهای ترجیحی پروژه"})).toBeTruthy();
     expect(screen.getByRole("option",{name:/ITEM-2/})).toBeTruthy();
-    expect(screen.getByRole("option",{name:"ورود دستی کالا"})).toBeTruthy();
+    expect(screen.getByRole("option",{name:"بدون کالای استاندارد؛ شرح فقط برای این محموله"})).toBeTruthy();
+    expect(screen.getByPlaceholderText("شرح نمایشی این قلم؛ فقط برای این محموله")).toBeTruthy();
     expect(screen.getByText("Historical snapshot")).toBeTruthy();
     fireEvent.change(screen.getByLabelText("Edit quantity line 1"),{target:{value:"3"}});
     fireEvent.click(screen.getByRole("button",{name:/Save/}));
@@ -117,6 +118,48 @@ describe("Cargo foundation UI", () => {
     await waitFor(()=>expect(api.createCanonicalShipmentTransportUnit).toHaveBeenCalledWith("shipment-1",{
       unit_type:"truck",display_name:"کامیون اصلی",vehicle_reference:"IR-77",
     }));
+  });
+
+  it("blocks only dependent catalog and shipment creation when organization references are missing", async () => {
+    api.request.mockResolvedValue({cargo_types:[],uoms:[]});
+    api.getShipmentCargoOptions.mockResolvedValue({catalog:[],cargo_types:[],uoms:[]});
+
+    const catalogView = render(<CargoCatalogAdminTab/>);
+    expect(await screen.findByText("این نوع در تعاریف سازمان موجود نیست. برای ادامه، مدیر سازمان باید آن را تعریف یا فعال کند.")).toBeInTheDocument();
+    expect(screen.getByRole("button",{name:"ایجاد کالای استاندارد"})).toBeDisabled();
+    expect(screen.getByRole("button",{name:"مشاهده محموله‌های دارای این کالا"})).toBeEnabled();
+    catalogView.unmount();
+
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1"/>);
+    expect(await screen.findByText("این نوع در تعاریف سازمان موجود نیست. برای ادامه، مدیر سازمان باید آن را تعریف یا فعال کند.")).toBeInTheDocument();
+    expect(screen.getByRole("button",{name:"افزودن کالا"})).toBeDisabled();
+    expect(screen.getByText("Historical snapshot")).toBeInTheDocument();
+    expect(screen.getByText(/نوع ثبت‌شده:/)).toHaveTextContent("عمومی");
+    expect(screen.getByText("افزودن وسیله حمل")).toBeInTheDocument();
+  });
+
+  it("shows only selectable organization-approved options for new shipment cargo", async () => {
+    api.getShipmentCargoOptions.mockResolvedValue({
+      catalog:[
+        {public_id:"catalog-active",code:"ACTIVE",name:"فعال",cargo_type_public_id:"ct-active",default_uom_public_id:"uom-active",selectable:true},
+        {public_id:"catalog-inactive",code:"INACTIVE",name:"غیرفعال",cargo_type_public_id:"ct-inactive",default_uom_public_id:"uom-inactive",selectable:false},
+      ],
+      cargo_types:[
+        {public_id:"ct-active",code:"TYPE_ACTIVE",name:"نوع فعال",selectable:true},
+        {public_id:"ct-inactive",code:"TYPE_INACTIVE",name:"نوع غیرفعال",selectable:false},
+      ],
+      uoms:[
+        {public_id:"uom-active",code:"UOM_ACTIVE",name:"واحد فعال",symbol:"ea",selectable:true},
+        {public_id:"uom-inactive",code:"UOM_INACTIVE",name:"واحد غیرفعال",symbol:"old",selectable:false},
+      ],
+    });
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1"/>);
+    expect(await screen.findByRole("option",{name:/ACTIVE/})).toBeInTheDocument();
+    expect(screen.getByRole("option",{name:"نوع فعال"})).toBeInTheDocument();
+    expect(screen.getByRole("option",{name:/واحد فعال/})).toBeInTheDocument();
+    expect(screen.queryByRole("option",{name:/INACTIVE/})).not.toBeInTheDocument();
+    expect(screen.queryByRole("option",{name:"نوع غیرفعال"})).not.toBeInTheDocument();
+    expect(screen.queryByRole("option",{name:/واحد غیرفعال/})).not.toBeInTheDocument();
   });
 
   it("renders and persists Cargo Owners by unique Customer identity", async () => {

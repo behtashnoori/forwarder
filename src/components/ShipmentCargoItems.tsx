@@ -19,8 +19,9 @@ import {
   type OperationalCustomerSelector,
 } from "@/lib/api";
 
-type Option = { public_id: string; code: string; name: string; cargo_type_public_id?: string; default_uom_public_id?: string | null; symbol?: string; preferred?: boolean };
+type Option = { public_id: string; code: string; name: string; cargo_type_public_id?: string; default_uom_public_id?: string | null; symbol?: string; preferred?: boolean; selectable?: boolean };
 const statusLabel: Record<string, string> = { loading: "در حال بارگیری", departed: "حرکت کرده", in_transit: "در مسیر", at_checkpoint: "در نقطه کنترل", delayed: "با تأخیر", arrived_destination: "رسیده به مقصد", delivered: "تحویل شده", cancelled: "لغو شده" };
+const missingReferenceGuidance = "این نوع در تعاریف سازمان موجود نیست. برای ادامه، مدیر سازمان باید آن را تعریف یا فعال کند.";
 const label = (status?: string) => statusLabel[status || ""] || status || "ثبت نشده";
 const time = (value?: string) => formatDualCalendarInstant(value, "fa-IR", { fallback: "ثبت نشده" });
 const uniqueCustomers = (customers: OperationalCustomerSelector[]) =>
@@ -46,7 +47,7 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
   const load = useCallback(async () => {
     try {
       const [lines, opts, ownerData, trackingData, unitData, allocationData] = await Promise.all([listShipmentCargoItems(shipmentPublicId), getShipmentCargoOptions(projectPublicId || undefined, cargoQuery), searchOperationalCustomers("", 100), getOperationalTransportTracking(shipmentPublicId), getCanonicalShipmentTransportUnits(shipmentPublicId), getCanonicalCargoAllocations(shipmentPublicId)]);
-      setItems(lines.items); setOptions(opts); setOwners(uniqueCustomers(ownerData.items)); setTracking(trackingData.tracking); setError("");
+      setItems(lines.items); setOptions({ catalog: opts.catalog.filter((option) => option.selectable !== false), cargo_types: opts.cargo_types.filter((option) => option.selectable !== false), uoms: opts.uoms.filter((option) => option.selectable !== false) }); setOwners(uniqueCustomers(ownerData.items)); setTracking(trackingData.tracking); setError("");
       setUnits(unitData.units); setAllocations(allocationData.allocations);
     } catch { setError("اطلاعات کالا، وسیله حمل یا پیگیری قابل دریافت نیست. اجازه دسترسی یا اتصال را بررسی کنید."); }
   }, [shipmentPublicId, projectPublicId, cargoQuery]);
@@ -56,6 +57,7 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
     const row = options.catalog.find((option) => option.public_id === id);
     setForm({ ...form, catalog_item_public_id: id, cargo_type_public_id: row?.cargo_type_public_id || form.cargo_type_public_id, uom_public_id: row?.default_uom_public_id || form.uom_public_id, display_name: row?.name || form.display_name });
   };
+  const referenceUnavailable = options.cargo_types.length === 0 || options.uoms.length === 0 || (Boolean(form.cargo_type_public_id) && !options.cargo_types.some((option) => option.public_id === form.cargo_type_public_id)) || (Boolean(form.uom_public_id) && !options.uoms.some((option) => option.public_id === form.uom_public_id));
   const remainingFor = (cargoId: string, exceptId?: string) => {
     const cargo = items.find((item) => item.public_id === cargoId);
     const allocated = allocations.filter((item) => item.cargo_item_public_id === cargoId && item.public_id !== exceptId).reduce((sum, item) => sum + Number(item.allocated_quantity), 0);
@@ -76,25 +78,26 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
     try {
       await createShipmentCargoItem(shipmentPublicId, { ...form, line_number: Number(form.line_number), quantity: form.quantity, catalog_item_public_id: form.catalog_item_public_id || undefined, cargo_owner_customer_id: form.cargo_owner_customer_id ? Number(form.cargo_owner_customer_id) : undefined });
       setForm({ ...form, line_number: String(Number(form.line_number) + 1), catalog_item_public_id: "", display_name: "", quantity: "" }); await load();
-    } catch { setError("شماره ردیف، کالا، مقدار و واحد را بررسی کنید."); }
+    } catch (caught) { setError(caught instanceof ApiError && (caught.status === 409 || caught.status === 422) ? missingReferenceGuidance : "شماره ردیف، کالا، مقدار و واحد را بررسی کنید."); }
   };
   return <>
     <Card dir="rtl"><CardHeader><CardTitle>کالا و وسایل حمل</CardTitle></CardHeader><CardContent className="space-y-4">
       {error && <p aria-live="polite" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
       {legacyDescription && <p className="rounded bg-amber-50 p-3 text-sm"><strong>شرح ثبت‌شده پیشین:</strong> {legacyDescription}</p>}
       <details><summary className="cursor-pointer font-medium">افزودن کالا</summary><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        {referenceUnavailable && <p className="rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 sm:col-span-2 lg:col-span-3">{missingReferenceGuidance}</p>}
         <Input aria-label="Cargo line number" type="number" min="1" value={form.line_number} onChange={(event) => setForm({ ...form, line_number: event.target.value })} />
         <Input aria-label="Search cargo catalog" placeholder="جست‌وجوی نام، نام جایگزین، کد، برند یا مدل" value={cargoQuery} onChange={(event) => setCargoQuery(event.target.value)} />
-        <select aria-label="Catalog item" className="min-h-11 rounded border px-3" value={form.catalog_item_public_id} onChange={(event) => choose(event.target.value)}><option value="">ورود دستی کالا</option>{options.catalog.some((option) => option.preferred)&&<optgroup label="کالاهای ترجیحی پروژه">{options.catalog.filter((option)=>option.preferred).map((option) => <option key={option.public_id} value={option.public_id}>★ {option.code} — {option.name}</option>)}</optgroup>}<optgroup label="سایر کالاهای سازمان">{options.catalog.filter((option)=>!option.preferred).map((option) => <option key={option.public_id} value={option.public_id}>{option.code} — {option.name}</option>)}</optgroup></select>
-        <Input aria-label="Cargo display name" placeholder="نام کالا" value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} />
+        <select aria-label="Catalog item" className="min-h-11 rounded border px-3" value={form.catalog_item_public_id} onChange={(event) => choose(event.target.value)}><option value="">بدون کالای استاندارد؛ شرح فقط برای این محموله</option>{options.catalog.some((option) => option.preferred)&&<optgroup label="کالاهای ترجیحی پروژه">{options.catalog.filter((option)=>option.preferred).map((option) => <option key={option.public_id} value={option.public_id}>★ {option.code} — {option.name}</option>)}</optgroup>}<optgroup label="سایر کالاهای سازمان">{options.catalog.filter((option)=>!option.preferred).map((option) => <option key={option.public_id} value={option.public_id}>{option.code} — {option.name}</option>)}</optgroup></select>
+        <Input aria-label="Cargo display name" placeholder="شرح نمایشی این قلم؛ فقط برای این محموله" value={form.display_name} onChange={(event) => setForm({ ...form, display_name: event.target.value })} />
         <select aria-label="Cargo type" className="min-h-11 rounded border px-3" value={form.cargo_type_public_id} onChange={(event) => setForm({ ...form, cargo_type_public_id: event.target.value })}><option value="">نوع کالا</option>{options.cargo_types.map((option) => <option key={option.public_id} value={option.public_id}>{option.name}</option>)}</select>
          <Input aria-label="Cargo quantity" type="number" min="0.000001" step="any" placeholder="مقدار" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: event.target.value })} />
          <select aria-label="Unit of measure" className="min-h-11 rounded border px-3" value={form.uom_public_id} onChange={(event) => setForm({ ...form, uom_public_id: event.target.value })}><option value="">واحد اندازه‌گیری</option>{options.uoms.map((option) => <option key={option.public_id} value={option.public_id}>{option.name} ({option.symbol})</option>)}</select>
          <select aria-label="Cargo owner" className="min-h-11 rounded border px-3" value={form.cargo_owner_customer_id} onChange={(event) => setForm({ ...form, cargo_owner_customer_id: event.target.value })}><option value="">مالک محموله (پیش‌فرض)</option>{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.label}</option>)}</select>
-         <Button className="min-h-11" onClick={() => void create()}>افزودن کالا</Button>
+         <Button className="min-h-11" disabled={referenceUnavailable || !form.cargo_type_public_id || !form.uom_public_id} onClick={() => void create()}>افزودن کالا</Button>
       </div></details>
       {!items.length ? <p className="text-sm text-slate-600">هنوز کالایی برای این محموله ثبت نشده است.</p> : <div className="grid gap-3 lg:grid-cols-2">{items.map((item) => <article className="rounded border p-3 text-sm" key={item.public_id}>
-        <div className="flex flex-wrap justify-between gap-2"><strong>{item.display_name_snapshot}</strong><span>ردیف {item.line_number}</span></div><p className="mt-2">مقدار کل: <strong>{formatQuantity(item.quantity)} {item.uom_symbol_snapshot}</strong></p><p>مالک کالا: <strong>{item.cargo_owner?.label || "نامشخص / ثبت نشده"}</strong></p><p>تخصیص‌یافته: {formatQuantity(item.allocated_quantity)} {item.uom_symbol_snapshot} · باقیمانده: {formatQuantity(item.remaining_quantity ?? item.quantity)} {item.uom_symbol_snapshot}</p>{item.description_snapshot && <p className="mt-2 text-slate-600">{item.description_snapshot}</p>}
+        <div className="flex flex-wrap justify-between gap-2"><strong>{item.display_name_snapshot}</strong><span>ردیف {item.line_number}</span></div><p className="mt-2">نوع ثبت‌شده: <strong>{item.cargo_type_fa_snapshot}</strong></p><p>مقدار کل: <strong>{formatQuantity(item.quantity)} {item.uom_symbol_snapshot}</strong></p><p>مالک کالا: <strong>{item.cargo_owner?.label || "نامشخص / ثبت نشده"}</strong></p><p>تخصیص‌یافته: {formatQuantity(item.allocated_quantity)} {item.uom_symbol_snapshot} · باقیمانده: {formatQuantity(item.remaining_quantity ?? item.quantity)} {item.uom_symbol_snapshot}</p>{item.description_snapshot && <p className="mt-2 text-slate-600">{item.description_snapshot}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-2"><Input aria-label={`Edit quantity line ${item.line_number}`} className="w-28" type="number" min="0.000001" step="any" value={edits[item.public_id] ?? item.quantity} onChange={(event) => setEdits({ ...edits, [item.public_id]: event.target.value })} /><select aria-label={`Cargo owner line ${item.line_number}`} className="min-h-10 rounded border px-2" value={ownerEdits[item.public_id] ?? String(item.cargo_owner?.id || "")} onChange={(event) => setOwnerEdits({ ...ownerEdits, [item.public_id]: event.target.value })}><option value="">نامشخص / ثبت نشده</option>{item.cargo_owner && !owners.some((owner) => owner.id === item.cargo_owner?.id) && <option value={item.cargo_owner.id}>{item.cargo_owner.label}</option>}{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.label}</option>)}</select><Button variant="outline" onClick={async () => { try { await updateShipmentCargoItem(shipmentPublicId, item.public_id, { quantity: edits[item.public_id] ?? item.quantity, cargo_owner_customer_id: ownerEdits[item.public_id] ?? item.cargo_owner?.id ?? null, version: item.version }); await load(); } catch { setError("مقدار یا مالک کالا به‌روزرسانی نشد؛ صفحه را تازه‌سازی کنید."); } }}>ذخیره <span className="sr-only">Save</span></Button></div>
       </article>)}</div>}
     </CardContent></Card>

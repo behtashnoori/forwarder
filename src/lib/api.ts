@@ -684,7 +684,13 @@ export const deactivateAdminLocation = <T>(
   request(`/api/admin/locations/${resource}/${id}`, { method: "DELETE" });
 
 export type MasterDataResource =
-  "cargo-types" | "service-types" | "units-of-measure";
+  | "cargo-types"
+  | "service-types"
+  | "units-of-measure"
+  | "packaging-types"
+  | "transport-means-types"
+  | "transport-equipment-types";
+export type OrganizationReferenceCatalogResource = Exclude<MasterDataResource, "service-types">;
 export type MeasurementDimension =
   "COUNT" | "WEIGHT" | "VOLUME" | "LENGTH" | "OTHER_GOVERNED";
 export interface MasterDataItem {
@@ -742,6 +748,47 @@ export const setMasterDataActive = (
     `/api/admin/master-data/${resource}/${item.public_id}/${active ? "activate" : "deactivate"}`,
     { method: "POST", body: JSON.stringify({ version: item.version }) },
   );
+
+export interface OrganizationReferenceCatalogItem {
+  public_id: string;
+  code: string;
+  fa_name: string;
+  en_name: string;
+  description: string | null;
+  display_order: number;
+  central_active: boolean;
+  organization_active: boolean;
+  selectable: boolean;
+  activation_public_id: string | null;
+  activation_version: number | null;
+  origin: "CENTRAL_SYSTEM";
+  created_at: string;
+  updated_at: string;
+}
+export interface OrganizationReferenceCatalogPage {
+  items: OrganizationReferenceCatalogItem[];
+  page?: number;
+  per_page?: number;
+  total?: number;
+  pages?: number;
+}
+export const fetchOrganizationReferenceCatalog = (
+  resource: OrganizationReferenceCatalogResource,
+  params?: Record<string, string | number | boolean | undefined>,
+) => request<OrganizationReferenceCatalogPage>(
+  withQuery(`/api/admin/organization-reference-catalog/${resource}`, params),
+);
+export const setOrganizationReferenceCatalogActive = (
+  resource: OrganizationReferenceCatalogResource,
+  item: OrganizationReferenceCatalogItem,
+  active: boolean,
+) => request<{ item: OrganizationReferenceCatalogItem }>(
+  `/api/admin/organization-reference-catalog/${resource}/${encodeURIComponent(item.public_id)}/${active ? "activate" : "deactivate"}`,
+  {
+    method: "POST",
+    body: JSON.stringify(item.activation_version == null ? {} : { version: item.activation_version }),
+  },
+);
 
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -3441,11 +3488,19 @@ export interface ShipmentCargoOption {
   symbol?: string;
   preferred?: boolean;
   preference_order?: number | null;
+  selectable?: boolean;
+}
+export interface CargoReferenceMissingConfiguration {
+  cargo_types?: boolean;
+  uoms?: boolean;
+  resources?: string[];
+  message?: string;
 }
 export interface ShipmentCargoOptions {
   catalog: ShipmentCargoOption[];
   cargo_types: ShipmentCargoOption[];
   uoms: ShipmentCargoOption[];
+  missing_configuration?: CargoReferenceMissingConfiguration | null;
 }
 export const getShipmentCargoOptions = (projectPublicId?: string, q?: string) =>
   request<ShipmentCargoOptions>(
