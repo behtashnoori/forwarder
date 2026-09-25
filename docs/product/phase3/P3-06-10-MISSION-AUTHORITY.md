@@ -104,3 +104,7 @@ Global Product EVIDENCE_PENDING; integrated journeys/human walkthrough NOT_RUN;
 Release Ready NO. Controlled canonical integration is authorized by the mission;
 its exact receipt must establish the next slice start. P3-08..10 implementation
 has not begun at this record and P3-11..15 remain excluded.
+
+## Verified P3-08 entry and Product authority
+
+P3-07 integrated at `682e83ed3a51badb3938d66dbd337e8e10e57797`; local and freshly fetched github were clean/aligned 0/0, sole head `20261007_phase3_reported_facts`. P3-02/03/05/06 dependencies verified. The new isolated `codex/phase3-p3-08-partial-delivery` starts from that actual canonical. [ADR-064](../../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) records the explicit mission §§31–44 Delivery SOR, correction, exact evidence and nonblocking reality decision before build. No additional reserved Product behavior is assumed. P3-07 is not a functional dependency; P3-09/10 are not started.

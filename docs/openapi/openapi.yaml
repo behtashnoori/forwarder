@@ -3977,11 +3977,11 @@ paths:
     post: { tags: [Saved Views], summary: Restore without rewriting definition history, security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/SavedViewVersionCommand' } } } }, responses: { '200': { description: Restored. }, '409': { description: Version conflict. } } }
   /api/internal/operational-shipments/{shipment_id}/documents:
     get: { tags: [Documents], summary: List authorized Shipment/Request file versions with typed context and visibility when classified, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Internal authorized document metadata and legacy unknown context. }, '404': { description: Shipment unavailable. } } }
-    post: { tags: [Documents], summary: Owning Expert uploads one immutable version with typed context and explicit visibility, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }], requestBody: { required: true, content: { multipart/form-data: { schema: { type: object, required: [file, title], properties: { file: { type: string, format: binary }, title: { type: string }, description: { type: string }, context_type: { type: string, enum: [SHIPMENT, CARGO, ROUTE_LEG, EXECUTION_UNIT] }, context_target_public_id: { type: string }, visibility: { type: string, enum: [INTERNAL, CARGO_OWNER, EXPLICIT_SHARED] }, audience_public_ids: { type: array, items: { type: string, format: uuid } }, replaces_document_public_id: { type: string, format: uuid } } } } } }, responses: { '201': { description: Exact new version; replacement defaults to internal. }, '404': { description: Inaccessible parent or target. }, '409': { description: Idempotency or replacement conflict. }, '422': { description: Invalid context, audience or file. } } }
+    post: { tags: [Documents], summary: Owning Expert uploads one immutable version with typed context and explicit visibility, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: Idempotency-Key, in: header, required: true, schema: { type: string } }], requestBody: { required: true, content: { multipart/form-data: { schema: { type: object, required: [file, title], properties: { file: { type: string, format: binary }, title: { type: string }, description: { type: string }, context_type: { type: string, enum: [SHIPMENT, CARGO, ROUTE_LEG, EXECUTION_UNIT, DELIVERY] }, context_target_public_id: { type: string }, visibility: { type: string, enum: [INTERNAL, CARGO_OWNER, EXPLICIT_SHARED] }, audience_public_ids: { type: array, items: { type: string, format: uuid } }, replaces_document_public_id: { type: string, format: uuid } } } } } }, responses: { '201': { description: Exact new version; replacement defaults to internal. }, '404': { description: Inaccessible parent or target. }, '409': { description: Idempotency or replacement conflict. }, '422': { description: Invalid context, audience or file. } } }
   /api/internal/operational-shipments/{shipment_id}/document-context-options:
     get: { tags: [Documents], summary: Authorized typed context and explicit audience choices, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Parent-validated choices for Expert UI. }, '404': { description: Shipment unavailable. } } }
   /api/internal/operational-shipments/{shipment_id}/documents/{document_id}/context:
-    patch: { tags: [Documents], summary: Owning Expert changes exact-version context or visibility with optimistic history, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { type: object, required: [expected_version], properties: { expected_version: { type: integer }, context_type: { type: string, enum: [SHIPMENT, CARGO, ROUTE_LEG, EXECUTION_UNIT] }, context_target_public_id: { type: string }, visibility: { type: string, enum: [INTERNAL, CARGO_OWNER, EXPLICIT_SHARED] }, audience_public_ids: { type: array, items: { type: string, format: uuid } }, reason: { type: string } } } } } }, responses: { '200': { description: New context version and immutable audit fact. }, '404': { description: Inaccessible exact file or context target. }, '409': { description: Stale version. } } }
+    patch: { tags: [Documents], summary: Owning Expert changes exact-version context or visibility with optimistic history, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }], requestBody: { required: true, content: { application/json: { schema: { type: object, required: [expected_version], properties: { expected_version: { type: integer }, context_type: { type: string, enum: [SHIPMENT, CARGO, ROUTE_LEG, EXECUTION_UNIT, DELIVERY] }, context_target_public_id: { type: string }, visibility: { type: string, enum: [INTERNAL, CARGO_OWNER, EXPLICIT_SHARED] }, audience_public_ids: { type: array, items: { type: string, format: uuid } }, reason: { type: string } } } } } }, responses: { '200': { description: New context version and immutable audit fact. }, '404': { description: Inaccessible exact file or context target. }, '409': { description: Stale version. } } }
   /api/internal/operational-shipments/{shipment_id}/documents/{document_id}/context-history:
     get: { tags: [Documents], summary: Authorized internal audit for one exact version, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Append-only context and visibility history. }, '404': { description: Inaccessible exact version. } } }
   /api/internal/operational-shipments/{shipment_id}/documents/{document_id}/download:
@@ -4048,3 +4048,50 @@ paths:
         '404': { description: Inaccessible Shipment, scope target, Cargo or original report. }
         '409': { description: Changed replay payload or already-corrected report; reread current history. }
         '422': { description: Invalid source, scope, time, target or location. }
+
+  /api/operational-shipments/{shipment_id}/deliveries:
+    parameters:
+      - { name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      tags: [OperationalShipments]
+      summary: Authorized per-Cargo delivery totals and immutable correction history
+      description: No-store. Existing Shipment read policy; twenty facts per page. Effective totals use current correction leaves, keep unknown actual unknown and expose nonblocking remaining or excess. Evidence identities identify exact file versions. No lifecycle inference.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+      responses:
+        '200': { description: Data with Cargo summaries, paged delivery items, total, page and owner-only can_manage. Items include quantity, UOM, destination, occurrence, recording time, actor, reason, revision, predecessor and exact evidence. }
+        '403': { description: Missing read permission. }
+        '404': { description: Missing or inaccessible Shipment. }
+    post:
+      tags: [OperationalShipments]
+      summary: Owning Expert appends a partial delivery or correction with exact optional evidence
+      description: Shipment and Cargo locks serialize command replay and correction. Same key and body returns the original result; distinct keys represent distinct real deliveries. One successor per corrected fact. Quantity may exceed current known actual without rewriting Cargo quantities or closing Shipment. Customer ownership derives from same-tenant Cargo, never the header or a legacy lifecycle status.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [cargo_public_id, quantity, uom_public_id, destination_text, occurred_at, expected_version]
+              properties:
+                cargo_public_id: { type: string, format: uuid }
+                quantity: { type: string, description: Positive finite decimal with at most six decimal places and maximum 999999999999.999999. }
+                uom_public_id: { type: string, format: uuid, description: Must match the Cargo UOM. }
+                destination_text: { type: string, minLength: 1, maxLength: 255 }
+                occurred_at: { type: string, format: date-time, description: Explicit aware occurrence instant; backend assigns recorded_at. }
+                expected_version: { type: integer, minimum: 0, description: Zero for a new delivery; exact current predecessor revision for correction. }
+                corrects_public_id: { type: string, format: uuid, description: Current same-Cargo delivery; all original facts and evidence remain. }
+                reason: { type: string, nullable: true, maxLength: 500 }
+                evidence_document_public_ids: { type: array, maxItems: 20, uniqueItems: true, items: { type: string, format: uuid }, description: Exact active same-Shipment file versions with typed same-Cargo or same-Cargo Delivery context. Empty is allowed; later uploads use DELIVERY context and atomic evidence linking. }
+      responses:
+        '201': { description: New public_id, revision and created true. }
+        '200': { description: Original public_id and revision with created false on exact replay. }
+        '403': { description: Active owning Expert required; Organization Admin does not inherit command authority. }
+        '404': { description: Missing or inaccessible Shipment, Cargo, predecessor or evidence. }
+        '409': { description: Changed command replay or stale/already-corrected predecessor. }
+        '422': { description: Invalid quantity, UOM, owner, destination, time or payload. }

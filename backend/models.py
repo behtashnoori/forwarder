@@ -2421,6 +2421,7 @@ from backend.mdpm_models import (  # noqa: E402,F401
 )
 from backend.customer_entitlement_models import CustomerEntitlement  # noqa: E402,F401
 from backend.reported_fact_models import OperationalEventReportContext, OperationalEventCargoImpact  # noqa: E402,F401
+from backend.delivery_models import CargoDelivery, CargoDeliveryEvidence  # noqa: E402,F401
 from backend.document_context_models import (  # noqa: E402,F401
     OperationalDocumentContext,
     OperationalDocumentAudience,

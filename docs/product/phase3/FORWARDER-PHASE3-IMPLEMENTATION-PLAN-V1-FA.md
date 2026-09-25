@@ -1,6 +1,6 @@
 # طرح اجرای فاز ۳ — نسخه ۱
 
-> وضعیت مأموریت جاری: [دستور پنج‌مرحله‌ای P3-06 تا P3-10](P3-06-10-MISSION-AUTHORITY.md) اکنون مرجع اختیار اجراست. DN10 با تصمیم صریح مالک محصول و [ADR-062](../../operational/adr/ADR-062-explicit-customer-entitlement.md) حل شده است؛ P3-06 روی Product `0e65fd89882e23453d7c3bfe4d520cd7f44a6c32` با [شواهد تازه](../../operational/evidence/phase3-p3-06-dn10-requalification-status-20260925.md) تأیید شده و ادغام کنترل‌شده آن مجاز است. DN06 و DN07 نیز در محدوده P3-07 همین مأموریت تصمیم مصوب دارند؛ P3-06 در canonical `13c0fed2d5971907d93f23860cc5689c7ebe33f8` یکپارچه شده و P3-07 طبق [ADR-063](../../operational/adr/ADR-063-scoped-reported-facts-and-safe-effects.md) روی Product `cd83f21ca1ac0db6e940475fcd9067713831a581` با [شواهد تازه](../../operational/evidence/phase3-p3-07-reported-facts-status-20260925.md) تأیید شده و ادغام کنترل‌شدهٔ آن مجاز است؛ شروع P3-08 تا P3-10 همچنان تابع گیت ترتیبی مأموریت است. متن طرح و رکوردهای قدیمی زیر، شواهد زمان خود هستند؛ هیچ یک مجوز دورزدن وابستگی، Release یا Production نیستند.
+> وضعیت مأموریت جاری: [دستور پنج‌مرحله‌ای P3-06 تا P3-10](P3-06-10-MISSION-AUTHORITY.md) اکنون مرجع اختیار اجراست. DN10 با تصمیم صریح مالک محصول و [ADR-062](../../operational/adr/ADR-062-explicit-customer-entitlement.md) حل شده است؛ P3-06 روی Product `0e65fd89882e23453d7c3bfe4d520cd7f44a6c32` با [شواهد تازه](../../operational/evidence/phase3-p3-06-dn10-requalification-status-20260925.md) تأیید شده و ادغام کنترل‌شده آن مجاز است. DN06 و DN07 نیز در محدوده P3-07 همین مأموریت تصمیم مصوب دارند؛ P3-06 در canonical `13c0fed2d5971907d93f23860cc5689c7ebe33f8` یکپارچه شده و P3-07 طبق [ADR-063](../../operational/adr/ADR-063-scoped-reported-facts-and-safe-effects.md) روی Product `cd83f21ca1ac0db6e940475fcd9067713831a581` با [شواهد تازه](../../operational/evidence/phase3-p3-07-reported-facts-status-20260925.md) تأیید شده و ادغام کنترل‌شدهٔ آن مجاز است؛ P3-07 در canonical `682e83ed3a51badb3938d66dbd337e8e10e57797` یکپارچه و با github برابر ۰/۰ است. P3-08 طبق [ADR-064](../../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) در محیط جداگانه در حال پیاده‌سازی و تأیید است؛ P3-09/10 هنوز آغاز نشده‌اند و تابع گیت ترتیبی مأموریت‌اند. متن طرح و رکوردهای قدیمی زیر، شواهد زمان خود هستند؛ هیچ یک مجوز دورزدن وابستگی، Release یا Production نیستند.
 
 تاریخ: ۲۰۲۶-۰۹-۲۵. وضعیت: **طرح آماده؛ اجرای فاز ۳ شروع نشده است.**
 
@@ -340,6 +340,8 @@ Q0 جزئی از `QUALIFICATION_PLAN` تک‌تک رکوردهای زیر است
 - DONE_CRITERIA=دو unit با گزارش متفاوت بدون مکان کلی جعلی نمایش داده شوند؛ correction و پیام safe از منبع درست بازخوانی شود.
 
 ### P3-08 ـ تحویل جزئی
+
+وضعیت اجرای مأموریت جاری: IN_PROGRESS؛ اختیار صریح §§۳۱–۴۴ و ADR-064 پیش از ساخت ثبت شدند. وابستگی‌های 02/03/05/06 یکپارچه‌اند؛ head والد واقعی `20261007_phase3_reported_facts` است. نتیجهٔ تأیید هنوز صادر نشده است.
 
 - SLICE_ID=P3-08
 - NAME=مقدار و مدرک تحویل هر بار

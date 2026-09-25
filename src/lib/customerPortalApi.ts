@@ -38,7 +38,7 @@ export interface CustomerSharedDocument {
   public_id: string;
   filename: string;
   version: number;
-  context_type: "SHIPMENT" | "CARGO" | "ROUTE_LEG" | "EXECUTION_UNIT";
+  context_type: "SHIPMENT" | "CARGO" | "ROUTE_LEG" | "EXECUTION_UNIT" | "DELIVERY";
 }
 
 export const fetchCustomerSharedDocuments = (page = 1) =>

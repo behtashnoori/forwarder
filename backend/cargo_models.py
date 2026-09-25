@@ -198,6 +198,7 @@ class ProjectCargoCatalogItem(db.Model):
 class ShipmentCargoItem(db.Model):
     __tablename__ = "shipment_cargo_item"
     __table_args__ = (
+        db.UniqueConstraint("id", "uom_id", name="uq_shipment_cargo_id_uom"),
         db.ForeignKeyConstraint(
             ["source_request_cargo_item_id", "source_shipment_request_id"],
             ["request_cargo_item.id", "request_cargo_item.shipment_request_id"],

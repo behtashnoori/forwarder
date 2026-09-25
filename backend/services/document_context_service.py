@@ -13,6 +13,7 @@ from backend.document_context_models import (
 )
 from backend.models import CaseDocumentFile, CustomerGamification
 from backend.cargo_models import ShipmentCargoItem
+from backend.delivery_models import CargoDelivery
 from backend.operational_models import (
     ExecutionUnit, OperationalShipment, RouteLeg, RoutePlan, RouteStageExecution,
 )
@@ -25,6 +26,7 @@ TARGET_COLUMNS = {
     "CARGO": "cargo_item_id",
     "ROUTE_LEG": "route_leg_id",
     "EXECUTION_UNIT": "execution_unit_id",
+    "DELIVERY": "delivery_id",
 }
 VISIBILITIES = frozenset({"INTERNAL", "CARGO_OWNER", "EXPLICIT_SHARED"})
 
@@ -41,6 +43,12 @@ def _target(shipment: OperationalShipment, context_type: str, public_id: str | N
         row = db.session.scalar(select(ShipmentCargoItem).where(
             ShipmentCargoItem.public_id == public_id,
             ShipmentCargoItem.operational_shipment_id == shipment.id,
+        ))
+    elif context_type == "DELIVERY":
+        row = db.session.scalar(select(CargoDelivery).where(
+            CargoDelivery.public_id == public_id,
+            CargoDelivery.operational_shipment_id == shipment.id,
+            CargoDelivery.organization_id == shipment.organization_id,
         ))
     elif context_type == "ROUTE_LEG":
         try:
@@ -68,9 +76,9 @@ def _target(shipment: OperationalShipment, context_type: str, public_id: str | N
 def _audiences(shipment: OperationalShipment, visibility: str, context_type: str, public_ids: list[str]) -> list[CustomerGamification]:
     if visibility not in VISIBILITIES:
         raise DocumentError("سطح دسترسی سند معتبر نیست", 422, "DOCUMENT_VISIBILITY_INVALID")
-    if visibility == "CARGO_OWNER" and context_type != "CARGO":
+    if visibility == "CARGO_OWNER" and context_type not in {"CARGO", "DELIVERY"}:
         raise DocumentError("نمایش مالک کالا فقط برای سند کالا مجاز است", 422, "DOCUMENT_VISIBILITY_INVALID")
-    if visibility == "EXPLICIT_SHARED" and context_type == "CARGO":
+    if visibility == "EXPLICIT_SHARED" and context_type in {"CARGO", "DELIVERY"}:
         raise DocumentError("سند خصوصی کالا برای اشتراک عمومی این مسیر نیست", 422, "DOCUMENT_VISIBILITY_INVALID")
     if visibility != "EXPLICIT_SHARED":
         if public_ids:
@@ -149,6 +157,9 @@ def attach(shipment: OperationalShipment, document: CaseDocumentFile, actor_id: 
         ))
     db.session.flush()
     _event(context, "REPLACED" if replacement_of else "ATTACHED", None, actor_id, None)
+    if context.delivery_id:
+        from backend.services.delivery_service import attach_evidence
+        attach_evidence(db.session.get(CargoDelivery, context.delivery_id), document, actor_id)
     return context
 
 
@@ -167,7 +178,7 @@ def project(shipment: OperationalShipment, document: CaseDocumentFile) -> dict[s
     column = TARGET_COLUMNS[context.context_type]
     target_id = getattr(context, column) if column else shipment.id
     model = {"SHIPMENT": OperationalShipment, "CARGO": ShipmentCargoItem,
-             "ROUTE_LEG": RouteLeg, "EXECUTION_UNIT": ExecutionUnit}[context.context_type]
+             "ROUTE_LEG": RouteLeg, "EXECUTION_UNIT": ExecutionUnit, "DELIVERY": CargoDelivery}[context.context_type]
     target = db.session.get(model, target_id)
     return {
         "public_id": context.public_id, "type": context.context_type,
@@ -225,7 +236,7 @@ def revise(shipment: OperationalShipment, document: CaseDocumentFile, actor_id: 
     if not context_changed and not visibility_changed:
         raise DocumentError("تغییری برای ثبت وجود ندارد", 422, "DOCUMENT_CONTEXT_UNCHANGED")
     context.context_type = prepared["type"]
-    context.cargo_item_id = context.route_leg_id = context.execution_unit_id = None
+    context.cargo_item_id = context.route_leg_id = context.execution_unit_id = context.delivery_id = None
     column = TARGET_COLUMNS[prepared["type"]]
     if column:
         setattr(context, column, prepared["target_id"])
@@ -243,6 +254,9 @@ def revise(shipment: OperationalShipment, document: CaseDocumentFile, actor_id: 
     action = ("CONTEXT_VISIBILITY" if context_changed and visibility_changed else
               "CONTEXT_CHANGED" if context_changed else "VISIBILITY_CHANGED")
     _event(context, action, before, actor_id, reason)
+    if context.delivery_id:
+        from backend.services.delivery_service import attach_evidence
+        attach_evidence(db.session.get(CargoDelivery, context.delivery_id), document, actor_id)
     return context
 
 
@@ -261,12 +275,21 @@ def customer_context_predicate(account: CustomerGamification):
         OperationalShipment.organization_id == account.operational_organization_id,
         ShipmentCargoItem.cargo_owner_customer_id.in_(authorized_customer_ids(account)),
     ).exists()
+    own_delivery = select(CargoDelivery.id).join(
+        ShipmentCargoItem, ShipmentCargoItem.id == CargoDelivery.cargo_item_id,
+    ).where(
+        CargoDelivery.id == OperationalDocumentContext.delivery_id,
+        CargoDelivery.operational_shipment_id == OperationalDocumentContext.operational_shipment_id,
+        CargoDelivery.organization_id == account.operational_organization_id,
+        ShipmentCargoItem.cargo_owner_customer_id.in_(authorized_customer_ids(account)),
+    ).exists()
     return and_(
         OperationalDocumentContext.organization_id == account.operational_organization_id,
         or_(and_(OperationalDocumentContext.visibility == "EXPLICIT_SHARED",
-                 OperationalDocumentContext.context_type != "CARGO", explicit),
+                 OperationalDocumentContext.context_type.not_in(["CARGO", "DELIVERY"]), explicit),
             and_(OperationalDocumentContext.visibility == "CARGO_OWNER",
-                 OperationalDocumentContext.context_type == "CARGO", own_cargo)),
+                 or_(and_(OperationalDocumentContext.context_type == "CARGO", own_cargo),
+                     and_(OperationalDocumentContext.context_type == "DELIVERY", own_delivery)))),
     )
 
 

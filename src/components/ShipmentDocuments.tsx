@@ -22,14 +22,14 @@ const stateLabel = (value: string) => ({
   active: "فعال", superseded: "جایگزین‌شده", deleted: "باطل‌شده",
 }[value] || value);
 const contextLabel = (value?: string) => ({
-  SHIPMENT: "پرونده حمل", CARGO: "کالای مشتری", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل",
+  SHIPMENT: "پرونده حمل", CARGO: "کالای مشتری", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل", DELIVERY: "تحویل کالا",
 }[value || ""] || "زمینه ثبت نشده");
 const visibilityLabel = (value?: string) => ({
   INTERNAL: "فقط داخلی", CARGO_OWNER: "مشتری صاحب کالا، پس از احراز مجوز هویتی",
   EXPLICIT_SHARED: "مشتریان انتخاب‌شده",
 }[value || ""] || "فقط دسترسی داخلی پیشین");
 const optionKey = (value: ShipmentDocumentContext["type"]) => ({
-  SHIPMENT: "shipment", CARGO: "cargo", ROUTE_LEG: "route_leg", EXECUTION_UNIT: "execution_unit",
+  SHIPMENT: "shipment", CARGO: "cargo", ROUTE_LEG: "route_leg", EXECUTION_UNIT: "execution_unit", DELIVERY: "delivery",
 } as const)[value];
 
 function ContextEditor({ row, shipmentPublicId, options, onSaved }: {
@@ -44,7 +44,7 @@ function ContextEditor({ row, shipmentPublicId, options, onSaved }: {
   const [history, setHistory] = useState<Array<{ action: string; recorded_at: string; reason: string | null }>>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const targets = options[optionKey(type)];
+  const targets = options[optionKey(type)] || [];
   const save = async () => {
     setBusy(true); setError("");
     try {
@@ -66,10 +66,10 @@ function ContextEditor({ row, shipmentPublicId, options, onSaved }: {
         <select aria-label={`Document context ${row.public_id}`} className="mt-1 w-full rounded border p-2" value={type}
           onChange={(event) => {
             const next = event.target.value as ShipmentDocumentContext["type"];
-            setType(next); setTarget(options[optionKey(next)][0]?.id || ""); setVisibility("INTERNAL"); setAudiences([]);
+            setType(next); setTarget(options[optionKey(next)]?.[0]?.id || ""); setVisibility("INTERNAL"); setAudiences([]);
           }}>
           <option value="SHIPMENT">پرونده حمل</option><option value="CARGO">کالای مشتری</option>
-          <option value="ROUTE_LEG">مرحله مسیر</option><option value="EXECUTION_UNIT">اجرای حمل</option>
+          <option value="ROUTE_LEG">مرحله مسیر</option><option value="EXECUTION_UNIT">اجرای حمل</option><option value="DELIVERY">تحویل کالا</option>
         </select>
       </label>
       <label>مورد مرتبط
@@ -82,8 +82,8 @@ function ContextEditor({ row, shipmentPublicId, options, onSaved }: {
         <select aria-label={`Document visibility ${row.public_id}`} className="mt-1 w-full rounded border p-2" value={visibility}
           onChange={(event) => { setVisibility(event.target.value as ShipmentDocumentContext["visibility"]); setAudiences([]); }}>
           <option value="INTERNAL">فقط داخلی</option>
-          {type === "CARGO" && <option value="CARGO_OWNER">مشتری صاحب کالا، پس از احراز مجوز هویتی</option>}
-          {type !== "CARGO" && <option value="EXPLICIT_SHARED">مشتریان انتخاب‌شده</option>}
+          {["CARGO", "DELIVERY"].includes(type) && <option value="CARGO_OWNER">مشتری صاحب کالا، پس از احراز مجوز هویتی</option>}
+          {!["CARGO", "DELIVERY"].includes(type) && <option value="EXPLICIT_SHARED">مشتریان انتخاب‌شده</option>}
         </select>
       </label>
       {visibility === "EXPLICIT_SHARED" && <label>مخاطبان مشخص
@@ -220,25 +220,25 @@ export default function ShipmentDocuments({ shipmentPublicId }: { shipmentPublic
                 <select aria-label="Document upload context" className="mt-1 w-full rounded border p-2" value={contextType}
                   onChange={(event) => {
                     const next = event.target.value as ShipmentDocumentContext["type"];
-                    setContextType(next); setTarget(options[optionKey(next)][0]?.id || "");
+                    setContextType(next); setTarget(options[optionKey(next)]?.[0]?.id || "");
                     setVisibility("INTERNAL"); setAudiences([]);
                   }}>
                   <option value="SHIPMENT">پرونده حمل</option><option value="CARGO">کالای مشتری</option>
-                  <option value="ROUTE_LEG">مرحله مسیر</option><option value="EXECUTION_UNIT">اجرای حمل</option>
+                  <option value="ROUTE_LEG">مرحله مسیر</option><option value="EXECUTION_UNIT">اجرای حمل</option><option value="DELIVERY">تحویل کالا</option>
                 </select>
               </label>
               <label className="text-sm">مورد مرتبط
                 <select aria-label="Document upload target" className="mt-1 w-full rounded border p-2" value={target}
                   onChange={(event) => setTarget(event.target.value)}>
-                  {options[optionKey(contextType)].map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                  {(options[optionKey(contextType)] || []).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
                 </select>
               </label>
               <label className="text-sm">چه کسانی می‌توانند ببینند؟
                 <select aria-label="Document upload visibility" className="mt-1 w-full rounded border p-2" value={visibility}
                   onChange={(event) => { setVisibility(event.target.value as ShipmentDocumentContext["visibility"]); setAudiences([]); }}>
                   <option value="INTERNAL">فقط داخلی</option>
-                  {contextType === "CARGO" && <option value="CARGO_OWNER">مشتری صاحب کالا، پس از احراز مجوز هویتی</option>}
-                  {contextType !== "CARGO" && <option value="EXPLICIT_SHARED">مشتریان انتخاب‌شده</option>}
+                  {["CARGO", "DELIVERY"].includes(contextType) && <option value="CARGO_OWNER">مشتری صاحب کالا، پس از احراز مجوز هویتی</option>}
+                  {!["CARGO", "DELIVERY"].includes(contextType) && <option value="EXPLICIT_SHARED">مشتریان انتخاب‌شده</option>}
                 </select>
               </label>
               {visibility === "EXPLICIT_SHARED" && <label className="text-sm">مخاطبان مشخص

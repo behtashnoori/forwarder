@@ -22,7 +22,7 @@ def test_request_cargo_migration_is_single_head_additive_and_zero_backfill():
     config = Config(str(Path(__file__).parents[1] / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(Path(__file__).parents[1] / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20261007_phase3_reported_facts"]
+    assert script.get_heads() == ["20261008_phase3_cargo_delivery"]
     assert script.get_bases() == ["20240917_initial_schema"]
 
 

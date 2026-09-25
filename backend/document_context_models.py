@@ -35,8 +35,13 @@ class OperationalDocumentContext(db.Model):
             ["execution_unit.id", "execution_unit.organization_id"],
             name="fk_operational_document_context_execution_org", ondelete="RESTRICT",
         ),
+        db.ForeignKeyConstraint(
+            ["delivery_id", "operational_shipment_id", "organization_id"],
+            ["cargo_delivery.id", "cargo_delivery.operational_shipment_id", "cargo_delivery.organization_id"],
+            name="fk_document_context_delivery_parent", ondelete="RESTRICT",
+        ),
         db.CheckConstraint(
-            "context_type IN ('SHIPMENT','CARGO','ROUTE_LEG','EXECUTION_UNIT')",
+            "context_type IN ('SHIPMENT','CARGO','ROUTE_LEG','EXECUTION_UNIT','DELIVERY')",
             name="ck_operational_document_context_type",
         ),
         db.CheckConstraint(
@@ -44,14 +49,15 @@ class OperationalDocumentContext(db.Model):
             name="ck_operational_document_context_visibility",
         ),
         db.CheckConstraint(
-            "(context_type = 'SHIPMENT' AND cargo_item_id IS NULL AND route_leg_id IS NULL AND execution_unit_id IS NULL) OR "
-            "(context_type = 'CARGO' AND cargo_item_id IS NOT NULL AND route_leg_id IS NULL AND execution_unit_id IS NULL) OR "
-            "(context_type = 'ROUTE_LEG' AND cargo_item_id IS NULL AND route_leg_id IS NOT NULL AND execution_unit_id IS NULL) OR "
-            "(context_type = 'EXECUTION_UNIT' AND cargo_item_id IS NULL AND route_leg_id IS NULL AND execution_unit_id IS NOT NULL)",
+            "(context_type = 'SHIPMENT' AND cargo_item_id IS NULL AND route_leg_id IS NULL AND execution_unit_id IS NULL AND delivery_id IS NULL) OR "
+            "(context_type = 'CARGO' AND cargo_item_id IS NOT NULL AND route_leg_id IS NULL AND execution_unit_id IS NULL AND delivery_id IS NULL) OR "
+            "(context_type = 'ROUTE_LEG' AND cargo_item_id IS NULL AND route_leg_id IS NOT NULL AND execution_unit_id IS NULL AND delivery_id IS NULL) OR "
+            "(context_type = 'EXECUTION_UNIT' AND cargo_item_id IS NULL AND route_leg_id IS NULL AND execution_unit_id IS NOT NULL AND delivery_id IS NULL) OR "
+            "(context_type = 'DELIVERY' AND cargo_item_id IS NULL AND route_leg_id IS NULL AND execution_unit_id IS NULL AND delivery_id IS NOT NULL)",
             name="ck_operational_document_context_one_target",
         ),
         db.CheckConstraint(
-            "visibility <> 'CARGO_OWNER' OR context_type = 'CARGO'",
+            "visibility <> 'CARGO_OWNER' OR context_type IN ('CARGO','DELIVERY')",
             name="ck_operational_document_cargo_owner_scope",
         ),
         db.Index("ix_operational_document_context_parent", "organization_id", "operational_shipment_id", "context_type"),
@@ -66,6 +72,7 @@ class OperationalDocumentContext(db.Model):
     cargo_item_id = db.Column(BIGINT, db.ForeignKey("shipment_cargo_item.id", ondelete="RESTRICT"))
     route_leg_id = db.Column(BIGINT, db.ForeignKey("route_leg.id", ondelete="RESTRICT"))
     execution_unit_id = db.Column(BIGINT, db.ForeignKey("execution_unit.id", ondelete="RESTRICT"))
+    delivery_id = db.Column(BIGINT)
     visibility = db.Column(db.String(20), nullable=False, default="INTERNAL")
     version = db.Column(db.Integer, nullable=False, default=1)
     created_by_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)

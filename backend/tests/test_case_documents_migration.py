@@ -8,6 +8,6 @@ def test_case_document_migration_is_single_head():
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20261007_phase3_reported_facts"]
+    assert script.get_heads() == ["20261008_phase3_cargo_delivery"]
     revision = script.get_revision("20260804_case_documents")
     assert revision.down_revision == "20260803_expert_sla"

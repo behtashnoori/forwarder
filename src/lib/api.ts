@@ -1717,10 +1717,10 @@ export interface OperationalLocationRef {
   source_type: "province" | "city" | "country" | "international_city" | "iran_port" | "customs_office" | "logistics_point";
   source_id: number | string;
 }
-export interface ShipmentDocumentContext { public_id:string; type:"SHIPMENT"|"CARGO"|"ROUTE_LEG"|"EXECUTION_UNIT"; target_public_id:string|null; visibility:"INTERNAL"|"CARGO_OWNER"|"EXPLICIT_SHARED"; version:number; audiences:string[]; }
+export interface ShipmentDocumentContext { public_id:string; type:"SHIPMENT"|"CARGO"|"ROUTE_LEG"|"EXECUTION_UNIT"|"DELIVERY"; target_public_id:string|null; visibility:"INTERNAL"|"CARGO_OWNER"|"EXPLICIT_SHARED"; version:number; audiences:string[]; }
 export interface ShipmentDocument { public_id:string; business_document_type:string; filename:string; version:number; recorded_at:string; actor?:string|null; owner:"REQUEST"|"SHIPMENT"; lifecycle_state:"active"|"superseded"|"deleted"; description?:string|null; references:Array<{public_id:string;type:string;display_value:string;lifecycle_status:string}>; requirements:Array<{public_id:string;title:string;association_state:string}>; context?:ShipmentDocumentContext|null; }
 export interface DocumentContextOption { id:string; label:string; }
-export interface DocumentContextOptions { shipment:DocumentContextOption[]; cargo:DocumentContextOption[]; route_leg:DocumentContextOption[]; execution_unit:DocumentContextOption[]; audience:DocumentContextOption[]; }
+export interface DocumentContextOptions { shipment:DocumentContextOption[]; cargo:DocumentContextOption[]; route_leg:DocumentContextOption[]; execution_unit:DocumentContextOption[]; delivery?:DocumentContextOption[]; audience:DocumentContextOption[]; }
 export const fetchShipmentDocuments=(shipmentId:string)=>request<{data:ShipmentDocument[];can_manage_documents:boolean}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`);
 export const fetchDocumentContextOptions=(shipmentId:string)=>request<{data:DocumentContextOptions}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/document-context-options`);
 export const uploadShipmentDocument=(shipmentId:string,form:FormData,idempotencyKey:string)=>request<{data:ShipmentDocument}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents`,{method:"POST",headers:{"Idempotency-Key":idempotencyKey},body:form});

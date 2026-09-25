@@ -9,7 +9,7 @@ import {
 } from "@/lib/customerPortalApi";
 
 const contextLabel = {
-  SHIPMENT: "پرونده حمل", CARGO: "کالای شما", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل",
+  SHIPMENT: "پرونده حمل", CARGO: "کالای شما", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل", DELIVERY: "تحویل کالای شما",
 };
 
 export default function CustomerPortalDocuments() {

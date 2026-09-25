@@ -61,6 +61,10 @@ def test_postgresql18_legacy_document_upgrade_downgrade_guard():
         ), {"id": legacy_id}).scalar_one() == "legacy.pdf"
     command.downgrade(config, PARENT)
     command.upgrade(config, HEAD)
+    # Historical roundtrip above stays at P3-06; current ORM includes later typed contexts.
+    command.upgrade(config, "head")
+    with engine.connect() as connection:
+        runtime_head = connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one()
     with app.app_context():
         shipment = OperationalShipment.query.filter_by(public_id=fixture["shipment"]).one()
         legacy = db.session.get(CaseDocumentFile, legacy_id)
@@ -73,5 +77,5 @@ def test_postgresql18_legacy_document_upgrade_downgrade_guard():
     with pytest.raises(RuntimeError, match="P3-06 document facts exist"):
         command.downgrade(config, PARENT)
     with engine.connect() as connection:
-        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD
+        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == runtime_head
     engine.dispose()

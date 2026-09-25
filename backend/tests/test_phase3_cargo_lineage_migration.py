@@ -13,7 +13,7 @@ from backend.migration_runtime import alembic_config
 
 PREVIOUS = "20260930_phase3_reference_catalog"
 HEAD = "20261001_phase3_cargo_lineage"
-REPOSITORY_HEAD = "20261007_phase3_reported_facts"
+REPOSITORY_HEAD = "20261008_phase3_cargo_delivery"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 

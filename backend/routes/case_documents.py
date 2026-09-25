@@ -25,6 +25,7 @@ from backend.operational_models import OperationalShipment
 from backend.cargo_models import ShipmentCargoItem
 from backend.operational_models import ExecutionUnit, RouteLeg, RoutePlan, RouteStageExecution
 from backend.document_context_models import OperationalDocumentContext, OperationalDocumentAudience
+from backend.delivery_models import CargoDelivery
 from backend.models import CustomerGamification
 from backend.services import document_context_service as contexts
 from backend.services.customer_portal_auth import require_customer
@@ -41,8 +42,7 @@ def _customer_document_no_store(response):
 
 
 def _customer_download_name(document: CaseDocumentFile) -> str:
-    # The original/internal filename is not a Customer-facing contract.
-    return f"document-v{document.version_number}.{document.canonical_extension}"
+    return service.customer_download_name(document)
 
 
 def _resolve_opaque_case_route(handler):
@@ -234,11 +234,16 @@ def shipment_document_context_options(shipment_id: str):
         CustomerGamification.operational_organization_id == shipment.organization_id,
         CustomerGamification.account_status == "ACTIVE",
     ).order_by(CustomerGamification.id).limit(100)).all()
+    deliveries = db.session.execute(select(CargoDelivery, ShipmentCargoItem).join(
+        ShipmentCargoItem, ShipmentCargoItem.id == CargoDelivery.cargo_item_id,
+    ).where(CargoDelivery.operational_shipment_id == shipment.id,
+        CargoDelivery.organization_id == shipment.organization_id).order_by(CargoDelivery.id.desc()).limit(200)).all()
     return jsonify({"data": {
         "shipment": [{"id": shipment.public_id, "label": "پرونده حمل"}],
         "cargo": [{"id": row.public_id, "label": f"کالا {row.line_number}: {row.display_name_snapshot}"} for row in cargo],
         "route_leg": [{"id": str(row.id), "label": f"مرحله {row.sequence_number} · طرح {row.route_plan_id}"} for row in legs],
         "execution_unit": [{"id": row.public_id, "label": row.unit_code} for row in units],
+        "delivery": [{"id": row.public_id, "label": f"{cargo.display_name_snapshot} · {row.quantity} {row.uom_symbol_snapshot} · {row.destination_text} · اصلاح {row.revision}"} for row, cargo in deliveries],
         "audience": [{"id": row.public_id, "label": f"{row.first_name or ''} {row.last_name or ''}".strip() or row.email}
                      for row in accounts],
     }})

@@ -32,6 +32,11 @@ SCOPES = {"all", "domestic", "international"}
 CODE_RE = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 
 
+def customer_download_name(document: CaseDocumentFile) -> str:
+    """The original/internal filename is never a Customer-facing contract."""
+    return f"document-v{document.version_number}.{document.canonical_extension}"
+
+
 class DocumentError(Exception):
     def __init__(self, message: str, status: int = 400, code: str = "DOCUMENT_REQUEST_INVALID"):
         super().__init__(message)
