@@ -15,9 +15,11 @@ from backend.migration_runtime import alembic_config
 from backend.cargo_models import ShipmentCargoItem
 from backend.models import CargoType, UnitOfMeasure, CaseDocumentFile
 from backend.delivery_models import CargoDeliveryEvidence
+from backend.document_context_models import OperationalDocumentContext
 from backend.operational_models import OperationalShipment, OperationalMembership
 from backend.services import delivery_service as deliveries, document_context_service as contexts
 from backend.services.operational_service import OperationalError
+from backend.services.case_document_service import DocumentError
 from backend.tests.test_phase3_transport_execution_postgresql import _seed_runtime
 
 URL = os.environ.get("P3_CARGO_DELIVERY_POSTGRES_URL", "")
@@ -111,6 +113,29 @@ def test_postgresql18_delivery_migration_constraints_and_concurrent_commands():
         assert CargoDeliveryEvidence.query.count() == 1
         db.session.rollback()
         assert CargoDeliveryEvidence.query.count() == CaseDocumentFile.query.count() == 0
+        # A replacement can commit after the route loaded a file. The context
+        # command must reread the exact file after its shared Shipment lock.
+        stale = CaseDocumentFile(owner_type="SHIPMENT", operational_shipment_id=shipment.id,
+            operational_organization_id=shipment.organization_id, is_miscellaneous=True,
+            custom_title="Stale evidence", original_filename="stale.pdf", safe_download_filename="stale.pdf",
+            storage_key="synthetic/stale.pdf", canonical_extension="pdf", detected_mime_type="application/pdf",
+            file_size_bytes=10, sha256_hash="1" * 64, version_number=1, uploaded_by=ctx["owner"])
+        db.session.add(stale); db.session.flush()
+        contexts.attach(shipment, stale, ctx["owner"], contexts.prepare(shipment, "CARGO", ctx["cargo"], "INTERNAL", []))
+        db.session.commit()
+        stale_id = stale.id
+        assert stale.status == "active"
+        with engine.begin() as connection:
+            connection.execute(sa.text("UPDATE case_document_file SET status='superseded' WHERE id=:id"), {"id": stale_id})
+        assert stale.status == "active"  # deliberately stale ORM identity, as in two requests
+        with pytest.raises(DocumentError) as rejected:
+            contexts.revise(shipment, stale, ctx["owner"], context_type="DELIVERY", target_public_id=original,
+                            visibility="CARGO_OWNER", expected_version=1)
+        assert rejected.value.status == 404
+        db.session.rollback()
+        assert CargoDeliveryEvidence.query.count() == 0
+        retained_context = OperationalDocumentContext.query.filter_by(document_file_id=stale_id).one()
+        assert retained_context.version == 1 and retained_context.context_type == "CARGO"
         db.session.remove(); db.engine.dispose()
     with engine.connect() as connection:
         original_pk = connection.execute(sa.text("SELECT id FROM cargo_delivery WHERE public_id=:id"), {"id": original}).scalar_one()

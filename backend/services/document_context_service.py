@@ -19,6 +19,7 @@ from backend.operational_models import (
 )
 from backend.services.case_document_service import DocumentError
 from backend.services.customer_entitlement_service import authorized_customer_ids
+from backend.services.assigned_work_authorization import authorize_document_management
 
 
 TARGET_COLUMNS = {
@@ -207,6 +208,20 @@ def revise(shipment: OperationalShipment, document: CaseDocumentFile, actor_id: 
            *, context_type: str | None = None, target_public_id: str | None = None,
            visibility: str | None = None, audience_public_ids: list[str] | None = None,
            expected_version: int, reason: str | None = None) -> OperationalDocumentContext:
+    # Match upload/replacement and Delivery commands: Shipment -> file -> context.
+    # Reauthorize and refresh after waiting; the route's loaded file may be stale.
+    shipment = db.session.scalar(select(OperationalShipment).where(
+        OperationalShipment.id == shipment.id,
+    ).with_for_update().execution_options(populate_existing=True))
+    if shipment is None or not authorize_document_management({"id": actor_id}, shipment).allowed:
+        raise DocumentError("مدیریت سند مجاز نیست", 403, "DOCUMENT_MUTATION_FORBIDDEN")
+    document = db.session.scalar(select(CaseDocumentFile).where(
+        CaseDocumentFile.id == document.id, CaseDocumentFile.owner_type == "SHIPMENT",
+        CaseDocumentFile.operational_shipment_id == shipment.id,
+        CaseDocumentFile.operational_organization_id == shipment.organization_id,
+    ).with_for_update().execution_options(populate_existing=True))
+    if document is None or document.status != "active":
+        raise DocumentError("نسخه جاری سند در دسترس نیست", 404, "DOCUMENT_VERSION_NOT_FOUND")
     context = db.session.scalar(select(OperationalDocumentContext).where(
         OperationalDocumentContext.document_file_id == document.id,
         OperationalDocumentContext.operational_shipment_id == shipment.id,

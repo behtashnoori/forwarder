@@ -88,6 +88,16 @@ authority or automatic MDPM readiness. A correction may explicitly select an
 eligible exact version; it does not silently copy history into current evidence.
 Replacement still preserves the prior version and begins the new version INTERNAL.
 
+P3-08 concurrency review reproduced a stale-file defect in the existing context
+revision command: if replacement committed after its route loaded an active file,
+the command could still reclassify that now-superseded file and add evidence.
+The bounded repair serializes context revision with upload/replacement and Delivery
+at the same Shipment lock, then locks and refreshes the exact file before context.
+It rechecks owning-Expert authority after waiting. This preserves the existing
+current-version rule and standardizes lock order; it grants no new mutation right.
+The PostgreSQL regression first failed against the prior command with DID NOT RAISE,
+then requires a 404 with unchanged context/version and no new evidence association.
+
 INTERNAL remains private. CARGO_OWNER may apply to DELIVERY through its actual
 Cargo and the current live DN10 grant; EXPLICIT_SHARED is unavailable for private
 Cargo/Delivery contexts. Other pre-existing explicit sharing keeps its policy.

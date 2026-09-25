@@ -83,7 +83,11 @@ export default function DeliverySection({ shipmentId }: { shipmentId: string }) 
     try { setError(""); const result = await listDeliveries(shipmentId, page); if (current === generation.current) setData(result.data); }
     catch (caught) { if (current === generation.current) { setData(undefined); setError(message(caught)); } }
   }, [shipmentId, page]);
-  useEffect(() => { setData(undefined); void load(); return () => { generation.current++; }; }, [load]);
+  useEffect(() => {
+    setData(undefined); void load();
+    // This is a request counter, not a DOM ref; invalidate every pending read.
+    return () => { generation.current = generation.current + 1; };
+  }, [load]);
   const submit = async (draft: DeliveryDraft) => {
     const body = JSON.stringify(draft);
     if (command.current?.body !== body) command.current = { body, key: crypto.randomUUID() };
