@@ -1,0 +1,65 @@
+{
+  "product_sha": "0e65fd89882e23453d7c3bfe4d520cd7f44a6c32",
+  "canonical_base": "bd3610c4016cf643b6243fb0490260ac49a8b92d",
+  "migration_head": "20261006_customer_entitlement",
+  "qualification": "PASS",
+  "backend": {
+    "passed": 1416,
+    "failed": 0,
+    "skipped": 114,
+    "xfailed": 0,
+    "xpassed": 0,
+    "warnings": 17954,
+    "errors": 0
+  },
+  "frontend": {
+    "files": 86,
+    "tests": 408,
+    "status": "PASS"
+  },
+  "postgresql": {
+    "major": 18,
+    "focused_tests": 2,
+    "p301_through_p305_tests": 5,
+    "status": "PASS"
+  },
+  "chrome": {
+    "journeys": [
+      "P306-context",
+      "DN10-own-Cargo",
+      "P305",
+      "P304",
+      "P303",
+      "P302",
+      "P301"
+    ],
+    "status": "PASS"
+  },
+  "static_checks": {
+    "typescript": "PASS",
+    "eslint": "PASS (0 errors, 13 existing warnings)",
+    "production_build": "PASS (chunk-size advisory)",
+    "openapi_route_parity": "PASS (backend tests)",
+    "architecture": "PASS",
+    "structure": "PASS",
+    "determinism": "PASS",
+    "diff_check": "PASS",
+    "changed_scope_secret_scan": "PASS"
+  },
+  "environment": {
+    "python": "3.13.9",
+    "node": "24.11.0",
+    "postgresql": "18.0",
+    "chrome": "154.0.8037.57",
+    "data": "owned synthetic only"
+  },
+  "global_product_validation": "EVIDENCE_PENDING",
+  "human_product_walkthrough": "NOT_RUN",
+  "integrated_product_journeys": "NOT_RUN",
+  "release_ready": "NO",
+  "production_accessed": false,
+  "deployed": false,
+  "released": false,
+  "retained_stopped_development_directory": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-dn10-owned-2210e7c9f66f43d3a8e0de226b0e26f1",
+  "retention_reason": "Host automatic approval rejected deletion: blocked by policy; no bypass attempted."
+}

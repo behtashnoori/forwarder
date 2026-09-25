@@ -33,6 +33,6 @@
 `DN02_DOCUMENT_VISIBILITY_STATUS=RESOLVED_FOR_P3_06`
 `DN02_OWNER_TRANSFER_PORTION=OPEN_FOR_P3_13`
 `DN09_STATUS=OPEN`
-`DN10_STATUS=RESOLVED` — تصمیم مصوب و نامزد پیاده‌سازی‌شده؛ نتیجه qualification تازه جدا ثبت می‌شود.
+`DN10_STATUS=RESOLVED` — تصمیم مصوب و پیاده‌سازی تأییدشده با [شواهد تازه](../../operational/evidence/phase3-p3-06-dn10-requalification-status-20260925.md) روی Product `0e65fd89882e23453d7c3bfe4d520cd7f44a6c32`.
 
 P3-06 پیوند حساب پورتال ↔ مشتری CRM را از نام، ایمیل، تلفن، منبع درخواست یا مالکیت Cargo حدس نمی‌زند. زمینهٔ Delivery به مدل واقعی P3-08 وابسته است. نمای جامع Shipment مشتری به P3-09 تعلق دارد. P3-07 و بعد از آن، انتشار و Production خارج از این اختیارند.

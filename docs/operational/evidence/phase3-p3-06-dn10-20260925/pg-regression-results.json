@@ -1,0 +1,15 @@
+{
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-dn10-owned-977a5f0343354911bb9093a48218da1d",
+  "stopped": true,
+  "executed_at_utc": "2026-09-25T18:45:58.2112215Z",
+  "production_accessed": false,
+  "schema": "20261006_customer_entitlement",
+  "dirty_source": false,
+  "product_sha": "0e65fd89882e23453d7c3bfe4d520cd7f44a6c32",
+  "results": [
+    {
+      "name": "PostgreSQL 18 P3-01 through P3-05",
+      "status": "PASS"
+    }
+  ]
+}

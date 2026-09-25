@@ -1,0 +1,28 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "backend/tests",
+    "--disable-warnings"
+  ],
+  "started_at": "2026-09-25T18:32:08.296815+00:00",
+  "timeout_seconds": null,
+  "status": "PASS",
+  "pytest_exit_code": 0,
+  "summary": "1416 passed, 114 skipped, 17954 warnings",
+  "counts": {
+    "passed": 1416,
+    "failed": 0,
+    "skipped": 114,
+    "xfailed": 0,
+    "xpassed": 0,
+    "warnings": 17954,
+    "errors": 0
+  },
+  "pytest_duration_seconds": 967.46,
+  "outer_duration_seconds": 978.511,
+  "finished_at": "2026-09-25T18:48:26.807405+00:00",
+  "stdout_file": "stdout.log",
+  "stderr_file": "stderr.log"
+}

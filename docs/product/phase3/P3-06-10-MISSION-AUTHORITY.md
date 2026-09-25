@@ -79,3 +79,11 @@ indexes, tenant ownership inventory, current Phase 3 plan and P3 contracts:
 UPDATE_REQUIRED for each implemented capability, reconciled before integration.
 Product Contract v1, Journey Pack v1.1 and approved UX V2.1 remain authoritative
 within the explicit mission decisions. Historical ADR/PDR/status are preserved.
+
+## P3-06 qualification gate
+
+Product `0e65fd89882e23453d7c3bfe4d520cd7f44a6c32` passed the required
+[bound evidence](../../operational/evidence/phase3-p3-06-dn10-requalification-status-20260925.md).
+Protected regressions are PASS within that recorded scope; global Product and
+human gates remain pending. Controlled canonical integration is authorized;
+the exact integration receipt establishes the next slice’s starting state.

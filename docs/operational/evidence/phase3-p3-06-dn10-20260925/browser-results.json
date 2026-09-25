@@ -1,0 +1,39 @@
+{
+  "executed_at_utc": "2026-09-25T18:44:50.7524532Z",
+  "product_sha": "0e65fd89882e23453d7c3bfe4d520cd7f44a6c32",
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-dn10-owned-8994693a86c145ee874838be1b920bea",
+  "production_accessed": false,
+  "stopped": true,
+  "schema": "20261006_customer_entitlement",
+  "results": [
+    {
+      "status": "PASS",
+      "name": "PostgreSQL 18"
+    },
+    {
+      "status": "PASS",
+      "name": "P306 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P305 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P304 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P303 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P302 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P301 Chrome"
+    }
+  ],
+  "dirty_source": false
+}
