@@ -1,0 +1,39 @@
+{
+  "product_sha": "cd83f21ca1ac0db6e940475fcd9067713831a581",
+  "kind": "static source review; not a replacement for runtime tests",
+  "findings": "No additional actionable violation found in reviewed boundaries",
+  "files": {
+    "backend/services/reported_fact_service.py": {
+      "git_blob_sha256": "439074df6986560e943a17ae8e9d0793c8145129e1ea4102ec2c16b7a3fda030",
+      "reviewed_boundaries": [
+        "authorized_customer_ids(account)",
+        "authorized_impact",
+        "limit(min(max(limit, 1), 100))",
+        "_can_manage(user, shipment)",
+        "with_for_update()",
+        "record_reported_fact"
+      ]
+    },
+    "backend/services/execution_unit_service.py": {
+      "git_blob_sha256": "74415c13667b6d0a8d6f758040ff0aa60cba9d797554c0918e56c4a40b21e1cc",
+      "reviewed_boundaries": [
+        "event_type != \"phase3_reported_fact\"",
+        "SCOPED_REPORT_REQUIRED"
+      ]
+    },
+    "backend/services/tracking_projection_service.py": {
+      "git_blob_sha256": "cc8a57d0c7bf1f662d692b0f4ab3a7df3311008ac3871216f67a04192541af60",
+      "reviewed_boundaries": [
+        "phase3_reported_fact"
+      ]
+    },
+    "backend/migrations/versions/20261007_phase3_reported_facts.py": {
+      "git_blob_sha256": "5c37c9586082ee19437025aa153b0d3911a9eec87b84728c104022e4efd776f1",
+      "reviewed_boundaries": [
+        "protect_phase3_report_fact",
+        "inherit_legacy_event_tenant",
+        "rollback would erase operational evidence"
+      ]
+    }
+  }
+}

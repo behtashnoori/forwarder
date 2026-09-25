@@ -1,0 +1,19 @@
+[startup] No .env file found in project root or backend/ - using process env only
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+{"product": "cd83f21ca1ac0db6e940475fcd9067713831a581", "source_files": 59, "secrets": 0, "contract_operations": 2}

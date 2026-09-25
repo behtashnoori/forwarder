@@ -1,0 +1,20 @@
+{
+  "product_sha": "cd83f21ca1ac0db6e940475fcd9067713831a581",
+  "python": "3.13.9",
+  "node": "v24.11.0",
+  "files": {
+    "apple-touch-icon.png": "a614fca15c0f66ee586a4d3a25839b66996e7d29ace2775c17c07fe3c2fcbb25",
+    "assets/index-BIKUAib4.css": "cdd88c73819d68f60f2960a0775c6bf3d9b55dceaa53cc73073083545d001e6b",
+    "assets/index-rQpHpYty.js": "2b55a759b70c3e596255bdb8357ee1e7f364511df37dfaaa7f9264c23ec0d89a",
+    "brand-icon.png": "c24e55950c2a3803cb30e20baa4b18f0395b1f1ac53aed5b8f39449fad449371",
+    "favicon-192.png": "f8909a75a0c5e26383ce9fb73c90f929c7bcf2701db96b3db0693930d867e5e5",
+    "favicon-32.png": "cf5cb583062897fbda12214457334aa606004886f1cf603fb2aa4266de16902e",
+    "favicon-512.png": "5702d50088bc8f280281aab052e3e0935a08803097d4b3da3b8f75732f5bf493",
+    "favicon.ico": "ce0672f158d69d30b8e3b5a5569c8d46c7bfc3b4c5e1d80af55d7d06dfa7483a",
+    "index.html": "620cc9dcb85dcfe0c01f3598d6f4a6a2261eadc32d5d126d08b9ca20c399e46b",
+    "placeholder.svg": "64badf7aabda0b9630b87020ffb6095cb858ccbcf66b355c2aa08b1063954d3b",
+    "robots.txt": "52710c261d851bc1ad35604017862f2a8444e7a0f02cd7b8b49e3ba92e6d4cea",
+    "site.webmanifest": "bb59f80de2785decd1f7a5c8de0ce9db2c9dd39439155afde2b81af390177c38",
+    "web.config": "28868b84e0ad907529e4f9f1652473a127e934167e25e9b2036f1b16cfa1e08b"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "product_sha": "cd83f21ca1ac0db6e940475fcd9067713831a581",
+  "head": "20261007_phase3_reported_facts",
+  "head_count": 1,
+  "parent": "20261006_customer_entitlement",
+  "historical_migrations_changed": false,
+  "migration_diff": [
+    "A\tbackend/migrations/versions/20261007_phase3_reported_facts.py"
+  ]
+}

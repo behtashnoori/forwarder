@@ -1,0 +1,47 @@
+{
+  "product_sha": "cd83f21ca1ac0db6e940475fcd9067713831a581",
+  "executed_at_utc": "2026-09-25T20:49:58.3199281Z",
+  "results": [
+    {
+      "status": "PASS",
+      "name": "PostgreSQL 18"
+    },
+    {
+      "status": "PASS",
+      "name": "P3-01 through P3-05 PostgreSQL"
+    },
+    {
+      "status": "PASS",
+      "name": "P307 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P306 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P305 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P304 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P303 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P302 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P301 Chrome"
+    }
+  ],
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p307-owned-502e9f12a70a410ca0843a902d43cb92",
+  "schema": "20261007_phase3_reported_facts",
+  "production_accessed": false,
+  "dirty_source": false,
+  "stopped": true
+}

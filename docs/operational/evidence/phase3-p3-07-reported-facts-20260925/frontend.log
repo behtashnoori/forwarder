@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-07-reported-location
+
+
+ Test Files  87 passed (87)
+      Tests  411 passed (411)
+   Start at  23:56:15
+   Duration  254.87s (transform 4.52s, setup 21.52s, import 21.29s, tests 70.98s, environment 117.00s)
+

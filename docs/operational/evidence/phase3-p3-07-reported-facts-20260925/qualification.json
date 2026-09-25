@@ -1,0 +1,88 @@
+{
+  "product_sha": "cd83f21ca1ac0db6e940475fcd9067713831a581",
+  "canonical_base": "13c0fed2d5971907d93f23860cc5689c7ebe33f8",
+  "migration_head": "20261007_phase3_reported_facts",
+  "migration_parent": "20261006_customer_entitlement",
+  "qualification": "PASS",
+  "backend": {
+    "passed": 1437,
+    "failed": 0,
+    "skipped": 115,
+    "xfailed": 0,
+    "xpassed": 0,
+    "warnings": 18810,
+    "errors": 0
+  },
+  "backend_duration_seconds": 802.98,
+  "frontend": {
+    "files": 87,
+    "tests": 411,
+    "seconds": 254.87,
+    "status": "PASS"
+  },
+  "postgresql": {
+    "major": 18,
+    "focused_tests": 3,
+    "p301_through_p305_tests": 5,
+    "status": "PASS"
+  },
+  "chrome": {
+    "tests": 8,
+    "journeys": [
+      "P307",
+      "P306",
+      "P305",
+      "P304",
+      "P303",
+      "P302",
+      "P301"
+    ],
+    "status": "PASS"
+  },
+  "visual_inspection": {
+    "status": "PASS",
+    "desktop": "1280x720",
+    "mobile": "390x844"
+  },
+  "static_checks": {
+    "app_typescript": "PASS",
+    "node_typescript": "PASS",
+    "eslint": "PASS",
+    "production_frontend_build": "PASS",
+    "openapi_route_parity": "PASS",
+    "tenant_inventory": "PASS",
+    "architecture": "PASS",
+    "structure": "PASS",
+    "backend_determinism": "PASS",
+    "diff_check": "PASS",
+    "changed_scope_secret_scan": "PASS"
+  },
+  "warnings": [
+    "13 existing ESLint warnings, zero errors",
+    "Existing frontend build chunk-size advisory"
+  ],
+  "environment": {
+    "python": "3.13.9",
+    "node": "24.11.0",
+    "postgresql": "18.0",
+    "chrome": "154.0.8037.57",
+    "data": "owned synthetic only"
+  },
+  "dn06": "RESOLVED",
+  "dn07": "RESOLVED",
+  "reported_location_is_gps": false,
+  "confidence_model_added": false,
+  "customer_safe_message": "explicit text or fixed generic/delay fallback only",
+  "internal_note_synthesized": false,
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": "NO",
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployed": false,
+  "released": false,
+  "final_owned_runtime_stopped_and_removed": true,
+  "prior_retained_stopped_directory": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-dn10-owned-2210e7c9f66f43d3a8e0de226b0e26f1",
+  "prior_retention_reason": "Automatic host approval rejected deletion: blocked by policy; no bypass attempted."
+}

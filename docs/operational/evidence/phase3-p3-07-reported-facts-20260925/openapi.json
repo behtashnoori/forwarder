@@ -1,0 +1,16 @@
+{
+  "product_sha": "cd83f21ca1ac0db6e940475fcd9067713831a581",
+  "status": "PASS",
+  "operations": 2,
+  "scope": "Runtime route parity for reported-facts and entire YAML parse",
+  "routes": [
+    [
+      "/api/operational-shipments/{shipment_id}/reported-facts",
+      "get"
+    ],
+    [
+      "/api/operational-shipments/{shipment_id}/reported-facts",
+      "post"
+    ]
+  ]
+}

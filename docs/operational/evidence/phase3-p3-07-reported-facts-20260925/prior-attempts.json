@@ -1,0 +1,26 @@
+[
+  {
+    "directory": "D:\\1-webapp\\forwarder-dev\\qualification-p307-313d3dd",
+    "file_sha256": {
+      "superseded.json": "8f1ac8c52c28317e52257a82cdf4b0dd22f851f06595469abab8ba35f295f9f8",
+      "runtime\\P305-browser.log": "1a9200c12c4077a318ef811627a89b5f5f0a2f1201b7d4226930b23484cb6eeb",
+      "runtime\\P302-browser.log": "ceebf94df2f18dad071d3fabea94dc6d45ec8d4c48126eb8cb2a2d7561781e1c"
+    }
+  },
+  {
+    "directory": "D:\\1-webapp\\forwarder-dev\\qualification-p307-1cfa2f5",
+    "file_sha256": {
+      "superseded.json": "47dc73320b8e9e4bf188454bf8af8d16628f138336c2c5b872d67adf13ac84de",
+      "runtime\\P305-browser.log": "39fddd0bbfa21f3694e35f321f7ede430a8cf7064d5a6154ce7d8f7a366c9b4b"
+    }
+  },
+  {
+    "directory": "D:\\1-webapp\\forwarder-dev\\qualification-p307-efa02c9",
+    "file_sha256": {
+      "superseded.json": "07d5fc476932e965d40ded5b7553f8ff6f5c3bc3fc4779b13aa0871ce43d549d",
+      "backend\\result.json": "c01fcf2fc2b06b59c64fe2dfb846bfcb8201355f1ad0327f3443aa48b478fedf",
+      "runtime\\P305-browser.log": "8d09b5cf0cdab30039436e475de65106f08d123379c4314fe9f3742f7c165018",
+      "runtime\\P302-browser.log": "7a9822977f9092c4cf936e262fba4fb15a3b87c2598ffe3f753f7b142ee0166b"
+    }
+  }
+]
