@@ -55,6 +55,7 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
   const [form, setForm] = useState({ line_number: "1", catalog_item_public_id: "", display_name: "", cargo_type_public_id: "", requested_quantity: "", planned_quantity: "", actual_quantity: "", uom_public_id: "", cargo_owner_customer_id: "", source_request_public_id: "", source_request_cargo_item_public_id: "", packaging_type_public_id: "", hs_code: "", description: "", gross_weight: "", gross_weight_uom_public_id: "", volume: "", volume_uom_public_id: "", destination_description: "" });
   const [cargoQuery, setCargoQuery] = useState("");
   const [edits, setEdits] = useState<Record<string, CargoEdit>>({});
+  const [savingCargo, setSavingCargo] = useState<Record<string, boolean>>({});
   const [historyByCargo, setHistoryByCargo] = useState<Record<string, ShipmentCargoHistoryEntry[]>>({});
   const [tracking, setTracking] = useState<OperationalTransportTracking | null>(null);
   const [units, setUnits] = useState<CanonicalShipmentTransportUnit[]>([]);
@@ -67,7 +68,10 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
   const load = useCallback(async () => {
     try {
       const [lines, opts, lineage, trackingData, unitData, allocationData] = await Promise.all([listShipmentCargoItems(shipmentPublicId), getShipmentCargoOptions(projectPublicId || undefined, cargoQuery), getShipmentCargoLineageOptions(shipmentPublicId), getOperationalTransportTracking(shipmentPublicId), getCanonicalShipmentTransportUnits(shipmentPublicId), getCanonicalCargoAllocations(shipmentPublicId)]);
-      setItems(lines.items); setOptions({ catalog: opts.catalog.filter((option) => option.selectable !== false), cargo_types: opts.cargo_types.filter((option) => option.selectable !== false), uoms: opts.uoms.filter((option) => option.selectable !== false), packaging_types: (opts.packaging_types || []).filter((option) => option.selectable !== false) }); setOwners(lineage.customers); setRequests(lineage.requests); setTracking(trackingData.tracking); setError("");
+      setItems(previous => {
+        const known = new Map(previous.map(item => [item.public_id, item]));
+        return lines.items.map(item => (known.get(item.public_id)?.version || 0) > item.version ? known.get(item.public_id)! : item);
+      }); setOptions({ catalog: opts.catalog.filter((option) => option.selectable !== false), cargo_types: opts.cargo_types.filter((option) => option.selectable !== false), uoms: opts.uoms.filter((option) => option.selectable !== false), packaging_types: (opts.packaging_types || []).filter((option) => option.selectable !== false) }); setOwners(lineage.customers); setRequests(lineage.requests); setTracking(trackingData.tracking); setError("");
       setUnits(unitData.units); setAllocations(allocationData.allocations);
     } catch { setError("اطلاعات کالا، وسیله حمل یا پیگیری قابل دریافت نیست. اجازه دسترسی یا اتصال را بررسی کنید."); }
   }, [shipmentPublicId, projectPublicId, cargoQuery]);
@@ -128,9 +132,11 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
     } catch (caught) { setError(caught instanceof ApiError && caught.code === "ORGANIZATION_REFERENCE_NOT_ACTIVE" ? missingReferenceGuidance : "مشتری، منبع درخواست، شماره ردیف، مقادیر و واحدها را بررسی کنید."); }
   };
   const saveCargo = async (item: ShipmentCargoItem) => {
+    if (savingCargo[item.public_id]) return;
     const edit = editFor(item);
+    setSavingCargo(current => ({ ...current, [item.public_id]: true }));
     try {
-      await updateShipmentCargoItem(shipmentPublicId, item.public_id, {
+      const saved = await updateShipmentCargoItem(shipmentPublicId, item.public_id, {
         cargo_owner_customer_id: Number(edit.cargo_owner_customer_id),
         source_request_public_id: edit.source_request_public_id || null,
         source_request_cargo_item_public_id: edit.source_request_cargo_item_public_id || null,
@@ -148,10 +154,14 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
         reason: edit.reason || null,
         version: item.version,
       });
+      // Use the accepted version before clearing the draft: a quick next edit
+      // must never rebuild from the old row while the broader refresh is pending.
+      setItems(current => current.map(row => row.public_id === item.public_id ? saved.item : row));
       setEdits((current) => { const next = { ...current }; delete next[item.public_id]; return next; });
       await load();
       if (historyByCargo[item.public_id]) await showCargoHistory(item);
     } catch { setError("اطلاعات کالا به‌روزرسانی نشد؛ مقادیر، منبع درخواست و نسخه جاری را بررسی کنید."); }
+    finally { setSavingCargo(current => ({ ...current, [item.public_id]: false })); }
   };
   const showCargoHistory = async (item: ShipmentCargoItem) => {
     try { const response = await getShipmentCargoHistory(shipmentPublicId, item.public_id); setHistoryByCargo((current) => ({ ...current, [item.public_id]: response.history })); }
@@ -197,7 +207,7 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
         {item.quantities.legacy_meaning === "UNKNOWN" && <p className="rounded bg-amber-50 p-2 text-amber-900">معنای مقدار این داده پیشین مشخص نیست و به مقدار برنامه‌ریزی‌شده تبدیل نشده است.</p>}
         <p>بسته‌بندی: {item.packaging?.fa_name || "نامشخص"} · HS: {item.hs_code_snapshot || "نامشخص"}</p><p>وزن ناخالص: {item.gross_weight ? `${formatQuantity(item.gross_weight.value)} ${item.gross_weight.uom_symbol}` : "نامشخص"} · حجم: {item.volume ? `${formatQuantity(item.volume.value)} ${item.volume.uom_symbol}` : "نامشخص"}</p>{item.destination_description && <p>مقصد قلم: {item.destination_description}</p>}{!stageScoped && <p>تخصیص قدیمی بدون بخش مسیر: {formatQuantity(item.allocated_quantity)} {item.uom_symbol_snapshot} · مانده نسبت به مقدار کالا: {formatQuantity(item.remaining_quantity ?? item.quantity)} {item.uom_symbol_snapshot}</p>}{item.description_snapshot && <p className="mt-2 text-slate-600">{item.description_snapshot}</p>}
         {item.incomplete_fields.length > 0 && <p className="mt-2 text-xs text-amber-800">اطلاعات قابل تکمیل: {item.incomplete_fields.map((field) => incompleteLabel[field] || field).join("، ")}</p>}
-        <details className="mt-3"><summary className="cursor-pointer font-medium">تکمیل یا اصلاح اطلاعات</summary><div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <details className="mt-3"><summary className="cursor-pointer font-medium">تکمیل یا اصلاح اطلاعات</summary><fieldset disabled={savingCargo[item.public_id]} aria-busy={savingCargo[item.public_id] || undefined} className="mt-2 grid gap-2 sm:grid-cols-2">
           <select aria-label={`Edit cargo customer line ${item.line_number}`} className="min-h-10 rounded border px-2" value={editFor(item).cargo_owner_customer_id} onChange={(event) => changeEdit(item, { cargo_owner_customer_id: event.target.value })}>{item.cargo_owner && !owners.some((owner) => owner.id === item.cargo_owner?.id) && <option value={item.cargo_owner.id}>{item.cargo_owner.label}</option>}{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.label}</option>)}</select>
           <select aria-label={`Edit source request line ${item.line_number}`} className="min-h-10 rounded border px-2" value={editFor(item).source_request_public_id} onChange={(event) => changeEdit(item, { source_request_public_id: event.target.value, source_request_cargo_item_public_id: "", requested_quantity: "", ...(requests.find((request) => request.public_id === event.target.value)?.customer_id ? { cargo_owner_customer_id: String(requests.find((request) => request.public_id === event.target.value)?.customer_id) } : {}) })}><option value="">ثبت مستقیم</option>{requests.map((request) => <option key={request.public_id} value={request.public_id}>{request.label}</option>)}</select>
           <select aria-label={`Edit source request cargo line ${item.line_number}`} className="min-h-10 rounded border px-2" disabled={!editFor(item).source_request_public_id} value={editFor(item).source_request_cargo_item_public_id} onChange={(event) => { const cargo = requests.find((request) => request.public_id === editFor(item).source_request_public_id)?.cargo_items.find((candidate) => candidate.public_id === event.target.value); changeEdit(item, { source_request_cargo_item_public_id: event.target.value, requested_quantity: cargo?.quantity || "" }); }}><option value="">قلم درخواست منبع</option>{requests.find((request) => request.public_id === editFor(item).source_request_public_id)?.cargo_items.map((cargo) => <option key={cargo.public_id} value={cargo.public_id}>{cargo.description || "قلم درخواست"}</option>)}</select>
@@ -214,7 +224,7 @@ export default function ShipmentCargoItems({ shipmentPublicId, projectPublicId, 
           <Input aria-label={`Edit volume line ${item.line_number}`} type="number" min="0.000001" step="any" placeholder="حجم" value={editFor(item).volume} onChange={(event) => changeEdit(item, { volume: event.target.value })} />
           <select aria-label={`Edit volume unit line ${item.line_number}`} className="min-h-10 rounded border px-2" value={editFor(item).volume_uom_public_id} onChange={(event) => changeEdit(item, { volume_uom_public_id: event.target.value })}><option value="">واحد حجم</option>{volumeUoms.map((option) => <option key={option.public_id} value={option.public_id}>{option.name}</option>)}</select>
           <Button variant="outline" disabled={!editFor(item).cargo_owner_customer_id || !editFor(item).planned_quantity || (Boolean(editFor(item).gross_weight) !== Boolean(editFor(item).gross_weight_uom_public_id)) || (Boolean(editFor(item).volume) !== Boolean(editFor(item).volume_uom_public_id))} onClick={() => void saveCargo(item)}>ذخیره اطلاعات کالا</Button>
-        </div></details>
+        </fieldset></details>
         <div className="mt-2"><Button variant="link" onClick={() => void showCargoHistory(item)}>تاریخچه برنامه و مقدار واقعی</Button>{historyByCargo[item.public_id] && <ol className="space-y-2">{historyByCargo[item.public_id].filter((entry) => entry.changed_fields.some((field) => ["planned_quantity", "actual_quantity"].includes(field))).map((entry, index) => <li key={`${entry.version}-${index}`} className="rounded bg-slate-50 p-2 text-xs"><p>{entry.changed_fields.filter((field) => ["planned_quantity", "actual_quantity"].includes(field)).map((field) => `${field === "planned_quantity" ? "برنامه" : "مقدار واقعی"}: ${entry.changes?.[field]?.before ?? "نامشخص"} ← ${entry.changes?.[field]?.after ?? "نامشخص"}`).join(" · ")}</p><p>{entry.actor_name} · {time(entry.recorded_at)}{entry.reason ? ` · دلیل: ${entry.reason}` : ""}</p></li>)}</ol>}</div>
       </article>)}</div>}
     </CardContent></Card>

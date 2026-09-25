@@ -110,3 +110,16 @@ FWD-IPJ-02/IPJ-04. Current indexes, OpenAPI, tenant inventory, Phase 3 status an
 architecture are reconciled before integration. Historical ADRs are preserved.
 Global Product validation EVIDENCE_PENDING; integrated journeys/human walkthrough
 NOT_RUN; RELEASE_READY=NO. No Production, deployment or release.
+
+## Protected P3-05 regression repair
+
+Exact-candidate Chrome exposed an existing Cargo form race: clearing the edit
+draft before its asynchronous refresh completed let a rapid actual-quantity edit
+restore planned quantity 100 after the user had saved 95. The retained audit
+proved the unwanted second plan change; this was not a warning-text mismatch.
+The bounded repair uses the acknowledged row/version immediately, ignores older
+list versions and holds that row's edit controls while saving/refreshing. A
+deterministic delayed-refresh test preserves the approved independent quantity
+semantics. This is AUTHORIZED preservation under the mission's P3-05 regression
+gate, not a new quantity rule. It requires a fresh Product identity and full
+qualification; the failed run remains preliminary evidence only.

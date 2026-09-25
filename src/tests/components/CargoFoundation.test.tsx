@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
 import ShipmentCargoItems from "@/components/ShipmentCargoItems";
@@ -55,6 +55,28 @@ describe("Cargo foundation UI", () => {
     api.getCanonicalShipmentTransportUnits.mockResolvedValue({units:[]});
     api.getCanonicalCargoAllocations.mockResolvedValue({allocations:[],items:[shipmentItem]});
     api.getCargoCatalogShipmentUsage.mockResolvedValue({cargo_item:catalog,summary:{shipment_count:1,active_shipment_count:1},items:[{operational_shipment_public_id:"shipment-1",project_public_id:"project-1",project_code:"PRJ-1",shipment_request_reference:null,quantity:"2.000000",uom:"ea",status:"in_progress",current_location:"Border",location_source:"operational_event",latest_event_at:"2026-08-20T09:25:00Z",shipment_cargo_line_public_id:"line-1",display_name_snapshot:"کالا"}],limit:50,offset:0});
+  });
+
+  it("keeps the accepted plan when actual quantity is edited after a delayed refresh", async () => {
+    const initial = { ...shipmentItem, cargo_owner: { id: 1, label: "Customer A" }, quantities: { ...shipmentItem.quantities, planned: "100", actual: "95" } };
+    const planned = { ...initial, quantities: { ...initial.quantities, planned: "95" }, version: 2 };
+    const actual = { ...planned, quantities: { ...planned.quantities, actual: "115" }, version: 3 };
+    let finishRefresh!: (value: { items: typeof planned[] }) => void;
+    const refresh = new Promise<{ items: typeof planned[] }>(resolve => { finishRefresh = resolve; });
+    api.listShipmentCargoItems.mockResolvedValueOnce({ items: [initial] }).mockReturnValueOnce(refresh).mockResolvedValue({ items: [actual] });
+    api.updateShipmentCargoItem.mockResolvedValueOnce({ item: planned }).mockResolvedValueOnce({ item: actual });
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1" />);
+    fireEvent.change(await screen.findByLabelText("Edit planned quantity line 1"), { target: { value: "95" } });
+    fireEvent.click(screen.getByRole("button", { name: "ذخیره اطلاعات کالا" }));
+    await waitFor(() => expect(api.listShipmentCargoItems).toHaveBeenCalledTimes(2));
+    expect(screen.getByLabelText("Edit actual quantity line 1")).toBeDisabled();
+    expect(screen.getByLabelText("Edit planned quantity line 1")).toHaveValue(95);
+    // Even a delayed old list cannot undo the acknowledged newer version.
+    await act(async () => finishRefresh({ items: [initial] }));
+    await waitFor(() => expect(screen.getByLabelText("Edit actual quantity line 1")).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("Edit actual quantity line 1"), { target: { value: "115" } });
+    fireEvent.click(screen.getByRole("button", { name: "ذخیره اطلاعات کالا" }));
+    await waitFor(() => expect(api.updateShipmentCargoItem).toHaveBeenLastCalledWith("shipment-1", "line-1", expect.objectContaining({ planned_quantity: "95", actual_quantity: "115", version: 2 })));
   });
 
   it("opens shipment usage and renders quantity, status, and location", async () => {
