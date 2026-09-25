@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const password = process.env.FORWARDER_E2E_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
+const apiBase = process.env.VITE_BACKEND_URL || "http://127.0.0.1:5001";
 if (!password || !fixturePath) throw new Error("P3-02 qualification must use its disposable local runner.");
 const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as {
   shipment_a: string;
@@ -112,7 +113,7 @@ test("P3-02 — Request lineage, direct cargo, progressive completion, and reope
   const directCard = page.getByRole("article").filter({ hasText: "[P3-02-E2E] کالای مستقیم مشتری دوم" }).first();
   await expect(directCard).toContainText(fixture.p3_customer_b_label);
   await expect(directCard).toContainText("منبع: ثبت مستقیم");
-  await expect(directCard).not.toContainText("درخواست P3-02-E2E-REQUEST");
+  await expect(directCard.locator("p").filter({ hasText: "منبع:" }).first()).toHaveText("منبع: ثبت مستقیم");
 
   await requestCard.locator("summary", { hasText: "تکمیل یا اصلاح اطلاعات" }).click();
   await requestCard.getByLabel("Edit actual quantity line 2").fill("8.5");
@@ -132,14 +133,14 @@ test("P3-02 — Request lineage, direct cargo, progressive completion, and reope
   await expect(requestCard).toContainText("انبار مقصد تهران");
   await expect(requestCard.getByText(/اطلاعات قابل تکمیل/)).toHaveCount(0);
 
-  const history = await page.evaluate(async ({ shipment, item }) => {
+  const history = await page.evaluate(async ({ shipment, item, base }) => {
     const token = localStorage.getItem("expert_token");
     const response = await fetch(
-      `http://127.0.0.1:5011/api/internal/operational-shipments/${shipment}/cargo-items/${item}/history`,
+      `${base}/api/internal/operational-shipments/${shipment}/cargo-items/${item}/history`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return { status: response.status, body: await response.json() };
-  }, { shipment: fixture.shipment_a, item: requestCreated.item.public_id });
+  }, { shipment: fixture.shipment_a, item: requestCreated.item.public_id, base: apiBase });
   expect(history.status).toBe(200);
   expect(history.body.history.map((entry: { action: string }) => entry.action)).toEqual(
     expect.arrayContaining(["SHIPMENT_CARGO_CREATED", "SHIPMENT_CARGO_UPDATED"]),
