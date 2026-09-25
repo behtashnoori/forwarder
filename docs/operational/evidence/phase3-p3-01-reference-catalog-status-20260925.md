@@ -1,161 +1,168 @@
-# Phase 3 P3-01 — Current Status, Reference Mapping, and Evidence Preparation
+# Phase 3 P3-01 — Reference Catalog Qualification Evidence
 
 - **Record date:** 2026-09-25
 - **Governing baseline:** LPAF v2.7 — ACTIVE / FROZEN / CANONICAL
 - **Rigor / route:** Level B / Sol-Astra
-- **Slice:** P3-01 only — governed reference catalog and organization activation
+- **Qualified slice:** P3-01 only — governed reference catalog and organization activation
 - **Mission:** [P3-01 Reference Catalog Mission Contract](../../product/phase3/P3-01-REFERENCE-CATALOG-MISSION-CONTRACT-FA.md)
 - **Architecture:** [ADR-056](../adr/ADR-056-governed-reference-catalog-organization-activation.md)
 - **Product baseline:** `integration/golden-controlled@5ebb8c3fb54b0a18898fe04db6ec4135bf41ef7e`
-- **Mission-record parent:** `4c7091bd4f0989ae70beff000598096d6b621cb0`
 - **Candidate branch:** `codex/phase3-p3-01-reference-catalog`
-- **Candidate Product SHA:** `UNFROZEN / TO_BE_RECORDED_AFTER_COMMIT`
+- **Phase 3 Product SHA:** `39c1084377e18c38dd337a79bed0d0d11b033e72`
+- **Evidence SHA:** this document's evidence-only descendant, bound by the final delivery record
 
-This is a bounded current-state and evidence-preparation record. It does not report test, journey, Product acceptance, release, deployment, or Production outcomes.
+This record qualifies only P3-01. It does not claim full Phase 3 completion, global Product validation, Human Product Walkthrough, release readiness, deployment, or Production access.
 
-## Current implementation state
+## Qualified implementation boundary
 
-`PHASE_3_IMPLEMENTATION_STARTED=YES_P3_01_ONLY` supersedes the planning-time statement that implementation had not started. The original Phase 3 plan remains historical planning evidence and is not rewritten. Slices P3-02 through P3-15 remain not started by this mission.
+P3-01 adds explicit central `PackagingType`, `TransportMeansType`, and `TransportEquipmentType` definitions and tenant-owned activation records for Cargo Type, UOM, Packaging, Transport Means, and Transport Equipment. It reuses the existing Cargo Type/UOM foundations; it does not introduce a parallel master-data system, polymorphic/EAV storage, or copied tenant definitions.
 
-The current P3-01 working-tree candidate contains:
+Platform Admin manages central definitions. Organization Admin, under server-derived tenant scope, can list and activate/deactivate approved central definitions for its organization. Existing Expert Cargo consumers can select only Cargo Type/UOM values in the intersection of active central definitions and active organization activations. Packaging, Transport Means, and Transport Equipment are foundation-only in P3-01 and have no new operational consumer.
 
-- explicit platform `PackagingType`, `TransportMeansType`, and `TransportEquipmentType` models;
-- tenant-owned activation models for Cargo Type, UOM, Packaging, Transport Means, and Transport Equipment;
-- expanded platform master-data administration for the three new central families;
-- Organization Admin list/activate/deactivate behavior using server-derived tenant scope and activation audit;
-- authenticated internal Cargo options filtered to active central CargoType/UOM definitions with active organization activation;
-- Admin UI for organization availability and existing Expert Cargo consumption only;
-- additive migration `20260930_phase3_reference_catalog` descending from `20260929_operational_monitoring_reliability`;
-- no central seed, no activation backfill, no organization-specific definition/promotion, and no Packaging/Means/Equipment operational consumer.
+No standard rows or organization activations are seeded or backfilled. Organization-specific definition creation/promotion remains absent and is still governed by open decision `DN08`. Experts cannot create a base definition or bypass selection with free text. An empty organization catalog is valid; a dependent Cargo action is blocked with the governed administrator guidance.
 
-These bullets identify inspected candidate scope. They are not a test or Product PASS claim and must be rechecked against the frozen SHA before qualification.
+Deactivation prevents new selection but does not rewrite or remove historical Cargo snapshots. Existing `CargoCatalogItem`, Shipment Cargo, Document policy, Global Logistics, public Request Cargo options, legacy `TransportMethod`, Shared Transport, and Tracking meanings remain preserved. During qualification, the existing canonical allocation serializer call was corrected to use the owning Cargo service; this restores the established contract and does not add Product behavior.
 
-## Product Authority and PDA-07 preparation
+## Product Authority and PDA-07 result
 
-| Material observable difference | Classification for candidate review | Authority / evidence required |
+| Material observable difference | Final classification | Evidence result |
 | --- | --- | --- |
-| Organization Admin can activate/deactivate approved central values for new tenant use | `AUTHORIZED` target; implementation evidence pending | P3-01 mission Product Authority Record; ADR-056; Admin slice/browser and audit evidence |
-| Expert Cargo Type/UOM choices require active central state and active tenant activation | `AUTHORIZED` target; implementation evidence pending | P3-01 mission; exact-candidate API/browser evidence; empty/missing/inactive cases |
-| Deactivation blocks new selection but historical snapshots/read remain | `AUTHORIZED` target; implementation evidence pending | Mission contract; ADR-022/056; inactive-history tests and reopen evidence |
-| Existing `CargoCatalogItem` organization ownership and Shipment Cargo snapshots | `PRESERVED` target; regression evidence pending | ADR-022; Cargo regression and historical-read checks |
-| Document policy and Global Logistics adoption/materialization | `PRESERVED` target; regression evidence pending | ADR-036/041; bounded regression checks |
-| Public `request-cargo-options` and legacy `TransportMethod` | `PRESERVED` target; regression evidence pending | Mission exclusions; Request/transport compatibility tests |
-| Organization-specific definition creation or central promotion | `PRESERVED_AS_ABSENT`; `DN08` remains open | No route/UI/command; repository search and negative Product review |
+| Organization Admin activates/deactivates approved central values for new tenant use | `AUTHORIZED` | Verified by API, authorization, audit, browser persistence, and two-tenant evidence |
+| Expert Cargo Type/UOM choices require active central state and active tenant activation | `AUTHORIZED` | Verified by service/API tests and normal-navigation browser journey |
+| Deactivation blocks new selection while historical snapshots/read remain | `AUTHORIZED` | Verified by backend and browser inactive-history checks |
+| Existing Cargo ownership, Shipment Cargo snapshots, Document policy, and Global Logistics behavior | `PRESERVED` | Full regressions and bounded operational journey passed |
+| Public Request Cargo options and legacy `TransportMethod` | `PRESERVED` | Compatibility tests remained green; no route/meaning replacement |
+| Organization-specific definition creation/promotion | `PRESERVED_AS_ABSENT` | No route, command, or UI exists; `DN08` remains open |
 
-No `AUTHORIZED`, `PRESERVED`, or final PDA-07 PASS may be promoted from target classification to verified result until exact-candidate evidence exists. Any unexpected behavior is `UNKNOWN` or `VIOLATION`, not silently normalized in tests or references.
+No material difference was classified `UNKNOWN` or `VIOLATION` in this slice.
 
-## Reference mapping
+## Migration and PostgreSQL 18 evidence
 
-| Reference | Owner | P3-01 impact | Current action/state |
-| --- | --- | --- | --- |
-| LPAF v2.7 framework and Entry Protocol | LPAF owner | `NONE` | Existing master/reference, tenant-authorization, journey, evidence, and human-gate controls apply without framework change. |
-| Operational Shipment Product Contract v1 | Product Owner | `NONE` | Meaning preserved; P3-01 implements only centrally approved definitions and tenant activation. `DN08` keeps local definition/promotion stopped. |
-| Product Acceptance Journey Pack v1.1 | Product Owner | `NONE` | Journey definitions and statuses remain authoritative; no PASS is inferred. |
-| Phase 3 Implementation Plan v1 | Product/Architecture | `NONE_TO_BODY` | Planning-time `IMPLEMENTATION_NOT_STARTED` remains historical; this record is the current status overlay for P3-01 only. |
-| P3-01 Mission Contract | Product Owner | `ALIGNED` target | Direct authority and stop conditions for this candidate. |
-| ADR-021/022/028/036/041 | Architecture owners | `ALIGNED` target | Reconciled by ADR-056 without rewriting decision history. |
-| ADR-056 | Product/Architecture/Data/Security | `CREATED / ACCEPTED` | Bounded P3-01 architecture and implementation authority. |
-| Architecture baseline and ADR indexes | Architecture | `UPDATED` | Central/tenant ownership, current ADR-041 local state, compatibility, and P3-01 boundaries reconciled. |
-| Tenant ownership inventory | Security/Data | `UPDATED` | Three new `PLATFORM_SCOPED` models and five `TENANT_OWNED_DIRECT` activation models recorded; ADR-041 state drift corrected. |
-| OpenAPI | API owner | `UPDATED` | Central resource enum, organization list/transition DTO/routes, and tenant-approved internal Cargo option semantics recorded. |
+- Migration target: `20260930_phase3_reference_catalog`.
+- Parent: `20260929_operational_monitoring_reliability`.
+- Alembic head count: `1`.
+- PostgreSQL server: `18.0`.
+- Clean upgrade from the parent, empty-table/no-seed verification, empty downgrade/re-upgrade, and populated downgrade refusal: `PASS`.
+- Concurrent first activation using two real PostgreSQL threads produced one success and one uniqueness conflict, with no duplicate activation: `PASS`.
+- Stale version conflict, inactive central definition rejection, append-only audit, and cleanup: `PASS`.
+- Exact PostgreSQL qualification: `1 passed, 15 warnings in 12.95s`.
 
-The listed project references match the current working-tree candidate and their YAML/JSON/local-reference structure and diff whitespace were checked. Recheck them against the frozen SHA before qualification:
+The migration is additive and requires no Product data backfill. A populated downgrade intentionally refuses destructive loss.
+
+## Authorization and tenant isolation evidence
+
+- Organization Admin-only mutation, server-derived organization scope, and Platform Admin/Expert mutation denial: `PASS`.
+- Inactive or revoked organization membership denial: `PASS`.
+- Tenant A activation remained invisible and inactive in Tenant B: `PASS` in API and browser evidence.
+- Foreign valid identifiers, direct/guessed routes, and body/query tenant override attempts did not cross the tenant boundary or disclose foreign existence: `PASS`.
+- Activation uniqueness, optimistic version conflict, central active-state enforcement, and audit ownership: `PASS`.
+
+## Automated evidence on the frozen Product SHA
+
+| Evidence unit | Result |
+| --- | --- |
+| Focused backend P3-01 tests | `4 passed` |
+| Exact PostgreSQL 18 qualification | `1 passed, 15 warnings` |
+| Full backend regression | `1377 passed, 108 skipped, 0 failed` |
+| Focused frontend P3-01 tests | `5 files, 22 tests passed` |
+| Full frontend regression | `81 files, 394 tests passed` |
+| TypeScript check | `PASS` |
+| Lint | `PASS` — 0 errors; 13 pre-existing warnings |
+| Production build | `PASS` — advisory chunk-size/browser-data warnings only |
+| Architecture governance check | `PASS` |
+| Repository structure check | `PASS` |
+| OpenAPI YAML and local-reference parse | `PASS` |
+| Diff whitespace check | `PASS` |
+
+Runtime identity: Python `3.13.9`, Node `v24.11.0`, npm `11.6.1`, PostgreSQL `18.0`, Chrome `154.0.8037.57`.
+
+## Browser Product evidence
+
+The dedicated P3-01 browser journey passed on the frozen Product SHA with runner cleanup passing. It covered Platform creation of all five reference families, role boundaries, Tenant A activation and persistence, Tenant B isolation, Expert normal navigation, governed allowed selection, retained history after deactivation, missing-definition guidance, absence of free-text bypass, and absence of unexpected page/API/console errors.
+
+The existing integrated browser path `Catalog → operational Cargo → Shared Transport → Tracking` was also rerun on the same Product SHA and passed (`1 passed in 36.4s`), with runner cleanup passing.
+
+| Evidence unit | Result |
+| --- | --- |
+| `P3-01-ADMIN` | `PASS` |
+| `P3-01-EXPERT` | `PASS` |
+| `P3-01-INACTIVE-HISTORY` | `PASS` |
+| `P3-01-MISSING` | `PASS` |
+| `P3-01-TENANT` | `PASS` |
+| Automated P3-01 Product slice | `PASS` |
+| `FWD-J06`, `FWD-J08`, `FWD-J09`, `FWD-IPJ-03`, `FWD-IPJ-04` P3-01 boundaries | `PASS` for this bounded slice only |
+| Full affected integrated journeys | `NOT_CLAIMED` by P3-01 qualification |
+| Human Product Walkthrough | `NOT_RUN` |
+
+`JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY`: the five named journeys consume or depend on the governed reference boundary. The P3-01 slice and its bounded integrated path are automated and green; this record does not silently convert the broader journey pack or Human gate to PASS.
+
+## Reference reconciliation
+
+LPAF v2.7, the Operational Shipment Product Contract, Product Acceptance Journey Pack, Phase 3 Implementation Plan, mission contract, ADR-021/022/028/036/041/056, architecture baseline, decision indexes, tenant ownership inventory, and OpenAPI were reconciled against the frozen Product SHA. Historical planning text remains historical. Current-state overlays and ownership/API references are aligned. No normative reference change is required.
 
 ```text
-LPAF_REFERENCE_IMPACT=NONE
-PROJECT_REFERENCE_IMPACT=ALIGNED
+REFERENCE_RECONCILIATION=PASS
+REFERENCE_IMPACT=NONE
 ```
 
-This alignment result concerns reference consistency only. It does not imply Product or journey acceptance.
-
-## Evidence to collect on the frozen candidate
-
-### Candidate identity and environment
-
-- full Product source SHA and clean-tree or documented evidence-only descendant relationship;
-- migration previous/target head and sole-head graph;
-- PostgreSQL 18 exact version/database identity plus any explicitly scoped SQLite compatibility evidence;
-- backend/frontend package and browser versions;
-- feature/config/policy identity;
-- synthetic Tenant A/Tenant B and actor matrix, with no Production data.
-
-### Migration and data safety
-
-- upgrade from `20260929_operational_monitoring_reliability` to `20260930_phase3_reference_catalog`;
-- empty-table verification proving no central row or organization activation was seeded/backfilled;
-- downgrade/re-upgrade on an empty disposable database;
-- populated downgrade refusal and application-rollback/retained-data behavior;
-- uniqueness, foreign keys, lifecycle/version checks, and migration single-head result.
-
-### Backend and authorization
-
-- central create/read/update/activate/deactivate for the three new families with immutable code and version conflicts;
-- organization list, first activation, deactivation, reactivation, stale version, inactive central row, and append-only `OperationalAudit` evidence;
-- Organization Admin only, server-derived tenant, Platform Admin without membership denied, Expert denied for mutation, inactive/revoked membership denied;
-- foreign valid UUID, guessed/direct route, body/query tenant override, search/count isolation, and no existence disclosure;
-- internal Cargo options use active-central intersection active-organization activation for Cargo Type/UOM;
-- public Request Cargo option and legacy `TransportMethod` behavior remain unchanged.
-
-### Frontend and browser
-
-- normal Admin navigation to organization reference availability;
-- five family tabs/sections, loading/empty/error/denied/conflict/inactive states, activation and reopen;
-- desktop, mobile, RTL, keyboard/focus checks;
-- Expert Cargo selector sees only approved Cargo Type/UOM values;
-- deactivation removes a new choice while an existing snapshot remains readable;
-- no local-definition, promotion, import/seed, or free-text master action exists.
-
-### Required slice and integrated preparation
-
-| Evidence unit | Current result in this record |
-| --- | --- |
-| `P3-01-ADMIN` | `NOT_RUN` |
-| `P3-01-EXPERT` | `NOT_RUN` |
-| `P3-01-INACTIVE-HISTORY` | `NOT_RUN` |
-| `P3-01-MISSING` | `NOT_RUN` |
-| `P3-01-TENANT` | `NOT_RUN` |
-| `FWD-J06` affected slice rerun | `NOT_RUN`; no full-journey PASS |
-| `FWD-J08` affected slice rerun | `NOT_RUN`; no full-journey PASS |
-| `FWD-J09` P3-01 boundary | `NOT_RUN`; no full Phase 3 journey PASS |
-| `FWD-IPJ-03` | `NOT_RUN`; no integrated PASS |
-| `FWD-IPJ-04` P3-01 boundary | `NOT_RUN`; full journey remains `DEFINED_TARGET_NOT_RUN` |
-| Automated Product journeys | `NOT_RUN` |
-| Human Product Walkthrough | `NOT_RUN`; only an authorized human may grant PASS |
-
-## Status ledger
+## Final status ledger
 
 ```text
 LPAF_BASELINE=2.7
-MISSION_SCOPE=P3-01_ONLY
-PHASE_3_IMPLEMENTATION_STARTED=YES_P3_01_ONLY
-P3_02_THROUGH_P3_15_STARTED=NO
-CANDIDATE_SHA=UNFROZEN
-MIGRATION_TARGET=20260930_phase3_reference_catalog
-DATABASE_QUALIFICATION=NOT_RUN_IN_THIS_RECORD
-BACKEND_TESTS=NOT_RUN_IN_THIS_RECORD
-FRONTEND_TESTS=NOT_RUN_IN_THIS_RECORD
-BROWSER_SLICE_JOURNEYS=NOT_RUN
-INTEGRATED_PRODUCT_JOURNEYS=NOT_RUN
-AUTOMATED_PRODUCT_JOURNEYS=NOT_RUN
-HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN
-PRODUCT_AUTHORITY_RECONCILIATION=PENDING_EXACT_CANDIDATE_EVIDENCE
-REFERENCE_ALIGNMENT=ALIGNED_RECHECK_AT_FREEZE
-ENGINEERING_COMPLETE=NO
-PRODUCT_COMPLETE=NO
-RELEASE_READY=NO
-RELEASE_COMPLETE=NO
+PHASE_3_IMPLEMENTATION_STARTED=YES
+PHASE3_CURRENT_SLICE=P3-01
+PHASE3_P3_01=PASS
+REFERENCE_CATALOG_FOUNDATION=PASS
+ORGANIZATION_REFERENCE_ACTIVATION=PASS
+EXPERT_GOVERNED_SELECTION=PASS
+INACTIVE_HISTORICAL_REFERENCE=PASS
+TENANT_ISOLATION=PASS
+HISTORY_PRESERVATION=PASS
+FREE_TEXT_EXPERT_BASE_DEFINITION=NO
+UNVERIFIED_STANDARD_SEED=NO
+PARALLEL_MASTER_DATA_SYSTEM=NO
+DN08_STATUS=PARTIAL_DECISION_NEEDED
+JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
+AFFECTED_JOURNEYS=FWD-J06,FWD-J08,FWD-J09,FWD-IPJ-03,FWD-IPJ-04
+BROWSER_PRODUCT_JOURNEY=PASS
+FULL_BACKEND_REGRESSION=PASS
+FULL_FRONTEND_REGRESSION=PASS
+MIGRATION_REQUIRED=YES
+ALEMBIC_HEAD=20260930_phase3_reference_catalog
+ALEMBIC_HEAD_COUNT=1
+MIGRATION_QUALIFICATION=PASS
+PRODUCT_AUTHORITY_RECONCILIATION=PASS
+PRODUCT_VALIDATION_EVIDENCE_FOR_THIS_SLICE=COMPLETE
+PHASE3_PRODUCT_HEAD=39c1084377e18c38dd337a79bed0d0d11b033e72
+PHASE3_EVIDENCE_HEAD=EVIDENCE_ONLY_DESCENDANT_REPORTED_IN_FINAL_HANDOFF
+REFERENCE_RECONCILIATION=PASS
+REFERENCE_IMPACT=NONE
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING
+HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN
+RELEASE_READY=NO
+P3_02_STARTED=NO
+P3_03_STARTED=NO
+P3_04_STARTED=NO
+AI_IMPLEMENTED=NO
+GPS_IMPLEMENTED=NO
+FINANCE_IMPLEMENTED=NO
+CARRIER_PORTAL_IMPLEMENTED=NO
+DRIVER_PORTAL_IMPLEMENTED=NO
 PRODUCTION_ACCESSED=NO
+PRODUCTION_MUTATED=NO
 DEPLOYMENT_PERFORMED=NO
 RELEASE_CREATED=NO
+CANONICAL_INTEGRATION=NOT_PERFORMED
+CANONICAL_PUSH=NOT_PERFORMED
+LOCAL_REMOTE_ALIGNMENT=PASS
+WORKTREE_CLEAN=YES_AFTER_EVIDENCE_COMMIT
 ```
 
-## Residual risks and next owner action
+## Residual gates and exact next action
 
-- Existing organizations receive no implicit activations. An empty Expert Cargo Type/UOM list is expected until an Organization Admin acts; qualification must prove this is understandable and does not masquerade as an infrastructure failure.
-- `TransportMethod` remains a legacy compatibility boundary. Any attempt to equate it with `TransportMeansType` needs a separate adapter decision and journey analysis.
-- Packaging, Means, and Equipment are foundation-only in P3-01. Their later operational snapshots, correction, and history semantics remain for P3-02/P3-04 or another authorized slice.
-- `DN08` remains a Product decision gate for organization-specific definitions and promotion. The affected capability stays absent.
-- Product freeze and Release Ready remain blocked until the applicable exact-candidate slice, integrated, automated, negative-authorization, reference, and authorized Human Product Walkthrough evidence is current.
+- `DN08` still requires a Product decision before organization-specific definitions or promotion can be introduced.
+- Packaging, Transport Means, and Transport Equipment remain foundation-only until their authorized operational slices.
+- Global Product validation remains `EVIDENCE_PENDING`; only an authorized human can complete the Human Product Walkthrough.
+- Release readiness remains `NO`; no integration, push, deployment, release, or Production action was performed.
 
-Next, delivery must freeze an exact candidate, run the listed qualification, attach recoverable evidence, and update this status ledger with evidence-backed results without converting missing or skipped work to PASS.
+The exact next engineering step is a controlled review and integration decision for this P3-01 candidate. P3-02 must not start under this mission.
