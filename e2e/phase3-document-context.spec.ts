@@ -209,6 +209,7 @@ test("DN10 — Admin grant → own-Cargo exact download → revoke → mobile ba
   await admin.getByRole("tab", { name: "تعاریف قابل استفاده سازمان", exact: true }).click();
   await admin.getByRole("tab", { name: "دسترسی حساب مشتری", exact: true }).click();
   await expect(admin.getByRole("button", { name: "لغو دسترسی" })).toBeVisible();
+  await expect(admin.getByText("ورود موفق", { exact: true })).toBeHidden({ timeout: 10000 });
   await admin.screenshot({ path: testInfo.outputPath("dn10-admin.png"), fullPage: true });
 
   await a.page.reload();

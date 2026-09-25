@@ -287,7 +287,7 @@ const AdminPanel = () => {
         </section>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm md:grid-cols-4 xl:grid-cols-9">
+          <TabsList className="grid h-auto w-full grid-cols-1 gap-1 rounded-[1.75rem] border border-slate-200 bg-white p-2 shadow-sm sm:grid-cols-2 lg:grid-cols-4 [&>button]:min-h-12 [&>button]:whitespace-normal">
             <TabsTrigger
               value="dashboard"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
