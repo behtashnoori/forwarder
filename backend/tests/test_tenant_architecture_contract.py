@@ -41,13 +41,20 @@ def _follow_fk_path(mapper, metadata, owner_path):
     assert len(segments) == len(set(segments)), f"{owner_path}: ownership path must be acyclic"
     for segment in segments[:-1]:
         candidates = [
-            column
-            for column in table.c
-            if any(fk.target_fullname.rsplit(".", 1)[0] == segment for fk in column.foreign_keys)
+            constraint
+            for constraint in table.foreign_key_constraints
+            if {
+                element.target_fullname.rsplit(".", 1)[0]
+                for element in constraint.elements
+            }
+            == {segment}
         ]
         assert len(candidates) == 1, f"{table.name} needs one unambiguous FK to {segment}"
-        column = candidates[0]
-        assert not column.nullable, f"{table.name}.{column.name} must be non-null"
+        columns = tuple(candidates[0].columns)
+        assert columns, f"{table.name}: empty FK constraint to {segment}"
+        assert all(not column.nullable for column in columns), (
+            f"{table.name}: every FK column to {segment} must be non-null"
+        )
         table = metadata.tables[segment]
     terminal = segments[-1]
     assert terminal in table.c, f"{table.name}: missing terminal {terminal}"

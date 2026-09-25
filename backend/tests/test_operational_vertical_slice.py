@@ -1127,7 +1127,7 @@ def test_legacy_operational_openapi_exact_runtime_parity_and_opacity(operational
             continue
         if re.match(r"^  /api/", line):
             current = None
-        method = re.match(r"^    (get|post|patch|delete):", line)
+        method = re.match(r"^    (get|post|put|patch|delete):", line)
         if current and method:
             documented[current].add(method.group(1).upper())
     runtime: dict[str, set[str]] = {}

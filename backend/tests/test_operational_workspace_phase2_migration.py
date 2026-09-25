@@ -13,6 +13,7 @@ PREVIOUS = "20260927_customer_portal_account_lifecycle"
 PHASE2 = "20260928_operational_workspace_phase2"
 RELIABILITY = "20260929_operational_monitoring_reliability"
 P3_REFERENCE = "20260930_phase3_reference_catalog"
+P3_CARGO = "20261001_phase3_cargo_lineage"
 REPOSITORY_HEAD = "20261002_phase3_branched_route"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
@@ -168,7 +169,8 @@ def test_phase2_and_reliability_are_the_single_linear_repository_head():
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
     assert script.get_heads() == [REPOSITORY_HEAD]
-    assert script.get_revision(REPOSITORY_HEAD).down_revision == P3_REFERENCE
+    assert script.get_revision(REPOSITORY_HEAD).down_revision == P3_CARGO
+    assert script.get_revision(P3_CARGO).down_revision == P3_REFERENCE
     assert script.get_revision(P3_REFERENCE).down_revision == RELIABILITY
     assert script.get_revision(RELIABILITY).down_revision == PHASE2
     assert script.get_revision(PHASE2).down_revision == PREVIOUS
