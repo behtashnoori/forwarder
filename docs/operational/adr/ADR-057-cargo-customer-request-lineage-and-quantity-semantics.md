@@ -4,7 +4,7 @@
 - **Date:** 2026-09-25
 - **Owners:** Product Owner for authorized behavior; Operational Shipment/Cargo domain for SOR; Security for tenant and owning-Expert enforcement; Data for additive migration
 - **Affected domain:** Operational Shipment Cargo, Request lineage, governed references
-- **Implementation state:** P3-02 candidate in progress; qualification, canonical integration, Release Ready, deployment, and Production use are not established by this ADR
+- **Implementation state:** P3-02 qualified on Product SHA `b38a4cb952f7ad74079399991511f35f63e4fd82`; canonical integration is the next gate; Release Ready, deployment, and Production use are not established by this ADR
 - **Mission authority:** [P3-02 Cargo Lineage Mission Contract](../../product/phase3/P3-02-CARGO-LINEAGE-MISSION-CONTRACT-FA.md)
 
 ## Context

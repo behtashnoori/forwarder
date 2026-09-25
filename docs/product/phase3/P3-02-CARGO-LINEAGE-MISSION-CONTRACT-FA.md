@@ -1,6 +1,6 @@
 # قرارداد مأموریت P3-02 — انتساب Cargo، منشأ و سه مقدار
 
-وضعیت: `ACTIVE_IMPLEMENTATION_MISSION`
+وضعیت: `QUALIFIED_AWAITING_CANONICAL_INTEGRATION`
 مبنای حاکمیتی: `LPAF v2.7`
 سطح سخت‌گیری: `Level B`
 مسیر قابلیت: `Astra`
@@ -83,3 +83,5 @@ Qualification باید backend/frontend متمرکز، PostgreSQL 18، upgrade �
 ## وضعیت completion
 
 `Engineering Complete`، `Product Complete`، `Release Ready` و `Release Complete` جدا گزارش می‌شوند. Human Product Walkthrough در این slice اجرا نمی‌شود؛ `GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING` و `RELEASE_READY=NO` باقی می‌ماند.
+
+P3-02 روی Product SHA `b38a4cb952f7ad74079399991511f35f63e4fd82` با backend/frontend کامل، PostgreSQL 18، migration round-trip/guard، مرورگر واقعی normal-navigation/reopen و gateهای ساختاری qualified شد. سند شواهد: [Phase 3 P3-02 Cargo Lineage Qualification Evidence](../../operational/evidence/phase3-p3-02-cargo-lineage-status-20260925.md). این نتیجه PASS همان slice است و integrated journey یا Human Product Walkthrough را PASS نمی‌کند.
