@@ -1,0 +1,28 @@
+"""Keep the repository qualifier's result contract while exposing live owned logs."""
+import sys
+import subprocess
+from pathlib import Path
+
+sys.path.insert(0, str(Path.cwd()))
+from scripts import run_pytest_qualification as qualifier
+
+output = Path(sys.argv[sys.argv.index('--output-dir') + 1])
+output.mkdir(parents=True, exist_ok=True)
+
+def streaming_run(command, *, capture_output, text, errors, timeout):
+    assert capture_output and text and errors == 'replace'
+    stdout_path, stderr_path = output/'stdout.log', output/'stderr.log'
+    with stdout_path.open('wb') as stdout, stderr_path.open('wb') as stderr:
+        process = subprocess.Popen(command, stdout=stdout, stderr=stderr)
+        try:
+            code = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            process.kill(); process.wait()
+            raise subprocess.TimeoutExpired(command, timeout,
+                output=stdout_path.read_bytes(), stderr=stderr_path.read_bytes())
+    return subprocess.CompletedProcess(command, code,
+        stdout_path.read_text(encoding='utf-8', errors='replace'),
+        stderr_path.read_text(encoding='utf-8', errors='replace'))
+
+qualifier.subprocess.run = streaming_run
+raise SystemExit(qualifier.main())

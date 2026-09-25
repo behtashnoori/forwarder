@@ -1,0 +1,18 @@
+{
+  "sha256": {
+    "placeholder.svg": "64badf7aabda0b9630b87020ffb6095cb858ccbcf66b355c2aa08b1063954d3b",
+    "apple-touch-icon.png": "a614fca15c0f66ee586a4d3a25839b66996e7d29ace2775c17c07fe3c2fcbb25",
+    "favicon-32.png": "cf5cb583062897fbda12214457334aa606004886f1cf603fb2aa4266de16902e",
+    "assets\\index-Cc4B6MOd.css": "04f9478e83ac7546d510a12829053488d49a507876592c3efb14b3a1c85a85b7",
+    "index.html": "ed3d9d12734c31d2e75d1bf527eed2817fb9830f488e4823719e622c2e303d1e",
+    "web.config": "28868b84e0ad907529e4f9f1652473a127e934167e25e9b2036f1b16cfa1e08b",
+    "favicon-192.png": "f8909a75a0c5e26383ce9fb73c90f929c7bcf2701db96b3db0693930d867e5e5",
+    "assets\\index-lbjt9FLN.js": "3dc11ae368c2281d19509f2d35e7948c70549a098d0db8e1ac40606a1c5f51ba",
+    "robots.txt": "52710c261d851bc1ad35604017862f2a8444e7a0f02cd7b8b49e3ba92e6d4cea",
+    "brand-icon.png": "c24e55950c2a3803cb30e20baa4b18f0395b1f1ac53aed5b8f39449fad449371",
+    "site.webmanifest": "bb59f80de2785decd1f7a5c8de0ce9db2c9dd39439155afde2b81af390177c38",
+    "favicon-512.png": "5702d50088bc8f280281aab052e3e0935a08803097d4b3da3b8f75732f5bf493",
+    "favicon.ico": "ce0672f158d69d30b8e3b5a5569c8d46c7bfc3b4c5e1d80af55d7d06dfa7483a"
+  },
+  "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c"
+}

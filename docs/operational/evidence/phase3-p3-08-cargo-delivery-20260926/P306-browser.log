@@ -1,0 +1,10 @@
+
+Running 2 tests using 1 worker
+
+(node:11664) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/2] e2e\phase3-document-context.spec.ts:60:1 › P3-06 — contextual upload, explicit audience, exact version, history, privacy and partial retry
+[2/2] e2e\phase3-document-context.spec.ts:184:1 › DN10 — Admin grant → own-Cargo exact download → revoke → mobile back/reopen denied
+  2 passed (1.5m)

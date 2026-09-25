@@ -1,0 +1,51 @@
+{
+  "results": [
+    {
+      "name": "PostgreSQL 18",
+      "status": "PASS"
+    },
+    {
+      "name": "P3-01 through P3-05 PostgreSQL",
+      "status": "PASS"
+    },
+    {
+      "name": "P308 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P307 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P306 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P305 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P304 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P303 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P302 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P301 Chrome",
+      "status": "PASS"
+    }
+  ],
+  "executed_at_utc": "2026-09-25T22:36:01.8713793Z",
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p308-owned-7ff1689c04e84f49939e6c4426a14844",
+  "production_accessed": false,
+  "dirty_source": false,
+  "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+  "stopped": true,
+  "schema": "20261008_phase3_cargo_delivery"
+}

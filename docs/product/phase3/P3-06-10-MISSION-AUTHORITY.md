@@ -108,3 +108,16 @@ has not begun at this record and P3-11..15 remain excluded.
 ## Verified P3-08 entry and Product authority
 
 P3-07 integrated at `682e83ed3a51badb3938d66dbd337e8e10e57797`; local and freshly fetched github were clean/aligned 0/0, sole head `20261007_phase3_reported_facts`. P3-02/03/05/06 dependencies verified. The new isolated `codex/phase3-p3-08-partial-delivery` starts from that actual canonical. [ADR-064](../../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) records the explicit mission §§31–44 Delivery SOR, correction, exact evidence and nonblocking reality decision before build. No additional reserved Product behavior is assumed. P3-07 is not a functional dependency; P3-09/10 are not started.
+
+## P3-08 qualification gate
+
+Product `48fa69b70af1bcf06fc5a9783b98fdf54de7a18c` passed [bound evidence](../../operational/evidence/phase3-p3-08-cargo-delivery-status-20260926.md).
+Full backend 1459 passed / 116 environment-dependent skips / zero failures;
+frontend 88 files / 414 tests; PostgreSQL 18 nine focused/regression tests; Chrome
+nine tests across P3-01..08 with desktop/mobile visual review. Partial Delivery,
+correction history, exact evidence, A/B isolation and nonblocking discrepancy PASS.
+Upstream rewrite, lifecycle inference, automatic closure and Customer commands NO.
+REFERENCE_RECONCILIATION=PASS; REFERENCE_IMPACT=NONE; protected behavior PRESERVED.
+Global Product EVIDENCE_PENDING; integrated journeys and human walkthrough NOT_RUN;
+Release Ready NO. The mission authorizes controlled integration; its exact receipt
+must establish P3-09 entry. P3-09/10 implementation not yet started at this record.

@@ -1,0 +1,17 @@
+{
+  "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+  "status": "PASS",
+  "desktop": "1280x720",
+  "mobile": "390x844",
+  "observations": [
+    "Separate Cargo/customer summaries remain readable",
+    "Excess warning prominent and nonblocking",
+    "Mobile labels wrap without horizontal overflow",
+    "Sticky header does not cover section"
+  ],
+  "screenshots": [
+    "runtime\\P308-browser\\phase3-cargo-delivery-P3-0-aae70--evidence-excess-and-reopen\\cargo-delivery-desktop.png",
+    "runtime\\P308-browser\\phase3-cargo-delivery-P3-0-aae70--evidence-excess-and-reopen\\cargo-delivery-mobile.png"
+  ],
+  "reviewed_at_utc": "2026-09-25T22:28:51.373272+00:00"
+}

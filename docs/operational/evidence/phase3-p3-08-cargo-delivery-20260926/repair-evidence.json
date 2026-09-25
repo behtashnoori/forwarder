@@ -1,0 +1,12 @@
+{
+  "prior_product": "461de820278edeb76a40287efe00cfaecab40fa8",
+  "final_product": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+  "failure_reproduced": "PostgreSQL DID NOT RAISE on stale replaced exact file context revision",
+  "repair": "Shipment lock -> reauthorize -> exact file lock/refresh -> context lock/revision; refuse non-active version",
+  "runtime_model": "same owning Expert authority; no new capability",
+  "diagnostic_files_sha256": {
+    "concurrency-reproduction.log": "bb65f0f687bbbd929d6cc5fa6a409f96d25b0ae854635aaab76cf76a1f3254d2",
+    "concurrency-repair-preflight.log": "c87f865f69df83523cd0745d066ea578f76a6d3066ac2bc62f6decaa5ff8c1e6",
+    "prior-product-superseded.json": "4bd56974e56b7f3cc7a1083ffa30ef8616f56af390abbf6b3c03e8b0ced81ef9"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "scope": "Diagnostic prequalification on dirty worktree; never substituted for exact Product gates",
+  "findings": [
+    "Initial test fixture incorrectly used Shipment delivered instead of supported completed; now also covers ExecutionUnit delivered without inferring delivery facts.",
+    "Browser assertion initially used a nonexistent lifecycle response field; corrected to compare existing data.status and version before and after. All quantity, evidence byte, immutable history and reopen assertions retained."
+  ],
+  "files": {
+    "D:\\1-webapp\\forwarder-dev\\qualification-p308-preflight\\delivery-tests.log": "5393dc579b9e7d5ce0633b7364bec47256034a86f0b6e8f687716040e6039e53",
+    "D:\\1-webapp\\forwarder-dev\\qualification-p308-preflight\\contracts.log": "2a486559cc58d9c13f20af3fcf4e3aaeafcfa050ee434edd86ded291292cf614",
+    "D:\\1-webapp\\forwarder-dev\\qualification-p308-preflight-browser\\runtime\\P308-browser.log": "5086c53074fefca051cdaa4999bca43ab3d3482b70ba3fd858da7faaccdd2012",
+    "D:\\1-webapp\\forwarder-dev\\qualification-p308-preflight-browser2\\runtime\\P308-browser.log": "30a6880e8df653eed89f9fc619adf26a3c6f20912b0a000c196825a1a6879180"
+  }
+}

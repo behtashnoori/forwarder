@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-08-partial-delivery
+
+
+ Test Files  88 passed (88)
+      Tests  414 passed (414)
+   Start at  01:32:00
+   Duration  284.48s (transform 8.29s, setup 22.41s, import 26.86s, tests 90.57s, environment 119.42s)
+

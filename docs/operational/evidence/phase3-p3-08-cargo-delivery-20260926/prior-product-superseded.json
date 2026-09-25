@@ -1,0 +1,8 @@
+{
+  "product_sha": "461de820278edeb76a40287efe00cfaecab40fa8",
+  "status": "SUPERSEDED_NOT_QUALIFIED",
+  "backend": "Stopped incomplete; no PASS claimed",
+  "frontend": "88 files/414 tests PASS; static gates exit0, 14 disclosed warnings",
+  "reason": "Code review identified document-context revision lock ordering and stale exact-file status during concurrent replacement; bounded repair and PostgreSQL regression required. Full exact-candidate qualification restarts after repair.",
+  "recorded_at_utc": "2026-09-25T21:55:40.493327+00:00"
+}

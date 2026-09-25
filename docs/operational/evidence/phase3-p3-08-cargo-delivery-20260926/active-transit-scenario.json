@@ -1,0 +1,25 @@
+{
+  "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+  "status": "PASS",
+  "database": "owned SQLite memory, explicit synthetic data",
+  "A_effective_delivered_sequence": [
+    "95",
+    "93",
+    "102"
+  ],
+  "A_remaining_sequence": [
+    "5",
+    "7",
+    "0"
+  ],
+  "A_excess": "2",
+  "B_current_actual_allocation": "25",
+  "B_unit_lifecycle": "in_progress",
+  "B_delivered": "0",
+  "B_remaining": "25",
+  "B_quantities_allocation_unit_version_unchanged": true,
+  "shipment_status_version_unchanged": true,
+  "work_items_unchanged": true,
+  "production_accessed": false,
+  "recorded_at_utc": "2026-09-25T22:19:13.809225+00:00"
+}

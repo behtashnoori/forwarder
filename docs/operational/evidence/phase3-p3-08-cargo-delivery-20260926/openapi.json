@@ -1,0 +1,16 @@
+{
+  "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+  "status": "PASS",
+  "operations": 2,
+  "scope": "Runtime route parity for /deliveries and entire YAML parse",
+  "routes": [
+    [
+      "/api/operational-shipments/{shipment_id}/deliveries",
+      "get"
+    ],
+    [
+      "/api/operational-shipments/{shipment_id}/deliveries",
+      "post"
+    ]
+  ]
+}

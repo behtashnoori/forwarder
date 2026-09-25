@@ -1,0 +1,44 @@
+
+> vite_react_shadcn_ts@1.10.0 lint
+> eslint .
+
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ReleaseIdentity.tsx
+  8:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ui\badge.tsx
+  29:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ui\button.tsx
+  49:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ui\form.tsx
+  129:10  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ui\navigation-menu.tsx
+  111:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ui\sidebar.tsx
+  636:3  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ui\sonner.tsx
+  27:19  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\components\ui\toggle.tsx
+  37:18  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\contexts\SiteSettingsContext.tsx
+  93:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+  97:17  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\pages\Index.tsx
+  12:14  warning  Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components  react-refresh/only-export-components
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\pages\OperationsControlTower.tsx
+  31:137  warning  React Hook useEffect has missing dependencies: 'blank', 'dashboard.global_filters', 'dashboard.semantic_version', and 'dashboard.widgets'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+D:\1-webapp\forwarder-dev\phase3-p3-08-partial-delivery\src\pages\UserManagement.tsx
+  207:6  warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 13 problems (0 errors, 13 warnings)
+

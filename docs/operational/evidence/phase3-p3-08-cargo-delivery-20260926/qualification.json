@@ -1,0 +1,131 @@
+{
+  "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+  "canonical_base": "682e83ed3a51badb3938d66dbd337e8e10e57797",
+  "qualification": "PASS",
+  "migration_head": "20261008_phase3_cargo_delivery",
+  "migration_parent": "20261007_phase3_reported_facts",
+  "backend": {
+    "passed": 1459,
+    "failed": 0,
+    "skipped": 116,
+    "xfailed": 0,
+    "xpassed": 0,
+    "warnings": 19822,
+    "errors": 0
+  },
+  "backend_duration_seconds": 1372.15,
+  "frontend": {
+    "files": 88,
+    "tests": 414,
+    "seconds": 284.48,
+    "status": "PASS"
+  },
+  "postgresql": {
+    "major": 18,
+    "focused_tests": 4,
+    "p301_through_p305_tests": 5,
+    "status": "PASS"
+  },
+  "chrome": {
+    "tests": 9,
+    "journeys": [
+      "P308",
+      "P307",
+      "P306",
+      "P305",
+      "P304",
+      "P303",
+      "P302",
+      "P301"
+    ],
+    "status": "PASS"
+  },
+  "visual_inspection": {
+    "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+    "status": "PASS",
+    "desktop": "1280x720",
+    "mobile": "390x844",
+    "observations": [
+      "Separate Cargo/customer summaries remain readable",
+      "Excess warning prominent and nonblocking",
+      "Mobile labels wrap without horizontal overflow",
+      "Sticky header does not cover section"
+    ],
+    "screenshots": [
+      "runtime\\P308-browser\\phase3-cargo-delivery-P3-0-aae70--evidence-excess-and-reopen\\cargo-delivery-desktop.png",
+      "runtime\\P308-browser\\phase3-cargo-delivery-P3-0-aae70--evidence-excess-and-reopen\\cargo-delivery-mobile.png"
+    ],
+    "reviewed_at_utc": "2026-09-25T22:28:51.373272+00:00"
+  },
+  "static_checks": {
+    "app_typescript": "PASS",
+    "node_typescript": "PASS",
+    "eslint": "PASS",
+    "frontend_build": "PASS",
+    "openapi_route_parity": "PASS",
+    "tenant_inventory": "PASS",
+    "architecture": "PASS",
+    "structure": "PASS",
+    "backend_determinism": "PASS",
+    "diff_check": "PASS",
+    "changed_scope_secret_scan": "PASS"
+  },
+  "warnings": [
+    "13 existing ESLint warnings, zero errors",
+    "Existing frontend build chunk-size advisory",
+    "Existing Browserslist data-age advisory"
+  ],
+  "environment": {
+    "python": "3.13.9",
+    "node": "24.11.0",
+    "postgresql": "18.0",
+    "chrome": "154.0.8037.57",
+    "data": "owned synthetic only"
+  },
+  "active_transit_customer_B_supplement": {
+    "product_sha": "48fa69b70af1bcf06fc5a9783b98fdf54de7a18c",
+    "status": "PASS",
+    "database": "owned SQLite memory, explicit synthetic data",
+    "A_effective_delivered_sequence": [
+      "95",
+      "93",
+      "102"
+    ],
+    "A_remaining_sequence": [
+      "5",
+      "7",
+      "0"
+    ],
+    "A_excess": "2",
+    "B_current_actual_allocation": "25",
+    "B_unit_lifecycle": "in_progress",
+    "B_delivered": "0",
+    "B_remaining": "25",
+    "B_quantities_allocation_unit_version_unchanged": true,
+    "shipment_status_version_unchanged": true,
+    "work_items_unchanged": true,
+    "production_accessed": false,
+    "recorded_at_utc": "2026-09-25T22:19:13.809225+00:00"
+  },
+  "partial_delivery": "PASS",
+  "customer_A_B_isolation": "PASS",
+  "correction_history": "PASS",
+  "exact_evidence_version": "PASS",
+  "mismatch_blocks_reality": false,
+  "upstream_quantities_rewritten": false,
+  "automatic_closure": false,
+  "reference_reconciliation": "PASS",
+  "reference_impact": "NONE",
+  "protected_regressions": "PRESERVED",
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": "NO",
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployed": false,
+  "released": false,
+  "final_owned_runtime_stopped_and_removed": true,
+  "prior_retained_stopped_directory": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-dn10-owned-2210e7c9f66f43d3a8e0de226b0e26f1",
+  "prior_retention_reason": "Automatic host approval rejected deletion: blocked by policy; no bypass attempted."
+}

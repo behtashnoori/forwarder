@@ -85,7 +85,7 @@ Current extension: [ADR-062](../operational/adr/ADR-062-explicit-customer-entitl
 resolves ADR-061's DN10 dependency under the explicit five-stage Product mission.
 It introduces only Org Admin managed, same-tenant, auditable account-to-CRM
 grants and live own-Cargo authorization. Prior rows retain their original scope;
-DN09/owner transfer, Delivery and full Customer Shipment remain separate gates.
+ADR-064 now extends real Delivery and its exact evidence within the explicit P3-08 gate. DN09/owner transfer and the full P3-09 Customer Shipment surface remain separate gates.
 
 1. Read this index and the baseline before design or implementation.
 2. Read every affected Accepted ADR in full.
