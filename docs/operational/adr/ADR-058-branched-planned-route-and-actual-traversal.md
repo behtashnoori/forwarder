@@ -4,7 +4,7 @@
 - **Date:** 2026-09-25
 - **Owners:** Product Owner for authorized behavior; Operational Shipment/Route domain for SOR; Security for tenant and owning-Expert enforcement; Data for additive migration
 - **Affected domain:** Route planning, Cargo destination association, actual traversal evidence
-- **Implementation state:** P3-03 implementation and qualification in progress; release, deployment, and Production use are not established by this ADR
+- **Implementation state:** P3-03 qualified on Product SHA `d7ff7208fdc25caff7af86379fd8afc5b41b24aa`; canonical integration is the next gate; release, deployment, and Production use are not established by this ADR
 - **Mission authority:** [P3-03 Branched Route Mission Contract](../../product/phase3/P3-03-BRANCHED-ROUTE-MISSION-CONTRACT-FA.md)
 
 ## Context
@@ -63,9 +63,9 @@ Qualification must prove incomplete draft save/reopen, branch continuity and cyc
 
 ```text
 LPAF_REFERENCE_IMPACT=NONE
-PROJECT_REFERENCE_IMPACT=UPDATE_REQUIRED_UNTIL_RECONCILED
+PROJECT_REFERENCE_IMPACT=NONE_AFTER_RECONCILIATION
 JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
-SLICE_JOURNEYS=NOT_RUN
+SLICE_JOURNEYS=PASS_FOR_P3_03_BOUNDARY
 INTEGRATED_PRODUCT_JOURNEYS=NOT_RUN
 HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING
