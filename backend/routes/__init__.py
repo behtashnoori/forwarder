@@ -35,6 +35,7 @@ from .saved_views import saved_view_bp
 from .project_access import project_access_bp
 from .control_tower import control_tower_bp
 from .organization_reference_catalog import organization_reference_catalog_bp
+from .customer_entitlements import customer_entitlements_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -76,3 +77,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(project_access_bp)
     app.register_blueprint(control_tower_bp)
     app.register_blueprint(organization_reference_catalog_bp)
+    app.register_blueprint(customer_entitlements_bp)

@@ -76,7 +76,15 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [060](../operational/adr/ADR-060-stage-scoped-cargo-allocation-and-trace.md) | Stage-scoped Cargo allocation and immutable transfer trace | ACCEPTED | Operational Shipment Cargo/Execution | extends ADR-022/046/057/058/059; supersedes the proposed ADR-023 hard cap for P3-05 / none | existing allocation SOR gains stage and plan/actual dimensions, immutable corrections and atomic transfers; mismatch is warning only | Yes; P3-05 only; no new lifecycle, Customer projection, P3-06 documents, release or Production |
 | [061](../operational/adr/ADR-061-contextual-document-version-visibility.md) | Typed document context and exact-version visibility | ACCEPTED | Operational Shipment Documents | extends ADR-030/047/050 and PDR-020; resolves only DN02 document visibility / none | CaseDocumentFile remains file SOR; typed context, explicit audience and append-only history are per exact version; Customer Cargo-owner access fails closed until DN10 entitlement | Yes; P3-06 only; DN09/DN10, P3-08 Delivery and P3-09 Customer Shipment projection remain open |
 
+| [062](../operational/adr/ADR-062-explicit-customer-entitlement.md) | Explicit customer entitlement | ACCEPTED | Customer authorization / Documents | resolves ADR-061 DN10 dependency only / none | Same-tenant Org Admin managed many-to-many grants, preserved revocation history and live own-Cargo authorization, no inference | Yes; P3-06 requalification; no release or full Customer Shipment projection |
+
 ## Usage rules
+
+Current extension: [ADR-062](../operational/adr/ADR-062-explicit-customer-entitlement.md)
+resolves ADR-061's DN10 dependency under the explicit five-stage Product mission.
+It introduces only Org Admin managed, same-tenant, auditable account-to-CRM
+grants and live own-Cargo authorization. Prior rows retain their original scope;
+DN09/owner transfer, Delivery and full Customer Shipment remain separate gates.
 
 1. Read this index and the baseline before design or implementation.
 2. Read every affected Accepted ADR in full.

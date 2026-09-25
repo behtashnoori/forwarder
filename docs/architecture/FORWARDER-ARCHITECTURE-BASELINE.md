@@ -5,6 +5,13 @@ Authority: repository implementation plus Accepted ADRs indexed in `ADR-INDEX.md
 
 ## 1. Product architecture principles
 
+Current bounded extension: [ADR-062](../operational/adr/ADR-062-explicit-customer-entitlement.md)
+records the Product Owner's explicit DN10 authorization and delegated minimal
+relational implementation. Portal Account and CRM Customer remain separate;
+Org Admin managed entitlement is a necessary additional own-Cargo read gate,
+never implicit Shipment/file/write authority. The historical ADR-061 DN10
+absence is superseded only within this bounded capability.
+
 1. Forwarder is a modular monolith with explicit domain boundaries and one deployable application. Service extraction requires an Accepted ADR and operational evidence.
 2. Commercial intent, operational execution, configuration, master data, evidence, audit, and projections are distinct concerns.
 3. New work extends canonical aggregates. Compatibility code does not become canonical merely because it remains active.
@@ -137,6 +144,18 @@ PDR-020 and ADR-050 establish the implemented bounded management contract withou
 The qualified bounded implementation provides multiple current operational associations, targeted replacement lineage, immutable version history, and known-failure retry outcome. Generalized visibility, retention/purge, unknown-outcome exactly-once recovery, and enterprise DMS expansion remain separately governed; this baseline grants no Production migration or deployment authority.
 
 ## 9. Cargo architecture
+
+### Current P3-06 document extension
+
+ADR-061 and ADR-062 extend the earlier document boundary with typed Shipment,
+Cargo, RouteLeg and ExecutionUnit *contexts* on one exact `CaseDocumentFile`
+version. They introduce no second physical file owner/store. Shipment-owned
+files and Request-owned files remain separate existing ownership paths.
+Customer read/download is permitted only by current explicit sharing or current
+DN10 entitlement intersected with own-Cargo context and customer visibility.
+Owning Expert management, Admin oversight, private storage, version history and
+MDPM exact-version readiness remain governed independently. Legacy files gain
+no guessed context or permission. Delivery context waits for P3-08.
 
 ```text
 ShipmentRequest -> 0..N RequestCargoItem (commercial, optional)

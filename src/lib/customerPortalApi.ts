@@ -38,11 +38,11 @@ export interface CustomerSharedDocument {
   public_id: string;
   filename: string;
   version: number;
-  context_type: "SHIPMENT" | "ROUTE_LEG" | "EXECUTION_UNIT";
+  context_type: "SHIPMENT" | "CARGO" | "ROUTE_LEG" | "EXECUTION_UNIT";
 }
 
 export const fetchCustomerSharedDocuments = (page = 1) =>
-  customerRequest<{ data: CustomerSharedDocument[] }>(`/api/customer/documents?page=${page}`);
+  customerRequest<{ data: CustomerSharedDocument[] }>(`/api/customer/documents?page=${page}`, { cache: "no-store" });
 
 export async function downloadCustomerSharedDocument(documentId: string, filename: string): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/api/customer/documents/${encodeURIComponent(documentId)}/download`, {

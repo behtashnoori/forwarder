@@ -110,6 +110,9 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
     format_id, mime = detected
     if extension not in FORMAT_CATALOG[format_id][0]:
         raise DocumentError("پسوند فایل با محتوای آن مطابقت ندارد")
+    if replacement is not None and (visibility != "INTERNAL" or audience_public_ids):
+        raise DocumentError("نسخه جایگزین ابتدا داخلی است؛ دسترسی همین نسخه را جداگانه تعیین کنید", 422,
+                            "DOCUMENT_REPLACEMENT_INTERNAL_REQUIRED")
     if replacement is not None and context_type is None:
         old_context = contexts.project(shipment, replacement)
         if old_context:
@@ -121,6 +124,7 @@ def upload(shipment: OperationalShipment, actor: dict[str, Any] | int, file: Fil
         "type": prepared["type"], "target": prepared["target_public_id"],
         "visibility": prepared["visibility"],
         "audiences": sorted(row.public_id for row in prepared["audiences"]),
+        "replaces": replacement.public_id if replacement is not None else None,
     }, sort_keys=True)
     request_hash = hashlib.sha256((title + "\0" + (description or "") + "\0" + policy_fingerprint + "\0").encode() + data).hexdigest()
     replay = db.session.scalar(select(OperationalIdempotency).where(

@@ -11,6 +11,7 @@ const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as {
   p305_cargo: string; tenant_b_cargo: string; foreign_unit: string;
   p306_account_a: string; p306_account_b: string;
   p306_email_a: string; p306_email_b: string;
+  p306_crm_customer: number;
 };
 const pdf = Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF");
 test.setTimeout(180_000);
@@ -177,5 +178,64 @@ test("P3-06 — contextual upload, explicit audience, exact version, history, pr
     multipart: { title: "ممنوع", file: { name: "admin.pdf", mimeType: "application/pdf", buffer: pdf } },
   })).status()).toBe(404);
   expect(errors).toEqual([]);
+  await a.context.close(); await b.context.close(); await adminContext.close();
+});
+
+test("DN10 — Admin grant → own-Cargo exact download → revoke → mobile back/reopen denied", async ({ page, browser }, testInfo) => {
+  await expert(page);
+  await page.getByLabel("Document upload context").selectOption("CARGO");
+  await page.getByLabel("Document upload target").selectOption(fixture.p305_cargo);
+  await page.getByLabel("Document upload visibility").selectOption("CARGO_OWNER");
+  const cargo = await upload(page, "مدرک کالای مشتری", "dn10-cargo.pdf");
+  const a = await customer(browser, fixture.p306_email_a);
+  await a.page.setViewportSize({ width: 390, height: 844 });
+  const cargoCard = a.page.getByRole("article").filter({ hasText: "مربوط به: کالای شما" });
+  await expect(cargoCard).toHaveCount(0);
+  expect((await a.page.request.get(`${apiBase}/api/customer/documents/${cargo.public_id}/download`)).status()).toBe(404);
+
+  const adminContext = await browser.newContext({ baseURL: browserBase, locale: "fa-IR" });
+  const admin = await adminContext.newPage();
+  await admin.goto("/");
+  await admin.getByRole("button", { name: "ورود به سامانه" }).first().click();
+  await admin.getByLabel("نام کاربری").fill("shared_transport_e2e_admin");
+  await admin.getByLabel("رمز عبور").fill(password!);
+  await admin.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
+  await admin.getByRole("tab", { name: "دسترسی حساب مشتری", exact: true }).click();
+  await expect(admin.getByText("هنوز دسترسی‌ای ثبت نشده است.")).toBeVisible();
+  await admin.getByLabel("حساب پورتال", { exact: true }).selectOption(fixture.p306_account_a);
+  await admin.getByLabel("مشتری / شرکت", { exact: true }).selectOption(String(fixture.p306_crm_customer));
+  await admin.getByRole("button", { name: "اعطای دسترسی", exact: true }).click();
+  await expect(admin.getByText("دسترسی ثبت شد.")).toBeVisible();
+  await admin.getByRole("tab", { name: "تعاریف قابل استفاده سازمان", exact: true }).click();
+  await admin.getByRole("tab", { name: "دسترسی حساب مشتری", exact: true }).click();
+  await expect(admin.getByRole("button", { name: "لغو دسترسی" })).toBeVisible();
+  await admin.screenshot({ path: testInfo.outputPath("dn10-admin.png"), fullPage: true });
+
+  await a.page.reload();
+  await expect(cargoCard).toBeVisible();
+  await a.page.screenshot({ path: testInfo.outputPath("dn10-customer-mobile.png"), fullPage: true });
+  const downloaded = a.page.waitForEvent("download");
+  await cargoCard.getByRole("button", { name: "دریافت سند" }).click();
+  const download = await downloaded;
+  expect(download.suggestedFilename()).toBe("document-v1.pdf");
+  expect(await download.failure()).toBeNull();
+  expect(await (await a.page.request.get(`${apiBase}/api/customer/documents/${cargo.public_id}/download`)).body()).toEqual(pdf);
+  const b = await customer(browser, fixture.p306_email_b);
+  await expect(b.page.getByText("مربوط به: کالای شما")).toHaveCount(0);
+  expect((await b.page.request.get(`${apiBase}/api/customer/documents/${cargo.public_id}/download`)).status()).toBe(404);
+
+  await a.page.getByRole("link", { name: "درخواست‌های من", exact: true }).click();
+  await admin.getByRole("button", { name: "لغو دسترسی", exact: true }).click();
+  await expect(admin.getByText(/دسترسی لغو شد/)).toBeVisible();
+  await a.page.goBack();
+  await expect(a.page.getByRole("heading", { name: "اسناد به‌اشتراک‌گذاشته‌شده با شما" })).toBeVisible();
+  await expect(cargoCard).toHaveCount(0);
+  const denied = await a.page.request.get(`${apiBase}/api/customer/documents/${cargo.public_id}/download`);
+  expect(denied.status()).toBe(404);
+  expect(denied.headers()["cache-control"]).toContain("no-store");
+  await a.page.reload();
+  await expect(cargoCard).toHaveCount(0);
+  await admin.getByText("تاریخچه دسترسی‌ها", { exact: true }).click();
+  await expect(admin.getByText(/لغو شده/)).toBeVisible();
   await a.context.close(); await b.context.close(); await adminContext.close();
 });

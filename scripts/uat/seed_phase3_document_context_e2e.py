@@ -35,7 +35,8 @@ def main() -> None:
             accounts.append(account)
         db.session.commit()
         fixture.update(p306_account_a=accounts[0].public_id, p306_account_b=accounts[1].public_id,
-                       p306_email_a=accounts[0].email, p306_email_b=accounts[1].email)
+                       p306_email_a=accounts[0].email, p306_email_b=accounts[1].email,
+                       p306_crm_customer=shipment.customer_id)
     path.write_text(json.dumps(fixture), encoding="utf-8")
 
 

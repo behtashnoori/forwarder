@@ -336,7 +336,7 @@ def shipment_document_delete(shipment_id: str, document_id: str):
 @document_bp.get("/api/customer/documents")
 @require_customer
 def customer_visible_documents():
-    """Only exact current versions explicitly addressed to this portal account."""
+    """Exact current versions authorized before pagination, under current grants."""
     account = g.current_customer
     try:
         page = max(1, int(request.args.get("page", "1")))
@@ -344,16 +344,9 @@ def customer_visible_documents():
         page = 1
     page = min(page, 1000)
     contexts_query = select(OperationalDocumentContext, CaseDocumentFile).join(
-        OperationalDocumentAudience,
-        OperationalDocumentAudience.context_id == OperationalDocumentContext.id,
-    ).join(
         CaseDocumentFile, CaseDocumentFile.id == OperationalDocumentContext.document_file_id,
     ).where(
-        OperationalDocumentAudience.customer_portal_account_id == account.id,
-        OperationalDocumentAudience.organization_id == account.operational_organization_id,
-        OperationalDocumentContext.organization_id == account.operational_organization_id,
-        OperationalDocumentContext.visibility == "EXPLICIT_SHARED",
-        OperationalDocumentContext.context_type != "CARGO",
+        contexts.customer_context_predicate(account),
         CaseDocumentFile.status == "active",
         CaseDocumentFile.operational_organization_id == account.operational_organization_id,
     ).order_by(CaseDocumentFile.uploaded_at.desc(), CaseDocumentFile.id.desc()).limit(20).offset((page - 1) * 20)

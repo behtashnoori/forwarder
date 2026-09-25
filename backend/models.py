@@ -325,6 +325,7 @@ class CustomerGamification(db.Model):
     requests = db.relationship("ShipmentRequest", back_populates="gamification_customer", lazy=True)
 
     __table_args__ = (
+        db.UniqueConstraint("id", "operational_organization_id", name="uq_customer_portal_id_org"),
         db.CheckConstraint(
             "account_status IN ('ACTIVE', 'DISABLED')",
             name="ck_customer_portal_account_status",
@@ -2418,6 +2419,7 @@ from backend.mdpm_models import (  # noqa: E402,F401
     RequirementApplicabilityDecision,
     TransitionOverride,
 )
+from backend.customer_entitlement_models import CustomerEntitlement  # noqa: E402,F401
 from backend.document_context_models import (  # noqa: E402,F401
     OperationalDocumentContext,
     OperationalDocumentAudience,

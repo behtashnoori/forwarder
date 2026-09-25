@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 
 from backend.extensions import db
 from backend.document_context_models import (
@@ -17,6 +17,7 @@ from backend.operational_models import (
     ExecutionUnit, OperationalShipment, RouteLeg, RoutePlan, RouteStageExecution,
 )
 from backend.services.case_document_service import DocumentError
+from backend.services.customer_entitlement_service import authorized_customer_ids
 
 
 TARGET_COLUMNS = {
@@ -245,14 +246,33 @@ def revise(shipment: OperationalShipment, document: CaseDocumentFile, actor_id: 
     return context
 
 
+def customer_context_predicate(account: CustomerGamification):
+    """One authorization predicate for lists, pagination and direct downloads."""
+    explicit = select(OperationalDocumentAudience.id).where(
+        OperationalDocumentAudience.context_id == OperationalDocumentContext.id,
+        OperationalDocumentAudience.customer_portal_account_id == account.id,
+        OperationalDocumentAudience.organization_id == account.operational_organization_id,
+    ).exists()
+    own_cargo = select(ShipmentCargoItem.id).join(
+        OperationalShipment, OperationalShipment.id == ShipmentCargoItem.operational_shipment_id,
+    ).where(
+        ShipmentCargoItem.id == OperationalDocumentContext.cargo_item_id,
+        ShipmentCargoItem.operational_shipment_id == OperationalDocumentContext.operational_shipment_id,
+        OperationalShipment.organization_id == account.operational_organization_id,
+        ShipmentCargoItem.cargo_owner_customer_id.in_(authorized_customer_ids(account)),
+    ).exists()
+    return and_(
+        OperationalDocumentContext.organization_id == account.operational_organization_id,
+        or_(and_(OperationalDocumentContext.visibility == "EXPLICIT_SHARED",
+                 OperationalDocumentContext.context_type != "CARGO", explicit),
+            and_(OperationalDocumentContext.visibility == "CARGO_OWNER",
+                 OperationalDocumentContext.context_type == "CARGO", own_cargo)),
+    )
+
+
 def authorized_customer_context(account: CustomerGamification, context: OperationalDocumentContext) -> bool:
-    """No CRM Customer ↔ portal identity link exists yet; Cargo-owner denies."""
     if account.account_status != "ACTIVE" or account.operational_organization_id != context.organization_id:
         return False
-    if context.visibility != "EXPLICIT_SHARED" or context.context_type == "CARGO":
-        return False
-    return db.session.scalar(select(OperationalDocumentAudience.id).where(
-        OperationalDocumentAudience.context_id == context.id,
-        OperationalDocumentAudience.customer_portal_account_id == account.id,
-        OperationalDocumentAudience.organization_id == context.organization_id,
+    return db.session.scalar(select(OperationalDocumentContext.id).where(
+        OperationalDocumentContext.id == context.id, customer_context_predicate(account),
     )) is not None

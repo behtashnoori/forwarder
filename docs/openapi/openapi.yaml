@@ -1333,6 +1333,55 @@ components:
       required: [result_kind, columns, rows, returned_row_count]
       properties: { result_kind: { type: string, enum: [ROWSET] }, columns: { type: array, items: { type: object } }, rows: { type: array, items: { type: object } }, returned_row_count: { type: integer } }
 paths:
+  /api/admin/customer-entitlements:
+    get:
+      tags: [Admin Panel]
+      summary: Same-organization Admin inspects explicit customer access configuration and history
+      description: Active same-tenant accounts and CRM selectors plus all grant/revocation facts. No Platform, Expert or Customer management authority. Responses are no-store.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Accounts, customers and grants scoped to the authenticated administrator organization. }
+        '401': { description: Authentication required. }
+        '403': { description: Active same-organization Admin required. }
+    post:
+      tags: [Admin Panel]
+      summary: Explicitly grant a portal account access prerequisite for one CRM customer
+      description: Neither identity is merged. No automatic grant from Request, names, contacts or Cargo. Active same-tenant targets only. Replaying a revoked grant never reactivates it.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 100 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [portal_account_public_id, customer_id]
+              properties:
+                portal_account_public_id: { type: string, format: uuid }
+                customer_id: { type: integer, minimum: 1, description: Existing same-tenant CRM selector identity; never an authorization capability. }
+      responses:
+        '201': { description: Explicit grant with actor and time persisted. }
+        '200': { description: Exact original command replay including its current revocation status. }
+        '401': { description: Authentication required. }
+        '403': { description: Organization Admin required. }
+        '404': { description: Active same-tenant target unavailable. }
+        '409': { description: Current relationship or command replay conflict. }
+        '422': { description: Invalid command. }
+  /api/admin/customer-entitlements/{public_id}/revoke:
+    post:
+      tags: [Admin Panel]
+      summary: Revoke exactly one grant without deleting its history
+      description: Only the active same-organization Admin may revoke. Repeated revoke is idempotent and cannot revoke a later grant. Subsequent document requests reauthorize immediately.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Grant with original grant facts and revoking actor/time. }
+        '401': { description: Authentication required. }
+        '403': { description: Organization Admin required. }
+        '404': { description: Grant unavailable in this organization. }
   /api/v2/projects/{project_id}/access:
     parameters:
       - { name: project_id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -3938,6 +3987,6 @@ paths:
   /api/internal/operational-shipments/{shipment_id}/documents/{document_id}/download:
     get: { tags: [Documents], summary: Reauthorize internal parent and exact file version before private-byte access, security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: document_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Authorized private bytes. }, '404': { description: Inaccessible file. } } }
   /api/customer/documents:
-    get: { tags: [Documents], summary: Page current exact versions explicitly shared with this Customer Portal account, security: [{ customerSession: [] }], parameters: [{ name: page, in: query, schema: { type: integer, minimum: 1 } }], responses: { '200': { description: Post-authorization list with no foreign metadata or count. }, '401': { description: Active Customer session required. } } }
+    get: { tags: [Documents], summary: Page current exact versions allowed by live DN10 own-Cargo entitlement or explicit sharing, security: [{ customerSession: [] }], parameters: [{ name: page, in: query, schema: { type: integer, minimum: 1 } }], responses: { '200': { description: Post-authorization list with no foreign metadata or count. }, '401': { description: Active Customer session required. } } }
   /api/customer/documents/{document_id}/download:
-    get: { tags: [Documents], summary: Reauthorize tenant, exact current version and explicit account allowlist on every download, security: [{ customerSession: [] }], parameters: [{ name: document_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Authorized private bytes without cache. }, '404': { description: Unknown and unauthorized files indistinguishable. } } }
+    get: { tags: [Documents], summary: Reauthorize tenant, exact current version and current own-Cargo entitlement or explicit audience on every download, security: [{ customerSession: [] }], parameters: [{ name: document_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Authorized private bytes without cache. }, '404': { description: Unknown and unauthorized files indistinguishable. } } }

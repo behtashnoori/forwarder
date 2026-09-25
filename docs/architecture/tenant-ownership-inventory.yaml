@@ -4,6 +4,7 @@
   "canonical_tenant_key": "organization_id",
   "classifications": ["TENANT_OWNED_DIRECT", "TENANT_OWNED_INDIRECT", "PLATFORM_SCOPED", "PUBLIC_CAPABILITY_SCOPED", "LEGACY_AMBIGUOUS"],
   "entities": {
+    "CustomerEntitlement": {"kind":"persisted_model","table":"customer_entitlement","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","owner_path":"operational_organization.id","rationale":"ADR-062 explicit Org Admin grant/revocation between separate Portal Account and CRM Customer identities. Composite same-tenant foreign keys, current-grant uniqueness and historical grants; no inferred backfill or capability-wide data permission."},
     "OperationalOrganization": {"kind":"persisted_model","table":"operational_organization","scope":"PLATFORM_SCOPED","rationale":"Authoritative platform control-plane record that establishes, but is not owned by, a tenant boundary."},
     "OrganizationHostname": {"kind":"persisted_model","table":"organization_hostname","scope":"PLATFORM_SCOPED","rationale":"Platform-managed exact-host routing alias; organization_id identifies the target tenant but hostname lifecycle remains a platform security and infrastructure concern."},
     "ExpertUser": {"kind":"persisted_model","table":"expert_user","scope":"PLATFORM_SCOPED","rationale":"Global identity; tenant staff authority exists only through OperationalMembership."},

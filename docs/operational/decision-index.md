@@ -2,6 +2,13 @@
 
 ## Current Product contract references
 
+Current mission: [P3-06 through P3-10 authority record](../product/phase3/P3-06-10-MISSION-AUTHORITY.md).
+DN10 is explicitly resolved by the Product Owner and implemented in the current
+P3-06 candidate under [ADR-062](adr/ADR-062-explicit-customer-entitlement.md).
+The previous blocked P3-06 evidence is historical; fresh qualification and
+canonical integration remain required. P3-01..05 are already canonical; later
+slices may start only through the dependency gates in this mission.
+
 | Reference | Status | Governing scope | Relationship to existing decisions |
 | --- | --- | --- | --- |
 | [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) | `ACTIVE / APPROVED_TARGET_PHASE3 / P3-01_P3-02_INTEGRATED / P3-03_QUALIFIED_CANDIDATE` | Multi-customer/multi-cargo Shipment, quantities/allocation, route execution, privacy/tracking, delivery/closure and UX target | P3-01 and P3-02 are bounded integrated slices. P3-03 is qualified at exact Product SHA `d7ff7208fdc25caff7af86379fd8afc5b41b24aa` and awaits the canonical gate; P3-04 and the remaining broader Product Contract are not claimed implemented. Historical ADR/PDR text and the limited ADR-047 supersession remain preserved. |

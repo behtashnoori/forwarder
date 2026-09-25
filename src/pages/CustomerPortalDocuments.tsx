@@ -9,7 +9,7 @@ import {
 } from "@/lib/customerPortalApi";
 
 const contextLabel = {
-  SHIPMENT: "پرونده حمل", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل",
+  SHIPMENT: "پرونده حمل", CARGO: "کالای شما", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل",
 };
 
 export default function CustomerPortalDocuments() {
@@ -21,24 +21,31 @@ export default function CustomerPortalDocuments() {
 
   useEffect(() => {
     let alive = true;
+    let generation = 0;
     const load = async () => {
+      const current = ++generation;
       setLoading(true);
+      setRows([]);
       try {
         const session = await fetchCustomerSession();
         if (!session.authenticated) { navigate("/customer", { replace: true }); return; }
         const result = await fetchCustomerSharedDocuments(page);
-        if (alive) { setRows(result.data); setError(""); }
+        if (alive && current === generation) { setRows(result.data); setError(""); }
       } catch (caught) {
-        if (alive) setError(caught instanceof Error ? caught.message : "اسناد دریافت نشدند");
-      } finally { if (alive) setLoading(false); }
+        if (alive && current === generation) setError(caught instanceof Error ? caught.message : "اسناد دریافت نشدند");
+      } finally { if (alive && current === generation) setLoading(false); }
     };
     void load();
-    return () => { alive = false; };
+    const refresh = () => { if (document.visibilityState !== "hidden") void load(); };
+    window.addEventListener("pageshow", refresh);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { alive = false; window.removeEventListener("pageshow", refresh); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
   }, [page, navigate]);
 
   return <CustomerPortalLayout privateNav><Card dir="rtl">
     <CardHeader><CardTitle>اسناد به‌اشتراک‌گذاشته‌شده با شما</CardTitle>
-      <p className="text-sm text-slate-600">فقط نسخه‌های جاری که کارشناس حمل مشخصاً برای حساب شما مجاز کرده است نمایش داده می‌شوند.</p>
+      <p className="text-sm text-slate-600">نسخه‌های جاریِ مجاز برای کالاهای شما و اسنادی که صریحاً با حساب شما به اشتراک گذاشته شده‌اند نمایش داده می‌شوند.</p>
     </CardHeader>
     <CardContent className="space-y-3">
       {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
@@ -49,8 +56,10 @@ export default function CustomerPortalDocuments() {
           <p>مربوط به: {contextLabel[row.context_type]}</p>
           <p>نسخه {row.version}</p>
           <Button variant="outline" onClick={() => {
-            void downloadCustomerSharedDocument(row.public_id, row.filename).catch((caught) =>
-              setError(caught instanceof Error ? caught.message : "سند در دسترس نیست"));
+            void downloadCustomerSharedDocument(row.public_id, row.filename).catch((caught) => {
+              setRows([]);
+              setError(caught instanceof Error ? caught.message : "سند در دسترس نیست");
+            });
           }}>دریافت سند</Button>
         </article>)}
       <div className="flex gap-2">
