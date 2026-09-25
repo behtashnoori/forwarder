@@ -2,7 +2,7 @@
 from sqlalchemy import select, and_, or_
 from backend.extensions import db
 from backend.operational_models import (Milestone, MilestoneEvent, RoutePlan, RouteLeg,
-    OperationalCheckpoint, OperationalAudit, OperationalWorkItem)
+    RouteTraversalFact, OperationalCheckpoint, OperationalAudit, OperationalWorkItem)
 from backend.external_reference_models import OperationalShipmentExternalReference
 from backend.models import CaseDocumentFile
 from backend.services import occurrence_projection_service as authority
@@ -160,6 +160,10 @@ def history(shipment, page=1, per_page=50, user=None):
 
 
 def plan_has_execution(plan):
+    if db.session.scalar(select(RouteTraversalFact.id).where(
+        RouteTraversalFact.route_plan_id == plan.id
+    )) is not None:
+        return True
     legs = db.session.scalars(select(RouteLeg).where(RouteLeg.route_plan_id == plan.id)).all()
     if any(l.actual_departure or l.actual_arrival or l.status in {"completed", "in_progress"} for l in legs):
         return True

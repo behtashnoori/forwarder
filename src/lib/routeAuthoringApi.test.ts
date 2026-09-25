@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { activateRoutePlan, addRouteCheckpoint, addRouteLeg, createRoutePlan, updateRouteCheckpoint, updateRouteLeg, validateRoutePlan } from "./api";
+import { activateRoutePlan, addRouteCheckpoint, addRouteLeg, assignRouteCargoDestination, createRoutePlan, recordActualRouteTraversal, updateRouteCheckpoint, updateRouteLeg, validateRoutePlan } from "./api";
 
 const shipment = "11111111-1111-4111-8111-111111111111";
 const base = `/api/operational-shipments/${shipment}/route-plans`;
@@ -22,6 +22,18 @@ describe("route authoring client contract", () => {
       [base, "POST"], [base + "/12/validate", "POST"], [base + "/12/activate", "POST"],
     ]);
     expect(JSON.parse(String(calls[2].init.body))).toEqual({ expected_version: 4 });
+  });
+
+  it("keeps Cargo destinations and actual-route facts shipment and plan scoped", async () => {
+    const cargo = "22222222-2222-4222-8222-222222222222";
+    await assignRouteCargoDestination(shipment, 12, cargo, 21, 3);
+    await recordActualRouteTraversal(shipment, 12, { origin: { source_type: "province", source_id: 1 }, destination: { source_type: "province", source_id: 2 }, departed_at: "2026-01-01T00:00:00Z" });
+    expect(calls.map((call) => [call.url, call.init.method])).toEqual([
+      [base + `/12/cargo-destinations/${cargo}`, "PUT"],
+      [base + "/12/actual-route", "POST"],
+    ]);
+    expect(JSON.parse(String(calls[0].init.body))).toEqual({ destination_route_leg_id: 21, expected_version: 3 });
+    expect(JSON.parse(String(calls[1].init.body)).planned_route_leg_id).toBeUndefined();
   });
 
   it("keeps typed location identity and expected versions in structural writes", async () => {

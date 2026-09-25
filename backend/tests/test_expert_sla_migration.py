@@ -86,4 +86,4 @@ def test_expert_sla_upgrade_constraints_and_downgrade(tmp_path):
         assert "sla_response_work_minutes" not in columns
         assert "ck_expert_user_sla_response_work_minutes" not in checks
 
-    assert ScriptDirectory.from_config(config).get_heads() == ["20261001_phase3_cargo_lineage"]
+    assert ScriptDirectory.from_config(config).get_heads() == ["20261002_phase3_branched_route"]

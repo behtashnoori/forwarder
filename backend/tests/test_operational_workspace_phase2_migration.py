@@ -13,7 +13,7 @@ PREVIOUS = "20260927_customer_portal_account_lifecycle"
 PHASE2 = "20260928_operational_workspace_phase2"
 RELIABILITY = "20260929_operational_monitoring_reliability"
 P3_REFERENCE = "20260930_phase3_reference_catalog"
-REPOSITORY_HEAD = "20261001_phase3_cargo_lineage"
+REPOSITORY_HEAD = "20261002_phase3_branched_route"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 

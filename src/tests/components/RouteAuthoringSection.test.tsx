@@ -9,7 +9,8 @@ vi.mock("../../components/OperationalPermission", () => ({ default: ({ permissio
 vi.mock("../../lib/api", async () => {
   const actual = await vi.importActual<typeof import("../../lib/api")>("../../lib/api");
   return { ...actual,
-    createRoutePlan: vi.fn(), addRouteLeg: vi.fn(), updateRouteLeg: vi.fn(), addRouteCheckpoint: vi.fn(), updateRouteCheckpoint: vi.fn(), validateRoutePlan: vi.fn(), activateRoutePlan: vi.fn(),
+    createRoutePlan: vi.fn(), addRouteLeg: vi.fn(), updateRouteLeg: vi.fn(), addRouteCheckpoint: vi.fn(), updateRouteCheckpoint: vi.fn(), validateRoutePlan: vi.fn(), activateRoutePlan: vi.fn(), assignRouteCargoDestination: vi.fn(),
+    listShipmentCargoItems: vi.fn(),
     fetchProvinces: vi.fn(), searchIranDestinations: vi.fn(), listLogisticsPoints: vi.fn(), fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(),
   };
 });
@@ -32,6 +33,7 @@ beforeEach(() => {
   vi.mocked(api.listLogisticsPoints).mockResolvedValue({ items: [{ public_id: "facility-1", fa_name: "Depot", is_active: true, point_type: { fa_name: "Depot" } } as api.LogisticsPointView], page: 1, pages: 1, total: 1 });
   vi.mocked(api.fetchCountries).mockResolvedValue([]);
   vi.mocked(api.fetchInternationalCityPage).mockResolvedValue({ items: [], offset: 0, limit: 50, has_more: false });
+  vi.mocked(api.listShipmentCargoItems).mockResolvedValue({ items: [] });
 });
 
 describe("governed route authoring", () => {
@@ -100,6 +102,33 @@ describe("governed route authoring", () => {
     await waitFor(() => expect(api.addRouteLeg).toHaveBeenCalledWith(shipmentId, draft.id, expect.objectContaining({ sequence_number: 1 })));
   });
 
+  it("saves an incomplete route leg without inventing mode or dates", async () => {
+    vi.mocked(api.addRouteLeg).mockResolvedValue({ data: draft.legs[0] });
+    renderDraft({ ...draft, legs: [], checkpoints: [], is_complete: false });
+    fireEvent.click(screen.getByRole("button", { name: "افزودن بخش مسیر" }));
+    await screen.findAllByRole("option", { name: "استان · Tehran" });
+    fireEvent.change(screen.getByLabelText("مبدأ"), { target: { value: "province:1" } });
+    fireEvent.change(screen.getByLabelText("مقصد"), { target: { value: "province:2" } });
+    fireEvent.click(screen.getByRole("button", { name: "ذخیره بخش مسیر" }));
+    await waitFor(() => expect(api.addRouteLeg).toHaveBeenCalledWith(shipmentId, draft.id, expect.objectContaining({
+      transport_mode: null,
+      planned_departure: null,
+      planned_arrival: null,
+    })));
+  });
+
+  it("assigns a Cargo line to a terminal destination branch", async () => {
+    const branch = { ...draft.legs[0], id: 22, sequence_number: 2, parent_route_leg_id: 21, branch_label: "مقصد تبریز" };
+    const cargo = { public_id: "22222222-2222-4222-8222-222222222222", line_number: 1, display_name_snapshot: "پمپ" } as api.ShipmentCargoItem;
+    vi.mocked(api.listShipmentCargoItems).mockResolvedValue({ items: [cargo] });
+    vi.mocked(api.assignRouteCargoDestination).mockResolvedValue({ data: { id: 1, cargo_item_public_id: cargo.public_id, destination_route_leg_id: 22, version: 1, created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z" } });
+    renderDraft({ ...draft, legs: [draft.legs[0], branch], cargo_destinations: [] });
+    const selector = await screen.findByLabelText("شاخه مقصد");
+    fireEvent.change(selector, { target: { value: "22" } });
+    fireEvent.click(screen.getByRole("button", { name: "ثبت مقصد" }));
+    await waitFor(() => expect(api.assignRouteCargoDestination).toHaveBeenCalledWith(shipmentId, draft.id, cargo.public_id, 22, undefined));
+  });
+
   it("loads governed international cities for the selected country", async () => {
     vi.mocked(api.fetchCountries).mockResolvedValue([{ id: 9, name: "Turkey", name_en: "Turkey", code: "TR" }]);
     vi.mocked(api.fetchInternationalCityPage).mockResolvedValue({ items: [{ id: 19, name: "Istanbul", name_en: "Istanbul", un_locode: "TRIST", city_type: "city", is_major_port: false, is_major_airport: false }], offset: 0, limit: 50, has_more: false });
@@ -118,14 +147,14 @@ describe("governed route authoring", () => {
     await waitFor(() => expect(api.addRouteLeg).toHaveBeenCalledWith(shipmentId, draft.id, expect.objectContaining({ origin: { source_type: "international_city", source_id: 19 } })));
   });
 
-  it("edits only the leg fields supported by the backend and sends its version", async () => {
+  it("edits branch and incomplete planning fields with optimistic versioning", async () => {
     vi.mocked(api.updateRouteLeg).mockResolvedValue({ data: draft.legs[0] });
     renderDraft();
     fireEvent.click(screen.getByRole("button", { name: "ویرایش بخش مسیر" }));
+    expect(screen.getByLabelText("حرکت برنامه‌ریزی‌شده")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("ترتیب بخش مسیر"), { target: { value: "2" } });
     fireEvent.click(screen.getByRole("button", { name: "ذخیره بخش مسیر" }));
     await waitFor(() => expect(api.updateRouteLeg).toHaveBeenCalledWith(shipmentId, draft.id, 21, expect.objectContaining({ expected_version: 2, sequence_number: 2 })));
-    expect(screen.queryByLabelText("حرکت برنامه‌ریزی‌شده")).not.toBeInTheDocument();
   });
 
   it("adds a checkpoint with authoritative leg association and edits supported fields", async () => {

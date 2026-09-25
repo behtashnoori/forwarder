@@ -47,6 +47,9 @@ flowchart LR
   P --> EU["ExecutionUnit"]
   OS --> RP["RoutePlan"]
   OS --> SC["ShipmentCargoItem"]
+  RP --> RL["RouteLeg — shared section / destination branches"]
+  SC --> RCD["RouteCargoDestination"] --> RL
+  RP --> RT["RouteTraversalFact — actual evidence"]
   EU --> EV["OperationalEvent"]
   RP --> CP["Checkpoint / Milestone"]
   EV --> E["Evidence and Timeline"]
@@ -68,6 +71,21 @@ flowchart LR
 ```
 
 `RequestCargoItem` and `ShipmentCargoItem` are distinct. Request submission permits zero Cargo Items and no Cargo field is mandatory. ADR-057 adds optional exact source lineage from an operational Cargo line to one authorized Request/RequestCargo, without copying Customer intake into execution or fabricating a Request for direct Cargo. Each new Cargo line has one same-tenant CRM Customer and independent requested/planned/actual meanings. Catalog changes never silently rewrite ShipmentCargoItem identity snapshots. Existing allocation remains separately governed by ADR-046 and is not redesigned by P3-02.
+
+## 3A. Route plan and actual traversal
+
+```mermaid
+flowchart LR
+  OS["OperationalShipment"] --> RP["RoutePlan revision — planned SOR"]
+  RP --> ROOT["RouteLeg — shared root"]
+  ROOT --> A["RouteLeg — branch A"]
+  ROOT --> B["RouteLeg — branch B"]
+  CA["ShipmentCargoItem A"] --> CDA["RouteCargoDestination"] --> A
+  CB["ShipmentCargoItem B"] --> CDB["RouteCargoDestination"] --> B
+  RP --> AT["RouteTraversalFact — append-only actual evidence"]
+```
+
+ADR-058 keeps `RoutePlan/RouteLeg` as the planned-route SOR. Draft legs can be honestly incomplete without synthetic times or milestones; activation requires complete and cycle-free topology. Cargo points to a terminal branch without duplication. Actual traversal is revision-bound evidence and never replaces plan history or automatically creates an Operational Exception. Fixed Shipment ownership and tenant scope authorize writes; Carrier/vehicle/equipment, ETA, reported-location taxonomy and Customer projection remain later concerns.
 
 ## 4. Logistics Network boundaries
 

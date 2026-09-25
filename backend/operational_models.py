@@ -583,6 +583,12 @@ class RouteLeg(db.Model):
             "route_plan_id", "sequence_number", name="uq_route_leg_plan_sequence"
         ),
         db.UniqueConstraint("id", "route_plan_id", name="uq_route_leg_id_plan"),
+        db.ForeignKeyConstraint(
+            ["parent_route_leg_id", "route_plan_id"],
+            ["route_leg.id", "route_leg.route_plan_id"],
+            name="fk_route_leg_parent_same_plan",
+            ondelete="RESTRICT",
+        ),
         db.CheckConstraint(
             "sequence_number >= 1", name="ck_route_leg_sequence_positive"
         ),
@@ -603,6 +609,7 @@ class RouteLeg(db.Model):
     source_route_leg_id = db.Column(
         BIGINT, db.ForeignKey("route_leg.id", ondelete="RESTRICT"), nullable=True
     )
+    parent_route_leg_id = db.Column(BIGINT, nullable=True, index=True)
     route_plan_id = db.Column(
         BIGINT, db.ForeignKey("route_plan.id", ondelete="CASCADE"), nullable=False
     )
@@ -631,10 +638,11 @@ class RouteLeg(db.Model):
     )
     origin_snapshot = db.Column(db.JSON, nullable=False)
     destination_snapshot = db.Column(db.JSON, nullable=False)
-    transport_mode = db.Column(db.String(32), nullable=False)
+    branch_label = db.Column(db.String(160), nullable=True)
+    transport_mode = db.Column(db.String(32), nullable=True)
     carrier_reference = db.Column(db.String(120), nullable=True)
-    planned_departure = db.Column(db.DateTime(timezone=True), nullable=False)
-    planned_arrival = db.Column(db.DateTime(timezone=True), nullable=False)
+    planned_departure = db.Column(db.DateTime(timezone=True), nullable=True)
+    planned_arrival = db.Column(db.DateTime(timezone=True), nullable=True)
     projected_departure = db.Column(db.DateTime(timezone=True), nullable=True)
     projected_arrival = db.Column(db.DateTime(timezone=True), nullable=True)
     actual_departure = db.Column(db.DateTime(timezone=True), nullable=True)
@@ -645,6 +653,131 @@ class RouteLeg(db.Model):
     updated_at = db.Column(
         db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
     )
+
+
+class RouteCargoDestination(db.Model):
+    """One cargo line's intended destination in one route-plan revision."""
+
+    __tablename__ = "route_cargo_destination"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "route_plan_id",
+            "shipment_cargo_item_id",
+            name="uq_route_cargo_destination_plan_cargo",
+        ),
+        db.ForeignKeyConstraint(
+            ["route_plan_id", "operational_shipment_id"],
+            ["route_plan.id", "route_plan.operational_shipment_id"],
+            name="fk_route_cargo_destination_plan_shipment",
+            ondelete="CASCADE",
+        ),
+        db.ForeignKeyConstraint(
+            ["destination_route_leg_id", "route_plan_id"],
+            ["route_leg.id", "route_leg.route_plan_id"],
+            name="fk_route_cargo_destination_leg_plan",
+            ondelete="RESTRICT",
+        ),
+        db.ForeignKeyConstraint(
+            ["shipment_cargo_item_id", "operational_shipment_id"],
+            ["shipment_cargo_item.id", "shipment_cargo_item.operational_shipment_id"],
+            name="fk_route_cargo_destination_cargo_shipment",
+            ondelete="CASCADE",
+        ),
+        db.CheckConstraint("version >= 1", name="ck_route_cargo_destination_version"),
+        db.Index(
+            "ix_route_cargo_destination_shipment_plan",
+            "operational_shipment_id",
+            "route_plan_id",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    operational_shipment_id = db.Column(BIGINT, nullable=False)
+    route_plan_id = db.Column(BIGINT, nullable=False)
+    shipment_cargo_item_id = db.Column(BIGINT, nullable=False)
+    destination_route_leg_id = db.Column(BIGINT, nullable=False)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+
+class RouteTraversalFact(db.Model):
+    """Append-only actual traversal evidence; RoutePlan remains the route SOR."""
+
+    __tablename__ = "route_traversal_fact"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "route_plan_id", "sequence_number", name="uq_route_traversal_plan_sequence"
+        ),
+        db.ForeignKeyConstraint(
+            ["route_plan_id", "operational_shipment_id"],
+            ["route_plan.id", "route_plan.operational_shipment_id"],
+            name="fk_route_traversal_plan_shipment",
+            ondelete="CASCADE",
+        ),
+        db.ForeignKeyConstraint(
+            ["planned_route_leg_id", "route_plan_id"],
+            ["route_leg.id", "route_leg.route_plan_id"],
+            name="fk_route_traversal_leg_plan",
+            ondelete="RESTRICT",
+        ),
+        db.CheckConstraint(
+            "sequence_number >= 1", name="ck_route_traversal_sequence_positive"
+        ),
+        db.CheckConstraint(
+            "departed_at IS NOT NULL OR arrived_at IS NOT NULL",
+            name="ck_route_traversal_has_occurrence",
+        ),
+        db.CheckConstraint(
+            "arrived_at IS NULL OR departed_at IS NULL OR arrived_at >= departed_at",
+            name="ck_route_traversal_timeline",
+        ),
+        db.CheckConstraint(
+            "origin_location_id <> destination_location_id OR "
+            "COALESCE(origin_logistics_point_id, 0) <> COALESCE(destination_logistics_point_id, 0)",
+            name="ck_route_traversal_distinct_locations",
+        ),
+        db.CheckConstraint("version >= 1", name="ck_route_traversal_version"),
+        db.Index(
+            "ix_route_traversal_shipment_plan",
+            "operational_shipment_id",
+            "route_plan_id",
+        ),
+    )
+    id = db.Column(BIGINT, primary_key=True)
+    public_id = db.Column(
+        db.String(36), nullable=False, unique=True, default=lambda: str(uuid.uuid4())
+    )
+    operational_shipment_id = db.Column(BIGINT, nullable=False)
+    route_plan_id = db.Column(BIGINT, nullable=False)
+    planned_route_leg_id = db.Column(BIGINT, nullable=True)
+    sequence_number = db.Column(db.Integer, nullable=False)
+    origin_location_id = db.Column(
+        BIGINT, db.ForeignKey("canonical_location.id", ondelete="RESTRICT"), nullable=False
+    )
+    destination_location_id = db.Column(
+        BIGINT, db.ForeignKey("canonical_location.id", ondelete="RESTRICT"), nullable=False
+    )
+    origin_logistics_point_id = db.Column(
+        BIGINT, db.ForeignKey("logistics_point.id", ondelete="RESTRICT"), nullable=True
+    )
+    destination_logistics_point_id = db.Column(
+        BIGINT, db.ForeignKey("logistics_point.id", ondelete="RESTRICT"), nullable=True
+    )
+    origin_snapshot = db.Column(db.JSON, nullable=False)
+    destination_snapshot = db.Column(db.JSON, nullable=False)
+    departed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    arrived_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    recorded_by_user_id = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False
+    )
+    recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
 
 
 class Milestone(db.Model):

@@ -2390,8 +2390,10 @@ from backend.operational_models import (  # noqa: E402,F401
     OperationalWorkItem,
     OrganizationSlaRule,
     Project,
+    RouteCargoDestination,
     RouteLeg,
     RoutePlan,
+    RouteTraversalFact,
 )
 from backend.cargo_models import (  # noqa: E402
     CargoCatalogItem,

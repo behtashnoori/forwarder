@@ -39,6 +39,7 @@ import ShipmentDocuments from "@/components/ShipmentDocuments";
 import OperationsNav from "@/components/OperationsNav";
 import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 import RouteAuthoringSection from "@/components/RouteAuthoringSection";
+import RouteActualSection from "@/components/RouteActualSection";
 import {
   formatRouteTransportModes,
   getRequestTransportMethod,
@@ -205,13 +206,15 @@ export default function OperationalShipmentDetail() {
           <section aria-labelledby="route-workspace-heading" className="space-y-3">
           <div><p className="text-xs font-semibold text-slate-500">اجرای حمل</p><h2 id="route-workspace-heading" className="text-xl font-bold">مسیر و اجرای عملیاتی</h2></div>
           <Card className="border-slate-200 shadow-sm">
-            <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle><p className="text-sm text-slate-500">مسیر فعال و وضعیت بخش‌های عملیاتی</p></CardHeader>
+            <CardHeader><CardTitle>{t("operations.activeRoutePlan")}</CardTitle><p className="text-sm text-slate-500">برنامه مسیر: بخش مشترک، شاخه‌های مقصد و وضعیت برنامه‌ریزی‌شده</p></CardHeader>
             <CardContent className="space-y-3 text-sm">
               {!displayedLegs.length ? <p className="text-slate-600">برنامه مسیر هنوز آماده نشده است.</p> : displayedLegs.map((leg, index) => {
-                return <article key={leg.id} className="min-w-0 rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><strong>بخش مسیر {index + 1}</strong><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{businessLabel(leg.status || "planned")}</span></div><p className="mt-2 break-words font-medium">{leg.origin.display_name || "ثبت نشده"} {routeConnector} {leg.destination.display_name || "ثبت نشده"}</p><p className="text-slate-600">{transportLabel(leg.transport_mode)}</p><p className="mt-2 text-xs text-slate-600">برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} {routeConnector} {when(leg.planned_arrival, locale)}</p>{"projected_departure" in leg && <p className="text-xs text-slate-600">برآورد فعلی: {when(leg.projected_departure, locale)} {routeConnector} {when(leg.projected_arrival, locale)}</p>}{"actual_departure" in leg && <p className="text-xs text-slate-600">زمان واقعی: {when(leg.actual_departure, locale)} {routeConnector} {when(leg.actual_arrival, locale)}</p>}</article>;
+                return <article key={leg.id} className="min-w-0 rounded-xl border border-slate-200 p-4"><div className="flex flex-wrap items-center justify-between gap-2"><strong>بخش مسیر {index + 1}{leg.branch_label ? ` · ${leg.branch_label}` : ""}</strong><span className="rounded-full bg-slate-100 px-2 py-1 text-xs">{businessLabel(leg.status || "planned")}</span></div><p className="text-xs text-slate-500">{leg.parent_route_leg_id ? `شاخه از بخش ${plan?.legs.find((item) => item.id === leg.parent_route_leg_id)?.sequence_number ?? "—"}` : "بخش آغازین مشترک"}</p><p className="mt-2 break-words font-medium">{leg.origin.display_name || "ثبت نشده"} {routeConnector} {leg.destination.display_name || "ثبت نشده"}</p><p className="text-slate-600">{leg.transport_mode ? transportLabel(leg.transport_mode) : "روش حمل هنوز مشخص نیست"}</p><p className="mt-2 text-xs text-slate-600">برنامه‌ریزی‌شده: {when(leg.planned_departure, locale)} {routeConnector} {when(leg.planned_arrival, locale)}</p>{"projected_departure" in leg && <p className="text-xs text-slate-600">برآورد فعلی: {when(leg.projected_departure, locale)} {routeConnector} {when(leg.projected_arrival, locale)}</p>}{"actual_departure" in leg && <p className="text-xs text-slate-600">زمان واقعی رخدادهای قدیمی بخش: {when(leg.actual_departure, locale)} {routeConnector} {when(leg.actual_arrival, locale)}</p>}</article>;
               })}
+              {!!plan?.cargo_destinations?.length && <section className="space-y-2 border-t pt-3"><h3 className="font-semibold">مقصد شاخه‌ای کالاها</h3><p className="text-slate-600">هر کالا به مقصد برنامه‌ریزی‌شده خودش متصل است؛ کالا و محموله تکثیر نشده‌اند.</p>{plan.cargo_destinations.map((destination) => { const leg = plan.legs.find((item) => item.id === destination.destination_route_leg_id); return <p className="rounded bg-slate-50 p-2" key={destination.id}><strong>{destination.cargo_display_name || "کالای ثبت‌شده"}</strong> · {leg?.branch_label || leg?.destination.display_name || "مقصد ثبت‌شده"}</p>; })}</section>}
             </CardContent>
           </Card>
+          {plan && <RouteActualSection shipmentId={shipmentPublicId} plan={plan} reload={load} />}
           </section>
 
           <details className="rounded border bg-white">
@@ -306,8 +309,8 @@ export default function OperationalShipmentDetail() {
           <Card>
             <CardHeader><CardTitle>{direction === "rtl" ? "بازبرنامه‌ریزی و نسخه‌های مسیر" : "Replan and route versions"}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>نسخه مسیر {item.revision_number}</strong> · {item.is_active ? "نسخه فعال" : businessLabel(item.status)} · نسخه رکورد {item.version}{item.created_from_plan_id ? " · جایگزین نسخه پیشین" : ""}<br />{item.replan_reason && `دلیل بازبرنامه‌ریزی: ${item.replan_reason}`}</div>)}
-              {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="Replan reason" placeholder="Replan reason (required)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "A new active revision was created.")}>Replan future segments</Button></div><p className="text-sm text-slate-600">Completed segments remain read-only; only future segments are copied into the new revision.</p></OperationalPermission>}
+              {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>نسخه مسیر {item.revision_number}</strong> · {item.is_active ? "نسخه فعال" : businessLabel(item.status)} · نسخه رکورد {item.version}{item.created_from_plan_id ? " · جایگزین نسخه پیشین" : ""}<br />{item.replan_reason && `دلیل بازبرنامه‌ریزی: ${item.replan_reason}`}<br /><span className="text-sm text-slate-600">واقعیت‌های پیمایش: {item.actual_traversal_count ?? 0} · انحراف‌های ثبت‌شده: {item.actual_deviation_count ?? 0}</span></div>)}
+              {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="دلیل بازبرنامه‌ریزی" placeholder="دلیل بازبرنامه‌ریزی (الزامی)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "نسخه فعال تازه مسیر ایجاد شد.")}>بازبرنامه‌ریزی بخش‌های آینده</Button></div><p className="text-sm text-slate-600">بخش‌های انجام‌شده فقط خواندنی می‌مانند و فقط بخش‌های آینده به نسخه تازه منتقل می‌شوند.</p></OperationalPermission>}
             </CardContent>
           </Card>
 

@@ -116,12 +116,15 @@ def ensure_leg_milestones(leg, shipment):
         row = db.session.scalar(select(Milestone).where(
             Milestone.route_leg_id == leg.id, Milestone.milestone_type == code,
         ))
-        if row is None:
+        if row is None and planned is not None:
             db.session.add(Milestone(
                 organization_id=shipment.organization_id, operational_shipment_id=shipment.id,
                 route_plan_id=leg.route_plan_id, route_leg_id=leg.id,
                 milestone_type=code, planned_at=planned, projected_at=planned,
             ))
+        elif row is not None and row.occurred_at is None:
+            row.planned_at = planned
+            row.projected_at = planned
 
 
 def active_plan(shipment):

@@ -2147,7 +2147,7 @@ export function resolveOperationalWorkItem(
 export interface RouteMilestone {
   id: number;
   type: string;
-  planned_at: string;
+  planned_at?: string | null;
   projected_at?: string | null;
   occurred_at?: string | null;
   verification_state: string;
@@ -2177,16 +2177,18 @@ export interface RouteCheckpoint {
 export interface RouteLeg {
   id: number;
   sequence_number: number;
+  parent_route_leg_id?: number | null;
+  branch_label?: string | null;
   origin: { display_name?: string; canonical_reference?: OperationalLocationRef; facility?: { logistics_point_public_id: string } };
   destination: { display_name?: string; canonical_reference?: OperationalLocationRef; facility?: { logistics_point_public_id: string } };
   origin_location_id?: number;
   destination_location_id?: number;
   origin_logistics_point_id?: number | null;
   destination_logistics_point_id?: number | null;
-  transport_mode: string;
+  transport_mode?: string | null;
   carrier_reference?: string | null;
-  planned_departure: string;
-  planned_arrival: string;
+  planned_departure?: string | null;
+  planned_arrival?: string | null;
   projected_departure?: string | null;
   projected_arrival?: string | null;
   actual_departure?: string | null;
@@ -2207,6 +2209,31 @@ export interface RoutePlanSummary {
   effective_at?: string | null;
   created_at?: string;
   version: number;
+  actual_traversal_count?: number;
+  actual_deviation_count?: number;
+}
+export interface RouteCargoDestination {
+  id: number;
+  cargo_item_public_id: string;
+  cargo_display_name?: string | null;
+  destination_route_leg_id: number;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+export interface RouteTraversalFact {
+  id: number;
+  public_id: string;
+  sequence_number: number;
+  planned_route_leg_id?: number | null;
+  origin: { display_name?: string };
+  destination: { display_name?: string };
+  departed_at?: string | null;
+  arrived_at?: string | null;
+  notes?: string | null;
+  is_deviation: boolean;
+  version: number;
+  recorded_at: string;
 }
 export interface RoutePlanDetail extends RoutePlanSummary {
   legs: RouteLeg[];
@@ -2217,6 +2244,10 @@ export interface RoutePlanDetail extends RoutePlanSummary {
     successor_checkpoint_id: number;
     dependency_type: string;
   }>;
+  cargo_destinations?: RouteCargoDestination[];
+  actual_route?: RouteTraversalFact[];
+  is_complete?: boolean;
+  incomplete_fields?: string[];
 }
 export interface TimelinePoint {
   checkpoint_id: number;
@@ -2269,8 +2300,12 @@ export const createRoutePlan = (shipmentId: string) =>
   request<{ data: RoutePlanDetail }>(`/api/operational-shipments/${shipmentId}/route-plans`, { method: "POST", body: JSON.stringify({}) });
 export const addRouteLeg = (shipmentId: string, planId: number, payload: RouteLegDraft) =>
   request<{ data: RouteLeg }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/legs`, { method: "POST", body: JSON.stringify(payload) });
-export const updateRouteLeg = (shipmentId: string, planId: number, legId: number, payload: { expected_version: number; sequence_number?: number; origin?: OperationalLocationRef; destination?: OperationalLocationRef; carrier_reference?: string | null }) =>
+export const updateRouteLeg = (shipmentId: string, planId: number, legId: number, payload: { expected_version: number; sequence_number?: number; parent_route_leg_id?: number | null; branch_label?: string | null; origin?: OperationalLocationRef; destination?: OperationalLocationRef; transport_mode?: string | null; planned_departure?: string | null; planned_arrival?: string | null; carrier_reference?: string | null }) =>
   request<{ data: RouteLeg }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/legs/${legId}`, { method: "PATCH", body: JSON.stringify(payload) });
+export const assignRouteCargoDestination = (shipmentId: string, planId: number, cargoPublicId: string, destinationRouteLegId: number, expectedVersion?: number) =>
+  request<{ data: RouteCargoDestination }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/cargo-destinations/${cargoPublicId}`, { method: "PUT", body: JSON.stringify({ destination_route_leg_id: destinationRouteLegId, ...(expectedVersion === undefined ? {} : { expected_version: expectedVersion }) }) });
+export const recordActualRouteTraversal = (shipmentId: string, planId: number, payload: ActualRouteTraversalDraft) =>
+  request<{ data: RouteTraversalFact }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/actual-route`, { method: "POST", body: JSON.stringify(payload) });
 export const addRouteCheckpoint = (shipmentId: string, planId: number, payload: RouteCheckpointDraft) =>
   request<{ data: RouteCheckpoint }>(`/api/operational-shipments/${shipmentId}/route-plans/${planId}/checkpoints`, { method: "POST", body: JSON.stringify(payload) });
 export const updateRouteCheckpoint = (shipmentId: string, planId: number, checkpointId: number, payload: { expected_version: number; responsible_party?: string | null; notes?: string | null }) =>
@@ -3898,10 +3933,21 @@ export interface RouteLegDraft {
   sequence_number: number;
   origin: OperationalLocationRef;
   destination: OperationalLocationRef;
-  transport_mode: string;
-  planned_departure: string;
-  planned_arrival: string;
+  parent_route_leg_id?: number | null;
+  branch_label?: string | null;
+  transport_mode?: string | null;
+  planned_departure?: string | null;
+  planned_arrival?: string | null;
   carrier_reference?: string | null;
+}
+export interface ActualRouteTraversalDraft {
+  sequence_number?: number;
+  planned_route_leg_id?: number | null;
+  origin: OperationalLocationRef;
+  destination: OperationalLocationRef;
+  departed_at?: string | null;
+  arrived_at?: string | null;
+  notes?: string | null;
 }
 export interface RouteCheckpointDraft {
   sequence_number: number;

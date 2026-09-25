@@ -160,6 +160,21 @@ CargoCatalogItem -> ShipmentCargoItem -> OperationalShipment (operational)
 - Cross-tenant catalog selection is rejected.
 - Existing ADR-046 `ExecutionUnitCargoAllocation` remains the canonical bounded allocation path and is unchanged by P3-02. ADR-023's wider allocation concurrency proposal remains Proposed; no allocation redesign is inferred here.
 
+### 9.1 Planned and actual route architecture
+
+```text
+OperationalShipment -> RoutePlan revision -> RouteLeg shared root / branches
+ShipmentCargoItem -> RouteCargoDestination -> terminal RouteLeg
+RoutePlan revision -> RouteTraversalFact (actual evidence; never plan replacement)
+```
+
+- ADR-058 extends the existing `RoutePlan/RouteLeg` SOR; it does not introduce a second route or workflow engine.
+- Draft legs may omit transport mode and planned times. Activation still requires complete, continuous, acyclic route structure; unknown draft values create no synthetic milestones.
+- A parent edge must stay inside one RoutePlan. Cargo destination associations are proven by composite plan/Shipment, leg/plan and Cargo/Shipment foreign keys and never duplicate Cargo or Shipment.
+- Actual traversal facts are append-only and revision-bound. They do not overwrite planned endpoints/times, and a deviation alone does not create an `OperationalException`.
+- Replan preserves the source revision and its actual facts while cloning only planned topology, future plan facts and Cargo branch associations into the next revision.
+- Normal P3-03 mutation belongs only to the fixed owning Expert. P3-04 Carrier/vehicle/equipment, ETA, P3-07 reported-location semantics and Customer projection remain excluded.
+
 ## 10. Logistics and location architecture
 
 `LogisticsPoint` is the future governed organization location master and `ProjectLogisticsPoint` is project configuration. `CanonicalLocation` remains the accepted route-facing bridge/snapshot abstraction from ADR-005. These roles are complementary.

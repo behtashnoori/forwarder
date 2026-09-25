@@ -206,7 +206,7 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(await screen.findByText("Active route plan")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "ایجاد مسیر عملیات" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "افزودن بخش مسیر" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Replan future segments" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "بازبرنامه‌ریزی بخش‌های آینده" })).toBeInTheDocument();
   });
 
   it("renders a direct shipment that has not been route-planned yet", async () => {
@@ -291,7 +291,7 @@ describe("Phase 1B shipment detail behavior", () => {
     controls.permissions = new Set();
     renderDetail();
     await screen.findByText("Timeline reconciliation");
-    for (const name of ["Reconcile timeline", "Report arrival", "Verify / re-verify", "Correct", "Replan future segments", "Reconcile exceptions", "Resolve manually"]) {
+    for (const name of ["Reconcile timeline", "Report arrival", "Verify / re-verify", "Correct", "بازبرنامه‌ریزی بخش‌های آینده", "Reconcile exceptions", "Resolve manually"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
   });
@@ -304,7 +304,7 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(await screen.findByText("Active route plan")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Report arrival" }));
     await waitFor(() => expect(api.commandRouteCheckpoint).toHaveBeenCalledTimes(1));
-    for (const name of ["Verify / re-verify", "Correct", "Reconcile timeline", "Replan future segments", "Reconcile exceptions", "Resolve manually"]) {
+    for (const name of ["Verify / re-verify", "Correct", "Reconcile timeline", "بازبرنامه‌ریزی بخش‌های آینده", "Reconcile exceptions", "Resolve manually"]) {
       expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
     }
     expect(screen.queryByLabelText("Correction reason 32")).not.toBeInTheDocument();
@@ -331,7 +331,7 @@ describe("Phase 1B shipment detail behavior", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Correct" }));
     expect(screen.getByRole("alert")).toHaveTextContent("ثبت دلیل الزامی است.");
     expect(api.correctRouteMilestone).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Replan future segments" }));
+    fireEvent.click(screen.getByRole("button", { name: "بازبرنامه‌ریزی بخش‌های آینده" }));
     expect(api.replanRoute).not.toHaveBeenCalled();
   });
 

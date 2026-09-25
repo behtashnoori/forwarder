@@ -701,6 +701,49 @@ def route_leg_delete(shipment_id, plan_id, leg_id):
         return _error(exc)
 
 
+@operations_bp.put(
+    "/api/operational-shipments/<uuid:shipment_id>/route-plans/<int:plan_id>/cargo-destinations/<uuid:cargo_public_id>"
+)
+@require_auth
+def route_cargo_destination_put(shipment_id, plan_id, cargo_public_id):
+    try:
+        return jsonify(
+            {
+                "data": routes.assign_cargo_destination(
+                    shipment_id,
+                    plan_id,
+                    cargo_public_id,
+                    request.get_json(silent=True) or {},
+                    _user(),
+                )
+            }
+        )
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
+@operations_bp.post(
+    "/api/operational-shipments/<uuid:shipment_id>/route-plans/<int:plan_id>/actual-route"
+)
+@require_auth
+def route_actual_traversal_create(shipment_id, plan_id):
+    try:
+        return jsonify(
+            {
+                "data": routes.record_traversal(
+                    shipment_id,
+                    plan_id,
+                    request.get_json(silent=True) or {},
+                    _user(),
+                )
+            }
+        ), 201
+    except service.OperationalError as exc:
+        db.session.rollback()
+        return _error(exc)
+
+
 @operations_bp.post(
     "/api/operational-shipments/<uuid:shipment_id>/route-plans/<int:plan_id>/checkpoints"
 )

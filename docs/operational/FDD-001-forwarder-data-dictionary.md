@@ -105,10 +105,32 @@ This is the authoritative business dictionary, not a raw schema inventory. Imple
 - **Canonical/Persian:** RoutePlan / برنامه مسیر; **definition/rationale:** revisioned operational plan for one OperationalShipment.
 - **Class/owners:** Configuration within execution; Operations; CAP-002/CAP-003.
 - **Lifecycle/identity/scope:** draft/active/superseded/cancelled; internal identity/revision; shipment organization inherited.
-- **Relationships:** OperationalShipment, RouteLeg, Checkpoint, Milestone. **Mutable/immutable:** draft mutable; active structure immutable/revisioned.
+- **Relationships:** OperationalShipment, RouteLeg, Checkpoint, Milestone, RouteCargoDestination and RouteTraversalFact. **Mutable/immutable:** draft mutable; active planned structure immutable/revisioned; actual traversal append-only.
 - **Activation/history:** supersede rather than rewrite; historical revisions retained. **API/UI/reporting:** operational planning/timeline; plan progress.
-- **Version/state/future/exclusions:** Phase 1A/1B; Implemented and Deployed; explicit future point reference; never auto-created by ProjectLogisticsPoint.
-- **Governance/source:** ADR-004, ADR-017, phase1b route docs; `backend.operational_models.RoutePlan`.
+- **Version/state/future/exclusions:** Phase 1A/1B plus P3-03 additive route graph; incomplete drafts and branched plans implemented in the candidate; never auto-created by ProjectLogisticsPoint; P3-04 execution and ETA excluded.
+- **Governance/source:** ADR-004, ADR-017, ADR-058, phase1b route docs; `backend.operational_models.RoutePlan`.
+
+### FDD-001-009A — RouteLeg branch topology
+
+- **Canonical/Persian:** RouteLeg / بخش مسیر؛ **definition/rationale:** one planned shared or branch section inside exactly one RoutePlan revision.
+- **Lifecycle/identity/scope:** plan-owned identity; `parent_route_leg_id` may reference only the same plan; tenant inherited from Shipment.
+- **Mutable/immutable:** draft mode/time/topology can progress from unknown; activation requires completeness; active structure changes only through revision/replan.
+- **History/exclusions:** branch label is descriptive; no Carrier/vehicle/equipment or ETA meaning is introduced. Missing draft time creates no fabricated Milestone.
+- **Governance/source:** ADR-058; `backend.operational_models.RouteLeg`.
+
+### FDD-001-009B — RouteCargoDestination
+
+- **Canonical/Persian:** RouteCargoDestination / مقصد شاخه‌ای کالا؛ **definition/rationale:** versioned association from one existing Shipment Cargo line to one terminal RouteLeg in one plan revision.
+- **Identity/scope:** unique per plan and Cargo; composite constraints prove common Shipment and plan; owning Expert mutation only.
+- **History/exclusions:** reassignment is audited and replan clones the association with remapped leg identity; it never creates Cargo, Shipment or execution allocation.
+- **Governance/source:** ADR-058; `backend.operational_models.RouteCargoDestination`.
+
+### FDD-001-009C — RouteTraversalFact
+
+- **Canonical/Persian:** RouteTraversalFact / واقعیت پیمایش مسیر؛ **definition/rationale:** append-only actual endpoints and occurrence time, optionally compared with one planned leg.
+- **Identity/scope:** unique sequence inside a plan revision; tenant inherited through plan/Shipment; exact governed location identities and snapshots retained.
+- **History/exclusions:** never overwrites plan, is not a reported-location taxonomy, and deviation alone never creates `OperationalException`; facts remain on the source revision after replan.
+- **Governance/source:** ADR-058; `backend.operational_models.RouteTraversalFact`.
 
 ## FDD-001-010 — Checkpoint
 

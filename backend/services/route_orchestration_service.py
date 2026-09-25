@@ -13,10 +13,12 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
 from backend.extensions import db
+from backend.cargo_models import ShipmentCargoItem
 from backend.operational_models import (
     Milestone, MilestoneEvent, OperationalAudit, OperationalCheckpoint,
     OperationalIdempotency, OperationalOutbox, OperationalShipment,
-    OperationalWorkItem, RouteDependency, RouteLeg, RoutePlan, utcnow,
+    OperationalWorkItem, RouteCargoDestination, RouteDependency, RouteLeg,
+    RoutePlan, RouteTraversalFact, utcnow,
 )
 from backend.services import operational_service as base
 
@@ -89,8 +91,20 @@ def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipm
     return row
 
 
+def _require_route_owner(shipment: OperationalShipment, user: dict) -> None:
+    """Route design is owned by the Shipment's fixed responsible Expert."""
+    if shipment.primary_responsible_expert_id != int(user["id"]):
+        raise base.OperationalError(
+            "FORBIDDEN_OPERATION",
+            "Only the responsible Expert can change the route plan.",
+            403,
+        )
+
+
 def _plan(shipment_id: int, plan_id: int, user: dict, permission: str, lock=False) -> tuple[OperationalShipment, RoutePlan]:
     shipment = _shipment(shipment_id, user, permission)
+    if permission != PLAN_PERMISSIONS["read"]:
+        _require_route_owner(shipment, user)
     query = select(RoutePlan).where(RoutePlan.id == plan_id, RoutePlan.operational_shipment_id == shipment.id)
     plan = db.session.scalar(query.with_for_update() if lock else query)
     if plan is None:
@@ -108,6 +122,15 @@ def _location(reference: Any):
 
 
 def _serialize_plan(plan: RoutePlan, include_children=True) -> dict:
+    traversal_count = db.session.scalar(select(func.count(RouteTraversalFact.id)).where(
+        RouteTraversalFact.route_plan_id == plan.id
+    )) or 0
+    deviation_count = 0
+    if traversal_count:
+        traversal_rows = db.session.scalars(select(RouteTraversalFact).where(
+            RouteTraversalFact.route_plan_id == plan.id
+        )).all()
+        deviation_count = sum(_is_traversal_deviation(row) for row in traversal_rows)
     data = {
         **reads.scope(plan),
         "scope": "current_route" if plan.is_active else "historical_route" if plan.status == "superseded" else "route_plan",
@@ -116,14 +139,34 @@ def _serialize_plan(plan: RoutePlan, include_children=True) -> dict:
         "is_active": plan.is_active, "created_from_plan_id": plan.created_from_plan_id,
         "replan_reason": plan.replan_reason, "effective_at": plan.effective_at.isoformat() if plan.effective_at else None,
         "version": plan.version, "created_at": plan.created_at.isoformat(),
+        "actual_traversal_count": traversal_count,
+        "actual_deviation_count": deviation_count,
     }
     if include_children:
         legs = db.session.scalars(select(RouteLeg).where(RouteLeg.route_plan_id == plan.id).order_by(RouteLeg.sequence_number)).all()
         checkpoints = db.session.scalars(select(OperationalCheckpoint).where(OperationalCheckpoint.route_plan_id == plan.id).order_by(OperationalCheckpoint.sequence_number)).all()
         dependencies = db.session.scalars(select(RouteDependency).where(RouteDependency.route_plan_id == plan.id)).all()
+        cargo_destinations = db.session.scalars(select(RouteCargoDestination).where(
+            RouteCargoDestination.route_plan_id == plan.id
+        ).order_by(RouteCargoDestination.id)).all()
+        traversals = db.session.scalars(select(RouteTraversalFact).where(
+            RouteTraversalFact.route_plan_id == plan.id
+        ).order_by(RouteTraversalFact.sequence_number)).all()
         data["legs"] = [_serialize_leg(row) for row in legs]
         data["checkpoints"] = [_serialize_checkpoint(row) for row in checkpoints]
         data["dependencies"] = [{"id": d.id, "predecessor_checkpoint_id": d.predecessor_checkpoint_id, "successor_checkpoint_id": d.successor_checkpoint_id, "dependency_type": d.dependency_type} for d in dependencies]
+        data["cargo_destinations"] = [_serialize_cargo_destination(row) for row in cargo_destinations]
+        data["actual_route"] = [_serialize_traversal(row) for row in traversals]
+        incomplete_fields = []
+        for row in legs:
+            if not row.transport_mode:
+                incomplete_fields.append(f"route_leg:{row.id}:transport_mode")
+            if not row.planned_departure:
+                incomplete_fields.append(f"route_leg:{row.id}:planned_departure")
+            if not row.planned_arrival:
+                incomplete_fields.append(f"route_leg:{row.id}:planned_arrival")
+        data["incomplete_fields"] = incomplete_fields
+        data["is_complete"] = bool(legs) and not incomplete_fields
     return data
 
 
@@ -138,11 +181,14 @@ def _serialize_leg(row: RouteLeg) -> dict:
         "departure_time": reads.time_value(row.planned_departure, row.projected_departure, row.actual_departure),
         "arrival_time": reads.time_value(row.planned_arrival, row.projected_arrival, row.actual_arrival),
         "id": row.id, "sequence_number": row.sequence_number,
+        "parent_route_leg_id": row.parent_route_leg_id,
+        "branch_label": row.branch_label,
         "origin": row.origin_snapshot, "destination": row.destination_snapshot,
         "origin_location_id": row.origin_location_id, "destination_location_id": row.destination_location_id,
         "origin_logistics_point_id": row.origin_logistics_point_id, "destination_logistics_point_id": row.destination_logistics_point_id,
         "transport_mode": row.transport_mode, "carrier_reference": row.carrier_reference,
-        "planned_departure": row.planned_departure.isoformat(), "planned_arrival": row.planned_arrival.isoformat(),
+        "planned_departure": row.planned_departure.isoformat() if row.planned_departure else None,
+        "planned_arrival": row.planned_arrival.isoformat() if row.planned_arrival else None,
         "projected_departure": row.projected_departure.isoformat() if row.projected_departure else None,
         "projected_arrival": row.projected_arrival.isoformat() if row.projected_arrival else None,
         "actual_departure": row.actual_departure.isoformat() if row.actual_departure else None,
@@ -150,6 +196,48 @@ def _serialize_leg(row: RouteLeg) -> dict:
         "status": row.status, "version": row.version, "source_route_leg_id": row.source_route_leg_id,
         "departure_milestone_id": milestone_ids.get("departure"),
         "arrival_milestone_id": milestone_ids.get("arrival"),
+    }
+
+
+def _serialize_cargo_destination(row: RouteCargoDestination) -> dict:
+    cargo = db.session.get(ShipmentCargoItem, row.shipment_cargo_item_id)
+    return {
+        "id": row.id,
+        "cargo_item_public_id": cargo.public_id if cargo else None,
+        "cargo_display_name": cargo.display_name_snapshot if cargo else None,
+        "destination_route_leg_id": row.destination_route_leg_id,
+        "version": row.version,
+        "created_at": row.created_at.isoformat(),
+        "updated_at": row.updated_at.isoformat(),
+    }
+
+
+def _is_traversal_deviation(row: RouteTraversalFact) -> bool:
+    leg = db.session.get(RouteLeg, row.planned_route_leg_id) if row.planned_route_leg_id else None
+    if leg is None:
+        return True
+    return (
+        leg.origin_location_id != row.origin_location_id
+        or leg.destination_location_id != row.destination_location_id
+        or leg.origin_logistics_point_id != row.origin_logistics_point_id
+        or leg.destination_logistics_point_id != row.destination_logistics_point_id
+    )
+
+
+def _serialize_traversal(row: RouteTraversalFact) -> dict:
+    return {
+        "id": row.id,
+        "public_id": row.public_id,
+        "sequence_number": row.sequence_number,
+        "planned_route_leg_id": row.planned_route_leg_id,
+        "origin": row.origin_snapshot,
+        "destination": row.destination_snapshot,
+        "departed_at": row.departed_at.isoformat() if row.departed_at else None,
+        "arrived_at": row.arrived_at.isoformat() if row.arrived_at else None,
+        "notes": row.notes,
+        "is_deviation": _is_traversal_deviation(row),
+        "version": row.version,
+        "recorded_at": row.recorded_at.isoformat(),
     }
 
 
@@ -170,7 +258,7 @@ def _serialize_checkpoint(row: OperationalCheckpoint) -> dict:
         "status": row.status, "verification_state": row.verification_state,
         "responsible_party": row.responsible_party, "notes": row.notes, "version": row.version,
         "source_checkpoint_id": row.source_checkpoint_id,
-        "milestones": [{"id":m.id,"type":m.milestone_type,"planned_at":m.planned_at.isoformat(),
+        "milestones": [{"id":m.id,"type":m.milestone_type,"planned_at":m.planned_at.isoformat() if m.planned_at else None,
             "projected_at":m.projected_at.isoformat() if m.projected_at else None,
             "occurred_at":m.occurred_at.isoformat() if m.occurred_at else None,
             "verification_state":m.verification_state,"version":m.version,
@@ -191,6 +279,7 @@ def get_plan(shipment_id: int, plan_id: int, user: dict) -> dict:
 
 def create_plan(shipment_id: int, payload: dict, user: dict) -> dict:
     shipment = _shipment(shipment_id, user, PLAN_PERMISSIONS["create"])
+    _require_route_owner(shipment, user)
     revision = (db.session.scalar(select(func.max(RoutePlan.revision_number)).where(RoutePlan.operational_shipment_id == shipment.id)) or 0) + 1
     plan = RoutePlan(operational_shipment_id=shipment.id, revision_number=revision, status="draft", is_active=False, created_by_user_id=user["id"])
     db.session.add(plan); db.session.flush()
@@ -207,32 +296,63 @@ def create_plan(shipment_id: int, payload: dict, user: dict) -> dict:
 def _add_leg(plan: RoutePlan, payload: dict, organization_id: int | None = None) -> RouteLeg:
     if plan.status != "draft":
         raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT", "Only draft plans can be changed.", 409)
-    mode = str(payload.get("transport_mode") or "")
-    if mode not in TRANSPORT_MODES:
+    mode = str(payload.get("transport_mode") or "").strip() or None
+    if mode is not None and mode not in TRANSPORT_MODES:
         raise base.OperationalError("ROUTE_PLAN_INVALID", "Unsupported transport mode.")
     if organization_id is None:
         organization_id = db.session.scalar(select(OperationalShipment.organization_id).where(OperationalShipment.id == plan.operational_shipment_id))
     origin, destination = base._endpoint(payload.get("origin") or payload.get("origin_location_id") or {}, organization_id), base._endpoint(payload.get("destination") or payload.get("destination_location_id") or {}, organization_id)
-    departure = base._parse_utc(payload.get("planned_departure"), "planned_departure")
-    arrival = base._parse_utc(payload.get("planned_arrival"), "planned_arrival")
-    if arrival < departure:
+    departure = base._parse_utc(payload.get("planned_departure"), "planned_departure") if payload.get("planned_departure") else None
+    arrival = base._parse_utc(payload.get("planned_arrival"), "planned_arrival") if payload.get("planned_arrival") else None
+    if arrival and departure and arrival < departure:
         raise base.OperationalError("INVALID_ROUTE_TIMELINE", "Arrival cannot precede departure.")
+    parent_id = payload.get("parent_route_leg_id")
+    if parent_id is not None:
+        parent_id = int(parent_id)
+        if db.session.scalar(select(RouteLeg.id).where(
+            RouteLeg.id == parent_id, RouteLeg.route_plan_id == plan.id
+        )) is None:
+            raise base.OperationalError(
+                "CROSS_PLAN_REFERENCE_NOT_ALLOWED",
+                "Parent route leg must belong to the same route plan.",
+                409,
+            )
     origin_location, destination_location = base._endpoint_location(origin), base._endpoint_location(destination)
     origin_point = origin.logistics_point.id if isinstance(origin, base.ResolvedFacilityEndpoint) else None
     destination_point = destination.logistics_point.id if isinstance(destination, base.ResolvedFacilityEndpoint) else None
     if origin_location.canonical_location.id == destination_location.canonical_location.id and origin_point == destination_point:
         raise base.OperationalError("INVALID_ROUTE_TIMELINE", "Origin and destination must be different.")
     row = RouteLeg(route_plan_id=plan.id, sequence_number=int(payload.get("sequence_number")),
+        parent_route_leg_id=parent_id,
         origin_location_id=origin_location.canonical_location.id,
         destination_location_id=destination_location.canonical_location.id,
         origin_logistics_point_id=origin_point, destination_logistics_point_id=destination_point,
         origin_snapshot=base._endpoint_snapshot(origin), destination_snapshot=base._endpoint_snapshot(destination),
+        branch_label=str(payload.get("branch_label") or "").strip() or None,
         transport_mode=mode, carrier_reference=payload.get("carrier_reference"),
         planned_departure=departure, planned_arrival=arrival, status="planned")
     db.session.add(row); db.session.flush()
     shipment = db.session.get(OperationalShipment, plan.operational_shipment_id)
     projection.ensure_leg_milestones(row, shipment)
     return row
+
+
+def _route_parent_error(plan_id: int) -> str | None:
+    legs = db.session.scalars(select(RouteLeg).where(
+        RouteLeg.route_plan_id == plan_id
+    )).all()
+    parents = {row.id: row.parent_route_leg_id for row in legs}
+    for leg_id in parents:
+        seen = set()
+        cursor = leg_id
+        while parents.get(cursor) is not None:
+            if cursor in seen:
+                return "ROUTE_BRANCH_CYCLE"
+            seen.add(cursor)
+            cursor = parents[cursor]
+            if cursor not in parents:
+                return "CROSS_PLAN_REFERENCE_NOT_ALLOWED"
+    return None
 
 
 def add_leg(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
@@ -268,8 +388,43 @@ def update_leg(shipment_id: int, plan_id: int, leg_id: int, payload: dict, user:
         if origin: row.origin_snapshot = base._endpoint_snapshot(origin)
         if destination: row.destination_snapshot = base._endpoint_snapshot(destination)
     if "sequence_number" in payload: row.sequence_number=int(payload["sequence_number"])
+    if "parent_route_leg_id" in payload:
+        parent_id = payload["parent_route_leg_id"]
+        if parent_id is not None:
+            parent_id = int(parent_id)
+            if parent_id == row.id or db.session.scalar(select(RouteLeg.id).where(
+                RouteLeg.id == parent_id, RouteLeg.route_plan_id == plan.id
+            )) is None:
+                raise base.OperationalError(
+                    "ROUTE_PARENT_INVALID", "Route branch parent is invalid.", 409
+                )
+        row.parent_route_leg_id = parent_id
+    if "branch_label" in payload:
+        row.branch_label = str(payload.get("branch_label") or "").strip() or None
+    if "transport_mode" in payload:
+        mode = str(payload.get("transport_mode") or "").strip() or None
+        if mode is not None and mode not in TRANSPORT_MODES:
+            raise base.OperationalError("ROUTE_PLAN_INVALID", "Unsupported transport mode.")
+        row.transport_mode = mode
+    if "planned_departure" in payload:
+        row.planned_departure = base._parse_utc(
+            payload["planned_departure"], "planned_departure"
+        ) if payload.get("planned_departure") else None
+    if "planned_arrival" in payload:
+        row.planned_arrival = base._parse_utc(
+            payload["planned_arrival"], "planned_arrival"
+        ) if payload.get("planned_arrival") else None
+    if row.planned_departure and row.planned_arrival and row.planned_arrival < row.planned_departure:
+        raise base.OperationalError(
+            "INVALID_ROUTE_TIMELINE", "Arrival cannot precede departure."
+        )
     if "carrier_reference" in payload: row.carrier_reference=payload["carrier_reference"]
     row.version+=1
+    projection.ensure_leg_milestones(row, shipment)
+    parent_error = _route_parent_error(plan.id)
+    if parent_error:
+        db.session.rollback()
+        raise base.OperationalError(parent_error, "Route branch graph is invalid.", 409)
     try: db.session.commit()
     except IntegrityError as exc: db.session.rollback();raise base.OperationalError("ROUTE_SEQUENCE_DUPLICATE","Leg sequence already exists.",409) from exc
     return _serialize_leg(row)
@@ -282,6 +437,10 @@ def delete_leg(shipment_id: int, plan_id: int, leg_id: int, user: dict) -> None:
     if row is None: raise base.OperationalError("RESOURCE_NOT_FOUND","Route leg was not found.",404)
     if row.actual_departure or row.actual_arrival or db.session.scalar(select(MilestoneEvent.id).join(Milestone).where(Milestone.route_leg_id==row.id)):
         raise base.OperationalError("ACTUAL_DATA_IMMUTABLE","A leg with actual/event data cannot be deleted.",409)
+    if db.session.scalar(select(RouteLeg.id).where(RouteLeg.parent_route_leg_id == row.id)):
+        raise base.OperationalError("ROUTE_PLAN_INVALID", "Delete child branches before deleting their parent.", 409)
+    if db.session.scalar(select(RouteCargoDestination.id).where(RouteCargoDestination.destination_route_leg_id == row.id)):
+        raise base.OperationalError("ROUTE_PLAN_INVALID", "Reassign Cargo destinations before deleting the branch.", 409)
     if db.session.scalar(select(OperationalCheckpoint.id).where(OperationalCheckpoint.route_leg_id==row.id)):
         raise base.OperationalError("ROUTE_PLAN_INVALID","Delete associated checkpoints before deleting the leg.",409)
     db.session.delete(row);db.session.commit()
@@ -370,6 +529,195 @@ def add_dependency(shipment_id: int, plan_id: int, payload: dict, user: dict) ->
         "successor_checkpoint_id": successor, "dependency_type": row.dependency_type}
 
 
+def assign_cargo_destination(
+    shipment_id: int,
+    plan_id: int,
+    cargo_public_id: str,
+    payload: dict,
+    user: dict,
+) -> dict:
+    shipment, plan = _plan(
+        shipment_id, plan_id, user, "route_leg.manage", True
+    )
+    if plan.status != "draft":
+        raise base.OperationalError(
+            "ROUTE_PLAN_NOT_DRAFT", "Only draft plans can be changed.", 409
+        )
+    cargo = db.session.scalar(select(ShipmentCargoItem).where(
+        ShipmentCargoItem.public_id == str(cargo_public_id),
+        ShipmentCargoItem.operational_shipment_id == shipment.id,
+    ))
+    if cargo is None:
+        raise base.OperationalError(
+            "RESOURCE_NOT_FOUND", "Cargo line was not found.", 404
+        )
+    leg_id = payload.get("destination_route_leg_id")
+    leg = db.session.scalar(select(RouteLeg).where(
+        RouteLeg.id == leg_id, RouteLeg.route_plan_id == plan.id
+    ))
+    if leg is None:
+        raise base.OperationalError(
+            "CROSS_PLAN_REFERENCE_NOT_ALLOWED",
+            "Cargo destination must belong to the same route plan.",
+            409,
+        )
+    row = db.session.scalar(select(RouteCargoDestination).where(
+        RouteCargoDestination.route_plan_id == plan.id,
+        RouteCargoDestination.shipment_cargo_item_id == cargo.id,
+    ).with_for_update())
+    if row:
+        if payload.get("expected_version") != row.version:
+            raise base.OperationalError(
+                "STALE_ROUTE_VERSION", "Cargo destination version is stale.", 409
+            )
+        row.destination_route_leg_id = leg.id
+        row.version += 1
+        action = "route_cargo_destination.updated"
+    else:
+        row = RouteCargoDestination(
+            operational_shipment_id=shipment.id,
+            route_plan_id=plan.id,
+            shipment_cargo_item_id=cargo.id,
+            destination_route_leg_id=leg.id,
+            created_by_user_id=user["id"],
+        )
+        db.session.add(row)
+        action = "route_cargo_destination.created"
+    db.session.flush()
+    base._audit(
+        shipment.organization_id,
+        user["id"],
+        action,
+        "RouteCargoDestination",
+        row.id,
+        {"route_plan_id": plan.id, "cargo_item_id": cargo.id, "route_leg_id": leg.id},
+    )
+    base._outbox(
+        shipment.organization_id,
+        action,
+        "RouteCargoDestination",
+        row.id,
+        {"route_plan_id": plan.id, "cargo_item_id": cargo.id, "route_leg_id": leg.id},
+    )
+    db.session.commit()
+    return _serialize_cargo_destination(row)
+
+
+def record_traversal(
+    shipment_id: int, plan_id: int, payload: dict, user: dict
+) -> dict:
+    shipment, plan = _plan(
+        shipment_id, plan_id, user, "route_leg.manage", True
+    )
+    if not plan.is_active or plan.status != "active":
+        raise base.OperationalError(
+            "ROUTE_PLAN_NOT_ACTIVE",
+            "Actual traversal can be recorded only against the current plan.",
+            409,
+        )
+    planned_leg_id = payload.get("planned_route_leg_id")
+    if planned_leg_id is not None and db.session.scalar(select(RouteLeg.id).where(
+        RouteLeg.id == planned_leg_id, RouteLeg.route_plan_id == plan.id
+    )) is None:
+        raise base.OperationalError(
+            "CROSS_PLAN_REFERENCE_NOT_ALLOWED",
+            "Planned route leg must belong to the current route plan.",
+            409,
+        )
+    departed = base._parse_utc(
+        payload["departed_at"], "departed_at"
+    ) if payload.get("departed_at") else None
+    arrived = base._parse_utc(
+        payload["arrived_at"], "arrived_at"
+    ) if payload.get("arrived_at") else None
+    if departed is None and arrived is None:
+        raise base.OperationalError(
+            "ACTUAL_ROUTE_TIME_REQUIRED", "At least one actual time is required."
+        )
+    if departed and arrived and arrived < departed:
+        raise base.OperationalError(
+            "INVALID_ACTUAL_CHRONOLOGY", "Arrival cannot precede departure."
+        )
+    latest = max(value for value in (departed, arrived) if value is not None)
+    if _aware(latest) > utcnow() + timedelta(minutes=5):
+        raise base.OperationalError(
+            "INVALID_ACTUAL_CHRONOLOGY", "Actual route time cannot be in the future."
+        )
+    origin = base._endpoint(payload.get("origin") or {}, shipment.organization_id)
+    destination = base._endpoint(
+        payload.get("destination") or {}, shipment.organization_id
+    )
+    origin_location = base._endpoint_location(origin)
+    destination_location = base._endpoint_location(destination)
+    origin_point = origin.logistics_point.id if isinstance(
+        origin, base.ResolvedFacilityEndpoint
+    ) else None
+    destination_point = destination.logistics_point.id if isinstance(
+        destination, base.ResolvedFacilityEndpoint
+    ) else None
+    if (
+        origin_location.canonical_location.id == destination_location.canonical_location.id
+        and origin_point == destination_point
+    ):
+        raise base.OperationalError(
+            "INVALID_ROUTE_TIMELINE", "Origin and destination must be different."
+        )
+    sequence = payload.get("sequence_number")
+    if sequence is None:
+        sequence = (db.session.scalar(select(func.max(
+            RouteTraversalFact.sequence_number
+        )).where(RouteTraversalFact.route_plan_id == plan.id)) or 0) + 1
+    row = RouteTraversalFact(
+        operational_shipment_id=shipment.id,
+        route_plan_id=plan.id,
+        planned_route_leg_id=int(planned_leg_id) if planned_leg_id is not None else None,
+        sequence_number=int(sequence),
+        origin_location_id=origin_location.canonical_location.id,
+        destination_location_id=destination_location.canonical_location.id,
+        origin_logistics_point_id=origin_point,
+        destination_logistics_point_id=destination_point,
+        origin_snapshot=base._endpoint_snapshot(origin),
+        destination_snapshot=base._endpoint_snapshot(destination),
+        departed_at=departed,
+        arrived_at=arrived,
+        notes=str(payload.get("notes") or "").strip() or None,
+        recorded_by_user_id=user["id"],
+    )
+    db.session.add(row)
+    try:
+        db.session.flush()
+    except IntegrityError as exc:
+        db.session.rollback()
+        raise base.OperationalError(
+            "ACTUAL_ROUTE_SEQUENCE_DUPLICATE",
+            "Actual route sequence already exists.",
+            409,
+        ) from exc
+    deviation = _is_traversal_deviation(row)
+    base._audit(
+        shipment.organization_id,
+        user["id"],
+        "route_traversal.recorded",
+        "RouteTraversalFact",
+        row.id,
+        {
+            "route_plan_id": plan.id,
+            "planned_route_leg_id": row.planned_route_leg_id,
+            "is_deviation": deviation,
+        },
+    )
+    base._outbox(
+        shipment.organization_id,
+        "route_traversal.recorded",
+        "RouteTraversalFact",
+        row.id,
+        {"route_plan_id": plan.id, "is_deviation": deviation},
+    )
+    # A route deviation is evidence, not an OperationalException command.
+    db.session.commit()
+    return _serialize_traversal(row)
+
+
 def validate_plan(shipment_id: int, plan_id: int, user: dict) -> dict:
     _, plan = _plan(shipment_id, plan_id, user, PLAN_PERMISSIONS["read"])
     legs = db.session.scalars(select(RouteLeg).where(RouteLeg.route_plan_id == plan.id).order_by(RouteLeg.sequence_number)).all()
@@ -379,12 +727,78 @@ def validate_plan(shipment_id: int, plan_id: int, user: dict) -> dict:
         errors.append({"code": code, "entity_reference": entity, "field": field, "message": message, "severity": "error"})
     if not legs: error("ROUTE_PLAN_INVALID", f"route_plan:{plan.id}", "legs", "At least one leg is required.")
     if [x.sequence_number for x in legs] != list(range(1, len(legs)+1)): error("ROUTE_SEQUENCE_GAP", f"route_plan:{plan.id}", "sequence_number", "Leg sequence must be contiguous.")
-    for previous, current in zip(legs, legs[1:]):
-        if previous.destination_location_id != current.origin_location_id: error("ROUTE_LOCATION_DISCONTINUITY", f"route_leg:{current.id}", "origin_location_id", "Adjacent legs must be location-continuous.")
-        if _aware(current.planned_departure) < _aware(previous.planned_arrival): error("INVALID_ROUTE_TIMELINE", f"route_leg:{current.id}", "planned_departure", "Legs cannot overlap.")
+    for row in legs:
+        for field in ("transport_mode", "planned_departure", "planned_arrival"):
+            if getattr(row, field) is None:
+                error(
+                    "ROUTE_LEG_INCOMPLETE",
+                    f"route_leg:{row.id}",
+                    field,
+                    "Route leg is incomplete.",
+                )
+        if row.planned_departure and row.planned_arrival and row.planned_arrival < row.planned_departure:
+            error("INVALID_ROUTE_TIMELINE", f"route_leg:{row.id}", "planned_arrival", "Arrival cannot precede departure.")
+    branched = any(row.parent_route_leg_id is not None for row in legs)
+    by_id = {row.id: row for row in legs}
+    if branched:
+        roots = [row for row in legs if row.parent_route_leg_id is None]
+        if len(roots) != 1:
+            error("ROUTE_BRANCH_ROOT_INVALID", f"route_plan:{plan.id}", "parent_route_leg_id", "A branched route must have one shared root.")
+        parent_error = _route_parent_error(plan.id)
+        if parent_error:
+            error(parent_error, f"route_plan:{plan.id}", "parent_route_leg_id", "Route branch graph contains a cycle or cross-plan reference.")
+        for current in legs:
+            if current.parent_route_leg_id is None:
+                continue
+            previous = by_id.get(current.parent_route_leg_id)
+            if previous is None:
+                continue
+            if (
+                previous.destination_location_id != current.origin_location_id
+                or previous.destination_logistics_point_id != current.origin_logistics_point_id
+            ):
+                error("ROUTE_LOCATION_DISCONTINUITY", f"route_leg:{current.id}", "origin_location_id", "A branch must start at its parent destination.")
+            if (
+                current.planned_departure and previous.planned_arrival
+                and _aware(current.planned_departure) < _aware(previous.planned_arrival)
+            ):
+                error("INVALID_ROUTE_TIMELINE", f"route_leg:{current.id}", "planned_departure", "A child branch cannot begin before its parent arrives.")
+    else:
+        for previous, current in zip(legs, legs[1:]):
+            if (
+                previous.destination_location_id != current.origin_location_id
+                or previous.destination_logistics_point_id != current.origin_logistics_point_id
+            ):
+                error("ROUTE_LOCATION_DISCONTINUITY", f"route_leg:{current.id}", "origin_location_id", "Adjacent legs must be location-continuous.")
+            if (
+                current.planned_departure and previous.planned_arrival
+                and _aware(current.planned_departure) < _aware(previous.planned_arrival)
+            ):
+                error("INVALID_ROUTE_TIMELINE", f"route_leg:{current.id}", "planned_departure", "Legs cannot overlap.")
     finals = [x for x in checkpoints if x.checkpoint_type == "final_delivery"]
-    if len(finals) > 1: error("CHECKPOINT_SEQUENCE_INVALID", f"route_plan:{plan.id}", "checkpoints", "Final delivery must be unique.")
-    if finals and finals[0] is not checkpoints[-1]: error("CHECKPOINT_SEQUENCE_INVALID", f"checkpoint:{finals[0].id}", "sequence_number", "Final delivery must be last.")
+    children = {row.parent_route_leg_id for row in legs if row.parent_route_leg_id is not None}
+    leaves = {row.id for row in legs if row.id not in children}
+    if branched:
+        final_leg_ids = [row.route_leg_id for row in finals]
+        if any(value not in leaves for value in final_leg_ids) or len(final_leg_ids) != len(set(final_leg_ids)):
+            error("CHECKPOINT_SEQUENCE_INVALID", f"route_plan:{plan.id}", "checkpoints", "Each final delivery must belong to a distinct terminal branch.")
+    else:
+        if len(finals) > 1: error("CHECKPOINT_SEQUENCE_INVALID", f"route_plan:{plan.id}", "checkpoints", "Final delivery must be unique.")
+        if finals and finals[0] is not checkpoints[-1]: error("CHECKPOINT_SEQUENCE_INVALID", f"checkpoint:{finals[0].id}", "sequence_number", "Final delivery must be last.")
+    cargo_rows = db.session.scalars(select(ShipmentCargoItem).where(
+        ShipmentCargoItem.operational_shipment_id == plan.operational_shipment_id
+    )).all()
+    destinations = db.session.scalars(select(RouteCargoDestination).where(
+        RouteCargoDestination.route_plan_id == plan.id
+    )).all()
+    for destination in destinations:
+        if destination.destination_route_leg_id not in leaves:
+            error("CARGO_DESTINATION_NOT_TERMINAL", f"route_cargo_destination:{destination.id}", "destination_route_leg_id", "Cargo must be assigned to a terminal route branch.")
+    if branched and len(leaves) > 1:
+        assigned = {row.shipment_cargo_item_id for row in destinations}
+        for cargo in cargo_rows:
+            if cargo.id not in assigned:
+                error("CARGO_DESTINATION_REQUIRED", f"shipment_cargo_item:{cargo.id}", "destination_route_leg_id", "Cargo destination is required for a branched route.")
     deps = db.session.scalars(select(RouteDependency).where(RouteDependency.route_plan_id == plan.id)).all()
     graph = {c.id: [] for c in checkpoints}
     for dep in deps: graph.setdefault(dep.predecessor_checkpoint_id, []).append(dep.successor_checkpoint_id)
@@ -433,6 +847,7 @@ def replan(
 ) -> dict:
     try:
         shipment = _shipment(shipment_id, user, PLAN_PERMISSIONS["replan"])
+        _require_route_owner(shipment, user)
         # The shipment row is the serialization boundary. It prevents duplicate
         # revision allocation without imposing an organization/global lock.
         shipment = db.session.scalar(select(OperationalShipment).where(
@@ -516,19 +931,20 @@ def replan(
                     "A completed route leg cannot be changed by replan.", 409,
                 )
             planned_departure = (
-                base._parse_utc(update["planned_departure"], "planned_departure")
+                base._parse_utc(update["planned_departure"], "planned_departure") if update.get("planned_departure") else None
                 if "planned_departure" in update else leg.planned_departure
             )
             planned_arrival = (
-                base._parse_utc(update["planned_arrival"], "planned_arrival")
+                base._parse_utc(update["planned_arrival"], "planned_arrival") if update.get("planned_arrival") else None
                 if "planned_arrival" in update else leg.planned_arrival
             )
-            if planned_arrival < planned_departure:
+            if planned_arrival and planned_departure and planned_arrival < planned_departure:
                 raise base.OperationalError(
                     "INVALID_ROUTE_GRAPH", "Leg arrival cannot precede departure.",
                 )
             clone = RouteLeg(
                 route_plan_id=target.id, source_route_leg_id=leg.id,
+                parent_route_leg_id=None,
                 sequence_number=int(update.get("sequence_number", leg.sequence_number)),
                 origin_location_id=leg.origin_location_id,
                 destination_location_id=leg.destination_location_id,
@@ -536,6 +952,7 @@ def replan(
                 destination_logistics_point_id=leg.destination_logistics_point_id,
                 origin_snapshot=leg.origin_snapshot,
                 destination_snapshot=leg.destination_snapshot,
+                branch_label=update.get("branch_label", leg.branch_label),
                 transport_mode=update.get("transport_mode", leg.transport_mode),
                 carrier_reference=update.get("carrier_reference", leg.carrier_reference),
                 planned_departure=planned_departure,
@@ -545,6 +962,12 @@ def replan(
                 status=leg.status, version=leg.version,
             )
             db.session.add(clone); db.session.flush(); leg_map[leg.id] = clone.id
+        for leg in legs:
+            if leg.parent_route_leg_id is not None:
+                db.session.get(RouteLeg, leg_map[leg.id]).parent_route_leg_id = leg_map[
+                    leg.parent_route_leg_id
+                ]
+        db.session.flush()
         _replan_failure("leg_clone", _fail_at)
 
         checkpoints = db.session.scalars(select(OperationalCheckpoint).where(
@@ -631,6 +1054,19 @@ def replan(
         db.session.flush()
         _replan_failure("dependency_clone", _fail_at)
 
+        cargo_destinations = db.session.scalars(select(RouteCargoDestination).where(
+            RouteCargoDestination.route_plan_id == source.id
+        )).all()
+        for destination in cargo_destinations:
+            db.session.add(RouteCargoDestination(
+                operational_shipment_id=shipment.id,
+                route_plan_id=target.id,
+                shipment_cargo_item_id=destination.shipment_cargo_item_id,
+                destination_route_leg_id=leg_map[destination.destination_route_leg_id],
+                created_by_user_id=user["id"],
+            ))
+        db.session.flush()
+
         milestones = db.session.scalars(select(Milestone).where(
             Milestone.route_plan_id == source.id,
         ).order_by(Milestone.id)).all()
@@ -640,17 +1076,17 @@ def replan(
             planned_at = row.planned_at
             leg_time = {"departure": "planned_departure", "arrival": "planned_arrival"}.get(row.milestone_type)
             if leg_time and leg_time in leg_update:
-                planned_at = base._parse_utc(leg_update[leg_time], leg_time)
+                planned_at = base._parse_utc(leg_update[leg_time], leg_time) if leg_update.get(leg_time) else None
             if row.milestone_type == "checkpoint_arrival" and "planned_arrival_at" in checkpoint_update:
                 planned_at = base._parse_utc(
                     checkpoint_update["planned_arrival_at"], "planned_arrival_at",
-                )
+                ) if checkpoint_update.get("planned_arrival_at") else None
             elif row.milestone_type in {
                 "checkpoint_processing_complete", "checkpoint_departure",
             } and "planned_departure_at" in checkpoint_update:
                 planned_at = base._parse_utc(
                     checkpoint_update["planned_departure_at"], "planned_departure_at",
-                )
+                ) if checkpoint_update.get("planned_departure_at") else None
             db.session.add(Milestone(
                 organization_id=shipment.organization_id, operational_shipment_id=shipment.id,
                 route_plan_id=target.id, route_leg_id=leg_map.get(row.route_leg_id),
@@ -718,6 +1154,10 @@ def replan(
         graph_summary = {
             "legs": len(legs), "checkpoints": len(checkpoints),
             "dependencies": len(dependencies), "milestones": len(milestones),
+            "cargo_destinations": len(cargo_destinations),
+            "actual_traversals_preserved_on_source": db.session.scalar(select(func.count(
+                RouteTraversalFact.id
+            )).where(RouteTraversalFact.route_plan_id == source.id)) or 0,
             "completed_segments_carried": sum(
                 leg.status == "completed" or leg.actual_arrival is not None for leg in legs
             ),

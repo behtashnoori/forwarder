@@ -209,6 +209,11 @@ class ShipmentCargoItem(db.Model):
             "line_number",
             name="uq_shipment_cargo_item_shipment_line",
         ),
+        db.UniqueConstraint(
+            "id",
+            "operational_shipment_id",
+            name="uq_shipment_cargo_item_id_shipment",
+        ),
         db.CheckConstraint(
             "line_number >= 1", name="ck_shipment_cargo_item_line_positive"
         ),

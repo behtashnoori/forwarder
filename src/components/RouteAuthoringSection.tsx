@@ -6,16 +6,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   ApiError, activateRoutePlan, addRouteCheckpoint, addRouteLeg, createRoutePlan,
+  assignRouteCargoDestination,
   fetchCountries, fetchProvinces, listLogisticsPoints,
-  searchIranDestinations, updateRouteCheckpoint, updateRouteLeg, validateRoutePlan,
+  listShipmentCargoItems, searchIranDestinations, updateRouteCheckpoint, updateRouteLeg, validateRoutePlan,
   type Country, type InternationalCity, type IranDestinationOption, type LogisticsPointView,
   type OperationalLocationRef, type Province, type RouteCheckpoint, type RouteLeg,
-  type RoutePlanDetail, type RouteValidationResult,
+  type RoutePlanDetail, type RouteValidationResult, type ShipmentCargoItem,
 } from "@/lib/api";
 import { localDateTimeInputToUtc, toLocalDateTimeInputValue } from "@/lib/localDateTime";
 import { useI18n } from "@/i18n";
 
-const selectClass = "min-h-11 min-w-0 w-full rounded border bg-white px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
+export const routeSelectClass = "min-h-11 min-w-0 w-full rounded border bg-white px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2";
+const selectClass = routeSelectClass;
 const modes = ["road", "rail", "sea", "air", "multimodal_transfer", "customs_handling"];
 const checkpointTypes = ["origin_loading", "export_customs", "border_exit", "transit_border_entry", "transit_border_exit", "border_entry", "import_customs", "port_entry", "port_exit", "terminal_arrival", "transshipment", "destination_arrival", "unloading", "final_delivery"];
 const checkpointNames: Record<string, string> = { origin_loading: "بارگیری مبدأ", export_customs: "گمرک صادرات", border_exit: "خروج از مرز", transit_border_entry: "ورود به مرز ترانزیت", transit_border_exit: "خروج از مرز ترانزیت", border_entry: "ورود از مرز", import_customs: "گمرک واردات", port_entry: "ورود به بندر", port_exit: "خروج از بندر", terminal_arrival: "رسیدن به پایانه", transshipment: "انتقال بین وسایل حمل", destination_arrival: "رسیدن به مقصد", unloading: "تخلیه", final_delivery: "تحویل نهایی" };
@@ -26,6 +28,11 @@ const validationMessage = (code: string) => ({
   INVALID_ROUTE_TIMELINE: "زمان‌بندی بخش‌های مسیر یا نقاط کنترل معتبر نیست.",
   CHECKPOINT_SEQUENCE_INVALID: "ترتیب نقاط کنترل را بررسی کنید؛ تحویل نهایی باید آخر باشد.",
   ROUTE_DEPENDENCY_CYCLE: "وابستگی نقاط کنترل معتبر نیست.",
+  ROUTE_BRANCH_CYCLE: "شاخه‌های مسیر دارای چرخه هستند.",
+  ROUTE_BRANCH_ROOT_INVALID: "مسیر شاخه‌دار باید یک بخش مشترک آغازین داشته باشد.",
+  ROUTE_LEG_INCOMPLETE: "روش حمل و زمان‌های برنامه‌ریزی‌شده همه بخش‌ها را پیش از فعال‌سازی کامل کنید.",
+  CARGO_DESTINATION_REQUIRED: "برای هر ردیف کالا مقصد شاخه‌ای را مشخص کنید.",
+  CARGO_DESTINATION_NOT_TERMINAL: "مقصد کالا باید آخرین بخش یک شاخه باشد.",
 }[code] || "ساختار مسیر نیاز به بررسی دارد.");
 const commandError = (error: unknown) => {
   if (!(error instanceof ApiError)) return "انجام این کار ممکن نشد؛ دوباره تلاش کنید.";
@@ -34,14 +41,16 @@ const commandError = (error: unknown) => {
   if (error.code === "INVALID_ROUTE_TIMELINE") return "ترتیب زمانی یا مکان‌های بخش مسیر معتبر نیست.";
   if (error.code === "LOCATION_MAPPING_REQUIRED" || error.code === "LOCATION_ANCESTRY_MISMATCH") return "مکان انتخاب‌شده برای این مسیر معتبر نیست.";
   if (error.code === "CROSS_PLAN_REFERENCE_NOT_ALLOWED") return "بخش انتخاب‌شده به این برنامه مسیر تعلق ندارد.";
+  if (error.code === "ROUTE_PARENT_INVALID" || error.code === "ROUTE_BRANCH_CYCLE") return "ارتباط شاخه‌های مسیر معتبر نیست.";
   if (error.code === "ROUTE_PLAN_NOT_DRAFT" || error.code === "ACTUAL_DATA_IMMUTABLE") return "این بخش از مسیر دیگر قابل ویرایش نیست.";
   if (error.status === 409) return "اطلاعات مسیر تغییر کرده است. نسخه تازه بارگذاری شد؛ دوباره بررسی کنید.";
   if (error.code === "ROUTE_PLAN_INVALID") return "مسیر هنوز آماده فعال‌سازی نیست؛ ابتدا آن را بررسی کنید.";
   return "اطلاعات مسیر را بررسی کنید و دوباره تلاش کنید.";
 };
 
-type Catalog = { provinces: Province[]; iran: IranDestinationOption[]; facilities: LogisticsPointView[]; countries: Country[] };
-function LocationPicker({ id, label, value, onChange, catalog, searchIran, includeFacilities = true }: {
+export type RouteLocationCatalog = { provinces: Province[]; iran: IranDestinationOption[]; facilities: LogisticsPointView[]; countries: Country[] };
+type Catalog = RouteLocationCatalog;
+export function RouteLocationPicker({ id, label, value, onChange, catalog, searchIran, includeFacilities = true }: {
   id: string; label: string; value: OperationalLocationRef | null;
   onChange: (value: OperationalLocationRef | null) => void; catalog: Catalog; searchIran: (query: string) => void; includeFacilities?: boolean;
 }) {
@@ -70,6 +79,8 @@ function LocationPicker({ id, label, value, onChange, catalog, searchIran, inclu
   </div>;
 }
 
+const LocationPicker = RouteLocationPicker;
+
 function LegForm({ shipmentId, plan, leg, catalog, searchIran, execute, close, busy }: {
   shipmentId: string; plan: RoutePlanDetail; leg?: RouteLeg; catalog: Catalog; searchIran: (query: string) => void;
   execute: (name: string, action: () => Promise<unknown>) => Promise<boolean>; close: () => void; busy: boolean;
@@ -78,29 +89,34 @@ function LegForm({ shipmentId, plan, leg, catalog, searchIran, execute, close, b
   const [sequence, setSequence] = useState(String(leg?.sequence_number ?? plan.legs.length + 1));
   const [origin, setOrigin] = useState<OperationalLocationRef | null>(null);
   const [destination, setDestination] = useState<OperationalLocationRef | null>(null);
-  const [mode, setMode] = useState(leg?.transport_mode || "road");
+  const [parent, setParent] = useState(leg?.parent_route_leg_id ? String(leg.parent_route_leg_id) : "");
+  const [branchLabel, setBranchLabel] = useState(leg?.branch_label || "");
+  const [mode, setMode] = useState(leg?.transport_mode || "");
   const [departure, setDeparture] = useState(leg?.planned_departure ? toLocalDateTimeInputValue(new Date(leg.planned_departure)) : "");
   const [arrival, setArrival] = useState(leg?.planned_arrival ? toLocalDateTimeInputValue(new Date(leg.planned_arrival)) : "");
-  const [carrier, setCarrier] = useState(leg?.carrier_reference || "");
+  const carrier = leg?.carrier_reference || "";
   const [error, setError] = useState("");
   const submit = async () => {
     const number = Number(sequence);
     if (!Number.isInteger(number) || number < 1) { setError("شماره ترتیب را وارد کنید."); return; }
+    const start = departure ? localDateTimeInputToUtc(departure) : null;
+    const end = arrival ? localDateTimeInputToUtc(arrival) : null;
+    if ((departure && !start) || (arrival && !end)) { setError("زمان‌های برنامه‌ریزی‌شده را بررسی کنید."); return; }
     if (leg) {
-      const payload = { expected_version: leg.version, sequence_number: number, carrier_reference: carrier || null, ...(origin ? { origin } : {}), ...(destination ? { destination } : {}) };
+      const payload = { expected_version: leg.version, sequence_number: number, parent_route_leg_id: parent ? Number(parent) : null, branch_label: branchLabel || null, transport_mode: mode || null, planned_departure: start, planned_arrival: end, carrier_reference: carrier || null, ...(origin ? { origin } : {}), ...(destination ? { destination } : {}) };
       if (await execute(`leg-${leg.id}`, () => updateRouteLeg(shipmentId, plan.id, leg.id, payload))) close();
     } else {
-      const start = localDateTimeInputToUtc(departure), end = localDateTimeInputToUtc(arrival);
-      if (!origin || !destination || !start || !end) { setError("مبدأ، مقصد و زمان‌های برنامه‌ریزی‌شده را تکمیل کنید."); return; }
-      if (await execute("leg-create", () => addRouteLeg(shipmentId, plan.id, { sequence_number: number, origin, destination, transport_mode: mode, planned_departure: start, planned_arrival: end, carrier_reference: carrier || null }))) close();
+      if (!origin || !destination) { setError("مبدأ و مقصد بخش مسیر را تکمیل کنید."); return; }
+      if (await execute("leg-create", () => addRouteLeg(shipmentId, plan.id, { sequence_number: number, origin, destination, parent_route_leg_id: parent ? Number(parent) : null, branch_label: branchLabel || null, transport_mode: mode || null, planned_departure: start, planned_arrival: end, carrier_reference: carrier || null }))) close();
     }
   };
   return <div className="space-y-3 rounded border bg-slate-50 p-3">
     <h4 className="font-semibold">{leg ? `ویرایش بخش مسیر ${leg.sequence_number}` : "افزودن بخش مسیر"}</h4>
-    <div className="grid min-w-0 gap-3 md:grid-cols-2"><div><label htmlFor={`leg-seq-${leg?.id || "new"}`}>ترتیب بخش مسیر</label><Input id={`leg-seq-${leg?.id || "new"}`} type="number" min="1" value={sequence} onChange={(event) => setSequence(event.target.value)} /></div><div><label htmlFor={`leg-carrier-${leg?.id || "new"}`}>شناسه حمل‌کننده (اختیاری)</label><Input id={`leg-carrier-${leg?.id || "new"}`} value={carrier} onChange={(event) => setCarrier(event.target.value)} /></div></div>
+    <div className="grid min-w-0 gap-3 md:grid-cols-2"><div><label htmlFor={`leg-seq-${leg?.id || "new"}`}>ترتیب بخش مسیر</label><Input id={`leg-seq-${leg?.id || "new"}`} type="number" min="1" value={sequence} onChange={(event) => setSequence(event.target.value)} /></div><div><label htmlFor={`leg-parent-${leg?.id || "new"}`}>ادامه بخش / شاخه از</label><select id={`leg-parent-${leg?.id || "new"}`} className={selectClass} value={parent} onChange={(event) => setParent(event.target.value)}><option value="">بخش آغازین مشترک</option>{plan.legs.filter((item) => item.id !== leg?.id).map((item) => <option key={item.id} value={item.id}>بخش {item.sequence_number} · {item.destination.display_name}</option>)}</select></div></div>
+    <div><label htmlFor={`leg-branch-${leg?.id || "new"}`}>عنوان بخش یا مقصد شاخه (اختیاری)</label><Input id={`leg-branch-${leg?.id || "new"}`} value={branchLabel} onChange={(event) => setBranchLabel(event.target.value)} placeholder="مثلاً بخش مشترک یا مقصد تبریز" /></div>
     {leg && <p className="text-sm">مبدأ فعلی: {leg.origin.display_name} · مقصد فعلی: {leg.destination.display_name}</p>}
     <div className="grid min-w-0 gap-3 md:grid-cols-2"><LocationPicker id={`leg-origin-${leg?.id || "new"}`} label={leg ? "مبدأ جدید (اختیاری)" : "مبدأ"} value={origin} onChange={setOrigin} catalog={catalog} searchIran={searchIran} /><LocationPicker id={`leg-destination-${leg?.id || "new"}`} label={leg ? "مقصد جدید (اختیاری)" : "مقصد"} value={destination} onChange={setDestination} catalog={catalog} searchIran={searchIran} /></div>
-    {leg ? <p className="text-sm text-slate-600">روش حمل و زمان‌های برنامه‌ریزی‌شده این بخش در فرمان ویرایش فعلی قابل تغییر نیستند. برای تغییر ساختار، از پیش‌نویس مسیر استفاده کنید.</p> : <div className="grid min-w-0 gap-3 md:grid-cols-3"><div><label htmlFor="leg-mode">روش حمل</label><select id="leg-mode" className={selectClass} value={mode} onChange={(event) => setMode(event.target.value)}>{modes.map((item) => <option key={item} value={item}>{transportLabel(item)}</option>)}</select></div><div><label htmlFor="leg-departure">حرکت برنامه‌ریزی‌شده</label><Input id="leg-departure" type="datetime-local" value={departure} onChange={(event) => setDeparture(event.target.value)} /></div><div><label htmlFor="leg-arrival">رسیدن برنامه‌ریزی‌شده</label><Input id="leg-arrival" type="datetime-local" value={arrival} onChange={(event) => setArrival(event.target.value)} /></div></div>}
+    <div className="grid min-w-0 gap-3 md:grid-cols-3"><div><label htmlFor={`leg-mode-${leg?.id || "new"}`}>روش حمل (در صورت مشخص‌بودن)</label><select id={`leg-mode-${leg?.id || "new"}`} className={selectClass} value={mode} onChange={(event) => setMode(event.target.value)}><option value="">هنوز مشخص نیست</option>{modes.map((item) => <option key={item} value={item}>{transportLabel(item)}</option>)}</select></div><div><label htmlFor={`leg-departure-${leg?.id || "new"}`}>حرکت برنامه‌ریزی‌شده (اختیاری)</label><Input id={`leg-departure-${leg?.id || "new"}`} aria-label="حرکت برنامه‌ریزی‌شده" type="datetime-local" value={departure} onChange={(event) => setDeparture(event.target.value)} /></div><div><label htmlFor={`leg-arrival-${leg?.id || "new"}`}>رسیدن برنامه‌ریزی‌شده (اختیاری)</label><Input id={`leg-arrival-${leg?.id || "new"}`} aria-label="رسیدن برنامه‌ریزی‌شده" type="datetime-local" value={arrival} onChange={(event) => setArrival(event.target.value)} /></div></div>
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     <div className="flex flex-wrap gap-2"><Button type="button" disabled={busy} onClick={() => void submit()}>{busy ? "در حال ذخیره…" : "ذخیره بخش مسیر"}</Button><Button type="button" variant="outline" disabled={busy} onClick={close}>انصراف</Button></div>
   </div>;
@@ -142,6 +158,8 @@ export default function RouteAuthoringSection({ shipmentId, draft, hasDraft, rel
   const { businessLabel, transportLabel } = useI18n();
   const draftId = draft?.id;
   const [catalog, setCatalog] = useState<Catalog>({ provinces: [], iran: [], facilities: [], countries: [] });
+  const [cargoItems, setCargoItems] = useState<ShipmentCargoItem[]>([]);
+  const [cargoSelections, setCargoSelections] = useState<Record<string, string>>({});
   const [catalogError, setCatalogError] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -152,10 +170,10 @@ export default function RouteAuthoringSection({ shipmentId, draft, hasDraft, rel
   useEffect(() => { setNeedsRefresh(false); }, [draft]);
   useEffect(() => {
     if (!draftId) return;
-    Promise.all([fetchProvinces(), searchIranDestinations(), listLogisticsPoints({ active: "true", per_page: 100 }), fetchCountries()])
-      .then(([provinces, iran, facilities, countries]) => setCatalog({ provinces, iran: iran.data, facilities: facilities.items.filter((item) => item.is_active), countries }))
+    Promise.all([fetchProvinces(), searchIranDestinations(), listLogisticsPoints({ active: "true", per_page: 100 }), fetchCountries(), listShipmentCargoItems(shipmentId)])
+      .then(([provinces, iran, facilities, countries, cargo]) => { setCatalog({ provinces, iran: iran.data, facilities: facilities.items.filter((item) => item.is_active), countries }); setCargoItems(cargo.items); })
       .catch(() => setCatalogError("دریافت مکان‌های مجاز ممکن نشد؛ دوباره صفحه را بارگذاری کنید."));
-  }, [draftId]);
+  }, [draftId, shipmentId]);
   const searchIran = (query: string) => { searchIranDestinations(query).then((response) => setCatalog((current) => ({ ...current, iran: response.data }))).catch(() => setCatalogError("جست‌وجوی مکان ممکن نشد.")); };
   const execute = async (name: string, action: () => Promise<unknown>): Promise<boolean> => {
     if (pending || needsRefresh) return false;
@@ -186,15 +204,19 @@ export default function RouteAuthoringSection({ shipmentId, draft, hasDraft, rel
     catch (caught) { setError(commandError(caught)); }
     finally { setPending(""); }
   };
-  return <Card><CardHeader><CardTitle>برنامه مسیر عملیات</CardTitle></CardHeader><CardContent className="min-w-0 space-y-4">
+  const childIds = new Set((draft?.legs || []).map((item) => item.parent_route_leg_id).filter((value): value is number => value != null));
+  const terminalLegs = (draft?.legs || []).filter((item) => !childIds.has(item.id));
+  return <Card><CardHeader><CardTitle>مسیر حمل و برنامه مسیر</CardTitle></CardHeader><CardContent className="min-w-0 space-y-4">
     {error && <p role="alert" className="rounded bg-red-50 p-3 text-red-700">{error}</p>}
     {notice && <p role="status" className="rounded bg-emerald-50 p-3 text-emerald-800">{notice}</p>}
     {!draft ? hasDraft ? <p role="status">در حال دریافت پیش‌نویس برنامه مسیر…</p> : <><p>هنوز برنامه مسیر فعالی برای این محموله ثبت نشده است. مسیر را به‌صورت پیش‌نویس ایجاد کنید و پس از بررسی فعال کنید.</p><OperationalPermission permission="route_plan.create"><Button disabled={!!pending || needsRefresh} onClick={() => void execute("create", () => createRoutePlan(shipmentId))}>{pending === "create" ? "در حال ایجاد…" : "ایجاد مسیر عملیات"}</Button></OperationalPermission></> : <>
       <p>پیش‌نویس برنامه مسیر · نسخه {draft.revision_number}</p>
+      {!draft.is_complete && <p role="status" className="rounded bg-amber-50 p-3 text-amber-900">این برنامه هنوز ناقص است. می‌توانید آن را ذخیره کنید و بعداً بدون تاریخ، توقف یا روش حمل جعلی کامل کنید.</p>}
       {catalogError && <p role="alert" className="text-red-700">{catalogError}</p>}
-      <section className="space-y-2"><h3 className="font-semibold">بخش‌های مسیر</h3>{draft.legs.length ? draft.legs.map((leg) => <div key={leg.id} className="flex min-w-0 flex-col justify-between gap-2 rounded border p-3 sm:flex-row sm:items-center"><span>بخش {leg.sequence_number} · {leg.origin.display_name} → {leg.destination.display_name} · {transportLabel(leg.transport_mode)}</span>{leg.actual_departure || leg.actual_arrival ? <span className="text-sm text-slate-600">دارای رخداد واقعی؛ فقط خواندنی</span> : <OperationalPermission permission="route_leg.manage"><Button variant="outline" disabled={!!pending || needsRefresh} onClick={() => setEditing(`leg-${leg.id}`)}>ویرایش بخش مسیر</Button></OperationalPermission>}</div>) : <p>هنوز بخشی برای مسیر ثبت نشده است.</p>}
+      <section className="space-y-2"><h3 className="font-semibold">بخش مشترک و شاخه‌های مقصد</h3>{draft.legs.length ? draft.legs.map((leg) => <div key={leg.id} className="flex min-w-0 flex-col justify-between gap-2 rounded border p-3 sm:flex-row sm:items-center"><span>بخش {leg.sequence_number} · {leg.parent_route_leg_id ? `شاخه از بخش ${draft.legs.find((item) => item.id === leg.parent_route_leg_id)?.sequence_number ?? "—"}` : "بخش آغازین مشترک"}{leg.branch_label ? ` · ${leg.branch_label}` : ""}<br />{leg.origin.display_name} → {leg.destination.display_name} · {leg.transport_mode ? transportLabel(leg.transport_mode) : "روش حمل نامشخص"} · {leg.planned_departure && leg.planned_arrival ? "زمان برنامه ثبت شده" : "زمان برنامه هنوز کامل نیست"}</span>{leg.actual_departure || leg.actual_arrival ? <span className="text-sm text-slate-600">دارای رخداد واقعی؛ فقط خواندنی</span> : <OperationalPermission permission="route_leg.manage"><Button variant="outline" disabled={!!pending || needsRefresh} onClick={() => setEditing(`leg-${leg.id}`)}>ویرایش بخش مسیر</Button></OperationalPermission>}</div>) : <p>هنوز بخشی برای مسیر ثبت نشده است.</p>}
         <OperationalPermission permission="route_leg.manage"><Button variant="outline" disabled={!!pending || needsRefresh} onClick={() => setEditing("leg-new")}>افزودن بخش مسیر</Button>{editing.startsWith("leg-") && <LegForm key={editing} shipmentId={shipmentId} plan={draft} leg={draft.legs.find((leg) => editing === `leg-${leg.id}`)} catalog={catalog} searchIran={searchIran} execute={execute} close={() => setEditing("")} busy={!!pending || needsRefresh} />}</OperationalPermission>
       </section>
+      <section className="space-y-2"><h3 className="font-semibold">مقصد هر ردیف کالا</h3><p className="text-sm text-slate-600">در مسیر شاخه‌دار، هر ردیف کالا را به آخرین بخش مقصد خودش متصل کنید؛ خود کالا یا محموله تکثیر نمی‌شود.</p>{!cargoItems.length ? <p>هنوز ردیف کالایی برای اتصال به مقصد وجود ندارد.</p> : cargoItems.map((cargo) => { const current = (draft.cargo_destinations || []).find((item) => item.cargo_item_public_id === cargo.public_id); const selected = cargoSelections[cargo.public_id] ?? (current ? String(current.destination_route_leg_id) : ""); return <div key={cargo.public_id} className="grid items-end gap-2 rounded border p-3 sm:grid-cols-[1fr_1fr_auto]"><div><strong>{cargo.display_name_snapshot}</strong><p className="text-sm text-slate-600">ردیف {cargo.line_number}</p></div><div><label htmlFor={`cargo-destination-${cargo.public_id}`}>شاخه مقصد</label><select id={`cargo-destination-${cargo.public_id}`} className={selectClass} value={selected} onChange={(event) => setCargoSelections((value) => ({ ...value, [cargo.public_id]: event.target.value }))}><option value="">مقصد هنوز مشخص نیست</option>{terminalLegs.map((leg) => <option key={leg.id} value={leg.id}>بخش {leg.sequence_number} · {leg.branch_label || leg.destination.display_name}</option>)}</select></div><OperationalPermission permission="route_leg.manage"><Button type="button" variant="outline" disabled={!selected || !!pending || needsRefresh} onClick={() => void execute(`cargo-${cargo.public_id}`, () => assignRouteCargoDestination(shipmentId, draft.id, cargo.public_id, Number(selected), current?.version))}>ثبت مقصد</Button></OperationalPermission></div>; })}</section>
       <section className="space-y-2"><h3 className="font-semibold">نقاط کنترل</h3>{draft.checkpoints.length ? draft.checkpoints.map((checkpoint) => <div key={checkpoint.id} className="flex min-w-0 flex-col justify-between gap-2 rounded border p-3 sm:flex-row sm:items-center"><span>نقطه کنترل {checkpoint.sequence_number} · {checkpointNames[checkpoint.checkpoint_type] || businessLabel(checkpoint.checkpoint_type)}{checkpoint.route_leg_id ? ` · بخش مرتبط ${draft.legs.find((leg) => leg.id === checkpoint.route_leg_id)?.sequence_number ?? "—"}` : ""}</span>{checkpoint.actual_arrival_at || checkpoint.actual_departure_at ? <span className="text-sm text-slate-600">دارای رخداد واقعی؛ فقط خواندنی</span> : <OperationalPermission permission="checkpoint.report"><Button variant="outline" disabled={!!pending || needsRefresh} onClick={() => setEditing(`checkpoint-${checkpoint.id}`)}>ویرایش نقطه کنترل</Button></OperationalPermission>}</div>) : <p>هنوز نقطه کنترلی ثبت نشده است.</p>}
         <OperationalPermission permission="checkpoint.report"><Button variant="outline" disabled={!!pending || needsRefresh} onClick={() => setEditing("checkpoint-new")}>افزودن نقطه کنترل</Button>{editing.startsWith("checkpoint-") && <CheckpointForm key={editing} shipmentId={shipmentId} plan={draft} checkpoint={draft.checkpoints.find((item) => editing === `checkpoint-${item.id}`)} catalog={catalog} searchIran={searchIran} execute={execute} close={() => setEditing("")} busy={!!pending || needsRefresh} />}</OperationalPermission>
       </section>
