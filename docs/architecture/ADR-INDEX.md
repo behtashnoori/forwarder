@@ -79,6 +79,8 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [063](../operational/adr/ADR-063-scoped-reported-facts-and-safe-effects.md) | Scoped reported facts and safe effects | ACCEPTED | Operational Event / Customer privacy | extends ADR-019/035/046/062; resolves DN06/DN07 within mission / none | Existing event SOR with mandatory tenant, typed context, four sources, occurred/recorded, append-only correction and explicit safe Cargo effects | Yes; P3-07 bounded candidate; no GPS, public publication, Customer page, automatic Action/Exception or Release |
 | [064](../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) | Partial Cargo delivery and exact evidence | ACCEPTED | Operational Shipment / Cargo / Documents | extends ADR-030/047/050/057/060/061/062 only for real Delivery / none | Immutable partial delivery/correction facts, exact-version evidence and warning-only discrepancy | Yes; explicit P3-08 authority; no closure, Customer page or new file store |
 
+| [065](../operational/adr/ADR-065-private-customer-shipment-projection.md) | Private Customer Shipment projection | ACCEPTED | Customer / Shipment security | enables deferred private consumers of ADR-057/058/062/063/064; preserves ADR-052/053 | Live own-Cargo SQL authorization, independent safe DTO and fresh UI | Yes; explicit P3-09 authority; no schema, public expansion or Customer mutation |
+
 ## Usage rules
 
 Current extension: [ADR-062](../operational/adr/ADR-062-explicit-customer-entitlement.md)

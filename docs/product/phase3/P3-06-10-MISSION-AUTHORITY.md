@@ -121,3 +121,7 @@ REFERENCE_RECONCILIATION=PASS; REFERENCE_IMPACT=NONE; protected behavior PRESERV
 Global Product EVIDENCE_PENDING; integrated journeys and human walkthrough NOT_RUN;
 Release Ready NO. The mission authorizes controlled integration; its exact receipt
 must establish P3-09 entry. P3-09/10 implementation not yet started at this record.
+
+## P3-09 verified entry and pre-build authority
+
+P3-08 integrated at `6a11c2e02a3103f0bc36129bd12798842b7c39cb`, clean local/fetched github 0/0; exact Product `48fa69b70af1bcf06fc5a9783b98fdf54de7a18c`. Required P3-02/05/06/07/08 are canonical. Sole head `20261008_phase3_cargo_delivery`; P3-09 adds no schema or entitlement store. [ADR-065](../../operational/adr/ADR-065-private-customer-shipment-projection.md) records the explicit §§45–61 authority before implementation in isolated `codex/phase3-p3-09-customer-projection`. Authorized Customer read only; Public Tracking, Request/account/recovery and command authority preserved, with fresh evidence pending. P3-10 not started.
