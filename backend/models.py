@@ -1944,6 +1944,37 @@ class UnitOfMeasure(_GovernedMasterDataMixin, db.Model):
     measurement_dimension = db.Column(db.String(32), nullable=False, index=True)
 
 
+class PackagingType(_GovernedMasterDataMixin, db.Model):
+    """Platform-owned governed packaging definition."""
+
+    __tablename__ = "packaging_type"
+    __table_args__ = (
+        db.CheckConstraint("version >= 1", name="ck_packaging_type_version_positive"),
+    )
+
+
+class TransportMeansType(_GovernedMasterDataMixin, db.Model):
+    """Platform-owned governed transport-means definition."""
+
+    __tablename__ = "transport_means_type"
+    __table_args__ = (
+        db.CheckConstraint(
+            "version >= 1", name="ck_transport_means_type_version_positive"
+        ),
+    )
+
+
+class TransportEquipmentType(_GovernedMasterDataMixin, db.Model):
+    """Platform-owned governed transport-equipment definition."""
+
+    __tablename__ = "transport_equipment_type"
+    __table_args__ = (
+        db.CheckConstraint(
+            "version >= 1", name="ck_transport_equipment_type_version_positive"
+        ),
+    )
+
+
 REFERENCE_DATA_SEED_RUN_MODES = frozenset({"apply"})
 REFERENCE_DATA_SEED_RUN_STATUSES = frozenset({"started", "succeeded", "failed", "refused"})
 
@@ -2002,6 +2033,9 @@ class ReferenceDataSeedRun(db.Model):
 @event.listens_for(CargoType, "before_update")
 @event.listens_for(ServiceType, "before_update")
 @event.listens_for(UnitOfMeasure, "before_update")
+@event.listens_for(PackagingType, "before_update")
+@event.listens_for(TransportMeansType, "before_update")
+@event.listens_for(TransportEquipmentType, "before_update")
 def _prevent_master_data_code_change(_mapper, _connection, target) -> None:
     if inspect(target).attrs.immutable_code.history.has_changes():
         raise ValueError("immutable_code cannot be changed")
@@ -2360,6 +2394,13 @@ from backend.cargo_models import (  # noqa: E402
     ProjectCargoCatalogItem,
     ShipmentCargoItem,
 )
+from backend.organization_reference_catalog_models import (  # noqa: E402,F401
+    OrganizationCargoTypeActivation,
+    OrganizationPackagingTypeActivation,
+    OrganizationTransportEquipmentTypeActivation,
+    OrganizationTransportMeansTypeActivation,
+    OrganizationUnitOfMeasureActivation,
+)
 from backend.mdpm_models import (  # noqa: E402,F401
     ArtifactAssociation,
     DocumentAssessment,
@@ -2402,6 +2443,14 @@ __all__ = [
     "CargoType",
     "ServiceType",
     "UnitOfMeasure",
+    "PackagingType",
+    "TransportMeansType",
+    "TransportEquipmentType",
+    "OrganizationCargoTypeActivation",
+    "OrganizationUnitOfMeasureActivation",
+    "OrganizationPackagingTypeActivation",
+    "OrganizationTransportMeansTypeActivation",
+    "OrganizationTransportEquipmentTypeActivation",
     "ReferenceDataSeedRun",
     "REFERENCE_DATA_SEED_RUN_MODES",
     "REFERENCE_DATA_SEED_RUN_STATUSES",
