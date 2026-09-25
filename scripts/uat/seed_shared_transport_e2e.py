@@ -227,6 +227,11 @@ def main() -> None:
         # merely to exercise the qualification.
         users["platform"] = fixture_user(suffix="platform", authority="PLATFORM_ADMIN", password=password)
         db.session.flush()
+        primary_expert = users[
+            "restricted"
+            if os.environ.get("FORWARDER_E2E_PRIMARY_EXPERT") == "restricted"
+            else "operator"
+        ]
         owner_a = customer("[SHARED-E2E] Customer A", org_a.id)
         # Customer's database identity, rather than its display text, is the test invariant.
         owner_a2 = Customer(company_name="[SHARED-E2E] Customer A Duplicate", first_name="Shared", last_name="E2E Duplicate", status="active", operational_organization_id=org_a.id, ownership_scope="TENANT")
@@ -263,7 +268,7 @@ def main() -> None:
         for key, owner, qty, uom in (("A", owner_a, "20", "PALLET"), ("B", owner_b, "8", "TON"), ("C", owner_c, "350", "CARTON"), ("D", owner_a2, "1", "PALLET"), ("X", owner_x, "2", "TON"), ("Y", owner_y, "3", "CARTON"), ("SB", owner_a, "4", "PALLET")):
             project = Project(organization_id=org_a.id, primary_customer_id=owner.id, project_code=f"SHARED-E2E-{key}", lifecycle_status="in_progress", created_by_user_id=users["admin"].id)
             db.session.add(project); db.session.flush()
-            shipment = OperationalShipment(organization_id=org_a.id, project_id=project.id, source_type="direct", customer_id=owner.id, lifecycle_status="in_progress", created_by_user_id=users["admin"].id)
+            shipment = OperationalShipment(organization_id=org_a.id, project_id=project.id, source_type="direct", customer_id=owner.id, lifecycle_status="in_progress", created_by_user_id=users["admin"].id, primary_responsible_expert_id=primary_expert.id)
             db.session.add(shipment); db.session.flush()
             cargo_name = "[SHARED-E2E] Scenario B Same Owner Cargo" if key == "SB" else f"[SHARED-E2E] Cargo {key}"
             cargo = ShipmentCargoItem(operational_shipment_id=shipment.id, cargo_owner_customer_id=owner.id, line_number=1, cargo_type_id=cargo_type.id, quantity=qty, uom_id=uoms[uom].id, display_name_snapshot=cargo_name, cargo_type_code_snapshot=cargo_type.immutable_code, cargo_type_fa_snapshot=cargo_type.fa_name, cargo_type_en_snapshot=cargo_type.en_name, uom_code_snapshot=uoms[uom].immutable_code, uom_symbol_snapshot=uoms[uom].symbol, created_by=users["admin"].id, updated_by=users["admin"].id)
@@ -271,7 +276,7 @@ def main() -> None:
             projects[key], shipments[key], cargoes[key] = project, shipment, cargo
         project = Project(organization_id=org_a.id, primary_customer_id=owner_a.id, project_code="SHARED-E2E-N", lifecycle_status="in_progress", created_by_user_id=users["admin"].id)
         db.session.add(project); db.session.flush()
-        shipment = OperationalShipment(organization_id=org_a.id, project_id=project.id, source_type="direct", customer_id=owner_a.id, lifecycle_status="in_progress", created_by_user_id=users["admin"].id)
+        shipment = OperationalShipment(organization_id=org_a.id, project_id=project.id, source_type="direct", customer_id=owner_a.id, lifecycle_status="in_progress", created_by_user_id=users["admin"].id, primary_responsible_expert_id=primary_expert.id)
         db.session.add(shipment); db.session.flush()
         cargo = ShipmentCargoItem(operational_shipment_id=shipment.id, cargo_owner_customer_id=None, line_number=1, cargo_type_id=cargo_type.id, quantity="1", uom_id=uoms["PALLET"].id, display_name_snapshot="[SHARED-E2E] Cargo NULL Owner", cargo_type_code_snapshot=cargo_type.immutable_code, cargo_type_fa_snapshot=cargo_type.fa_name, cargo_type_en_snapshot=cargo_type.en_name, uom_code_snapshot=uoms["PALLET"].immutable_code, uom_symbol_snapshot=uoms["PALLET"].symbol, created_by=users["admin"].id, updated_by=users["admin"].id)
         db.session.add(cargo)
@@ -280,7 +285,7 @@ def main() -> None:
         # or legacy allocation and has two authorized execution targets.
         project = Project(organization_id=org_a.id, primary_customer_id=owner_a.id, project_code="SHARED-E2E-I", lifecycle_status="in_progress", created_by_user_id=users["admin"].id)
         db.session.add(project); db.session.flush()
-        shipment = OperationalShipment(organization_id=org_a.id, project_id=project.id, source_type="direct", customer_id=owner_a.id, lifecycle_status="in_progress", created_by_user_id=users["admin"].id)
+        shipment = OperationalShipment(organization_id=org_a.id, project_id=project.id, source_type="direct", customer_id=owner_a.id, lifecycle_status="in_progress", created_by_user_id=users["admin"].id, primary_responsible_expert_id=primary_expert.id)
         db.session.add(shipment); db.session.flush()
         cargo = ShipmentCargoItem(operational_shipment_id=shipment.id, cargo_owner_customer_id=owner_a.id, line_number=1, cargo_type_id=cargo_type.id, quantity="5", uom_id=uoms["PALLET"].id, display_name_snapshot="[SHARED-E2E] Cargo I", cargo_type_code_snapshot=cargo_type.immutable_code, cargo_type_fa_snapshot=cargo_type.fa_name, cargo_type_en_snapshot=cargo_type.en_name, uom_code_snapshot=uoms["PALLET"].immutable_code, uom_symbol_snapshot=uoms["PALLET"].symbol, created_by=users["admin"].id, updated_by=users["admin"].id)
         db.session.add(cargo); db.session.flush()
@@ -289,7 +294,7 @@ def main() -> None:
         # deliberately has no relation to any Organization A record.
         project = Project(organization_id=org_b.id, primary_customer_id=foreign_owner.id, project_code="SHARED-E2E-TENANT-B", lifecycle_status="in_progress", created_by_user_id=users["foreign"].id)
         db.session.add(project); db.session.flush()
-        shipment = OperationalShipment(organization_id=org_b.id, project_id=project.id, source_type="direct", customer_id=foreign_owner.id, lifecycle_status="in_progress", created_by_user_id=users["foreign"].id)
+        shipment = OperationalShipment(organization_id=org_b.id, project_id=project.id, source_type="direct", customer_id=foreign_owner.id, lifecycle_status="in_progress", created_by_user_id=users["foreign"].id, primary_responsible_expert_id=users["foreign"].id)
         db.session.add(shipment); db.session.flush()
         cargo = ShipmentCargoItem(operational_shipment_id=shipment.id, cargo_owner_customer_id=foreign_owner.id, line_number=1, cargo_type_id=cargo_type.id, quantity="7", uom_id=uoms["PALLET"].id, display_name_snapshot="[SHARED-E2E] Tenant B Cargo", cargo_type_code_snapshot=cargo_type.immutable_code, cargo_type_fa_snapshot=cargo_type.fa_name, cargo_type_en_snapshot=cargo_type.en_name, uom_code_snapshot=uoms["PALLET"].immutable_code, uom_symbol_snapshot=uoms["PALLET"].symbol, created_by=users["foreign"].id, updated_by=users["foreign"].id)
         db.session.add(cargo); db.session.flush()

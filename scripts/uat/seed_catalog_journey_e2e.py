@@ -17,6 +17,10 @@ from backend.cargo_models import CargoCatalogItem
 from backend.extensions import db
 from backend.models import CargoType, ExpertUser, UnitOfMeasure
 from backend.operational_models import Project
+from backend.organization_reference_catalog_models import (
+    OrganizationCargoTypeActivation,
+    OrganizationUnitOfMeasureActivation,
+)
 from scripts.uat.seed_shared_transport_e2e import main as seed_shared_transport
 
 
@@ -32,6 +36,24 @@ def main() -> None:
         uom = UnitOfMeasure.query.filter_by(is_active=True).order_by(UnitOfMeasure.id).first()
         if not cargo_type or not uom:
             raise RuntimeError("catalog journey requires active cargo type and UOM")
+        db.session.add_all(
+            [
+                OrganizationCargoTypeActivation(
+                    organization_id=project.organization_id,
+                    cargo_type_id=cargo_type.id,
+                    status="ACTIVE",
+                    created_by=user.id,
+                    updated_by=user.id,
+                ),
+                OrganizationUnitOfMeasureActivation(
+                    organization_id=project.organization_id,
+                    unit_of_measure_id=uom.id,
+                    status="ACTIVE",
+                    created_by=user.id,
+                    updated_by=user.id,
+                ),
+            ]
+        )
         catalog = CargoCatalogItem(
             organization_id=project.organization_id,
             immutable_code="CATALOG-JOURNEY-001",
