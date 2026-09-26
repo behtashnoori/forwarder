@@ -184,7 +184,10 @@ try {
   }
 
   New-Item -ItemType Directory -Path $runtime, $EvidenceDirectory -Force | Out-Null
-  $pgPort = Get-FreePort
+  $pgPort = 55432
+  if (Get-NetTCPConnection -LocalPort $pgPort -State Listen -ErrorAction SilentlyContinue) {
+    throw "Owned PostgreSQL port $pgPort is already in use"
+  }
   Invoke-Logged 'initialize owned PostgreSQL 18' {
     & (Join-Path $pgBin 'initdb.exe') -D $pgData -U postgres --auth-host=trust --auth-local=trust --encoding=UTF8 --locale=C
   } (Join-Path $EvidenceDirectory 'initdb.log')
@@ -226,7 +229,7 @@ try {
     $env:P3_CLOSURE_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_p3_12_closure_$($runId.Substring(0, 8))"
     $env:P3_OWNER_TRANSFER_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_p3_13_owner_$($runId.Substring(0, 8))"
     $env:DN10_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_dn10_$($runId.Substring(0, 8))"
-    $env:CONTROL_TOWER_DISPOSABLE_POSTGRES_URL = New-OwnedDatabase "forwarder_control_tower_p315_$($runId.Substring(0, 8))"
+    $env:CONTROL_TOWER_DISPOSABLE_POSTGRES_URL = New-OwnedDatabase 'forwarder_control_tower_build'
     $postgresSpecs = @(
       'backend/tests/test_phase3_reference_catalog_postgresql.py',
       'backend/tests/test_phase3_cargo_lineage_postgresql.py',
