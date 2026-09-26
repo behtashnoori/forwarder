@@ -148,7 +148,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
     mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF"),
   });
-  await page.getByRole("button", { name: "بارگذاری سند برای محموله" }).click();
+  await page.getByRole("button", { name: "بارگذاری سند", exact: true }).click();
   await expect(page.getByText("fixed-owner-proof.pdf")).toBeVisible();
 
   // Journey B: use the existing governed assignment command; Shipment access stays with E1.
