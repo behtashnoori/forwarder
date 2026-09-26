@@ -3,7 +3,9 @@ param(
   [Parameter(Mandatory = $true)][string]$EvidenceDirectory,
   [Parameter(Mandatory = $true)][string]$ExpectedProductSha,
   [switch]$PostgresOnly,
-  [switch]$BrowserOnly
+  [switch]$BrowserOnly,
+  [ValidateSet('P301','P302','P303','P304','P305','P306','P307','P308','P309','P310','P311','P312','P313','P314','MT3','IPJ01','IPJ02-IPJ03','P315-CORE')]
+  [string]$StartBrowserAt
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,6 +22,7 @@ $productHead = $null
 $dirty = $null
 $schemaHead = $null
 $results = [System.Collections.Generic.List[object]]::new()
+$browserSelectionStarted = -not [bool]$StartBrowserAt
 
 function Get-FreePort {
   $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
@@ -78,6 +81,13 @@ function Invoke-BrowserJourney {
     [switch]$RestrictedOwnerRuntime,
     [switch]$CustomerPassword
   )
+  if (-not $script:browserSelectionStarted) {
+    if ($Name -ne $StartBrowserAt) {
+      Write-Output "$Name Chrome SKIPPED_FOR_DIAGNOSTIC_RESUME"
+      return
+    }
+    $script:browserSelectionStarted = $true
+  }
   $journeyEvidence = Join-Path $EvidenceDirectory $Name
   New-Item -ItemType Directory -Path $journeyEvidence -Force | Out-Null
   $databaseUrl = New-OwnedDatabase $DatabaseName
@@ -90,6 +100,7 @@ function Invoke-BrowserJourney {
     $env:FORWARDER_E2E_CUSTOMER_PASSWORD = $env:FORWARDER_E2E_PASSWORD
   }
   $env:FORWARDER_E2E_FIXTURE_PATH = Join-Path $runtime "$Name-fixture.json"
+  $env:MT3_E2E_FIXTURE_PATH = $env:FORWARDER_E2E_FIXTURE_PATH
   $env:DOCUMENT_STORAGE_ROOT = Join-Path $runtime "$Name-private-documents"
   $env:OPERATIONAL_WORKSPACE_EVIDENCE_PATH = $journeyEvidence
   $env:OPERATIONAL_MONITORING_RELIABILITY_EVIDENCE_PATH = $journeyEvidence
@@ -279,6 +290,9 @@ try {
       'e2e/operational-monitoring-reliability-phase2-5.spec.ts'
     ) -CustomerPassword
     Invoke-BrowserJourney -Name 'P315-CORE' -DatabaseName "forwarder_workspace_phase1_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_final_candidate_e2e.py' -Specs @('e2e/phase3-final-candidate.spec.ts') -PostAudit 'scripts/uat/audit_phase3_final_candidate_e2e.py' -CustomerPassword
+    if (-not $script:browserSelectionStarted) {
+      throw "Diagnostic browser resume target was not found: $StartBrowserAt"
+    }
   }
 
   if ((git rev-parse HEAD).Trim() -ne $ExpectedProductSha -or (git status --porcelain)) {
