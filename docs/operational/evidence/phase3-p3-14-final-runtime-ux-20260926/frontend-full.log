@@ -1,0 +1,12 @@
+
+> vite_react_shadcn_ts@1.10.0 test:frontend
+> vitest run
+
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-14-final-runtime-ux
+
+
+ Test Files  94 passed (94)
+      Tests  447 passed (447)
+   Start at  23:49:03
+   Duration  454.98s (transform 10.77s, setup 36.06s, import 46.49s, tests 145.30s, environment 184.77s)

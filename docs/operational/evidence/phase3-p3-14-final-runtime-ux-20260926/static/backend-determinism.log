@@ -1,0 +1,5 @@
+
+> vite_react_shadcn_ts@1.10.0 backend:check
+> node scripts/check-backend-determinism.js
+
+check-backend-determinism: OK (no forbidden patterns)

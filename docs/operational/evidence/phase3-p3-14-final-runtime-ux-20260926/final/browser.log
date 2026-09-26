@@ -1,0 +1,11 @@
+
+Running 3 tests using 1 worker
+
+
+(node:6364) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/3] e2e\phase3-final-runtime-ux.spec.ts:38:1 › P3-14 Expert context navigation and Workspace/Tower shared truth
+[2/3] e2e\phase3-final-runtime-ux.spec.ts:98:1 › P3-14 Organization Admin reaches account support through normal navigation
+[3/3] e2e\phase3-final-runtime-ux.spec.ts:119:1 › P3-14 Customer mobile projection keeps section navigation and privacy
+  3 passed (1.5m)
