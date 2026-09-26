@@ -30,6 +30,7 @@ from backend.operational_models import (
     OrganizationHostname,
 )
 from backend.services.user_service import hash_password
+from backend.security import security
 
 
 DATABASE_NAME = "forwarder_integrated_cert_fixed_shipment_owner_e2e"
@@ -138,6 +139,9 @@ def main() -> None:
             phone="09124700001",
             first_name="مشتری",
             last_name="مالک ثابت",
+            password_hash=security.hash_password(password),
+            account_status="ACTIVE",
+            operational_organization_id=organization.id,
             is_email_verified=True,
             total_requests=1,
             completed_requests=0,
@@ -210,6 +214,7 @@ def main() -> None:
                     "e2_id": e2.id,
                     "admin_id": admin.id,
                     "customer_id": portal_customer.id,
+                    "customer_email": portal_customer.email,
                     "request_id": request_row.id,
                     "request_public_id": request_row.public_id,
                     "tracking_code": request_row.tracking_code,

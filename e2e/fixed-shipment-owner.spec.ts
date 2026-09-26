@@ -15,6 +15,7 @@ const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as {
   usernames: { e1: string; e2: string; admin: string };
   e2_id: number;
   customer_id: number;
+  customer_email: string;
   request_id: number;
   request_public_id: string;
   origin_province_id: number;
@@ -99,7 +100,12 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await quoteDialog.getByRole("button", { name: "ارسال پیشنهاد", exact: true }).click();
   await expect(quoteDialog).toBeHidden();
 
-  await page.goto(`/request/${fixture.request_id}?customer=${fixture.customer_id}`);
+  await page.goto("/customer");
+  await page.locator("#customer-email").fill(fixture.customer_email);
+  await page.locator("#customer-password").fill(password!);
+  await page.locator("form").getByRole("button").first().click();
+  await expect(page).toHaveURL(/\/customer\/requests$/);
+  await page.locator(`a[href="/customer/requests/${fixture.request_public_id}"]`).click();
   await expect(page.getByText("پیشنهاد (قیمت)")).toBeVisible();
   await page.getByRole("button", { name: "تأیید پیشنهاد" }).click();
   await expect(page.getByText("شما این پیشنهاد را تأیید کردید")).toBeVisible();
