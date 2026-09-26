@@ -284,9 +284,15 @@ try {
 
     Invoke-BrowserJourney -Name 'MT3' -DatabaseName "forwarder_mt3_browser_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_mt3_public_tracking_e2e.py' -Specs @('e2e/mt3-public-tracking-security.spec.ts')
     Invoke-BrowserJourney -Name 'IPJ01' -DatabaseName 'forwarder_integrated_cert_fixed_shipment_owner_e2e' -Seed 'scripts/uat/seed_fixed_shipment_owner_e2e.py' -Specs @('e2e/fixed-shipment-owner.spec.ts')
-    Invoke-BrowserJourney -Name 'IPJ02-IPJ03' -DatabaseName "forwarder_workspace_phase2_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_operational_workspace_phase2_e2e.py' -Specs @(
-      'e2e/operational-workspace-phase1.spec.ts',
-      'e2e/operational-workspace-phase2.spec.ts',
+    # These suites deliberately mutate Actions and SLA rule versions. Keep each
+    # proof on a fresh owned database so one journey cannot precondition another.
+    Invoke-BrowserJourney -Name 'IPJ02-IPJ03' -DatabaseName "forwarder_workspace_phase2_phase1_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_operational_workspace_phase2_e2e.py' -Specs @(
+      'e2e/operational-workspace-phase1.spec.ts'
+    ) -CustomerPassword
+    Invoke-BrowserJourney -Name 'IPJ02-IPJ03-PHASE2' -DatabaseName "forwarder_workspace_phase2_phase2_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_operational_workspace_phase2_e2e.py' -Specs @(
+      'e2e/operational-workspace-phase2.spec.ts'
+    ) -CustomerPassword
+    Invoke-BrowserJourney -Name 'IPJ02-IPJ03-MONITORING' -DatabaseName "forwarder_workspace_phase2_monitoring_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_operational_workspace_phase2_e2e.py' -Specs @(
       'e2e/operational-monitoring-reliability-phase2-5.spec.ts'
     ) -CustomerPassword
     Invoke-BrowserJourney -Name 'P315-CORE' -DatabaseName "forwarder_workspace_phase1_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_final_candidate_e2e.py' -Specs @('e2e/phase3-final-candidate.spec.ts') -PostAudit 'scripts/uat/audit_phase3_final_candidate_e2e.py' -CustomerPassword
