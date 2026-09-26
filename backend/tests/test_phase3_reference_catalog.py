@@ -34,7 +34,7 @@ from backend.services.auth_session_service import create_session_tokens
 
 PREVIOUS = "20260929_operational_monitoring_reliability"
 HEAD = "20260930_phase3_reference_catalog"
-REPOSITORY_HEAD = "20261011_phase3_owner_transfer"
+REPOSITORY_HEAD = "20261012_phase3_cargo_eta"
 BIGINT = sa.BigInteger().with_variant(sa.Integer(), "sqlite")
 
 

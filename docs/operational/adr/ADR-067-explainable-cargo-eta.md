@@ -140,8 +140,9 @@ never mutates operational sources. No new worker, external provider or scheduler
 
 ## Compatibility, migration and rollback
 
-An additive empty migration follows actual canonical head when P3-11 begins
-(currently `20261009_phase3_route_time`). Preserve all historic migrations and
+An additive empty migration `20261012_phase3_cargo_eta` follows the verified
+canonical `20261011_phase3_owner_transfer`. The never-canonical earlier draft is
+preserved at `198d2bf`; no canonical P3-12/P3-13 migration is modified. Preserve all historic migrations and
 P3-10 selections. One head, no seed/backfill. New DTO fields are additive and
 legacy tracking remains separate. Upgrade and empty downgrade/re-upgrade require
 PostgreSQL 18 proof. Populated downgrade refuses before deleting history.
@@ -173,3 +174,14 @@ NOT_RUN; Product Owner DN04 decision retained as already resolved.
 with explicit idempotent ensure versus pure historical/read lookup semantics.
 Original proposal evidence remains at review commit
 `081f73a3d84c6aa6136e7f1fd4268f57bac497cf`; acceptance does not claim implementation.
+
+## Current resumed implementation — 2026-09-26
+
+The Product Owner explicitly resolved
+`P311_STOP_PLACEMENT=ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT`. The
+[current implementation contract](../../product/phase3/P3-11-ETA-CONTRACT.md)
+defines arrival-only next/final arithmetic, origin boundary, whole remaining
+stops, existing completion adapters and Customer-safe provenance. Preserved
+work at `198d2bf` is resumed in its original branch after merging P3-13.
+Qualification is pending the final frozen source; preliminary checks do not
+establish Product Complete or controlled integration.

@@ -1,8 +1,8 @@
 """ENSURE_CURRENT_ETA is an explicit derived write; history is a pure lookup.
 
 Call ensure in a consistent transaction. No operational source is mutated here.
-An unplaced nonzero stop range cannot prove a remaining arrival interval. Pending
-the bounded Product clarification, that interval remains explicitly unavailable.
+Reference stops belong to a leg's arrival point before the next movement.
+Only governed completion facts consume components; elapsed time never does.
 """
 from datetime import timedelta
 import hashlib
@@ -13,7 +13,7 @@ from sqlalchemy import select
 from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem as Cargo, ExecutionUnitCargoAllocation as Allocation
 from backend.eta_models import CargoEtaSnapshot as Snapshot, CargoEtaInput as Input
-from backend.operational_models import (Milestone, OperationalCheckpoint, OperationalEvent,
+from backend.operational_models import (Milestone, OperationalCheckpoint,
     OperationalShipment as Shipment, RouteCargoDestination, RouteLeg, RoutePlan,
     RouteStageExecution, RouteTraversalFact, utcnow)
 from backend.reported_fact_models import OperationalEventReportContext as Context, OperationalEventCargoImpact as Impact
@@ -27,7 +27,7 @@ REASONS = {
     "PROGRESS_UNDEFINED": "موقعیت یا پیشرفت عملیاتی کافی ثبت نشده است.",
     "PROGRESS_AMBIGUOUS": "پیشرفت کل این کالا به‌طور روشن مشخص نیست.",
     "REFERENCE_UNDEFINED": "زمان مرجع بخش باقی‌مانده تعریف نشده است.",
-    "STOP_SCOPE_UNDEFINED": "جای توقف یا عملیات نسبت به نقطه رسیدن مشخص نشده است.",
+    "DEPARTURE_UNDEFINED": "زمان شروع حرکت هنوز مشخص نیست.",
     "NEXT_POINT_AMBIGUOUS": "مبنای زمان نقطه مهم بعدی مشخص نیست.",
     "DESTINATION_REACHED": "رسیدن ثبت شده است؛ برآورد رسیدن آینده ارائه نمی‌شود.",
     "SOURCE_UNAVAILABLE": "مبنای این برآورد اکنون در دسترس نیست.",
@@ -115,11 +115,18 @@ def _participation(cargo, legs):
             stage = stages[row.route_stage_execution_id]
             by_leg.setdefault(stage.route_leg_id, []).append(row)
             basis.append([row.id, row.version, stage.id, row.execution_unit_id, str(row.allocated_quantity)])
-    split = legacy_unknown or any(len(rows) > 1 for rows in by_leg.values())
+    split = legacy_unknown or any(len(rows) > 1 or cargo.actual_quantity is None
+        or rows[0].allocated_quantity != cargo.actual_quantity for rows in by_leg.values())
     whole_units = {}
+    ambiguous_units = set()
     for rows in by_leg.values():
         if len(rows) == 1 and cargo.actual_quantity is not None and rows[0].allocated_quantity == cargo.actual_quantity:
-            whole_units[rows[0].execution_unit_id] = stages[rows[0].route_stage_execution_id].route_leg_id
+            unit = rows[0].execution_unit_id
+            if unit in whole_units:
+                ambiguous_units.add(unit)
+            whole_units[unit] = stages[rows[0].route_stage_execution_id].route_leg_id
+    for unit in ambiguous_units:
+        del whole_units[unit]
     return by_leg, whole_units, split, sorted(basis)
 
 
@@ -213,7 +220,38 @@ def _observations(shipment, cargo, plan, legs, customer, whole_units):
                         "node": index + arrived if matches else None,
                         "phase": "AT_NODE" if arrived else "DEPARTED",
                         "occurred_at": stamp(at), "recorded_at": stamp(traversal.recorded_at)})
-    candidates.sort(key=lambda row: (row["occurred_at"], row["source"], row["id"]))
+        # Each existing checkpoint explicitly belongs to its leg. Completion of
+        # every configured arrival-point operation is required; a partial or
+        # unlocated operation cannot consume the leg's aggregate arrival stop.
+        for index, leg in enumerate(legs):
+            checkpoints = db.session.scalars(select(OperationalCheckpoint).where(
+                OperationalCheckpoint.route_plan_id == plan.id,
+                OperationalCheckpoint.route_leg_id == leg.id,
+                OperationalCheckpoint.status != "cancelled")).all()
+            at_arrival = [cp for cp in checkpoints if leg.destination_logistics_point_id is None
+                          and cp.canonical_location_id == leg.destination_location_id]
+            completed = []
+            for cp in at_arrival:
+                facts = {}
+                for milestone in db.session.scalars(select(Milestone).where(
+                        Milestone.checkpoint_id == cp.id, Milestone.route_plan_id == plan.id,
+                        Milestone.milestone_type.in_(("checkpoint_arrival", "checkpoint_processing_complete")))).all():
+                    fact = occurrences.effective_occurrence(milestone)
+                    if fact is not None:
+                        sources.append({"milestone_event_id": fact.id})
+                        facts[milestone.milestone_type] = fact
+                arrival, completion = facts.get("checkpoint_arrival"), facts.get("checkpoint_processing_complete")
+                if arrival is not None and completion is not None and cp.status != "blocked" and (
+                        times.aware(completion.occurred_at) >= times.aware(arrival.occurred_at)):
+                    completed.append(completion)
+            if at_arrival and len(at_arrival) == len(checkpoints) and len(completed) == len(at_arrival):
+                last = max(completed, key=lambda row: (times.aware(row.occurred_at), row.id))
+                candidates.append({"source": "CHECKPOINT_OPERATIONS", "id": last.id,
+                    "node": index + 1, "phase": "STOP_COMPLETE",
+                    "completion_ids": sorted(row.id for row in completed),
+                    "occurred_at": stamp(last.occurred_at), "recorded_at": stamp(last.recorded_at)})
+    phase_order = {"AT_NODE": 0, "STOP_COMPLETE": 1, "DEPARTED": 2}
+    candidates.sort(key=lambda row: (row["occurred_at"], phase_order[row["phase"]], row["source"], row["id"]))
     return candidates, sources, effects
 
 
@@ -221,9 +259,10 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
     """Pure source computation; no flush, commit, snapshot or source writes."""
     at = at or utcnow()
     plan, mapping, legs = _path(shipment, cargo)
-    basis = {"ruleset": RULESET, "audience": "CUSTOMER" if customer else "INTERNAL",
-        "cargo": [cargo.id, cargo.version, str(cargo.actual_quantity)],
-        "route": [plan.id, plan.revision_number, plan.version] if plan else None,
+    basis = {"ruleset": RULESET, "stop_placement": "ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT",
+        "audience": "CUSTOMER" if customer else "INTERNAL",
+        "cargo": [cargo.id, None if customer else cargo.version, str(cargo.actual_quantity)],
+        "route": [plan.id, plan.revision_number, None if customer else plan.version] if plan else None,
         "mapping": [mapping.id, mapping.version, mapping.destination_route_leg_id] if mapping else None}
     result = {"next": missing("ROUTE_UNDEFINED"), "final": missing("ROUTE_UNDEFINED"),
         "as_of": None, "recorded_at": None, "basis_label": None,
@@ -231,7 +270,7 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
     sources = []
     if not legs:
         return plan, basis, result, sources
-    basis["legs"] = [{"id": leg.id, "version": leg.version, "parent": leg.parent_route_leg_id,
+    basis["legs"] = [{"id": leg.id, "version": None if customer else leg.version, "parent": leg.parent_route_leg_id,
         **times.fingerprint(leg)} for leg in legs]
     _, whole_units, split, allocation_basis = _participation(cargo, legs)
     basis["participation"] = allocation_basis
@@ -266,31 +305,53 @@ def _calculate(shipment, cargo, *, customer=False, at=None):
     if node == len(legs):
         result.update(next=missing("DESTINATION_REACHED"), final=missing("DESTINATION_REACHED", _label(shipment, legs[-1], customer)))
         return plan, basis, result, sources
-    references = [times.applicable(leg, shipment.organization_id, at) for leg in legs[node:]]
+    if node == 0 and anchor["phase"] != "DEPARTED":
+        result.update(next=missing("DEPARTURE_UNDEFINED", _label(shipment, legs[0], customer)),
+                      final=missing("DEPARTURE_UNDEFINED", _label(shipment, legs[-1], customer)))
+        return plan, basis, result, sources
+    # A later location at the same node does not erase an explicit completion.
+    # Facts from another visit/node or after the anchor cannot consume this stop.
+    completed_stop = anchor["phase"] in {"DEPARTED", "STOP_COMPLETE"} or any(
+        row["node"] == node and row["phase"] in {"STOP_COMPLETE", "DEPARTED"}
+        and row["occurred_at"] <= anchor["occurred_at"] for row in observations)
+    reference_start = node - 1 if node > 0 and not completed_stop else node
+    references = [times.applicable(leg, shipment.organization_id, at) for leg in legs[reference_start:]]
     basis["references"] = [{"id": ref.id, "version": ref.version,
         "movement_min": ref.movement_min_minutes, "movement_max": ref.movement_max_minutes,
         "stop_min": ref.stop_min_minutes, "stop_max": ref.stop_max_minutes} if ref else None for ref in references]
     sources += [{"reference_version_id": ref.id} for ref in references if ref]
-    checkpoints = db.session.scalars(select(OperationalCheckpoint).where(
+    checkpoints = [] if customer else db.session.scalars(select(OperationalCheckpoint).where(
         OperationalCheckpoint.route_plan_id == plan.id,
         OperationalCheckpoint.route_leg_id == legs[node].id)).all()
-    basis["next_checkpoints"] = [[row.id, row.version, row.canonical_location_id] for row in checkpoints]
+    basis["next_checkpoints"] = [[row.id, row.version, row.canonical_location_id,
+        stamp(row.actual_departure_at), row.status] for row in checkpoints]
     # A checkpoint within the next leg has no fractional reference travel-time basis.
     uncertain_next = any(row.canonical_location_id not in endpoint(legs[node], "destination")[:1]
                          and row.actual_departure_at is None for row in checkpoints)
     def estimate(count):
-        selected = references[:count]
         label = _label(shipment, legs[node + count - 1], customer)
-        if any(ref is None or ref.movement_min_minutes is None or ref.stop_min_minutes is None for ref in selected):
-            return missing("REFERENCE_UNDEFINED", label)
-        if any(ref.stop_max_minutes != 0 for ref in selected):
-            return missing("STOP_SCOPE_UNDEFINED", label)
-        lower = sum(ref.movement_min_minutes + ref.stop_min_minutes for ref in selected)
-        upper = sum(ref.movement_max_minutes + ref.stop_max_minutes for ref in selected)
+        components = [(index, "movement") for index in range(node, node + count)]
+        # Include only stops that precede a still-required movement, never the
+        # target's arrival stop. The incoming anchor stop may be unknown even
+        # when the outgoing movement is fully referenced.
+        components += [(index, "stop") for index in range(node, node + count - 1)]
+        if reference_start < node:
+            components.append((node - 1, "stop"))
+        lower = upper = 0
+        for index, kind in components:
+            ref = references[index - reference_start]
+            minimum = getattr(ref, kind + "_min_minutes", None)
+            maximum = getattr(ref, kind + "_max_minutes", None)
+            if minimum is None or maximum is None:
+                return missing("REFERENCE_UNDEFINED", label)
+            lower += minimum
+            upper += maximum
         origin = times.instant(anchor["occurred_at"])
         return {"available": True, "reason": None, "message": None, "target": label,
                 "earliest": stamp(origin + timedelta(minutes=lower)), "latest": stamp(origin + timedelta(minutes=upper))}
-    result.update(next=missing("NEXT_POINT_AMBIGUOUS") if uncertain_next else estimate(1), final=estimate(len(references)))
+    basis["remaining"] = {"node": node, "anchor_stop_complete": completed_stop,
+                          "reference_start": reference_start}
+    result.update(next=missing("NEXT_POINT_AMBIGUOUS") if uncertain_next else estimate(1), final=estimate(len(legs) - node))
     return plan, basis, result, sources
 
 
@@ -322,7 +383,8 @@ def ensure_current_eta(shipment_id, cargo_id, *, user=None, account=None):
         db.session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:identity, 0))"),
                            {"identity": f"cargo_eta:{cargo.id}"})
     audience = "CUSTOMER" if account is not None else "INTERNAL"
-    plan, basis, result, sources = calculate(shipment, cargo, customer=account is not None)
+    calculated_at = utcnow()
+    plan, basis, result, sources = calculate(shipment, cargo, customer=account is not None, at=calculated_at)
     fingerprint = _fingerprint(basis)
     previous = db.session.scalar(select(Snapshot).where(Snapshot.cargo_item_id == cargo.id,
         Snapshot.organization_id == shipment.organization_id, Snapshot.audience == audience)
@@ -332,7 +394,7 @@ def ensure_current_eta(shipment_id, cargo_id, *, user=None, account=None):
     row = Snapshot(organization_id=shipment.organization_id, operational_shipment_id=shipment.id,
         cargo_item_id=cargo.id, route_plan_id=plan.id if plan else None, audience=audience,
         sequence=previous.sequence + 1 if previous else 1, source_fingerprint=fingerprint,
-        source_basis=basis, result=result)
+        source_basis=basis, result=result, calculated_at=calculated_at)
     db.session.add(row)
     db.session.flush()
     unique = {tuple(source.items()) for source in sources}

@@ -22,7 +22,7 @@ function age(value: string, calculatedAt: string) {
 function Range({ title, value }: { title: string; value: Estimate }) {
   return <div className="space-y-1 rounded-lg bg-slate-50 p-3">
     <h4 className="font-semibold">{title}{value.target ? ` · ${value.target}` : ""}</h4>
-    {value.available ? <p>{time(value.earliest)} تا {time(value.latest)}</p> : <>
+    {value.available ? <p>بین {time(value.earliest)} تا {time(value.latest)}</p> : <>
       <p>زمان تقریبی رسیدن قابل محاسبه نیست</p><p className="text-sm text-slate-600">{value.message}</p>
     </>}
   </div>;
@@ -97,6 +97,7 @@ export default function CargoEta({ shipmentId, cargoId, customer = false }: { sh
   return <section aria-label="زمان تقریبی رسیدن کالا" className="min-w-0 space-y-3 break-words rounded-xl border p-3" dir="rtl">
     <div className="flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold">زمان تقریبی رسیدن</h3><Button size="sm" variant="outline" onClick={() => setRefresh(value => value + 1)}>تازه‌سازی برآورد</Button></div>
     <p className="text-xs text-slate-600">برآورد عملیاتی است؛ تعهد زمانی یا موقعیت لحظه‌ای نیست.</p>
+    <p className="text-xs text-slate-600">زمان رسیدن است؛ مدت عملیات پس از رسیدن به مقصد نهایی در آن حساب نمی‌شود.</p>
     {!active || state.loading ? <p role="status">در حال دریافت برآورد…</p> : state.error ? <p role="alert">{state.error}</p> : state.current && <Result value={state.current} />}
     <p className="text-sm text-slate-600">فاصله برنامه‌ریزی‌شده: تعریف نشده</p>
     <Button size="sm" variant="ghost" onClick={() => setPage(value => value ? 0 : 1)}>{page ? "بستن تاریخچه برآورد" : "برآوردهای قبلی"}</Button>

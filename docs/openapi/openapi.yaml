@@ -2430,6 +2430,7 @@ components:
         created:
           type: boolean
     CargoEtaRange:
+      description: Arrival range only. Arrival-point stop affects continuation beyond that point; target stop is excluded. Next and final are independent. Missing required components stay unknown; no elapsed-time proration.
       type: object
       additionalProperties: false
       required:

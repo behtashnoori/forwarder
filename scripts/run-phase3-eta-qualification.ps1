@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param([Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$IncludeRegressions, [switch]$PostgresOnly, [switch]$BrowserOnly)
+param([Parameter(Mandatory=$true)][string]$EvidenceDirectory, [switch]$IncludeRegressions, [switch]$PostgresOnly, [switch]$BrowserOnly, [string]$ExpectedProductSha)
 $ErrorActionPreference = 'Stop'
 $workspace = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $pgBin = 'C:\Program Files\PostgreSQL\18\bin'
@@ -46,8 +46,9 @@ Push-Location $workspace
 try {
   $productHead = (git rev-parse HEAD).Trim()
   $dirty = [bool](git status --porcelain)
+  if ($ExpectedProductSha -and ($dirty -or $productHead -ne $ExpectedProductSha)) { throw 'Final qualification requires the exact clean Product SHA' }
   $head = (python -m scripts.browser_migration_contract repository-head).Trim()
-  if ($head -ne '20261010_phase3_cargo_eta') { throw "Unexpected migration head: $head" }
+  if ($head -ne '20261012_phase3_cargo_eta') { throw "Unexpected migration head: $head" }
   $pgPort = Free-Port
   & (Join-Path $pgBin 'initdb.exe') -D $pgData -U postgres --auth-host=trust --auth-local=trust --encoding=UTF8 --locale=C *> (Join-Path $EvidenceDirectory 'initdb.log')
   Check-Exit 'initialize owned PostgreSQL'
@@ -56,9 +57,14 @@ try {
   if ($pgStart.ExitCode -ne 0) { throw 'Owned PostgreSQL failed to start' }
   $postgresStarted = $true
   $env:APP_ENV = 'uat'
+  $env:PYTHONIOENCODING = 'utf-8'
   $env:SECRET_KEY = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
   $env:JWT_SECRET_KEY = [guid]::NewGuid().ToString('N') + [guid]::NewGuid().ToString('N')
+  $env:TEST_DATABASE_URL = "sqlite:///:memory:"
+  $env:DATABASE_URL = "sqlite:///:memory:"
   if (-not $BrowserOnly) {
+  $env:P3_OWNER_TRANSFER_POSTGRES_URL = New-Database 'forwarder_integrated_cert_p3_13_owner'
+  $env:P3_CLOSURE_POSTGRES_URL = New-Database 'forwarder_integrated_cert_p3_12_closure'
   $env:P3_ETA_POSTGRES_URL = New-Database 'forwarder_integrated_cert_p3_11_eta'
   $env:P3_ROUTE_TIME_POSTGRES_URL = New-Database 'forwarder_integrated_cert_p3_10_route_time'
   $env:P3_CUSTOMER_SHIPMENT_POSTGRES_URL = New-Database 'forwarder_integrated_cert_p3_09_customer'
@@ -66,7 +72,7 @@ try {
   $env:P3_REPORTED_FACTS_POSTGRES_URL = New-Database 'forwarder_integrated_cert_p3_07_reports'
   $env:DN10_POSTGRES_URL = New-Database 'forwarder_integrated_cert_dn10'
   $env:P3_DOCUMENT_CONTEXT_POSTGRES_URL = New-Database 'forwarder_integrated_cert_p3_06_documents'
-  python -m pytest backend/tests/test_phase3_eta_postgresql.py backend/tests/test_phase3_route_time_postgresql.py backend/tests/test_phase3_customer_shipment_postgresql.py backend/tests/test_phase3_cargo_delivery_postgresql.py backend/tests/test_phase3_reported_facts_postgresql.py backend/tests/test_customer_entitlement_postgresql.py backend/tests/test_phase3_document_context_postgresql.py -q --disable-warnings *> (Join-Path $EvidenceDirectory 'postgresql.log')
+  python -m pytest backend/tests/test_phase3_eta_postgresql.py backend/tests/test_phase3_owner_transfer_postgresql.py backend/tests/test_phase3_closure_postgresql.py backend/tests/test_phase3_route_time_postgresql.py backend/tests/test_phase3_customer_shipment_postgresql.py backend/tests/test_phase3_cargo_delivery_postgresql.py backend/tests/test_phase3_reported_facts_postgresql.py backend/tests/test_customer_entitlement_postgresql.py backend/tests/test_phase3_document_context_postgresql.py -q --disable-warnings *> (Join-Path $EvidenceDirectory 'postgresql.log')
   Check-Exit 'PostgreSQL 18 migration/concurrency'
   $results.Add(@{ name='PostgreSQL 18'; status='PASS' })
   Write-Output 'PostgreSQL 18 migration/concurrency PASS'
@@ -92,6 +98,8 @@ try {
   $journeys = @(@{ name='P311'; seed='eta'; spec='eta' })
   if ($IncludeRegressions) {
     $journeys += @(
+      @{ name='P313'; seed='owner_transfer'; spec='owner-transfer' },
+      @{ name='P312'; seed='closure'; spec='closure' },
       @{ name='P310'; seed='route_time'; spec='route-time' },
       @{ name='P309'; seed='customer_shipment'; spec='customer-shipment' },
       @{ name='P303'; seed='branched_route'; spec='branched-route' },
@@ -138,6 +146,9 @@ try {
     Stop-OwnedProcess $backend; $backend = $null
     $results.Add(@{ name="$name Chrome"; status='PASS' })
     Write-Output "$name Chrome PASS"
+  }
+  if ($ExpectedProductSha -and ((git rev-parse HEAD).Trim() -ne $ExpectedProductSha -or (git status --porcelain))) {
+    throw 'Source changed during final qualification'
   }
 } finally {
   Stop-OwnedProcess $frontend

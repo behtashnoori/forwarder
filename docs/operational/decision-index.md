@@ -13,8 +13,10 @@ receipt is retained in [P3-13 entry evidence](evidence/phase3-p3-13-entry-202609
 P3-13 passed [exact-source qualification](evidence/phase3-p3-13-owner-transfer-status-20260926.md)
 on Product `c0914906af6675c016d5b77d51ecc8a0c05c0b72`, including genuine restricted
 PostgreSQL LOGIN and current Chrome authorization. Controlled integration/push/fetch
-has a separate exact-SHA receipt. P3-11 stays
-independently pending the Product stop-placement answer. P3-01..10 ancestry remains
+has a separate exact-SHA receipt. P3-11 resumes under the explicitly resolved
+`ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT` decision and its
+[current ETA contract](../product/phase3/P3-11-ETA-CONTRACT.md); final qualification
+and controlled integration are pending. P3-01..10 ancestry remains
 `368cd736cbffce3d62c33336868738d9086e8306`.
 Earlier phase status entries below are historical; no P3-14/P3-15 authority.
 

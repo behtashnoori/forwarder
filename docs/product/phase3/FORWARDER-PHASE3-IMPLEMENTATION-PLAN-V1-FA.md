@@ -1,6 +1,6 @@
 # طرح اجرای فاز ۳ — نسخه ۱
 
-> وضعیت جاری P3-11..13: معماری ADR-067/068/069 در `6259830f2a5fe94798bf4183d2643bf624529c26` پذیرفته شد. P3-11 کار حفظ‌شدهٔ تأییدنشده دارد و محل اعمال بازه توقف منتظر تصمیم محصول است. P3-12 طبق ماتریس مصوب، در Product `d1574fa137017ac41331cf039117ab9c19e101a3` [ارزیابی کامل و موفق](../../operational/evidence/phase3-p3-12-closure-status-20260926.md) دارد؛ ادغام آن در `c2e6140d52eda620ecaef6e255bcd591f58da2cb` با رسید push/fetch ثبت شده است. P3-13 روی همین پایه در Product `c0914906af6675c016d5b77d51ecc8a0c05c0b72` [ارزیابی کامل و موفق](../../operational/evidence/phase3-p3-13-owner-transfer-status-20260926.md) دارد؛ ادغام کنترل‌شده و push/fetch با رسید جداگانهٔ شناسهٔ دقیق ثبت می‌شود؛ P3-14/15، ارزیابی یکپارچهٔ سراسری، walkthrough انسانی و Release خارج از اختیار این مأموریت‌اند.
+> وضعیت جاری P3-11..13: معماری ADR-067/068/069 در `6259830f2a5fe94798bf4183d2643bf624529c26` پذیرفته شد. P3-11 از همان کار حفظ‌شده، طبق [تصمیم صریح توقف در نقطهٔ رسیدن](P3-11-ETA-CONTRACT.md) ادامه دارد؛ ارزیابی نهایی و ادغام هنوز در انتظار شواهد است. P3-12 طبق ماتریس مصوب، در Product `d1574fa137017ac41331cf039117ab9c19e101a3` [ارزیابی کامل و موفق](../../operational/evidence/phase3-p3-12-closure-status-20260926.md) دارد؛ ادغام آن در `c2e6140d52eda620ecaef6e255bcd591f58da2cb` با رسید push/fetch ثبت شده است. P3-13 روی همین پایه در Product `c0914906af6675c016d5b77d51ecc8a0c05c0b72` [ارزیابی کامل و موفق](../../operational/evidence/phase3-p3-13-owner-transfer-status-20260926.md) دارد؛ ادغام کنترل‌شده و push/fetch با رسید جداگانهٔ شناسهٔ دقیق ثبت می‌شود؛ P3-14/15، ارزیابی یکپارچهٔ سراسری، walkthrough انسانی و Release خارج از اختیار این مأموریت‌اند.
 
 
 > Current 2026-09-26 disposition: P3-01..10 are integrated at canonical `368cd736cbffce3d62c33336868738d9086e8306`. [Named ADR-067/068/069 acceptance](P3-11-13-ARCHITECTURE-ACCEPTANCE.md) opens the architecture gate for the SAME retained P3-11..13 mission. Their implementation is NOT_STARTED at this acceptance point. P3-14/P3-15, global qualification, Human Walkthrough and release remain excluded. Earlier dated/planning statuses below are preserved historical evidence.
@@ -445,7 +445,7 @@ Q0 جزئی از `QUALIFICATION_PLAN` تک‌تک رکوردهای زیر است
 - JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
 - AFFECTED_JOURNEYS=FWD-J02,FWD-J04,FWD-J06,FWD-J07,FWD-J08,FWD-J09,FWD-IPJ-02,FWD-IPJ-03,FWD-IPJ-04
 - DEPENDENCIES=P3-02,P3-03,P3-05,P3-07,P3-10
-- DECISIONS_REQUIRED_BEFORE_START=DN04؛ ADR فرمول/health/provenance و هر provider آینده؛ بدون تصمیم، این بخش وارد Build نمی‌شود.
+- DECISIONS_REQUIRED_BEFORE_START=DN04 و ADR-067 پذیرفته شده‌اند؛ P311_STOP_PLACEMENT=ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT با درخواست ادامه حل شد. Provider جدید خارج از اختیار است.
 - QUALIFICATION_PLAN=Q0؛ backend determinism/missing inputs/late correction؛ frontend range/stale/unavailable؛ PostgreSQL version pin و estimate concurrency؛ browser reference change→report correction→ETA history؛ regression route/OIP/customer/privacy.
 - MIGRATION_REQUIRED=YES
 - REFERENCE_IMPACT=UPDATE_REQUIRED: ETA contract و source registry؛ algorithm در این طرح نهایی نشده.

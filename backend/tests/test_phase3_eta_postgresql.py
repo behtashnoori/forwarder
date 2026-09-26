@@ -16,14 +16,14 @@ from backend.migration_runtime import alembic_config
 from backend.models import CargoType, UnitOfMeasure, ExpertUser, Province
 from backend.cargo_models import ShipmentCargoItem as Cargo
 from backend.eta_models import CargoEtaSnapshot as Snapshot, CargoEtaInput as Input
-from backend.operational_models import OperationalShipment, OperationalMembership, RouteCargoDestination
+from backend.operational_models import OperationalShipment, OperationalMembership, RouteCargoDestination, Milestone
 from backend.services import eta_service as eta, reported_fact_service as reports, route_time_service as times
 from backend.tests.test_phase3_transport_execution_postgresql import _seed_runtime
 from backend.tests.test_operational_vertical_slice import _auth
 
 URL = os.environ.get("P3_ETA_POSTGRES_URL", "")
-PREVIOUS = "20261009_phase3_route_time"
-HEAD = "20261010_phase3_cargo_eta"
+PREVIOUS = "20261011_phase3_owner_transfer"
+HEAD = "20261012_phase3_cargo_eta"
 pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned P3_ETA_POSTGRES_URL")
 
 
@@ -40,7 +40,7 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
     with app.app_context():
         ctx = _seed_runtime(app)
         membership = OperationalMembership.query.filter_by(user_id=ctx["owner"]).one()
-        membership.permissions = [*membership.permissions, "operational_shipment.create"]
+        membership.permissions = [*membership.permissions, "operational_shipment.create", "milestone_event.create", "milestone.correct"]
         shipment = OperationalShipment.query.filter_by(public_id=ctx["shipment"]).one()
         ctx.update(org=shipment.organization_id, shipment_id=shipment.id)
         admin = ExpertUser(username="p311-admin", password_hash="unused", full_name="Admin", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
@@ -64,6 +64,10 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
             "effective_from": (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()}, str(uuid4()))
         db.session.commit()
         ctx.update(cargo=cargo.public_id, cargo_id=cargo.id, reference=reference.id)
+        milestone = Milestone(organization_id=ctx["org"], operational_shipment_id=ctx["shipment_id"],
+            route_plan_id=ctx["plan"], route_leg_id=ctx["leg"], milestone_type="departure",
+            planned_at=datetime(2026, 9, 20, 8, tzinfo=timezone.utc))
+        db.session.add(milestone); db.session.commit(); ctx["departure"] = milestone.id
     tables = ("operational_shipment", "route_plan", "route_leg", "shipment_cargo_item", "organization_route_time_version")
     def source_rows():
         with engine.connect() as c:
@@ -109,7 +113,11 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
                         "target_public_id": ctx["cargo"], "kind": "LOCATION", "source": "DRIVER_REPORT",
                         "occurred_at": "2026-09-20T08:00:00Z", "location": {"canonical_location_public_id": location.public_id},
                         "impacted_cargo_public_ids": [ctx["cargo"]]}, str(uuid4()))
-                    db.session.commit(); return row.event.public_id
+                    db.session.commit()
+                    from backend.services import operational_service as operations
+                    operations.record_event(ctx["shipment_id"], ctx["departure"],
+                        {"occurred_at": "2026-09-20T08:00:00Z"}, {"id": ctx["owner"]}, str(uuid4()))
+                    return row.event.public_id
             with ThreadPoolExecutor(max_workers=1) as pool:
                 created.append(pool.submit(add_report).result(timeout=30))
         return value
@@ -125,6 +133,40 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         assert client.post(path + "/ensure", json={}, headers=headers).status_code == 200
         assert len(client.get(path + "/history", headers=headers).get_json()["items"]) == 2
     assert source_rows() == after_report
+
+    # Governed corrections append A→B→A instead of deduplicating away history.
+    from backend.services import operational_service as operations
+    def latest():
+        with app.test_client() as client:
+            response = client.post(path + "/ensure", json={}, headers=headers)
+            assert response.status_code == 200, response.get_json()
+            return response.get_json()
+    first = latest()
+    for hour in (9, 8):
+        with app.app_context():
+            milestone = db.session.get(Milestone, ctx["departure"])
+            operations.correct_milestone(ctx["shipment_id"], milestone.id,
+                {"expected_version": milestone.version, "reason": "Synthetic corrected departure",
+                 "occurred_at": f"2026-09-20T{hour:02d}:00:00Z"}, {"id": ctx["owner"]}, str(uuid4()))
+        current = latest()
+        assert current["sequence"] > first["sequence"]
+        assert current["next"]["earliest"] == f"2026-09-20T{hour+1:02d}:00:00+00:00"
+    assert current["next"] == first["next"] and current["public_id"] != first["public_id"]
+    with app.test_client() as client:
+        history = client.get(path + "/history", headers=headers).get_json()["items"]
+        assert len(history) == 4 and history[-2]["next"] == first["next"]
+
+    # Composite identities reject another Cargo/Shipment or RoutePlan before a
+    # snapshot can be attached. Tenant FK cannot be forged by a caller.
+    template = """INSERT INTO cargo_eta_snapshot(public_id,organization_id,operational_shipment_id,
+        cargo_item_id,route_plan_id,audience,sequence,ruleset,source_fingerprint,calculated_at,result,source_basis)
+        SELECT :public,organization_id + :org_delta,operational_shipment_id + :shipment_delta,
+        cargo_item_id,route_plan_id + :plan_delta,audience,sequence+1,ruleset,source_fingerprint,
+        calculated_at,result,source_basis FROM cargo_eta_snapshot ORDER BY sequence DESC LIMIT 1"""
+    for field in ("org_delta", "shipment_delta", "plan_delta"):
+        params = {"public": str(uuid4()), "org_delta": 0, "shipment_delta": 0, "plan_delta": 0, field: 100000}
+        with pytest.raises(sa.exc.DBAPIError), engine.begin() as connection:
+            connection.execute(sa.text(template), params)
 
     for statement in (
         "UPDATE cargo_eta_snapshot SET source_basis='{}'", "DELETE FROM cargo_eta_snapshot",
