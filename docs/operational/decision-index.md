@@ -17,8 +17,8 @@ has a separate exact-SHA receipt. P3-11 resumes under the explicitly resolved
 `ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT` decision and its
 [current ETA contract](../product/phase3/P3-11-ETA-CONTRACT.md).
 [Complete exact-source qualification](evidence/phase3-p3-11-eta-status-20260926.md)
-passed on Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`; controlled integration has a
-separate final receipt gate. P3-01..10 ancestry remains
+passed on Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`; [controlled integration and push/fetch](evidence/phase3-p3-11-integration-20260926.json)
+passed with 0/0 at `a96436be9d2c3ca9beafbd83d20d927851a357fd`. P3-01..10 ancestry remains
 `368cd736cbffce3d62c33336868738d9086e8306`.
 Earlier phase status entries below are historical; no P3-14/P3-15 authority.
 

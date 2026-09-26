@@ -185,5 +185,6 @@ stops, existing completion adapters and Customer-safe provenance. Preserved
 work at `198d2bf` is resumed in its original branch after merging P3-13.
 Full [exact-source qualification](../evidence/phase3-p3-11-eta-status-20260926.md)
 passed on Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`. Preliminary attempts are
-retained separately. Controlled canonical integration requires the final clean,
-ancestry, reference and push/fetch receipt; no global Product or human PASS follows.
+retained separately. [Controlled canonical integration](../evidence/phase3-p3-11-integration-20260926.json)
+passed its clean, ancestry, reference and push/fetch gates with 0/0; no global
+Product or human PASS follows.

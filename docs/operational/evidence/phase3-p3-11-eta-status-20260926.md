@@ -8,11 +8,17 @@ DN04_STATUS=RESOLVED_FOR_P3_11
 PRODUCT_AUTHORITY_RECONCILIATION=PASS
 REFERENCE_RECONCILIATION=PASS
 REFERENCE_IMPACT=NONE
-CANONICAL_INTEGRATION=PENDING_FINAL_GUARD_AND_RECEIPT
+CANONICAL_INTEGRATION=PASS
+EVIDENCE_HEAD=a96436be9d2c3ca9beafbd83d20d927851a357fd
+FIRST_INTEGRATED_HEAD=a96436be9d2c3ca9beafbd83d20d927851a357fd
+CANONICAL_PUSH=PASS
+LOCAL_REMOTE_ALIGNMENT=PASS
+AHEAD_BEHIND=0/0
 
 The evidence SHA is the Git commit adding this report and its bound evidence.
-Integration and push/fetch have a separate receipt; qualification alone is not
-a claim that the canonical branch has moved. No runtime Product change is
+[The completed integration receipt](phase3-p3-11-integration-20260926.json)
+records the actual fast-forward, canonical push and subsequent fetch with 0/0.
+A following documentation-only commit retains that completed receipt. No runtime Product change is
 permitted after the tested Product commit.
 
 ## Preservation and authority

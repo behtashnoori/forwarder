@@ -88,7 +88,8 @@ migration/Phase 3 references reconciled. Historical blocked/proposal notes remai
 unedited. Final exact-source qualification passed on Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`;
 [bound evidence](../../operational/evidence/phase3-p3-11-eta-status-20260926.md)
 records preservation and all required checks. This is bounded P3-11 qualification;
-controlled canonical integration is recorded separately by its verified receipt.
+[controlled canonical integration](../../operational/evidence/phase3-p3-11-integration-20260926.json)
+passed and is recorded separately by its verified fast-forward/push/fetch receipt.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; RELEASE_READY=NO.
 PRODUCTION_ACCESSED=NO; PRODUCTION_MUTATED=NO; DEPLOYMENT_PERFORMED=NO;
 RELEASE_CREATED=NO; P3_14_STARTED=NO; P3_15_STARTED=NO.

@@ -1,0 +1,95 @@
+{
+  "status": "PASS",
+  "recorded_utc": "2026-09-26T18:56:49.553165+00:00",
+  "previous_canonical": "94b499340b2ed6abeefe7a4f38c95cb820dc4a72",
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "evidence_sha": "a96436be9d2c3ca9beafbd83d20d927851a357fd",
+  "canonical_clean": true,
+  "candidate_clean": true,
+  "preserved_ancestry": true,
+  "alembic_head": "20261012_phase3_cargo_eta",
+  "alembic_head_count": 1,
+  "runtime_unchanged_after_product": true,
+  "approved_remote": "github",
+  "push_scope": "canonical branch only",
+  "production_accessed": false,
+  "integration_status": "PASS",
+  "first_integrated_head": "a96436be9d2c3ca9beafbd83d20d927851a357fd",
+  "canonical_push": "PASS",
+  "local_remote_alignment": "PASS",
+  "ahead_behind": "0/0",
+  "integration_method": "FAST_FORWARD_ONLY",
+  "push_output": "To https://github.com/behtashnoori/forwarder.git\n \trefs/heads/integration/golden-controlled:refs/heads/integration/golden-controlled\t94b4993..a96436b\nDone",
+  "verified_utc": "2026-09-26T18:57:42.592664+00:00",
+  "receipt_followup": "This documentation-only receipt commit follows the tested Product and first successfully pushed Evidence commit. The final receipt commit SHA is established by subsequent push/fetch and reported externally, avoiding a circular self-hash.",
+  "evidence_binding_verification": {
+    "status": "PASS",
+    "checked_ref": "a96436be9d2c3ca9beafbd83d20d927851a357fd",
+    "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+    "evidence_manifest_files": 173,
+    "changes_after_product": "docs-only",
+    "original_working_note_unchanged": true,
+    "authorized_request_byte_exact": true,
+    "all_bound_evidence_blob_hashes_match": true,
+    "recorded_utc": "2026-09-26T18:55:36.716191+00:00"
+  },
+  "cleanup": {
+    "earlier_postgresql": {
+      "reason": "Earlier automatic approval review rejected deletion: blocked by policy; no retry or bypass",
+      "retained": true,
+      "stopped": true,
+      "path": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p311-owned-a074f7e4652f4e3aaf9ea9d1324576ec"
+    },
+    "backend_fixtures": [
+      {
+        "existed": true,
+        "removed": true,
+        "processes_stopped": true,
+        "path": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-52f31893e4e54d7fbc135921640a3c19"
+      },
+      {
+        "existed": true,
+        "removed": true,
+        "processes_stopped": true,
+        "path": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-6b9163fdd589427e863ce3ca9f7b54f0"
+      },
+      {
+        "existed": true,
+        "removed": true,
+        "processes_stopped": true,
+        "path": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-6c8dff7f83104f88920c912c253bffaf"
+      }
+    ],
+    "recorded_utc": "2026-09-26T18:49:56.6944814Z",
+    "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+    "final_process_inventory": {
+      "checked_utc": "2026-09-26T18:59:43.990666+00:00",
+      "mission_runtime_process_matches": 0,
+      "remaining_owned_postgresql_directories": 1,
+      "remaining_directory": "Previously stopped a074f7e4652f4e3aaf9ea9d1324576ec; deletion was rejected by automatic review, no retry"
+    }
+  },
+  "required_scope_complete": true,
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": false,
+  "p3_14_started": false,
+  "p3_15_started": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "next_step": "P3_14_AND_P3_15_FINAL_IMPLEMENTATION_AND_QUALIFICATION_GATE",
+  "mission_worktree_scope": [
+    "D:\\1-webapp\\forwarder-dev\\phase3-p3-11-explainable-eta",
+    "D:\\1-webapp\\15-forwarder-golden-20260921"
+  ],
+  "unrelated_initial_worktree": "D:\\1-webapp\\15-forwarder was not changed; unrelated pre-existing changes remain outside this mission",
+  "tracked_evidence_secret_review": {
+    "raw_exit": 1,
+    "findings": 4,
+    "classification": "Same four reviewed synthetic testing values; no additional finding after all raw evidence logs were tracked",
+    "review": "phase3-p3-11-preintegration-review-20260926.json",
+    "scanner_modified": false
+  }
+}
