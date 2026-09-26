@@ -118,3 +118,12 @@ No count, assertion or historical schema expectation is relaxed. This is an
 AUTHORIZED contract update under §39, with 80 focused existing migration/contract
 tests passing before final source freeze. Those preliminary results are diagnostic;
 complete final regressions must run on the committed Product identity.
+
+The first complete-suite attempt at Product `ffce31a2228be46f992cb321f75d269cebf51ca8`
+found two further CURRENT-head expectations in `test_alembic_version_table.py`
+and `test_browser_migration_contract.py`. Focused reproduction proves both compare
+the actual new single head with the stale P3-08 literal. Reconcile those two exact
+values, retaining uniqueness, long-revision and fail-closed browser bootstrap checks.
+This is the same authorized new-head contract update. The partial backend run is
+superseded, not passed; its successful frontend/static and partial runtime results
+are diagnostic only. Repeat all final gates on the new committed identity.
