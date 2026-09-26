@@ -44,6 +44,7 @@ import RouteActualSection from "@/components/RouteActualSection";
 import RouteStageTransportExecutionSection from "@/components/RouteStageTransportExecutionSection";
 import ReportedFactsSection from "@/components/ReportedFactsSection";
 import DeliverySection from "@/components/DeliverySection";
+import { ShipmentEta } from "@/components/CargoEta";
 import CargoAllocationTraceSection from "@/components/CargoAllocationTraceSection";
 import {
   formatRouteTransportModes,
@@ -88,6 +89,7 @@ export default function OperationalShipmentDetail() {
   const [routePlansLoaded, setRoutePlansLoaded] = useState(false);
   const [cargoTraceOpen, setCargoTraceOpen] = useState(false);
   const [referenceTimesOpen, setReferenceTimesOpen] = useState(false);
+  const [etaOpen, setEtaOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const [deliveriesOpen, setDeliveriesOpen] = useState(false);
   const [timeline, setTimeline] = useState<RouteTimeline>();
@@ -230,6 +232,7 @@ export default function OperationalShipmentDetail() {
             {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} /></div>}
           </details>}
           {plan && <RouteActualSection shipmentId={shipmentPublicId} plan={plan} reload={load} />}
+          <details className="rounded-xl border bg-white" onToggle={event => setEtaOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">زمان تقریبی رسیدن کالاها</summary>{etaOpen && <ShipmentEta shipmentId={shipmentPublicId} />}</details>
           <details className="rounded-xl border bg-white" onToggle={event => setReportsOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">گزارش موقعیت و تغییرات حمل</summary>{reportsOpen && <div className="border-t p-3 sm:p-4"><ReportedFactsSection shipmentId={shipmentPublicId} /></div>}</details>
           <details className="rounded-xl border bg-white" onToggle={event => setDeliveriesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">تحویل کالاها</summary>{deliveriesOpen && <div className="border-t p-3 sm:p-4"><DeliverySection shipmentId={shipmentPublicId} /></div>}</details>
           </section>

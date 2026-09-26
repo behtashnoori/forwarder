@@ -1981,6 +1981,154 @@ components:
       type: object
       required: [result_kind, columns, rows, returned_row_count]
       properties: { result_kind: { type: string, enum: [ROWSET] }, columns: { type: array, items: { type: object } }, rows: { type: array, items: { type: object } }, returned_row_count: { type: integer } }
+    CargoEtaRange:
+      type: object
+      additionalProperties: false
+      required:
+      - available
+      - reason
+      - message
+      - target
+      - earliest
+      - latest
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        target:
+          type: string
+          nullable: true
+        earliest:
+          type: string
+          format: date-time
+          nullable: true
+        latest:
+          type: string
+          format: date-time
+          nullable: true
+    CustomerCargoEta:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - ruleset
+      - sequence
+      - calculated_at
+      - next
+      - final
+      - as_of
+      - recorded_at
+      - basis_label
+      - unquantified_effect
+      - planned_distance
+      properties:
+        public_id: &etaSchema001
+          type: string
+        ruleset: &etaSchema002
+          type: string
+        sequence: &etaSchema003
+          type: integer
+          minimum: 1
+        calculated_at: &etaSchema004
+          type: string
+          format: date-time
+        next: &etaSchema005
+          $ref: '#/components/schemas/CargoEtaRange'
+        final: &etaSchema006
+          $ref: '#/components/schemas/CargoEtaRange'
+        as_of: &etaSchema007
+          type: string
+          format: date-time
+          nullable: true
+        recorded_at: &etaSchema008
+          type: string
+          format: date-time
+          nullable: true
+        basis_label: &etaSchema009
+          type: string
+          nullable: true
+        unquantified_effect: &etaSchema010
+          type: boolean
+        planned_distance: &etaSchema011
+          nullable: true
+          description: 'Always null: no governed planned distance source.'
+        authorization_revision:
+          type: string
+          description: Must match a fresh live Customer authorization revision before
+            display.
+    CustomerCargoEtaHistory:
+      type: object
+      required:
+      - items
+      - page
+      - has_next
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/CustomerCargoEta'
+        page:
+          type: integer
+        has_next:
+          type: boolean
+        authorization_revision:
+          type: string
+    InternalCargoEta:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - ruleset
+      - sequence
+      - calculated_at
+      - next
+      - final
+      - as_of
+      - recorded_at
+      - basis_label
+      - unquantified_effect
+      - planned_distance
+      - source_fingerprint
+      - provenance
+      properties:
+        public_id: *etaSchema001
+        ruleset: *etaSchema002
+        sequence: *etaSchema003
+        calculated_at: *etaSchema004
+        next: *etaSchema005
+        final: *etaSchema006
+        as_of: *etaSchema007
+        recorded_at: *etaSchema008
+        basis_label: *etaSchema009
+        unquantified_effect: *etaSchema010
+        planned_distance: *etaSchema011
+        source_fingerprint:
+          type: string
+        provenance:
+          type: object
+          additionalProperties: true
+    InternalCargoEtaHistory:
+      type: object
+      required:
+      - items
+      - page
+      - has_next
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/InternalCargoEta'
+        page:
+          type: integer
+        has_next:
+          type: boolean
 paths:
   /api/organization/route-reference-times:
     get:
@@ -5118,3 +5266,179 @@ paths:
         '422':
           description: Invalid page.
         '409': { description: Current authorization changed during projection; discard and reread. }
+  /api/customer/shipments/{shipment_id}/cargo/{cargo_id}/eta/ensure:
+    post:
+      tags:
+      - Operational Shipments
+      operationId: ensureCustomerCargoEta
+      summary: Explicit idempotent ENSURE_CURRENT_ETA; compare and append derived snapshot
+      description: Current tenant and Cargo authorization are rechecked. Customer uses
+        own Cargo branch and eligible impact sources only. No operational source mutation,
+        client inputs, default durations, GPS, AI, or distance inference. Responses
+        are private, no-store. Historical access does not confer a grant.
+      security:
+      - customerSession: []
+      parameters:
+      - $ref: '#/components/parameters/ShipmentPublicId'
+      - name: cargo_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Derived range or explicit bounded unavailable reason.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerCargoEta'
+        '401':
+          description: Current authenticated active session required.
+        '403':
+          description: Current authority denied.
+        '404':
+          description: Not found in authorized tenant and Cargo scope.
+        '409':
+          description: Authorization or sources changed; discard prior result and retry.
+        '422':
+          description: Unexpected client inputs or invalid history page.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+  /api/customer/shipments/{shipment_id}/cargo/{cargo_id}/eta/history:
+    get:
+      tags:
+      - Operational Shipments
+      operationId: historyCustomerCargoEta
+      summary: Pure paginated immutable ETA history lookup; no materialization
+      description: Current tenant and Cargo authorization are rechecked. Customer uses
+        own Cargo branch and eligible impact sources only. No operational source mutation,
+        client inputs, default durations, GPS, AI, or distance inference. Responses
+        are private, no-store. Historical access does not confer a grant.
+      security:
+      - customerSession: []
+      parameters:
+      - $ref: '#/components/parameters/ShipmentPublicId'
+      - name: cargo_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      responses:
+        '200':
+          description: Derived range or explicit bounded unavailable reason.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerCargoEtaHistory'
+        '401':
+          description: Current authenticated active session required.
+        '403':
+          description: Current authority denied.
+        '404':
+          description: Not found in authorized tenant and Cargo scope.
+        '409':
+          description: Authorization or sources changed; discard prior result and retry.
+        '422':
+          description: Unexpected client inputs or invalid history page.
+  /api/operational-shipments/{shipment_id}/cargo/{cargo_id}/eta/ensure:
+    post:
+      tags:
+      - Operational Shipments
+      operationId: ensureInternalCargoEta
+      summary: Explicit idempotent ENSURE_CURRENT_ETA; compare and append derived snapshot
+      description: Current tenant and Cargo authorization are rechecked. Customer uses
+        own Cargo branch and eligible impact sources only. No operational source mutation,
+        client inputs, default durations, GPS, AI, or distance inference. Responses
+        are private, no-store. Historical access does not confer a grant.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ShipmentPublicId'
+      - name: cargo_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: Derived range or explicit bounded unavailable reason.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalCargoEta'
+        '401':
+          description: Current authenticated active session required.
+        '403':
+          description: Current authority denied.
+        '404':
+          description: Not found in authorized tenant and Cargo scope.
+        '409':
+          description: Authorization or sources changed; discard prior result and retry.
+        '422':
+          description: Unexpected client inputs or invalid history page.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+  /api/operational-shipments/{shipment_id}/cargo/{cargo_id}/eta/history:
+    get:
+      tags:
+      - Operational Shipments
+      operationId: historyInternalCargoEta
+      summary: Pure paginated immutable ETA history lookup; no materialization
+      description: Current tenant and Cargo authorization are rechecked. Customer uses
+        own Cargo branch and eligible impact sources only. No operational source mutation,
+        client inputs, default durations, GPS, AI, or distance inference. Responses
+        are private, no-store. Historical access does not confer a grant.
+      security:
+      - bearerAuth: []
+      parameters:
+      - $ref: '#/components/parameters/ShipmentPublicId'
+      - name: cargo_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      responses:
+        '200':
+          description: Derived range or explicit bounded unavailable reason.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalCargoEtaHistory'
+        '401':
+          description: Current authenticated active session required.
+        '403':
+          description: Current authority denied.
+        '404':
+          description: Not found in authorized tenant and Cargo scope.
+        '409':
+          description: Authorization or sources changed; discard prior result and retry.
+        '422':
+          description: Unexpected client inputs or invalid history page.

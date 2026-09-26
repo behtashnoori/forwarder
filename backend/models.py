@@ -2423,6 +2423,7 @@ from backend.customer_entitlement_models import CustomerEntitlement  # noqa: E40
 from backend.reported_fact_models import OperationalEventReportContext, OperationalEventCargoImpact  # noqa: E402,F401
 from backend.delivery_models import CargoDelivery, CargoDeliveryEvidence  # noqa: E402,F401
 from backend.route_time_models import OrganizationRouteTime, OrganizationRouteTimeVersion, RouteLegTimeBasis  # noqa: E402,F401
+from backend.eta_models import CargoEtaSnapshot, CargoEtaInput  # noqa: E402,F401
 from backend.document_context_models import (  # noqa: E402,F401
     OperationalDocumentContext,
     OperationalDocumentAudience,

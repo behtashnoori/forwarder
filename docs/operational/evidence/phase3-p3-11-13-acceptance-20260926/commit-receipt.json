@@ -1,0 +1,13 @@
+{
+  "ARCHITECTURE_ACCEPTANCE_HEAD": "6259830f2a5fe94798bf4183d2643bf624529c26",
+  "architecture_gate": "PASS",
+  "clean_after_acceptance_commit": true,
+  "canonical_freshly_refetched": true,
+  "canonical_head": "368cd736cbffce3d62c33336868738d9086e8306",
+  "ahead_behind": [
+    "0",
+    "0"
+  ],
+  "no_runtime_or_migration_in_acceptance": true,
+  "production_accessed": false
+}

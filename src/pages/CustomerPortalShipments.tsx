@@ -8,6 +8,7 @@ import { downloadCustomerSharedDocument } from "@/lib/customerPortalApi";
 import type { CustomerFactPage, CustomerReport, CustomerShipmentDetail, CustomerShipmentList } from "@/lib/customerShipmentApi";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { usePrivateCustomerRead } from "@/hooks/usePrivateCustomerRead";
+import { CargoEtaPanel } from "@/components/CargoEta";
 
 const statuses = { planned: "برنامه‌ریزی‌شده", in_progress: "در حال انجام", completed: "تکمیل‌شده", cancelled: "لغوشده" };
 const contexts = { SHIPMENT: "پرونده حمل", CARGO: "کالای شما", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل", DELIVERY: "تحویل کالای شما" };
@@ -77,6 +78,7 @@ export function CustomerPortalShipmentDetail() {
         <CardHeader><CardTitle className="text-lg">{item.label}</CardTitle><p className="text-sm text-slate-600">{item.customer_label} · {item.type_label} · {item.uom_symbol}</p></CardHeader>
         <CardContent className="space-y-4"><dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">{[["درخواستی", item.requested], ["برنامه‌ریزی‌شده", item.planned], ["واقعی شناخته‌شده", item.known_actual], ["تحویل‌شده", item.delivered], ["مانده", item.remaining]].map(([label, value]) => <div key={label}><dt className="text-slate-600">{label}</dt><dd className="mt-1 font-semibold">{amount(value)} {value !== null && item.uom_symbol}</dd></div>)}</dl>
           {!item.has_delivery && <p className="text-sm text-slate-600">هنوز تحویلی برای این کالا ثبت نشده است.</p>}
+          <CargoEtaPanel shipmentId={shipmentId} cargoId={item.public_id} customer />
           {item.excess !== null && Number(item.excess) > 0 && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">تحویل ثبت‌شده {amount(item.excess)} {item.uom_symbol} بیش از مقدار واقعی شناخته‌شده است.</p>}
         </CardContent></Card>)}</div></section>
       <Card><CardHeader><h2 className="text-2xl font-semibold leading-none tracking-tight">مسیر کالاهای من</h2><p className="text-sm text-slate-600">برنامه مسیر و نقاط اصلی مربوط به کالاهای شما</p></CardHeader><CardContent className="space-y-4">{data.routes.map(route => <section key={route.cargo_public_id} className="space-y-2"><h3 className="font-semibold">{cargoName(route.cargo_public_id)}</h3>
