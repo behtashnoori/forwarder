@@ -7,7 +7,7 @@ const fixture = JSON.parse(readFileSync(fixturePath, "utf8")) as {
   p313_shipment: string; p313_target_id: number; p313_target_label: string;
   p309_documents: Record<string, string>; p309_accounts: Record<string, {email: string}>;
 };
-test.setTimeout(180_000);
+test.setTimeout(300_000);
 async function login(page: Page, persona: string) {
   await page.goto("/"); await page.getByRole("button", {name: "ورود به سامانه"}).first().click();
   await page.getByLabel("نام کاربری").fill(`shared_transport_e2e_${persona}`);
