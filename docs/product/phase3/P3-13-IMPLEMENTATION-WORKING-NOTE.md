@@ -159,3 +159,16 @@ its immutable Git Product SHA and tree; preliminary dirty-source logs are not
 substitutes. Evidence-only commits may follow after all required source-bound
 checks pass. Canonical fast-forward/push/fetch is authorized only after those
 checks and fresh canonical identity verification.
+
+## First exact-source attempt and document-order correction
+
+Product 212d01fa19979e520f8ba9d4a5b4cefd9248cb9e passed 441 frontend tests,
+14 PostgreSQL tests, 15 Chrome tests and nine static gates. Its complete
+backend run had 1534 passes, 120 environment-dependent skips and one failure:
+the legacy ProjectConfiguration OpenAPI text-range test also included the
+new private owner-transfer schemas and rejected their explicit person id.
+The owner-transfer schema block is moved before ProjectConfigurationPage.
+Parsed YAML equality proves the API contract is unchanged; the existing
+test/assertions and all runtime files are unchanged. This failed attempt
+is retained and is not final qualification. A fresh Product source identity
+and all required source-bound gates follow the correction.

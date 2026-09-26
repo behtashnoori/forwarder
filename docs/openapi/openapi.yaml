@@ -1571,6 +1571,155 @@ components:
         is_active: { type: boolean }
         effective_from: { type: string, format: date-time }
         version: { type: integer, minimum: 1 }
+    OwnerTransferPerson:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - display_name
+      properties:
+        id: &p313schema001
+          type: integer
+          minimum: 1
+        display_name: &p313schema002
+          type: string
+    OwnerTransferInitial:
+      type: object
+      additionalProperties: false
+      required:
+      - id
+      - display_name
+      - provenance
+      - occurred_at
+      properties:
+        id: *p313schema001
+        display_name: *p313schema002
+        provenance:
+          type: string
+          enum:
+          - FIRST_TRANSFER_PREDECESSOR
+          - PERSISTED_OWNER_WITHOUT_TRANSFER
+        occurred_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Unknown initial ownership time; never inferred from transfer or
+            creation.
+    OwnerTransferReceipt:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - sequence
+      - old_owner
+      - new_owner
+      - actor
+      - reason
+      - occurred_at
+      - recorded_at
+      - previous_shipment_version
+      - next_shipment_version
+      properties:
+        public_id:
+          type: string
+          format: uuid
+        sequence: *p313schema001
+        old_owner:
+          $ref: '#/components/schemas/OwnerTransferPerson'
+        new_owner:
+          $ref: '#/components/schemas/OwnerTransferPerson'
+        actor:
+          $ref: '#/components/schemas/OwnerTransferPerson'
+        reason: *p313schema002
+        occurred_at: &p313schema003
+          type: string
+          format: date-time
+        recorded_at: *p313schema003
+        previous_shipment_version: *p313schema001
+        next_shipment_version: *p313schema001
+    OwnerTransferView:
+      type: object
+      additionalProperties: false
+      required:
+      - shipment_public_id
+      - shipment_version
+      - current_owner
+      - initial_owner
+      - transfers
+      - page
+      - has_more
+      - capabilities
+      - available
+      - old_owner_open_work_count
+      properties:
+        shipment_public_id:
+          type: string
+          format: uuid
+        shipment_version: *p313schema001
+        current_owner:
+          $ref: '#/components/schemas/OwnerTransferPerson'
+        initial_owner:
+          $ref: '#/components/schemas/OwnerTransferInitial'
+        transfers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OwnerTransferReceipt'
+        page: *p313schema001
+        has_more: &p313schema004
+          type: boolean
+        capabilities:
+          type: object
+          additionalProperties: false
+          required:
+          - TRANSFER_OWNER
+          properties:
+            TRANSFER_OWNER: *p313schema004
+        available: *p313schema004
+        old_owner_open_work_count:
+          type: integer
+          minimum: 0
+          nullable: true
+    OwnerTransferCandidates:
+      type: object
+      additionalProperties: false
+      required:
+      - candidates
+      - page
+      - has_more
+      properties:
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/OwnerTransferPerson'
+        page: *p313schema001
+        has_more: *p313schema004
+    OwnerTransferCommand:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_owner_id
+      - target_owner_id
+      - expected_version
+      - reason
+      properties:
+        expected_owner_id: *p313schema001
+        target_owner_id: *p313schema001
+        expected_version: *p313schema001
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 1000
+    OwnerTransferResult:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - created
+      properties:
+        public_id:
+          type: string
+          format: uuid
+        created: *p313schema004
     ProjectConfigurationPage:
       type: object
       additionalProperties: false
@@ -1981,155 +2130,6 @@ components:
       type: object
       required: [result_kind, columns, rows, returned_row_count]
       properties: { result_kind: { type: string, enum: [ROWSET] }, columns: { type: array, items: { type: object } }, rows: { type: array, items: { type: object } }, returned_row_count: { type: integer } }
-    OwnerTransferPerson:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - display_name
-      properties:
-        id: &p313schema001
-          type: integer
-          minimum: 1
-        display_name: &p313schema002
-          type: string
-    OwnerTransferInitial:
-      type: object
-      additionalProperties: false
-      required:
-      - id
-      - display_name
-      - provenance
-      - occurred_at
-      properties:
-        id: *p313schema001
-        display_name: *p313schema002
-        provenance:
-          type: string
-          enum:
-          - FIRST_TRANSFER_PREDECESSOR
-          - PERSISTED_OWNER_WITHOUT_TRANSFER
-        occurred_at:
-          type: string
-          format: date-time
-          nullable: true
-          description: Unknown initial ownership time; never inferred from transfer or
-            creation.
-    OwnerTransferReceipt:
-      type: object
-      additionalProperties: false
-      required:
-      - public_id
-      - sequence
-      - old_owner
-      - new_owner
-      - actor
-      - reason
-      - occurred_at
-      - recorded_at
-      - previous_shipment_version
-      - next_shipment_version
-      properties:
-        public_id:
-          type: string
-          format: uuid
-        sequence: *p313schema001
-        old_owner:
-          $ref: '#/components/schemas/OwnerTransferPerson'
-        new_owner:
-          $ref: '#/components/schemas/OwnerTransferPerson'
-        actor:
-          $ref: '#/components/schemas/OwnerTransferPerson'
-        reason: *p313schema002
-        occurred_at: &p313schema003
-          type: string
-          format: date-time
-        recorded_at: *p313schema003
-        previous_shipment_version: *p313schema001
-        next_shipment_version: *p313schema001
-    OwnerTransferView:
-      type: object
-      additionalProperties: false
-      required:
-      - shipment_public_id
-      - shipment_version
-      - current_owner
-      - initial_owner
-      - transfers
-      - page
-      - has_more
-      - capabilities
-      - available
-      - old_owner_open_work_count
-      properties:
-        shipment_public_id:
-          type: string
-          format: uuid
-        shipment_version: *p313schema001
-        current_owner:
-          $ref: '#/components/schemas/OwnerTransferPerson'
-        initial_owner:
-          $ref: '#/components/schemas/OwnerTransferInitial'
-        transfers:
-          type: array
-          items:
-            $ref: '#/components/schemas/OwnerTransferReceipt'
-        page: *p313schema001
-        has_more: &p313schema004
-          type: boolean
-        capabilities:
-          type: object
-          additionalProperties: false
-          required:
-          - TRANSFER_OWNER
-          properties:
-            TRANSFER_OWNER: *p313schema004
-        available: *p313schema004
-        old_owner_open_work_count:
-          type: integer
-          minimum: 0
-          nullable: true
-    OwnerTransferCandidates:
-      type: object
-      additionalProperties: false
-      required:
-      - candidates
-      - page
-      - has_more
-      properties:
-        candidates:
-          type: array
-          items:
-            $ref: '#/components/schemas/OwnerTransferPerson'
-        page: *p313schema001
-        has_more: *p313schema004
-    OwnerTransferCommand:
-      type: object
-      additionalProperties: false
-      required:
-      - expected_owner_id
-      - target_owner_id
-      - expected_version
-      - reason
-      properties:
-        expected_owner_id: *p313schema001
-        target_owner_id: *p313schema001
-        expected_version: *p313schema001
-        reason:
-          type: string
-          minLength: 1
-          maxLength: 1000
-    OwnerTransferResult:
-      type: object
-      additionalProperties: false
-      required:
-      - public_id
-      - created
-      properties:
-        public_id:
-          type: string
-          format: uuid
-        created: *p313schema004
     ClosureCriterion:
       type: object
       additionalProperties: false
