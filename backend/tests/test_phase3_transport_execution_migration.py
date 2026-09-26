@@ -92,7 +92,7 @@ def _parent_schema(url: str):
 def test_p3_04_is_single_head_additive_seed_free_and_round_trips(tmp_path):
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20261008_phase3_cargo_delivery"]
+    assert script.get_heads() == ["20261009_phase3_route_time"]
     assert script.get_revision(HEAD).down_revision == PREVIOUS
     source = (
         Path(__file__).parents[1]

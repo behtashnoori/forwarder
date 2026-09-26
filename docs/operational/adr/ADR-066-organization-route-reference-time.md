@@ -95,3 +95,17 @@ regressions; all current references and exact-source evidence.
 JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY: FWD-J06/J08/J09, FWD-IPJ-03/IPJ-04.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; INTEGRATED_PRODUCT_JOURNEYS=NOT_RUN;
 HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN; RELEASE_READY=NO. Source freeze is not Product Freeze.
+
+## ADR-016 surface-adoption ledger
+
+| Surface | Authoritative fact | Presentation and preservation |
+| --- | --- | --- |
+| Admin effective version interval | aware UTC effective_from and next version's effective_from | Shared formatDualCalendarInstant, one Instant rendered Gregorian (Jalali); derived end never mutates stored history |
+| Admin record history | server recorded_at | Same shared dual-calendar helper; actor remains recorded separately |
+| Expert applicability and selection history | planned departure or explicitly labelled current selection Instant; recorded_at | Same helper; no inferred departure or persisted Jalali value |
+| Movement / stop ranges | nullable integer elapsed minutes, independently bounded | Exact minutes or whole hours; no timezone, averaging, fake precision or null-to-zero conversion |
+
+Existing local input→UTC conversion is reused and the form labels the device
+timezone rule. P3-10 makes no new timezone ownership decision. Backend range/history
+and browser old/new plan checks plus existing calendar/route regressions verify
+the bounded adoption. UI dates cannot alter authoritative timestamps.

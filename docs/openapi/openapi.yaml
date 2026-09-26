@@ -127,6 +127,346 @@ components:
       name: session
       description: Revocable Customer Portal session; not a CRM Customer entitlement.
   schemas:
+    RouteTimeVersion:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - version
+      - movement_min_minutes
+      - movement_max_minutes
+      - stop_min_minutes
+      - stop_max_minutes
+      - effective_from
+      - effective_until
+      - recorded_at
+      - actor_user_id
+      - recorded_by
+      properties:
+        public_id:
+          type: string
+        version:
+          type: integer
+        movement_min_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 525600
+        movement_max_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 525600
+        stop_min_minutes:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 525600
+        stop_max_minutes:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 525600
+        effective_from:
+          type: string
+          format: date-time
+        effective_until:
+          type: string
+          format: date-time
+          nullable: true
+        recorded_at:
+          type: string
+          format: date-time
+        actor_user_id:
+          type: integer
+        recorded_by:
+          type: string
+          nullable: true
+    OrganizationRouteTime:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - origin_label
+      - destination_label
+      - transport_mode
+      - latest_version
+      - current
+      - versions
+      properties:
+        public_id:
+          type: string
+        origin_label:
+          type: string
+        destination_label:
+          type: string
+        transport_mode:
+          type: string
+        latest_version:
+          type: integer
+        current:
+          $ref: '#/components/schemas/RouteTimeVersion'
+          nullable: true
+        versions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteTimeVersion'
+    RouteTimeSelection:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - selection_revision
+      - reference_at
+      - recorded_at
+      - actor_user_id
+      - reference
+      properties:
+        public_id:
+          type: string
+        selection_revision:
+          type: integer
+        reference_at:
+          type: string
+          format: date-time
+        recorded_at:
+          type: string
+          format: date-time
+        actor_user_id:
+          type: integer
+        reference:
+          $ref: '#/components/schemas/RouteTimeVersion'
+    RouteLegReferenceTime:
+      type: object
+      additionalProperties: false
+      required:
+      - leg_id
+      - leg_version
+      - sequence_number
+      - origin_label
+      - destination_label
+      - transport_mode
+      - reference_at
+      - time_basis
+      - applicable
+      - selected
+      - selection_matches_leg
+      - history
+      - can_select
+      properties:
+        leg_id:
+          type: integer
+        leg_version:
+          type: integer
+        sequence_number:
+          type: integer
+        origin_label:
+          type: string
+        destination_label:
+          type: string
+        transport_mode:
+          type: string
+          nullable: true
+        reference_at:
+          type: string
+          format: date-time
+        time_basis:
+          type: string
+          enum:
+          - PLANNED_DEPARTURE
+          - SELECTION_TIME
+        applicable:
+          $ref: '#/components/schemas/RouteTimeVersion'
+          nullable: true
+        selected:
+          $ref: '#/components/schemas/RouteTimeSelection'
+          nullable: true
+        selection_matches_leg:
+          type: boolean
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteTimeSelection'
+        can_select:
+          type: boolean
+    RouteTimeList:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - page
+      - total
+      - has_next
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrganizationRouteTime'
+        page:
+          type: integer
+        total:
+          type: integer
+        has_next:
+          type: boolean
+    RoutePlanReferenceTimes:
+      type: object
+      additionalProperties: false
+      required:
+      - plan_id
+      - plan_revision
+      - plan_status
+      - items
+      properties:
+        plan_id:
+          type: integer
+        plan_revision:
+          type: integer
+        plan_status:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RouteLegReferenceTime'
+    RouteTimeCommandResult:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - created
+      properties:
+        public_id:
+          type: string
+        created:
+          type: boolean
+    CreateRouteTime:
+      type: object
+      additionalProperties: false
+      required:
+      - effective_from
+      - origin
+      - destination
+      - transport_mode
+      properties:
+        movement_min_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 525600
+        movement_max_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 525600
+        stop_min_minutes:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 525600
+        stop_max_minutes:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 525600
+        effective_from:
+          type: string
+          format: date-time
+        origin:
+          type: object
+          additionalProperties: false
+          required:
+          - source_type
+          - source_id
+          properties:
+            source_type:
+              type: string
+              enum:
+              - province
+              - city
+              - country
+              - international_city
+              - iran_port
+              - customs_office
+              - logistics_point
+            source_id:
+              oneOf:
+              - type: integer
+              - type: string
+        destination:
+          type: object
+          additionalProperties: false
+          required:
+          - source_type
+          - source_id
+          properties:
+            source_type:
+              type: string
+              enum:
+              - province
+              - city
+              - country
+              - international_city
+              - iran_port
+              - customs_office
+              - logistics_point
+            source_id:
+              oneOf:
+              - type: integer
+              - type: string
+        transport_mode:
+          type: string
+          enum:
+          - road
+          - rail
+          - sea
+          - air
+          - multimodal_transfer
+          - customs_handling
+    ReviseRouteTime:
+      type: object
+      additionalProperties: false
+      required:
+      - effective_from
+      - expected_version
+      properties:
+        movement_min_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 525600
+        movement_max_minutes:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 525600
+        stop_min_minutes:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 525600
+        stop_max_minutes:
+          type: integer
+          nullable: true
+          minimum: 0
+          maximum: 525600
+        effective_from:
+          type: string
+          format: date-time
+        expected_version:
+          type: integer
+    SelectRouteTime:
+      type: object
+      additionalProperties: false
+      required:
+      - expected_version
+      - expected_selection_revision
+      - reference_version_public_id
+      properties:
+        expected_version:
+          type: integer
+        expected_selection_revision:
+          type: integer
+        reference_version_public_id:
+          type: string
     CustomerShipmentIdentity:
       type: object
       additionalProperties: false
@@ -1642,6 +1982,276 @@ components:
       required: [result_kind, columns, rows, returned_row_count]
       properties: { result_kind: { type: string, enum: [ROWSET] }, columns: { type: array, items: { type: object } }, rows: { type: array, items: { type: object } }, returned_row_count: { type: integer } }
 paths:
+  /api/organization/route-reference-times:
+    get:
+      tags:
+      - Operational Shipments
+      operationId: listOrganizationRouteTimes
+      summary: Read own organization route reference versions, separate ranges and derived half-open effective intervals.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      responses:
+        '200':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RouteTimeList'
+        '401':
+          description: Authentication required.
+        '403':
+          description: Current role or membership is denied.
+        '404':
+          description: Resource not found in authorized scope.
+        '409':
+          description: Stale version, key conflict, missing applicable reference or concurrent change.
+        '422':
+          description: Invalid ranges, explicit dates or governed endpoints.
+  /api/admin/organization-route-reference-times:
+    post:
+      tags:
+      - Operational Shipments
+      operationId: createOrganizationRouteTime
+      summary: Org Admin creates an explicit directional route/mode reference; no default, seed, SLA or ETA.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RouteTimeCommandResult'
+        '201':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RouteTimeCommandResult'
+        '401':
+          description: Authentication required.
+        '403':
+          description: Current role or membership is denied.
+        '404':
+          description: Resource not found in authorized scope.
+        '409':
+          description: Stale version, key conflict, missing applicable reference or concurrent change.
+        '422':
+          description: Invalid ranges, explicit dates or governed endpoints.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateRouteTime'
+  /api/admin/organization-route-reference-times/{reference_id}/versions:
+    post:
+      tags:
+      - Operational Shipments
+      operationId: reviseOrganizationRouteTime
+      summary: Append a prospective immutable version; old plan selections remain pinned.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: reference_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RouteTimeCommandResult'
+        '201':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RouteTimeCommandResult'
+        '401':
+          description: Authentication required.
+        '403':
+          description: Current role or membership is denied.
+        '404':
+          description: Resource not found in authorized scope.
+        '409':
+          description: Stale version, key conflict, missing applicable reference or concurrent change.
+        '422':
+          description: Invalid ranges, explicit dates or governed endpoints.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviseRouteTime'
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/reference-times:
+    get:
+      tags:
+      - Operational Shipments
+      operationId: getRoutePlanReferenceTimes
+      summary: Authorized plan basis and applicable reference are separate; null is undefined and old selection history
+        remains.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: shipment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: plan_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RoutePlanReferenceTimes'
+        '401':
+          description: Authentication required.
+        '403':
+          description: Current role or membership is denied.
+        '404':
+          description: Resource not found in authorized scope.
+        '409':
+          description: Stale version, key conflict, missing applicable reference or concurrent change.
+        '422':
+          description: Invalid ranges, explicit dates or governed endpoints.
+  /api/operational-shipments/{shipment_id}/route-plans/{plan_id}/legs/{leg_id}/reference-time:
+    post:
+      tags:
+      - Operational Shipments
+      operationId: selectRouteLegReferenceTime
+      summary: Fixed owning Expert explicitly selects the reviewed version for a draft leg; never recalculates timestamps.
+      security:
+      - bearerAuth: []
+      parameters:
+      - name: shipment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: plan_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: leg_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RouteTimeCommandResult'
+        '201':
+          description: Authorized current tenant result; no-store.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RouteTimeCommandResult'
+        '401':
+          description: Authentication required.
+        '403':
+          description: Current role or membership is denied.
+        '404':
+          description: Resource not found in authorized scope.
+        '409':
+          description: Stale version, key conflict, missing applicable reference or concurrent change.
+        '422':
+          description: Invalid ranges, explicit dates or governed endpoints.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectRouteTime'
   /api/admin/customer-entitlements:
     get:
       tags: [Admin Panel]

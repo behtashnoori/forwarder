@@ -39,6 +39,7 @@ import ShipmentDocuments from "@/components/ShipmentDocuments";
 import OperationsNav from "@/components/OperationsNav";
 import OccurrenceTimeAction from "@/components/OccurrenceTimeAction";
 import RouteAuthoringSection from "@/components/RouteAuthoringSection";
+import RouteReferenceTimes from "@/components/RouteReferenceTimes";
 import RouteActualSection from "@/components/RouteActualSection";
 import RouteStageTransportExecutionSection from "@/components/RouteStageTransportExecutionSection";
 import ReportedFactsSection from "@/components/ReportedFactsSection";
@@ -86,6 +87,7 @@ export default function OperationalShipmentDetail() {
   const [draftPlan, setDraftPlan] = useState<RoutePlanDetail>();
   const [routePlansLoaded, setRoutePlansLoaded] = useState(false);
   const [cargoTraceOpen, setCargoTraceOpen] = useState(false);
+  const [referenceTimesOpen, setReferenceTimesOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const [deliveriesOpen, setDeliveriesOpen] = useState(false);
   const [timeline, setTimeline] = useState<RouteTimeline>();
@@ -222,6 +224,7 @@ export default function OperationalShipmentDetail() {
             </CardContent>
           </Card>
           {activePlan && <RouteStageTransportExecutionSection shipmentId={shipmentPublicId} planId={activePlan.id} />}
+          {!!plans.length && <details className="rounded-2xl border bg-white" onToggle={event=>setReferenceTimesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-4 font-semibold">زمان مرجع و مبنای برنامه</summary>{referenceTimesOpen&&<RouteReferenceTimes shipmentId={shipmentPublicId} plans={plans}/>}</details>}
           {activePlan && <details className="rounded border bg-white" onToggle={(event) => setCargoTraceOpen(event.currentTarget.open)}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">تخصیص و مسیر هر کالا</summary>
             {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} /></div>}

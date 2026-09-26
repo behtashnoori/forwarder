@@ -99,3 +99,22 @@ EVIDENCE_PENDING; integrated journeys and human walkthrough NOT_RUN; Release Rea
 This evidence-only descendant may be integrated fast-forward under the user's
 existing authorization. Exact evidence/canonical identity is recorded in the receipt
 and P3-10 entry; no self-referential SHA is invented inside this commit.
+
+## P3-09 integration receipt and P3-10 independent entry
+
+P3-09 evidence/canonical `e102ace12a741716442466d68140f632f1109bff`
+was fast-forwarded from `6a11c2e02a3103f0bc36129bd12798842b7c39cb`, pushed
+only to github `integration/golden-controlled`, fetched and verified clean at 0/0.
+The source tree outside docs remains identical to Product `e499eb13fccc12734b21a09c1e2bfa1b92e983ee`.
+P3-10 branch `codex/phase3-p3-10-route-reference-time` was created independently
+from that actual freshly fetched, clean/aligned canonical after P3-09 completed.
+Its design and scoped DoD are [ADR-066](../../operational/adr/ADR-066-organization-route-reference-time.md).
+
+The new authorized additive migration changes the repository's sole head to
+`20261009_phase3_route_time`. Existing tests asserting the CURRENT repository head
+are reconciled to that exact value; the historical P3-08 migration and its parent
+remain unchanged, and the parent-chain test adds new→P3-08 while retaining P3-08→P3-07.
+No count, assertion or historical schema expectation is relaxed. This is an
+AUTHORIZED contract update under §39, with 80 focused existing migration/contract
+tests passing before final source freeze. Those preliminary results are diagnostic;
+complete final regressions must run on the committed Product identity.

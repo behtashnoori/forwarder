@@ -1,5 +1,7 @@
 # طرح اجرای فاز ۳ — نسخه ۱
 
+> وضعیت جاریِ جایگزین رکورد تاریخی پاراگراف بعد: P3-09 از کار قبلی ادامه یافت و در canonical `e102ace12a741716442466d68140f632f1109bff` ادغام و با github برابر شد. P3-10 در worktree مستقل از همین canonical، تحت [اختیار ادامه](P3-09-10-RESUME-AUTHORITY.md) و [ADR-066](../../operational/adr/ADR-066-organization-route-reference-time.md) پیاده‌سازی شده و در انتظار qualification نهایی روی Product ثبت‌شده است. P3-11 تا P3-15 آغاز نشده‌اند؛ Global Product Validation همچنان EVIDENCE_PENDING است.
+
 > وضعیت مأموریت جاری: [دستور پنج‌مرحله‌ای P3-06 تا P3-10](P3-06-10-MISSION-AUTHORITY.md) اکنون مرجع اختیار اجراست. DN10 با تصمیم صریح مالک محصول و [ADR-062](../../operational/adr/ADR-062-explicit-customer-entitlement.md) حل شده است؛ P3-06 روی Product `0e65fd89882e23453d7c3bfe4d520cd7f44a6c32` با [شواهد تازه](../../operational/evidence/phase3-p3-06-dn10-requalification-status-20260925.md) تأیید شده و ادغام کنترل‌شده آن مجاز است. DN06 و DN07 نیز در محدوده P3-07 همین مأموریت تصمیم مصوب دارند؛ P3-06 در canonical `13c0fed2d5971907d93f23860cc5689c7ebe33f8` یکپارچه شده و P3-07 طبق [ADR-063](../../operational/adr/ADR-063-scoped-reported-facts-and-safe-effects.md) روی Product `cd83f21ca1ac0db6e940475fcd9067713831a581` با [شواهد تازه](../../operational/evidence/phase3-p3-07-reported-facts-status-20260925.md) تأیید شده و ادغام کنترل‌شدهٔ آن مجاز است؛ P3-07 در canonical `682e83ed3a51badb3938d66dbd337e8e10e57797` یکپارچه و با github برابر ۰/۰ است. P3-08 طبق [ADR-064](../../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) روی Product `48fa69b70af1bcf06fc5a9783b98fdf54de7a18c` با [شواهد تازه](../../operational/evidence/phase3-p3-08-cargo-delivery-status-20260926.md) تأیید شده و ادغام کنترل‌شدهٔ آن مجاز است؛ P3-09/10 هنوز آغاز نشده‌اند و تابع گیت ترتیبی مأموریت‌اند. متن طرح و رکوردهای قدیمی زیر، شواهد زمان خود هستند؛ هیچ یک مجوز دورزدن وابستگی، Release یا Production نیستند.
 
 تاریخ: ۲۰۲۶-۰۹-۲۵. وضعیت: **طرح آماده؛ اجرای فاز ۳ شروع نشده است.**
@@ -399,20 +401,20 @@ Q0 جزئی از `QUALIFICATION_PLAN` تک‌تک رکوردهای زیر است
 - NAME=Reference Time مسیر و روش حمل
 - PRODUCT_OUTCOME=Admin زمان/بازه مرجع حرکت و توقف را نسخه‌دار تعریف کند و برنامه به مبنای مشخص اشاره کند.
 - USER / ACTOR=Organization Admin تنظیم؛ Expert مصرف
-- CURRENT_STATE=planned timestamps در RouteLeg و SLA duration وجود دارد؛ مرجع زمان مسیر/روش حمل مستقل کشف نشد.
+- CURRENT_STATE=مرجع سازمانی نسخه‌دار و انتخاب صریح مبنای leg طبق ADR-066 پیاده‌سازی شده؛ qualification نهایی هنوز pending است. داده مسیر و SLA پیشین بازنویسی نمی‌شود.
 - TARGET_STATE=پیکربندی محدود effective-dated مسیر/روش حمل؛ حرکت و توقف/انتظار جدا؛ snapshot مصرف در برنامه/برآورد.
 - AUTHORIZED_PRODUCT_BEHAVIOR=قرارداد §19: زمان مرجع سازمان، بازه و version؛ نه SLA و نه تغییر خودکار برنامه‌های قبلی.
 - PROTECTED_BEHAVIOR=OrganizationSlaRule دو process خودش را حفظ کند؛ نبود مرجع با صفر یا default پر نشود.
 - REUSED_FOUNDATIONS=governed catalogs، logistics points، RouteLeg و الگوی pinned configuration؛ نه جدول SLA به‌عنوان owner جدید.
-- LIKELY_SCHEMA_IMPACT=persistence محدود reference time/version با tenant و effective interval و کلیدهای مرجع مصوب.
-- API_IMPACT=Org CRUD versioned و read انتخاب مبنا؛ تاریخ مصرف‌کننده نسخه را pin کند.
+- LIKELY_SCHEMA_IMPACT=سه جدول additive برای کلید مرجع، نسخه و انتخاب immutable؛ migration `20261009_phase3_route_time` پس از `20261008_phase3_cargo_delivery`، بدون seed/backfill؛ downgrade دارای سابقه ممنوع است.
+- API_IMPACT=Org Admin ایجاد مرجع/افزودن نسخه؛ خواندن tenant و ثبت صریح مبنای leg پیش‌نویس توسط Expert مسئول؛ حذف یا ویرایش سابقه وجود ندارد.
 - FRONTEND_IMPACT=بخش Admin کنار تنظیمات موجود، انتخاب مرجع در route؛ نمایش بازه و «تعریف نشده».
 - AUTHORIZATION_IMPACT=فقط Org Admin مجاز تنظیم؛ Expert read tenant خود؛ Platform مجوز ضمنی مدیریت tenant ندارد.
 - HISTORY_IMPACT=تغییر مرجع آینده اثر دارد؛ داده گذشته و ETA قبلی مجدداً با نسخه تازه بازنویسی نشود.
 - JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
 - AFFECTED_JOURNEYS=FWD-J06,FWD-J08,FWD-J09,FWD-IPJ-03,FWD-IPJ-04
 - DEPENDENCIES=P3-01,P3-03
-- DECISIONS_REQUIRED_BEFORE_START=ADR مرجع زمان؛ DN04 تنها اگر معنای ورودی/مصرف هنوز مبهم باشد؛ فرمول ETA اینجا انتخاب نمی‌شود.
+- DECISIONS_REQUIRED_BEFORE_START=اختیار صریح مالک در §§29–44 و ADR-066 معتبر است؛ تصمیم باز در این محدوده وجود ندارد. DN04 و فرمول ETA خارج از محدوده‌اند.
 - QUALIFICATION_PLAN=Q0؛ backend interval/version/no-default؛ frontend Admin→Expert؛ PostgreSQL overlap policy مصوب و immutable pins؛ browser update→old/new plan؛ regression SLA و route.
 - MIGRATION_REQUIRED=YES
 - REFERENCE_IMPACT=UPDATE_REQUIRED: مرجع زمان و ownership inventory، جدایی SLA.

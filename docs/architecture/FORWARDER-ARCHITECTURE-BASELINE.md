@@ -5,6 +5,18 @@ Authority: repository implementation plus Accepted ADRs indexed in `ADR-INDEX.md
 
 ## 1. Product architecture principles
 
+P3-10 bounded extension: [ADR-066](../operational/adr/ADR-066-organization-route-reference-time.md)
+owns immutable organization/endpoint/mode reference keys, append-only effective
+versions with independent movement and stop ranges, and explicit version-pinned
+draft RouteLeg selections. It reuses governed locations, tenant logistics points,
+mode vocabulary and fixed-owner route permission. Only Organization Admin manages
+its own configuration; Expert reads and explicitly selects. Missing is undefined.
+Admin updates never rewrite a prior basis, route timestamps, actual facts or SLA.
+Migration `20261009_phase3_route_time` adds three empty tables after actual parent
+`20261008_phase3_cargo_delivery`, without default, seed or backfill. History-bearing
+downgrade refuses deletion. No ETA or P3-11 behavior is introduced. Final source-bound
+qualification is pending; this implementation status is not global Product acceptance.
+
 P3-09 bounded extension: [ADR-065](../operational/adr/ADR-065-private-customer-shipment-projection.md)
 defines authenticated Customer list/detail as a live allowlisted read of the SAME
 OperationalShipment SOR. Current DN10 grants intersect same-tenant Cargo ownership
