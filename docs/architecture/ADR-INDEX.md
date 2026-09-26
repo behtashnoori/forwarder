@@ -80,6 +80,7 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 | [064](../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) | Partial Cargo delivery and exact evidence | ACCEPTED | Operational Shipment / Cargo / Documents | extends ADR-030/047/050/057/060/061/062 only for real Delivery / none | Immutable partial delivery/correction facts, exact-version evidence and warning-only discrepancy | Yes; explicit P3-08 authority; no closure, Customer page or new file store |
 
 | [065](../operational/adr/ADR-065-private-customer-shipment-projection.md) | Private Customer Shipment projection | ACCEPTED | Customer / Shipment security | enables deferred private consumers of ADR-057/058/062/063/064; preserves ADR-052/053 | Live own-Cargo SQL authorization, independent safe DTO and fresh UI | Yes; explicit P3-09 authority; no schema, public expansion or Customer mutation |
+| [066](../operational/adr/ADR-066-organization-route-reference-time.md) | Organization route reference time and explicit plan basis | ACCEPTED | Route / tenant configuration | extends ADR-004/005/006/010/016/058 / none | organization route reference versions and immutable plan basis | Yes; bounded P3-10 resume authority |
 
 ## Usage rules
 
