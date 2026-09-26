@@ -15,8 +15,9 @@ $pgPort = 55432
 $backend = $null
 $frontend = $null
 $postgresStarted = $false
+$productHead = $null
+$dirty = $null
 $results = [System.Collections.Generic.List[object]]::new()
-New-Item -ItemType Directory -Path $runtime, $EvidenceDirectory -Force | Out-Null
 
 function Free-Port {
   $listener = [System.Net.Sockets.TcpListener]::new([System.Net.IPAddress]::Loopback, 0)
@@ -49,6 +50,7 @@ Push-Location $workspace
 try {
   $productHead = (git rev-parse HEAD).Trim()
   $dirty = [bool](git status --porcelain)
+  New-Item -ItemType Directory -Path $runtime, $EvidenceDirectory -Force | Out-Null
   $head = (python -m scripts.browser_migration_contract repository-head).Trim()
   if ($head -ne '20261012_phase3_cargo_eta') { throw "Unexpected migration head: $head" }
   if (Get-NetTCPConnection -LocalPort $pgPort -State Listen -ErrorAction SilentlyContinue) {
