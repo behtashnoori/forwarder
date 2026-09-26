@@ -35,6 +35,7 @@ import OrganizationDocumentPolicyTab from "@/components/OrganizationDocumentPoli
 import OrganizationSlaRulesTab from "@/components/OrganizationSlaRulesTab";
 import MasterDataAdminTab from "@/components/MasterDataAdminTab";
 import OrganizationReferenceCatalogTab from "@/components/OrganizationReferenceCatalogTab";
+import ClosurePolicyTab from "@/components/ClosurePolicyTab";
 import OrganizationRouteTimesTab from "@/components/OrganizationRouteTimesTab";
 import CustomerAccessTab from "@/components/CustomerAccessTab";
 import CargoCatalogAdminTab from "@/components/CargoCatalogAdminTab";
@@ -342,6 +343,7 @@ const AdminPanel = () => {
             {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف مرکزی</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="customer-access" className="gap-2 rounded-2xl py-3"><Users className="h-4 w-4"/>دسترسی حساب مشتری</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-reference-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف قابل استفاده سازمان</TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger value="closure-policy" className="rounded-2xl py-3">قواعد بستن پرونده</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-route-times" className="gap-2 rounded-2xl py-3"><Clock className="h-4 w-4"/>زمان مرجع مسیر</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>}
             <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی سازمان</TabsTrigger>
@@ -542,6 +544,7 @@ const AdminPanel = () => {
           {isPlatformAdmin && <TabsContent value="master-data" className="space-y-4"><MasterDataAdminTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="customer-access" className="space-y-4"><CustomerAccessTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="organization-reference-catalog" className="space-y-4"><OrganizationReferenceCatalogTab /></TabsContent>}
+          {isOrganizationAdmin && <TabsContent value="closure-policy" className="space-y-4"><ClosurePolicyTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="organization-route-times" className="space-y-4"><OrganizationRouteTimesTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>}
           <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab isPlatformAdmin={isPlatformAdmin} /></TabsContent>

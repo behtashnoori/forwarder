@@ -5,7 +5,7 @@ Authority: repository implementation plus Accepted ADRs indexed in `ADR-INDEX.md
 
 ## 1. Product architecture principles
 
-### Accepted P3-11..13 design extension; implementation pending
+### Accepted P3-11..13 design extension; separate implementation gates
 
 [Named acceptance](../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md) accepts
 ADR-067 (Cargo ETA history and explicit idempotent ensure), ADR-068 (versioned
@@ -20,6 +20,20 @@ implemented canonical behavior until the accepted bounded command is qualified;
 they do not veto the newly accepted exception. No runtime, schema, Product or
 security PASS follows from architecture acceptance.
 
+
+P3-12 implementation extension: [ADR-068](../operational/adr/ADR-068-controlled-shipment-closure.md)
+now has versioned organization policy and current GENERAL/mode checklist, explicit
+completed-only owner closure or Admin exception, immutable missing/source snapshots,
+terminal state protection and per-source PostgreSQL fences. The [accepted command
+matrix](../product/phase3/P3-12-POST-CLOSURE-COMMAND-MATRIX.md) permits historical
+corrections, prior facts and document repair under existing authority; new work is
+denied. Customer receives only its existing safe Shipment projection with `closed`.
+Migration `20261010_phase3_closure` follows actual `20261009_phase3_route_time`;
+no seed/backfill. Empty rollback is supported; populated rollback is refused and
+N-1 is unsupported after use. [Working scope and qualification gate](../product/phase3/P3-12-IMPLEMENTATION-WORKING-NOTE.md)
+records the independent source freeze and receipt; implementation alone is not PASS.
+P3-11 has retained unqualified work pending the stop-range placement Product
+answer; P3-13 runtime remains unstarted until a fresh canonical-base check.
 
 P3-10 bounded extension: [ADR-066](../operational/adr/ADR-066-organization-route-reference-time.md)
 owns immutable organization/endpoint/mode reference keys, append-only effective

@@ -43,6 +43,7 @@ import RouteReferenceTimes from "@/components/RouteReferenceTimes";
 import RouteActualSection from "@/components/RouteActualSection";
 import RouteStageTransportExecutionSection from "@/components/RouteStageTransportExecutionSection";
 import ReportedFactsSection from "@/components/ReportedFactsSection";
+import ShipmentClosure from "@/components/ShipmentClosure";
 import DeliverySection from "@/components/DeliverySection";
 import CargoAllocationTraceSection from "@/components/CargoAllocationTraceSection";
 import {
@@ -90,6 +91,7 @@ export default function OperationalShipmentDetail() {
   const [referenceTimesOpen, setReferenceTimesOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(false);
   const [deliveriesOpen, setDeliveriesOpen] = useState(false);
+  const [closureOpen, setClosureOpen] = useState(false);
   const [timeline, setTimeline] = useState<RouteTimeline>();
   const [exceptions, setExceptions] = useState<RouteException[]>([]);
   const [error, setError] = useState("");
@@ -203,9 +205,10 @@ export default function OperationalShipmentDetail() {
           </header>
 
           <OperationsNav />
+          <details className="rounded-2xl border bg-white" onToggle={event=>setClosureOpen(event.currentTarget.open)}><summary className="cursor-pointer p-4 text-lg font-semibold">بررسی و بستن پرونده</summary>{closureOpen&&<ShipmentClosure shipment={shipmentPublicId} reload={load}/>}</details>
           <section aria-labelledby="next-action-heading" className="space-y-3 rounded-2xl border border-blue-200 bg-blue-50/70 p-4 sm:p-5">
-            <div><p className="text-xs font-semibold text-blue-700">اقدام جاری</p><h2 id="next-action-heading" className="text-xl font-bold">اقدامات مجاز بعدی</h2><p className="mt-1 text-sm text-slate-600">اقدامات این بخش فقط بر پایه وضعیت و مجوزهای ثبت‌شده در سامانه نمایش داده می‌شوند.</p></div>
-            {routePlansLoaded && !activePlan && <RouteAuthoringSection shipmentId={shipmentPublicId} draft={draftPlan} hasDraft={plans.some((item) => item.status === "draft")} reload={load} />}
+            <div><p className="text-xs font-semibold text-blue-700">اقدام جاری</p><h2 id="next-action-heading" className="text-xl font-bold">{data.status === "closed" ? "اصلاح و تکمیل سوابق" : "اقدامات مجاز بعدی"}</h2><p className="mt-1 text-sm text-slate-600">اقدامات این بخش فقط بر پایه وضعیت و مجوزهای ثبت‌شده در سامانه نمایش داده می‌شوند.</p></div>
+            {data.status !== "closed" && routePlansLoaded && !activePlan && <RouteAuthoringSection shipmentId={shipmentPublicId} draft={draftPlan} hasDraft={plans.some((item) => item.status === "draft")} reload={load} />}
             {activePlan && <div className="grid gap-3 lg:grid-cols-2">{displayedLegs.map((leg, index) => {
               const actionable = !["blocked", "cancelled", "completed"].includes(leg.status);
               const action = actionable && !leg.actual_departure && leg.departure_milestone_id ? { label: "ثبت حرکت", id: leg.departure_milestone_id } : actionable && leg.actual_departure && !leg.actual_arrival && leg.arrival_milestone_id ? { label: "ثبت رسیدن", id: leg.arrival_milestone_id } : null;
@@ -223,20 +226,20 @@ export default function OperationalShipmentDetail() {
               {!!plan?.cargo_destinations?.length && <section className="space-y-2 border-t pt-3"><h3 className="font-semibold">مقصد شاخه‌ای کالاها</h3><p className="text-slate-600">هر کالا به مقصد برنامه‌ریزی‌شده خودش متصل است؛ کالا و محموله تکثیر نشده‌اند.</p>{plan.cargo_destinations.map((destination) => { const leg = plan.legs.find((item) => item.id === destination.destination_route_leg_id); return <p className="rounded bg-slate-50 p-2" key={destination.id}><strong>{destination.cargo_display_name || "کالای ثبت‌شده"}</strong> · {leg?.branch_label || leg?.destination.display_name || "مقصد ثبت‌شده"}</p>; })}</section>}
             </CardContent>
           </Card>
-          {activePlan && <RouteStageTransportExecutionSection shipmentId={shipmentPublicId} planId={activePlan.id} />}
+          {activePlan && <RouteStageTransportExecutionSection shipmentId={shipmentPublicId} planId={activePlan.id} closed={data.status === "closed"} />}
           {!!plans.length && <details className="rounded-2xl border bg-white" onToggle={event=>setReferenceTimesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-4 font-semibold">زمان مرجع و مبنای برنامه</summary>{referenceTimesOpen&&<RouteReferenceTimes shipmentId={shipmentPublicId} plans={plans}/>}</details>}
           {activePlan && <details className="rounded border bg-white" onToggle={(event) => setCargoTraceOpen(event.currentTarget.open)}>
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">تخصیص و مسیر هر کالا</summary>
-            {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} /></div>}
+            {cargoTraceOpen && <div className="border-t p-3 sm:p-4"><CargoAllocationTraceSection shipmentId={shipmentPublicId} planId={activePlan.id} closed={data.status === "closed"} /></div>}
           </details>}
           {plan && <RouteActualSection shipmentId={shipmentPublicId} plan={plan} reload={load} />}
           <details className="rounded-xl border bg-white" onToggle={event => setReportsOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">گزارش موقعیت و تغییرات حمل</summary>{reportsOpen && <div className="border-t p-3 sm:p-4"><ReportedFactsSection shipmentId={shipmentPublicId} /></div>}</details>
-          <details className="rounded-xl border bg-white" onToggle={event => setDeliveriesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">تحویل کالاها</summary>{deliveriesOpen && <div className="border-t p-3 sm:p-4"><DeliverySection shipmentId={shipmentPublicId} /></div>}</details>
+          <details id="shipment-deliveries" className="rounded-xl border bg-white" onToggle={event => setDeliveriesOpen(event.currentTarget.open)}><summary className="cursor-pointer p-3 font-semibold sm:p-4">تحویل کالاها</summary>{deliveriesOpen && <div className="border-t p-3 sm:p-4"><DeliverySection shipmentId={shipmentPublicId} /></div>}</details>
           </section>
 
-          <details className="rounded border bg-white">
+          <details id="shipment-cargo" className="rounded border bg-white">
             <summary className="cursor-pointer px-4 py-4 text-lg font-semibold">جزئیات کالا، وسیله حمل و پیگیری</summary>
-            <div className="border-t p-3 sm:p-4"><ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} stageScoped={Boolean(activePlan)} /></div>
+            <div className="border-t p-3 sm:p-4"><ShipmentCargoItems shipmentPublicId={data.public_id} projectPublicId={data.project_public_id} legacyDescription={(data as OperationalShipmentSummary & {legacy_cargo_description?:string|null}).legacy_cargo_description} stageScoped={Boolean(activePlan)} closed={data.status === "closed"} /></div>
           </details>
 
           <details className="rounded border bg-white" open={false}>
@@ -254,7 +257,7 @@ export default function OperationalShipmentDetail() {
             <OperationalActionsSection shipmentPublicId={data.public_id} />
           </section>
 
-          {data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <section aria-labelledby="project-execution-heading" className="space-y-3"><h2 id="project-execution-heading" className="text-xl font-bold">اجرای پروژه</h2><OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} /></section>}
+          {data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <section aria-labelledby="project-execution-heading" className="space-y-3"><h2 id="project-execution-heading" className="text-xl font-bold">اجرای پروژه</h2><OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} closed={data.status === "closed"} /></section>}
 
           <section aria-labelledby="documents-heading" className="space-y-3">
             <div><p className="text-xs font-semibold text-slate-500">اسناد و شواهد</p><h2 id="documents-heading" className="text-xl font-bold">مدارک و مراجع حمل</h2><p className="mt-1 text-sm text-slate-600">فایل‌ها، شماره‌های مرجع و آمادگی اسناد مستقل از یکدیگر و در یک فضای عملیاتی قابل دسترس‌اند.</p></div>
@@ -327,7 +330,7 @@ export default function OperationalShipmentDetail() {
             <CardHeader><CardTitle>{direction === "rtl" ? "بازبرنامه‌ریزی و نسخه‌های مسیر" : "Replan and route versions"}</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               {plans.map((item) => <div key={item.id} className="rounded border p-3"><strong>نسخه مسیر {item.revision_number}</strong> · {item.is_active ? "نسخه فعال" : businessLabel(item.status)} · نسخه رکورد {item.version}{item.created_from_plan_id ? " · جایگزین نسخه پیشین" : ""}<br />{item.replan_reason && `دلیل بازبرنامه‌ریزی: ${item.replan_reason}`}<br /><span className="text-sm text-slate-600">واقعیت‌های پیمایش: {item.actual_traversal_count ?? 0} · انحراف‌های ثبت‌شده: {item.actual_deviation_count ?? 0}</span></div>)}
-              {activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="دلیل بازبرنامه‌ریزی" placeholder="دلیل بازبرنامه‌ریزی (الزامی)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "نسخه فعال تازه مسیر ایجاد شد.")}>بازبرنامه‌ریزی بخش‌های آینده</Button></div><p className="text-sm text-slate-600">بخش‌های انجام‌شده فقط خواندنی می‌مانند و فقط بخش‌های آینده به نسخه تازه منتقل می‌شوند.</p></OperationalPermission>}
+              {data.status !== "closed" && activePlan && <OperationalPermission permission="route_plan.replan"><div className="flex flex-col gap-2 sm:flex-row"><Input aria-label="دلیل بازبرنامه‌ریزی" placeholder="دلیل بازبرنامه‌ریزی (الزامی)" value={reasons.replan || ""} onChange={(event) => setReasons({...reasons,replan:event.target.value})}/><Button className="min-h-11" disabled={!!pending} onClick={() => requireReason("replan", (reason) => replanRoute(shipmentPublicId, activePlan.id, activePlan.version, reason, key()), "نسخه فعال تازه مسیر ایجاد شد.")}>بازبرنامه‌ریزی بخش‌های آینده</Button></div><p className="text-sm text-slate-600">بخش‌های انجام‌شده فقط خواندنی می‌مانند و فقط بخش‌های آینده به نسخه تازه منتقل می‌شوند.</p></OperationalPermission>}
             </CardContent>
           </Card>
 

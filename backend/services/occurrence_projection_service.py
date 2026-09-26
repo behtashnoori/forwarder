@@ -134,6 +134,8 @@ def active_plan(shipment):
 
 
 def shipment_state(shipment, plan, legs):
+    if shipment.lifecycle_status == "closed":
+        return "closed", "EXPLICIT_CLOSURE"
     if shipment.lifecycle_status == "cancelled":
         return "cancelled", "EXPLICIT_CANCEL"
     required = [leg for leg in legs if leg.status != "cancelled"]

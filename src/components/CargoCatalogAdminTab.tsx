@@ -8,7 +8,7 @@ import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 
 const emptyForm = { immutable_code:"", fa_name:"", en_name:"", cargo_type_public_id:"", default_uom_public_id:"", part_number:"", customer_item_code:"", hs_code:"", brand:"", model:"", description:"" };
 const fieldLabels: Record<keyof typeof emptyForm, string> = {immutable_code:"کد ثابت کالا",fa_name:"نام فارسی",en_name:"نام انگلیسی",cargo_type_public_id:"شناسه نوع کالا",default_uom_public_id:"شناسه واحد اندازه‌گیری پیش‌فرض",part_number:"شماره قطعه",customer_item_code:"کد کالای مشتری",hs_code:"کد HS",brand:"برند",model:"مدل",description:"توضیحات"};
-const shipmentStatus:Record<string,string>={draft:"پیش‌نویس",planned:"برنامه‌ریزی‌شده",in_progress:"در حال انجام",completed:"تکمیل‌شده",cancelled:"لغوشده"};
+const shipmentStatus:Record<string,string>={draft:"پیش‌نویس",planned:"برنامه‌ریزی‌شده",in_progress:"در حال انجام",completed:"تکمیل‌شده",closed:"بسته‌شده",cancelled:"لغوشده"};
 const locationState:Record<string,string>={UNAVAILABLE:"موقعیت فعلی ثبت نشده است",SINGLE:"موقعیت فعلی",COMMON:"موقعیت مشترک بخش‌های حمل",MULTIPLE:"محموله در چند موقعیت قرار دارد"};
 const missingReferenceGuidance = "این نوع در تعاریف سازمان موجود نیست. برای ادامه، مدیر سازمان باید آن را تعریف یا فعال کند.";
 

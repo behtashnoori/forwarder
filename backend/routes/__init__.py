@@ -40,6 +40,7 @@ from .reported_facts import reported_facts_bp
 from .deliveries import deliveries_bp
 from .customer_shipments import customer_shipments_bp
 from .route_times import route_times_bp
+from .closure import closure_bp
 
 
 def register_routes(app: Flask) -> None:
@@ -86,3 +87,4 @@ def register_routes(app: Flask) -> None:
     app.register_blueprint(deliveries_bp)
     app.register_blueprint(customer_shipments_bp)
     app.register_blueprint(route_times_bp)
+    app.register_blueprint(closure_bp)

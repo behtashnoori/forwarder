@@ -1,8 +1,11 @@
 # طرح اجرای فاز ۳ — نسخه ۱
 
+> وضعیت جاری P3-11..13: معماری ADR-067/068/069 در `6259830f2a5fe94798bf4183d2643bf624529c26` پذیرفته شد. P3-11 کار حفظ‌شدهٔ تأییدنشده دارد و محل اعمال بازه توقف منتظر تصمیم محصول است. P3-12 طبق [ماتریس مصوب پس از بستن](P3-12-POST-CLOSURE-COMMAND-MATRIX.md) پیاده‌سازی شده و [دروازهٔ ارزیابی نسخهٔ ثابت](P3-12-IMPLEMENTATION-WORKING-NOTE.md) را طی می‌کند. P3-13 هنوز پیاده‌سازی نشده؛ P3-14/15، ارزیابی یکپارچهٔ سراسری، walkthrough انسانی و Release خارج از اختیار این مأموریت‌اند.
+
+
 > Current 2026-09-26 disposition: P3-01..10 are integrated at canonical `368cd736cbffce3d62c33336868738d9086e8306`. [Named ADR-067/068/069 acceptance](P3-11-13-ARCHITECTURE-ACCEPTANCE.md) opens the architecture gate for the SAME retained P3-11..13 mission. Their implementation is NOT_STARTED at this acceptance point. P3-14/P3-15, global qualification, Human Walkthrough and release remain excluded. Earlier dated/planning statuses below are preserved historical evidence.
 
-> وضعیت جاریِ جایگزین رکورد تاریخی پاراگراف بعد: P3-09 از کار قبلی ادامه یافت و در canonical `e102ace12a741716442466d68140f632f1109bff` ادغام و با github برابر شد. P3-10 در worktree مستقل از همین canonical، تحت [اختیار ادامه](P3-09-10-RESUME-AUTHORITY.md) و [ADR-066](../../operational/adr/ADR-066-organization-route-reference-time.md) روی Product `6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d` با [شواهد تازه](../../operational/evidence/phase3-p3-10-route-reference-time-status-20260926.md) تأیید شده و ادغام کنترل‌شدهٔ آن تحت receipt مأموریت مجاز است. P3-11 تا P3-15 آغاز نشده‌اند؛ Global Product Validation همچنان EVIDENCE_PENDING است.
+> وضعیت جاریِ جایگزین رکورد تاریخی پاراگراف بعد: P3-09 از کار قبلی ادامه یافت و در canonical `e102ace12a741716442466d68140f632f1109bff` ادغام و با github برابر شد. P3-10 در worktree مستقل از همین canonical، تحت [اختیار ادامه](P3-09-10-RESUME-AUTHORITY.md) و [ADR-066](../../operational/adr/ADR-066-organization-route-reference-time.md) روی Product `6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d` با [شواهد تازه](../../operational/evidence/phase3-p3-10-route-reference-time-status-20260926.md) تأیید شده و ادغام کنترل‌شدهٔ آن تحت receipt مأموریت مجاز است. وضعیت جاری P3-11..13 در رکورد زیر آمده است؛ Global Product Validation همچنان EVIDENCE_PENDING است.
 
 > وضعیت مأموریت جاری: [دستور پنج‌مرحله‌ای P3-06 تا P3-10](P3-06-10-MISSION-AUTHORITY.md) اکنون مرجع اختیار اجراست. DN10 با تصمیم صریح مالک محصول و [ADR-062](../../operational/adr/ADR-062-explicit-customer-entitlement.md) حل شده است؛ P3-06 روی Product `0e65fd89882e23453d7c3bfe4d520cd7f44a6c32` با [شواهد تازه](../../operational/evidence/phase3-p3-06-dn10-requalification-status-20260925.md) تأیید شده و ادغام کنترل‌شده آن مجاز است. DN06 و DN07 نیز در محدوده P3-07 همین مأموریت تصمیم مصوب دارند؛ P3-06 در canonical `13c0fed2d5971907d93f23860cc5689c7ebe33f8` یکپارچه شده و P3-07 طبق [ADR-063](../../operational/adr/ADR-063-scoped-reported-facts-and-safe-effects.md) روی Product `cd83f21ca1ac0db6e940475fcd9067713831a581` با [شواهد تازه](../../operational/evidence/phase3-p3-07-reported-facts-status-20260925.md) تأیید شده و ادغام کنترل‌شدهٔ آن مجاز است؛ P3-07 در canonical `682e83ed3a51badb3938d66dbd337e8e10e57797` یکپارچه و با github برابر ۰/۰ است. P3-08 طبق [ADR-064](../../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) روی Product `48fa69b70af1bcf06fc5a9783b98fdf54de7a18c` با [شواهد تازه](../../operational/evidence/phase3-p3-08-cargo-delivery-status-20260926.md) تأیید شده و ادغام کنترل‌شدهٔ آن مجاز است؛ وضعیت به‌روز P3-09/10 در رکورد جاری بالا و بخش‌های مربوط درج شده است. متن طرح و رکوردهای قدیمی زیر، شواهد زمان خود هستند؛ هیچ یک مجوز دورزدن وابستگی، Release یا Production نیستند.
 
@@ -455,7 +458,7 @@ Q0 جزئی از `QUALIFICATION_PLAN` تک‌تک رکوردهای زیر است
 - NAME=Closure و استثنای Org Admin
 - PRODUCT_OUTCOME=پس از تحویل، شرایط بسته‌شدن جدا ارزیابی شود؛ نقص‌های باقیمانده حتی با استثنای مجاز محفوظ بمانند.
 - USER / ACTOR=owning Expert اقدام معمول؛ Organization Admin استثنای مصوب
-- CURRENT_STATE=Shipment lifecycle و documents/exception/action موجود؛ checklist عمومی/روش حمل فاز۳ وجود ندارد.
+- CURRENT_STATE=پیاده‌سازی مستقل closure، policy و matrix موجود؛ qualification و ادغام تابع receipt نسخه ثابت.
 - TARGET_STATE=policy نسخه‌دار، ارزیابی از facts و closure decision با evidence؛ Admin exception با علت و نواقص، بدون پاک‌کردن آن‌ها.
 - AUTHORIZED_PRODUCT_BEHAVIOR=قرارداد §23؛ تحویل ≠ closure؛ Expert bypass ندارد.
 - PROTECTED_BEHAVIOR=Exception و Action جدا resolve شوند؛ بسته‌شدن آن‌ها نتیجه ضمنی closure نیست؛ نمونه checklist پیش‌فرض نصب نشود.
@@ -468,7 +471,7 @@ Q0 جزئی از `QUALIFICATION_PLAN` تک‌تک رکوردهای زیر است
 - JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
 - AFFECTED_JOURNEYS=FWD-J04,FWD-J05,FWD-J06,FWD-J08,FWD-J09,FWD-IPJ-02,FWD-IPJ-03,FWD-IPJ-04
 - DEPENDENCIES=P3-06,P3-07,P3-08
-- DECISIONS_REQUIRED_BEFORE_START=DN01,DN03؛ DN05 اگر HS شرط شود؛ ADR closure/policy؛ ETA شرط closure فرض نشود.
+- DECISIONS_REQUIRED_BEFORE_START=DN01 در محدوده closure و ADR-068 پذیرفته شد؛ تصمیم صریح 2026-09-26 اصلاح سابقه/واقعیت قبلی/اسناد را مجاز و عملیات تازه را ممنوع کرد. DN05 سیاست خاص آینده باز است؛ HS و ETA شرط عمومی closure نیستند.
 - QUALIFICATION_PLAN=Q0؛ backend missing/checklist version/exception/replay؛ frontend نقص و علت؛ PostgreSQL concurrent delivery/doc change versus close؛ browser Expert denied→Admin exception→history؛ regression WorkItem/Exception/SLA.
 - MIGRATION_REQUIRED=YES
 - REFERENCE_IMPACT=UPDATE_REQUIRED: closure و مرز exception؛ هیچ معنای جدیدی از نمونه‌ها استنباط نشود.

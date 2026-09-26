@@ -201,6 +201,8 @@ def select_basis(shipment_id, plan_id, leg_id, user, payload, key):
     org = context(user)
     _payload(payload, {"expected_version", "expected_selection_revision", "reference_version_public_id"})
     shipment, plan = routes._plan(shipment_id, plan_id, user, "route_leg.manage", True)
+    from backend.services.closure_commands import deny_new
+    deny_new(shipment)
     leg = db.session.scalar(select(RouteLeg).where(RouteLeg.id == leg_id, RouteLeg.route_plan_id == plan.id).with_for_update().execution_options(populate_existing=True))
     if leg is None: fail("بخش مسیر یافت نشد.", 404, "ROUTE_TIME_NOT_FOUND")
     command, request_hash = routes._idempotency(org, "route_time.select", "RouteLeg", leg.id, key, {"actor_id": user["id"], **payload})

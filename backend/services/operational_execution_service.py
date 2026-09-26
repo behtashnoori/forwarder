@@ -60,6 +60,9 @@ EVENT_FOR = {
 REASON_TARGETS = {"BLOCKED", "SKIPPED", "CANCELLED"}
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def _shipment(public_id: str, user: dict, permission="operational_execution.read"):
     # Execution state is a read-only projection of a shipment.  Its GET
     # surface must use the same tenant, assignment, direct-responsibility and
@@ -259,6 +262,7 @@ def initialization_preview(shipment_id, user, *, authorized_shipment=None):
 
 def initialize(shipment_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_execution.manage")
+    closure_guard.deny_new(shipment)
     expected = payload.get("expected_shipment_version")
     if shipment.version != expected:
         raise OperationalError(
@@ -366,6 +370,7 @@ def list_milestones(shipment_id, user):
 
 def transition(shipment_id, milestone_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_execution.manage")
+    closure_guard.deny_new(shipment)
     from backend.operational_models import OperationalIdempotency
     from backend.services import operational_service as base_service
 
@@ -500,6 +505,7 @@ def transition(shipment_id, milestone_id, payload, user):
 
 def reopen(shipment_id, milestone_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_event.correct")
+    closure_guard.deny_new(shipment)
     m = _milestone(shipment, milestone_id, True)
     if m.version != payload.get("expected_version"):
         raise OperationalError(
@@ -637,6 +643,7 @@ def create_event(shipment_id, milestone_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_event.create")
     milestone = _milestone(shipment, milestone_id, True)
     effective = _occurrence_time(payload.get("effective_at"), "effective_at")
+    closure_guard.prior_fact(shipment, effective)
     command = {"type": "reported", "effective_at": effective.isoformat(), "note": payload.get("note"),
                "expected_version": payload.get("expected_version")}
     key = _command_key({**command, "idempotency_key": payload.get("idempotency_key")}, "report", milestone.public_id)
@@ -678,6 +685,7 @@ def correct_event(shipment_id, event_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_event.correct")
     milestone, original = _target_event(shipment, event_id)
     effective = _occurrence_time(payload.get("effective_at"), "effective_at")
+    closure_guard.prior_fact(shipment, effective)
     reason = str(payload.get("reason") or "").strip()
     if not reason:
         raise OperationalError("CORRECTION_REASON_REQUIRED", "Correction reason is required.", 422)
@@ -706,6 +714,7 @@ def correct_event(shipment_id, event_id, payload, user):
 def verify_event(shipment_id, event_id, payload, user):
     shipment = _shipment(shipment_id, user, "operational_event.verify")
     milestone, original = _target_event(shipment, event_id)
+    closure_guard.prior_fact(shipment, original.occurred_at)
     if original.actor_user_id == user["id"]:
         raise OperationalError("SELF_VERIFICATION_FORBIDDEN", "The asserting actor cannot verify this event.", 403)
     key = _command_key(payload, "verify", event_id)
@@ -956,6 +965,7 @@ def condition_collection(kind, shipment_id, user, payload=None):
             created_by_user_id=user["id"],
             **{instant: _parse_utc(payload.get(instant), instant)},
         )
+        closure_guard.prior_fact(shipment, getattr(row, instant))
         db.session.add(row)
         db.session.flush()
         if key is not None:

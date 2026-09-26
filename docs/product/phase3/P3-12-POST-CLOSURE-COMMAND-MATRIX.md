@@ -1,50 +1,30 @@
-# P3-12 — command-level closed-state review
+# P3-12 — accepted post-closure command matrix
 
-Date: 2026-09-26. Architecture accepted at
-`6259830f2a5fe94798bf4183d2643bf624529c26`; implementation not started.
-Fresh canonical fetch: `368cd736cbffce3d62c33336868738d9086e8306`, clean, 0/0.
-Sole canonical migration head: `20261009_phase3_route_time`.
-This isolated worktree started at that exact canonical and fast-forwarded only
-the retained review/acceptance documentation. P3-11 runtime was not imported.
-Managed worktree creation failed because this chat's older repository cannot
-resolve canonical SHA (operation 869ab8dd-5dc6-45cb-89b3-94dcc2785baf). Native Git
-created `codex/phase3-p3-12-closure` in the actual canonical repository instead.
+Date: 2026-09-26. Product decision: «اصلاح سوابق و ثبت دیرهنگامِ واقعیت‌های قبلی و تکمیل/اصلاح اسناد مجاز باشد؛ عملیات جدید ممنوع.»
+The pending review is retained at `7f98fca1f32a2c2afd51b0889e23893180b9852e`.
+P312-LATE-FACTS and P312-DOCUMENTS are RESOLVED. Existing roles and audit history
+remain; `closed` and its immutable ClosureDecision remain fixed.
 
-## Authority and unresolved meaning
+Architecture acceptance: `6259830f2a5fe94798bf4183d2643bf624529c26`.
+Actual canonical entry: `368cd736cbffce3d62c33336868738d9086e8306`, clean 0/0;
+parent migration `20261009_phase3_route_time`. No P3-11 runtime was imported.
+Managed creation failed against the older chat repository (operation
+869ab8dd-5dc6-45cb-89b3-94dcc2785baf); the actual canonical Git repository created
+`codex/phase3-p3-12-closure` through the documented native fallback.
 
-The acceptance mission §8 and ADR-068 explicitly require this review and forbid
-silently choosing undefined post-closure Product behavior. Original mission §42
-requires protecting the closed state, denying normal operational progression,
-and preserving only correction mechanisms explicitly valid after closure.
-PDA-08 in AGENTS.md stops only the affected design when that authority is missing.
+## Enforcement meaning
 
-Existing ADR-006/030/050/061/063/064 approve occurrence corrections, exact-version
-document commands and Delivery corrections, but none defines their behavior for
-the new `closed` state. Product Contract §23 defines checklist and exceptional
-closure without specifying late facts, corrections or missing-evidence repair
-after closure. Current runtime has no `closed` value, so current tests cannot
-supply that Product decision.
+All YES entries require current tenant, actor, owner/permission and exact parent
+checks. They grant no new role. A prior fact must carry an operational instant no
+later than ClosureDecision.occurred_at; recorded/audit time remains now. Historical
+quantity corrections without an occurred field require the existing reason.
+ACTUAL allocation has its existing occurred_at plus a reason. New planned
+quantities, routes, executions, allocations and physical transfers remain denied.
+Shared-unit commands examine every Shipment parent, including stage and legacy
+allocation parents; new work affecting any closed parent is denied.
 
-The narrow unresolved families are:
-
-- **P312-LATE-FACTS:** whether a completed, closed Shipment may receive a late
-  report/Delivery, correction of an earlier occurrence/report/Delivery, or an
-  audited actual-quantity/allocation correction. Preserving history is already
-  required; permission to add these facts after closure is not yet specified.
-- **P312-DOCUMENTS:** whether the owning Expert may append/replace/remove evidence,
-  revise its context/visibility or assess required documents after closure,
-  especially after an exceptional closure with missing evidence.
-
-No allow or deny has been implemented for those rows. Their blocking effect is
-limited to P3-12 closed-state integration. Versioned policy design and independent
-P3-13 remain authorized. No new Product policy is inferred from security or tests.
-
-## Matrix
-
-YES/NO below describe the authorized target; DECISION_NEEDED means neither is
-chosen. Every command still requires its existing live tenant/actor/parent
-authority. Source symbols are in `backend/services/`; function inputs distinguish
-normal records from corrections when the existing command handles both.
+Commands are reviewed explicitly; no blanket write middleware. Pure lists/reads
+never materialize closure. All historical records keep their original meanings.
 
 | COMMAND | ALLOWED_AFTER_CLOSED | DENIED_AFTER_CLOSED | AUTHORITY | REASON |
 | --- | --- | --- | --- | --- |
@@ -67,35 +47,35 @@ normal records from corrections when the existing command handles both.
 | operational_execution_service.reopen | NO | YES | Original §42; ADR-068 | Milestone reopening cannot silently reopen a closed Shipment |
 | cargo_service.create_shipment_item | NO | YES | Original §42; ADR-068 | Adding new Cargo changes the closed operational scope |
 | cargo_service.update_shipment_item planned quantity | NO | YES | Original §42; ADR-068 | Ordinary new planning |
-| cargo_service.update_shipment_item actual quantity/correction | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-057 | Could repair an historical quantity or change closure evidence |
+| cargo_service.update_shipment_item actual quantity/correction | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
 | cargo_allocation_service.set_allocation PLANNED | NO | YES | Original §42; ADR-068 | Ordinary new planning |
-| cargo_allocation_service.set_allocation ACTUAL correction | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-060 | Historical correction versus new execution meaning |
+| cargo_allocation_service.set_allocation ACTUAL correction | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
 | cargo_allocation_service.transfer | NO | YES | Original §42; ADR-068 | New physical reallocation/handoff |
 | transport_execution_service.create | NO | YES | Original §42; ADR-068 | New execution context |
-| transport_execution_service.revise | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-059 | Recorded corrections and ordinary changes share the command |
-| route_orchestration_service.record_traversal | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-058 | A newly recorded traversal can describe a past operation |
-| operational_service.record_event | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-006 | Late occurrence may change current operational projection |
-| operational_service.verify_milestone | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; occurrence contract | Whether post-closure verification may add authority to old facts |
-| operational_service.correct_milestone | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; occurrence contract | Explicit correction exists, but closed-state permission is undefined |
-| route_orchestration_service.checkpoint_command | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS | Late checkpoint report versus progression |
-| route_orchestration_service.verify_checkpoint_milestone | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS | Post-closure verification meaning undefined |
-| route_orchestration_service.correct_checkpoint_milestone | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS | Correction can alter derived route times |
-| operational_execution_service.create_event | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS | Explicit late occurrence versus new operation |
-| operational_execution_service.correct_event | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS | Existing append correction lacks closed boundary |
-| operational_execution_service.verify_event | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS | Existing verification lacks closed boundary |
-| reported_fact_service.create new report | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-063 | Late report accepted today; new terminal state not covered |
-| reported_fact_service.create correction | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-063 | Append history mandatory; post-closure authorization undefined |
-| delivery_service.create new Delivery | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-064 | Late evidence versus continuing physical delivery |
-| delivery_service.create correction | DECISION_NEEDED | DECISION_NEEDED | P312-LATE-FACTS; ADR-064 | Can change delivered totals after decision |
-| shipment_document_service.upload append | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-050/061 | May complete a preserved missing item after exceptional closure |
-| shipment_document_service.upload replacement/retry | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-050/061 | New exact version changes readiness; old evidence stays |
-| shipment_document_service.remove | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-050 | Changes current evidence state |
-| document_context_service.revise | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-061 | Context and visibility change after terminal state |
-| delivery_service.attach_evidence | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-064 | Adds exact historical evidence through authorized document command |
-| document_readiness_service.materialize | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-030 | Adds the missing governed requirement snapshot |
-| document_readiness_service.associate | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-030 | Changes current exact-version evidence use |
-| document_readiness_service.assess | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-030 | Appends a new assessment after the closure decision |
-| document_readiness_service.resolve_applicability | DECISION_NEEDED | DECISION_NEEDED | P312-DOCUMENTS; ADR-030 | Changes current requirement applicability |
+| transport_execution_service.revise | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| route_orchestration_service.record_traversal | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| operational_service.record_event | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| operational_service.verify_milestone | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| operational_service.correct_milestone | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| route_orchestration_service.checkpoint_command | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| route_orchestration_service.verify_checkpoint_milestone | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| route_orchestration_service.correct_checkpoint_milestone | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| operational_execution_service.create_event | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| operational_execution_service.correct_event | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| operational_execution_service.verify_event | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| reported_fact_service.create new report | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| reported_fact_service.create correction | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| delivery_service.create new Delivery | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| delivery_service.create correction | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| shipment_document_service.upload append | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| shipment_document_service.upload replacement/retry | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| shipment_document_service.remove | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| document_context_service.revise | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| delivery_service.attach_evidence | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| document_readiness_service.materialize | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| document_readiness_service.associate | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| document_readiness_service.assess | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
+| document_readiness_service.resolve_applicability | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
 | document_readiness_service.create_override | NO | YES | Original §42; ADR-068 | No further operational transition may consume an override |
 | document_readiness_service.revoke_override | YES | NO | ADR-030; independent authority | Revokes an existing authorization, without reopening/altering history |
 | operational_action_service.record_follow_up | YES | NO | Acceptance §7; ADR-054/068 | WorkItem lifecycle remains independent |
@@ -107,21 +87,31 @@ normal records from corrections when the existing command handles both.
 | policy/version configuration | YES | NO | Acceptance §7; ADR-068 | Organization configuration; old ClosureDecision retains its pin |
 | DN10 grant/revoke and account disabling | YES | NO | ADR-062/065; original protected scope | Live authorization independent of Shipment lifecycle |
 | authorized read/history/download | YES | NO | ADR-050/061/064/065/068 | Current authorization still applies; history never grants access |
+| execution_unit_service.create_unit/create_shipment_unit | NO for closed parent | YES | Product answer; ADR-068 | A new vehicle/execution is new work; unrelated Project-only units are independent |
+| execution_unit_service.update_unit; legacy transport metadata | NO for closed parent | YES | Product answer; ADR-018/059 | Use audited historical stage revision for prior facts; ordinary metadata update cannot begin new execution |
+| execution_unit_service.add_event; multi_unit_tracking late update | YES: prior occurrence | YES: later occurrence | Product answer; existing permissions | Check every shared Shipment cutoff; append original audit |
+| shared_transport_service.allocate/release/assign_carrier | NO affecting closed parent | YES | Product answer; ADR-068 | Ordinary legacy allocation/carrier commands are new operations |
+| cargo_allocation_service.set_allocation | YES: ACTUAL prior occurrence with reason | YES: PLANNED | Product answer; ADR-060 | Version/idempotency/history retained |
+| route_time_service.select_basis | NO | YES | Product answer; ADR-066 | Reference selection changes future planning; configuration remains independent |
+| operational_execution_service.condition_collection | YES: prior delay/exception occurrence | YES: later occurrence | Product answer; ADR-006/068 | Resolution remains independent and explicit |
+| economics create_line/append_observation/correct/quote_confirm | YES: prior effective fact | YES: later effective fact | Product answer; existing FE-2 permissions | Records observations, including pre-existing commitments; no source amount, FX or accounting semantics changed |
+| external_reference_service.create/transition | YES | NO | Product answer; existing reference authority | Add/correct documentary identity evidence, not operational progression; history/revision/reason retained |
+| legacy tracking enable/disable visibility | YES | NO | Existing visibility authority | Changes projection availability only; cannot create execution/facts |
 
-## Proposed resolution for review, not an accepted policy
+## Serialization and scope
 
-Allow the existing audited historical corrections and evidence repair commands
-with their current roles and version checks, while retaining the original
-ClosureDecision/missing-item snapshot and preserving the terminal closed state.
-Ordinary new planning/execution stays denied. The Product Owner must separately
-say whether a newly entered past occurrence/Delivery counts as permitted evidence
-repair; no backdating shortcut or arbitrary pre-close timestamp is invented here.
+The close transaction locks organization configuration and Shipment, reauthorizes
+after waits, rereads sources, compares policy/Shipment/fact identity and commits
+one immutable decision with the terminal state. Each criterion source write has a
+PostgreSQL Shipment fence, including absent inserts and exact document versions
+through direct or associated Request ownership. Fences serialize; they do not
+replace the command-specific policy above. Independent work and correction stay
+possible after commit. ORM plus PostgreSQL guards deny reopening and decision
+rewrites; delivery projections cannot auto-close or reopen.
 
-Before integration this inventory must be completed against all certified child
-write paths (including shared ExecutionUnits), verified with command-level tests,
-and reconciled with the Product answer. This working review is not a blanket
-middleware rule, a completeness claim or implementation evidence.
-
-P3-12 BUILD=NOT_STARTED; QUALIFICATION=NOT_RUN; INTEGRATED=NO.
+Qualification is recorded in P3-12-IMPLEMENTATION-WORKING-NOTE.md and the eventual
+exact-source evidence receipt. No qualification or integration is asserted by
+this matrix alone. Rigor C / Astra capability; no runtime model-setting assertion.
+DN05_GENERAL_CLOSURE_RULE=NOT_IMPLEMENTED; DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; HUMAN_WALKTHROUGH=NOT_RUN;
-RELEASE_READY=NO; PRODUCTION_UNTOUCHED=YES.
+RELEASE_READY=NO; PRODUCTION_UNTOUCHED=YES. No P3-14/P3-15.

@@ -24,6 +24,9 @@ from backend.services.assigned_work_authorization import authorize_work_action
 ASSESSMENTS = {"REVIEW_STARTED", "APPROVED", "REJECTED", "VERIFIED"}
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def _shipment(public_id, user, permission="document_readiness.read", lock=False):
     org = organization_for_user(user["id"])
     q = select(OperationalShipment).where(
@@ -719,6 +722,7 @@ def next_readiness(shipment_id, user):
 
 def create_override(shipment_id, requirement_id, payload, user):
     shipment = _shipment(shipment_id, user, "document_readiness.override", True)
+    closure_guard.deny_new(shipment)
     req = _requirement(shipment, requirement_id, True)
     milestone = db.session.scalar(
         select(Milestone)

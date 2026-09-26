@@ -54,6 +54,9 @@ class OperationalError(Exception):
         self.code, self.message, self.status = code, message, status
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def require_permission(user: dict[str, Any], permission: str) -> None:
     membership = _membership_for_user(int(user["id"]))
     if permission not in set(membership.permissions or []):
@@ -1197,6 +1200,7 @@ def record_event(
     )
     _reject_recorded_at(payload)
     occurred = _occurrence_time(payload.get("occurred_at"))
+    closure_guard.prior_fact(shipment, occurred)
     event_hash = _hash({"occurred_at": occurred.isoformat(), "event_type": "reported"})
     if existing:
         if existing.request_hash != event_hash:
@@ -1265,6 +1269,7 @@ def verify_milestone(
     latest_report = projection.effective_occurrence(milestone)
     if latest_report is None:
         raise OperationalError("INVALID_EVENT_TARGET", "No occurrence is available to verify.", 409)
+    closure_guard.prior_fact(shipment, latest_report.occurred_at)
     if latest_report and latest_report.actor_user_id == user["id"]:
         raise OperationalError(
             "FORBIDDEN_OPERATION",
@@ -1338,6 +1343,7 @@ def correct_milestone(
     expected = payload.get("expected_version")
     _reject_recorded_at(payload)
     occurred = _occurrence_time(payload.get("occurred_at"))
+    closure_guard.prior_fact(shipment, occurred)
     event_hash = _hash(
         {
             "occurred_at": occurred.isoformat(),

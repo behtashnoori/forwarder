@@ -9,7 +9,7 @@ import type { CustomerFactPage, CustomerReport, CustomerShipmentDetail, Customer
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { usePrivateCustomerRead } from "@/hooks/usePrivateCustomerRead";
 
-const statuses = { planned: "برنامه‌ریزی‌شده", in_progress: "در حال انجام", completed: "تکمیل‌شده", cancelled: "لغوشده" };
+const statuses = { planned: "برنامه‌ریزی‌شده", in_progress: "در حال انجام", completed: "تکمیل‌شده", closed: "بسته‌شده", cancelled: "لغوشده" };
 const contexts = { SHIPMENT: "پرونده حمل", CARGO: "کالای شما", ROUTE_LEG: "مرحله مسیر", EXECUTION_UNIT: "اجرای حمل", DELIVERY: "تحویل کالای شما" };
 const time = (value: string) => formatDualCalendarInstant(value, "fa-IR");
 const amount = (value: string | null) => value === null ? "نامشخص" : Number(value).toLocaleString("fa-IR", { maximumFractionDigits: 6 });

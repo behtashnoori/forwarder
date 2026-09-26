@@ -25,6 +25,9 @@ FIELDS = {"scope", "target_public_id", "kind", "source", "occurred_at", "locatio
           "corrects_public_id", "reason"}
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def fail(message, status=422, code="REPORT_INVALID"):
     raise OperationalError(code, message, status)
 
@@ -121,6 +124,7 @@ def create(shipment_public_id, user, payload, key):
         fail("نوع، منبع و بخش گزارش را مشخص کنید.")
     targets = _target(shipment, scope, payload.get("target_public_id"))
     occurred = instant(payload.get("occurred_at"))
+    closure_guard.prior_fact(shipment, occurred)
     effect = payload.get("customer_effect", "CHANGE")
     if not isinstance(effect, str) or effect not in {"CHANGE", "DELAY"}:
         fail("اثر ثبت‌شده معتبر نیست.")

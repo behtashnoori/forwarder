@@ -244,6 +244,12 @@ def update_unit_metadata(
 ):
     """Delegate supported compatibility metadata to the mapped execution."""
     execution = _canonical_unit_for_legacy_unit(unit)
+    from backend.services.closure_commands import unit_new
+    from backend.services.operational_service import OperationalError
+    try:
+        unit_new(execution)
+    except OperationalError as exc:
+        raise TrackingValidationError(exc.message) from exc
     execution.display_name = _clean_optional(display_name, "display_name", 160)
     execution.vehicle_reference = _clean_optional(vehicle_reference, "vehicle_reference", 160)
     execution.version += 1
@@ -284,6 +290,12 @@ def add_update(
     if not isinstance(occurred_at, datetime):
         raise TrackingValidationError("occurred_at must be a datetime")
     occurred_at = _utc_naive(occurred_at)
+    from backend.services.closure_commands import unit_prior_fact
+    from backend.services.operational_service import OperationalError
+    try:
+        unit_prior_fact(execution, occurred_at)
+    except OperationalError as exc:
+        raise TrackingValidationError(exc.message) from exc
     created_at = _utc_naive(now or datetime.utcnow())
     if occurred_at > created_at:
         raise TrackingValidationError("occurred_at cannot be in the future")

@@ -32,6 +32,9 @@ POLICY_VERSION = os.getenv("EXECUTION_UNIT_THRESHOLD_POLICY_VERSION", "stale-v1"
 STALE_HOURS = max(1, int(os.getenv("EXECUTION_UNIT_STALE_HOURS", "24")))
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def _iso(value):
     if not value: return None
     if value.tzinfo is None: value=value.replace(tzinfo=timezone.utc)
@@ -166,6 +169,8 @@ def create_unit(project: Project, payload: dict, user: dict) -> ExecutionUnit:
         if shipment is None:
             raise OperationalError("NOT_FOUND", "Operational shipment not found.", 404)
     db.session.execute(select(Project.id).where(Project.id == project.id).with_for_update())
+    if shipment:
+        closure_guard.deny_new(shipment)
     codes = db.session.scalars(select(ExecutionUnit.unit_code).where(ExecutionUnit.project_id == project.id, ExecutionUnit.unit_code.like("U-%"))).all()
     next_number = max([int(match.group(1)) for code in codes if (match := re.fullmatch(r"U-(\d+)", code))] or [0]) + 1
     unit = ExecutionUnit(
@@ -188,6 +193,7 @@ def create_shipment_unit(shipment: OperationalShipment, payload: dict, user: dic
     """
     from backend.services.operational_service import require_permission
     require_permission(user, "execution_unit.create")
+    closure_guard.deny_new(shipment)
     unit_type = str(payload.get("unit_type", "truck")).strip().lower()
     if not unit_type or len(unit_type) > 32:
         raise OperationalError("VALIDATION_FAILED", "unit_type is required and must not exceed 32 characters.")
@@ -212,6 +218,7 @@ def create_shipment_unit(shipment: OperationalShipment, payload: dict, user: dic
 
 
 def update_unit(unit: ExecutionUnit, payload: dict) -> ExecutionUnit:
+    closure_guard.unit_new(unit)
     expected = payload.get("expected_version")
     if not isinstance(expected, int) or expected != unit.version:
         raise OperationalError("VERSION_CONFLICT", "expected_version does not match the current unit version.", 409)
@@ -310,6 +317,7 @@ def create_event(unit: ExecutionUnit, payload: dict, user: dict, idempotency_key
     internal_note = str(payload.get("internal_note", "")).strip() or None
     if visibility == "customer" and not customer_message: raise OperationalError("VALIDATION_FAILED", "customer_message is required for customer visibility.")
     occurred = _parse_time(payload.get("occurred_at"))
+    closure_guard.unit_prior_fact(unit, occurred)
     transport_revision = db.session.scalar(
         select(ExecutionTransportRevision)
         .where(ExecutionTransportRevision.execution_unit_id == unit.id)

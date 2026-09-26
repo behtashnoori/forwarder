@@ -46,6 +46,9 @@ from backend.services.organization_reference_catalog_service import (
 )
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def _fail(code: str, message: str, status: int = 422):
     raise OperationalError(code, message, status)
 
@@ -626,6 +629,7 @@ def create(
     shipment = _shipment(
         shipment_public_id, user, mutation_permission="execution_unit.create"
     )
+    closure_guard.deny_new(shipment)
     plan = _plan(shipment, plan_id, active=True)
     leg = _leg(plan, leg_id)
     organization_id = shipment.organization_id
@@ -787,6 +791,7 @@ def revise(
             409,
         )
     configuration = _configuration(payload, shipment.organization_id)
+    closure_guard.unit_prior_fact(unit, configuration["effective_at"], configuration["reason"], require_reason=True)
     latest = db.session.scalar(
         select(ExecutionTransportRevision)
         .where(ExecutionTransportRevision.execution_unit_id == unit.id)

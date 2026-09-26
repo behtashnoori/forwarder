@@ -1,7 +1,7 @@
 import type { CustomerSharedDocument } from "@/lib/customerPortalApi";
 
 export interface CustomerShipmentIdentity {
-  public_id: string; created_at: string; status: "planned" | "in_progress" | "completed" | "cancelled";
+  public_id: string; created_at: string; status: "planned" | "in_progress" | "completed" | "cancelled" | "closed";
   shared_transport: boolean;
 }
 export interface CustomerShipmentList {

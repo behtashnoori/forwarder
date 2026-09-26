@@ -40,6 +40,9 @@ CHECKPOINT_MILESTONES = (
 )
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def _idempotency(org: int, operation: str, resource_type: str, resource_id: int, key: str, payload: dict):
     base._require_idempotency_key(key)
     request_hash = base._hash(payload)
@@ -280,6 +283,7 @@ def get_plan(shipment_id: int, plan_id: int, user: dict) -> dict:
 def create_plan(shipment_id: int, payload: dict, user: dict) -> dict:
     shipment = _shipment(shipment_id, user, PLAN_PERMISSIONS["create"])
     _require_route_owner(shipment, user)
+    closure_guard.deny_new(shipment)
     revision = (db.session.scalar(select(func.max(RoutePlan.revision_number)).where(RoutePlan.operational_shipment_id == shipment.id)) or 0) + 1
     plan = RoutePlan(operational_shipment_id=shipment.id, revision_number=revision, status="draft", is_active=False, created_by_user_id=user["id"])
     db.session.add(plan); db.session.flush()
@@ -357,6 +361,7 @@ def _route_parent_error(plan_id: int) -> str | None:
 
 def add_leg(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
     shipment, plan = _plan(shipment_id, plan_id, user, "route_leg.manage", True)
+    closure_guard.deny_new(shipment)
     row = _add_leg(plan, payload, shipment.organization_id)
     base._audit(shipment.organization_id, user["id"], "route_leg.created", "RouteLeg", row.id)
     base._outbox(shipment.organization_id, "route_leg.created", "RouteLeg", row.id)
@@ -369,6 +374,7 @@ def add_leg(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
 
 def update_leg(shipment_id: int, plan_id: int, leg_id: int, payload: dict, user: dict) -> dict:
     shipment, plan=_plan(shipment_id,plan_id,user,"route_leg.manage",True)
+    closure_guard.deny_new(shipment)
     if plan.status!="draft": raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT","Only draft plans can be changed.",409)
     row=db.session.scalar(select(RouteLeg).where(RouteLeg.id==leg_id,RouteLeg.route_plan_id==plan.id).with_for_update())
     if row is None: raise base.OperationalError("RESOURCE_NOT_FOUND","Route leg was not found.",404)
@@ -432,6 +438,7 @@ def update_leg(shipment_id: int, plan_id: int, leg_id: int, payload: dict, user:
 
 def delete_leg(shipment_id: int, plan_id: int, leg_id: int, user: dict) -> None:
     _,plan=_plan(shipment_id,plan_id,user,"route_leg.manage",True)
+    closure_guard.deny_new(db.session.get(OperationalShipment, plan.operational_shipment_id))
     if plan.status!="draft": raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT","Only draft plans can be changed.",409)
     row=db.session.scalar(select(RouteLeg).where(RouteLeg.id==leg_id,RouteLeg.route_plan_id==plan.id).with_for_update())
     if row is None: raise base.OperationalError("RESOURCE_NOT_FOUND","Route leg was not found.",404)
@@ -479,6 +486,7 @@ def _add_checkpoint(plan: RoutePlan, payload: dict, user: dict) -> OperationalCh
 
 def add_checkpoint(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
     shipment, plan = _plan(shipment_id, plan_id, user, "checkpoint.report", True)
+    closure_guard.deny_new(shipment)
     if plan.status != "draft":
         raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT", "Only draft plans can be changed.", 409)
     row = _add_checkpoint(plan, payload, user)
@@ -490,6 +498,7 @@ def add_checkpoint(shipment_id: int, plan_id: int, payload: dict, user: dict) ->
 
 def update_checkpoint(shipment_id:int,plan_id:int,checkpoint_id:int,payload:dict,user:dict)->dict:
     _,plan=_plan(shipment_id,plan_id,user,"checkpoint.report",True)
+    closure_guard.deny_new(db.session.get(OperationalShipment, plan.operational_shipment_id))
     if plan.status!="draft": raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT","Only draft plans can be changed.",409)
     row=db.session.scalar(select(OperationalCheckpoint).where(OperationalCheckpoint.id==checkpoint_id,OperationalCheckpoint.route_plan_id==plan.id).with_for_update())
     if row is None: raise base.OperationalError("RESOURCE_NOT_FOUND","Checkpoint was not found.",404)
@@ -502,6 +511,7 @@ def update_checkpoint(shipment_id:int,plan_id:int,checkpoint_id:int,payload:dict
 
 def add_dependency(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
     shipment, plan = _plan(shipment_id, plan_id, user, "route_leg.manage", True)
+    closure_guard.deny_new(shipment)
     if plan.status != "draft":
         raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT", "Only draft plans can be changed.", 409)
     predecessor, successor = payload.get("predecessor_checkpoint_id"), payload.get("successor_checkpoint_id")
@@ -539,6 +549,7 @@ def assign_cargo_destination(
     shipment, plan = _plan(
         shipment_id, plan_id, user, "route_leg.manage", True
     )
+    closure_guard.deny_new(shipment)
     if plan.status != "draft":
         raise base.OperationalError(
             "ROUTE_PLAN_NOT_DRAFT", "Only draft plans can be changed.", 409
@@ -639,6 +650,7 @@ def record_traversal(
             "INVALID_ACTUAL_CHRONOLOGY", "Arrival cannot precede departure."
         )
     latest = max(value for value in (departed, arrived) if value is not None)
+    closure_guard.prior_fact(shipment, latest)
     if _aware(latest) > utcnow() + timedelta(minutes=5):
         raise base.OperationalError(
             "INVALID_ACTUAL_CHRONOLOGY", "Actual route time cannot be in the future."
@@ -815,6 +827,7 @@ def validate_plan(shipment_id: int, plan_id: int, user: dict) -> dict:
 
 def activate_plan(shipment_id: int, plan_id: int, payload: dict, user: dict) -> dict:
     shipment, plan = _plan(shipment_id, plan_id, user, PLAN_PERMISSIONS["activate"], True)
+    closure_guard.deny_new(shipment)
     if plan.status != "draft": raise base.OperationalError("ROUTE_PLAN_NOT_DRAFT", "Only a draft plan can be activated.", 409)
     if plan.version != payload.get("expected_version"): raise base.OperationalError("STALE_ROUTE_VERSION", "Route plan version is stale.", 409)
     result = validate_plan(shipment_id, plan_id, user)
@@ -848,6 +861,7 @@ def replan(
     try:
         shipment = _shipment(shipment_id, user, PLAN_PERMISSIONS["replan"])
         _require_route_owner(shipment, user)
+        closure_guard.deny_new(shipment)
         # The shipment row is the serialization boundary. It prevents duplicate
         # revision allocation without imposing an organization/global lock.
         shipment = db.session.scalar(select(OperationalShipment).where(
@@ -1218,6 +1232,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
         return _serialize_checkpoint(checkpoint)
     if checkpoint.version != payload.get("expected_version"): raise base.OperationalError("STALE_MILESTONE_VERSION", "Checkpoint milestone version is stale.", 409)
     occurred = base._parse_utc(payload.get("occurred_at"), "occurred_at")
+    closure_guard.prior_fact(shipment, occurred)
     milestone_type = {"arrive": "checkpoint_arrival", "complete_processing": "checkpoint_processing_complete", "depart": "checkpoint_departure"}[action]
     milestone = db.session.scalar(select(Milestone).where(
         Milestone.route_plan_id == checkpoint.route_plan_id,
@@ -1283,6 +1298,7 @@ def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_
         raise base.OperationalError("INVALID_MILESTONE_TRANSITION", "Only a reported milestone can be verified.", 409)
     report = projection.effective_occurrence(milestone)
     if report is None: raise base.OperationalError("INVALID_CHECKPOINT_TRANSITION", "No report is available to verify.", 409)
+    closure_guard.prior_fact(shipment, report.occurred_at)
     if report.actor_user_id == user["id"]:
         raise base.OperationalError("REPORTER_CANNOT_VERIFY_OWN_EVENT", "Reporter and verifier must be different users.", 403)
     event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="verified", occurred_at=report.occurred_at,
@@ -1323,6 +1339,7 @@ def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone
     previous = projection.effective_occurrence(milestone)
     if previous is None: raise base.OperationalError("INVALID_CHECKPOINT_TRANSITION", "No event exists to correct.", 409)
     occurred = base._parse_utc(payload.get("occurred_at"), "occurred_at")
+    closure_guard.prior_fact(shipment, occurred)
     event = MilestoneEvent(organization_id=shipment.organization_id, milestone_id=milestone.id, event_type="corrected", occurred_at=occurred,
         actor_user_id=user["id"], reason=reason, supersedes_event_id=previous.id,
         idempotency_key=f"correct:{key}", request_hash=request_hash)

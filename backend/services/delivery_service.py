@@ -22,6 +22,9 @@ FIELDS = {"cargo_public_id", "quantity", "uom_public_id", "destination_text", "o
           "expected_version", "corrects_public_id", "reason", "evidence_document_public_ids"}
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def fail(message, status=422, code="DELIVERY_INVALID"):
     raise OperationalError(code, message, status)
 
@@ -161,6 +164,7 @@ def create(shipment_public_id, user, payload, key):
     elif expected != 0:
         fail("نسخه تحویل تازه معتبر نیست.", 409, "DELIVERY_VERSION_CONFLICT")
     documents = _evidence_selection(shipment, cargo, payload.get("evidence_document_public_ids", []))
+    closure_guard.prior_fact(shipment, _instant(payload.get("occurred_at")))
     row = Delivery(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, cargo_item_id=cargo.id,
         quantity=_quantity(payload.get("quantity")), uom_id=cargo.uom_id, uom_code_snapshot=cargo.uom_code_snapshot,
         uom_symbol_snapshot=cargo.uom_symbol_snapshot, destination_text=_text(payload.get("destination_text"), 255, True),
