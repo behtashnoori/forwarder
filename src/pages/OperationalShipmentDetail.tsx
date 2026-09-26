@@ -254,7 +254,7 @@ export default function OperationalShipmentDetail() {
           <section aria-labelledby="issues-heading" className="space-y-3">
             <div><p className="text-xs font-semibold text-slate-500">کنترل جاری</p><h2 id="issues-heading" className="text-xl font-bold">مسائل عملیاتی</h2><p className="mt-1 text-sm text-slate-600">انحراف زمانی، تأخیر، استثنا و موارد پیگیری در کنار هم دیده می‌شوند اما ماهیت مستقل خود را حفظ می‌کنند.</p></div>
             <OperationalConditionsSection shipmentPublicId={data.public_id} />
-            <OperationalActionsSection shipmentPublicId={data.public_id} />
+            <OperationalActionsSection shipmentPublicId={data.public_id} closed={data.status === "closed"} />
           </section>
 
           {data.source.type !== "direct" && /^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(data.public_id) && <section aria-labelledby="project-execution-heading" className="space-y-3"><h2 id="project-execution-heading" className="text-xl font-bold">اجرای پروژه</h2><OperationalExecutionSection shipmentPublicId={data.public_id} shipmentVersion={data.version} closed={data.status === "closed"} /></section>}

@@ -78,6 +78,7 @@ never materialize closure. All historical records keep their original meanings.
 | document_readiness_service.resolve_applicability | YES: prior fact / correction / document repair only | YES: new operation | Product answer 2026-09-26; existing authority | Live authorization and existing history; prior occurred time for facts; original closure decision unchanged |
 | document_readiness_service.create_override | NO | YES | Original §42; ADR-068 | No further operational transition may consume an override |
 | document_readiness_service.revoke_override | YES | NO | ADR-030; independent authority | Revokes an existing authorization, without reopening/altering history |
+| operational_action_service.create_action | NO | YES | Product answer 2026-09-26; ADR-068 | Creates new operational follow-up; no prior-occurrence contract |
 | operational_action_service.record_follow_up | YES | NO | Acceptance §7; ADR-054/068 | WorkItem lifecycle remains independent |
 | operational_action_service.resolve_action | YES | NO | Acceptance §7; ADR-054/068 | Explicit resolution of independent work; never auto-resolved by close |
 | operational_service.resolve_work_item | YES | NO | Acceptance §7; ADR-068 | Same independent work boundary |

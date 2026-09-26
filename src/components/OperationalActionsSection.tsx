@@ -21,7 +21,7 @@ const message = (caught: unknown) => {
   return "عملیات اقدام قابل انجام نبود.";
 };
 
-export default function OperationalActionsSection({ shipmentPublicId }: { shipmentPublicId: string }) {
+export default function OperationalActionsSection({ shipmentPublicId, closed = false }: { shipmentPublicId: string; closed?: boolean }) {
   const [actions, setActions] = useState<OperationalAction[]>([]);
   const [exceptions, setExceptions] = useState<ExecutionCondition[]>([]);
   const [canRead, setCanRead] = useState(false);
@@ -145,7 +145,7 @@ export default function OperationalActionsSection({ shipmentPublicId }: { shipme
         {history[action.public_id] && <ol className="space-y-1 text-xs text-slate-500">{history[action.public_id].map((event, index) => <li key={`${event.occurred_at}-${index}`}>{event.action.replace("operational_action.", "")} · {formatDualCalendarInstant(event.occurred_at, "fa-IR")}</li>)}</ol>}
       </article>)}
     </div>
-    {canManage && <div className="space-y-3 rounded border bg-white p-4">
+    {canManage && !closed && <div className="space-y-3 rounded border bg-white p-4">
       <h3 className="font-semibold">اقدام جدید</h3>
       <label className="block text-sm">چه کاری لازم است؟<input className="mt-1 min-h-11 w-full rounded border px-3" value={what} maxLength={1000} onChange={event => setWhat(event.target.value)} /></label>
       <label className="block text-sm">نتیجه مورد انتظار<input className="mt-1 min-h-11 w-full rounded border px-3" value={expected} maxLength={2000} onChange={event => setExpected(event.target.value)} /></label>

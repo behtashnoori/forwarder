@@ -73,6 +73,14 @@ prequalification failures (old head expectations, isolated test mocks, inventory
 and environment selection) and subsequent diagnostic fixes remain in external logs;
 they are not a final PASS. No runtime exception was hidden to make tests pass.
 
+Pre-integration review found that manual Action creation also creates new work.
+It is now denied after closure and its form is hidden; existing Action follow-up,
+assignee and explicit resolution remain independent. Backend and UI tests cover
+both sides. The intermediate ad11390 attempt (13 PostgreSQL and 14 Chrome passes,
+static passes, frontend timeouts, interrupted full backend) is superseded in full.
+Fresh qualification uses the corrected clean source; screenshots wait for the
+parent detail refresh as well as the closed decision panel.
+
 JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY: FWD-J04/J05/J06/J08/J09 and
 FWD-IPJ-02/IPJ-03/IPJ-04. Slice and affected regression checks are not global
 integrated journey qualification. GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING;

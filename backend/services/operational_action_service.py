@@ -158,6 +158,8 @@ def create_action(
     shipment_public_id: str, payload: dict[str, Any], user: dict[str, Any]
 ) -> dict[str, Any]:
     shipment = _shipment(shipment_public_id, user, manage=True)
+    from backend.services.closure_commands import deny_new
+    deny_new(shipment)
     what = _text(payload.get("what"), "what", required=True, maximum=1000)
     expected = _text(
         payload.get("expected_result"),

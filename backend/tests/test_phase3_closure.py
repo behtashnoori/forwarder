@@ -156,6 +156,7 @@ def test_policy_and_close_authority_no_store_and_pure_read(operational_app):
 
 def test_closed_command_matrix_and_shared_unit_cannot_start_new_operations(operational_app):
     from backend.services import transport_execution_service as execution, operational_execution_service as milestones
+    from backend.services import operational_action_service as actions
     from backend.services import shared_transport_service as shared, execution_unit_service as units
     from backend.operational_models import RouteStageExecution, ExecutionUnit
     from backend.tests.test_phase3_cargo_allocation import _fixture
@@ -171,6 +172,7 @@ def test_closed_command_matrix_and_shared_unit_cannot_start_new_operations(opera
         unit_id = RouteStageExecution.query.filter_by(public_id=ctx["first"]).one().execution_unit_id
         unit_public_id = db.session.get(ExecutionUnit, unit_id).public_id
         calls = [
+            lambda: actions.create_action(ctx["shipment"], {}, _user(app)),
             lambda: routes.create_plan(ctx["shipment"], {}, _user(app)),
             lambda: routes.add_leg(ctx["shipment"], ctx["plan"], {}, _user(app)),
             lambda: routes.update_leg(ctx["shipment"], ctx["plan"], ctx["leg"], {}, _user(app)),
@@ -191,6 +193,25 @@ def test_closed_command_matrix_and_shared_unit_cannot_start_new_operations(opera
             assert denied.value.code == "SHIPMENT_CLOSED", (index, denied.value.message)
             db.session.rollback()
         assert ClosureDecision.query.count() == 1 and shipment.lifecycle_status == "closed"
+
+
+def test_closed_existing_actions_keep_independent_follow_up_and_resolution(operational_app):
+    from backend.services import operational_action_service as actions
+    from backend.operational_models import OperationalWorkItem
+    app = operational_app
+    with app.app_context():
+        policy(app, [{"scope":"GENERAL", "code":"NO_OPEN_FOLLOW_UPS", "mandatory":True}])
+        shipment = completed(app)
+        action = actions.create_action(shipment.public_id, {"what":"Prior follow-up", "due_at":(utcnow()+timedelta(days=1)).isoformat()}, _user(app))
+        decision = close(app, shipment, "EXCEPTIONAL", "Existing follow-up remains independent")
+        original = decision.assessment
+        row = OperationalWorkItem.query.filter_by(public_id=action["public_id"]).one()
+        prior_assignee = row.assignee_user_id
+        assert row.status == "open" and decision.missing_items[0]["code"] == "NO_OPEN_FOLLOW_UPS"
+        actions.record_follow_up(shipment.public_id, row.public_id, {"expected_version":row.version, "note":"Historical evidence completed"}, _user(app))
+        actions.resolve_action(shipment.public_id, row.public_id, {"expected_version":row.version, "result":"Explicitly resolved existing work"}, _user(app))
+        assert row.status == "resolved" and row.assignee_user_id == prior_assignee
+        assert shipment.lifecycle_status == "closed" and decision.assessment == original
 
 
 def test_post_closure_document_append_replace_preserve_missing_and_owner_authority(operational_app, tmp_path):

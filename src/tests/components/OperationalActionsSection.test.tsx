@@ -72,4 +72,14 @@ describe("operational actions", () => {
     await waitFor(() => expect(screen.getByRole("option", { name: "اختلال هماهنگی · باز" })).toBeInTheDocument());
     expect(api.exceptions).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps existing follow-up available after closure and hides new actions", async () => {
+    render(<OperationalActionsSection shipmentPublicId={shipment} closed />);
+    await screen.findByText(action.what);
+    expect(screen.queryByText("اقدام جدید")).not.toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText(`یادداشت پیگیری ${action.what}`), "سند قبلی تکمیل شد");
+    expect(screen.getByRole("button", { name: "ثبت پیگیری" })).toBeEnabled();
+    await userEvent.click(screen.getByRole("button", { name: "ثبت پیگیری" }));
+    await waitFor(() => expect(api.followUp).toHaveBeenCalledWith(shipment, action, "سند قبلی تکمیل شد"));
+  });
 });
