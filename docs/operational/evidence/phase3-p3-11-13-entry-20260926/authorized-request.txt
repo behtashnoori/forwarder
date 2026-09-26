@@ -1,0 +1,2248 @@
+تأیید شد. پس این سه تصمیم را دیگر باز نمی‌گذاریم و Codex حق ندارد برای P3-11 تا P3-13 دوباره از خودش سیاست محصول بسازد. طبق طرح، P3-11 روی ETA، P3-12 روی Closure و P3-13 روی انتقال کنترل‌شده مالک متمرکزند و dependencyهای هر سه الان روی canonical موجودند.   
+
+```text
+RECOMMENDED CODEX MODEL:
+GPT-6 Astra — Highest Available Reasoning
+
+GOAL:
+Forwarder — PHASE 3 DEPENDENCY-AWARE MULTI-SLICE IMPLEMENTATION
+
+IMPLEMENT / QUALIFY / INTEGRATE:
+
+P3-11 — Explainable ETA + Planned Distance Basis
+P3-12 — Closure Checklist + Controlled Admin Exception
+P3-13 — Exceptional Shipment Owner Transfer
+
+MISSION TYPE:
+LPAF v2.7 GOVERNED MULTI-SLICE IMPLEMENTATION
+
+AUTHORIZED SLICES:
+P3-11
+P3-12
+P3-13
+
+NO P3-14 OR P3-15
+NO RELEASE
+NO DEPLOYMENT
+NO PRODUCTION ACCESS
+
+Proceed under:
+
+- repository AGENTS.md
+- canonical LPAF v2.7
+- Operational Shipment Product Contract v1
+- Product Acceptance Journey Pack v1.1
+- approved Phase 3 UX V2.1
+- Phase 3 Implementation Plan V1
+- all integrated P3-01 through P3-10 foundations
+- explicit Product Owner decisions in THIS mission
+
+The Product Owner explicitly approves the P3-11, P3-12 and P3-13 Product
+decisions below.
+
+These decisions resolve the bounded open Product questions required for these
+slices.
+
+Do not reopen them unless implementation exposes a genuinely new Product
+decision outside this mission.
+
+==================================================
+0. EXECUTION STRATEGY
+==================================================
+
+P3-11, P3-12 and P3-13 do NOT depend on each other for Product meaning.
+
+Their prerequisites are already integrated.
+
+Therefore use dependency-aware sequential execution:
+
+For every attempted slice:
+
+BUILD
+→ QUALIFICATION
+→ PRODUCT SHA
+→ EVIDENCE
+→ REFERENCE RECONCILIATION
+→ CONTROLLED CANONICAL INTEGRATION
+→ PUSH
+→ FETCH
+→ LOCAL/REMOTE 0/0
+
+Then create the next slice from the ACTUAL CURRENT canonical.
+
+Do not create Alembic branches.
+
+If P3-11 blocks:
+
+- preserve canonical;
+- report exact blocker;
+- P3-12 MAY continue if its own dependencies are satisfied;
+- P3-13 MAY continue if its own dependencies are satisfied.
+
+If P3-12 blocks:
+
+- preserve any integrated P3-11;
+- P3-13 MAY continue.
+
+If P3-13 blocks:
+
+- preserve P3-11/P3-12 integrations.
+
+Never roll back a successful canonical slice merely because a later
+independent slice blocks.
+
+==================================================
+1. CURRENT CANONICAL BASE
+==================================================
+
+Canonical repository:
+
+D:\1-webapp\15-forwarder-golden-20260921
+
+Canonical branch:
+
+integration/golden-controlled
+
+Expected current canonical HEAD:
+
+368cd736cbffce3d62c33336868738d9086e8306
+
+Approved remote:
+
+github
+
+Expected Alembic head:
+
+20261009_phase3_route_time
+
+Expected Alembic head count:
+
+1
+
+Known integrated status:
+
+P3-01 PASS
+P3-02 PASS
+P3-03 PASS
+P3-04 PASS
+P3-05 PASS
+P3-06 PASS
+P3-07 PASS
+P3-08 PASS
+P3-09 PASS
+P3-10 PASS
+
+Before any mutation:
+
+- fetch approved remote;
+- verify repository identity;
+- verify branch;
+- verify local canonical SHA;
+- verify remote SHA;
+- verify ahead/behind;
+- require 0/0;
+- verify clean worktree;
+- verify AGENTS.md;
+- verify LPAF v2.7;
+- verify one Alembic head;
+- verify full P3-01..P3-10 ancestry.
+
+Do not trust recorded SHA blindly.
+
+If unexpected Product/runtime/migration changes exist:
+
+STOP and classify.
+
+Do not automatically merge unrelated work.
+
+######################################################################
+# PART A — P3-11
+# EXPLAINABLE ETA + PLANNED DISTANCE BASIS
+######################################################################
+
+==================================================
+2. CREATE P3-11 ISOLATED WORKTREE
+==================================================
+
+Create a NEW isolated worktree from freshly verified canonical.
+
+Suggested branch:
+
+codex/phase3-p3-11-explainable-eta
+
+Suggested worktree:
+
+D:\1-webapp\forwarder-dev\phase3-p3-11-explainable-eta
+
+Do not develop directly on canonical.
+
+==================================================
+3. P3-11 PRODUCT OUTCOME
+==================================================
+
+P3-11 must provide an explainable dynamic estimate for:
+
+- next important operational point;
+- final relevant destination;
+
+when sufficient governed data exists.
+
+ETA is:
+
+a deterministic operational estimate.
+
+ETA is NOT:
+
+- SLA;
+- contractual promise;
+- AI prediction;
+- GPS result;
+- black-box prediction;
+- exact certainty.
+
+The Product must always be able to answer:
+
+«این زمان تقریبی بر چه اساسی محاسبه شده؟»
+
+==================================================
+4. DN04 — RESOLVED PRODUCT DECISION
+==================================================
+
+DN04 is resolved for P3-11 with the following policy:
+
+ETA uses:
+
+1. the latest VALID applicable operational progress fact;
+2. current applicable Cargo/route branch;
+3. remaining route stages;
+4. pinned/versioned organization reference times from P3-10;
+5. explicitly recorded known operational effects that are authorized inputs.
+
+No AI model.
+
+No hidden provider.
+
+No inferred speed.
+
+No fake historical average.
+
+No GPS assumption.
+
+Record:
+
+DN04_STATUS=RESOLVED_FOR_P3_11
+
+==================================================
+5. ETA ANCHOR
+==================================================
+
+The ETA calculation must begin from an explicit, valid, relevant operational
+anchor.
+
+Examples:
+
+- actual milestone/progression fact;
+- approved reported operational location/progress from P3-07;
+- actual completed stage fact;
+- other already-governed operational fact if its semantics clearly establish
+  route progress.
+
+Do NOT:
+
+- choose the newest ExecutionUnit arbitrarily;
+- choose a location from another Cargo branch;
+- infer Shipment-wide progress from one unrelated unit;
+- manufacture progress from planned data if actual progress is available and
+  contradictory.
+
+The anchor must have provenance.
+
+==================================================
+6. OCCURRED TIME VS RECORDED TIME
+==================================================
+
+For ETA temporal calculation:
+
+occurred_at
+is the operational time basis where valid.
+
+recorded_at
+is audit/freshness information.
+
+Do not calculate operational travel from recorded_at merely because it is
+newer.
+
+If occurred_at is unknown and no approved alternative basis exists:
+
+ETA may be unavailable.
+
+Do not invent an occurrence time.
+
+==================================================
+7. REMAINING ROUTE
+==================================================
+
+Determine remaining route only from the authorized route/branch applicable to
+the relevant Cargo / destination.
+
+Use:
+
+P3-03 route and route branch
++
+P3-07 actual/report progress
++
+P3-10 pinned reference times.
+
+Do not expose or consume another Customer's private branch in Customer ETA.
+
+Do not overwrite planned route.
+
+==================================================
+8. REFERENCE TIME INPUT
+==================================================
+
+Reuse P3-10.
+
+Each applicable remaining segment may have:
+
+movement minimum
+movement maximum
+
+and:
+
+stop / operation / wait minimum
+stop / operation / wait maximum.
+
+ETA must preserve range semantics.
+
+Do NOT collapse a range into fake exact precision.
+
+==================================================
+9. ETA RANGE
+==================================================
+
+Preferred output is a range.
+
+Example:
+
+زمان تقریبی رسیدن:
+دوشنبه 14:00 تا سه‌شنبه 10:00
+
+Do not show:
+
+14:37:12
+
+if source inputs are range-based.
+
+The precision of the output must not exceed the precision of the inputs.
+
+==================================================
+10. EXPLICIT OPERATIONAL DELAYS / HOLDS
+==================================================
+
+An explicitly recorded known operational effect may influence the estimate if
+its semantics are deterministic and approved.
+
+Examples:
+
+known operational hold duration
+or
+explicitly recorded delay duration.
+
+Do not infer duration from:
+
+- internal free text;
+- AI;
+- private Customer notes;
+- vague Exception text.
+
+If effect duration is unknown:
+
+do not invent one.
+
+The ETA may remain available using reference ranges with a clear statement
+that the unknown effect is not quantified, OR unavailable if the missing fact
+makes calculation invalid.
+
+Choose the honest behavior and document it in ADR/tests.
+
+==================================================
+11. NEXT IMPORTANT POINT + FINAL DESTINATION
+==================================================
+
+Where data exists, provide separately:
+
+زمان تقریبی رسیدن به نقطه مهم بعدی
+
+and:
+
+زمان تقریبی رسیدن نهایی
+
+Do not claim final ETA if the final remaining path lacks enough governed
+reference data.
+
+It is valid for:
+
+next ETA = available
+final ETA = unavailable.
+
+==================================================
+12. AS-OF / FRESHNESS
+==================================================
+
+Every ETA must expose its data time/basis.
+
+Example:
+
+آخرین داده عملیاتی:
+6 ساعت پیش
+
+or:
+
+مبنای برآورد:
+گزارش عملیاتی ساعت 14:30
+
+Do not invent a new arbitrary freshness threshold.
+
+Reuse existing governed health/freshness semantics where applicable.
+
+If no existing threshold applies:
+
+display age/as-of honestly without inventing:
+
+fresh / stale
+
+classification.
+
+==================================================
+13. MISSING INPUT
+==================================================
+
+If required reference or route/progress data is unavailable:
+
+show:
+
+«زمان تقریبی رسیدن قابل محاسبه نیست»
+
+and explain the bounded reason, for example:
+
+- زمان مرجع این بخش تعریف نشده است;
+- موقعیت/پیشرفت عملیاتی کافی ثبت نشده است;
+- مسیر باقی‌مانده کامل نیست.
+
+Do NOT substitute zero/default.
+
+==================================================
+14. ETA HISTORY
+==================================================
+
+ETA is dynamic.
+
+New facts may generate a new estimate.
+
+Do not overwrite prior meaningful estimates without history.
+
+Preserve enough provenance to explain:
+
+previous estimate
+new estimate
+as-of
+input fingerprint/version
+reference-time version
+calculation version.
+
+Do not implement full event sourcing.
+
+Use bounded estimate snapshots/history.
+
+==================================================
+15. REFERENCE-TIME VERSION PINNING
+==================================================
+
+An estimate must state which P3-10 reference versions were used.
+
+Changing an Organization reference later:
+
+must NOT rewrite historical ETA records.
+
+A future recalculation uses the currently applicable valid reference as
+governed by the calculation policy and records a NEW estimate.
+
+==================================================
+16. CALCULATION VERSION
+==================================================
+
+Persist / expose a bounded calculation-policy version.
+
+Example concept:
+
+ETA_RULESET_V1
+
+Do not use code hash as Product language.
+
+This enables future calculations to remain auditable if the deterministic
+formula evolves.
+
+Do NOT build a generic rules platform.
+
+==================================================
+17. PLANNED DISTANCE
+==================================================
+
+P3-11 may show PLANNED DISTANCE only when a governed distance fact with
+provenance exists.
+
+Planned distance must record/source:
+
+where the distance came from.
+
+Examples could include an already-governed route/reference source if one
+exists in canonical.
+
+Do NOT:
+
+- integrate a new external provider without Product approval;
+- scrape map providers;
+- infer straight-line distance and label it route distance;
+- invent a value.
+
+If no governed source exists:
+
+planned distance =
+«تعریف نشده»
+
+This does NOT block ETA if ETA can be computed solely from approved reference
+times.
+
+==================================================
+18. ACTUAL TRAVELLED DISTANCE
+==================================================
+
+Do NOT claim precise actual travelled distance without actual path/GPS
+evidence.
+
+Reported operational points are NOT sufficient to claim exact travelled
+distance.
+
+Record:
+
+ACTUAL_TRAVELLED_DISTANCE_WITHOUT_PATH_EVIDENCE=NO
+
+==================================================
+19. CUSTOMER ETA
+==================================================
+
+Customer ETA uses ONLY:
+
+- Customer-authorized Cargo;
+- Customer-relevant route;
+- safe progress facts;
+- safe ETA result/provenance.
+
+Do not expose:
+
+- another Customer route;
+- internal Exception details;
+- private delay cause;
+- internal notes.
+
+Simple customer wording.
+
+==================================================
+20. WORKSPACE / CONTROL TOWER
+==================================================
+
+P3-11 may expose ETA/freshness as a READ fact to current Workspace/Tower where
+the existing UI contract supports it.
+
+Do NOT:
+
+- change Attention ranking;
+- create a new SLA;
+- create automatic Actions;
+- create new Exception types.
+
+P3-14 owns final integrated UX/ranking reconciliation.
+
+==================================================
+21. P3-11 ARCHITECTURE
+==================================================
+
+Inspect and reuse:
+
+- P3-03 RoutePlan / RouteLeg;
+- P3-07 reported facts;
+- P3-09 Customer projection;
+- P3-10 reference time;
+- existing route propagation;
+- OIP/health/freshness foundations;
+- current Workspace/Tower read adapters.
+
+Do not create a second route engine.
+
+Do not create AI infrastructure.
+
+==================================================
+22. P3-11 MIGRATION
+==================================================
+
+Migration expected:
+
+YES
+
+if estimate history/provenance requires persistence.
+
+Parent MUST be the ACTUAL current canonical Alembic head when P3-11 starts.
+
+Expected from current baseline:
+
+20261009_phase3_route_time
+
+but verify, do not assume.
+
+Requirements:
+
+- additive;
+- one head;
+- no seed;
+- no historical migration rewrite;
+- no fabricated historical ETA;
+- no fabricated distance;
+- PostgreSQL 18;
+- upgrade;
+- downgrade/re-upgrade where safe;
+- populated downgrade protection if history would be destroyed.
+
+==================================================
+23. P3-11 MANDATORY QUALIFICATION
+==================================================
+
+Synthetic cases at minimum:
+
+A. Reference range exists + valid progress
+
+→ next ETA range
+→ final ETA range
+→ correct as-of/provenance.
+
+
+B. Reference missing on final segment
+
+→ next ETA available where possible
+→ final ETA unavailable.
+
+
+C. New progress report
+
+→ new ETA
+→ old ETA history preserved.
+
+
+D. Corrected P3-07 report
+
+→ corrected fact becomes current input
+→ old ETA remains history
+→ new ETA created.
+
+
+E. P3-10 reference update
+
+→ past ETA unchanged
+→ future recalculation uses governed applicable version.
+
+
+F. Two Cargo route branches
+
+→ Customer A ETA uses A branch only
+→ Customer B facts do not leak.
+
+
+G. Multiple ExecutionUnits
+
+→ no arbitrary Shipment location selection.
+
+
+H. No distance source
+
+→ distance undefined
+→ no fake distance.
+
+
+I. No GPS
+
+→ no actual travelled distance claim.
+
+
+J. Full qualification
+
+- focused backend;
+- focused frontend;
+- determinism tests;
+- missing input;
+- provenance;
+- version pin;
+- PostgreSQL 18;
+- concurrency;
+- Chrome Expert;
+- Chrome Customer where applicable;
+- Workspace/Tower regression;
+- P3-03/P3-07/P3-09/P3-10 regressions;
+- TypeScript;
+- ESLint;
+- build;
+- OpenAPI;
+- architecture;
+- governance;
+- git diff --check;
+- full backend;
+- full frontend.
+
+==================================================
+24. P3-11 JOURNEY IMPACT
+==================================================
+
+Record:
+
+JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
+
+AFFECTED_JOURNEYS=
+FWD-J02,
+FWD-J04,
+FWD-J06,
+FWD-J07,
+FWD-J08,
+FWD-J09,
+FWD-IPJ-02,
+FWD-IPJ-03,
+FWD-IPJ-04
+
+Do not claim global integrated journeys PASS.
+
+==================================================
+25. P3-11 CANONICAL INTEGRATION
+==================================================
+
+After qualification:
+
+- freeze Product SHA;
+- evidence-only descendant;
+- reference reconciliation;
+- one migration head;
+- exact ancestry;
+- clean candidate;
+- Product Authority PASS.
+
+Then:
+
+FAST-FORWARD ONLY canonical.
+
+Push:
+
+integration/golden-controlled
+
+to github.
+
+Fetch again.
+
+Require:
+
+LOCAL_REMOTE_ALIGNMENT=PASS
+AHEAD_BEHIND=0/0
+
+Record:
+
+P3_11_PRODUCT_HEAD
+P3_11_EVIDENCE_HEAD
+P3_11_ALEMBIC_HEAD
+P3_11_FINAL_CANONICAL_HEAD
+
+######################################################################
+# PART B — P3-12
+# CLOSURE CHECKLIST + CONTROLLED ADMIN EXCEPTION
+######################################################################
+
+==================================================
+26. START P3-12 FROM ACTUAL CURRENT CANONICAL
+==================================================
+
+Create a NEW isolated worktree.
+
+Suggested branch:
+
+codex/phase3-p3-12-closure
+
+Suggested worktree:
+
+D:\1-webapp\forwarder-dev\phase3-p3-12-closure
+
+Dependencies:
+
+P3-06
+P3-07
+P3-08
+
+already integrated.
+
+P3-12 does not require P3-11.
+
+==================================================
+27. P3-12 CORE PRODUCT SEMANTICS
+==================================================
+
+Approved:
+
+ARRIVAL
+≠
+DELIVERY
+≠
+OPERATIONAL COMPLETION
+≠
+CLOSED
+
+A Shipment must NOT automatically become Closed because:
+
+- it arrived;
+- one Cargo was delivered;
+- all Cargo was delivered;
+- one execution was delivered;
+- a document arrived.
+
+Closure is an explicit governed Product action.
+
+==================================================
+28. DN01 — CLOSURE BOUNDARY RESOLVED
+==================================================
+
+For P3-12:
+
+Shipment closure is an explicit action by the owning Transport Expert after
+the current closure assessment passes.
+
+If canonical already has an exact lifecycle state representing this semantic,
+reuse it.
+
+Do NOT silently reinterpret an existing state with different meaning.
+
+If canonical does not have a true CLOSED terminal meaning:
+
+add the minimum explicit CLOSED lifecycle state/transition needed by this
+slice under an accepted ADR.
+
+Do NOT create a general workflow engine.
+
+Do NOT add reopening behavior.
+
+Reopening a Closed Shipment is NOT authorized in P3-12.
+
+If a reopen Product need appears:
+
+DECISION_NEEDED for a future scope.
+
+Record:
+
+DN01_CLOSURE_STATUS=RESOLVED_FOR_P3_12
+
+DN01 may remain open only for future unrelated lifecycle questions.
+
+==================================================
+29. CLOSURE CHECKLIST OWNERSHIP
+==================================================
+
+Organization Admin owns closure checklist policy for its organization.
+
+Checklist is:
+
+- versioned;
+- effective-dated/pinned;
+- auditable;
+- organization-specific.
+
+Expert consumes it.
+
+Platform Admin has no implicit tenant policy authority.
+
+No default checklist is automatically seeded.
+
+==================================================
+30. GENERAL + MODE-SPECIFIC CHECKLIST
+==================================================
+
+Support:
+
+GENERAL closure requirements
+
+and:
+
+MODE-SPECIFIC requirements.
+
+For combined/multimodal transport:
+
+effective checklist =
+GENERAL
++
+requirements for applicable transport modes
+
+using explicit deterministic combination.
+
+Do not silently discard overlapping requirements.
+
+Use stable governed criterion identifiers.
+
+==================================================
+31. APPROVED CHECK CAPABILITY FAMILIES
+==================================================
+
+P3-12 may support explicit closure requirement types derived from existing
+facts.
+
+Bounded Product families include:
+
+- required deliveries recorded / final delivery state known;
+- final Cargo operational quantity/state requirement where an existing
+  authoritative fact supports it;
+- current required documents ready;
+- configured blocking operational Exceptions resolved;
+- configured blocking required follow-ups / WorkItems completed;
+- other already-governed explicit closure facts approved in the Product
+  Contract.
+
+Do NOT introduce arbitrary executable expressions.
+
+Do NOT build:
+
+generic rule scripting
+EAV condition language
+user SQL
+JSON workflow engine.
+
+==================================================
+32. DN05 — HS CODE
+==================================================
+
+Do NOT make HS Code a universal closure requirement.
+
+Record:
+
+DN05_GENERAL_CLOSURE_RULE=NOT_IMPLEMENTED
+DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY
+
+Do not silently allow Org Admin to configure HS as a closure blocker unless a
+future Product decision authorizes that exact criterion.
+
+==================================================
+33. REQUIRED VS OPTIONAL
+==================================================
+
+Organization Admin can configure which approved closure requirements are:
+
+mandatory
+
+within the versioned policy.
+
+Expert cannot bypass mandatory failure.
+
+Do not create fake requirements where no policy exists.
+
+If no applicable closure policy has been configured:
+
+behave honestly according to the accepted ADR.
+
+Do NOT auto-generate a checklist.
+
+Prefer:
+
+«قواعد بستن پرونده تعریف نشده است»
+
+and do not claim a fully governed closure assessment until policy exists.
+
+Do not guess Product defaults.
+
+==================================================
+34. CLOSURE ASSESSMENT
+==================================================
+
+The system should show:
+
+برای بستن پرونده چه چیزی باقی مانده؟
+
+Assessment must be derived from current source-of-truth facts.
+
+Example UX:
+
+برای بستن پرونده:
+
+✓ تحویل‌های الزامی ثبت شده
+✓ مدارک الزامی کامل
+✗ یک پیگیری اجباری باز است
+✗ یک مشکل مسدودکننده هنوز حل نشده
+
+Do not copy facts into a second SOR merely for display.
+
+Snapshot assessment when closure decision is recorded.
+
+==================================================
+35. NORMAL EXPERT CLOSURE
+==================================================
+
+Owning Expert may execute:
+
+بستن پرونده
+
+ONLY when all mandatory applicable closure requirements pass.
+
+At commit time:
+
+reauthorize
++
+re-evaluate current facts
++
+verify policy version
++
+verify Shipment version/concurrency.
+
+Do not rely on a stale frontend assessment.
+
+==================================================
+36. EXPERT BYPASS
+==================================================
+
+Expert cannot bypass a failed mandatory closure requirement.
+
+No hidden override checkbox.
+
+No free-text bypass.
+
+No role escalation.
+
+==================================================
+37. ORGANIZATION ADMIN EXCEPTIONAL CLOSURE
+==================================================
+
+Organization Admin may perform:
+
+بستن استثنایی پرونده
+
+when mandatory items still fail.
+
+Required:
+
+- same tenant;
+- explicit authorized Admin capability;
+- mandatory reason;
+- current missing requirements snapshot;
+- actor;
+- timestamp;
+- policy version;
+- Shipment version.
+
+The reason is mandatory.
+
+==================================================
+38. ADMIN EXCEPTION DOES NOT ERASE MISSING ITEMS
+==================================================
+
+After exceptional closure:
+
+history must still show:
+
+- which checklist requirements were missing;
+- which Exceptions remained;
+- which WorkItems remained;
+- which documents/delivery requirements were missing;
+- who authorized closure;
+- reason;
+- time.
+
+Do NOT mark missing facts as completed merely because Admin closed the
+Shipment.
+
+==================================================
+39. EXCEPTION / ACTION INDEPENDENCE
+==================================================
+
+Closing Shipment does NOT automatically:
+
+- resolve OperationalException;
+- complete WorkItem;
+- mark Action successful;
+- close SLA;
+- delete Attention history.
+
+Those lifecycles remain independent.
+
+If a policy requires a specific Exception/WorkItem resolved before normal
+closure:
+
+closure assessment reads that fact.
+
+It does not mutate it.
+
+==================================================
+40. DELIVERY INDEPENDENCE
+==================================================
+
+P3-08 Delivery remains independent.
+
+All required deliveries may be complete and Shipment still remain open for:
+
+- documents;
+- issues;
+- follow-ups;
+- closure requirements.
+
+One partial delivery never auto-closes Shipment.
+
+==================================================
+41. POLICY VERSION HISTORY
+==================================================
+
+Admin changing closure policy later:
+
+must NOT rewrite historical closure decisions.
+
+Closure record pins:
+
+policy version
++
+assessment/missing snapshot
++
+actor
++
+time
++
+normal/exception type.
+
+==================================================
+42. CLOSED SHIPMENT BEHAVIOR
+==================================================
+
+Do not invent broad post-closure editing behavior.
+
+Preserve current authorization and domain invariants.
+
+Normal operational mutation after Closed should be denied where closure
+semantics require immutability, except already-approved correction mechanisms
+that explicitly remain valid.
+
+If current domain has ambiguity about a specific mutation after closure:
+
+do not invent a broad rule.
+
+Protect the closed state and report the narrow gap.
+
+No reopening in this slice.
+
+==================================================
+43. P3-12 UX
+==================================================
+
+Primary UI:
+
+«برای بستن پرونده چه چیزی باقی مانده؟»
+
+Show remaining items first.
+
+Then:
+
+checklist/details/history.
+
+Expert:
+
+بستن پرونده
+
+Admin:
+
+بستن استثنایی
+
+Admin dialog must clearly show unresolved items before confirmation.
+
+Simple Persian.
+
+No architecture terminology.
+
+==================================================
+44. P3-12 MIGRATION
+==================================================
+
+Migration expected:
+
+YES
+
+Parent:
+
+ACTUAL current canonical Alembic head.
+
+Likely bounded persistence:
+
+- closure policy;
+- policy version;
+- criterion selection;
+- closure assessment/decision;
+- exceptional closure evidence.
+
+If CLOSED lifecycle schema requires extension:
+
+do it only under accepted ADR.
+
+Requirements:
+
+- additive;
+- one head;
+- no fake policy seed;
+- no backfill of historical "closure decisions";
+- existing completed/delivered legacy rows do NOT become inferred closed
+  decisions;
+- PostgreSQL 18;
+- upgrade;
+- safe downgrade rules.
+
+==================================================
+45. P3-12 QUALIFICATION
+==================================================
+
+At minimum:
+
+A. Org Admin creates checklist policy
+
+GENERAL requirements.
+
+
+B. Mode-specific requirement
+
+mode policy included for applicable Shipment.
+
+
+C. Combined transport
+
+GENERAL + relevant mode requirements.
+
+
+D. Expert normal closure
+
+all mandatory pass
+→ Closed.
+
+
+E. Expert blocked
+
+mandatory item fails
+→ closure denied.
+
+
+F. Admin exception
+
+missing requirements
+→ reason required
+→ exceptional closure succeeds
+→ missing items remain visible in history.
+
+
+G. Concurrent fact change
+
+assessment passes
+→ document/delivery/work item changes before command
+→ commit re-evaluates
+→ stale close denied.
+
+
+H. Delivery
+
+all deliveries complete
+→ no automatic closure.
+
+
+I. Exception/Action
+
+closure
+→ does not auto-resolve them.
+
+
+J. Historical policy
+
+policy V2
+→ old closure still references V1.
+
+
+K. Negative auth
+
+non-owner Expert
+Admin foreign tenant
+Platform Admin
+guessed Shipment
+→ deny.
+
+
+L. Full regression
+
+P3-06 documents
+P3-07 events
+P3-08 delivery
+Workspace
+Tower
+SLA
+Exception
+Action
+Customer projection
+full backend/frontend/PostgreSQL/Chrome.
+
+==================================================
+46. P3-12 JOURNEY IMPACT
+==================================================
+
+AFFECTED_JOURNEYS=
+FWD-J04,
+FWD-J05,
+FWD-J06,
+FWD-J08,
+FWD-J09,
+FWD-IPJ-02,
+FWD-IPJ-03,
+FWD-IPJ-04
+
+JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
+
+No global journey PASS claim.
+
+==================================================
+47. P3-12 CANONICAL INTEGRATION
+==================================================
+
+After full qualification:
+
+Product SHA
+→ evidence-only descendant
+→ reference reconciliation
+→ controlled fast-forward
+→ push
+→ fetch
+→ 0/0.
+
+Record:
+
+P3_12_PRODUCT_HEAD
+P3_12_EVIDENCE_HEAD
+P3_12_ALEMBIC_HEAD
+P3_12_FINAL_CANONICAL_HEAD
+
+######################################################################
+# PART C — P3-13
+# EXCEPTIONAL OWNER TRANSFER
+######################################################################
+
+==================================================
+48. START P3-13 FROM ACTUAL CURRENT CANONICAL
+==================================================
+
+Create NEW isolated worktree.
+
+Suggested branch:
+
+codex/phase3-p3-13-owner-transfer
+
+Suggested worktree:
+
+D:\1-webapp\forwarder-dev\phase3-p3-13-owner-transfer
+
+Dependencies:
+
+P3-02
+P3-06
+
+already integrated.
+
+P3-13 does not require P3-11 or P3-12.
+
+==================================================
+49. CORE PRODUCT DECISION
+==================================================
+
+Normal Shipment ownership remains fixed.
+
+Ordinary:
+
+Expert
+Shipment edit
+Request reassignment
+Cargo mutation
+Route mutation
+Document update
+
+MUST NOT change Shipment owner.
+
+Only an explicit exceptional command may transfer ownership.
+
+==================================================
+50. TRANSFER AUTHORITY
+==================================================
+
+Only:
+
+Organization Admin
+
+for the SAME organization may execute:
+
+انتقال مسئول پرونده حمل
+
+Transport Expert:
+NO owner-transfer command.
+
+Customer:
+NO.
+
+Platform Admin:
+NO implicit tenant transfer authority.
+
+==================================================
+51. NEW OWNER ELIGIBILITY
+==================================================
+
+New owner must be:
+
+- active;
+- same organization;
+- valid Transport Expert;
+- currently eligible under tenant membership/role policy.
+
+Cannot transfer to:
+
+- inactive user;
+- foreign tenant user;
+- Customer account;
+- Platform Admin;
+- invalid role.
+
+==================================================
+52. REQUIRED TRANSFER INPUT
+==================================================
+
+Transfer requires:
+
+- Shipment;
+- expected current owner;
+- new owner;
+- mandatory reason;
+- expected Shipment/version concurrency token.
+
+System records:
+
+old owner
+new owner
+Admin actor
+reason
+occurred/recorded time
+transfer sequence/history.
+
+==================================================
+53. DN09 — POST-TRANSFER ACCESS RESOLVED
+==================================================
+
+Approved rule:
+
+Previous ownership does NOT grant continuing access by itself.
+
+After transfer:
+
+old owner permissions are recalculated from CURRENT authorization only.
+
+If old Expert has another independent current permission:
+
+that permission may continue.
+
+If not:
+
+old ownership alone grants:
+
+NO operational owner edit
+NO owner document management
+NO owner-only command access.
+
+Historical audit still shows old actor/owner.
+
+Record:
+
+DN09_STATUS=RESOLVED_FOR_P3_13
+
+==================================================
+54. NEW OWNER
+==================================================
+
+New owner becomes the normal Shipment owning Transport Expert.
+
+New owner receives normal owner capabilities under current authorization:
+
+- ordinary Shipment operational commands;
+- normal Cargo/route/execution ownership commands;
+- owning-Expert document management;
+- other current owner-scoped behavior.
+
+Do not invent additional privileges.
+
+==================================================
+55. DOCUMENT AUTHORITY
+==================================================
+
+After transfer:
+
+new owner
+→ owning-Expert document management.
+
+Old owner
+→ loses ownership-derived document management.
+
+Existing document versions/history remain unchanged.
+
+Admin executing transfer does NOT gain document upload/replace authority.
+
+==================================================
+56. WORKITEM / ACTION ASSIGNMENTS DO NOT AUTO-TRANSFER
+==================================================
+
+Critical Product rule:
+
+Shipment owner transfer
+≠
+WorkItem reassignment.
+
+Example:
+
+Shipment owner:
+Expert A → Expert B
+
+Existing WorkItem:
+Assignee = Expert C
+
+remains C.
+
+If a WorkItem is assigned to former owner A:
+
+it remains assigned to A unless a separate approved WorkItem reassignment
+action occurs.
+
+Do NOT automatically move WorkItems to B.
+
+==================================================
+57. INDEPENDENT WORKITEM PERMISSION
+==================================================
+
+A former owner with a still-valid WorkItem assignment may only receive the
+permissions independently granted by the WorkItem/Action model.
+
+That assignment does NOT restore full Shipment-owner privileges.
+
+Do not use "was previous Shipment owner" as authorization.
+
+==================================================
+58. TRANSFER UX SHOULD SURFACE OPEN WORK
+==================================================
+
+The Admin transfer dialog may show a read-only warning such as:
+
+«۳ پیگیری همچنان به کارشناس قبلی واگذار شده‌اند.»
+
+This is informational.
+
+Do not auto-reassign them.
+
+Do not block transfer solely because open WorkItems exist unless an already
+approved policy explicitly requires it.
+
+==================================================
+59. HISTORY
+==================================================
+
+Owner transfer history is append-only.
+
+Never rewrite:
+
+initial owner
+previous transfers
+old actor names
+historical document actor
+historical Event actor.
+
+Shipment current owner points to the current valid owner.
+
+History answers:
+
+چه کسی ابتدا مسئول بود؟
+چه زمانی منتقل شد؟
+از چه کسی؟
+به چه کسی؟
+توسط کدام مدیر؟
+با چه دلیلی؟
+
+==================================================
+60. DB-LEVEL OWNER INVARIANT
+==================================================
+
+Current canonical protects owner as write-once through ORM/DB mechanisms.
+
+Do NOT simply remove that protection.
+
+Design an accepted bounded mechanism where:
+
+ordinary update:
+DENIED
+
+raw ordinary owner update:
+DENIED
+
+approved owner-transfer command:
+ALLOWED
+
+with full audit/history/concurrency.
+
+The exact DB mechanism is a technical architecture decision.
+
+Requirements:
+
+- no global owner-write backdoor;
+- no reusable bypass flag exposed to generic requests;
+- fail closed;
+- transaction-safe.
+
+==================================================
+61. CONCURRENCY
+==================================================
+
+Two Admins attempting transfer concurrently:
+
+only one valid chain may win according to expected version/current owner.
+
+No lost update.
+
+No impossible transfer chain.
+
+Example:
+
+A → B
+
+and concurrent:
+
+A → C
+
+must not both succeed.
+
+Replay with same idempotency key:
+
+no duplicate transfer history.
+
+==================================================
+62. AUTHORIZATION REFRESH
+==================================================
+
+After transfer, current permissions must apply on subsequent requests.
+
+Test:
+
+- old open browser tab;
+- stale list;
+- stale detail;
+- direct download;
+- direct command;
+- Workspace;
+- Tower;
+- document access;
+- WorkItem access.
+
+Do not rely on stale owner data in cache.
+
+==================================================
+63. REQUEST ASSIGNEE INDEPENDENCE
+==================================================
+
+Shipment owner transfer does NOT automatically mutate:
+
+Request assignee
+Quote owner/actor
+historical Request assignment.
+
+Request and Shipment ownership remain separate concepts.
+
+==================================================
+64. CUSTOMER PROJECTION
+==================================================
+
+Owner transfer must not change Customer Cargo entitlement or DN10 identity.
+
+Customer sees no internal owner-transfer details unless separately approved.
+
+No internal Admin reason leaks to Customer projection.
+
+==================================================
+65. P3-13 MIGRATION
+==================================================
+
+Migration expected:
+
+YES
+
+Parent:
+
+actual current canonical Alembic head.
+
+Likely bounded persistence:
+
+- owner transfer history;
+- approved DB-level transfer mechanism/invariant support.
+
+Requirements:
+
+- one head;
+- no owner-history fabrication for legacy rows beyond provable current initial
+  owner state;
+- no rewriting existing audit;
+- PostgreSQL 18;
+- ordinary owner mutation remains denied;
+- controlled transfer works;
+- downgrade protection for non-empty transfer history.
+
+==================================================
+66. P3-13 QUALIFICATION
+==================================================
+
+Mandatory:
+
+A. Valid transfer
+
+Admin:
+A → B
+reason
+→ current owner B.
+
+
+B. Old owner
+
+owner-only edit
+→ denied.
+
+
+C. New owner
+
+normal owner operation
+→ allowed.
+
+
+D. Documents
+
+B manages documents.
+A no longer has owner-derived document management.
+
+
+E. WorkItem assigned to C
+
+remains C.
+
+
+F. WorkItem assigned to old owner A
+
+remains A.
+No automatic reassignment.
+A does not regain full Shipment ownership.
+
+
+G. Invalid target
+
+inactive / foreign / wrong role
+→ denied.
+
+
+H. Ordinary mutation
+
+API/ORM generic owner change
+→ denied.
+
+
+I. Raw DB bypass test
+
+unauthorized raw owner update
+→ denied by DB-level invariant.
+
+
+J. Concurrent transfer
+
+A→B vs A→C
+→ only valid serialized outcome.
+
+
+K. Replay
+
+same idempotency key
+→ one transfer fact.
+
+
+L. Stale browser/cache
+
+old owner loses owner capability after refresh/request.
+
+
+M. Request ownership
+
+Request assignee unchanged.
+
+
+N. Customer
+
+Customer projection unaffected.
+No reason leak.
+
+
+O. Regression
+
+P3-06 document authority
+P3-09 Customer privacy
+Workspace
+Tower
+Exception
+Action
+fixed owner semantics
+full backend/frontend/PostgreSQL/Chrome.
+
+==================================================
+67. DN02 OWNER TRANSFER PORTION
+==================================================
+
+P3-06 already resolved document visibility.
+
+P3-13 now resolves the owner-transfer command boundary:
+
+Organization Admin:
+may execute explicit Shipment owner transfer.
+
+This does NOT grant:
+
+document upload
+document replacement
+Cargo edit
+route edit
+general operational command authority.
+
+Record:
+
+DN02_OWNER_TRANSFER_PORTION=RESOLVED_FOR_P3_13
+DN09_STATUS=RESOLVED_FOR_P3_13
+
+==================================================
+68. P3-13 JOURNEY IMPACT
+==================================================
+
+JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
+
+AFFECTED_JOURNEYS=
+FWD-J03,
+FWD-J04,
+FWD-J06,
+FWD-J08,
+FWD-J09,
+FWD-IPJ-01,
+FWD-IPJ-03,
+FWD-IPJ-04
+
+No global integrated journey PASS claim.
+
+==================================================
+69. P3-13 CANONICAL INTEGRATION
+==================================================
+
+After qualification:
+
+Product SHA
+→ Evidence SHA
+→ references
+→ exact ancestry
+→ one Alembic head
+→ candidate clean
+→ canonical clean
+→ FAST-FORWARD ONLY
+→ push github
+→ fetch
+→ 0/0.
+
+Record:
+
+P3_13_PRODUCT_HEAD
+P3_13_EVIDENCE_HEAD
+P3_13_ALEMBIC_HEAD
+P3_13_FINAL_CANONICAL_HEAD
+
+######################################################################
+# COMMON GOVERNANCE / QUALIFICATION
+######################################################################
+
+==================================================
+70. PRODUCT AUTHORITY RECONCILIATION
+==================================================
+
+For every slice classify behavioral diffs:
+
+AUTHORIZED
+PRESERVED
+VIOLATION
+UNKNOWN
+
+VIOLATION or UNKNOWN:
+
+blocks that slice integration.
+
+Do not change tests to legitimize an unapproved Product behavior.
+
+Tests follow Product Authority.
+
+==================================================
+71. REFERENCE RECONCILIATION
+==================================================
+
+Do not rewrite historical ADR/PDR/evidence truth.
+
+Create/update current governed references only.
+
+P3-11 references should capture:
+
+- DN04 resolution;
+- deterministic ETA;
+- range;
+- as-of/provenance;
+- no AI/GPS;
+- no fake distance;
+- estimate history.
+
+P3-12:
+
+- closure semantics;
+- checklist policy ownership;
+- normal vs Admin exceptional closure;
+- DN01 bounded resolution;
+- DN05 remains open for HS;
+- no automatic resolution of Exception/Action.
+
+P3-13:
+
+- controlled owner-transfer authority;
+- DN02 transfer portion;
+- DN09 post-transfer access;
+- WorkItem independence;
+- DB invariant.
+
+Expected per integrated slice:
+
+REFERENCE_RECONCILIATION=PASS
+REFERENCE_IMPACT=NONE
+
+==================================================
+72. FULL QUALIFICATION STANDARD
+==================================================
+
+Each implemented slice requires:
+
+- focused backend;
+- focused frontend;
+- PostgreSQL 18;
+- migration qualification;
+- one Alembic head;
+- concurrency/idempotency where applicable;
+- negative authorization;
+- tenant isolation;
+- normal Chrome navigation;
+- reopen/persistence;
+- mobile where relevant;
+- stale/cache/direct-link where security-relevant;
+- TypeScript;
+- ESLint;
+- production frontend build;
+- OpenAPI;
+- architecture checks;
+- repository structure checks;
+- governance;
+- git diff --check;
+- full backend regression;
+- full frontend regression.
+
+Evidence must bind exact final Product SHA.
+
+If runtime changes after evidence:
+
+rerun affected evidence.
+
+==================================================
+73. PRODUCTION BOUNDARY
+==================================================
+
+ABSOLUTELY NO:
+
+Production access
+Production DB
+Production secrets
+Production data
+Production migration
+deployment
+release.
+
+Use synthetic non-production data only.
+
+==================================================
+74. CLEANUP
+==================================================
+
+After each slice:
+
+- stop temporary backend/frontend;
+- stop owned PostgreSQL;
+- close listeners;
+- remove disposable resources where host policy safely allows;
+- no unsafe cleanup bypass;
+- no secrets in evidence;
+- candidate clean;
+- canonical clean.
+
+If host policy refuses deletion of a stopped temporary directory:
+
+record it accurately.
+
+Not a Product blocker by itself.
+
+==================================================
+75. HARD STOP AFTER P3-13
+==================================================
+
+After completing all possible P3-11/P3-12/P3-13 work:
+
+STOP.
+
+DO NOT START:
+
+P3-14
+P3-15
+
+DO NOT:
+
+run final Integrated Product Journey Pack as global PASS;
+run Human Product Walkthrough on behalf of Product Owner;
+create release;
+deploy.
+
+==================================================
+76. FINAL REPORT — SIMPLE PERSIAN
+==================================================
+
+Report each slice separately.
+
+P3-11:
+
+1. ETA دقیقاً از چه factهایی ساخته شد؟
+2. anchor چگونه انتخاب شد؟
+3. range چگونه محاسبه شد؟
+4. next ETA و final ETA چگونه جدا شدند؟
+5. as-of/freshness چگونه نمایش داده شد؟
+6. missing input چه رفتاری دارد؟
+7. history/provenance چگونه حفظ شد؟
+8. planned distance چه منبعی دارد یا چرا undefined است؟
+9. چرا actual travelled distance ادعا نشد؟
+10. Product/Evidence/Migration/Canonical SHA چیست؟
+
+P3-12:
+
+11. arrival/delivery/closed چگونه جدا شدند؟
+12. checklist را چه کسی مدیریت می‌کند؟
+13. general + mode-specific چگونه ترکیب می‌شوند؟
+14. Expert چه زمانی می‌تواند Close کند؟
+15. چرا bypass ندارد؟
+16. Admin exceptional closure چگونه کار می‌کند؟
+17. missing items چگونه در history حفظ می‌شوند؟
+18. Exception/Action چرا auto-resolve نشدند؟
+19. DN05 چه وضعیتی دارد؟
+20. Product/Evidence/Migration/Canonical SHA چیست؟
+
+P3-13:
+
+21. چه کسی می‌تواند owner را منتقل کند؟
+22. target Expert چه شرایطی دارد؟
+23. دسترسی old owner چه می‌شود؟
+24. new owner چه دسترسی می‌گیرد؟
+25. document authority چگونه تغییر می‌کند؟
+26. WorkItemهای موجود چه می‌شوند؟
+27. DB invariant چگونه حفظ شد؟
+28. concurrent transfer چگونه کنترل شد؟
+29. Request assignee چرا تغییر نکرد؟
+30. Product/Evidence/Migration/Canonical SHA چیست؟
+
+Overall:
+
+31. چه Sliceهایی integrated شدند؟
+32. چه Sliceهایی blocked شدند و چرا؟
+33. final canonical SHA چیست؟
+34. Alembic head چیست؟
+35. local/remote alignment چیست؟
+36. P3-14 شروع شد؟ باید NO باشد.
+37. Global Product Validation چیست؟
+38. Integrated Product Journeys چیست؟
+39. Human Product Walkthrough چیست؟
+40. Release Ready چیست؟
+41. Production دست‌نخورده ماند؟
+42. قدم بعدی دقیق چیست؟
+
+==================================================
+77. FINAL VERDICT
+==================================================
+
+If all three succeed:
+
+PASS — PHASE 3 P3-11 THROUGH P3-13 INTEGRATED INTO CANONICAL
+
+If some integrate and some block:
+
+PARTIAL PASS — <integrated slices> — <blocked slices + exact reasons>
+
+If none can safely integrate:
+
+BLOCKED — P3-11 THROUGH P3-13 — <specific reason>
+
+==================================================
+78. FULL SUCCESS FLAGS
+==================================================
+
+If all succeed:
+
+LPAF_BASELINE=2.7
+
+PHASE3_P3_01=PASS
+PHASE3_P3_02=PASS
+PHASE3_P3_03=PASS
+PHASE3_P3_04=PASS
+PHASE3_P3_05=PASS
+PHASE3_P3_06=PASS
+PHASE3_P3_07=PASS
+PHASE3_P3_08=PASS
+PHASE3_P3_09=PASS
+PHASE3_P3_10=PASS
+
+PHASE3_P3_11=PASS
+PHASE3_P3_11_INTEGRATED=PASS
+
+DN04_STATUS=RESOLVED_FOR_P3_11
+DETERMINISTIC_ETA=PASS
+ETA_IS_AI=NO
+ETA_IS_SLA=NO
+ETA_IS_GPS=NO
+ETA_RANGE=PASS
+NEXT_POINT_ETA=PASS
+FINAL_DESTINATION_ETA=PASS
+ETA_AS_OF=PASS
+ETA_PROVENANCE=PASS
+ETA_HISTORY=PASS
+ETA_REFERENCE_VERSION_PIN=PASS
+FAKE_ETA_PRECISION=NO
+FAKE_DISTANCE=NO
+ACTUAL_TRAVELLED_DISTANCE_WITHOUT_PATH_EVIDENCE=NO
+
+P3_11_POSTGRESQL_18=PASS
+P3_11_BROWSER_PRODUCT_JOURNEY=PASS
+P3_11_FULL_BACKEND_REGRESSION=PASS
+P3_11_FULL_FRONTEND_REGRESSION=PASS
+P3_11_MIGRATION_REQUIRED=YES
+P3_11_ALEMBIC_HEAD=<exact>
+P3_11_PRODUCT_HEAD=<full sha>
+P3_11_EVIDENCE_HEAD=<full sha>
+P3_11_CANONICAL_INTEGRATION=PASS
+
+PHASE3_P3_12=PASS
+PHASE3_P3_12_INTEGRATED=PASS
+
+ARRIVAL_EQUALS_CLOSURE=NO
+DELIVERY_EQUALS_CLOSURE=NO
+EXPLICIT_CLOSURE=PASS
+
+DN01_CLOSURE_STATUS=RESOLVED_FOR_P3_12
+ORG_CLOSURE_POLICY=PASS
+CLOSURE_POLICY_VERSIONING=PASS
+GENERAL_MODE_CHECKLIST=PASS
+EXPERT_CLOSURE=PASS
+EXPERT_MANDATORY_BYPASS=NO
+ADMIN_EXCEPTIONAL_CLOSURE=PASS
+ADMIN_EXCEPTION_REASON_REQUIRED=YES
+CLOSURE_MISSING_HISTORY=PASS
+CLOSURE_AUTO_RESOLVE_EXCEPTION=NO
+CLOSURE_AUTO_COMPLETE_WORKITEM=NO
+DN05_GENERAL_CLOSURE_RULE=NOT_IMPLEMENTED
+DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY
+
+P3_12_POSTGRESQL_18=PASS
+P3_12_BROWSER_PRODUCT_JOURNEY=PASS
+P3_12_FULL_BACKEND_REGRESSION=PASS
+P3_12_FULL_FRONTEND_REGRESSION=PASS
+P3_12_MIGRATION_REQUIRED=YES
+P3_12_ALEMBIC_HEAD=<exact>
+P3_12_PRODUCT_HEAD=<full sha>
+P3_12_EVIDENCE_HEAD=<full sha>
+P3_12_CANONICAL_INTEGRATION=PASS
+
+PHASE3_P3_13=PASS
+PHASE3_P3_13_INTEGRATED=PASS
+
+DN02_OWNER_TRANSFER_PORTION=RESOLVED_FOR_P3_13
+DN09_STATUS=RESOLVED_FOR_P3_13
+
+ORG_ADMIN_OWNER_TRANSFER=PASS
+EXPERT_OWNER_TRANSFER=NO
+PLATFORM_ADMIN_OWNER_TRANSFER=NO
+
+NEW_OWNER_SAME_TENANT_ACTIVE_EXPERT=PASS
+OLD_OWNER_OWNER_DERIVED_ACCESS_REMOVED=PASS
+NEW_OWNER_OWNER_ACCESS=PASS
+
+DOCUMENT_AUTHORITY_TRANSFER=PASS
+ADMIN_DOCUMENT_MANAGEMENT_GRANTED=NO
+
+WORKITEM_AUTO_REASSIGNMENT=NO
+WORKITEM_ASSIGNMENT_INDEPENDENCE=PASS
+
+OWNER_TRANSFER_HISTORY=PASS
+OWNER_TRANSFER_REASON_REQUIRED=YES
+OWNER_TRANSFER_CONCURRENCY=PASS
+OWNER_TRANSFER_IDEMPOTENCY=PASS
+ORDINARY_OWNER_MUTATION=DENIED
+RAW_OWNER_BYPASS=DENIED
+REQUEST_ASSIGNEE_AUTO_TRANSFER=NO
+
+P3_13_POSTGRESQL_18=PASS
+P3_13_BROWSER_PRODUCT_JOURNEY=PASS
+P3_13_FULL_BACKEND_REGRESSION=PASS
+P3_13_FULL_FRONTEND_REGRESSION=PASS
+P3_13_MIGRATION_REQUIRED=YES
+P3_13_ALEMBIC_HEAD=<exact>
+P3_13_PRODUCT_HEAD=<full sha>
+P3_13_EVIDENCE_HEAD=<full sha>
+P3_13_CANONICAL_INTEGRATION=PASS
+
+PRODUCT_AUTHORITY_RECONCILIATION=PASS
+REFERENCE_RECONCILIATION=PASS
+REFERENCE_IMPACT=NONE
+
+ALEMBIC_HEAD=<final exact>
+ALEMBIC_HEAD_COUNT=1
+
+GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING
+INTEGRATED_PRODUCT_JOURNEYS=NOT_RUN
+HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN
+RELEASE_READY=NO
+
+P3_14_STARTED=NO
+P3_15_STARTED=NO
+
+PRODUCTION_ACCESSED=NO
+PRODUCTION_MUTATED=NO
+DEPLOYMENT_PERFORMED=NO
+RELEASE_CREATED=NO
+
+FINAL_CANONICAL_HEAD=<full sha>
+CANONICAL_PUSH=PASS
+LOCAL_REMOTE_ALIGNMENT=PASS
+AHEAD_BEHIND=0/0
+
+WORKTREES_CLEAN=YES
+
+NEXT_STEP=P3_14_AND_P3_15_FINAL_IMPLEMENTATION_AND_QUALIFICATION_GATE
+
+STOP.
+```
+
+اگر این مأموریت کامل `PASS` شود، از نظر ساخت قابلیت‌ها **P3-01 تا P3-13 بسته می‌شوند** و فقط دو اسلایس باقی می‌ماند: **P3-14 یکپارچه‌سازی نهایی تجربه کاربری/Workspace/Control Tower و P3-15 qualification و hardening نامزد نهایی**. بعد از آن وارد سفرهای یکپارچه، walkthrough انسانی خودت و Release Gate می‌شویم.

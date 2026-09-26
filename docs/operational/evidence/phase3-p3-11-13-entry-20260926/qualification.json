@@ -1,0 +1,68 @@
+{
+  "scope": "Documentation-only architecture proposals; not Product qualification",
+  "recorded_at_utc": "2026-09-26 08:49:00 UTC",
+  "baseline": "LPAF 2.7",
+  "source_base": "368cd736cbffce3d62c33336868738d9086e8306",
+  "gates": [
+    {
+      "name": "architecture_governance",
+      "command": "python scripts/check_architecture_governance.py",
+      "chunk_id": "34b8ca",
+      "wall_time_seconds": 1.3695708,
+      "exit_code": 0,
+      "original_token_count": 13,
+      "output": "Forwarder architecture governance checks passed.\r\n"
+    },
+    {
+      "name": "repository_structure",
+      "command": "node scripts/check-structure.js",
+      "chunk_id": "fb057f",
+      "wall_time_seconds": 0.4140034,
+      "exit_code": 0,
+      "original_token_count": 33,
+      "output": "✅ Canonical migrations directory exists: backend/migrations\n✅ backend/migrations/alembic.ini exists\n✅ Structure check passed\n"
+    },
+    {
+      "name": "new_packet_relative_links",
+      "status": "PASS",
+      "checked_count": 84
+    },
+    {
+      "name": "staged_documentation_only",
+      "status": "PASS",
+      "paths": [
+        "docs/architecture/ADR-INDEX.md",
+        "docs/operational/adr/ADR-067-explainable-cargo-eta.md",
+        "docs/operational/adr/ADR-068-controlled-shipment-closure.md",
+        "docs/operational/adr/ADR-069-exceptional-shipment-owner-transfer.md",
+        "docs/operational/evidence/phase3-p3-11-13-entry-20260926/.gitattributes",
+        "docs/operational/evidence/phase3-p3-11-13-entry-20260926/authorized-request.txt",
+        "docs/operational/evidence/phase3-p3-11-13-entry-20260926/preflight.json",
+        "docs/product/phase3/P3-11-13-ARCHITECTURE-REVIEW-FA.md",
+        "docs/product/phase3/P3-11-13-MISSION-AUTHORITY.md"
+      ]
+    },
+    {
+      "name": "request_exact_git_blob",
+      "status": "PASS",
+      "sha256": "67d78ec9b98ec55d7924a02df0d3811a6f106739616b8b139eb7d08b98a3a64a"
+    },
+    {
+      "name": "git_diff_cached_check",
+      "status": "PASS",
+      "exit_code": 0,
+      "output": ""
+    }
+  ],
+  "product_backend": "NOT_RUN",
+  "product_frontend": "NOT_RUN",
+  "postgresql_18": "NOT_RUN",
+  "migration_execution": "NOT_RUN",
+  "chrome_journeys": "NOT_RUN",
+  "typescript_eslint_build": "NOT_RUN",
+  "openapi_runtime_parity": "NOT_RUN",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": false,
+  "production_accessed": false
+}

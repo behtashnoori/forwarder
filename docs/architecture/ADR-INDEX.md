@@ -84,6 +84,19 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 
 ## Usage rules
 
+### P3-11 through P3-13 architecture review — not implementation acceptance
+
+| ADR | Title | Status | Domain | Supersedes / superseded by | Related implementation | Authoritative? |
+| --- | --- | --- | --- | --- | --- | --- |
+| [067](../operational/adr/ADR-067-explainable-cargo-eta.md) | Explainable Cargo ETA and immutable snapshots | PROPOSED | Route / temporal provenance / Customer privacy | none while proposed | P3-11 Build blocked on named ADR acceptance | No |
+| [068](../operational/adr/ADR-068-controlled-shipment-closure.md) | Versioned closure checklist and explicit closure | PROPOSED | Organization policy / Shipment lifecycle | none while proposed | P3-12 Build blocked on named ADR acceptance | No |
+| [069](../operational/adr/ADR-069-exceptional-shipment-owner-transfer.md) | Exceptional owner transfer with database fencing | PROPOSED | Shipment ownership / Security | proposed scoped ADR-047/050 supersession, not active | P3-13 Build blocked on named ADR acceptance | No |
+
+The [mission authority record](../product/phase3/P3-11-13-MISSION-AUTHORITY.md)
+retains the Product Owner's already-resolved decisions. These proposals neither
+reopen those decisions nor self-accept an architecture change. The existing
+Development Gate and Architecture Baseline §2 still apply.
+
 Current extension: [ADR-062](../operational/adr/ADR-062-explicit-customer-entitlement.md)
 resolves ADR-061's DN10 dependency under the explicit five-stage Product mission.
 It introduces only Org Admin managed, same-tenant, auditable account-to-CRM
