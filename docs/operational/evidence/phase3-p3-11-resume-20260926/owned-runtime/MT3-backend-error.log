@@ -1,0 +1,28 @@
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:56213
+Press CTRL+C to quit
+127.0.0.1 - - [26/Sep/2026 22:04:52] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:04:59] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:04:59] "GET /api/site-settings HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:00] "GET /api/public/track/SR2-AAAAAAAAAAAAAAAAAAAAAA HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:00] "GET /api/public/track/SR2-AAAAAAAAAAAAAAAAAAAAAA?tenant_id=999999&request_id=2 HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:02] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:02] "GET /api/public/track/1 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:02] "GET /api/site-settings HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:03] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:03] "GET /api/public/track/2 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:03] "GET /api/site-settings HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:04] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:04] "GET /api/public/track/2 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:04] "GET /api/site-settings HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:05] "GET /api/public/track/1 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:05] "GET /api/public/track/2 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:05] "GET /api/public/track/3 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:05] "GET /api/public/track/10 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:05] "GET /api/public/track/100 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:05] "GET /api/public/track/9999 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:05] "GET /api/public/track/0 HTTP/1.1" 404 -
+127.0.0.1 - - [26/Sep/2026 22:05:06] "POST /api/shipment-request HTTP/1.1" 201 -
+127.0.0.1 - - [26/Sep/2026 22:05:07] "GET /api/health HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:07] "GET /api/site-settings HTTP/1.1" 200 -
+127.0.0.1 - - [26/Sep/2026 22:05:07] "GET /api/public/track/SR2-2PUEk4HP6l1hucZHvtH7Ug HTTP/1.1" 200 -

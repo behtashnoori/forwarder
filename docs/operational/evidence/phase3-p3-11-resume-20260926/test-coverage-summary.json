@@ -1,0 +1,74 @@
+{
+  "phase3_eta": {
+    "passed": 24,
+    "optional_skipped": 1
+  },
+  "phase3_branched_route": {
+    "passed": 6,
+    "optional_skipped": 1
+  },
+  "phase3_reported_facts": {
+    "passed": 21,
+    "optional_skipped": 1
+  },
+  "phase3_customer_shipment": {
+    "passed": 16,
+    "optional_skipped": 1
+  },
+  "phase3_route_time": {
+    "passed": 15,
+    "optional_skipped": 1
+  },
+  "phase3_closure": {
+    "passed": 24,
+    "optional_skipped": 1
+  },
+  "phase3_owner_transfer": {
+    "passed": 21,
+    "optional_skipped": 1
+  },
+  "operational_workspace": {
+    "passed": 16,
+    "optional_skipped": 0
+  },
+  "control_tower": {
+    "passed": 185,
+    "optional_skipped": 1
+  },
+  "eta_cases": [
+    "test_ranges_use_occurred_pins_and_explicit_ensure_not_history_or_list",
+    "test_next_can_exist_when_final_reference_missing_and_newer_ambiguity_is_not_hidden",
+    "test_stop_b_belongs_only_to_continuing_beyond_b",
+    "test_correction_uses_corrected_occurrence_and_preserves_old_estimate",
+    "test_future_reference_becomes_applicable_without_rewriting_history",
+    "test_customer_exact_cargo_branch_allowlist_live_revocation_and_no_pure_get_write",
+    "test_internal_api_denies_foreign_expert_and_is_idempotent",
+    "test_equal_time_conflict_and_unquantified_effect_do_not_invent_progress",
+    "test_return_to_same_result_appends_and_customer_correction_history_remains",
+    "test_split_cargo_and_unit_scope_cannot_create_whole_cargo_progress",
+    "test_internal_milestone_anchor_is_not_a_private_customer_input",
+    "test_private_branch_report_cannot_indirectly_change_customer_estimate",
+    "test_eta_openapi_matches_runtime_and_declares_explicit_ensure",
+    "test_origin_location_is_not_a_departure_delay_or_time",
+    "test_zero_and_unknown_intermediate_stop_are_distinct[stop0-True]",
+    "test_zero_and_unknown_intermediate_stop_are_distinct[stop1-False]",
+    "test_arrival_stop_is_not_prorated_after_two_hours",
+    "test_next_departure_consumes_stop_even_if_unknown[stop0]",
+    "test_next_departure_consumes_stop_even_if_unknown[stop1]",
+    "test_explicit_checkpoint_operations_consume_stop_but_are_private",
+    "test_final_arrival_stop_is_never_required",
+    "test_private_departure_does_not_even_create_customer_history",
+    "test_one_partial_allocation_is_not_whole_cargo_progress",
+    "test_partial_checkpoint_completion_does_not_consume_aggregate_stop"
+  ],
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "frontend_total": 446,
+  "frontend_passed": 446,
+  "frontend_eta_cases": [
+    "Cargo ETA private range and history ensures only when its own panel is opened, shows independent results and distinct times",
+    "Cargo ETA private range and history loads bounded history through a pure GET and retains a historical unavailable result",
+    "Cargo ETA private range and history rechecks a delayed Customer response and renders only the new authorization revision",
+    "Cargo ETA private range and history clears on hide and does not restore cached estimates after a revoked session",
+    "Cargo ETA private range and history discards a late response for a previously selected Cargo"
+  ]
+}

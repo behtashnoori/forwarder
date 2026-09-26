@@ -1,0 +1,20 @@
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-11-explainable-eta
+
+stdout | src/tests/components/LocationForm.destination.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+ ✓ src/tests/components/LocationForm.destination.test.tsx > public destination business flow > offers Combined Transport as one ordinary customer intent choice 713ms
+ ✓ src/tests/components/LocationForm.destination.test.tsx > public destination business flow > Iran uses country and InternationalCity without the obsolete step 1709ms
+ ✓ src/tests/components/LocationForm.destination.test.tsx > public destination business flow > Turkey uses country and InternationalCity without the obsolete step 1566ms
+ ✓ src/tests/components/LocationForm.destination.test.tsx > public destination business flow > resets and reloads destination from Iran (Tehran) 2201ms
+ ✓ src/tests/components/LocationForm.destination.test.tsx > public destination business flow > resets and reloads destination from Turkey (Istanbul) 2249ms
+ ✓ src/tests/components/LocationForm.destination.test.tsx > public destination business flow > submits multiple optional cargo items without converting exact quantity to Number 3599ms
+ ✓ src/tests/components/LocationForm.destination.test.tsx > public destination business flow > keeps an empty voluntarily-added item on the form and blocks submission 1964ms
+
+ Test Files  1 passed (1)
+      Tests  7 passed (7)
+   Start at  21:16:03
+   Duration  16.72s (transform 485ms, setup 249ms, import 853ms, tests 14.00s, environment 1.30s)
+

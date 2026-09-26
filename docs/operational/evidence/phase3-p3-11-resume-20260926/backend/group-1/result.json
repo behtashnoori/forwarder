@@ -1,0 +1,13 @@
+{
+  "group": 1,
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "exit_code": 0,
+  "summary": "683 passed, 50 skipped, 9560 warnings",
+  "counts": {
+    "passed": 683,
+    "skipped": 50,
+    "warnings": 9560
+  },
+  "junit_testcases": 733,
+  "status": "PASS"
+}

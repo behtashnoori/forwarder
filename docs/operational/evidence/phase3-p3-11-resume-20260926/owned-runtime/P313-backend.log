@@ -1,0 +1,32 @@
+
+> vite_react_shadcn_ts@1.10.0 backend
+> node scripts/run-backend.js
+
+[startup] PORT=50305, HOST=127.0.0.1, DEBUG=False, use_reloader=False
+[startup] DATABASE_URL detected=yes, dialect=postgresql, host=127.0.0.1, database=forwarder_integrated_cert_p3_06_documents_p313_a91668ff
+[startup] Environment OK.
+[startup] DATABASE_URL detected=yes, dialect=postgresql, host=127.0.0.1, database=forwarder_integrated_cert_p3_06_documents_p313_a91668ff
+[startup] CORS configured.
+CORS Configuration:
+   Environment: uat
+   Total Origins: 247
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:50306
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      ... and 242 more
+
+[startup] Routes registered.
+Backend started successfully.
+Listening on:
+  - http://localhost:50305
+  - http://192.168.1.240:50305
+Health: GET http://localhost:50305/api/health
+ * Serving Flask app 'backend'
+ * Debug mode: off

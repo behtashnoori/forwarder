@@ -1,0 +1,4 @@
+# Keep raw evidence bytes; recognize Windows CRLF as line endings.
+* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Raw tool logs retain their emitted spaces and final blank lines.
+*.log -whitespace

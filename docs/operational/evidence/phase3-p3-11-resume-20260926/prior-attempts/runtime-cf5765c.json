@@ -1,0 +1,29 @@
+{
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p311-owned-0c2a78e57ad94f71bca4a4a2e791536a",
+  "browser_only": false,
+  "schema": "20261012_phase3_cargo_eta",
+  "executed_at_utc": "2026-09-26T18:15:47.2612485Z",
+  "dirty_source": false,
+  "stopped": true,
+  "postgres_only": false,
+  "product_sha": "cf5765cda3e80588102affa52f996b5b501a110c",
+  "production_accessed": false,
+  "results": [
+    {
+      "status": "PASS",
+      "name": "PostgreSQL 18"
+    },
+    {
+      "status": "PASS",
+      "name": "P3-01 through P3-05 PostgreSQL"
+    },
+    {
+      "status": "PASS",
+      "name": "Public Tracking PostgreSQL"
+    },
+    {
+      "status": "PASS",
+      "name": "P311 Chrome"
+    }
+  ]
+}

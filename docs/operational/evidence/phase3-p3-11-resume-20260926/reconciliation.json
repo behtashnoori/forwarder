@@ -1,0 +1,94 @@
+{
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "authority_record": "docs/product/phase3/P3-11-RESUME-AUTHORITY.md",
+  "current_contract": "docs/product/phase3/P3-11-ETA-CONTRACT.md",
+  "product_authority_reconciliation": [
+    {
+      "difference": "Incoming-leg stop belongs to arrival node, before next movement; final arrival excludes terminal stop",
+      "disposition": "AUTHORIZED",
+      "authority": "explicit retained resume request"
+    },
+    {
+      "difference": "Whole stop retained after arrival; consumed only by governed operation completion or next departure; origin location alone cannot provide departure",
+      "disposition": "AUTHORIZED",
+      "authority": "explicit retained resume request"
+    },
+    {
+      "difference": "Explicit zero differs from unknown; next and final depend only on their own components",
+      "disposition": "AUTHORIZED",
+      "authority": "explicit retained resume request"
+    },
+    {
+      "difference": "Customer private sources excluded before computation, including indirect history-only transitions",
+      "disposition": "PRESERVED",
+      "authority": "ADR-065, ADR-067 and explicit request"
+    },
+    {
+      "difference": "Immutable ETA history and source pins; current-reference change never repins an operational plan",
+      "disposition": "AUTHORIZED",
+      "authority": "accepted ADR-067 and explicit request"
+    },
+    {
+      "difference": "New empty migration follows P3-13; old draft and canonical migrations preserved",
+      "disposition": "AUTHORIZED",
+      "authority": "explicit migration reconciliation instruction"
+    },
+    {
+      "difference": "P3-12/P3-13, Workspace, Tower, source commands and Customer entitlement meanings unchanged",
+      "disposition": "PRESERVED",
+      "evidence": "source-integrity.json and completed full exact-source regression results"
+    },
+    {
+      "difference": "Current references describe the authorized resumed implementation; historical blocked/proposal evidence unchanged",
+      "disposition": "AUTHORIZED",
+      "authority": "explicit current-reference-only instruction"
+    }
+  ],
+  "journey_impact": "AFFECTS_EXISTING_JOURNEY",
+  "affected_journeys": [
+    "FWD-J02",
+    "FWD-J04",
+    "FWD-J06",
+    "FWD-J07",
+    "FWD-J08",
+    "FWD-J09",
+    "FWD-IPJ-02",
+    "FWD-IPJ-03",
+    "FWD-IPJ-04"
+  ],
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": false,
+  "p3_14_started": false,
+  "p3_15_started": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "qualification_status": "PASS",
+  "preliminary_attempts": {
+    "browser1": "synthetic Province code exceeded existing length; fixture corrected",
+    "browser2_and_3": "synthetic execution fixture did not satisfy existing governed stage contract; fixture now uses execution service",
+    "browser4": "pin comparison incorrectly included mutable effective-until boundary; now verifies immutable selection identity and durations",
+    "browser5": "second Customer login responded 200 after URL assertion expired; browser test now awaits successful login response"
+  },
+  "final_source_frontend_initial_attempt": "Earlier 9aa3321 only: timeouts retained; unchanged source passed after PG stopped. All 446 tests passed again on final c0e35a7.",
+  "prior_candidate_full_backend": "1556 passed, 3 failed, 121 skipped; repaired exact migration chain and UUID route normalization; grouped ETA schemas before the separate project-configuration schemas without semantic change",
+  "prior_candidate_frontend": "446 passed / 93 files after owned PostgreSQL stopped; earlier loaded runs hit unchanged timeouts",
+  "prior_candidate_postgresql": "8 passed, 1 P3-13 readiness wait(5) failed; fresh complete run required",
+  "cleanup_exception": {
+    "product_sha": "9aa3321a68db84b9da9a29493607bd431ff998a6",
+    "production_accessed": false,
+    "shutdown": "pg_ctl timed out after 60 seconds; server log and later pg_ctl status confirm stopped",
+    "status": "FAIL",
+    "temporary_runtime_removed": false,
+    "postgres_tests": "8 passed; P3-13 readiness wait(5) failed",
+    "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p311-owned-a074f7e4652f4e3aaf9ea9d1324576ec",
+    "cleanup": "automatic approval review rejected deletion: blocked by policy; retained without bypass"
+  },
+  "cf5765c_attempt": "Full backend 1559 passed / 121 optional skips; full frontend 446 passed; all 9 static and 15 PostgreSQL tests passed; P311 Chrome 3 passed. P313 browser guard correctly unavailable with generic elevated DB connection. Launcher now reuses the existing approved restricted LOGIN setup; original browser test unchanged. All final gates rerun on c0e35a7.",
+  "product_authority_reconciliation_status": "PASS",
+  "reference_reconciliation": "PASS",
+  "reference_impact": "NONE"
+}

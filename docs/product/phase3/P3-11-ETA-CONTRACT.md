@@ -102,7 +102,8 @@ before deleting evidence. No Production migration is authorized.
 
 JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY: FWD-J02/J04/J06/J07/J08/J09 and
 FWD-IPJ-02/03/04. Required slice cases A–P and the complete exact-source checks
-are defined in the retained request. Current implementation checks are preliminary
-until a clean Product SHA and its evidence descendant are recorded.
+are defined in the retained request. Complete qualification passed on clean
+Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`; [bound evidence](../../operational/evidence/phase3-p3-11-eta-status-20260926.md)
+records all required gates, prior attempts and the controlled integration boundary.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; INTEGRATED_PRODUCT_JOURNEYS=NOT_RUN;
 HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN; RELEASE_READY=NO.

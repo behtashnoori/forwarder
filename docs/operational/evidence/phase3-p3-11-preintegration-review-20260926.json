@@ -1,0 +1,46 @@
+{
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "recorded_utc": "2026-09-26T18:52:49.256326+00:00",
+  "raw_scanner_exit": 1,
+  "raw_scanner_findings": 4,
+  "review_status": "PASS_SYNTHETIC_ONLY",
+  "introduced_live_secrets": 0,
+  "scanner_or_baseline_modified": false,
+  "production_accessed": false,
+  "production_credentials_accessed": false,
+  "findings": [
+    {
+      "path": "docs/operational/evidence/phase3-p3-11-resume-20260926/harnesses/run-owned-backend-partitions.py",
+      "line": 39,
+      "fingerprint": "79ccd829a5",
+      "type": "named-secret",
+      "already_canonical": false,
+      "classification": "Synthetic isolated testing JWT value; same literal already in canonical P3-13 test harness"
+    },
+    {
+      "path": "docs/operational/evidence/phase3-p3-13-owner-transfer-20260926/harnesses/run-owned-backend-partitions.py",
+      "line": 39,
+      "fingerprint": "79ccd829a5",
+      "type": "named-secret",
+      "already_canonical": true,
+      "classification": "Synthetic isolated testing JWT value; same literal already in canonical P3-13 test harness"
+    },
+    {
+      "path": "scripts/production/v1.10.0/Deploy-ForwarderV110Production.ps1",
+      "line": 276,
+      "fingerprint": "b179a9e190",
+      "type": "credential-url",
+      "already_canonical": true,
+      "classification": "Existing loopback ToolingSelfTest synthetic URL/password; not a deployed credential"
+    },
+    {
+      "path": "scripts/production/v1.10.0/New-ForwarderV110PreDeploymentBackup.ps1",
+      "line": 142,
+      "fingerprint": "ca83196194",
+      "type": "credential-url",
+      "already_canonical": true,
+      "classification": "Existing loopback ToolingSelfTest synthetic URL/password; not a deployed credential"
+    }
+  ],
+  "raw_redacted_output": "path=docs\\operational\\evidence\\phase3-p3-11-resume-20260926\\harnesses\\run-owned-backend-partitions.py line=39 type=named-secret status=redacted fingerprint=79ccd829a5\npath=docs\\operational\\evidence\\phase3-p3-13-owner-transfer-20260926\\harnesses\\run-owned-backend-partitions.py line=39 type=named-secret status=redacted fingerprint=79ccd829a5\npath=scripts\\production\\v1.10.0\\Deploy-ForwarderV110Production.ps1 line=276 type=credential-url status=redacted fingerprint=b179a9e190\npath=scripts\\production\\v1.10.0\\New-ForwarderV110PreDeploymentBackup.ps1 line=142 type=credential-url status=redacted fingerprint=ca83196194\nscan=current-tree findings=4 redaction=enabled\n"
+}

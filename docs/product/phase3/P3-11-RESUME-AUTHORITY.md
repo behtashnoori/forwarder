@@ -46,8 +46,8 @@ canonical after all gates pass. No history rewrite or parallel implementation.
 PROTECTED_OUT_OF_SCOPE_BEHAVIOR: operational source SORs, P3-01..10/12/13,
 Customer DN10 and source privacy, source corrections, route reference plan pins,
 closure and owner-transfer authorization, legacy/public tracking, Workspace and
-Tower ranking, Action/Exception/SLA. Preservation evidence starts with canonical
-diff/ancestry and must be completed by regression; it is not yet a PASS claim.
+Tower ranking, Action/Exception/SLA. Preservation evidence combines canonical
+diff/ancestry with the completed exact-source regression in the linked final report.
 No new provider, AI, GPS, progress inference, distance fabrication, seed/backfill,
 P3-14/P3-15, global integrated qualification, human walkthrough or release.
 
@@ -84,9 +84,11 @@ Runtime changes invalidate earlier evidence. Temporary resources are owned,
 synthetic, non-production and must be stopped and safely cleaned.
 
 Reference impact: external LPAF NONE; Forwarder current ADR/API/domain/journey/
-migration/Phase 3 references UPDATE_REQUIRED until reconciled. Historical
-blocked/proposal notes remain unedited. Unknowns: final source-adapter proof and
-qualification results. Engineering/Product Complete=NO until evidence exists.
+migration/Phase 3 references reconciled. Historical blocked/proposal notes remain
+unedited. Final exact-source qualification passed on Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`;
+[bound evidence](../../operational/evidence/phase3-p3-11-eta-status-20260926.md)
+records preservation and all required checks. This is bounded P3-11 qualification;
+controlled canonical integration is recorded separately by its verified receipt.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; RELEASE_READY=NO.
 PRODUCTION_ACCESSED=NO; PRODUCTION_MUTATED=NO; DEPLOYMENT_PERFORMED=NO;
 RELEASE_CREATED=NO; P3_14_STARTED=NO; P3_15_STARTED=NO.

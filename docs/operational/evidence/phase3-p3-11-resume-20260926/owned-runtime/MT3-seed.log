@@ -1,0 +1,19 @@
+[startup] DATABASE_URL detected=yes, dialect=postgresql, host=127.0.0.1, database=forwarder_mt3_browser_a91668ff
+[startup] CORS configured.
+CORS Configuration:
+   Environment: uat
+   Total Origins: 247
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:56214
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      ... and 242 more
+
+[startup] Routes registered.
+MT3_BROWSER_FIXTURE_SEEDED=YES

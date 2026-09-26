@@ -1,0 +1,23 @@
+{
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "status": "PASS",
+  "reviewer": "agent visual inspection of final-source Chrome artifacts; not a Human Product Walkthrough",
+  "images": [
+    "owned-runtime/P311-browser/phase3-eta-P3-11-Customer--1c8b3-nd-private-source-exclusion/customer-independent-results.png",
+    "owned-runtime/P311-browser/phase3-eta-P3-11-Customer--1c8b3-nd-private-source-exclusion/customer-mobile.png",
+    "owned-runtime/P311-browser/phase3-eta-P3-11-Expert-no-b5724-mpletion-history-and-mobile/expert-arrival-ranges.png",
+    "owned-runtime/P311-browser/phase3-eta-P3-11-Expert-no-b5724-mpletion-history-and-mobile/expert-history-mobile.png"
+  ],
+  "checks": [
+    "Expert arrival B excludes stop B; terminal C range includes intermediate stop only",
+    "Distinct next available / final unavailable messages visible for Customer",
+    "Occurred time, recorded time, calculation time, age through calculation, and undefined planned distance visible",
+    "390px Customer and Expert layouts wrap without horizontal overflow",
+    "Current and historical ranges remain distinct and readable; no actual travelled distance or GPS position shown"
+  ],
+  "capture_notes": [
+    "English scenario suffixes are synthetic location fixture names, not added product copy",
+    "The tall Expert element screenshot includes the existing fixed navigation at the viewport boundary; the ETA/history content remains scrollable. The shared navigation shell is unchanged."
+  ],
+  "human_product_walkthrough": "NOT_RUN"
+}

@@ -183,5 +183,7 @@ The Product Owner explicitly resolved
 defines arrival-only next/final arithmetic, origin boundary, whole remaining
 stops, existing completion adapters and Customer-safe provenance. Preserved
 work at `198d2bf` is resumed in its original branch after merging P3-13.
-Qualification is pending the final frozen source; preliminary checks do not
-establish Product Complete or controlled integration.
+Full [exact-source qualification](../evidence/phase3-p3-11-eta-status-20260926.md)
+passed on Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979`. Preliminary attempts are
+retained separately. Controlled canonical integration requires the final clean,
+ancestry, reference and push/fetch receipt; no global Product or human PASS follows.

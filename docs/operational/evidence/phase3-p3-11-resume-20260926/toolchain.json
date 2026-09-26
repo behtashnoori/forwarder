@@ -1,0 +1,10 @@
+{
+  "node": "v24.11.0",
+  "python": "Python 3.13.9",
+  "postgresql": "postgres (PostgreSQL) 18.0",
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "browser_channel": "chrome",
+  "host": "Windows",
+  "targets": "owned synthetic loopback databases and application listeners only",
+  "chrome_installed_product_version": "154.0.8037.57"
+}

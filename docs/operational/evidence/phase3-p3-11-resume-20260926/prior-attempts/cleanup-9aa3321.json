@@ -1,0 +1,10 @@
+{
+  "product_sha": "9aa3321a68db84b9da9a29493607bd431ff998a6",
+  "production_accessed": false,
+  "shutdown": "pg_ctl timed out after 60 seconds; server log and later pg_ctl status confirm stopped",
+  "status": "FAIL",
+  "temporary_runtime_removed": false,
+  "postgres_tests": "8 passed; P3-13 readiness wait(5) failed",
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p311-owned-a074f7e4652f4e3aaf9ea9d1324576ec",
+  "cleanup": "automatic approval review rejected deletion: blocked by policy; retained without bypass"
+}

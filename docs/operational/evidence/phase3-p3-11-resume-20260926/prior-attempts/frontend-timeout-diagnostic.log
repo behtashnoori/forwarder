@@ -1,0 +1,104 @@
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-11-explainable-eta
+
+stdout | src/tests/components/LocationForm.destination.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+ × src/tests/components/LocationForm.destination.test.tsx > public destination business flow > offers Combined Transport as one ordinary customer intent choice 6113ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ × src/tests/components/LocationForm.destination.test.tsx > public destination business flow > Iran uses country and InternationalCity without the obsolete step 6364ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ × src/tests/components/LocationForm.destination.test.tsx > public destination business flow > Turkey uses country and InternationalCity without the obsolete step 6282ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ × src/tests/components/LocationForm.destination.test.tsx > public destination business flow > resets and reloads destination from Iran (Tehran) 5176ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ × src/tests/components/LocationForm.destination.test.tsx > public destination business flow > resets and reloads destination from Turkey (Istanbul) 5677ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ × src/tests/components/LocationForm.destination.test.tsx > public destination business flow > submits multiple optional cargo items without converting exact quantity to Number 15540ms
+   → Test timed out in 15000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ × src/tests/components/LocationForm.destination.test.tsx > public destination business flow > keeps an empty voluntarily-added item on the form and blocks submission 5118ms
+   → Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/tests/components/LocationForm.destination.test.tsx > public destination business flow > offers Combined Transport as one ordinary customer intent choice
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/tests/components/LocationForm.destination.test.tsx:94:3
+     92|
+     93| describe("public destination business flow", () => {
+     94|   it("offers Combined Transport as one ordinary customer intent choice…
+       |   ^
+     95|     vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
+     96|       international_methods: [{ id: 7, name: "Combined Transport", nam…
+
+
+ Test Files  1 failed (1)
+      Tests  7 failed (7)
+   Start at  21:11:02
+   Duration  65.89s (transform 1.27s, setup 783ms, import 2.42s, tests 50.29s, environment 8.60s)
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  src/tests/components/LocationForm.destination.test.tsx > public destination business flow > Iran uses country and InternationalCity without the obsolete step
+ FAIL  src/tests/components/LocationForm.destination.test.tsx > public destination business flow > Turkey uses country and InternationalCity without the obsolete step
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/tests/components/LocationForm.destination.test.tsx:109:69
+    107|   });
+    108|
+    109|   it.each([["Iran", "Tehran", 1, 11], ["Turkey", "Istanbul", 2, 22]] a…
+       |                                                                     ^
+    110|     "%s uses country and InternationalCity without the obsolete step",…
+    111|       await start();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  src/tests/components/LocationForm.destination.test.tsx > public destination business flow > resets and reloads destination from Iran (Tehran)
+ FAIL  src/tests/components/LocationForm.destination.test.tsx > public destination business flow > resets and reloads destination from Turkey (Istanbul)
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/tests/components/LocationForm.destination.test.tsx:115:109
+    113|       await submit(countryId, cityId);
+    114|     });
+    115|   it.each([["Iran", "Tehran", "Turkey", "Istanbul", 2, 22], ["Turkey",…
+       |                                                                                                             ^
+    116|     "resets and reloads destination from %s (%s)", async (first, first…
+    117|       await start();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  src/tests/components/LocationForm.destination.test.tsx > public destination business flow > submits multiple optional cargo items without converting exact quantity to Number
+Error: Test timed out in 15000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/tests/components/LocationForm.destination.test.tsx:130:3
+    128|     });
+    129|
+    130|   it("submits multiple optional cargo items without converting exact q…
+       |   ^
+    131|     await start();
+    132|     await destination("Turkey", "Istanbul");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  src/tests/components/LocationForm.destination.test.tsx > public destination business flow > keeps an empty voluntarily-added item on the form and blocks submission
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ src/tests/components/LocationForm.destination.test.tsx:151:3
+    149|   }, 15_000);
+    150|
+    151|   it("keeps an empty voluntarily-added item on the form and blocks sub…
+       |   ^
+    152|     await start();
+    153|     await destination("Turkey", "Istanbul");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+

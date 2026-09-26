@@ -1,0 +1,60 @@
+
+Running 1 test using 1 worker
+
+(node:20152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/1] e2e\phase3-owner-transfer.spec.ts:38:1 › P3-13 Admin transfer changes live Expert access and preserves Customer document scope
+  1) e2e\phase3-owner-transfer.spec.ts:38:1 › P3-13 Admin transfer changes live Expert access and preserves Customer document scope 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: 'مسئول و سابقه انتقال' }).getByText(/کارهای بازِ مسئول فعلی/)
+    Expected substring: "1"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: 'مسئول و سابقه انتقال' }).getByText(/کارهای بازِ مسئول فعلی/) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'مسئول و سابقه انتقال' }).getByText(/کارهای بازِ مسئول فعلی/)
+
+
+      64 |   await login(admin, "admin"); await openShipment(admin);
+      65 |   let region = await ownership(admin);
+    > 66 |   await expect(region.getByText(/کارهای بازِ مسئول فعلی/)).toContainText("1");
+         |                                                            ^
+      67 |   await expect(region.getByRole("button", {name: "بررسی انتقال مسئول"})).toBeDisabled();
+      68 |   await region.getByLabel("کارشناس مسئول جدید").selectOption(String(fixture.p313_target_id));
+      69 |   await region.getByLabel("دلیل انتقال (الزامی)").fill("PRIVATE-OWNER-TRANSFER-REASON");
+        at D:\1-webapp\forwarder-dev\phase3-p3-11-explainable-eta\e2e\phase3-owner-transfer.spec.ts:66:60
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\p311-qualification-cf5765c-20260926\owned-runtime\P313-browser\phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope\test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\p311-qualification-cf5765c-20260926\owned-runtime\P313-browser\phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope\test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\p311-qualification-cf5765c-20260926\owned-runtime\P313-browser\phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope\test-failed-4.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ..\p311-qualification-cf5765c-20260926\owned-runtime\P313-browser\phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ..\p311-qualification-cf5765c-20260926\owned-runtime\P313-browser\phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope\error-context.md
+
+    attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+    ..\p311-qualification-cf5765c-20260926\owned-runtime\P313-browser\phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope\trace.zip
+    Usage:
+
+        npx playwright show-trace ..\p311-qualification-cf5765c-20260926\owned-runtime\P313-browser\phase3-owner-transfer-P3-1-98e0e-ves-Customer-document-scope\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+  1 failed
+    e2e\phase3-owner-transfer.spec.ts:38:1 › P3-13 Admin transfer changes live Expert access and preserves Customer document scope 

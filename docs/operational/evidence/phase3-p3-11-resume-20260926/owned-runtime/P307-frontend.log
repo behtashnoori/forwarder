@@ -1,0 +1,9 @@
+
+> vite_react_shadcn_ts@1.10.0 dev
+> vite --host 127.0.0.1 --port 62624 --strictPort
+
+
+  VITE v6.4.3  ready in 673 ms
+
+  ➜  Local:   http://127.0.0.1:62624/
+  ➜  press h + enter to show help

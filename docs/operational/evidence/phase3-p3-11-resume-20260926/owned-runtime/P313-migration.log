@@ -1,0 +1,127 @@
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade  -> 20240917_initial_schema, Initial schema for shipment request service.
+INFO  [alembic.runtime.migration] Running upgrade 20240917_initial_schema -> 20240918_add_shipment_request_log, add shipment request log table
+INFO  [alembic.runtime.migration] Running upgrade 20240918_add_shipment_request_log -> 20240919_add_code_to_province, add code column to province
+INFO  [alembic.runtime.migration] Running upgrade 20240919_add_code_to_province -> 20240920_add_transport_method_to_shipment_request, Add transport_method to shipment_request.
+INFO  [alembic.runtime.migration] Running upgrade 20240920_add_transport_method_to_shipment_request -> 20240922_make_transport_method_nullable, Make transport_method nullable.
+INFO  [alembic.runtime.migration] Running upgrade 20240922_make_transport_method_nullable -> 20240923_add_cargo_details, Add cargo details to shipment_request.
+INFO  [alembic.runtime.migration] Running upgrade 20240923_add_cargo_details -> 20240924_add_customer_name_fields, Add customer name fields to shipment_request.
+INFO  [alembic.runtime.migration] Running upgrade 20240924_add_customer_name_fields -> 20240924_add_expert_console_tables, Add expert console tables and fields.
+INFO  [alembic.runtime.migration] Running upgrade 20240924_add_expert_console_tables -> 20240925_add_crm_models, Add CRM models
+INFO  [alembic.runtime.migration] Running upgrade 20240925_add_crm_models -> 20240925_add_performance_indexes, Add performance indexes for better query performance
+INFO  [alembic.runtime.migration] Running upgrade 20240925_add_performance_indexes -> 20240925_add_data_integrity_constraints, Add data integrity constraints and optimizations
+INFO  [alembic.runtime.migration] Running upgrade 20240925_add_data_integrity_constraints -> 20240925_fix_customer_shipment_relationship, Fix customer-shipment relationship
+INFO  [alembic.runtime.migration] Running upgrade 20240925_fix_customer_shipment_relationship -> 20240926_add_password_to_expert_user, add password to expert user
+INFO  [alembic.runtime.migration] Running upgrade 20240926_add_password_to_expert_user -> 20250101_add_crm_hierarchy_system, Add CRM hierarchy system with managers and business experts
+INFO  [alembic.runtime.migration] Running upgrade 20250101_add_crm_hierarchy_system -> 20251006_124249, Add international shipping fields to shipment_request
+INFO  [alembic.runtime.migration] Running upgrade 20251006_124249 -> 20250110_add_international_models, Add international shipping models - countries and cities
+INFO  [alembic.runtime.migration] Running upgrade 20250110_add_international_models -> 20250115_add_iran_ports_models, Add Iran ports and port-province mapping models.
+INFO  [alembic.runtime.migration] Running upgrade 20240924_add_customer_name_fields -> 20240924_add_expert_console_fields, Add expert console fields to shipment_request.
+INFO  [alembic.runtime.migration] Running upgrade 20250115_add_iran_ports_models -> 20250115_add_iran_entry_point_fields, Add Iran entry point fields to shipment request.
+INFO  [alembic.runtime.migration] Running upgrade 20250115_add_iran_ports_models -> 20250120_add_separate_transport_methods, Add separate transport methods for international and domestic shipping.
+INFO  [alembic.runtime.migration] Running upgrade 20250120_add_separate_transport_methods -> 20250120_add_customer_gamification_system, Add customer gamification system
+INFO  [alembic.runtime.migration] Running upgrade 20250120_add_customer_gamification_system -> 20250220_add_tracking_code, Add tracking_code to shipment_request for non-guessable public tracking.
+INFO  [alembic.runtime.migration] Running upgrade 20250220_add_tracking_code, 20250115_add_iran_entry_point_fields -> 20250220_merge_heads, Merge heads: tracking_code and iran_entry_point branches.
+INFO  [alembic.runtime.migration] Running upgrade 20250220_merge_heads, 20240924_add_expert_console_fields -> 20250220_merge_final, Merge all heads: merge_heads and expert_console_fields branch.
+INFO  [alembic.runtime.migration] Running upgrade 20250220_merge_final -> 20250221_referral, Add referral rule, state, and assignment log tables.
+INFO  [alembic.runtime.migration] Running upgrade 20250221_referral -> 20250221_auto, Add auto-assign state table and make referral_assignment_log.rule_id nullable.
+INFO  [alembic.runtime.migration] Running upgrade 20250221_auto -> 20250221_site, Add site_setting table for editable site content.
+INFO  [alembic.runtime.migration] Running upgrade 20250221_site -> 20250223_quote, Add expert_quote table for storing quotes per request.
+INFO  [alembic.runtime.migration] Running upgrade 20250223_quote -> 20250223_quote_fix, Fix expert_quote id column: use primary_key with autoincrement so INSERT works on SQLite.
+INFO  [alembic.runtime.migration] Running upgrade 20250223_quote_fix -> 20250223_ensure_quote, Ensure expert_quote table exists (idempotent). Creates table only if missing; no drop, no data loss.
+INFO  [alembic.runtime.migration] Running upgrade 20250223_ensure_quote -> 20250224_allow_quoted_status, Allow quoted as a shipment request lifecycle status.
+INFO  [alembic.runtime.migration] Running upgrade 20250224_allow_quoted_status -> 20260710_crm_link_audit, Add CRM customer link audit table.
+INFO  [alembic.runtime.migration] Running upgrade 20260710_crm_link_audit -> 20260715_multi_unit_tracking, Add production-safe manual multi-unit shipment tracking.
+INFO  [alembic.runtime.migration] Running upgrade 20260715_multi_unit_tracking -> 20260716_drop_invalid_shipment_update_trigger, Drop the invalid generic update trigger from shipment_request.
+INFO  [alembic.runtime.migration] Running upgrade 20260716_drop_invalid_shipment_update_trigger -> 20260717_add_customs_office_domain, Add canonical customs office domain.
+INFO  [alembic.runtime.migration] Running upgrade 20260717_add_customs_office_domain -> 20260718_add_token_revocation, Add server-side JWT revocation storage.
+INFO  [alembic.runtime.migration] Running upgrade 20260718_add_token_revocation -> 20260719_add_auth_sessions, Add server-side authentication sessions and refresh rotation state.
+INFO  [alembic.runtime.migration] Running upgrade 20260719_add_auth_sessions -> 20260720_expand_reference_data_identity, Expand reference-data identity, lifecycle and provenance schema.
+INFO  [alembic.runtime.migration] Running upgrade 20260720_expand_reference_data_identity -> 20260725_add_tracking_location_reference, Add internal tracking location references and immutable update snapshots.
+INFO  [alembic.runtime.migration] Running upgrade 20260725_add_tracking_location_reference -> 20260726_seed_iran_tracking_reference, Seed Iran and curated China-Iran tracking reference data.
+INFO  [alembic.runtime.migration] Running upgrade 20260726_seed_iran_tracking_reference -> 20260727_add_iran_destination_point, Add Iran destination point fields to shipment_request
+INFO  [alembic.runtime.migration] Running upgrade 20260727_add_iran_destination_point -> 20260728_add_quote_customer_response, Add customer response fields to expert_quote
+INFO  [alembic.runtime.migration] Running upgrade 20260728_add_quote_customer_response -> 20260729_operational_vertical_slice, Add the Phase 1A operational shipment vertical slice.
+INFO  [alembic.runtime.migration] Running upgrade 20260729_operational_vertical_slice -> 20260730_multileg_route, Add safe versioned multi-leg route orchestration.
+INFO  [alembic.runtime.migration] Running upgrade 20260730_multileg_route -> 20260801_route_exception, Add route-exception reconciliation transition state.
+INFO  [alembic.runtime.migration] Running upgrade 20260801_route_exception -> 20260802_expert_scope, Add domestic and international expert assignment capabilities.
+INFO  [alembic.runtime.migration] Running upgrade 20260802_expert_scope -> 20260803_expert_sla, Add admin-managed response SLA duration to experts.
+INFO  [alembic.runtime.migration] Running upgrade 20260803_expert_sla -> 20260804_case_documents, Add case document management foundation.
+INFO  [alembic.runtime.migration] Running upgrade 20260804_case_documents -> 20260805_project_foundation, Add the Slice-001 Project aggregate foundation.
+INFO  [alembic.runtime.migration] Running upgrade 20260805_project_foundation -> 20260806_execution_units, Add canonical ExecutionUnit and OperationalEvent vertical slice.
+INFO  [alembic.runtime.migration] Running upgrade 20260806_execution_units -> 20260807_master_data, Add governed master-data foundation tables.
+INFO  [alembic.runtime.migration] Running upgrade 20260807_master_data -> 20260808_reference_seed, Add persistent reference-data seed execution evidence.
+INFO  [alembic.runtime.migration] Running upgrade 20260808_reference_seed -> 20260809_cargo_catalog_items, Add cargo catalog, aliases, and shipment cargo snapshots.
+INFO  [alembic.runtime.migration] Running upgrade 20260809_cargo_catalog_items -> 20260810_logistics_network, Add governed logistics network foundation.
+INFO  [alembic.runtime.migration] Running upgrade 20260810_logistics_network -> 20260811_project_configuration, Add governed Project Configuration foundation.
+INFO  [alembic.runtime.migration] Running upgrade 20260811_project_configuration -> security_credential_remediation, Disable accounts that retain the historical shared credential hash.
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade security_credential_remediation -> 20260812_operational_execution, Bounded operational execution foundation (Release 1.9.0).
+INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
+INFO  [alembic.runtime.migration] Will assume transactional DDL.
+INFO  [alembic.runtime.migration] Running upgrade 20260812_operational_execution -> 20260813_mdpm_readiness, MDPM-1 operational document readiness.
+INFO  [alembic.runtime.migration] Running upgrade 20260813_mdpm_readiness -> 20260814_oip_situations, OIP-2 deterministic situations and attention projection.
+INFO  [alembic.runtime.migration] Running upgrade 20260814_oip_situations -> 20260815_oip_threshold_policy, Governed OIP timing thresholds.
+INFO  [alembic.runtime.migration] Running upgrade 20260815_oip_threshold_policy -> 20260816_oip_projection_health, OIP-D20 projection health lifecycle.
+INFO  [alembic.runtime.migration] Running upgrade 20260816_oip_projection_health -> 20260817_shipment_economics_core, FE-2 Shipment Economics core. Revision: 20260817_shipment_economics_core.
+INFO  [alembic.runtime.migration] Running upgrade 20260817_shipment_economics_core -> 20260818_immutable_fx_provenance, Immutable observation FX provenance. Revision: 20260818_immutable_fx_provenance.
+INFO  [alembic.runtime.migration] Running upgrade 20260818_immutable_fx_provenance -> 20260819_v191_acceptance_corrections, Forwarder 1.9.1 source, customer, and canonical location persistence.
+INFO  [alembic.runtime.migration] Running upgrade 20260819_v191_acceptance_corrections -> 20260820_mt1c_quarantine_runtime, Add the MT-1C runtime ownership certification registry.
+INFO  [alembic.runtime.migration] Running upgrade 20260820_mt1c_quarantine_runtime -> 20260821_mt1d_canonical_census, Add MT-1D canonical identity and atomic census publication tables.
+INFO  [alembic.runtime.migration] Running upgrade 20260821_mt1d_canonical_census -> 20260822_mt1c1_census_fence, Add normalized canonical decision components for MT-1C.1 Core guards.
+INFO  [alembic.runtime.migration] Running upgrade 20260822_mt1c1_census_fence -> 20260823_mt1_ownership_expand, Expand canonical MT-1 ownership envelopes without assigning legacy rows.
+INFO  [alembic.runtime.migration] Running upgrade 20260823_mt1_ownership_expand -> 20260824_mt1_graph, Complete canonical ownership for CRM multi-parent and transport graphs.
+INFO  [alembic.runtime.migration] Running upgrade 20260824_mt1_graph -> 20260825_admin_multitenant, Explicit admin authority and tenant-scoped policy. Revision ID: 20260825_admin_multitenant
+INFO  [alembic.runtime.migration] Running upgrade 20260825_admin_multitenant -> 20260826_org_document_policy, Add tenant-owned organization document policy.
+INFO  [alembic.runtime.migration] Running upgrade 20260826_org_document_policy -> 20260827_org_hostname, Add exact hostname routing for operational organizations.
+INFO  [alembic.runtime.migration] Running upgrade 20260827_org_hostname -> 20260828_referral_state_compat, Repair referral auto-assignment state sequence compatibility.
+INFO  [alembic.runtime.migration] Running upgrade 20260828_referral_state_compat -> 20260829_cargo_traceability_index, Index catalog-to-shipment cargo traceability reads.
+INFO  [alembic.runtime.migration] Running upgrade 20260829_cargo_traceability_index -> 20260830_logistics_point_tracking_convergence, Converge expert tracking location writes on LogisticsPoint.
+INFO  [alembic.runtime.migration] Running upgrade 20260830_logistics_point_tracking_convergence -> 20260831_document_catalog_metadata, Add governed Document Master Catalog metadata and relations.
+INFO  [alembic.runtime.migration] Running upgrade 20260831_document_catalog_metadata -> 20260901_document_catalog_runs, Extend governed apply-run evidence for document catalog packages.
+INFO  [alembic.runtime.migration] Running upgrade 20260901_document_catalog_runs -> 20260902_shipment_request_public_id, Add opaque authenticated identity to ShipmentRequest.
+INFO  [alembic.runtime.migration] Running upgrade 20260902_shipment_request_public_id -> 20260903_external_operational_references, Add governed external operational reference schema.
+INFO  [alembic.runtime.migration] Running upgrade 20260903_external_operational_references -> 20260904_global_logistics_point_foundation, Add empty platform Global Logistics Point foundation.
+INFO  [alembic.runtime.migration] Running upgrade 20260904_global_logistics_point_foundation -> 20260905_global_logistics_point_adoption, Add tenant-owned global logistics point adoption.
+INFO  [alembic.runtime.migration] Running upgrade 20260905_global_logistics_point_adoption -> 20260906_global_logistics_point_materialization, Add operational LogisticsPoint provenance for global adoption materialization.
+INFO  [alembic.runtime.migration] Running upgrade 20260906_global_logistics_point_materialization -> 20260907_direct_shipment_responsibility, Add ADR-043 direct-shipment primary responsibility evidence.
+INFO  [alembic.runtime.migration] Running upgrade 20260907_direct_shipment_responsibility -> 20260908_governed_international_geography, Add stable UN/LOCODE identity and provenance to InternationalCity.
+INFO  [alembic.runtime.migration] Running upgrade 20260908_governed_international_geography -> 20260909_cargo_transport_allocation, Governed quantity-aware cargo to transport allocation.
+INFO  [alembic.runtime.migration] Running upgrade 20260909_cargo_transport_allocation -> 20260910_route_leg_logistics_points, Add optional organization facility identities to route legs.
+INFO  [alembic.runtime.migration] Running upgrade 20260910_route_leg_logistics_points -> 20260911_project_cargo_preference, Add project commodity catalog preferences.
+INFO  [alembic.runtime.migration] Running upgrade 20260911_project_cargo_preference -> 20260912_execution_authority, Step 3A occurrence decision lineage; historical event payloads stay immutable.
+INFO  [alembic.runtime.migration] Running upgrade 20260912_execution_authority -> 20260913_dashboard_persistence, Personal dashboard persistence; source-controlled system templates have no rows.
+INFO  [alembic.runtime.migration] Running upgrade 20260913_dashboard_persistence -> 20260914_saved_view_persistence, Private personal Saved View persistence.
+INFO  [alembic.runtime.migration] Running upgrade 20260914_saved_view_persistence -> 20260915_project_access_foundation, Explicit tenant-consistent Project user access.
+INFO  [alembic.runtime.migration] Running upgrade 20260915_project_access_foundation -> 20260916_personal_dashboard_permissions, Grant the accepted Personal Dashboard capabilities to canonical tenant users.
+INFO  [alembic.runtime.migration] Running upgrade 20260916_personal_dashboard_permissions -> 20260917_shared_transport_execution, Evolve execution units into tenant-owned shared transport executions.
+INFO  [alembic.runtime.migration] Running upgrade 20260917_shared_transport_execution -> 20260918_customer_carrier_role, Add multi-role party eligibility and backfill current carrier relationships.
+INFO  [alembic.runtime.migration] Running upgrade 20260918_customer_carrier_role -> 20260919_operational_event_location_evidence, Add immutable structured location evidence to canonical operational events.
+INFO  [alembic.runtime.migration] Running upgrade 20260919_operational_event_location_evidence -> 20260920_legal_customer_nullable_contact_names, Allow legal customers without a fabricated contact name.
+INFO  [alembic.runtime.migration] Running upgrade 20260920_legal_customer_nullable_contact_names -> 20260921_shipment_evidence_ownership, Generalize the existing document authority for shipment-owned evidence.
+INFO  [alembic.runtime.migration] Running upgrade 20260921_shipment_evidence_ownership -> 20260922_notification_foundation, Add the dormant, channel-neutral notification persistence foundation.
+INFO  [alembic.runtime.migration] Running upgrade 20260922_notification_foundation -> 20260923_notification_lifecycle, Add minimal durable notification claim fencing.
+INFO  [alembic.runtime.migration] Running upgrade 20260923_notification_lifecycle -> 20260924_request_cargo_items, Add optional Request-owned multi-item Cargo.
+INFO  [alembic.runtime.migration] Running upgrade 20260924_request_cargo_items -> 20260925_quote_communication, Add governed simple Quote communication.
+INFO  [alembic.runtime.migration] Running upgrade 20260925_quote_communication -> 20260926_fixed_shipment_responsible_expert, Enforce ADR-047 fixed OperationalShipment responsible Expert ownership.
+INFO  [alembic.runtime.migration] Running upgrade 20260926_fixed_shipment_responsible_expert -> 20260927_customer_portal_account_lifecycle, Add optional Customer Portal credentials, lifecycle, and recovery core.
+INFO  [alembic.runtime.migration] Running upgrade 20260927_customer_portal_account_lifecycle -> 20260928_operational_workspace_phase2, Add organization SLA, bounded Action, and Exception context.
+INFO  [alembic.runtime.migration] Running upgrade 20260928_operational_workspace_phase2 -> 20260929_operational_monitoring_reliability, Operational monitoring reliability and recoverable evaluation evidence.
+INFO  [alembic.runtime.migration] Running upgrade 20260929_operational_monitoring_reliability -> 20260930_phase3_reference_catalog, Phase 3 P3-01 central reference families and organization activation.
+INFO  [alembic.runtime.migration] Running upgrade 20260930_phase3_reference_catalog -> 20261001_phase3_cargo_lineage, Phase 3 P3-02 Cargo customer/request lineage and semantic quantities.
+INFO  [alembic.runtime.migration] Running upgrade 20261001_phase3_cargo_lineage -> 20261002_phase3_branched_route, Phase 3 P3-03 branched planned route and actual traversal facts.
+INFO  [alembic.runtime.migration] Running upgrade 20261002_phase3_branched_route -> 20261003_phase3_transport_execution, Phase 3 P3-04 route-stage transport execution and immutable history.
+INFO  [alembic.runtime.migration] Running upgrade 20261003_phase3_transport_execution -> 20261004_phase3_cargo_allocation_trace, P3-05 stage-scoped planned/actual allocation with immutable history.
+INFO  [alembic.runtime.migration] Running upgrade 20261004_phase3_cargo_allocation_trace -> 20261005_phase3_contextual_documents, P3-06 exact-version typed document context and explicit audience.
+INFO  [alembic.runtime.migration] Running upgrade 20261005_phase3_contextual_documents -> 20261006_customer_entitlement, DN10 explicit auditable account-to-CRM entitlement, without inferred backfill.
+INFO  [alembic.runtime.migration] Running upgrade 20261006_customer_entitlement -> 20261007_phase3_reported_facts, Typed report context/impacts on the existing OperationalEvent envelope.
+INFO  [alembic.runtime.migration] Running upgrade 20261007_phase3_reported_facts -> 20261008_phase3_cargo_delivery, Real partial delivery facts and DELIVERY context; no inferred backfill.
+INFO  [alembic.runtime.migration] Running upgrade 20261008_phase3_cargo_delivery -> 20261009_phase3_route_time, Empty, additive route reference configuration and explicit plan basis.
+INFO  [alembic.runtime.migration] Running upgrade 20261009_phase3_route_time -> 20261010_phase3_closure, Versioned closure policy and explicit completed-only terminal decisions.
+INFO  [alembic.runtime.migration] Running upgrade 20261010_phase3_closure -> 20261011_phase3_owner_transfer, ADR-069 narrow owner transfer with immutable receipts and role separation.
+INFO  [alembic.runtime.migration] Running upgrade 20261011_phase3_owner_transfer -> 20261012_phase3_cargo_eta, Empty, additive immutable Cargo ETA snapshots and provenance links.
+[startup] DATABASE_URL detected=yes, dialect=postgresql, host=127.0.0.1, database=forwarder_integrated_cert_p3_06_documents_p313_a91668ff
+Applying explicit migration to postgresql://127.0.0.1/forwarder_integrated_cert_p3_06_documents_p313_a91668ff; revision=20261012_phase3_cargo_eta
+Migration completed.

@@ -1,0 +1,45 @@
+{
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "status": "PASS",
+  "backend": {
+    "passed": 1559,
+    "failed": 0,
+    "skipped": 121,
+    "errors": 0,
+    "warnings": 22571
+  },
+  "backend_discovered_and_executed": 1680,
+  "frontend_passed": 446,
+  "frontend_files": 93,
+  "static_gates": 9,
+  "chrome": {
+    "MT3": 4,
+    "P301": 1,
+    "P303": 1,
+    "P306": 2,
+    "P307": 1,
+    "P308": 1,
+    "P309": 2,
+    "P310": 1,
+    "P311": 3,
+    "P312": 1,
+    "P313": 1
+  },
+  "postgresql": {
+    "postgresql.log": 9,
+    "postgresql-regressions.log": 5,
+    "postgresql-public.log": 1
+  },
+  "alembic_head": "20261012_phase3_cargo_eta",
+  "alembic_head_count": 1,
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": false,
+  "p3_14_started": false,
+  "p3_15_started": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false
+}

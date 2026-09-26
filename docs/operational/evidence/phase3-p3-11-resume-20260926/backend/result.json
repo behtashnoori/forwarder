@@ -1,0 +1,46 @@
+{
+  "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+  "status": "PASS",
+  "counts": {
+    "passed": 1559,
+    "failed": 0,
+    "skipped": 121,
+    "errors": 0,
+    "warnings": 22571
+  },
+  "expected_collected_tests": 1680,
+  "executed_testcases": 1680,
+  "groups": [
+    {
+      "group": 1,
+      "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+      "exit_code": 0,
+      "summary": "683 passed, 50 skipped, 9560 warnings",
+      "counts": {
+        "passed": 683,
+        "skipped": 50,
+        "warnings": 9560
+      },
+      "junit_testcases": 733,
+      "status": "PASS"
+    },
+    {
+      "group": 2,
+      "product_sha": "c0e35a7845f9749ec574a3e29ed5ec81ada87979",
+      "exit_code": 0,
+      "summary": "876 passed, 71 skipped, 13011 warnings",
+      "counts": {
+        "passed": 876,
+        "skipped": 71,
+        "warnings": 13011
+      },
+      "junit_testcases": 947,
+      "status": "PASS"
+    }
+  ],
+  "source_unchanged": true,
+  "finished_at": "2026-09-26T18:49:23.456562+00:00",
+  "owned_processes_stopped": true,
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-6c8dff7f83104f88920c912c253bffaf",
+  "temporary_fixtures_retained": true
+}
