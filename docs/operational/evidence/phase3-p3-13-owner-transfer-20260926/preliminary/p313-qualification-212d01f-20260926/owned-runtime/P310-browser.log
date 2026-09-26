@@ -1,0 +1,9 @@
+
+Running 1 test using 1 worker
+
+(node:3928) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/1] e2e\phase3-route-time.spec.ts:34:1 › P3-10 normal Admin reference → Expert pinned basis → future version and new plan
+  1 passed (30.3s)

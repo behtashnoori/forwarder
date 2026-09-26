@@ -1,0 +1,162 @@
+.................FFFF                                                    [100%]
+================================== FAILURES ===================================
+_______ test_sla_background_and_old_and_third_party_work_remain_pinned ________
+backend\tests\test_phase3_owner_transfer.py:224: in test_sla_background_and_old_and_third_party_work_remain_pinned
+    sla.create_rule({"process_type":"ACTION_COMPLETION","name":"Pinned action SLA","duration_minutes":60},_user(app,"verifier"))
+backend\services\organization_sla_service.py:173: in create_rule
+    org = _admin_organization(user)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend\services\organization_sla_service.py:55: in _admin_organization
+    raise OperationalError(
+E   backend.services.operational_service.OperationalError: Organization SLA management requires Organization Admin authority.
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_____ test_closed_transfer_preserves_decision_and_closed_command_boundary _____
+backend\tests\test_phase3_owner_transfer.py:248: in test_closed_transfer_preserves_decision_and_closed_command_boundary
+    preserved=(decision.public_id,decision.actor_user_id,decision.occurred_at,decision.assessment_snapshot)
+                                                                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: 'ClosureDecision' object has no attribute 'assessment_snapshot'
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_______ test_current_list_workspace_tower_and_independent_project_read ________
+backend\tests\test_phase3_owner_transfer.py:266: in test_current_list_workspace_tower_and_independent_project_read
+    assert sid not in str(old.json) and sid in str(new.json)
+E   assert ('6f51b2b7-a9...6192d7517a4e' not in "{'data': {'...total': 0}}}"
+E     
+E     '6f51b2b7-a99d-42bc-b544-6192d7517a4e' is contained here:
+E       otal': 0}}} and '6f51b2b7-a99d-42bc-b544-6192d7517a4e' in "{'data': {'attentionEvaluation': {'checkedAt': '2026-09-26T14:51:43.714851+00:00', 'lastAttemptAt': None, 'lastRun': ...ned': 0}, 'state': 'complete', 'summary': {'attentionCounts': {'followUp': 0, 'review': 0, 'urgent': 0}, 'total': 0}}}")
+E    +  where "{'data': {'attentionEvaluation': {'checkedAt': '2026-09-26T14:51:43.714851+00:00', 'lastAttemptAt': None, 'lastRun': ...ned': 0}, 'state': 'complete', 'summary': {'attentionCounts': {'followUp': 0, 'review': 0, 'urgent': 0}, 'total': 0}}}" = str({'data': {'attentionEvaluation': {'checkedAt': '2026-09-26T14:51:43.714851+00:00', 'lastAttemptAt': None, 'lastRun': N...0c\u0631\u0648\u0632 \u0646\u06cc\u0633\u062a \u0648 \u0627\u06cc\u0646 \u0646\u062a\u06cc\u062c\u0647 \u0627\u062b\u0628\u0627\u062a \u0633\u0644\u0627\u0645\u062a \u0639\u0645\u0644\u06cc\u0627\u062a \u0646\u06cc\u0633\u062a.', 'evaluatedAt': '2026-09-26T14:51:43.596617+00:00', 'items': [], ...}})
+E    +    where {'data': {'attentionEvaluation': {'checkedAt': '2026-09-26T14:51:43.714851+00:00', 'lastAttemptAt': None, 'lastRun': N...0c\u0631\u0648\u0632 \u0646\u06cc\u0633\u062a \u0648 \u0627\u06cc\u0646 \u0646\u062a\u06cc\u062c\u0647 \u0627\u062b\u0628\u0627\u062a \u0633\u0644\u0627\u0645\u062a \u0639\u0645\u0644\u06cc\u0627\u062a \u0646\u06cc\u0633\u062a.', 'evaluatedAt': '2026-09-26T14:51:43.596617+00:00', 'items': [], ...}} = <WrapperTestResponse 1136 bytes [200 OK]>.json
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+________________ test_openapi_routes_and_recursive_allowlists _________________
+backend\tests\test_phase3_owner_transfer.py:284: in test_openapi_routes_and_recursive_allowlists
+    document=yaml.safe_load((Path(__file__).resolve().parents[2]/"docs/openapi/openapi.yaml").read_text(encoding="utf-8"))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\__init__.py:125: in safe_load
+    return load(stream, SafeLoader)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\__init__.py:81: in load
+    return loader.get_single_data()
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\constructor.py:49: in get_single_data
+    node = self.get_single_node()
+           ^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:36: in get_single_node
+    document = self.compose_document()
+               ^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:55: in compose_document
+    node = self.compose_node(None, None)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:84: in compose_node
+    node = self.compose_mapping_node(anchor)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:133: in compose_mapping_node
+    item_value = self.compose_node(node, item_key)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:84: in compose_node
+    node = self.compose_mapping_node(anchor)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:133: in compose_mapping_node
+    item_value = self.compose_node(node, item_key)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:84: in compose_node
+    node = self.compose_mapping_node(anchor)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:133: in compose_mapping_node
+    item_value = self.compose_node(node, item_key)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:84: in compose_node
+    node = self.compose_mapping_node(anchor)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:133: in compose_mapping_node
+    item_value = self.compose_node(node, item_key)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:84: in compose_node
+    node = self.compose_mapping_node(anchor)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:133: in compose_mapping_node
+    item_value = self.compose_node(node, item_key)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+C:\Users\pc\AppData\Local\Programs\Python\Python313\Lib\site-packages\yaml\composer.py:75: in compose_node
+    raise ComposerError("found duplicate anchor %r; first occurrence"
+E   yaml.composer.ComposerError: found duplicate anchor 'id001'; first occurrence
+E     in "<unicode string>", line 518, column 19:
+E                   page: &id001
+E                         ^
+E   second occurrence
+E     in "<unicode string>", line 1991, column 13:
+E               id: &id001
+E                   ^
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+=========================== short test summary info ===========================
+FAILED backend/tests/test_phase3_owner_transfer.py::test_sla_background_and_old_and_third_party_work_remain_pinned
+FAILED backend/tests/test_phase3_owner_transfer.py::test_closed_transfer_preserves_decision_and_closed_command_boundary
+FAILED backend/tests/test_phase3_owner_transfer.py::test_current_list_workspace_tower_and_independent_project_read
+FAILED backend/tests/test_phase3_owner_transfer.py::test_openapi_routes_and_recursive_allowlists
+4 failed, 17 passed, 334 warnings in 32.96s

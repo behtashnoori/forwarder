@@ -10,8 +10,10 @@ is NOT_IMPLEMENTED and remains OPEN_FOR_FUTURE_SPECIFIC_POLICY.
 The same retained mission continues. P3-12 passed exact-source qualification and
 is integrated at `c2e6140d52eda620ecaef6e255bcd591f58da2cb`; its fresh push/fetch
 receipt is retained in [P3-13 entry evidence](evidence/phase3-p3-13-entry-20260926/p312-integration-receipt.json).
-P3-13 is a candidate implementation with preliminary unit, restricted PostgreSQL
-and Chrome proofs; final qualification and integration remain pending. P3-11 stays
+P3-13 passed [exact-source qualification](evidence/phase3-p3-13-owner-transfer-status-20260926.md)
+on Product `c0914906af6675c016d5b77d51ecc8a0c05c0b72`, including genuine restricted
+PostgreSQL LOGIN and current Chrome authorization. Controlled integration/push/fetch
+has a separate exact-SHA receipt. P3-11 stays
 independently pending the Product stop-placement answer. P3-01..10 ancestry remains
 `368cd736cbffce3d62c33336868738d9086e8306`.
 Earlier phase status entries below are historical; no P3-14/P3-15 authority.

@@ -1,0 +1,25 @@
+{
+  "browser_only": false,
+  "results": [
+    {
+      "name": "PostgreSQL 18",
+      "status": "PASS"
+    },
+    {
+      "name": "P3-01 through P3-05 PostgreSQL",
+      "status": "PASS"
+    },
+    {
+      "name": "Public Tracking PostgreSQL",
+      "status": "PASS"
+    }
+  ],
+  "production_accessed": false,
+  "stopped": true,
+  "schema": "20261011_phase3_owner_transfer",
+  "product_sha": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "postgres_only": true,
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p313-owned-675e316bc2384bf786eeb0a0e80550d1",
+  "executed_at_utc": "2026-09-26T15:13:27.0505108Z",
+  "dirty_source": true
+}

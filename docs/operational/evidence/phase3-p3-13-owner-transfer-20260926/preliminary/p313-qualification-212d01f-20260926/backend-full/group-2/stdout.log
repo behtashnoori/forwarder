@@ -1,0 +1,154 @@
+============================= test session starts =============================
+platform win32 -- Python 3.13.9, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\1-webapp\forwarder-dev\phase3-p3-13-owner-transfer
+configfile: pytest.ini
+plugins: anyio-4.14.1, flask-1.3.0
+collected 923 items
+
+backend\tests\test_admin_panel_read_contract.py .sssssss                 [  0%]
+backend\tests\test_adr043_reporting_fail_closed.py .                     [  0%]
+backend\tests\test_alembic_version_table.py ........                     [  1%]
+backend\tests\test_analytics_foundation.py ...........                   [  3%]
+backend\tests\test_architecture_governance.py .                          [  3%]
+backend\tests\test_auth.py ..........                                    [  4%]
+backend\tests\test_border_customs_seed.py .                              [  4%]
+backend\tests\test_cargo_foundation.py .................                 [  6%]
+backend\tests\test_cargo_traceability.py ...                             [  6%]
+backend\tests\test_case_documents.py .................................   [ 10%]
+backend\tests\test_case_documents_migration.py .                         [ 10%]
+backend\tests\test_case_documents_schema_parity.py s                     [ 10%]
+backend\tests\test_control_tower_read_model.py ......................... [ 13%]
+...................................                                      [ 16%]
+backend\tests\test_control_tower_scope.py .............................. [ 20%]
+.......................                                                  [ 22%]
+backend\tests\test_cors.py ..                                            [ 22%]
+backend\tests\test_credential_policy_verifier.py .                       [ 22%]
+backend\tests\test_crm_customer_link_contract.py ....                    [ 23%]
+backend\tests\test_crm_write_contract.py ...                             [ 23%]
+backend\tests\test_customer_entitlement_postgresql.py s                  [ 23%]
+backend\tests\test_customer_portal_account.py ..............             [ 25%]
+backend\tests\test_customer_quote_response.py ....................       [ 27%]
+backend\tests\test_customer_tenant_maintenance.py ....                   [ 27%]
+backend\tests\test_dashboard_openapi_contract.py ..                      [ 28%]
+backend\tests\test_data_integrity_migration_portability.py ..            [ 28%]
+backend\tests\test_document_catalog.py ....                              [ 28%]
+backend\tests\test_event_location_postgresql.py s                        [ 28%]
+backend\tests\test_execution_authority_3a.py ...........                 [ 30%]
+backend\tests\test_expert_assignment_referral_contract.py .............. [ 31%]
+........                                                                 [ 32%]
+backend\tests\test_expert_service_scope.py .....                         [ 32%]
+backend\tests\test_external_operational_references.py ......             [ 33%]
+backend\tests\test_external_reference_type_cli.py ..                     [ 33%]
+backend\tests\test_fe2_races_postgresql.py ssssssssssssss                [ 35%]
+backend\tests\test_fixed_shipment_owner_postgresql.py ssss               [ 35%]
+backend\tests\test_global_logistics_point_adoption_migration.py .        [ 35%]
+backend\tests\test_global_logistics_point_adoptions_postgresql.py s      [ 35%]
+backend\tests\test_global_logistics_point_catalog_v1.py ..s              [ 36%]
+backend\tests\test_global_logistics_point_materialization_migration.py . [ 36%]
+                                                                         [ 36%]
+backend\tests\test_global_logistics_points_postgresql.py s               [ 36%]
+backend\tests\test_health_provinces_transport.py ......                  [ 37%]
+backend\tests\test_international_reference_reconciliation.py .           [ 37%]
+backend\tests\test_iran_destination_point.py ................            [ 39%]
+backend\tests\test_local_sqlite_config.py ...............                [ 40%]
+backend\tests\test_logistics_network.py .......                          [ 41%]
+backend\tests\test_master_data.py .....                                  [ 41%]
+backend\tests\test_mdpm_races_postgresql.py sssssssssssss                [ 43%]
+backend\tests\test_milestone_upgrade_bridge.py .....                     [ 43%]
+backend\tests\test_mt1_ownership_postgresql.py ssss                      [ 44%]
+backend\tests\test_mt1c1_census_foundation.py ......                     [ 44%]
+backend\tests\test_mt1c2_full_surface_postgresql.py ssssss               [ 45%]
+backend\tests\test_mt1c_quarantine_runtime.py .....................      [ 47%]
+backend\tests\test_mt1d_identity_and_census.py ...........               [ 49%]
+backend\tests\test_multi_unit_tracking_postgresql.py s                   [ 49%]
+backend\tests\test_multileg_route_orchestration.py ..................... [ 51%]
+...........................                                              [ 54%]
+backend\tests\test_notification_foundation.py ...                        [ 54%]
+backend\tests\test_notification_lifecycle.py ........                    [ 55%]
+backend\tests\test_notification_lifecycle_postgresql.py ss               [ 55%]
+backend\tests\test_oip_openapi.py .                                      [ 55%]
+backend\tests\test_oip_rebuild_recovery_postgresql.py s                  [ 56%]
+backend\tests\test_operational_reads_3b.py .........................     [ 58%]
+backend\tests\test_operational_vertical_slice.py ....................    [ 60%]
+backend\tests\test_operational_workspace.py ......                       [ 61%]
+backend\tests\test_operational_workspace_phase2_migration.py ...         [ 61%]
+backend\tests\test_organization_hostname_routing.py .........            [ 62%]
+backend\tests\test_parallel_expert_console_migrations.py ...             [ 63%]
+backend\tests\test_phase0_2_current_head_compatibility_postgresql.py ss  [ 63%]
+backend\tests\test_phase1b_full_uat_runner.py ..............             [ 64%]
+backend\tests\test_phase1b_uat_seed.py ........                          [ 65%]
+backend\tests\test_phase3_branched_route_migration.py ..                 [ 65%]
+backend\tests\test_phase3_cargo_allocation.py .......                    [ 66%]
+backend\tests\test_phase3_cargo_allocation_postgresql.py s               [ 66%]
+backend\tests\test_phase3_cargo_delivery_postgresql.py s                 [ 66%]
+backend\tests\test_phase3_cargo_lineage_migration.py ..                  [ 67%]
+backend\tests\test_phase3_closure.py ........................            [ 69%]
+backend\tests\test_phase3_customer_shipment.py ................          [ 71%]
+backend\tests\test_phase3_document_context.py ...                        [ 71%]
+backend\tests\test_phase3_owner_transfer.py .....................        [ 74%]
+backend\tests\test_phase3_reference_catalog.py ....                      [ 74%]
+backend\tests\test_phase3_reported_facts.py .....................        [ 76%]
+backend\tests\test_phase3_route_time.py ...............                  [ 78%]
+backend\tests\test_phase3_transport_execution.py .....                   [ 78%]
+backend\tests\test_phase3_transport_execution_postgresql.py s            [ 79%]
+backend\tests\test_phase_b3_existing_transport_summary.py ..             [ 79%]
+backend\tests\test_phase_b7_private_point_selector_reachability.py ..    [ 79%]
+backend\tests\test_project_aggregate_foundation.py .....                 [ 80%]
+backend\tests\test_project_configuration_openapi.py F                    [ 80%]
+backend\tests\test_public_tracking_security.py ....................      [ 82%]
+backend\tests\test_public_tracking_timeline.py ...........               [ 83%]
+backend\tests\test_quote_communication_postgresql.py ss                  [ 83%]
+backend\tests\test_reference_data_catalog.py .........                   [ 84%]
+backend\tests\test_reference_schema_expansion.py .................       [ 86%]
+backend\tests\test_referral_auto_assign_state_compatibility.py ..sss     [ 87%]
+backend\tests\test_referral_tenant_fencing.py ..........                 [ 88%]
+backend\tests\test_release_postgres_orchestrator.py ...                  [ 88%]
+backend\tests\test_reporter_permission_postgresql.py s                   [ 88%]
+backend\tests\test_request_cargo_migration.py ..                         [ 88%]
+backend\tests\test_route_leg_facility_identity.py ........               [ 89%]
+backend\tests\test_runtime_dependency_contract.py .                      [ 89%]
+backend\tests\test_s4_reporting_oversight.py ...                         [ 90%]
+backend\tests\test_saved_view_dashboard_snapshot.py ...                  [ 90%]
+backend\tests\test_security_config.py ..............                     [ 91%]
+backend\tests\test_semantic_rowset.py ......                             [ 92%]
+backend\tests\test_shared_transport_e2e_audit.py ........                [ 93%]
+backend\tests\test_shipment_document_authorization.py ......             [ 94%]
+backend\tests\test_shipment_list_deduplication_postgresql.py s           [ 94%]
+backend\tests\test_shipment_request_contract.py .........                [ 95%]
+backend\tests\test_shipment_request_update_trigger_migration.py ..       [ 95%]
+backend\tests\test_tenant_architecture_contract.py .........             [ 96%]
+backend\tests\test_token_revocation.py ...                               [ 96%]
+backend\tests\test_tracking_locations_postgresql.py s                    [ 96%]
+backend\tests\test_user_management_contract.py ................          [ 98%]
+backend\tests\test_v191_persistence_foundation.py ............           [ 99%]
+backend\tests\test_version_consistency.py .                              [100%]
+
+================================== FAILURES ===================================
+__________ test_release_180_openapi_runtime_exact_parity_and_schemas __________
+backend\tests\test_project_configuration_openapi.py:71: in test_release_180_openapi_runtime_exact_parity_and_schemas
+    assert not forbidden.search(release_schema_text)
+E   AssertionError: assert not <re.Match object; span=(32188, 32199), match='        id:'>
+E    +  where <re.Match object; span=(32188, 32199), match='        id:'> = <built-in method search of re.Pattern object at 0x0000023117B13490>('    ProjectConfigurationPage:\n      type: object\n      additionalProperties: false\n      required: [page, per_page...ties:\n        public_id:\n          type: string\n          format: uuid\n        created:\n          type: boolean\n')
+E    +    where <built-in method search of re.Pattern object at 0x0000023117B13490> = re.compile('^\\s+(?:id|project_id|service_type_id|document_definition_id|milestone_type_id|project_logistics_point_id):', re.MULTILINE).search
+---------------------------- Captured stdout call -----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+- generated xml file: D:\1-webapp\forwarder-dev\p313-qualification-212d01f-20260926\backend-full\group-2\junit.xml -
+=========================== short test summary info ===========================
+FAILED backend/tests/test_project_configuration_openapi.py::test_release_180_openapi_runtime_exact_parity_and_schemas
+==== 1 failed, 851 passed, 71 skipped, 12554 warnings in 994.44s (0:16:34) ====

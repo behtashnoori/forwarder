@@ -1,0 +1,17 @@
+{
+  "results": [
+    {
+      "name": "P3-13 PostgreSQL",
+      "status": "PASS"
+    }
+  ],
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p313-probe-owned-fb4e677d8ae5431ca1b9d527299d119c",
+  "postgres_only": true,
+  "executed_at_utc": "2026-09-26T13:59:00.7941928Z",
+  "schema": "20261011_phase3_owner_transfer",
+  "browser_only": false,
+  "production_accessed": false,
+  "stopped": true,
+  "product_sha": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "dirty_source": true
+}

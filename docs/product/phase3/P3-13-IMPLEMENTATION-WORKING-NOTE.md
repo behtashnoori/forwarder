@@ -1,6 +1,6 @@
 # P3-13 — bounded exceptional owner transfer
 
-2026-09-26. BUILD=IMPLEMENTED_CANDIDATE; QUALIFICATION=FINAL_NOT_RUN; INTEGRATED=NO.
+2026-09-26. BUILD=IMPLEMENTED; QUALIFICATION=PASS_ON_c091490; INTEGRATION=SEPARATE_CONTROLLED_RECEIPT.
 LPAF v2.7 / rigor C / Astra capability. No runtime model-setting assertion.
 
 ## Product authority and actual entry
@@ -172,3 +172,12 @@ Parsed YAML equality proves the API contract is unchanged; the existing
 test/assertions and all runtime files are unchanged. This failed attempt
 is retained and is not final qualification. A fresh Product source identity
 and all required source-bound gates follow the correction.
+
+## Final exact-source qualification
+
+The candidate and preliminary sections above preserve the build-stage record.
+Product `c0914906af6675c016d5b77d51ecc8a0c05c0b72` now passed all required
+[source-bound gates](../../operational/evidence/phase3-p3-13-owner-transfer-status-20260926.md).
+The evidence-only descendant changes no runtime/test/migration file. Controlled
+canonical integration and push/fetch use a separate exact-SHA receipt. Global
+Product validation remains EVIDENCE_PENDING; no new scope is authorized.

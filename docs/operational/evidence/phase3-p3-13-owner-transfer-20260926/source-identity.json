@@ -1,0 +1,12 @@
+{
+  "product_sha": "c0914906af6675c016d5b77d51ecc8a0c05c0b72",
+  "product_tree": "c30513984d4d723fbfa565297c3973e47b10f439",
+  "parent": "212d01fa19979e520f8ba9d4a5b4cefd9248cb9e",
+  "canonical_base": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "clean": true,
+  "branch": "codex/phase3-p3-13-owner-transfer",
+  "migration_head": "20261011_phase3_owner_transfer",
+  "recorded_at": "2026-09-26T15:52:34.651895+00:00",
+  "final_status": "PASS",
+  "production_accessed": false
+}

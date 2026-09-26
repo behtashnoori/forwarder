@@ -1,0 +1,17 @@
+{
+  "product_sha": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "browser_only": true,
+  "schema": "20261011_phase3_owner_transfer",
+  "dirty_source": true,
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p313-owned-799824550fc84c5aad586d8edc5de543",
+  "executed_at_utc": "2026-09-26T15:05:13.8403819Z",
+  "production_accessed": false,
+  "postgres_only": false,
+  "stopped": true,
+  "results": [
+    {
+      "name": "P313 Chrome",
+      "status": "PASS"
+    }
+  ]
+}
