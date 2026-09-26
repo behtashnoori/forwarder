@@ -5,6 +5,18 @@ Authority: repository implementation plus Accepted ADRs indexed in `ADR-INDEX.md
 
 ## 1. Product architecture principles
 
+P3-09 bounded extension: [ADR-065](../operational/adr/ADR-065-private-customer-shipment-projection.md)
+defines authenticated Customer list/detail as a live allowlisted read of the SAME
+OperationalShipment SOR. Current DN10 grants intersect same-tenant Cargo ownership
+before count/search/order/page; individual source policies govern simplified route,
+scoped reports, safe timeline, exact current documents and own deliveries. Multiple
+grants form a union without merging CRM identities. No copied Shipment, schema or
+duplicate entitlement store. No-store responses and an opaque current authorization
+comparison before browser acceptance reject delayed revoked-scope bodies; lifecycle
+return/refresh clears prior data. Public Tracking retains its separate ADR-052 DTO.
+This enables the private consumer deferred by P3-06..08 and grants no Customer writes.
+Exact-candidate qualification remains a separate gate under the resume authority.
+
 P3-08 bounded extension: [ADR-064](../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) owns immutable CargoDelivery facts and exact-version CargoDeliveryEvidence. Shipment/Cargo/UOM tenant and parent FKs, owner-only serialized commands, expected correction revision and stable idempotency preserve downstream reality without rewriting Cargo quantities or closing Shipment. Partial, remaining and over-known-actual amounts are independent per Cargo; unknown actual remains unknown. DELIVERY extends typed document context through its real Cargo and live DN10; retained evidence never grants a stale file download. Customer capability is projection support only until P3-09. [Exact-Product qualification](../operational/evidence/phase3-p3-08-cargo-delivery-status-20260926.md) passed at `48fa69b70af1bcf06fc5a9783b98fdf54de7a18c`; controlled integration is governed by the mission receipt.
 
 P3-07 bounded extension: [ADR-063](../operational/adr/ADR-063-scoped-reported-facts-and-safe-effects.md) reuses OperationalEvent with a mandatory tenant key, typed Shipment/Stage/Unit/Cargo context, immutable location and correction history. Explicit Cargo impacts feed a separate live-DN10 safe projection; legacy/public tracking excludes this family. No GPS, automatic Exception/Action/SLA or Customer Shipment page is implied. [Exact-Product qualification](../operational/evidence/phase3-p3-07-reported-facts-status-20260925.md) passed; controlled integration is governed by the mission receipt.

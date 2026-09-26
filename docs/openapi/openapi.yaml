@@ -127,6 +127,315 @@ components:
       name: session
       description: Revocable Customer Portal session; not a CRM Customer entitlement.
   schemas:
+    CustomerShipmentIdentity:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - created_at
+      - status
+      - shared_transport
+      properties:
+        public_id: &id003
+          type: string
+          format: uuid
+        created_at: &id004
+          type: string
+          format: date-time
+        status: &id005
+          type: string
+          enum:
+          - planned
+          - in_progress
+          - completed
+          - cancelled
+        shared_transport: &id002
+          type: boolean
+    CustomerShipmentList:
+      type: object
+      additionalProperties: false
+      required:
+      - items
+      - pagination
+      - authorization_revision
+      properties:
+        authorization_revision:
+          type: string
+          description: Opaque live scope comparison; never a grant. Revalidate after body receipt before display.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CustomerShipmentIdentity'
+        pagination:
+          type: object
+          additionalProperties: false
+          required:
+          - page
+          - total
+          - has_prev
+          - has_next
+          properties:
+            page: &id001
+              type: integer
+            total: *id001
+            has_prev: *id002
+            has_next: *id002
+    CustomerShipmentDetail:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - created_at
+      - status
+      - shared_transport
+      - cargo
+      - routes
+      - documents
+      - deliveries
+      - timeline
+      - reported_locations
+      - authorization_revision
+      properties:
+        authorization_revision:
+          type: string
+          description: Opaque live scope comparison; never a grant. Revalidate after body receipt before display.
+        public_id: *id003
+        created_at: *id004
+        status: *id005
+        shared_transport: *id002
+        cargo:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - label
+            - customer_label
+            - type_label
+            - uom_symbol
+            - delivered
+            - public_id
+            - requested
+            - planned
+            - known_actual
+            - remaining
+            - excess
+            - has_delivery
+            properties:
+              label:
+                type: string
+              customer_label:
+                type: string
+              type_label:
+                type: string
+              uom_symbol:
+                type: string
+              delivered:
+                type: string
+              public_id: *id003
+              requested:
+                type: string
+                nullable: true
+              planned:
+                type: string
+                nullable: true
+              known_actual:
+                type: string
+                nullable: true
+              remaining:
+                type: string
+                nullable: true
+              excess:
+                type: string
+                nullable: true
+              has_delivery: *id002
+        routes:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required:
+            - cargo_public_id
+            - legs
+            properties:
+              cargo_public_id: *id003
+              legs:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                  - origin
+                  - destination
+                  - mode
+                  properties:
+                    origin:
+                      type: string
+                      nullable: true
+                    destination:
+                      type: string
+                      nullable: true
+                    mode:
+                      type: string
+                      nullable: true
+        documents:
+          type: object
+          additionalProperties: false
+          required:
+          - items
+          - page
+          - has_prev
+          - has_next
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                - public_id
+                - filename
+                - version
+                - context_type
+                properties:
+                  public_id: *id003
+                  filename:
+                    type: string
+                  version: *id001
+                  context_type:
+                    type: string
+                    enum:
+                    - SHIPMENT
+                    - CARGO
+                    - ROUTE_LEG
+                    - EXECUTION_UNIT
+                    - DELIVERY
+            page: *id001
+            has_prev: *id002
+            has_next: *id002
+        deliveries:
+          type: object
+          additionalProperties: false
+          required:
+          - items
+          - page
+          - has_prev
+          - has_next
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required:
+                - public_id
+                - cargo_public_id
+                - quantity
+                - uom_symbol
+                - destination_text
+                - occurred_at
+                - recorded_at
+                - revision
+                - status
+                - is_correction
+                - evidence
+                properties:
+                  public_id: *id003
+                  cargo_public_id: *id003
+                  quantity:
+                    type: string
+                  uom_symbol:
+                    type: string
+                  destination_text:
+                    type: string
+                  occurred_at: *id004
+                  recorded_at: *id004
+                  revision: *id001
+                  status:
+                    type: string
+                    enum:
+                    - CURRENT
+                    - SUPERSEDED
+                  is_correction: *id002
+                  evidence:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: false
+                      required:
+                      - public_id
+                      - filename
+                      - version
+                      - status
+                      properties:
+                        public_id: *id003
+                        filename:
+                          type: string
+                        version: *id001
+                        status:
+                          type: string
+                          enum:
+                          - active
+            page: *id001
+            has_prev: *id002
+            has_next: *id002
+        timeline:
+          type: object
+          additionalProperties: false
+          required:
+          - items
+          - page
+          - has_prev
+          - has_next
+          properties:
+            items:
+              type: array
+              items: &id006
+                type: object
+                additionalProperties: false
+                required:
+                - public_id
+                - kind
+                - message
+                - occurred_at
+                - recorded_at
+                - source_label
+                - scope_label
+                - reported_location
+                - status
+                - is_correction
+                properties:
+                  public_id: *id003
+                  kind:
+                    type: string
+                    enum:
+                    - LOCATION
+                    - PROGRESS
+                    - TRANSPORT_CHANGE
+                    - EFFECT
+                  message:
+                    type: string
+                  occurred_at: *id004
+                  recorded_at: *id004
+                  source_label:
+                    type: string
+                  scope_label:
+                    type: string
+                  reported_location:
+                    type: string
+                    nullable: true
+                  status:
+                    type: string
+                    enum:
+                    - CURRENT
+                    - SUPERSEDED
+                  is_correction: *id002
+            page: *id001
+            has_prev: *id002
+            has_next: *id002
+        reported_locations:
+          type: array
+          items: *id006
     LogisticsNetworkError:
       type: object
       required: [error]
@@ -4095,3 +4404,107 @@ paths:
         '404': { description: Missing or inaccessible Shipment, Cargo, predecessor or evidence. }
         '409': { description: Changed command replay or stale/already-corrected predecessor. }
         '422': { description: Invalid quantity, UOM, owner, destination, time or payload. }
+
+  /api/customer/shipments/authorization:
+    get:
+      tags: [Customer Gamification]
+      summary: Recheck current session and DN10 scope before accepting a private Shipment response
+      security: [{ customerSession: [] }]
+      responses:
+        '200':
+          description: Private no-store opaque comparison only; no customer identity or count. Not an authorization grant.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [authorization_revision]
+                properties:
+                  authorization_revision: { type: string }
+        '401': { description: Current active Customer session and generation required. }
+  /api/customer/shipments:
+    get:
+      tags:
+      - Customer Gamification
+      summary: List the single Shipment SOR through live DN10 own-Cargo authorization before search, count, sort and page
+      description: A scope change during composition returns 409 with no projection. Browser revalidates authorization_revision before display.
+      security:
+      - customerSession: []
+      parameters:
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+        description: Literal search of own Cargo name or safe Shipment UUID only.
+      responses:
+        '200':
+          description: Current authorized private projection; Cache-Control private, no-store; Vary Cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerShipmentList'
+        '401':
+          description: Current active Customer session and generation required.
+        '422':
+          description: Invalid query.
+        '409': { description: Current authorization changed during projection; discard and reread. }
+  /api/customer/shipments/{shipment_id}:
+    get:
+      tags:
+      - Customer Gamification
+      summary: Allowlisted same-tenant Customer Shipment detail with live own-Cargo facts and independently paginated sections
+      description: No private actor, reason, raw note, other-Customer metadata, public alias, inferred quantities or ETA. Exact
+        current document downloads reauthorize through the existing Customer document endpoint. Latest locations are separate
+        per-scope observations; history page never changes them.
+      security:
+      - customerSession: []
+      parameters:
+      - name: shipment_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: documents_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      - name: deliveries_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      - name: timeline_page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100000
+          default: 1
+      responses:
+        '200':
+          description: Current authorized private projection; Cache-Control private, no-store; Vary Cookie.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerShipmentDetail'
+        '401':
+          description: Current active Customer session and generation required.
+        '404':
+          description: Unknown, unentitled, foreign and revoked Shipment identities share the same non-disclosing response.
+        '422':
+          description: Invalid page.
+        '409': { description: Current authorization changed during projection; discard and reread. }

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 
-from sqlalchemy import func, select
+from sqlalchemy import and_, func, or_, select
 
 from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem, ExecutionUnitCargoAllocation
@@ -279,44 +279,64 @@ def listing(shipment_public_id, user, page=1):
             "options": choices, "can_manage": _can_manage(user, shipment)}
 
 
-def customer_timeline(shipment, account, *, limit=50):
-    """A future private Customer surface may use this; raw envelope stays internal."""
+def customer_timeline(shipment, account, *, limit=50, offset=0, latest_locations=False):
+    """P3-09 private consumer; impact and location gates precede disclosure."""
     allowed = select(ShipmentCargoItem.id).where(ShipmentCargoItem.operational_shipment_id == shipment.id,
         ShipmentCargoItem.cargo_owner_customer_id.in_(authorized_customer_ids(account)))
     if account.operational_organization_id != shipment.organization_id:
         return []
     authorized_impact = select(Impact.operational_event_id).where(
         Impact.operational_event_id == Context.operational_event_id, Impact.cargo_item_id.in_(allowed)).exists()
-    rows = db.session.scalars(_contexts(shipment).where(authorized_impact).order_by(
-        OperationalEvent.occurred_at.desc(), OperationalEvent.recorded_at.desc(), OperationalEvent.id.desc()).limit(min(max(limit, 1), 100))).all()
+    own_ids = set(db.session.scalars(allowed).all())
+    own_units = set(db.session.scalars(select(ExecutionUnitCargoAllocation.execution_unit_id).where(
+        ExecutionUnitCargoAllocation.shipment_cargo_item_id.in_(own_ids),
+        ExecutionUnitCargoAllocation.is_current.is_(True),
+        ExecutionUnitCargoAllocation.dimension == "ACTUAL",
+        ExecutionUnitCargoAllocation.allocated_quantity > 0)).all())
+    relevant_legs = set()
+    leaves = db.session.execute(select(RouteCargoDestination.route_plan_id,
+        RouteCargoDestination.destination_route_leg_id).where(
+            RouteCargoDestination.operational_shipment_id == shipment.id,
+            RouteCargoDestination.shipment_cargo_item_id.in_(own_ids))).all()
+    for plan_id, leg_id in leaves:
+        while leg_id and leg_id not in relevant_legs:
+            leg = db.session.get(RouteLeg, leg_id)
+            if not leg or leg.route_plan_id != plan_id: break
+            relevant_legs.add(leg_id)
+            leg_id = leg.parent_route_leg_id
+    location_gate = or_(Context.scope == "SHIPMENT",
+        and_(Context.scope == "CARGO", Context.cargo_item_id.in_(own_ids)),
+        and_(Context.scope == "EXECUTION_UNIT", Context.execution_unit_id.in_(own_units)),
+        and_(Context.scope == "ROUTE_STAGE", Context.route_leg_id.in_(relevant_legs)))
+    order = (OperationalEvent.occurred_at.desc(), OperationalEvent.recorded_at.desc(), OperationalEvent.id.desc())
+    query = _contexts(shipment).where(authorized_impact)
+    if latest_locations:
+        successors = select(OperationalEvent.supersedes_event_id).join(Context,
+            Context.operational_event_id == OperationalEvent.id).where(
+                Context.organization_id == shipment.organization_id,
+                Context.operational_shipment_id == shipment.id, OperationalEvent.supersedes_event_id.is_not(None))
+        ranked = select(Context.operational_event_id.label("event_id"), func.row_number().over(
+            partition_by=(Context.scope, Context.route_leg_id, Context.execution_unit_id, Context.cargo_item_id),
+            order_by=order).label("position")).join(OperationalEvent, OperationalEvent.id == Context.operational_event_id).where(
+                Context.organization_id == shipment.organization_id, Context.operational_shipment_id == shipment.id,
+                authorized_impact, location_gate, Context.kind == "LOCATION", OperationalEvent.id.not_in(successors)).subquery()
+        query = query.where(Context.operational_event_id.in_(select(ranked.c.event_id).where(ranked.c.position == 1)))
+    rows = db.session.scalars(query.order_by(*order).offset(max(offset, 0)).limit(min(max(limit, 1), 100))).all()
     superseded = set(db.session.scalars(select(OperationalEvent.supersedes_event_id).join(Context,
         Context.operational_event_id == OperationalEvent.id).where(Context.operational_shipment_id == shipment.id,
             OperationalEvent.supersedes_event_id.is_not(None))).all())
-    own_ids = set(db.session.scalars(allowed).all())
     result = []
     for row in rows:
         location_allowed = row.kind == "LOCATION" and (row.scope != "CARGO" or row.cargo_item_id in own_ids)
         if row.scope == "EXECUTION_UNIT":
             # An impact on A does not disclose the location of a unit carrying
             # only B. Current own-cargo participation is a conservative read gate.
-            location_allowed = location_allowed and db.session.scalar(select(ExecutionUnitCargoAllocation.id).where(
-                ExecutionUnitCargoAllocation.execution_unit_id == row.execution_unit_id,
-                ExecutionUnitCargoAllocation.shipment_cargo_item_id.in_(own_ids),
-                ExecutionUnitCargoAllocation.is_current.is_(True),
-                ExecutionUnitCargoAllocation.dimension == "ACTUAL",
-                ExecutionUnitCargoAllocation.allocated_quantity > 0).limit(1)) is not None
+            location_allowed = location_allowed and row.execution_unit_id in own_units
         if row.scope == "ROUTE_STAGE":
             # Only the customer's own destination ancestry is a relevant route.
-            leaves = db.session.scalars(select(RouteCargoDestination.destination_route_leg_id).where(
-                RouteCargoDestination.route_plan_id == row.route_plan_id,
-                RouteCargoDestination.shipment_cargo_item_id.in_(own_ids))).all()
-            relevant = set()
-            for leg_id in leaves:
-                while leg_id and leg_id not in relevant:
-                    relevant.add(leg_id)
-                    leg = db.session.get(RouteLeg, leg_id)
-                    leg_id = leg.parent_route_leg_id if leg else None
-            location_allowed = location_allowed and row.route_leg_id in relevant
+            location_allowed = location_allowed and row.route_leg_id in relevant_legs
+        if latest_locations and not location_allowed:
+            continue
         result.append({"public_id": row.event.public_id, "kind": row.kind,
             "message": row.event.customer_message or (DELAY_MESSAGE if row.customer_effect == "DELAY" else GENERIC_MESSAGE),
             "occurred_at": iso(row.event.occurred_at), "recorded_at": iso(row.event.recorded_at),

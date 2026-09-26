@@ -8,6 +8,7 @@ export default function CustomerPortalLayout({ children, privateNav = false }: {
   const { t } = useI18n();
   return <div className="min-h-screen bg-slate-50"><Header />
     {privateNav && <nav className="border-b bg-white" aria-label={t("customer.portalNavigation")}><div className="mx-auto flex max-w-6xl flex-wrap gap-2 px-4 py-3">
+      <Button asChild variant="ghost" size="sm"><Link to="/customer/shipments">حمل‌های من</Link></Button>
       <Button asChild variant="ghost" size="sm"><Link to="/customer/requests">{t("customer.requests")}</Link></Button>
       <Button asChild variant="ghost" size="sm"><Link to="/customer/documents">اسناد مشترک</Link></Button>
       <Button asChild variant="ghost" size="sm"><Link to="/customer/profile">{t("customer.profile")}</Link></Button>

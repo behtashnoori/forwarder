@@ -98,6 +98,16 @@ including failures and authentication redirects. Download failure invalidates th
 displayed projection. No browser persistent cache is introduced. Loading, empty,
 denied, unknown and retry states remain distinct; mobile layout is required.
 
+The resume review additionally requires a stateless opaque authorization revision:
+current account/session generation plus current DN10 grant UUIDs, with current
+CRM/tenant eligibility applied. It is checked before/after server composition and
+through a fresh private `/authorization` read after body receipt, before browser
+render. A delayed body whose revision differs is discarded and read once again;
+continued changes fail closed. This is a freshness comparison, never a capability
+or a new identity store. No browser event is required to reject that delayed body.
+Already delivered data cannot be retroactively erased by a server; subsequent
+authorization and browser lifecycle invalidation remain the enforcement points.
+
 ## Verification and references
 
 No migration: reuse the actual head above and prove query behavior on PostgreSQL
