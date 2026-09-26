@@ -99,7 +99,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
 
     await page.goto(`/customer/track/${created.tracking_code}`);
     await expect(page.getByRole("heading", { name: created.tracking_code })).toBeVisible();
-    await expect(page.getByText("ثبت شده", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("در انتظار بررسی", { exact: true }).first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("anonymous-intake-public-tracking.png"), fullPage: true });
     expectClean(evidence);
   });
