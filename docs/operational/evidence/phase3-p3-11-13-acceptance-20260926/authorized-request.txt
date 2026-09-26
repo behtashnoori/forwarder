@@ -1,0 +1,811 @@
+این توقف **درست و لازم** بوده. Codex دقیقاً همان‌جایی ایستاده که باید می‌ایستاد: Product تصمیم‌ها را داریم، اما سه تصمیم معماری باید قبل از ساخت رسماً پذیرفته شوند.
+
+من هر سه ADR را بررسی کردم. **ADR-067 را قابل پذیرش می‌دانم، ADR-068 را با یک مرز کوچک قابل پذیرش می‌دانم، و ADR-069 را بدون یک اصلاح امنیتی مهم نباید همان‌طور که هست ACCEPT کنیم.**
+
+### جمع‌بندی بررسی
+
+**ADR-067 — ETA:** طراحی خوب و محافظه‌کارانه است. ETA را Projection مشتق‌شده نگه می‌دارد، SORهای Route/Event را دست نمی‌زند، ambiguity را با «غیرقابل محاسبه» جواب می‌دهد نه عدد ساختگی، Reference Versionها را pin می‌کند و history برآورد را پاک نمی‌کند. برای Cargoهای split هم تا وقتی پیشرفت کل بار قابل اثبات نباشد، ETA ساختگی نمی‌دهد. این دقیقاً همان چیزی است که می‌خواستیم.
+
+تنها ترجیح معماری من این است که materialize شدن snapshot روی یک read معمولی، تبدیل به «نوشتن پنهان روی GET» نشود. اگر لازم است read باعث refresh شود، endpoint/Service contract باید صریحاً آن را به‌عنوان `ensure/refresh estimate` تعریف کند و idempotent باشد. این تغییر Product نیست و blocker هم نیست.
+
+**ADR-068 — Closure:** طراحی‌اش خوب است: `completed` را به `closed` تغییرمعنا نمی‌دهد، policy نسخه‌دار می‌سازد، checklist از SORهای واقعی خوانده می‌شود، Admin exception کمبودها را پاک نمی‌کند و Close شدن Exception/WorkItem را خودکار نمی‌بندد.
+
+فقط یک مرز را باید صریح کنیم:
+
+> **Normal Close فقط از وضعیت `completed` مجاز است.**
+> **Exceptional Admin Close هم در P3-12 فقط از `completed` مجاز باشد.**
+
+یعنی:
+
+```text
+planned      → closed   ❌
+in_progress  → closed   ❌
+cancelled    → closed   ❌
+
+completed
+   ↓
+normal close       ✅ اگر checklist پاس باشد
+
+completed
+   ↓
+exceptional close  ✅ با Admin + دلیل + حفظ missing items
+```
+
+اگر روزی خواستیم مدیر از `in_progress` هم پرونده را ببندد، آن یک تصمیم محصولی جداست. این کار جلوی این را می‌گیرد که «exceptional closure» ناخواسته به یک bypass برای lifecycle تبدیل شود.
+
+### نکته مهم ADR-069
+
+اینجا یک مسئله امنیتی ظریف وجود دارد.
+
+ADR پیشنهاد کرده یک `SECURITY DEFINER` function داشته باشیم که app آن را صدا بزند؛ app role عضو role ویژه نیست و raw update معمولی هم همچنان توسط trigger بسته می‌ماند. 
+
+اما خود ADR هم می‌گوید DB برای اینکه بداند «actor واقعی چه کسی است»، به application service اعتماد می‌کند. 
+
+پس DB می‌تواند ثابت کند:
+
+```text
+actor_id واقعاً Admin فعال همان tenant است ✅
+target واقعاً Expert معتبر همان tenant است ✅
+owner/version درست است ✅
+history ساخته شده ✅
+```
+
+اما اگر application DB role مستقیماً function را صدا بزند و یک `actor_id` معتبر Admin بدهد، خود PostgreSQL راه مستقلی ندارد بفهمد واقعاً درخواست HTTP متعلق به همان Admin بوده یا نه.
+
+بنابراین جمله‌ای مثل:
+
+> «database independently authenticates the Admin»
+
+نباید ادعا شود.
+
+مرز درست این است:
+
+```text
+Application authentication
+        ↓
+binds real user identity
+
+Application authorization
+        ↓
+authorizes TRANSFER_OWNER
+
+PostgreSQL routine
+        ↓
+revalidates structural security:
+tenant
+role eligibility
+current owner
+version
+history chain
+atomicity
+```
+
+یعنی **Authentication/actor binding همچنان مسئولیت Application است** و Database مسئول جلوگیری از تغییر ساختاری owner بدون مسیر رسمی/history است.
+
+این مدل هم قوی است و هم صادقانه.
+
+Raw این همچنان باید fail شود:
+
+```sql
+UPDATE operational_shipment
+SET primary_responsible_expert_id = ...
+```
+
+و history fabrication هم fail شود.
+
+اما نباید در evidence ادعا کنیم که اگر کسی credential معتبر خود app database را کامل در اختیار گرفت، PostgreSQL می‌تواند تشخیص دهد که `actor_id` فرستاده‌شده واقعاً همان کاربر Login شده بوده است. اگر روزی بخواهیم در برابر compromised app DB credential هم این سطح را enforce کنیم، آن دیگر نیازمند یک identity-binding DB mechanism یا credential جداست و **Scope این Phase نیست**.
+
+خود ADR نیز هدفش را حفظ write-once guard و ایجاد فقط یک مسیر استثنایی audited تعریف کرده است، که کاملاً درست است.  و همچنین درست تأکید کرده که WorkItem، Request assignment و DN10 entitlement نباید همراه انتقال owner خودکار تغییر کنند. 
+
+بنابراین دستور درست الان این است؛ این Prompt سه ADR را با همین اصلاحات نهایی می‌کند و **همان مأموریت P3-11 تا P3-13 را ادامه می‌دهد، نه اینکه از اول شروع کند**:
+
+```text
+RECOMMENDED CODEX MODEL:
+GPT-6 Astra — Highest Available Reasoning
+
+GOAL:
+Forwarder — RESOLVE ARCHITECTURE GATE
+ACCEPT ADR-067 / ADR-068 / ADR-069 WITH THE EXPLICIT CLARIFICATIONS BELOW
+THEN RESUME THE EXISTING P3-11 → P3-12 → P3-13 MISSION
+
+MISSION TYPE:
+LPAF v2.7 GOVERNED ARCHITECTURE ACCEPTANCE + RESUME
+
+IMPORTANT:
+
+DO NOT restart the P3-11..13 mission.
+
+DO NOT discard the existing architecture review worktree or review package.
+
+DO NOT begin P3-14/P3-15.
+
+NO PRODUCTION.
+NO DEPLOYMENT.
+NO RELEASE.
+
+The Product Owner has reviewed the architecture review package and explicitly
+authorizes acceptance of ADR-067, ADR-068 and ADR-069 ONLY with the bounded
+clarifications below.
+
+==================================================
+1. VERIFY CURRENT STATE FIRST
+==================================================
+
+Canonical expected:
+
+integration/golden-controlled
+@368cd736cbffce3d62c33336868738d9086e8306
+
+Expected Alembic head:
+
+20261009_phase3_route_time
+
+Expected architecture state:
+
+ADR-067 = PROPOSED
+ADR-068 = PROPOSED
+ADR-069 = PROPOSED
+
+Implementation of P3-11/P3-12/P3-13:
+
+NOT_STARTED because Architecture Gate blocked Build.
+
+Before mutation:
+
+- fetch github;
+- verify canonical local/remote;
+- require 0/0;
+- verify clean canonical;
+- verify one Alembic head;
+- verify P3-01..P3-10 ancestry;
+- locate existing P3-11 architecture-review worktree;
+- preserve all valid architecture review files.
+
+If canonical unexpectedly advanced with runtime/Product/migration work:
+
+STOP.
+
+==================================================
+2. ADR-067 — ACCEPT
+==================================================
+
+ADR-067 architecture direction is APPROVED.
+
+Accept:
+
+Explainable Cargo ETA with immutable calculation snapshots.
+
+Preserve its key decisions:
+
+- operational SORs remain unchanged;
+- Cargo-specific ETA;
+- Customer branch isolation;
+- no arbitrary latest-unit Shipment location;
+- occurred_at is operational basis;
+- recorded_at remains audit/freshness;
+- corrected/superseded source handling;
+- no fake progress;
+- no free-text progress inference;
+- ambiguous whole-Cargo progress → unavailable;
+- remaining route from governed Cargo branch;
+- P3-10 reference versions pinned into ETA snapshot;
+- ETA ranges preserve min/max;
+- no zero/default durations;
+- next and final ETA evaluated independently;
+- explicit bounded missing reasons;
+- immutable ETA history;
+- source fingerprint/provenance;
+- no AI;
+- no GPS;
+- no hidden distance provider;
+- planned distance undefined without governed source;
+- no precise actual-travelled-distance claim without path evidence.
+
+==================================================
+3. ADR-067 READ / MATERIALIZATION CLARIFICATION
+==================================================
+
+Do not create an accidental hidden write side effect behind a generic pure GET
+contract.
+
+If current ETA read needs to materialize/reuse a snapshot:
+
+the application/domain service must expose this semantics explicitly as a
+bounded idempotent:
+
+ENSURE_CURRENT_ETA
+or
+REFRESH_CURRENT_ETA
+
+operation internally.
+
+The public Product API may still present an ordinary ETA read experience, but
+the architecture/documentation must distinguish:
+
+pure historical/read lookup
+
+from:
+
+ensure/recalculate current derived snapshot.
+
+Do not create uncontrolled write-on-read behavior through unrelated list/count
+queries.
+
+This is an architecture clarification only.
+
+It does NOT add a new Product capability.
+
+==================================================
+4. ADR-067 STATUS
+==================================================
+
+After incorporating the clarification:
+
+ADR-067 STATUS=ACCEPTED
+
+Record acceptance date and governing mission.
+
+Do not rewrite historical proposal history.
+
+==================================================
+5. ADR-068 — ACCEPT WITH EXPLICIT PREDECESSOR RULE
+==================================================
+
+ADR-068 direction is APPROVED:
+
+Versioned Closure Checklist
++
+Explicit Shipment Closure
++
+Controlled Organization Admin Exceptional Closure.
+
+Preserve:
+
+ARRIVAL != DELIVERY != COMPLETED != CLOSED
+
+`completed` remains its existing meaning.
+
+Add new explicit:
+
+closed
+
+terminal state.
+
+No existing legacy row is backfilled as closed.
+
+No auto-closure.
+
+No reopen capability.
+
+No generic state machine.
+
+==================================================
+6. P3-12 CLOSURE PREDECESSOR — PRODUCT DECISION
+==================================================
+
+The Product Owner explicitly resolves the predecessor boundary:
+
+NORMAL CLOSURE:
+
+completed
+→ closed
+
+ONLY.
+
+EXCEPTIONAL ORGANIZATION ADMIN CLOSURE:
+
+completed
+→ closed
+
+ONLY.
+
+Therefore during P3-12:
+
+planned → closed = NOT AUTHORIZED
+
+in_progress → closed = NOT AUTHORIZED
+
+cancelled → closed = NOT AUTHORIZED
+
+Exceptional closure bypasses mandatory CHECKLIST failures.
+
+It does NOT bypass Shipment lifecycle progression.
+
+If a future Product requirement needs Admin closure directly from
+in_progress/planned/cancelled:
+
+that requires a new Product decision outside P3-12.
+
+==================================================
+7. ADR-068 CHECKLIST DECISION REMAINS
+==================================================
+
+Preserve ADR-068:
+
+- Organization Admin owns policy;
+- policy/version/effective date;
+- GENERAL + applicable mode-specific criteria;
+- explicit stable criterion families;
+- no executable arbitrary expressions;
+- no SQL/rule scripting/EAV;
+- no automatic checklist seed;
+- missing policy = governed closure unavailable;
+- mandatory failure blocks normal Expert close;
+- Admin exceptional closure requires mandatory reason;
+- missing/unknown facts remain preserved;
+- closure does not auto-resolve Exception;
+- closure does not auto-complete WorkItem;
+- closure does not close SLA;
+- closure does not fabricate delivery/document facts;
+- policy version pinned into ClosureDecision;
+- stale assessment is never authority;
+- commit re-evaluates current facts.
+
+HS Code remains outside universal closure.
+
+Record:
+
+DN05_GENERAL_CLOSURE_RULE=NOT_IMPLEMENTED
+DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY
+
+==================================================
+8. POST-CLOSURE MATRIX
+==================================================
+
+ADR-068 already requires command-level post-closure review.
+
+Before P3-12 integration, produce an explicit matrix:
+
+COMMAND
+→ ALLOWED_AFTER_CLOSED
+→ DENIED_AFTER_CLOSED
+→ AUTHORITY
+→ REASON
+
+Do not use one blanket middleware rule.
+
+Preserve explicitly approved correction/history behavior where applicable.
+
+Any command with genuinely undefined post-closure Product meaning:
+
+classify as DECISION_NEEDED for that narrow command.
+
+Do not silently decide it.
+
+==================================================
+9. ADR-068 STATUS
+==================================================
+
+After incorporating the explicit predecessor rule:
+
+ADR-068 STATUS=ACCEPTED
+
+Record:
+
+DN01_CLOSURE_STATUS=RESOLVED_FOR_P3_12
+
+==================================================
+10. ADR-069 — ACCEPT ONLY WITH SECURITY TRUST-BOUNDARY CORRECTION
+==================================================
+
+ADR-069 direction is APPROVED:
+
+Audited Exceptional Shipment Owner Transfer
+with database fencing.
+
+Preserve:
+
+- current owner column remains SOR;
+- ordinary ORM owner assignment remains denied;
+- ordinary raw SQL owner UPDATE remains denied;
+- append-only ShipmentOwnerTransfer history;
+- one explicit same-tenant Organization Admin command;
+- target must be active same-org Transport Expert;
+- reason mandatory;
+- expected owner/version required;
+- idempotency;
+- concurrency serialization;
+- no automatic WorkItem reassignment;
+- no Request reassignment;
+- no Customer entitlement change;
+- new owner gets normal existing owner permissions;
+- old owner loses owner-derived permissions;
+- independent permissions remain independent;
+- document authority follows current owner;
+- transfer Admin gets no document-management grant;
+- Customer receives no internal transfer reason/history.
+
+==================================================
+11. ADR-069 AUTHENTICATION TRUST BOUNDARY
+==================================================
+
+Correct the security wording precisely.
+
+The PostgreSQL SECURITY DEFINER routine does NOT independently authenticate
+the human actor.
+
+The authenticated human identity is bound by the application authentication
+layer.
+
+The application authorization service is responsible for proving:
+
+request actor = authenticated Organization Admin
+
+before invoking the transfer operation.
+
+The database routine independently validates structural/security invariants
+such as:
+
+- supplied actor exists;
+- actor is active;
+- actor is same-tenant Organization Admin;
+- target is valid same-tenant active Transport Expert;
+- Shipment belongs to tenant;
+- expected current owner;
+- expected Shipment version;
+- transfer chain;
+- idempotency identity;
+- immutable transfer history;
+- atomic owner/version transition.
+
+Do NOT claim PostgreSQL can distinguish a malicious caller holding the trusted
+application DB credential from the authenticated Admin whose actor ID was
+supplied, unless an actual independently bound DB identity mechanism exists.
+
+No such new DB identity mechanism is authorized in this slice.
+
+==================================================
+12. ADR-069 DATABASE THREAT MODEL
+==================================================
+
+Explicitly document:
+
+The normal application database credential is part of the trusted application
+service boundary.
+
+P3-13 MUST prove:
+
+DIRECT ORDINARY OWNER UPDATE
+→ DENIED
+
+DIRECT TRANSFER-HISTORY FABRICATION
+→ DENIED
+
+INVALID FUNCTION CALL:
+- foreign tenant Admin
+- inactive Admin
+- invalid target
+- wrong owner
+- stale version
+- invalid chain
+→ DENIED
+
+PUBLIC function execution
+→ DENIED
+
+SET ROLE to privileged function-owner role
+→ DENIED
+
+generic ORM owner assignment
+→ DENIED
+
+However:
+
+compromise of the trusted application service/database credential plus use of
+a structurally valid Admin identity is NOT to be falsely represented as a
+database-authenticated human identity guarantee.
+
+That is outside the current Product threat boundary.
+
+==================================================
+13. SECURITY DEFINER REQUIREMENTS
+==================================================
+
+If the SECURITY DEFINER design remains the accepted technical implementation:
+
+require:
+
+- dedicated NOLOGIN function owner;
+- safe fixed search_path;
+- fully qualified schema/table references;
+- no dynamic SQL;
+- revoke PUBLIC EXECUTE;
+- minimum explicit EXECUTE privilege only;
+- normal app role cannot SET ROLE;
+- normal app role cannot mutate transfer history directly;
+- trigger cannot elevate itself;
+- no session-wide/global bypass;
+- no caller-controlled generic bypass flag;
+- no trigger disable;
+- no bulk owner-update operation.
+
+If repository/database privilege constraints cannot prove this design safely:
+
+STOP P3-13.
+
+Do NOT weaken to a reusable bypass.
+
+Return architecture/security blocker.
+
+==================================================
+14. RAW SQL QUALIFICATION CLAIMS
+==================================================
+
+Tests/evidence must distinguish:
+
+A. Structural DB invariant:
+
+raw ordinary UPDATE owner
+→ DENIED
+
+B. History integrity:
+
+raw transfer-history INSERT/UPDATE/DELETE
+→ DENIED
+
+C. Function misuse with invalid structural authority:
+→ DENIED
+
+D. Authenticated human identity binding:
+→ APPLICATION AUTHORIZATION RESPONSIBILITY
+
+Do not collapse A/B/C/D into one misleading statement such as:
+
+"PostgreSQL independently authorizes the human Admin."
+
+==================================================
+15. ADR-069 STATUS
+==================================================
+
+After the trust-boundary wording is corrected:
+
+ADR-069 STATUS=ACCEPTED
+
+Record:
+
+DN02_OWNER_TRANSFER_PORTION=RESOLVED_FOR_P3_13
+DN09_STATUS=RESOLVED_FOR_P3_13
+
+==================================================
+16. ARCHITECTURE REFERENCE RECONCILIATION
+==================================================
+
+Update only current architecture references:
+
+- ADR status/index;
+- Architecture Handbook if required;
+- Development Gate references;
+- P3-11..13 architecture review package;
+- decision index;
+- current Phase 3 status.
+
+Do NOT rewrite historical proposal evidence.
+
+Expected:
+
+ADR_067=ACCEPTED
+ADR_068=ACCEPTED
+ADR_069=ACCEPTED
+
+ARCHITECTURE_GATE_P3_11_13=PASS
+
+REFERENCE_RECONCILIATION=PASS
+REFERENCE_IMPACT=NONE
+
+==================================================
+17. ACCEPTANCE COMMIT
+==================================================
+
+Create a documentation/architecture-only acceptance commit.
+
+No runtime Product implementation in this commit.
+
+Record exact:
+
+ARCHITECTURE_ACCEPTANCE_HEAD=<full sha>
+
+Verify:
+
+- git diff --check;
+- no runtime files changed;
+- no migration created;
+- no Production access;
+- worktree clean after commit.
+
+==================================================
+18. RESUME ORIGINAL MISSION
+==================================================
+
+ONLY AFTER:
+
+ADR-067=ACCEPTED
+ADR-068=ACCEPTED
+ADR-069=ACCEPTED
+ARCHITECTURE_GATE_P3_11_13=PASS
+
+resume the SAME retained P3-11 → P3-12 → P3-13 implementation mission.
+
+Do NOT invent a new Product mission.
+
+All Product decisions in the retained P3-11..13 mission remain governing.
+
+==================================================
+19. P3-11 IMPLEMENT
+==================================================
+
+Implement:
+
+P3-11 Explainable ETA
+
+according to:
+
+- retained Product mission;
+- ACCEPTED ADR-067;
+- clarifications above.
+
+Then:
+
+qualification
+→ evidence
+→ reference reconciliation
+→ controlled canonical integration
+→ github push
+→ fetch
+→ 0/0.
+
+==================================================
+20. P3-12 IMPLEMENT
+==================================================
+
+Start from actual current canonical after P3-11 if P3-11 integrated, or from
+current canonical if P3-11 independently blocked.
+
+Implement:
+
+P3-12 Closure
+
+according to:
+
+- retained Product mission;
+- ACCEPTED ADR-068;
+- completed→closed predecessor boundary.
+
+Then:
+
+qualification
+→ evidence
+→ canonical integration
+→ push/fetch
+→ 0/0.
+
+==================================================
+21. P3-13 IMPLEMENT
+==================================================
+
+Start from actual current canonical after previous attempted slices.
+
+Implement:
+
+P3-13 Owner Transfer
+
+according to:
+
+- retained Product mission;
+- ACCEPTED ADR-069;
+- corrected security trust boundary.
+
+Do not weaken database fencing merely to make tests pass.
+
+Then:
+
+qualification
+→ evidence
+→ canonical integration
+→ push/fetch
+→ 0/0.
+
+==================================================
+22. INDEPENDENT-SLICE RULE
+==================================================
+
+Preserve the retained mission rule:
+
+If P3-11 blocks:
+
+P3-12 and P3-13 MAY still continue if their own dependencies and current
+canonical state are valid.
+
+If P3-12 blocks:
+
+P3-13 MAY continue.
+
+Do not create migration branches.
+
+Each slice starts from actual current canonical.
+
+==================================================
+23. PRODUCTION BOUNDARY
+==================================================
+
+ABSOLUTELY NO:
+
+Production access
+Production data
+Production DB
+Production credential
+Production migration
+deployment
+release.
+
+==================================================
+24. HARD STOP
+==================================================
+
+After all possible P3-11/P3-12/P3-13 work:
+
+STOP.
+
+DO NOT START:
+
+P3-14
+P3-15
+Integrated Journey global qualification
+Human Product Walkthrough
+Release.
+
+==================================================
+25. FINAL REPORT — SIMPLE PERSIAN
+==================================================
+
+First report Architecture Gate:
+
+1. ADR-067 چه تغییری در وضعیت داشت؟
+2. read/materialization clarification چگونه ثبت شد؟
+3. ADR-068 چه تغییری در وضعیت داشت؟
+4. completed→closed rule چگونه ثبت شد؟
+5. ADR-069 چه تغییری در وضعیت داشت؟
+6. Application auth vs DB structural validation چگونه تفکیک شد؟
+7. architecture acceptance SHA چیست؟
+
+Then report P3-11/P3-12/P3-13 exactly according to the retained mission's
+required report.
+
+Explicitly state:
+
+- integrated slices;
+- blocked slices;
+- Product/Evidence SHAs;
+- migrations;
+- final canonical;
+- local/remote alignment;
+- Alembic head;
+- P3-14 started? NO;
+- Global Product Validation;
+- Human Walkthrough;
+- Release Ready;
+- Production untouched.
+
+==================================================
+26. FINAL VERDICT
+==================================================
+
+If Architecture Gate passes and all 3 slices integrate:
+
+PASS — ADR-067/068/069 ACCEPTED AND P3-11 THROUGH P3-13 INTEGRATED
+
+If Architecture Gate passes but only some slices integrate:
+
+PARTIAL PASS — ARCHITECTURE ACCEPTED — <slice results>
+
+If an ADR cannot safely be accepted after these clarifications:
+
+BLOCKED — ARCHITECTURE ACCEPTANCE — <specific reason>
+
+If environment interrupts again:
+
+ENVIRONMENT_INTERRUPTION — SAFE STATE PRESERVED
+
+STOP.
+```
+
+با این اصلاح، **سه ADR را می‌توانیم با خیال راحت بپذیریم** و Codex دوباره وارد Build شود. مهم‌ترینش ADR-069 بود؛ اگر همان متن اولیه را بدون تصحیح قبول می‌کردیم، احتمال داشت بعداً در evidence ادعا کنیم «PostgreSQL هویت Admin را مستقلاً تأیید کرده»، در حالی که طراحی فعلی چنین تضمینی نمی‌دهد. این اصلاح معماری را ضعیف نمی‌کند؛ فقط **Trust Boundary را دقیق و قابل دفاع** می‌کند.

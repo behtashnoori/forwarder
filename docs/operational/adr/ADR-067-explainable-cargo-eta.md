@@ -1,11 +1,13 @@
 # ADR-067: Explainable Cargo ETA with immutable calculation snapshots
 
-- Status: PROPOSED
+- Status: ACCEPTED
 - Date: 2026-09-26
 - Owners: Architecture; Operational Shipment/Route; Security; Data
 - Affected domain: derived ETA, temporal provenance, Customer projection
 - Product authority: [P3-11..13 mission](../../product/phase3/P3-11-13-MISSION-AUTHORITY.md), §§3–25 of its retained source
-- Implementation authority: BLOCKED pending acceptance of this named ADR
+- Acceptance date: 2026-09-26
+- Acceptance authority: Product Owner, explicit named acceptance with clarification in the [architecture acceptance mission](../../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md)
+- Implementation authority: bounded P3-11 implementation authorized; qualification and controlled integration gates remain mandatory
 
 ## Context
 
@@ -30,7 +32,7 @@ inventing progress, mixing Customer branches or rewriting source/reference histo
 DN04 is already resolved. The new snapshot boundary and temporal input contract
 require architecture acceptance before Build.
 
-## Decision proposed
+## Accepted decision
 
 1. Keep all source SORs unchanged. Add a tenant/Shipment/Cargo-owned derived
    `CargoEtaSnapshot` and relational input references. A snapshot stores route
@@ -77,8 +79,15 @@ require architecture acceptance before Build.
    makes that estimate unavailable. No new hold input model is included here.
 8. Compute on consistent source reads, using the existing aggregate lock order
    for source mutations and a single per-Cargo projection serialization point.
-   Fresh authorized reads may materialize a system-derived snapshot; they cannot
-   accept client-supplied results, durations, anchors or grants. Source fingerprint
+   The application/domain service explicitly exposes idempotent
+   `ENSURE_CURRENT_ETA` (or `REFRESH_CURRENT_ETA`) for compare-and-append of a
+   current derived snapshot. Historical/read lookup remains pure. The public
+   Product may present an ordinary ETA read experience, but its endpoint/service
+   contract must declare when it invokes ensure/recalculate; a generic pure GET
+   must not silently acquire write semantics. Unrelated list/count queries must
+   never trigger materialization. This is an internal architecture clarification,
+   not a new Product capability or mandatory user action. Ensure cannot accept
+   client-supplied results, durations, anchors or grants. Source fingerprint
    equality reuses the current snapshot; an A→B→A sequence appends the return to A
    rather than erasing the meaningful intervening B. Concurrent identical reads
    converge through compare-and-append under the lock. Recheck source identity and
@@ -151,7 +160,7 @@ regressions plus all common exact-source gates from the mission record.
 
 ## Supersedes / superseded by
 
-Supersedes: none while PROPOSED. Upon acceptance extends ADR-004/005/006/010/016,
+Supersedes: none. Extends ADR-004/005/006/010/016,
 ADR-029/058/063/065/066 only for this derived consumer. Existing source meaning,
 OIP health and authorization remain unchanged. Superseded by: none.
 
@@ -159,3 +168,8 @@ OIP health and authorization remain unchanged. Superseded by: none.
 
 2026-09-26: PROPOSED for named architecture acceptance. Build and qualification
 NOT_RUN; Product Owner DN04 decision retained as already resolved.
+
+2026-09-26: ACCEPTED by the Product Owner's named acceptance/resume mission,
+with explicit idempotent ensure versus pure historical/read lookup semantics.
+Original proposal evidence remains at review commit
+`081f73a3d84c6aa6136e7f1fd4268f57bac497cf`; acceptance does not claim implementation.

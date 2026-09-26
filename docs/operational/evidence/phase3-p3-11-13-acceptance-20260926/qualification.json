@@ -1,0 +1,33 @@
+{
+  "checks": {
+    "documentation_only": "PASS",
+    "no_new_migration": "PASS",
+    "relative_links": "PASS",
+    "named_adr_status": "PASS",
+    "historical_entry_evidence_unchanged": "PASS",
+    "diff_check": "PASS"
+  },
+  "architecture_gate": "PASS",
+  "reference_reconciliation": "PASS",
+  "remaining_reference_impact": "NONE",
+  "product_tests": "NOT_RUN",
+  "browser": "NOT_RUN",
+  "database_migration": "NOT_RUN",
+  "production_accessed": false,
+  "changed_paths": [
+    "docs/architecture/ADR-INDEX.md",
+    "docs/architecture/CODEX-DEVELOPMENT-GATE.md",
+    "docs/architecture/FORWARDER-ARCHITECTURE-BASELINE.md",
+    "docs/operational/adr/ADR-067-explainable-cargo-eta.md",
+    "docs/operational/adr/ADR-068-controlled-shipment-closure.md",
+    "docs/operational/adr/ADR-069-exceptional-shipment-owner-transfer.md",
+    "docs/operational/decision-index.md",
+    "docs/product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md",
+    "docs/product/phase3/P3-11-13-ARCHITECTURE-REVIEW-FA.md",
+    "docs/product/phase3/P3-11-13-MISSION-AUTHORITY.md",
+    "docs/operational/evidence/phase3-p3-11-13-acceptance-20260926/.gitattributes",
+    "docs/operational/evidence/phase3-p3-11-13-acceptance-20260926/authorized-request.txt",
+    "docs/operational/evidence/phase3-p3-11-13-acceptance-20260926/preflight.json",
+    "docs/product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md"
+  ]
+}

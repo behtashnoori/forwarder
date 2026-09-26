@@ -50,3 +50,12 @@ Every completion report must include:
 ## Failure behavior
 
 A missing decision, uncertain tenant owner, ambiguous timestamp, disputed canonical model, or Proposed-only ADR is a governance blocker—not permission to choose a convenient implementation.
+
+## P3-11..13 named architecture gate disposition — 2026-09-26
+
+The Product Owner explicitly accepted ADR-067/068/069 with the bounded
+[acceptance/resume clarifications](../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md).
+Their named gate is PASS; all unrelated architecture changes still follow this
+gate. Pure ETA lookup versus idempotent ensure, completed-only closure (including
+Admin exception), and application actor binding versus DB structural validation
+are mandatory. Acceptance does not substitute for security or Product evidence.

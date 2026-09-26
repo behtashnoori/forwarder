@@ -1,5 +1,10 @@
 # بستهٔ پذیرش معماری P3-11 تا P3-13
 
+> Current disposition, 2026-09-26: ADR-067/068/069 are ACCEPTED with the explicit
+> [acceptance clarifications](P3-11-13-ARCHITECTURE-ACCEPTANCE.md). Architecture gate PASS.
+> The remainder is the preserved historical proposal review at `081f73a`; its
+> BLOCKED/PROPOSED statements describe that earlier state, not the current gate.
+
 تاریخ: ۲۰۲۶-۰۹-۲۶. نتیجهٔ فعلی: **BLOCKED — P3-11 THROUGH P3-13 — NAMED ADR ACCEPTANCE REQUIRED**.
 
 تصمیم‌های محصولِ درخواست شما ثبت شده و دوباره باز نشده‌اند. مانع فعلی، پذیرش

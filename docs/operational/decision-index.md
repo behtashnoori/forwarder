@@ -1,6 +1,17 @@
 # Architecture and Governance Decision Index
 
-## Current Product contract references
+## Current P3-11..13 architecture disposition — 2026-09-26
+
+[Acceptance/resume record](../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md):
+ADR-067=ACCEPTED; ADR-068=ACCEPTED; ADR-069=ACCEPTED;
+ARCHITECTURE_GATE_P3_11_13=PASS. DN01 closure resolved for completed-only P3-12;
+DN02 owner-transfer portion and DN09 resolved for P3-13. DN05 general HS closure
+is NOT_IMPLEMENTED and remains OPEN_FOR_FUTURE_SPECIFIC_POLICY.
+The same retained mission resumes; runtime implementation and evidence remain
+pending. P3-01..10 ancestry is confirmed at `368cd736cbffce3d62c33336868738d9086e8306`.
+Earlier phase status entries below are historical; no P3-14/P3-15 authority.
+
+## Earlier Product contract reference records
 
 Current mission: [P3-06 through P3-10 authority record](../product/phase3/P3-06-10-MISSION-AUTHORITY.md).
 DN10 is explicitly resolved by the Product Owner and implemented in the current

@@ -1,5 +1,11 @@
 # P3-11 through P3-13 — approved Product scope and architecture entry
 
+> Current architecture disposition (2026-09-26): named ADR-067/068/069 acceptance
+> is recorded in [the acceptance/resume addendum](P3-11-13-ARCHITECTURE-ACCEPTANCE.md).
+> Architecture gate PASS. The following original entry/gate record is preserved
+> as history; its unresolved named-acceptance statements are superseded only by
+> that addendum. Retained Product scope, evidence gates and exclusions still govern.
+
 Date: 2026-09-26. LPAF v2.7; rigor C; Astra capability need because temporal
 provenance, multi-Customer privacy, terminal state and database authorization
 interact. This records required capability, not a claim that model settings changed.

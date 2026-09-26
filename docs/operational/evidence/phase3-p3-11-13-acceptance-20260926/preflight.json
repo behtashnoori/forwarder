@@ -1,0 +1,72 @@
+{
+  "recorded_at_utc": "2026-09-26T08:58:56.273130+00:00",
+  "canonical_repository": "D:\\1-webapp\\15-forwarder-golden-20260921",
+  "canonical_head": "368cd736cbffce3d62c33336868738d9086e8306",
+  "remote_head": "368cd736cbffce3d62c33336868738d9086e8306",
+  "ahead_behind": [
+    0,
+    0
+  ],
+  "canonical_clean": true,
+  "review_head": "081f73a3d84c6aa6136e7f1fd4268f57bac497cf",
+  "review_clean": true,
+  "alembic_source_heads": [
+    "20261009_phase3_route_time"
+  ],
+  "ancestry": [
+    {
+      "slice": "P3-01",
+      "integrated_lineage_head": "012d1fa1ae9afef902f0fada5ce4e5bf652edfad",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-02",
+      "integrated_lineage_head": "629e6f5a544b7b2824670960d90eb5209d3c594b",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-03",
+      "integrated_lineage_head": "c69c0d3096c29d902a7fad2009d0b8ec2d4bdf68",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-04",
+      "integrated_lineage_head": "3d4564bad7df7a2ec5aade24132c74d9c1ad0015",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-05",
+      "integrated_lineage_head": "bd3610c4016cf643b6243fb0490260ac49a8b92d",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-06",
+      "integrated_lineage_head": "13c0fed2d5971907d93f23860cc5689c7ebe33f8",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-07",
+      "integrated_lineage_head": "682e83ed3a51badb3938d66dbd337e8e10e57797",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-08",
+      "integrated_lineage_head": "6a11c2e02a3103f0bc36129bd12798842b7c39cb",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-09",
+      "integrated_lineage_head": "e102ace12a741716442466d68140f632f1109bff",
+      "is_ancestor": true
+    },
+    {
+      "slice": "P3-10",
+      "integrated_lineage_head": "368cd736cbffce3d62c33336868738d9086e8306",
+      "is_ancestor": true
+    }
+  ],
+  "baseline_manifest_identity_revalidated": true,
+  "request_sha256": "52b94b3ef0795d5bb722e1e02531cd51f3a529e00afb10851e7a67f89e668e50",
+  "database_connected": false,
+  "production_accessed": false
+}

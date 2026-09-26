@@ -1,11 +1,13 @@
 # ADR-068: Versioned closure checklist and explicit Shipment closure
 
-- Status: PROPOSED
+- Status: ACCEPTED
 - Date: 2026-09-26
 - Owners: Architecture; Operational Shipment; Organization policy; Security; Data
 - Affected domain: closure configuration, terminal state, historical decision
 - Product authority: [P3-11..13 mission](../../product/phase3/P3-11-13-MISSION-AUTHORITY.md), retained source §§26–47
-- Implementation authority: BLOCKED pending acceptance of this named ADR
+- Acceptance date: 2026-09-26
+- Acceptance authority: Product Owner, explicit named acceptance and completed-only predecessor decision in the [architecture acceptance mission](../../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md)
+- Implementation authority: bounded P3-12 implementation authorized; qualification and controlled integration gates remain mandatory
 
 ## Context and problem
 
@@ -16,7 +18,7 @@ context and delivery evidence. OperationalException and OperationalWorkItem own
 independent current states. Closure policy and a retained closure decision are
 missing, even though the Product boundary is explicitly approved.
 
-## Decision proposed
+## Accepted decision
 
 1. Add organization-owned ClosurePolicy, append-only ClosurePolicyVersion and
    typed ClosurePolicyCriterion rows, plus Shipment-owned ClosureDecision.
@@ -54,6 +56,11 @@ missing, even though the Product boundary is explicitly approved.
    committed version, policy version, current assessment and missing-fact snapshot.
    Existing arrival, delivery and `completed` remain separate and are never
    backfilled as closed. No reopening route or generic state machine is introduced.
+   Both NORMAL and EXCEPTIONAL closure permit only `completed -> closed`.
+   `planned`, `in_progress`, and `cancelled` cannot close through either command.
+   Exceptional Admin closure bypasses mandatory checklist failures only; it never
+   bypasses lifecycle progression. Any other predecessor requires a future,
+   separate Product Owner decision outside P3-12.
 7. Normal close is an owning-active-Expert command. Exceptional close is a
    same-tenant Organization Admin command with explicit capability and mandatory
    reason. The Admin must review current missing/unknown items. Commit rechecks
@@ -83,6 +90,10 @@ command-level allow/deny matrix with exact authority. If an existing correction
 has no defined post-closure meaning, record that narrow ambiguity and stop only
 its affected design; this proposal does not silently decide it. No Customer
 internal checklist, Admin reason or private missing-item disclosure is added.
+
+The matrix must record COMMAND, ALLOWED_AFTER_CLOSED, DENIED_AFTER_CLOSED,
+AUTHORITY and REASON. A genuinely undefined Product meaning is DECISION_NEEDED
+for that narrow command; it is not an implicit blanket denial or new permission.
 
 ## Security and time
 
@@ -129,9 +140,17 @@ Workspace/Tower, SLA/Exception/Action plus the mission's complete regression gat
 
 ## Supersedes / superseded by and status history
 
-Supersedes none while PROPOSED. Upon acceptance extends ADR-007/010/016/030/054/
+Supersedes none. Extends ADR-007/010/016/030/054/
 061/064 only for explicit closure and policy; it changes neither their historical
 truth nor their independent source lifecycles. Superseded by: none.
 2026-09-26: PROPOSED; named architecture acceptance pending. DN01's bounded
 closure decision and the policy authority are resolved; DN05 remains open only
 for future specific HS policy. No runtime implementation or qualification.
+
+2026-09-26: ACCEPTED by the named acceptance/resume mission with the explicit
+completed-only predecessor for both normal and exceptional closure.
+`DN01_CLOSURE_STATUS=RESOLVED_FOR_P3_12`;
+`DN05_GENERAL_CLOSURE_RULE=NOT_IMPLEMENTED`;
+`DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY`.
+Original proposal evidence is retained at review commit
+`081f73a3d84c6aa6136e7f1fd4268f57bac497cf`.

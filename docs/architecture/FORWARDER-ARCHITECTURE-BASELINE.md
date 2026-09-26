@@ -5,6 +5,22 @@ Authority: repository implementation plus Accepted ADRs indexed in `ADR-INDEX.md
 
 ## 1. Product architecture principles
 
+### Accepted P3-11..13 design extension; implementation pending
+
+[Named acceptance](../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md) accepts
+ADR-067 (Cargo ETA history and explicit idempotent ensure), ADR-068 (versioned
+closure; only completed -> closed for normal and exceptional commands), and
+ADR-069 (audited Admin transfer with application actor binding and DB structural
+fencing). Each keeps its source/tenant/history boundaries. Post-closure commands
+require a specific authority matrix. Database human authentication is not claimed.
+ADR-069 supersedes only ADR-047/050's absolute no-transfer assumptions; creation,
+ordinary ORM/raw owner-write protection and independent Request/WorkItem/DN10
+contracts remain. The later fixed-owner/no-transfer descriptions below record
+implemented canonical behavior until the accepted bounded command is qualified;
+they do not veto the newly accepted exception. No runtime, schema, Product or
+security PASS follows from architecture acceptance.
+
+
 P3-10 bounded extension: [ADR-066](../operational/adr/ADR-066-organization-route-reference-time.md)
 owns immutable organization/endpoint/mode reference keys, append-only effective
 versions with independent movement and stop ranges, and explicit version-pinned

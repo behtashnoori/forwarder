@@ -84,18 +84,19 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 
 ## Usage rules
 
-### P3-11 through P3-13 architecture review — not implementation acceptance
+### P3-11 through P3-13 — accepted architecture, implementation qualification pending
 
 | ADR | Title | Status | Domain | Supersedes / superseded by | Related implementation | Authoritative? |
 | --- | --- | --- | --- | --- | --- | --- |
-| [067](../operational/adr/ADR-067-explainable-cargo-eta.md) | Explainable Cargo ETA and immutable snapshots | PROPOSED | Route / temporal provenance / Customer privacy | none while proposed | P3-11 Build blocked on named ADR acceptance | No |
-| [068](../operational/adr/ADR-068-controlled-shipment-closure.md) | Versioned closure checklist and explicit closure | PROPOSED | Organization policy / Shipment lifecycle | none while proposed | P3-12 Build blocked on named ADR acceptance | No |
-| [069](../operational/adr/ADR-069-exceptional-shipment-owner-transfer.md) | Exceptional owner transfer with database fencing | PROPOSED | Shipment ownership / Security | proposed scoped ADR-047/050 supersession, not active | P3-13 Build blocked on named ADR acceptance | No |
+| [067](../operational/adr/ADR-067-explainable-cargo-eta.md) | Explainable Cargo ETA and immutable snapshots | ACCEPTED | Route / temporal provenance / Customer privacy | additive consumer; source contracts preserved | P3-11 authorized with explicit idempotent ensure/read distinction; NOT_STARTED | Yes; bounded slice |
+| [068](../operational/adr/ADR-068-controlled-shipment-closure.md) | Versioned closure checklist and explicit closure | ACCEPTED | Organization policy / Shipment lifecycle | completed meaning preserved; completed -> closed only | P3-12 authorized, both commands completed-only; NOT_STARTED | Yes; bounded slice |
+| [069](../operational/adr/ADR-069-exceptional-shipment-owner-transfer.md) | Exceptional owner transfer with database fencing | ACCEPTED | Shipment ownership / Security | scoped ADR-047/050 no-transfer supersession; ordinary protection remains | P3-13 authorized, app human binding / DB structural proof separate; NOT_STARTED | Yes; bounded slice |
 
-The [mission authority record](../product/phase3/P3-11-13-MISSION-AUTHORITY.md)
-retains the Product Owner's already-resolved decisions. These proposals neither
-reopen those decisions nor self-accept an architecture change. The existing
-Development Gate and Architecture Baseline §2 still apply.
+[Named acceptance and trust-boundary clarification](../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md)
+opens the architecture gate only. The original proposal commit `081f73a` remains
+historical evidence. Build/security/product/integration gates are not acceptance
+side effects. Prior ADR-047/050 index rows retain implemented historical state;
+ADR-069 is now the bounded design exception to their absolute no-transfer wording.
 
 Current extension: [ADR-062](../operational/adr/ADR-062-explicit-customer-entitlement.md)
 resolves ADR-061's DN10 dependency under the explicit five-stage Product mission.

@@ -1,11 +1,13 @@
 # ADR-069: Audited exceptional Shipment owner transfer with database fencing
 
-- Status: PROPOSED
+- Status: ACCEPTED
 - Date: 2026-09-26
 - Owners: Architecture; Security; Operational Shipment; Data
 - Affected domain: Shipment ownership and current authorization
 - Product authority: [P3-11..13 mission](../../product/phase3/P3-11-13-MISSION-AUTHORITY.md), retained source §§48–69
-- Implementation authority: BLOCKED pending acceptance of this named ADR
+- Acceptance date: 2026-09-26
+- Acceptance authority: Product Owner, explicit named acceptance with corrected security trust boundary in the [architecture acceptance mission](../../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md)
+- Implementation authority: bounded P3-13 implementation authorized; database privilege proof, qualification and controlled integration gates remain mandatory
 
 ## Context and problem
 
@@ -18,7 +20,7 @@ Admin oversight separate from owning-Expert management; ADR-065 keeps Customer
 entitlement independent. The mission approves the exceptional transfer boundary
 and DN09, but no named ADR has yet accepted its database implementation.
 
-## Decision proposed
+## Accepted decision
 
 1. Retain the current owner column and ordinary ORM write prohibition. Add one
    append-only ShipmentOwnerTransfer relation: tenant, Shipment, old/new owner,
@@ -38,16 +40,18 @@ and DN09, but no named ADR has yet accepted its database implementation.
    command returns its recorded result; a different payload conflicts. A→B and
    concurrent A→C cannot both pass the same predecessor/version.
 
-## Proposed database mechanism
+## Accepted database mechanism and trust boundary
 
 Use a narrow PostgreSQL SECURITY DEFINER transfer routine owned by a dedicated
 NOLOGIN role. This is a database execution role, not a new Product persona.
 The normal application role is not its member and cannot SET ROLE to it; PUBLIC
-execution is revoked. The function has a fixed safe search_path, qualified names,
+execution is revoked; grant only minimum explicit EXECUTE to the trusted service
+role. The function has a fixed safe search_path, fully qualified schema/table names,
 no dynamic SQL, no caller-selected actor/tenant authority beyond the authenticated
 service's validated inputs, and no alternate bulk/general owner-update operation.
 
-The routine independently validates same-tenant active Admin and target Expert,
+The routine independently validates structural eligibility of the supplied
+same-tenant active Admin identity and active eligible same-tenant target Expert,
 locks the predecessor row, checks expected owner/version, writes immutable history,
 and updates only the matching owner/version. The owner trigger permits that
 change only under the dedicated function-owner role AND with the matching current
@@ -64,12 +68,38 @@ database password is required by the proposed role separation.
 
 The database routine trusts the already authenticated application service for
 binding session actor identity; it is not a replacement authentication system.
+The normal application database credential is inside that trusted application
+service boundary. Application authentication binds the real human identity;
+application authorization proves the request actor is the authenticated
+Organization Admin authorized for `TRANSFER_OWNER` before invoking the routine.
+PostgreSQL does NOT independently authenticate the human Admin. It validates the
+supplied actor's existence, active membership/role/tenant, target eligibility,
+Shipment tenant, current owner/version, transfer chain, idempotency identity,
+immutable history and atomic owner/version transition. A malicious holder of
+the trusted app DB credential supplying a structurally valid Admin identity is
+not distinguishable from that human request by this routine. No independent DB
+identity-binding mechanism or separate identity credential is authorized here.
 No raw SQL endpoint is introduced. Migration/schema administrators remain trusted
 infrastructure authorities, not ordinary Product actors. Qualification must use a
 restricted application role, not merely a schema-owner connection, and prove
 ordinary owner writes, history fabrication, role switching and function misuse
 fail in their intended boundaries. If role privileges cannot establish this
 boundary, this design fails closed; do not fall back to a shared bypass flag.
+
+Qualification reports these separate guarantees, without collapsing them into
+database authentication of a human:
+
+| Claim | Required evidence |
+| --- | --- |
+| A: structural DB owner invariant | Direct ordinary raw UPDATE of owner and generic ORM assignment denied |
+| B: transfer-history integrity | Direct raw history INSERT/UPDATE/DELETE denied |
+| C: invalid structural routine use | Foreign/inactive Admin, invalid target, wrong owner, stale version and invalid chain denied; PUBLIC EXECUTE and SET ROLE to function owner denied |
+| D: human actor binding | Application authentication and authorization responsibility, proven at the request/service boundary |
+
+Trigger code cannot elevate itself; no global/session bypass, caller-controlled
+generic bypass flag, trigger disabling, dynamic SQL or bulk owner update is allowed.
+If repository/database privileges cannot establish this design, STOP P3-13 with
+an architecture/security blocker; do not weaken the fence to make tests pass.
 
 ## Current access and independent assignments
 
@@ -152,7 +182,7 @@ must pass, alongside P3-06/P3-09/fixed-owner and complete mission regressions.
 
 ## Supersedes / superseded by
 
-None while PROPOSED. Upon acceptance, scoped supersession of ADR-047's absolute
+Scoped supersession of ADR-047's absolute
 no-transfer rule and ADR-050's no-transfer assumption ONLY for this explicit
 exceptional command and current owner-based document authority. Creation, ordinary
 write protection, Request separation, tenant boundaries and immutable history
@@ -164,3 +194,10 @@ Superseded by: none.
 2026-09-26: PROPOSED for named Architecture/Security acceptance. DN02 transfer and
 DN09 are already resolved by the Product Owner. Implementation, privilege proof,
 tests and browser evidence are NOT_RUN, not presumed safe from the proposal.
+
+2026-09-26: ACCEPTED by the named acceptance/resume mission after explicitly
+separating application human authentication/authorization from DB structural
+validation and documenting the trusted app-credential boundary.
+`DN02_OWNER_TRANSFER_PORTION=RESOLVED_FOR_P3_13`;
+`DN09_STATUS=RESOLVED_FOR_P3_13`. Original proposal evidence remains at
+`081f73a3d84c6aa6136e7f1fd4268f57bac497cf`; privilege proof remains required.
