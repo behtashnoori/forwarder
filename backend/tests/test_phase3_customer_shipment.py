@@ -308,9 +308,10 @@ def test_revoke_during_projection_never_returns_pre_revoke_body(operational_app,
 def test_customer_shipment_openapi_exact_route_and_allowlist_contract(operational_app):
     from pathlib import Path
     import yaml
+    import re
     app = operational_app
     document = yaml.safe_load((Path(__file__).resolve().parents[2] / "docs/openapi/openapi.yaml").read_text(encoding="utf-8"))
-    actual = {(rule.rule.replace("<shipment_id>", "{shipment_id}"), method.lower())
+    actual = {(re.sub(r"<(?:(?:string|uuid):)?([^>]+)>", r"{\1}", rule.rule), method.lower())
         for rule in app.url_map.iter_rules() if rule.rule.startswith("/api/customer/shipments")
         for method in rule.methods - {"HEAD", "OPTIONS"}}
     declared = {(path, method) for path, value in document["paths"].items()

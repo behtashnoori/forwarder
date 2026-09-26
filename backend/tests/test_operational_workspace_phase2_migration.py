@@ -170,7 +170,8 @@ def test_phase2_and_reliability_are_the_single_linear_repository_head():
     config = alembic_config("sqlite://")
     script = ScriptDirectory.from_config(config)
     assert script.get_heads() == [REPOSITORY_HEAD]
-    assert script.get_revision(REPOSITORY_HEAD).down_revision == "20261010_phase3_closure"
+    assert script.get_revision(REPOSITORY_HEAD).down_revision == "20261011_phase3_owner_transfer"
+    assert script.get_revision("20261011_phase3_owner_transfer").down_revision == "20261010_phase3_closure"
     assert script.get_revision("20261010_phase3_closure").down_revision == "20261009_phase3_route_time"
     assert script.get_revision("20261009_phase3_route_time").down_revision == "20261008_phase3_cargo_delivery"
     assert script.get_revision("20261008_phase3_cargo_delivery").down_revision == "20261007_phase3_reported_facts"

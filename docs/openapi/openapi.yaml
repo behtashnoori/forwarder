@@ -1720,6 +1720,155 @@ components:
           type: string
           format: uuid
         created: *p313schema004
+    CargoEtaRange:
+      description: Arrival range only. Arrival-point stop affects continuation beyond that point; target stop is excluded. Next and final are independent. Missing required components stay unknown; no elapsed-time proration.
+      type: object
+      additionalProperties: false
+      required:
+      - available
+      - reason
+      - message
+      - target
+      - earliest
+      - latest
+      properties:
+        available:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        target:
+          type: string
+          nullable: true
+        earliest:
+          type: string
+          format: date-time
+          nullable: true
+        latest:
+          type: string
+          format: date-time
+          nullable: true
+    CustomerCargoEta:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - ruleset
+      - sequence
+      - calculated_at
+      - next
+      - final
+      - as_of
+      - recorded_at
+      - basis_label
+      - unquantified_effect
+      - planned_distance
+      properties:
+        public_id: &etaSchema001
+          type: string
+        ruleset: &etaSchema002
+          type: string
+        sequence: &etaSchema003
+          type: integer
+          minimum: 1
+        calculated_at: &etaSchema004
+          type: string
+          format: date-time
+        next: &etaSchema005
+          $ref: '#/components/schemas/CargoEtaRange'
+        final: &etaSchema006
+          $ref: '#/components/schemas/CargoEtaRange'
+        as_of: &etaSchema007
+          type: string
+          format: date-time
+          nullable: true
+        recorded_at: &etaSchema008
+          type: string
+          format: date-time
+          nullable: true
+        basis_label: &etaSchema009
+          type: string
+          nullable: true
+        unquantified_effect: &etaSchema010
+          type: boolean
+        planned_distance: &etaSchema011
+          nullable: true
+          description: 'Always null: no governed planned distance source.'
+        authorization_revision:
+          type: string
+          description: Must match a fresh live Customer authorization revision before
+            display.
+    CustomerCargoEtaHistory:
+      type: object
+      required:
+      - items
+      - page
+      - has_next
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/CustomerCargoEta'
+        page:
+          type: integer
+        has_next:
+          type: boolean
+        authorization_revision:
+          type: string
+    InternalCargoEta:
+      type: object
+      additionalProperties: false
+      required:
+      - public_id
+      - ruleset
+      - sequence
+      - calculated_at
+      - next
+      - final
+      - as_of
+      - recorded_at
+      - basis_label
+      - unquantified_effect
+      - planned_distance
+      - source_fingerprint
+      - provenance
+      properties:
+        public_id: *etaSchema001
+        ruleset: *etaSchema002
+        sequence: *etaSchema003
+        calculated_at: *etaSchema004
+        next: *etaSchema005
+        final: *etaSchema006
+        as_of: *etaSchema007
+        recorded_at: *etaSchema008
+        basis_label: *etaSchema009
+        unquantified_effect: *etaSchema010
+        planned_distance: *etaSchema011
+        source_fingerprint:
+          type: string
+        provenance:
+          type: object
+          additionalProperties: true
+    InternalCargoEtaHistory:
+      type: object
+      required:
+      - items
+      - page
+      - has_next
+      properties:
+        items:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/InternalCargoEta'
+        page:
+          type: integer
+        has_next:
+          type: boolean
     ProjectConfigurationPage:
       type: object
       additionalProperties: false
@@ -2428,155 +2577,6 @@ components:
           type: string
           format: uuid
         created:
-          type: boolean
-    CargoEtaRange:
-      description: Arrival range only. Arrival-point stop affects continuation beyond that point; target stop is excluded. Next and final are independent. Missing required components stay unknown; no elapsed-time proration.
-      type: object
-      additionalProperties: false
-      required:
-      - available
-      - reason
-      - message
-      - target
-      - earliest
-      - latest
-      properties:
-        available:
-          type: boolean
-        reason:
-          type: string
-          nullable: true
-        message:
-          type: string
-          nullable: true
-        target:
-          type: string
-          nullable: true
-        earliest:
-          type: string
-          format: date-time
-          nullable: true
-        latest:
-          type: string
-          format: date-time
-          nullable: true
-    CustomerCargoEta:
-      type: object
-      additionalProperties: false
-      required:
-      - public_id
-      - ruleset
-      - sequence
-      - calculated_at
-      - next
-      - final
-      - as_of
-      - recorded_at
-      - basis_label
-      - unquantified_effect
-      - planned_distance
-      properties:
-        public_id: &etaSchema001
-          type: string
-        ruleset: &etaSchema002
-          type: string
-        sequence: &etaSchema003
-          type: integer
-          minimum: 1
-        calculated_at: &etaSchema004
-          type: string
-          format: date-time
-        next: &etaSchema005
-          $ref: '#/components/schemas/CargoEtaRange'
-        final: &etaSchema006
-          $ref: '#/components/schemas/CargoEtaRange'
-        as_of: &etaSchema007
-          type: string
-          format: date-time
-          nullable: true
-        recorded_at: &etaSchema008
-          type: string
-          format: date-time
-          nullable: true
-        basis_label: &etaSchema009
-          type: string
-          nullable: true
-        unquantified_effect: &etaSchema010
-          type: boolean
-        planned_distance: &etaSchema011
-          nullable: true
-          description: 'Always null: no governed planned distance source.'
-        authorization_revision:
-          type: string
-          description: Must match a fresh live Customer authorization revision before
-            display.
-    CustomerCargoEtaHistory:
-      type: object
-      required:
-      - items
-      - page
-      - has_next
-      properties:
-        items:
-          type: array
-          maxItems: 20
-          items:
-            $ref: '#/components/schemas/CustomerCargoEta'
-        page:
-          type: integer
-        has_next:
-          type: boolean
-        authorization_revision:
-          type: string
-    InternalCargoEta:
-      type: object
-      additionalProperties: false
-      required:
-      - public_id
-      - ruleset
-      - sequence
-      - calculated_at
-      - next
-      - final
-      - as_of
-      - recorded_at
-      - basis_label
-      - unquantified_effect
-      - planned_distance
-      - source_fingerprint
-      - provenance
-      properties:
-        public_id: *etaSchema001
-        ruleset: *etaSchema002
-        sequence: *etaSchema003
-        calculated_at: *etaSchema004
-        next: *etaSchema005
-        final: *etaSchema006
-        as_of: *etaSchema007
-        recorded_at: *etaSchema008
-        basis_label: *etaSchema009
-        unquantified_effect: *etaSchema010
-        planned_distance: *etaSchema011
-        source_fingerprint:
-          type: string
-        provenance:
-          type: object
-          additionalProperties: true
-    InternalCargoEtaHistory:
-      type: object
-      required:
-      - items
-      - page
-      - has_next
-      properties:
-        items:
-          type: array
-          maxItems: 20
-          items:
-            $ref: '#/components/schemas/InternalCargoEta'
-        page:
-          type: integer
-        has_next:
           type: boolean
 paths:
   /api/organization/route-reference-times:
