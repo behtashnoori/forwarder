@@ -135,6 +135,13 @@ try {
     $seedPath = if ($name -eq 'MT3') { 'scripts/uat/seed_mt3_public_tracking_e2e.py' } else { "scripts/uat/seed_phase3_$($journey.seed)_e2e.py" }
     python $seedPath *> (Join-Path $EvidenceDirectory "$name-seed.log")
     Check-Exit "$name synthetic seed"
+    if ($name -eq 'P313') {
+      $runtimeDatabaseUrl = (python scripts/uat/configure_owner_transfer_test_runtime.py).Trim()
+      Check-Exit 'P313 restricted runtime provisioning'
+      $env:DATABASE_URL = $runtimeDatabaseUrl
+      $env:E2E_DATABASE_URL = $runtimeDatabaseUrl
+      @{ actual_login=$true; owner_membership=$false; elevated_runtime=$false; ddl_grants=$false; production_accessed=$false } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $EvidenceDirectory 'P313-runtime-identity.json') -Encoding UTF8
+    }
     $backend = Start-Process -FilePath 'npm.cmd' -ArgumentList 'run','backend' -WorkingDirectory $workspace -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $EvidenceDirectory "$name-backend.log") -RedirectStandardError (Join-Path $EvidenceDirectory "$name-backend-error.log")
     $frontend = Start-Process -FilePath 'npm.cmd' -ArgumentList @('run','dev','--','--host','127.0.0.1','--port',([string]$frontendPort),'--strictPort') -WorkingDirectory $workspace -PassThru -WindowStyle Hidden -RedirectStandardOutput (Join-Path $EvidenceDirectory "$name-frontend.log") -RedirectStandardError (Join-Path $EvidenceDirectory "$name-frontend-error.log")
     Wait-Http "http://127.0.0.1:$backendPort/api/health"
