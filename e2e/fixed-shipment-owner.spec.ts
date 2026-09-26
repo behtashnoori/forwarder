@@ -89,7 +89,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   const evidence = observe(page);
 
   // Journey A: E1 issues Q1, the Customer accepts it, and the governed UI creates S.
-  await login(page, fixture.usernames.e1, /\/expert$/);
+  await login(page, fixture.usernames.e1, /\/operations$/);
   await page.goto(`/expert/requests/${fixture.request_public_id}`);
   await page.getByRole("button", { name: "ثبت قیمت" }).click();
   const quoteDialog = page.getByRole("dialog", { name: "ارسال پیشنهاد" });
@@ -163,7 +163,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await expect(page.getByText(/مسئول فعلی: کارشناس مالک ثابت یک/)).toBeVisible();
 
   // E2 owns the mutable Request only; guessed Shipment and Document mutation stay denied.
-  await login(page, fixture.usernames.e2, /\/expert$/);
+  await login(page, fixture.usernames.e2, /\/operations$/);
   const e2Token = await token(page);
   const e2Shipment = await page.request.get(`/api/operational-shipments/${shipmentId}`, {
     headers: { Authorization: `Bearer ${e2Token}` },
