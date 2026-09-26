@@ -81,7 +81,7 @@ def eligible_cargo(*, execution_public_id: str, user: dict) -> list[dict]:
             shipment = _authorized_shipment(cargo, user)
         except OperationalError:
             continue
-        if cargo.cargo_owner_customer_id is None:
+        if cargo.cargo_owner_customer_id is None or shipment.lifecycle_status == "closed":
             continue
         owner = db.session.get(Customer, cargo.cargo_owner_customer_id)
         if owner and owner.operational_organization_id == organization_id and owner.status == "active":
@@ -105,8 +105,11 @@ def allocate(*, execution_public_id: str, cargo_public_id: str, allocated_quanti
     if not unit or not cargo:
         raise OperationalError("NOT_FOUND", "Execution or cargo not found.", 404)
     shipment = _authorized_shipment(cargo, user)
-    if not authorize_document_management(user, shipment).allowed:
+    if not authorize_document_management(user, shipment, for_update=True).allowed:
         raise OperationalError("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
+    from backend.services import closure_commands as closure_guard
+    closure_guard.deny_new(shipment)
+    closure_guard.unit_new(unit)
     if cargo.cargo_owner_customer_id is None:
         raise OperationalError("CARGO_OWNER_REQUIRED", "Cargo owner is required for a new shared transport allocation.", 422)
     owner = db.session.get(Customer, cargo.cargo_owner_customer_id)
@@ -160,8 +163,11 @@ def release(*, execution_public_id: str, allocation_public_id: str, user: dict) 
     # Re-check source authorization on destructive actions as well.
     cargo = db.session.scalar(select(ShipmentCargoItem).where(ShipmentCargoItem.id == row.shipment_cargo_item_id).with_for_update())
     shipment = _authorized_shipment(cargo, user)
-    if not authorize_document_management(user, shipment).allowed:
+    if not authorize_document_management(user, shipment, for_update=True).allowed:
         raise OperationalError("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
+    from backend.services import closure_commands as closure_guard
+    closure_guard.deny_new(shipment)
+    closure_guard.unit_new(unit)
     before = row.allocated_quantity
     row.is_current = False
     row.version += 1
@@ -231,6 +237,8 @@ def assign_carrier(*, execution_public_id: str, carrier_customer_id: int | None,
     require_permission(user, "execution_unit.update")
     organization_id = organization_for_user(int(user["id"]))
     unit = _unit(execution_public_id, user)
+    from backend.services.closure_commands import unit_new
+    unit_new(unit)
     if carrier_customer_id is None:
         unit.carrier_customer_id = None
         return unit

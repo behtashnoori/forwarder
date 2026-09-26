@@ -28,6 +28,8 @@ from backend.services.operational_service import (
     _lock_idempotency_scope,
 )
 
+from backend.services import closure_commands as closure_guard
+
 STAGES = {"ESTIMATE", "COMMITMENT", "ACTUAL"}
 SIDES = {"REVENUE", "COST"}
 CURRENCIES = {"IRR", "USD", "EUR", "GBP", "AED", "CNY", "TRY"}
@@ -266,6 +268,8 @@ def create_line(shipment_id: str, payload: dict, user: dict) -> dict:
                 409,
             )
         return {"line": serialize_line(existing.line), "replayed": True}
+    effective = _time(payload.get("effective_at"))
+    closure_guard.prior_fact(shipment, effective)
     line = EconomicLine(
         organization_id=shipment.organization_id,
         operational_shipment_id=shipment.id,
@@ -288,7 +292,7 @@ def create_line(shipment_id: str, payload: dict, user: dict) -> dict:
         stage=stage,
         amount=amount,
         currency=currency,
-        effective_at=_time(payload.get("effective_at")),
+        effective_at=effective,
         actor_user_id=user["id"],
         authority=str(payload.get("authority") or "").strip(),
         source_type=str(payload.get("source_type") or "MANUAL"),
@@ -371,13 +375,15 @@ def append_observation(
                 409,
             )
         return {"observation": serialize_observation(existing), "replayed": True}
+    effective = _time(payload.get("effective_at"))
+    closure_guard.prior_fact(shipment, effective)
     row = EconomicObservation(
         organization_id=shipment.organization_id,
         line_id=line.id,
         stage=stage,
         amount=amount,
         currency=currency,
-        effective_at=_time(payload.get("effective_at")),
+        effective_at=effective,
         actor_user_id=user["id"],
         authority=str(payload.get("authority") or "").strip(),
         source_type=str(payload.get("source_type") or "MANUAL"),
@@ -473,6 +479,8 @@ def correct(shipment_id: str, observation_id: str, payload: dict, user: dict) ->
                 409,
             )
         return {"observation": serialize_observation(replay), "replayed": True}
+    effective = _time(payload.get("effective_at"))
+    closure_guard.prior_fact(shipment, effective)
     old.status = "REVERSED" if kind == "REVERSAL" else "SUPERSEDED"
     old.version += 1
     old.line.version += 1
@@ -482,7 +490,7 @@ def correct(shipment_id: str, observation_id: str, payload: dict, user: dict) ->
         stage=old.stage,
         amount=amount,
         currency=currency,
-        effective_at=_time(payload.get("effective_at")),
+        effective_at=effective,
         actor_user_id=user["id"],
         authority=str(payload.get("authority") or "").strip(),
         source_type=str(payload.get("source_type") or "CORRECTION"),

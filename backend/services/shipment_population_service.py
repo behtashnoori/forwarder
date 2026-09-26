@@ -17,7 +17,7 @@ from backend.services.operational_service import OperationalError, organization_
 
 
 VISIBILITY_POLICY = "SHIPMENT_OPERATIONAL_ASSIGNED"
-SUPPORTED_STATUSES = frozenset({"planned", "in_progress", "completed", "cancelled"})
+SUPPORTED_STATUSES = frozenset({"planned", "in_progress", "completed", "cancelled", "closed"})
 
 
 @dataclass(frozen=True)

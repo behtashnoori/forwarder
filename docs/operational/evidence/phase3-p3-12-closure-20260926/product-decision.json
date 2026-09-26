@@ -1,0 +1,19 @@
+{
+  "authority": "Product Owner, explicit reply in the current retained mission",
+  "recorded_date": "2026-09-26",
+  "question": "ماتریس P3-12 آماده شد. پس از «بسته‌شدن»، آیا کارشناس مسئول اجازه دارد گزارش/تحویل دیرثبت‌شده، اصلاح سابقه یا مقدار واقعی، و تکمیل یا اصلاح اسناد را با همان مجوز و تاریخچهٔ فعلی ثبت کند؟ وضعیت closed و تصمیم بستن در هر حال ثابت می‌مانند. طبق بند ۸ درخواست شما و ADR-068، این مرزِ تعریف‌نشده باید تصمیم محصول باشد؛ ماتریس در docs/product/phase3/P3-12-POST-CLOSURE-COMMAND-MATRIX.md ثبت شده است.",
+  "answer": "اصلاح سوابق و ثبت دیرهنگامِ واقعیت‌های قبلی و تکمیل/اصلاح اسناد مجاز باشد؛ عملیات جدید ممنوع.",
+  "decisions": [
+    "P312-LATE-FACTS",
+    "P312-DOCUMENTS"
+  ],
+  "status": "RESOLVED",
+  "preserved": [
+    "existing current authorization",
+    "existing audit history",
+    "terminal closed state",
+    "immutable original ClosureDecision"
+  ],
+  "implementation_matrix": "docs/product/phase3/P3-12-POST-CLOSURE-COMMAND-MATRIX.md",
+  "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3"
+}

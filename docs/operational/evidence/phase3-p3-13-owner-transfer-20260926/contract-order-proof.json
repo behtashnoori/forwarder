@@ -1,0 +1,13 @@
+{
+  "previous_product": "212d01fa19979e520f8ba9d4a5b4cefd9248cb9e",
+  "product_sha": "c0914906af6675c016d5b77d51ecc8a0c05c0b72",
+  "parsed_openapi_equal": true,
+  "runtime_test_migration_files_changed": false,
+  "changed_paths": [
+    "docs/openapi/openapi.yaml",
+    "docs/product/phase3/P3-13-IMPLEMENTATION-WORKING-NOTE.md"
+  ],
+  "before_openapi_sha256": "c1729bc04b186a78c8152808d8e52e055289960eb2d4f6ba93d8daf3e6ab96bb",
+  "after_openapi_sha256": "e17778129be50bec81ae9d73f89e39d0d81a8b4f07e988fa408d6f8455f1fb4c",
+  "correction": "OwnerTransfer schema block moved before ProjectConfigurationPage; existing legacy text-range assertion unchanged."
+}

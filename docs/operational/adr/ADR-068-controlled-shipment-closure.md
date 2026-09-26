@@ -154,3 +154,36 @@ completed-only predecessor for both normal and exceptional closure.
 `DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY`.
 Original proposal evidence is retained at review commit
 `081f73a3d84c6aa6136e7f1fd4268f57bac497cf`.
+
+
+## Accepted post-closure decision and implementation mapping — 2026-09-26
+
+The Product Owner explicitly permits correction of history, late recording of
+prior facts and document completion/correction, and forbids new operations.
+The [current command matrix](../../product/phase3/P3-12-POST-CLOSURE-COMMAND-MATRIX.md)
+records exact entry points, current authorization, prior occurrence cutoff,
+shared-unit parents and unchanged immutable closure history. This resolves the
+post-closure ambiguity; it does not grant reopening or change independent work.
+Four empty additive tables and the terminal/source fences are in
+`20261010_phase3_closure`, parent `20261009_phase3_route_time`. Implementation
+qualification is a separate gate documented in the working note and receipt.
+
+## ADR-016 surface-adoption ledger
+
+| Surface | Authoritative fact | Presentation and preservation |
+| --- | --- | --- |
+| Admin policy validity | aware effective_from; next version derives interval end | shared formatDualCalendarInstant: Gregorian (Jalali), explicit timezone; original UTC unchanged |
+| Shipment decision history | server occurred_at and recorded_at, actor/reason | shared dual-calendar helper; immutable historical assessment remains distinct from current facts |
+| Late ACTUAL allocation input | explicitly entered occurrence instant | labelled prior-fact local input converted to UTC; real recorded time; no guessed historical date |
+
+Policy input reuses the existing device-local to UTC convention. No persisted
+Jalali value, changed ordering, source timestamp, SLA deadline or precision rule.
+
+
+## Exact-source qualification — 2026-09-26
+
+Product `d1574fa137017ac41331cf039117ab9c19e101a3` passes complete backend and
+frontend, PostgreSQL 18 migration/concurrency/immutability, real Chrome and
+static gates. The [source-bound evidence report](../evidence/phase3-p3-12-closure-status-20260926.md)
+retains counts, prior attempts and rollback limits. This slice proof does not
+claim global integrated Product acceptance, Human Walkthrough or release.

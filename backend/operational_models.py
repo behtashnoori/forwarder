@@ -705,7 +705,7 @@ class OperationalShipment(db.Model):
             ondelete="RESTRICT",
         ),
         db.CheckConstraint(
-            "lifecycle_status IN ('planned','in_progress','completed','cancelled')",
+            "lifecycle_status IN ('planned','in_progress','completed','cancelled','closed')",
             name="ck_operational_shipment_status",
         ),
         db.CheckConstraint(
@@ -778,6 +778,27 @@ class OperationalShipment(db.Model):
 def _operational_shipment_owner_is_immutable(_mapper, _connection, target):
     if inspect(target).attrs.primary_responsible_expert_id.history.has_changes():
         raise ValueError("OperationalShipment responsible Expert is immutable")
+    history = inspect(target).attrs.lifecycle_status.history
+    if history.has_changes():
+        prior = _connection.execute(db.select(
+            OperationalShipment.lifecycle_status, OperationalShipment.version
+        ).where(OperationalShipment.id == target.id)).one()
+        if prior.lifecycle_status == "closed" and target.lifecycle_status != "closed":
+            raise ValueError("Closed Shipment cannot be reopened")
+        if target.lifecycle_status == "closed" and prior.lifecycle_status != "closed":
+            from backend.closure_models import ClosureDecision
+            decision = _connection.execute(db.select(ClosureDecision.id).where(
+                ClosureDecision.operational_shipment_id == target.id,
+                ClosureDecision.shipment_version == target.version,
+            )).scalar()
+            if prior.lifecycle_status != "completed" or target.version != prior.version + 1 or decision is None:
+                raise ValueError("Explicit completed-only ClosureDecision required")
+
+
+@event.listens_for(OperationalShipment, "before_insert")
+def _shipment_cannot_start_closed(_mapper, _connection, target):
+    if target.lifecycle_status == "closed":
+        raise ValueError("A Shipment cannot start closed")
 
 
 class RoutePlan(db.Model):

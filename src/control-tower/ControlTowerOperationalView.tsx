@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCurrentAuthorityRefresh } from "@/hooks/useCurrentAuthorityRefresh";
 import { Link } from "react-router";
 import { AlertTriangle, MapPin, RefreshCw, Route, UserRound } from "lucide-react";
 import OperationsNav from "@/components/OperationsNav";
@@ -175,6 +176,9 @@ function Tower({ context }: { context: string }) {
   const [reloadKey, setReloadKey] = useState(0);
   const generation = useRef(0);
   const pendingPage = useRef(false);
+  const refreshAuthority = useCallback(() => { generation.current++; setReloadKey(value => value + 1); }, []);
+  const retireAuthority = useCallback(() => { generation.current++; }, []);
+  useCurrentAuthorityRefresh(refreshAuthority, retireAuthority);
 
   const retire = useCallback((error: unknown, requestGeneration: number) => {
     if (generation.current !== requestGeneration || sessionContext() !== context) return;

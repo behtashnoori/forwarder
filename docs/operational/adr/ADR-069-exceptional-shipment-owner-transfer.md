@@ -201,3 +201,27 @@ validation and documenting the trusted app-credential boundary.
 `DN02_OWNER_TRANSFER_PORTION=RESOLVED_FOR_P3_13`;
 `DN09_STATUS=RESOLVED_FOR_P3_13`. Original proposal evidence remains at
 `081f73a3d84c6aa6136e7f1fd4268f57bac497cf`; privilege proof remains required.
+
+## Implementation candidate record — 2026-09-26
+
+The [P3-13 working note](../../product/phase3/P3-13-IMPLEMENTATION-WORKING-NOTE.md)
+records actual entry from integrated P3-12 `c2e6140`. Migration
+`20261011_phase3_owner_transfer` implements the accepted mechanism;
+`owner_transfer_service` binds live session identity and refuses PostgreSQL
+schema-owner/elevated application runtimes, including TESTING. Preliminary
+restricted LOGIN proofs cover raw/ORM/history denial, privilege misuse, concurrent
+winner and same-command replay, revocation waits, stale cached owner mutation,
+atomic rollback, empty downgrade and populated downgrade denial. Final exact-source
+qualification and controlled integration remain pending; this paragraph grants
+no Product/global validation, Human Walkthrough or Release PASS.
+
+## Final source qualification — 2026-09-26
+
+Product `c0914906af6675c016d5b77d51ecc8a0c05c0b72` passed the
+[complete bounded qualification](../evidence/phase3-p3-13-owner-transfer-status-20260926.md),
+including actual restricted LOGIN, structural misuse/role denial, concurrent
+transfer and revocation waits, immutable history, transaction rollback and
+current browser/document authority. Application human identity binding remains
+distinct from database structural validation. Controlled integration has a
+separate receipt; global Product validation, Human Walkthrough and Release
+remain unclaimed. No prior proposal or preliminary record is rewritten.

@@ -1,0 +1,18 @@
+{
+  "direct_deletion_request_for_this_path": false,
+  "previous_rejection_record": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\cleanup.json",
+  "process_ids": [
+    20200,
+    25472
+  ],
+  "authority": "Retained mission section 74 permits accurate retention of stopped fixtures under host deletion policy. No alternate deletion mechanism or workaround is attempted.",
+  "product_sha": "c0914906af6675c016d5b77d51ecc8a0c05c0b72",
+  "retained_due_to_policy_rejection": true,
+  "checked_at_utc": "2026-09-26T16:29:07.8677733Z",
+  "owned_processes_stopped": true,
+  "automatic_approval_review": "Prior P3-12 and first P3-13 stopped-fixture deletions were rejected as blocked by policy. This same cleanup action is not retried for the final run; no fresh rejection for this path is claimed.",
+  "runtime_removed": false,
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-303d68e1a597428dacaaf0f7fd5d1d7c",
+  "listeners_absent_verified": true,
+  "processes_absent_verified": true
+}

@@ -53,12 +53,15 @@ class CargoError(ValueError):
         self.code = code
 
 
-SHIPMENT_STATUSES = frozenset({"planned", "in_progress", "completed", "cancelled"})
+SHIPMENT_STATUSES = frozenset({"planned", "in_progress", "completed", "cancelled", "closed"})
 ACTIVE_SHIPMENT_STATUSES = frozenset({"planned", "in_progress"})
 
 
 _SPACES = re.compile(r"[\s\u200c]+")
 _DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+from backend.services import closure_commands as closure_guard
 
 
 def normalize_text(value: str) -> str:
@@ -517,7 +520,7 @@ def _require_cargo_mutation(user, shipment):
         operational_service.require_permission(user, "operational_shipment.create")
     except operational_service.OperationalError as exc:
         raise CargoError(exc.message, exc.status, exc.code) from exc
-    decision = authorize_document_management(user, shipment)
+    decision = authorize_document_management(user, shipment, for_update=True)
     if not decision.allowed:
         raise CargoError(
             "Only the owning Transport Expert can change Cargo.",
@@ -1043,6 +1046,10 @@ def delete_allocation(user, shipment, public_id):
 
 def create_shipment_item(user, shipment, data):
     _require_cargo_mutation(user, shipment)
+    try:
+        closure_guard.deny_new(shipment)
+    except operational_service.OperationalError as exc:
+        raise CargoError(exc.message, exc.status, exc.code) from exc
     planned = _decimal(data.get("planned_quantity"), "planned_quantity")
     quantity = _decimal(
         data.get("quantity", planned), "quantity", required=True
@@ -1207,6 +1214,16 @@ def update_shipment_item(user, row, data):
     if shipment is None:
         raise CargoError("shipment not found", 404)
     _require_cargo_mutation(user, shipment)
+    try:
+        closure_guard.current(shipment)
+        db.session.refresh(row)
+        _require_cargo_mutation(user, shipment)
+        if any(field in data and _decimal(data[field], field) != getattr(row, field)
+               for field in ("planned_quantity", "quantity")):
+            closure_guard.deny_new(shipment)
+        closure_guard.correction(shipment, data.get("reason"))
+    except operational_service.OperationalError as exc:
+        raise CargoError(exc.message, exc.status, exc.code) from exc
     reason = data.get("reason")
     if reason is not None and (not isinstance(reason, str) or len(reason.strip()) > 500):
         raise CargoError("reason must be short text", 422)

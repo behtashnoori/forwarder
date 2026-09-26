@@ -1,0 +1,436 @@
+FFFFFFFFFFFFFFFF                                                         [100%]
+================================== FAILURES ===================================
+__ test_transfer_receipt_current_authority_and_independent_work_and_request ___
+backend\tests\test_phase3_owner_transfer.py:44: in test_transfer_receipt_current_authority_and_independent_work_and_request
+    shipment,target,third=setup(app)
+                          ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+__________ test_exact_replay_later_chain_and_immutable_actor_labels ___________
+backend\tests\test_phase3_owner_transfer.py:76: in test_exact_replay_later_chain_and_immutable_actor_labels
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+___________ test_admin_authority_is_live_not_claimed_in_input[user] ___________
+backend\tests\test_phase3_owner_transfer.py:97: in test_admin_authority_is_live_not_claimed_in_input
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_________ test_admin_authority_is_live_not_claimed_in_input[outsider] _________
+backend\tests\test_phase3_owner_transfer.py:97: in test_admin_authority_is_live_not_claimed_in_input
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_________ test_admin_authority_is_live_not_claimed_in_input[platform] _________
+backend\tests\test_phase3_owner_transfer.py:97: in test_admin_authority_is_live_not_claimed_in_input
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_________ test_admin_authority_is_live_not_claimed_in_input[inactive] _________
+backend\tests\test_phase3_owner_transfer.py:97: in test_admin_authority_is_live_not_claimed_in_input
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+________ test_admin_authority_is_live_not_claimed_in_input[duplicate] _________
+backend\tests\test_phase3_owner_transfer.py:97: in test_admin_authority_is_live_not_claimed_in_input
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+________________ test_target_eligibility_is_current[inactive] _________________
+backend\tests\test_phase3_owner_transfer.py:114: in test_target_eligibility_is_current
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_________________ test_target_eligibility_is_current[foreign] _________________
+backend\tests\test_phase3_owner_transfer.py:114: in test_target_eligibility_is_current
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+__________________ test_target_eligibility_is_current[admin] __________________
+backend\tests\test_phase3_owner_transfer.py:114: in test_target_eligibility_is_current
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+________________ test_target_eligibility_is_current[platform] _________________
+backend\tests\test_phase3_owner_transfer.py:114: in test_target_eligibility_is_current
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+______________ test_target_eligibility_is_current[no_membership] ______________
+backend\tests\test_phase3_owner_transfer.py:114: in test_target_eligibility_is_current
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+________________ test_target_eligibility_is_current[duplicate] ________________
+backend\tests\test_phase3_owner_transfer.py:114: in test_target_eligibility_is_current
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_________ test_owner_and_history_orm_prohibition_and_atomic_rollback __________
+backend\tests\test_phase3_owner_transfer.py:131: in test_owner_and_history_orm_prohibition_and_atomic_rollback
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+_________ test_http_binding_payload_no_store_and_post_transfer_access _________
+backend\tests\test_phase3_owner_transfer.py:156: in test_http_binding_payload_no_store_and_post_transfer_access
+    shipment,target,_=setup(app);sid=shipment.public_id;payload=command(shipment,target)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+____________ test_sqlite_adapter_cannot_bypass_a_migrated_database ____________
+backend\tests\test_phase3_owner_transfer.py:171: in test_sqlite_adapter_cannot_bypass_a_migrated_database
+    shipment,target,_=setup(app)
+                      ^^^^^^^^^^
+backend\tests\test_phase3_owner_transfer.py:16: in setup
+    shipment,_ = base.create_shipment(_user(app),_payload(app),str(uuid4()))
+                 ^^^^^^^^^^^^^^^^^^^^
+E   AttributeError: module 'backend.services.operational_service' has no attribute 'create_shipment'. Did you mean: 'create_direct'?
+---------------------------- Captured stdout setup ----------------------------
+[startup] CORS configured.
+CORS Configuration:
+   Environment: testing
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+=========================== short test summary info ===========================
+FAILED backend/tests/test_phase3_owner_transfer.py::test_transfer_receipt_current_authority_and_independent_work_and_request
+FAILED backend/tests/test_phase3_owner_transfer.py::test_exact_replay_later_chain_and_immutable_actor_labels
+FAILED backend/tests/test_phase3_owner_transfer.py::test_admin_authority_is_live_not_claimed_in_input[user]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_admin_authority_is_live_not_claimed_in_input[outsider]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_admin_authority_is_live_not_claimed_in_input[platform]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_admin_authority_is_live_not_claimed_in_input[inactive]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_admin_authority_is_live_not_claimed_in_input[duplicate]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_target_eligibility_is_current[inactive]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_target_eligibility_is_current[foreign]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_target_eligibility_is_current[admin]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_target_eligibility_is_current[platform]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_target_eligibility_is_current[no_membership]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_target_eligibility_is_current[duplicate]
+FAILED backend/tests/test_phase3_owner_transfer.py::test_owner_and_history_orm_prohibition_and_atomic_rollback
+FAILED backend/tests/test_phase3_owner_transfer.py::test_http_binding_payload_no_store_and_post_transfer_access
+FAILED backend/tests/test_phase3_owner_transfer.py::test_sqlite_adapter_cannot_bypass_a_migrated_database
+16 failed, 145 warnings in 5.92s

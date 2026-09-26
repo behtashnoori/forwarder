@@ -8,6 +8,18 @@ from backend.models import Customer, CargoType, UnitOfMeasure
 from backend.services import cargo_service as svc
 
 
+@pytest.fixture(autouse=True)
+def planned_shipment_lock_adapter(monkeypatch):
+    # These pure snapshot/validation tests already replace the session. Closure
+    # authorization, locking and repair boundaries have real-session coverage
+    # in test_phase3_closure; keep this adapter limited to this module.
+    def current(shipment):
+        shipment.lifecycle_status = "planned"
+        return shipment
+    monkeypatch.setattr(svc.closure_guard, "current", current)
+    monkeypatch.setattr(svc.db.session, "refresh", lambda _row: None)
+
+
 @pytest.mark.parametrize(
     ("source", "expected"),
     [

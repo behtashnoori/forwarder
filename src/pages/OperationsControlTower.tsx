@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCurrentAuthorityRefresh } from "@/hooks/useCurrentAuthorityRefresh";
 import { useNavigate } from "react-router";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,21 @@ function SemanticDashboardRuntime({ definition = operationsControlTower, display
   const [registry, setRegistry] = useState<AnalyticsSemanticRegistry>(); const [issues, setIssues] = useState<string[]>([]); const [results, setResults] = useState<Record<string, WidgetResult>>(blank); const [filters, setFilters] = useState({ from:"", to:"", customer:"", project:"" }); const [cycle, setCycle] = useState(0); const [lastRefreshed, setLastRefreshed] = useState<string>(); const [allowed, setAllowed] = useState<boolean>(); const [canManageDashboard, setCanManageDashboard] = useState(false); const cycleRef = useRef(0);
   const clone = async () => { if (cloning || !canManageDashboard) return; setCloning(true); try { const {data} = await cloneSystemDashboard(operationsControlTowerManifest.system_dashboard_id); navigate(`/dashboards/${data.public_id}`); } catch { setIssues(["ایجاد نسخه شخصی ناموفق بود. دوباره تلاش کنید."]); } finally { setCloning(false); } };
   const globalFilters = useMemo<AnalyticsFilter[]>(() => [filters.from || filters.to ? { dimension:"TIME", value:{ ...(filters.from ? {from:filters.from}:{}), ...(filters.to ? {to:filters.to}:{}) } } : null, filters.customer ? {dimension:"CUSTOMER",value:filters.customer}:null, filters.project ? {dimension:"PROJECT",value:filters.project}:null].filter(Boolean) as AnalyticsFilter[], [filters]);
-  useEffect(() => { getOperationalContext().then((item) => { setAllowed(item.data.permissions.includes("operational_shipment.read")); setCanManageDashboard(item.data.permissions.includes("personal_dashboard.manage")); }).catch(() => { setAllowed(false); setCanManageDashboard(false); }); }, []);
+  const authorityGeneration = useRef(0);
+  const retireAuthority = useCallback(() => {authorityGeneration.current++; cycleRef.current++;}, []);
+  const refreshAuthority = useCallback(async () => {
+    const current = ++authorityGeneration.current; cycleRef.current++;
+    setResults(Object.fromEntries(dashboard.widgets.map(widget => [widget.widget_id, {state: "LOADING"}])));
+    try {
+      const item = await getOperationalContext();
+      if (current !== authorityGeneration.current) return;
+      setAllowed(item.data.permissions.includes("operational_shipment.read"));
+      setCanManageDashboard(item.data.permissions.includes("personal_dashboard.manage"));
+      setCycle(value => value + 1);
+    } catch { if (current === authorityGeneration.current) {setAllowed(false); setCanManageDashboard(false);} }
+  }, [dashboard]);
+  useEffect(() => {void refreshAuthority(); return retireAuthority;}, [refreshAuthority, retireAuthority]);
+  useCurrentAuthorityRefresh(refreshAuthority, retireAuthority);
   useEffect(() => { let live = true; getAnalyticsSemanticRegistry().then(({data}) => { if (!live) return; setRegistry(data); setIssues(validateDashboardDefinition(dashboard, data).map((item) => item.message)); }).catch(() => live && setIssues(["دریافت لایه معنایی ممکن نیست."])); return () => { live = false; }; }, [dashboard]);
   useEffect(() => { if (!registry || issues.length || !allowed) return; const current = ++cycleRef.current; setResults(blank()); const queue = [...dashboard.widgets]; const run = async () => { while (queue.length) { const widget = queue.shift()!; const applicable = new Set(dashboard.global_filters.filter((filter) => filter.applicable_widget_ids.includes(widget.widget_id)).map((filter) => filter.dimension_key)); const query = widget.query.query_kind === "ROWSET" ? { query_kind:"ROWSET" as const, semantic_version:widget.query.semantic_version || dashboard.semantic_version, population:widget.query.population, columns:widget.query.columns, filters:[...globalFilters.filter((filter) => applicable.has(filter.dimension)), ...(widget.query.filters || [])], operational_window:widget.query.operational_window, sort:typeof widget.query.sort === "object" ? widget.query.sort : undefined, limit:widget.query.limit } : { metrics:widget.query.metric_keys, dimensions:widget.query.dimension_keys, filters:[...globalFilters.filter((filter) => applicable.has(filter.dimension)), ...(widget.query.filters || [])], time_dimension:widget.query.time_dimension, time_grain:widget.query.time_grain, limit:widget.query.limit }; try { const {data} = await queryAnalytics(query); if (cycleRef.current === current) setResults((old) => ({...old,[widget.widget_id]:{state:data.coverage.some((item) => item.state !== "VALUE") || data.warnings.length ? "PARTIAL_COVERAGE":"VALUE",response:data,receivedAt:new Date().toISOString()}})); } catch (error) { if (cycleRef.current === current) setResults((old) => ({...old,[widget.widget_id]:{state:"ERROR",error:error instanceof Error ? error.message : "Query failed."}})); } } };
     Promise.all(Array.from({length:4}, run)).then(() => current === cycleRef.current && setLastRefreshed(new Date().toISOString())); }, [registry, issues.length, allowed, globalFilters, cycle]);

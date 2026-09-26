@@ -58,7 +58,7 @@ def _text(value: Any, field: str, *, required: bool, maximum: int) -> str | None
 
 
 def _shipment(public_id: str, user: dict[str, Any], *, manage: bool) -> OperationalShipment:
-    shipment = operational_service.scoped_shipment(public_id, user)
+    shipment = operational_service.scoped_shipment(public_id, user, for_update=manage)
     operational_service.require_permission(
         user, "work_item.manage" if manage else "work_item.read"
     )
@@ -158,6 +158,8 @@ def create_action(
     shipment_public_id: str, payload: dict[str, Any], user: dict[str, Any]
 ) -> dict[str, Any]:
     shipment = _shipment(shipment_public_id, user, manage=True)
+    from backend.services.closure_commands import deny_new
+    deny_new(shipment)
     what = _text(payload.get("what"), "what", required=True, maximum=1000)
     expected = _text(
         payload.get("expected_result"),

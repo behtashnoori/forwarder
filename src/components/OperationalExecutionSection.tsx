@@ -9,11 +9,11 @@ import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 const transitions:Record<string,string[]>={PENDING:["READY","BLOCKED","SKIPPED","CANCELLED"],READY:["IN_PROGRESS","SKIPPED","CANCELLED","BLOCKED"],IN_PROGRESS:["COMPLETED","BLOCKED","CANCELLED"],BLOCKED:["READY","CANCELLED"]};
 const message=(e:unknown)=>e instanceof ApiError?(e.status===403?"اطلاعات اجرای عملیات برای این کاربر در دسترس نیست.":e.code==="TRANSITION_READINESS_BLOCKED"?"پیش‌نیازهای این تغییر هنوز تکمیل نشده است.":e.code.startsWith("STALE_")?"اطلاعات تغییر کرده است؛ صفحه را تازه‌سازی کنید.":"دریافت یا ثبت اطلاعات اجرای عملیات ممکن نشد."):"دریافت یا ثبت اطلاعات اجرای عملیات ممکن نشد.";
 
-export default function OperationalExecutionSection({shipmentPublicId,shipmentVersion,readOnly=false}:{shipmentPublicId:string;shipmentVersion:number;readOnly?:boolean}){
+export default function OperationalExecutionSection({shipmentPublicId,shipmentVersion,readOnly=false,closed=false}:{shipmentPublicId:string;shipmentVersion:number;readOnly?:boolean;closed?:boolean}){
   const {businessLabel,locale}=useI18n();
   const tr=(en:string,fa:string)=>document.documentElement.dir==="rtl"?fa:en;
   const [preview,setPreview]=useState<Awaited<ReturnType<typeof getExecutionPreview>>["data"]>(); const [milestones,setMilestones]=useState<ExecutionMilestone[]>([]); const [progress,setProgress]=useState<ExecutionProgress>(); const [events,setEvents]=useState<ExecutionEvent[]>([]); const [permissions,setPermissions]=useState<Set<string>>(new Set()); const [reason,setReason]=useState(""); const [error,setError]=useState(""); const [busy,setBusy]=useState(false);
-  const canManage=!readOnly&&permissions.has("operational_execution.manage");
+  const canManage=!readOnly&&!closed&&permissions.has("operational_execution.manage");
   const canVerify=!readOnly&&permissions.has("operational_event.verify");
   const load=useCallback(async()=>{setError("");const results=await Promise.allSettled([getExecutionPreview(shipmentPublicId),listExecutionMilestones(shipmentPublicId),getExecutionProgress(shipmentPublicId),listExecutionEvents(shipmentPublicId)]);const [p,m,g,e]=results;if(p.status==="fulfilled")setPreview(p.value.data);if(m.status==="fulfilled")setMilestones(m.value.data);if(g.status==="fulfilled")setProgress(g.value.data);if(e.status==="fulfilled")setEvents(e.value.data);const failed=results.find((result):result is PromiseRejectedResult=>result.status==="rejected");if(failed)setError(message(failed.reason))},[shipmentPublicId]);
   useEffect(()=>{void load();getOperationalContext().then(result=>setPermissions(new Set(result.data.permissions))).catch(()=>setPermissions(new Set()))},[load]);

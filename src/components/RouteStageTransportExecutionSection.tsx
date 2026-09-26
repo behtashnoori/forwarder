@@ -163,7 +163,7 @@ function ExecutionCard({
   </article>;
 }
 
-export default function RouteStageTransportExecutionSection({ shipmentId, planId }: { shipmentId: string; planId: number }) {
+export default function RouteStageTransportExecutionSection({ shipmentId, planId, closed = false }: { shipmentId: string; planId: number; closed?: boolean }) {
   const [data, setData] = useState<RouteStageTransportExecutionList>();
   const [options, setOptions] = useState<TransportExecutionOptions>({ means: [], equipment: [], carriers: [] });
   const [pending, setPending] = useState("");
@@ -214,7 +214,7 @@ export default function RouteStageTransportExecutionSection({ shipmentId, planId
         <p className="mt-1 text-sm text-slate-600">{stage.origin.display_name || "مبدأ ثبت نشده"} ← {stage.destination.display_name || "مقصد ثبت نشده"}</p>
         <div className="mt-3 grid gap-3 xl:grid-cols-2">{stage.executions.map((execution) => <ExecutionCard key={execution.public_id} execution={execution} options={options} pending={pending === execution.execution_public_id} canManage={data.can_manage} onRevise={(form) => revise(execution, form)} />)}</div>
         {!stage.executions.length && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">هنوز اجرای حملی برای این بخش ثبت نشده است.</p>}
-        {data.can_manage && data.plan.is_active && <details className="mt-3"><summary className="cursor-pointer font-medium text-blue-700">افزودن اجرای حمل دیگر</summary><ExecutionForm key={`${stage.id}-${stage.executions.length}`} options={options} submitLabel="ثبت اجرای حمل" pending={pending === `create-${stage.id}`} onSubmit={(form) => create(stage.id, form)} /></details>}
+        {!closed && data.can_manage && data.plan.is_active && <details className="mt-3"><summary className="cursor-pointer font-medium text-blue-700">افزودن اجرای حمل دیگر</summary><ExecutionForm key={`${stage.id}-${stage.executions.length}`} options={options} submitLabel="ثبت اجرای حمل" pending={pending === `create-${stage.id}`} onSubmit={(form) => create(stage.id, form)} /></details>}
       </section>)}
     </CardContent>
   </Card>;

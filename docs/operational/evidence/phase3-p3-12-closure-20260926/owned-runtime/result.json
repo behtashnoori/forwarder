@@ -1,0 +1,57 @@
+{
+  "schema": "20261010_phase3_closure",
+  "executed_at_utc": "2026-09-26T12:56:43.0504548Z",
+  "dirty_source": false,
+  "browser_only": false,
+  "postgres_only": false,
+  "results": [
+    {
+      "name": "PostgreSQL 18",
+      "status": "PASS"
+    },
+    {
+      "name": "P3-01 through P3-05 PostgreSQL",
+      "status": "PASS"
+    },
+    {
+      "name": "Public Tracking PostgreSQL",
+      "status": "PASS"
+    },
+    {
+      "name": "P312 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P310 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P309 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P303 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P301 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P308 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P307 Chrome",
+      "status": "PASS"
+    },
+    {
+      "name": "P306 Chrome",
+      "status": "PASS"
+    }
+  ],
+  "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+  "production_accessed": false,
+  "stopped": true,
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p312-owned-4619ab7745264b7cbcd411e280efdc5d"
+}

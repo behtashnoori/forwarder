@@ -1,0 +1,488 @@
+{
+  "scope": "Preliminary dirty-source diagnosis only; final Product is c0914906af6675c016d5b77d51ecc8a0c05c0b72.",
+  "failures_retained": [
+    "First owner unit run had 16 failures from the fixture calling nonexistent create_shipment instead of existing create_direct; corrected fixture then 16 passed. Expanded run had four fixture/schema failures: SLA actor context/process name, closure field, empty Tower attention fixture and YAML anchor collision; corrected without weakening authority, then 21 passed.",
+    "PG probe 1 startup create_all conflicted with historical schema; skip_startup=True restored exclusive migration ownership.",
+    "Focused/full frontend exposed retry-test interaction and old current-owner wording assertion; fixed. An unchanged NewOperation 1-second selector wait failed under concurrent load, then passed focused and final full runs without source/assertion/timeout change.",
+    "First browser Customer screenshot captured loading; final browser waits for actual own-Cargo content.",
+    "Early smoke selected inherited local test DB and DDL failed/rolled back before seed; environment note preserved in Product entry evidence."
+  ],
+  "successes_not_substituted_for_final": [
+    "Expanded owner unit 21 passed; authority subset 32 passed; broader backend subset 59 passed.",
+    "Focused frontend rerun 62 passed; app/node types, lint/build preliminary passed.",
+    "Owned PG probes 2/3 passed; preliminary PG regressions 14 passed.",
+    "Preliminary browser regressions 15 passed, captured old dirty HEAD; source changed during that run, so not final Product evidence."
+  ],
+  "previous_exact_source": {
+    "product_sha": "212d01fa19979e520f8ba9d4a5b4cefd9248cb9e",
+    "status": "FAILED_QUALIFICATION_NOT_INTEGRATED",
+    "backend": "1534 passed, 120 skipped, one ProjectConfiguration OpenAPI text-range failure; all 1655 cases executed.",
+    "other_gates": "441 frontend / 14 PostgreSQL / 15 Chrome / nine static gates passed, but this source is not final PASS.",
+    "correction": "Move the owner-transfer schema block before ProjectConfigurationPage; parsed YAML equality verified; no runtime/test/assertion change. Focused 22 tests passed.",
+    "cleanup": "Owned PostgreSQL/browser runtime removed. Host automatic approval rejected stopped backend fixture deletion as blocked by policy; exact cleanup.json retained, no deletion retry."
+  },
+  "files": [
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-owner-unit-first.log",
+      "retained_path": "preliminary/p313-owner-unit-first.log",
+      "sha256": "db6776f1a610b6c0c1d01da3b89a989c0cce0319d5e0962d574af6ad167c326b",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-owner-unit-second.log",
+      "retained_path": "preliminary/p313-owner-unit-second.log",
+      "sha256": "9a7bc3292c4ee101db97aea3a369dab52975a15240c5390615132cf6d00d7f4d",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-owner-unit-expanded.log",
+      "retained_path": "preliminary/p313-owner-unit-expanded.log",
+      "sha256": "be9fca34133ca9657f5127365e6f09fd959a215997dc757f2b11a0f85fe4cec5",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-owner-unit-expanded-2.log",
+      "retained_path": "preliminary/p313-owner-unit-expanded-2.log",
+      "sha256": "d4f242c8547d40c18ba9074353c89bc73b5b0791a1aca5d20e0710309604e868",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-final-backend-focused.log",
+      "retained_path": "preliminary/p313-final-backend-focused.log",
+      "sha256": "c494fb0c30a3532a268dbdda44cfa79fd8b4feb2642aad1a7a3841f94f3d4ee1",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-authority-regression.log",
+      "retained_path": "preliminary/p313-authority-regression.log",
+      "sha256": "e660b021743fd6e1b334b749d30e1ae9efbe6fc08f8d6b3f2593dc5f6081b31e",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-frontend-focused.log",
+      "retained_path": "preliminary/p313-frontend-focused.log",
+      "sha256": "5fda27f189e4ce696519f968828749bc2e4f8e92a6c0f8e859dd7711dd28a484",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-frontend-full-preliminary.log",
+      "retained_path": "preliminary/p313-frontend-full-preliminary.log",
+      "sha256": "998f63f204e47e61943565cd0a0742afcfd7a1be77d4d908270208d89c9ce9b6",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-frontend-focused-2.log",
+      "retained_path": "preliminary/p313-frontend-focused-2.log",
+      "sha256": "d1c710919cac50b33c1e7dbb7efb1fa0ef52094f22dc217a8344066396e37848",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-typescript-app.log",
+      "retained_path": "preliminary/p313-typescript-app.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-openapi-order-focused.log",
+      "retained_path": "preliminary/p313-openapi-order-focused.log",
+      "sha256": "644968668cdca9373e84edba7c25e15d6fc9c3a3a0de22d8d111fda9f6b5851f",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-1-20260926\\postgres-stop.log",
+      "retained_path": "preliminary/p313-pg-probe-1-20260926/postgres-stop.log",
+      "sha256": "3a6747065de8c2dbc66a6baa73d5ab09c2c03eb8851704f973ac4b886e6805f2",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-1-20260926\\postgresql.log",
+      "retained_path": "preliminary/p313-pg-probe-1-20260926/postgresql.log",
+      "sha256": "239623794470183ba2a9a08114f98ade33db2821c03713b1e2178ac4fdfedd77",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-1-20260926\\result.json",
+      "retained_path": "preliminary/p313-pg-probe-1-20260926/result.json",
+      "sha256": "9fe1711446059a450ba8fede83fa84658465e1897fb521dabdd06cb6d2760ba6",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-2-20260926\\postgres-stop.log",
+      "retained_path": "preliminary/p313-pg-probe-2-20260926/postgres-stop.log",
+      "sha256": "3a6747065de8c2dbc66a6baa73d5ab09c2c03eb8851704f973ac4b886e6805f2",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-2-20260926\\postgresql.log",
+      "retained_path": "preliminary/p313-pg-probe-2-20260926/postgresql.log",
+      "sha256": "a67656274fff12ada99acf305a8b3e36b270782b670459d4bf1f61d5d11dba4a",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-2-20260926\\result.json",
+      "retained_path": "preliminary/p313-pg-probe-2-20260926/result.json",
+      "sha256": "1c8ffed74ce45edbe4771a613e60f41d8f07c55cffa45c87c0dec95cdece3d32",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-3-20260926\\postgres-stop.log",
+      "retained_path": "preliminary/p313-pg-probe-3-20260926/postgres-stop.log",
+      "sha256": "dee7dfd8ceacf2d71f71537b270e2bd76b1fbc56e836a8d0272f52d90f119f17",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-3-20260926\\postgresql.log",
+      "retained_path": "preliminary/p313-pg-probe-3-20260926/postgresql.log",
+      "sha256": "4ff74f9116bd559acef624957f4ca1cfa8d84afeaad03940cf4ea6ad072c8e56",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-probe-3-20260926\\result.json",
+      "retained_path": "preliminary/p313-pg-probe-3-20260926/result.json",
+      "sha256": "bf0bf04dc2a4be4dd6f230024b14f9a4d0c76dd96d543372472a637aa51d916a",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-regressions-preliminary-20260926\\postgres-stop.log",
+      "retained_path": "preliminary/p313-pg-regressions-preliminary-20260926/postgres-stop.log",
+      "sha256": "c9e295e5be414a942acc803b49f30da73a4f31471fae8834cf3c85bd95fc924c",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-regressions-preliminary-20260926\\postgresql-public.log",
+      "retained_path": "preliminary/p313-pg-regressions-preliminary-20260926/postgresql-public.log",
+      "sha256": "e8716fd2f95e2ab602314a427f69111b3d79c202e9efa09cbca6b1198d26d3c2",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-regressions-preliminary-20260926\\postgresql-regressions.log",
+      "retained_path": "preliminary/p313-pg-regressions-preliminary-20260926/postgresql-regressions.log",
+      "sha256": "27f95c4cdba21560aa9849f88054bcc9453b9238186829ea7b5699a5d2ff0a38",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-regressions-preliminary-20260926\\postgresql.log",
+      "retained_path": "preliminary/p313-pg-regressions-preliminary-20260926/postgresql.log",
+      "sha256": "ea20a890ee65b09b00e2fa13777497e95d2937508a86c536eeaa2dbd4e89e524",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-pg-regressions-preliminary-20260926\\result.json",
+      "retained_path": "preliminary/p313-pg-regressions-preliminary-20260926/result.json",
+      "sha256": "b39c51086f9eea1dd4879567df8c9f28c2bc3099536878054c348f23a4d2a80c",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-probe-1-20260926\\P313-browser.log",
+      "retained_path": "preliminary/p313-browser-probe-1-20260926/P313-browser.log",
+      "sha256": "78c19c463f0065ed4c4376e7669be5766add2b7a23c3cc4bc51b8c8822d9f152",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-probe-1-20260926\\postgres-stop.log",
+      "retained_path": "preliminary/p313-browser-probe-1-20260926/postgres-stop.log",
+      "sha256": "fbd64ac77ed7cfc1533581fdc76667bb81f6f16778b82a91bf911794c0efc3b0",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-probe-1-20260926\\result.json",
+      "retained_path": "preliminary/p313-browser-probe-1-20260926/result.json",
+      "sha256": "b15393d2002de1d4df0ab2bf0d8252b58e4811824b99ab785685e6af1214df72",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\MT3-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/MT3-browser.log",
+      "sha256": "30e586122d341f4031a34d8839ccaae5546bd2a55a151a14d37883b69aa27410",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P301-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P301-browser.log",
+      "sha256": "65ab627e4a15fd6d58677df990787b97ec76ac76e3e474a33513b3c89a0f853f",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P303-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P303-browser.log",
+      "sha256": "446336f06b25bef285c6ad877d7aa7efc1b152ddd4ef122ded9b728da6f723e5",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P306-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P306-browser.log",
+      "sha256": "35344905be191ee17433ab7f20d0b1390d9abec397f8fc9fb3b1ace53b5b8f92",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P307-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P307-browser.log",
+      "sha256": "70f237cc29da905e36eeb5bd29ba1e673df65a3266158ad017e7b40c86e733c0",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P308-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P308-browser.log",
+      "sha256": "214b55c9983a3c2bfd8d1b3b5601ee9d8e776f5e9bacc5d739f0ecac430bdc00",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P309-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P309-browser.log",
+      "sha256": "b0fda90a627262a5ad11c314397d07fcd3edaf7fdba169e48881f0b75afa93d8",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P310-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P310-browser.log",
+      "sha256": "a215599c8388da36022a36377cc2881ffd4db8a161640badee481f18d4b93ffe",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P312-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P312-browser.log",
+      "sha256": "c5d6d86012f1f4f2b26dd7c051eab3a5ddc357fea67434a4be1185118aab354d",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\P313-browser.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/P313-browser.log",
+      "sha256": "1620444753e161086b81b5c19c962479949808a84a33137cd87a999075f33524",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\postgres-stop.log",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/postgres-stop.log",
+      "sha256": "fbd64ac77ed7cfc1533581fdc76667bb81f6f16778b82a91bf911794c0efc3b0",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-browser-regressions-preliminary-20260926\\result.json",
+      "retained_path": "preliminary/p313-browser-regressions-preliminary-20260926/result.json",
+      "sha256": "ee05bc7e4b4a2620313dbd23a22b64371aa2a54314ad54d6d9a0fa845388cae1",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-static-preliminary-20260926\\app-types.log",
+      "retained_path": "preliminary/p313-static-preliminary-20260926/app-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-static-preliminary-20260926\\build.log",
+      "retained_path": "preliminary/p313-static-preliminary-20260926/build.log",
+      "sha256": "af2c8755cc1e83cde2c049b4241088f2be58f036621146659cf76855ee31c411",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-static-preliminary-20260926\\lint.log",
+      "retained_path": "preliminary/p313-static-preliminary-20260926/lint.log",
+      "sha256": "9cac1f05903dd083701c7cc860d0074fae3f18ba332a43a915f720be06fbdcc9",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-static-preliminary-20260926\\node-types.log",
+      "retained_path": "preliminary/p313-static-preliminary-20260926/node-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-static-preliminary-20260926\\result.json",
+      "retained_path": "preliminary/p313-static-preliminary-20260926/result.json",
+      "sha256": "2975b35125fe2ba25f85ac26ed6c38eaab6507e9798323deb977b9d953d483e7",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\source-identity.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/source-identity.json",
+      "sha256": "8cf4ff76e1eb6aeda374354c2d932604c04f483a3f29fa8692fa3c1d235ece9c",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\frontend-result.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/frontend-result.json",
+      "sha256": "2f797d7c9e8b49517caa28d1ec1bd53f023cad2c828f45282a70043a582bb53e",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\frontend-full.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/frontend-full.log",
+      "sha256": "984fc7a5a170a3bcd4ff5f415413fe8990d2d068dd174c0937ae4d6c265cf769",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\visual-review.md",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/visual-review.md",
+      "sha256": "36594d8719a0a7cb0ae445013204ddd7bb43b9e13c13f04619a0dfd176e5e9bc",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\result.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/result.json",
+      "sha256": "e22b9b85bee2ff953a141320ca659e99c20c688bb73c650214c7885774288c01",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\plan.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/plan.json",
+      "sha256": "064d46c627a2db5f0bc8203b602932a5cd9b611d533792645ba3201ef0fd8a54",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\collection.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/collection.log",
+      "sha256": "c5ad557873a6efe7a8c6564988b8ca00269cc2f9f279b1ec51f9a5d6cd6b4e49",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\cleanup.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/cleanup.json",
+      "sha256": "a5a66bb184e4eaa03c972d01688ebdaca431fe354c7c0326cfbf01512ae2133f",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\static\\result.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/static/result.json",
+      "sha256": "bcd810d6ba2ca737f94f29b8d3c4d293ede06c71b830c8e9f82053878bb0a710",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\result.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/result.json",
+      "sha256": "c6b1efcedfa76c16ffcb9ba8e2968ae62a40b5e2c246ce1eebdde48d8b5cbad4",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\postgresql.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/postgresql.log",
+      "sha256": "89a3fb85f03f59c73311074ed63ac91d2252c3b04d7020e4d6cf0065631ffe81",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\postgresql-regressions.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/postgresql-regressions.log",
+      "sha256": "f2cb37137a6b3578a65ecf0826d5edd77e8cd52b76ec7f882446b6f95c50c0dd",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\postgresql-public.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/postgresql-public.log",
+      "sha256": "a5f3537c60c29947480eead5dee3bc3376da48c9b4f44a42850cc507e9e40263",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\postgres-stop.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/postgres-stop.log",
+      "sha256": "268591bb8333f58eb7c4f23ebca0c06ed2f697c5454a8d6f75771abdf46e859b",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-1\\junit.xml",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-1/junit.xml",
+      "sha256": "4d65741c6288b0c21c7b1dfc47187703fa7d6ce4ede5fcb26d6e6d00258e218a",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-1\\result.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-1/result.json",
+      "sha256": "ae59088307bf5069fc89f1001b414a4f0906930477c2f9cb0ac4908ab4c9c4f6",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-1\\stderr.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-1/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-1\\stdout.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-1/stdout.log",
+      "sha256": "3d53c0a8eea3306b7c6cffe26094207d41046476b6c2a9e60a620e651486f680",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-2\\junit.xml",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-2/junit.xml",
+      "sha256": "aab1e782f5858f7ff82dc109644d764cc9c9752f171c00b2fcecc362ff9fd6ff",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-2\\result.json",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-2/result.json",
+      "sha256": "49cfd13160bb9292a2c7838d1653e7b266f83d78bb55b5f79095f160fcb1910d",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-2\\stderr.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-2/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\backend-full\\group-2\\stdout.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/backend-full/group-2/stdout.log",
+      "sha256": "c7cc95e62db5bc19a8e9fff25994fb663d86b6df116b6e62e6347e10b93e659b",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\MT3-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/MT3-browser.log",
+      "sha256": "e72b164dfdad7adff74ecf76a7a8e934737f0f72b4ebd5dc5699a8fa853e4637",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P301-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P301-browser.log",
+      "sha256": "8048c57296efb2a3fe410d038d95b9633defdd453825d5f57e5f0b829f16e27d",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P303-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P303-browser.log",
+      "sha256": "9fd0131b5c7623f1fb4f6f9ec967844c213a3904ce5502f1051e40e8340eeb5b",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P306-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P306-browser.log",
+      "sha256": "0fff5307f430b06848dfa0434aead8f341fcb5f9777c624dbfadc31a83f13946",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P307-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P307-browser.log",
+      "sha256": "0765bad18c0f4fbf8055328c990acb176306a36c0e7fcae024ac235b418933ac",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P308-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P308-browser.log",
+      "sha256": "5d3feabbf859d3ff456d61649733010c51531baad22aa0c38b5e6133fb510ffc",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P309-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P309-browser.log",
+      "sha256": "ff017b43b5f177547da19a3a19eac781bf9c8c33236b3e8cd6dea31e60cea2a2",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P310-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P310-browser.log",
+      "sha256": "8e5c7e1336c0c8fd8293e972fcb34f8565c54409e77b554b5bbe7b9e15a6a34e",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P312-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P312-browser.log",
+      "sha256": "b8684b52d2aa920ea18cf57431f8fa2fbced47db0298b91899b4a28895e1ed82",
+      "final_qualification": false
+    },
+    {
+      "original_path": "D:\\1-webapp\\forwarder-dev\\p313-qualification-212d01f-20260926\\owned-runtime\\P313-browser.log",
+      "retained_path": "preliminary/p313-qualification-212d01f-20260926/owned-runtime/P313-browser.log",
+      "sha256": "c1560409f72aa09ca3a8971e432eeb64d07c5b95d6d875bbf814e35d50bdba4b",
+      "final_qualification": false
+    }
+  ]
+}

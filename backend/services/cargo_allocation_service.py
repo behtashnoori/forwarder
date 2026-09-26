@@ -32,6 +32,9 @@ from backend.services.operational_service import OperationalError, require_permi
 ZERO = Decimal("0")
 
 
+from backend.services import closure_commands as closure_guard
+
+
 def _fail(code: str, message: str, status: int = 422):
     raise OperationalError(code, message, status)
 
@@ -83,7 +86,7 @@ def _reason(value, *, field="reason", limit=500):
 def _shipment(shipment_public_id: str, user: dict, *, write=False) -> OperationalShipment:
     shipment = scoped_shipment(shipment_public_id, user)
     require_permission(user, "operational_shipment.create" if write else "operational_shipment.read")
-    if write and not authorize_document_management(user, shipment).allowed:
+    if write and not authorize_document_management(user, shipment, for_update=True).allowed:
         _fail("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
     return shipment
 
@@ -216,6 +219,11 @@ def set_allocation(shipment_public_id: str, cargo_public_id: str, stage_public_i
     quantity = _quantity(payload.get("quantity"), allow_zero=True)
     reason = _reason(payload.get("reason"))
     occurred_at = _instant(payload.get("occurred_at"))
+    if dimension == "PLANNED":
+        closure_guard.deny_new(shipment)
+    else:
+        closure_guard.prior_fact(shipment, occurred_at)
+        closure_guard.correction(shipment, reason)
     row = _current(cargo.id, stage.id, dimension, lock=True)
     _assert_allocation_scope(row, stage)
     try:
@@ -280,6 +288,7 @@ def _downstream(source: RouteStageExecution, target: RouteStageExecution):
 def transfer(shipment_public_id: str, cargo_public_id: str, payload: dict, user: dict, idempotency_key: str):
     """Move within a stage; across stages, record a handoff without erasing prior-stage actual."""
     shipment = _shipment(shipment_public_id, user, write=True)
+    closure_guard.deny_new(shipment)
     key = _key(idempotency_key)
     request_hash = _payload_hash({"operation": "transfer", "shipment": shipment_public_id, "cargo": cargo_public_id, "payload": payload})
     existing = db.session.scalar(select(CargoAllocationTransfer).where(

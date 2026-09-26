@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useCurrentAuthorityRefresh } from "@/hooks/useCurrentAuthorityRefresh";
 import { Link } from "react-router";
 import { AlertTriangle, Clock3, PackageSearch, Route as RouteIcon } from "lucide-react";
 import OperationsNav from "@/components/OperationsNav";
@@ -51,13 +52,18 @@ export default function OperationalWorkspace() {
   const [snapshot, setSnapshot] = useState<OperationalWorkspaceSnapshot>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const generation = useRef(0);
+  const retire = useCallback(() => { generation.current++; }, []);
 
   const load = useCallback(async () => {
+    const current = ++generation.current;
     setLoading(true);
     setError("");
     try {
-      setSnapshot(await getOperationalWorkspace());
+      const result = await getOperationalWorkspace();
+      if (current === generation.current) setSnapshot(result);
     } catch (caught) {
+      if (current !== generation.current) return;
       setSnapshot(undefined);
       setError(
         caught instanceof ApiError && caught.status === 403
@@ -65,13 +71,15 @@ export default function OperationalWorkspace() {
           : "فضای کار عملیاتی در حال حاضر بارگذاری نشد.",
       );
     } finally {
-      setLoading(false);
+      if (current === generation.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
-  }, [load]);
+    return retire;
+  }, [load, retire]);
+  useCurrentAuthorityRefresh(load, retire);
 
   const data = snapshot?.data;
   const meta = snapshot?.meta;

@@ -73,7 +73,7 @@ def _has_capability(membership: OperationalMembership, action: str) -> bool:
     return aliases.get(action, action) in set(membership.permissions or [])
 
 
-def authorize_document_management(actor: dict[str, Any], resource: Any) -> AuthorizationDecision:
+def authorize_document_management(actor: dict[str, Any], resource: Any, *, for_update: bool = False) -> AuthorizationDecision:
     """Authorize a document mutation against its persisted owning parent.
 
     Document read remains governed by ``authorize_work_action``.  Management is
@@ -81,6 +81,15 @@ def authorize_document_management(actor: dict[str, Any], resource: Any) -> Autho
     membership must be the parent owner.  Organization and Platform
     administrators never inherit this authority from read/create capabilities.
     """
+    # Mutation callers serialize with exceptional owner transfer. Acquire the
+    # parent before reading revocable identity/ownership after any lock wait.
+    # Capability projections keep the default pure read behavior.
+    if for_update and isinstance(resource, (OperationalShipment, ShipmentRequest)):
+        model = type(resource)
+        parent = db.session.scalar(select(model).where(model.id == resource.id)
+            .with_for_update().execution_options(populate_existing=True))
+        if parent is None:
+            return _deny("RESOURCE_LINEAGE_NOT_CERTIFIED")
     user_id = _actor_id(actor)
     if user_id is None:
         return _deny("ACTIVE_IDENTITY_REQUIRED")

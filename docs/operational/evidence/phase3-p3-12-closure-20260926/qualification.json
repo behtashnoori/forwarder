@@ -1,0 +1,351 @@
+{
+  "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+  "product_tree": "e85fffa602cb51c6fd212e43e4c55a15954997c1",
+  "status": "PASS",
+  "backend": {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "counts": {
+      "passed": 1514,
+      "failed": 0,
+      "skipped": 119,
+      "errors": 0,
+      "warnings": 21774
+    },
+    "expected_collected_tests": 1633,
+    "executed_testcases": 1633,
+    "groups": [
+      {
+        "group": 1,
+        "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+        "exit_code": 0,
+        "summary": "683 passed, 48 skipped, 9560 warnings",
+        "counts": {
+          "passed": 683,
+          "skipped": 48,
+          "warnings": 9560
+        },
+        "junit_testcases": 731,
+        "status": "PASS"
+      },
+      {
+        "group": 2,
+        "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+        "exit_code": 0,
+        "summary": "831 passed, 71 skipped, 12214 warnings",
+        "counts": {
+          "passed": 831,
+          "skipped": 71,
+          "warnings": 12214
+        },
+        "junit_testcases": 902,
+        "status": "PASS"
+      }
+    ],
+    "source_unchanged": true,
+    "finished_at": "2026-09-26T12:59:09.985720+00:00",
+    "owned_processes_stopped": true,
+    "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-b8606864511746a4b2ebd5793ff57611",
+    "temporary_fixtures_retained": true
+  },
+  "frontend_tests": 434,
+  "frontend_files": 91,
+  "postgresql_tests": 13,
+  "chrome_tests": 14,
+  "static_gates": 9,
+  "migration": "20261010_phase3_closure",
+  "parent_migration": "20261009_phase3_route_time",
+  "postgresql_browser_runtimes_removed": true,
+  "backend_fixture_cleanup": {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-b8606864511746a4b2ebd5793ff57611",
+    "runtime_removed": false,
+    "retained_due_to_policy_rejection": true,
+    "owned_processes_stopped": true,
+    "process_ids": [
+      22648,
+      7904
+    ],
+    "processes_absent_verified": true,
+    "listeners_absent_verified": true,
+    "checked_at": "2026-09-26T13:25:56.769822+00:00",
+    "automatic_approval_review": "Deletion command rejected: blocked by policy",
+    "action": "Remove stopped synthetic backend fixture directory",
+    "authority": "Retained mission section 74 explicitly permits accurate retention after host policy refuses deletion; not a Product blocker. No alternative deletion attempted."
+  },
+  "mt3_retry": {
+    "stopped": true,
+    "production_accessed": false,
+    "results": [
+      {
+        "status": "PASS",
+        "name": "MT3 Chrome"
+      }
+    ],
+    "schema": "20261010_phase3_closure",
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "dirty_source": false,
+    "executed_at_utc": "2026-09-26T13:24:24.3896273Z",
+    "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p312-owned-a7110c08ee8641d48795c6f79fa613ac",
+    "postgres_only": false,
+    "browser_only": true
+  },
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": false,
+  "production_accessed": false,
+  "selected_evidence": [
+    {
+      "path": "source-identity.json",
+      "sha256": "d4f7220e6fd99de9240de53f1a48b16ad21b4279aa11d0cd1a5c42224f7c3b69",
+      "bytes": 190
+    },
+    {
+      "path": "frontend-result.json",
+      "sha256": "c4b25111286fd6a5817ef1a0d75ef485ca6ea528930f74380f1fc72418a0b2d2",
+      "bytes": 185
+    },
+    {
+      "path": "frontend-full.log",
+      "sha256": "80dd4c636cf5983409a9f4e933c3d90acfd683a92707f08ba8470b2e8e4aeabb",
+      "bytes": 258
+    },
+    {
+      "path": "product-decision.json",
+      "sha256": "8dec1e59d6498dd4c0e901894e3df72efc14017cf47ef1babe5d49a9f60b88d3",
+      "bytes": 1386
+    },
+    {
+      "path": "prior-attempts.json",
+      "sha256": "af2564c1270bf5ecd32f4959df7ecfa1e4d55f5d166df6f08d57a18b6822f874",
+      "bytes": 2872
+    },
+    {
+      "path": "visual-review.md",
+      "sha256": "d1e70e3d8209cb986da50538cfa797aa635b3d937b66a7b8155f5a87a343ae0b",
+      "bytes": 1713
+    },
+    {
+      "path": "backend-full/result.json",
+      "sha256": "cf319aa2b23eb1ceffdad9cbec539c22468c462a3ebd0518faa8c8a580d53b4c",
+      "bytes": 1250
+    },
+    {
+      "path": "backend-full/plan.json",
+      "sha256": "d0d44aff15d9ea7a2c26f3b19e20e5e4aff934d3cb31b638b176f40f0889843b",
+      "bytes": 42010
+    },
+    {
+      "path": "backend-full/collection.log",
+      "sha256": "8fbe6571b98beaa82931f96d11d2bde415bd7f81b3058fae90a1ce4ca984256f",
+      "bytes": 178707
+    },
+    {
+      "path": "backend-full/cleanup.json",
+      "sha256": "003918d54be32c1c1c0dd84cbd49a9ee2ecd31a5ff1f5ef90bad380455becf95",
+      "bytes": 791
+    },
+    {
+      "path": "owned-runtime/result.json",
+      "sha256": "f1555157399d15783cbdac614ae21bb0177688c8204c6d77c9082aae50cd8ded",
+      "bytes": 1217
+    },
+    {
+      "path": "owned-runtime/postgresql.log",
+      "sha256": "262e154fae8a97e6a07a80937016d08b9822a582eab60e208e34a3a47c8b134c",
+      "bytes": 126
+    },
+    {
+      "path": "owned-runtime/postgresql-regressions.log",
+      "sha256": "cb7c8d3b0900895848db68af807067c1abc2c7af360fe857df835b3a2b154a22",
+      "bytes": 124
+    },
+    {
+      "path": "owned-runtime/postgresql-public.log",
+      "sha256": "995f0c79302e8a6c8032d24c5b22d4132d4ee13dbec6d8acc7d4fee748bf550b",
+      "bytes": 113
+    },
+    {
+      "path": "owned-runtime/postgres-stop.log",
+      "sha256": "c80135c33667079be5f58bda85776e1279a704a3e20e8056ff64e28eb8e93ab1",
+      "bytes": 67
+    },
+    {
+      "path": "backend-full/group-1/junit.xml",
+      "sha256": "c9b1b8bb5df175d476c760d1d75af61b5bee13a70b15a5af190431b83c350693",
+      "bytes": 121227
+    },
+    {
+      "path": "backend-full/group-1/result.json",
+      "sha256": "1de6e16f1bfa22dc08f1894755f523d09acaf69eda8a3eeddef4662b890a7d4a",
+      "bytes": 287
+    },
+    {
+      "path": "backend-full/group-1/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "backend-full/group-1/stdout.log",
+      "sha256": "5bd369dd2ffe347516d0a0e5bcfa48d4128da1b47de68d6e168e7f9dfb8e74b9",
+      "bytes": 9879
+    },
+    {
+      "path": "backend-full/group-2/junit.xml",
+      "sha256": "d73e1d9dc06f6932a3398625c2c2bf962606a6988e6354a2ed0e983ee494ede5",
+      "bytes": 153735
+    },
+    {
+      "path": "backend-full/group-2/result.json",
+      "sha256": "4548c6f747dc9c7ab8e6d609ebc255ee9b93e582ddcb646d9f139f53cc632597",
+      "bytes": 289
+    },
+    {
+      "path": "backend-full/group-2/stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "backend-full/group-2/stdout.log",
+      "sha256": "8d4fef70e3ce1c40a752b950e2c48ea439cfe20e327762e690ac6413c3371e8c",
+      "bytes": 9879
+    },
+    {
+      "path": "static/alembic-head.log",
+      "sha256": "725e8609a1c15878ee9651568ac5bce3c2f5d01cd0e6130e9443f9d389c94441",
+      "bytes": 25
+    },
+    {
+      "path": "static/app-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "static/architecture.log",
+      "sha256": "47109b0c724cf0a14aaa0e6570abf8b39f00411150f99d0705ed657852b2d4e4",
+      "bytes": 50
+    },
+    {
+      "path": "static/backend-determinism.log",
+      "sha256": "9642cc5da4e3f9c15b6e877eb2cca467440c42971ce159635d24c5b59e213743",
+      "bytes": 55
+    },
+    {
+      "path": "static/build.log",
+      "sha256": "4b13fdf922243b88f8d7c7663511217a480891e33e5d95debbd07e6483a45d4d",
+      "bytes": 881
+    },
+    {
+      "path": "static/diff.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "static/lint.log",
+      "sha256": "561d306824b907275be431148575c576d9bef2270a968c0edd99d458a421e613",
+      "bytes": 3432
+    },
+    {
+      "path": "static/node-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "static/result.json",
+      "sha256": "18b9c77f50e5924912d07a0387a05fb031b717a00cc9602d9e28643632f8b103",
+      "bytes": 1304
+    },
+    {
+      "path": "static/structure.log",
+      "sha256": "73a3038b160e1b0959e2ad084f65f0986025fe799004769b66c0ef8dc8f15045",
+      "bytes": 134
+    },
+    {
+      "path": "owned-runtime/MT3-browser.log",
+      "sha256": "fbf342e8a7549938afc051fbbb614e1de563086a906c94721f6b72bb0d9b08b4",
+      "bytes": 4103
+    },
+    {
+      "path": "owned-runtime/P301-browser.log",
+      "sha256": "7dd6ae0bd81226760394727964614634205ec17e2dc9e0a20be7173b74130c54",
+      "bytes": 371
+    },
+    {
+      "path": "owned-runtime/P303-browser.log",
+      "sha256": "7cfdcf39ec1a8b3d013994a4b7ffb6844df54d8933604274ec5d3df944ef4136",
+      "bytes": 353
+    },
+    {
+      "path": "owned-runtime/P306-browser.log",
+      "sha256": "effe139d60e87e63b7dd1579b8f7e143bae485d4d60198da728858d849abbab4",
+      "bytes": 519
+    },
+    {
+      "path": "owned-runtime/P307-browser.log",
+      "sha256": "57cfcc2b247b779bac68fe45d8ffbdd6cc17a5775d00227e84d2c8cad01dc992",
+      "bytes": 343
+    },
+    {
+      "path": "owned-runtime/P308-browser.log",
+      "sha256": "3c469d5a03a8ac1636018b96b0e06c863da0c14d3d3bac63f66ccc10376591b9",
+      "bytes": 359
+    },
+    {
+      "path": "owned-runtime/P309-browser.log",
+      "sha256": "6362af81c3c4e15f92d9fd553dfad5f535cece0c4eb954f6a1856cc96005b3dc",
+      "bytes": 508
+    },
+    {
+      "path": "owned-runtime/P310-browser.log",
+      "sha256": "73df5f004cc34e86cc2ddc33cbe7276e5ab047e403160bc22c2346ad98f9000e",
+      "bytes": 355
+    },
+    {
+      "path": "owned-runtime/P312-browser.log",
+      "sha256": "8881f2e5369128b8d38825f85684c450a9aa88c07cc400bf13118f198ac705db",
+      "bytes": 362
+    },
+    {
+      "path": "owned-runtime/P312-browser/phase3-closure-P3-12-Admin-c0304-and-private-Customer-status/closed-customer-safe.png",
+      "sha256": "1c77b1e4bb5603e3ac9b5effc5f28ffb1121af30ca978f6d12d2992a8b7a7e1c",
+      "bytes": 162262
+    },
+    {
+      "path": "owned-runtime/P312-browser/phase3-closure-P3-12-Admin-c0304-and-private-Customer-status/closed-owner-mobile.png",
+      "sha256": "2f5c7e919e53151d22faece7ee13dbdc72045dce51a392d7f15080402e4f3be4",
+      "bytes": 243714
+    },
+    {
+      "path": "owned-runtime/P312-browser/phase3-closure-P3-12-Admin-c0304-and-private-Customer-status/closure-policy-admin.png",
+      "sha256": "2ca421e9711271193999c57ec3f63ea301ac60a81e4ba65a9d2aa023777b4a9d",
+      "bytes": 84462
+    },
+    {
+      "path": "owned-runtime/P312-browser/phase3-closure-P3-12-Admin-c0304-and-private-Customer-status/exception-retained-missing.png",
+      "sha256": "2d5a70759033f695bb1ee19f0dad21f162f289044382c74014412ac0433763b8",
+      "bytes": 201134
+    },
+    {
+      "path": "mt3-retry/result.json",
+      "sha256": "7e73fb362daba163a76f85644744894097a0a50942d7d007d7570d47f3ff5364",
+      "bytes": 489
+    },
+    {
+      "path": "mt3-retry/MT3-browser.log",
+      "sha256": "58c36dfbd23f650abcd0fbfd7be865d68afb12b31654b84553a3501df8a3ef0b",
+      "bytes": 981
+    },
+    {
+      "path": "mt3-retry/postgres-stop.log",
+      "sha256": "3a6747065de8c2dbc66a6baa73d5ab09c2c03eb8851704f973ac4b886e6805f2",
+      "bytes": 59
+    },
+    {
+      "path": "mt3-retry/owned-retry-harness.ps1",
+      "sha256": "4c442a8fee3320ad81c904b9e6584c0dc14c4e91205980300a95cf317e13c187",
+      "bytes": 10993
+    }
+  ],
+  "raw_evidence_directory": "D:\\1-webapp\\forwarder-dev\\p312-qualification-d1574fa-20260926"
+}

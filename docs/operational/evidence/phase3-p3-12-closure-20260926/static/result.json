@@ -1,0 +1,56 @@
+[
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "app-types"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "node-types"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "lint"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "build"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "architecture"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "structure"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "backend-determinism"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "diff"
+  },
+  {
+    "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "status": "PASS",
+    "exit_code": 0,
+    "name": "alembic-head"
+  }
+]

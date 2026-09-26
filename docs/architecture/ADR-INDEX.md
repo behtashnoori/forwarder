@@ -84,13 +84,13 @@ Only an explicitly authorized architecture owner/process may change status. Impl
 
 ## Usage rules
 
-### P3-11 through P3-13 — accepted architecture, implementation qualification pending
+### P3-11 through P3-13 — accepted architecture and separate slice qualification
 
 | ADR | Title | Status | Domain | Supersedes / superseded by | Related implementation | Authoritative? |
 | --- | --- | --- | --- | --- | --- | --- |
-| [067](../operational/adr/ADR-067-explainable-cargo-eta.md) | Explainable Cargo ETA and immutable snapshots | ACCEPTED | Route / temporal provenance / Customer privacy | additive consumer; source contracts preserved | P3-11 authorized with explicit idempotent ensure/read distinction; NOT_STARTED | Yes; bounded slice |
-| [068](../operational/adr/ADR-068-controlled-shipment-closure.md) | Versioned closure checklist and explicit closure | ACCEPTED | Organization policy / Shipment lifecycle | completed meaning preserved; completed -> closed only | P3-12 authorized, both commands completed-only; NOT_STARTED | Yes; bounded slice |
-| [069](../operational/adr/ADR-069-exceptional-shipment-owner-transfer.md) | Exceptional owner transfer with database fencing | ACCEPTED | Shipment ownership / Security | scoped ADR-047/050 no-transfer supersession; ordinary protection remains | P3-13 authorized, app human binding / DB structural proof separate; NOT_STARTED | Yes; bounded slice |
+| [067](../operational/adr/ADR-067-explainable-cargo-eta.md) | Explainable Cargo ETA and immutable snapshots | ACCEPTED | Route / temporal provenance / Customer privacy | additive consumer; source contracts preserved | P3-11 retained draft; stop-range placement decision pending; NOT_QUALIFIED | Yes; bounded slice |
+| [068](../operational/adr/ADR-068-controlled-shipment-closure.md) | Versioned closure checklist and explicit closure | ACCEPTED | Organization policy / Shipment lifecycle | completed meaning preserved; completed -> closed only | P3-12 qualified at d1574fa under accepted post-closure matrix; controlled integration receipt remains separate | Yes; bounded slice |
+| [069](../operational/adr/ADR-069-exceptional-shipment-owner-transfer.md) | Exceptional owner transfer with database fencing | ACCEPTED | Shipment ownership / Security | scoped ADR-047/050 no-transfer supersession; ordinary protection remains | P3-13 qualified at c091490; actual restricted LOGIN and app human-binding proofs separate; controlled integration has a separate receipt | Yes; bounded slice |
 
 [Named acceptance and trust-boundary clarification](../product/phase3/P3-11-13-ARCHITECTURE-ACCEPTANCE.md)
 opens the architecture gate only. The original proposal commit `081f73a` remains

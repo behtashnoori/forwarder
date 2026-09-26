@@ -1,0 +1,1113 @@
+RECOMMENDED CODEX MODEL:
+GPT-6 Astra — Highest Available Reasoning
+
+GOAL:
+Forwarder — RESUME AND COMPLETE PHASE 3 P3-11 ONLY
+
+P3-11 — Explainable ETA + Planned Distance Basis
+
+MISSION TYPE:
+LPAF v2.7 GOVERNED RESUME / QUALIFY / INTEGRATE
+
+IMPORTANT:
+
+DO NOT RESTART P3-11 FROM SCRATCH.
+
+DO NOT DISCARD THE EXISTING P3-11 WORKTREE OR DRAFT IMPLEMENTATION.
+
+DO NOT REIMPLEMENT P3-12 OR P3-13.
+
+P3-12 and P3-13 are already integrated and canonical.
+
+DO NOT START P3-14 OR P3-15.
+
+NO PRODUCTION.
+NO DEPLOYMENT.
+NO RELEASE.
+
+The Product Owner explicitly resolves the remaining bounded P3-11 Product
+decision:
+
+P311_STOP_PLACEMENT
+
+according to the rules below.
+
+==================================================
+1. CURRENT CANONICAL
+==================================================
+
+Canonical repository:
+
+D:\1-webapp\15-forwarder-golden-20260921
+
+Canonical branch:
+
+integration/golden-controlled
+
+Expected current canonical HEAD:
+
+94b499340b2ed6abeefe7a4f38c95cb820dc4a72
+
+Approved remote:
+
+github
+
+Expected current Alembic head:
+
+20261011_phase3_owner_transfer
+
+Expected head count:
+
+1
+
+Known integrated status:
+
+P3-01 PASS
+P3-02 PASS
+P3-03 PASS
+P3-04 PASS
+P3-05 PASS
+P3-06 PASS
+P3-07 PASS
+P3-08 PASS
+P3-09 PASS
+P3-10 PASS
+P3-12 PASS
+P3-13 PASS
+
+P3-11:
+STARTED / PRESERVED / NOT_INTEGRATED
+
+P3-14:
+NOT_STARTED
+
+P3-15:
+NOT_STARTED
+
+Before any mutation:
+
+- fetch github;
+- verify repository identity;
+- verify canonical branch;
+- verify local SHA;
+- verify remote SHA;
+- verify 0/0;
+- verify clean canonical;
+- verify one Alembic head;
+- verify ancestry through P3-13;
+- verify no unexpected runtime/Product/migration changes.
+
+Do not trust recorded SHA blindly.
+
+Unexpected canonical runtime/Product/migration changes:
+
+STOP.
+
+==================================================
+2. LOCATE AND PRESERVE EXISTING P3-11 WORK
+==================================================
+
+Locate the existing P3-11 branch/worktree.
+
+Known preserved P3-11 work SHA from the previous mission:
+
+198d2bfb07b84e8bf35f0da67b0ef58e48872241
+
+Existing draft migration reported:
+
+20261010_phase3_cargo_eta
+
+IMPORTANT:
+
+That draft migration was created before P3-12/P3-13 became canonical.
+
+It is NOT the canonical migration head.
+
+Do not blindly reuse its old parent relationship.
+
+Inspect actual existing P3-11 work.
+
+Preserve:
+
+- valid runtime work;
+- tests;
+- ADR-067 implementation choices;
+- UI;
+- API;
+- migration content where semantically valid;
+- evidence notes.
+
+Do NOT:
+
+- reset --hard;
+- delete valid work;
+- reimplement from memory;
+- discard the preserved draft;
+- create a parallel ETA implementation.
+
+==================================================
+3. GOVERNING ARCHITECTURE
+==================================================
+
+ADR-067 is ACCEPTED.
+
+Preserve its accepted architecture:
+
+- Cargo-scoped ETA;
+- immutable calculation snapshots;
+- explainable provenance;
+- no second route engine;
+- no AI;
+- no GPS;
+- no hidden map/distance provider;
+- no fabricated progress;
+- no latest-unit shortcut;
+- corrected source semantics;
+- explicit unavailable results;
+- P3-10 reference versions pinned;
+- ETA history preserved;
+- exact source fingerprint;
+- Customer authorization before calculation/projection.
+
+Also preserve the accepted clarification:
+
+pure history/read lookup
+≠
+ENSURE / REFRESH current ETA snapshot.
+
+Do not create uncontrolled hidden writes from unrelated list/count reads.
+
+==================================================
+4. PRODUCT DECISION — STOP PLACEMENT
+==================================================
+
+The Product Owner explicitly resolves:
+
+P311_STOP_PLACEMENT=ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT
+
+Meaning:
+
+Stop / Operation time associated with a Route Leg belongs to the ARRIVAL point
+of that leg.
+
+Its effect is on CONTINUING BEYOND that point.
+
+==================================================
+5. ETA TO THE ARRIVAL POINT
+==================================================
+
+For:
+
+A → B
+
+with:
+
+movement(A→B)
++
+stop/operation(B)
+
+ETA ARRIVAL AT B is:
+
+movement(A→B)
+
+Do NOT include stop/operation(B) in the ETA for arriving at B.
+
+The stop begins conceptually after arrival at B.
+
+==================================================
+6. ETA TO A LATER POINT
+==================================================
+
+For:
+
+A → B → C
+
+ETA(B):
+
+movement(A→B)
+
+ETA(C):
+
+movement(A→B)
++
+remaining stop/operation(B), if not proven complete
++
+movement(B→C)
+
+Continue the same logic across later intermediate points.
+
+==================================================
+7. FINAL DESTINATION
+==================================================
+
+Final ETA is:
+
+ARRIVAL ETA.
+
+Do NOT include stop/operation AFTER arrival at the final destination.
+
+Therefore:
+
+arrival at final destination
+≠
+delivery completion
+≠
+unloading completion
+≠
+customs completion
+≠
+operational closure.
+
+P3-11 does NOT create:
+
+Delivery ETA
+Customs ETA
+Operational Completion ETA.
+
+==================================================
+8. INTERMEDIATE STOP NOT PROVEN COMPLETE
+==================================================
+
+If arrival at B is proven:
+
+but completion of required stop/operation(B) is NOT proven:
+
+the entire configured remaining stop/operation range for B remains part of the
+ETA to the next point.
+
+Example:
+
+reference stop(B) = 4–8 hours
+
+Cargo arrived at B two hours ago.
+
+Do NOT automatically change remaining stop to:
+
+2–6 hours.
+
+Elapsed wall-clock time is NOT evidence of operation progress.
+
+No prorating.
+
+==================================================
+9. STOP COMPLETION PROOF
+==================================================
+
+Stop/operation(B) is considered consumed for remaining ETA only when a governed
+fact proves that its required operation has completed.
+
+A governed start of the NEXT movement may also prove that the required
+pre-departure stop at B has already been completed.
+
+Use existing explicit operational semantics only.
+
+Do NOT infer completion from:
+
+- free text;
+- elapsed time;
+- location text;
+- estimated speed;
+- unrelated ExecutionUnit;
+- another Cargo branch.
+
+==================================================
+10. ZERO VS UNKNOWN
+==================================================
+
+Explicit:
+
+0 / 0
+
+means:
+
+no reference stop duration.
+
+NULL / missing:
+
+means unknown.
+
+NULL is NEVER converted to zero.
+
+If a required intermediate stop has no governed duration and no fact proves it
+complete:
+
+the dependent ETA is unavailable.
+
+==================================================
+11. ORIGIN BOUNDARY
+==================================================
+
+Do not attach an arrival-stop range backwards to the origin of the same leg.
+
+Example:
+
+A → B
+
+stop(B) belongs to arrival at B.
+
+It does NOT represent pre-departure handling at A.
+
+If Cargo is still at origin A and no governed departure time / pre-departure
+basis exists:
+
+do not invent a departure delay from stop(B).
+
+If ETA cannot be honestly calculated:
+
+return unavailable.
+
+Example reason:
+
+«زمان شروع حرکت هنوز مشخص نیست.»
+
+==================================================
+12. NO PRORATING
+==================================================
+
+Do NOT prorate stop or movement ranges based on:
+
+- elapsed time;
+- estimated fraction completed;
+- map distance;
+- reported location text;
+- inferred speed.
+
+Only explicit governed progress facts may remove already completed components
+from remaining ETA.
+
+==================================================
+13. NEXT ETA / FINAL ETA INDEPENDENCE
+==================================================
+
+Evaluate:
+
+NEXT IMPORTANT POINT ETA
+
+and:
+
+FINAL DESTINATION ETA
+
+independently.
+
+Example:
+
+next stage reference exists;
+later stage reference missing.
+
+Then:
+
+NEXT ETA = available
+
+FINAL ETA = unavailable
+
+Do not suppress a valid next ETA merely because final ETA is unavailable.
+
+Do not fabricate a final ETA from partial references.
+
+==================================================
+14. ETA INPUTS
+==================================================
+
+Use only approved deterministic inputs:
+
+- valid Cargo route branch;
+- valid active RoutePlan/revision;
+- applicable operational progress anchor;
+- occurred_at;
+- explicitly proven completed movement/operation facts;
+- remaining route;
+- P3-10 reference time versions;
+- explicit governed deterministic effects if already supported by accepted
+  semantics.
+
+Do not parse free text for duration.
+
+Do not use LLM.
+
+==================================================
+15. ANCHOR RULE
+==================================================
+
+The anchor must prove:
+
+- relevant operational position;
+- applicability to THIS Cargo;
+- applicability to THIS route branch.
+
+Do not use:
+
+"newest location in Shipment"
+
+or:
+
+"newest ExecutionUnit"
+
+as a shortcut.
+
+For split Cargo:
+
+one partial unit's progress does not automatically establish whole-Cargo
+progress.
+
+If whole-Cargo anchor is ambiguous:
+
+ETA unavailable.
+
+==================================================
+16. OCCURRED / RECORDED
+==================================================
+
+Use:
+
+occurred_at
+
+for operational time basis.
+
+Use:
+
+recorded_at
+
+for audit/freshness.
+
+Late reporting must not move the operational clock forward incorrectly.
+
+Do not substitute recorded_at for occurred_at.
+
+==================================================
+17. ETA RANGE
+==================================================
+
+Preserve range semantics.
+
+If remaining reference inputs produce:
+
+lower bound
+upper bound
+
+show a range.
+
+No fake second/minute-level certainty beyond source precision.
+
+Use simple Persian.
+
+Example:
+
+زمان تقریبی رسیدن:
+بین دوشنبه ۱۴:۰۰ تا سه‌شنبه ۱۰:۰۰
+
+==================================================
+18. ETA PROVENANCE
+==================================================
+
+Every current/history ETA must preserve enough evidence to explain:
+
+- Cargo;
+- route revision;
+- relevant branch/terminal destination;
+- anchor identity/type;
+- occurred time;
+- recorded time where useful;
+- reference-time version IDs;
+- calculation instant;
+- ruleset version;
+- source fingerprint;
+- next result / unavailable reason;
+- final result / unavailable reason.
+
+Do not expose unsafe internal IDs to Customer UI.
+
+==================================================
+19. ETA HISTORY
+==================================================
+
+New meaningful input:
+
+→ new snapshot.
+
+Do not overwrite history.
+
+Examples:
+
+new progress report
+correction
+route revision
+reference-time version change
+material source change
+
+may create a new ETA snapshot.
+
+If the resulting ETA happens to equal the previous range:
+
+the source/provenance change may still justify a new meaningful snapshot.
+
+Preserve ADR-067 rules.
+
+==================================================
+20. CUSTOMER ETA
+==================================================
+
+Customer ETA must use current authorization:
+
+Portal Account
+→ DN10
+→ CRM Customer
+→ Cargo
+→ Customer-safe route/progress
+→ ETA.
+
+Never use a private anchor that the Customer is not authorized to know as an
+indirect explanation leak.
+
+Customer output is allowlisted.
+
+No:
+
+internal notes
+private causes
+other Customer route
+other Customer Cargo
+raw source IDs.
+
+==================================================
+21. PLANNED DISTANCE
+==================================================
+
+No governed route-distance source was found in the accepted architecture
+review.
+
+Therefore P3-11 must NOT invent planned distance.
+
+Display:
+
+«تعریف نشده»
+
+unless fresh inspection finds an already-governed source explicitly suitable
+under Product Authority.
+
+Do NOT integrate a new provider.
+
+==================================================
+22. ACTUAL TRAVELLED DISTANCE
+==================================================
+
+Do NOT claim precise actual travelled distance without actual path/GPS
+evidence.
+
+Reported operational locations do not equal a complete travelled path.
+
+Required:
+
+ACTUAL_TRAVELLED_DISTANCE_WITHOUT_PATH_EVIDENCE=NO
+
+==================================================
+23. RECONCILE DRAFT MIGRATION
+==================================================
+
+The preserved P3-11 migration draft:
+
+20261010_phase3_cargo_eta
+
+was based on an earlier canonical state.
+
+Do NOT modify already-canonical P3-12/P3-13 migrations.
+
+Do NOT create a migration branch.
+
+Reconcile P3-11 into a NEW additive migration whose parent is the ACTUAL
+current canonical head:
+
+expected currently:
+
+20261011_phase3_owner_transfer
+
+Use a new correct revision identifier.
+
+Do not reuse a revision ID in a way that makes migration history ambiguous.
+
+Preserve valid schema intent from the earlier draft.
+
+Canonical final graph must have:
+
+ALEMBIC_HEAD_COUNT=1
+
+==================================================
+24. LEGACY / BACKFILL
+==================================================
+
+No ETA history is fabricated for historical Shipments.
+
+No seed.
+
+No historical snapshot backfill.
+
+Unknown historical ETA remains unknown.
+
+==================================================
+25. POSTGRESQL QUALIFICATION
+==================================================
+
+Use PostgreSQL 18.
+
+At minimum verify:
+
+- clean upgrade from current canonical head;
+- one head;
+- legacy rows preserved;
+- no fabricated ETA;
+- snapshot immutability;
+- tenant/Cargo/route integrity;
+- concurrent identical ensure;
+- source change;
+- correction;
+- A→B→A meaningful history;
+- customer authorization;
+- populated downgrade protection where required;
+- empty downgrade/re-upgrade where safe.
+
+==================================================
+26. REQUIRED PRODUCT JOURNEYS
+==================================================
+
+Use normal Google Chrome navigation and synthetic data.
+
+At minimum:
+
+A. Cargo with valid anchor + all required references
+
+→ next ETA available
+→ final ETA available
+→ ranges correct.
+
+
+B. A → B → C
+
+movement A→B
+stop B
+movement B→C
+
+Verify:
+
+ETA(B)
+does NOT contain stop B.
+
+ETA(C)
+does contain stop B unless completion proven.
+
+
+C. Intermediate operation complete
+
+arrival B
+→ operation completion fact
+→ ETA(C) excludes stop B.
+
+
+D. Next movement started
+
+valid start of B→C
+→ stop B treated as already consumed where contract proves it.
+
+
+E. Arrival but no operation-complete fact
+
+two hours elapsed
+→ stop range is NOT prorated.
+
+
+F. stop=0/0
+
+→ valid zero stop.
+
+
+G. stop=NULL
+
+→ unknown
+→ dependent ETA unavailable.
+
+
+H. Final destination
+
+→ final arrival ETA does not add destination stop.
+
+
+I. Missing later reference
+
+→ next ETA available
+→ final unavailable.
+
+
+J. Corrected report
+
+→ previous ETA remains history
+→ corrected fact produces current ETA.
+
+
+K. Reference-time version change
+
+→ historical ETA pinned
+→ later recalculation uses governed applicable version.
+
+
+L. Multiple Customer/Cargo branches
+
+→ no cross-Customer leak.
+
+
+M. Split Cargo ambiguous
+
+→ no fake whole-Cargo ETA.
+
+
+N. Customer UI
+
+→ safe range/basis/as-of only.
+
+
+O. No distance source
+
+→ planned distance undefined.
+
+
+P. No GPS/path
+
+→ no actual travelled distance.
+
+==================================================
+27. WORKSPACE / CONTROL TOWER BOUNDARY
+==================================================
+
+P3-11 may expose read-only ETA facts through existing approved adapters.
+
+Do NOT:
+
+- change Attention rank;
+- create Action;
+- create Exception;
+- create SLA;
+- create notification engine;
+- change Tower business ranking.
+
+P3-14 owns final integrated UI reconciliation.
+
+==================================================
+28. FULL QUALIFICATION
+==================================================
+
+Required on the final frozen Product SHA:
+
+- focused backend;
+- focused frontend;
+- deterministic ETA tests;
+- stop-placement cases;
+- provenance/history;
+- unavailable reasons;
+- negative auth;
+- tenant isolation;
+- Customer privacy;
+- PostgreSQL 18;
+- migration qualification;
+- Chrome Expert;
+- Chrome Customer;
+- responsive/mobile where affected;
+- P3-03 regression;
+- P3-07 regression;
+- P3-09 regression;
+- P3-10 regression;
+- P3-12 regression;
+- P3-13 regression;
+- Workspace regression;
+- Control Tower regression;
+- TypeScript;
+- ESLint;
+- production frontend build;
+- OpenAPI;
+- architecture;
+- repository structure;
+- governance;
+- git diff --check;
+- full backend regression;
+- full frontend regression.
+
+Evidence must bind to exact Product SHA.
+
+No stale evidence reuse after runtime change.
+
+==================================================
+29. REFERENCES
+==================================================
+
+Update current references only.
+
+Record:
+
+P311_STOP_PLACEMENT=ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT
+
+and the exact semantics above.
+
+Update:
+
+- ADR-067 implementation status;
+- P3-11 status/evidence;
+- API contract;
+- domain map if affected;
+- Journey impact;
+- migration reference;
+- current Phase 3 status.
+
+Do not rewrite historical blocked report or proposal history.
+
+Expected:
+
+REFERENCE_RECONCILIATION=PASS
+REFERENCE_IMPACT=NONE
+
+==================================================
+30. JOURNEY IMPACT
+==================================================
+
+JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY
+
+AFFECTED_JOURNEYS=
+FWD-J02,
+FWD-J04,
+FWD-J06,
+FWD-J07,
+FWD-J08,
+FWD-J09,
+FWD-IPJ-02,
+FWD-IPJ-03,
+FWD-IPJ-04
+
+Do NOT claim global Integrated Product Journeys PASS.
+
+==================================================
+31. CONTROLLED CANONICAL INTEGRATION
+==================================================
+
+Only if P3-11 fully qualifies:
+
+- freeze Product SHA;
+- bind evidence;
+- verify ancestry;
+- Product Authority PASS;
+- architecture PASS;
+- one Alembic head;
+- references reconciled;
+- candidate clean;
+- canonical clean;
+- no runtime Product change after tested SHA.
+
+Then:
+
+FAST-FORWARD ONLY
+
+integration/golden-controlled
+
+Push only canonical to github.
+
+Fetch again.
+
+Require:
+
+LOCAL_REMOTE_ALIGNMENT=PASS
+AHEAD_BEHIND=0/0
+
+==================================================
+32. PRODUCTION BOUNDARY
+==================================================
+
+ABSOLUTELY NO:
+
+Production access
+Production database
+Production credentials
+Production data
+Production migration
+deployment
+release.
+
+Synthetic owned non-production qualification only.
+
+==================================================
+33. CLEANUP
+==================================================
+
+Stop:
+
+temporary backend
+frontend
+Chrome
+owned PostgreSQL
+listeners/processes.
+
+Remove disposable resources where host policy safely permits.
+
+If host policy blocks deletion:
+
+record accurately.
+
+Do not bypass safety.
+
+==================================================
+34. HARD STOP
+==================================================
+
+After P3-11 qualification/integration:
+
+STOP.
+
+DO NOT START:
+
+P3-14
+P3-15
+Integrated Product Journey global qualification
+Human Product Walkthrough
+Release.
+
+==================================================
+35. FINAL REPORT — SIMPLE PERSIAN
+==================================================
+
+Explain:
+
+1. P3-11 work قبلی چگونه حفظ شد؟
+2. migration قدیمی چگونه با canonical جدید reconcile شد؟
+3. تصمیم Stop Placement دقیقاً چگونه پیاده شد؟
+4. ETA رسیدن به نقطه B چگونه محاسبه می‌شود؟
+5. stop B چه زمانی روی ETA C اثر می‌گذارد؟
+6. چه چیزی completion توقف را اثبات می‌کند؟
+7. چرا elapsed time باعث prorating نمی‌شود؟
+8. zero و unknown چگونه جدا شدند؟
+9. next ETA و final ETA چگونه مستقل شدند؟
+10. final-destination stop چرا وارد Arrival ETA نشد؟
+11. anchor چگونه انتخاب می‌شود؟
+12. split Cargo ambiguity چه رفتاری دارد؟
+13. history/provenance چگونه حفظ شد؟
+14. Customer privacy چگونه حفظ شد؟
+15. planned distance چه شد؟
+16. actual travelled distance چه شد؟
+17. migration نهایی چیست؟
+18. backend/frontend/PostgreSQL/Chrome چه نتایجی داشتند؟
+19. Product SHA چیست؟
+20. Evidence SHA چیست؟
+21. canonical نهایی چیست؟
+22. Alembic head چیست؟
+23. local/remote alignment چیست؟
+24. P3-14 شروع شد؟ باید NO باشد.
+25. Global Product Validation چیست؟
+26. Human Product Walkthrough چیست؟
+27. Release Ready چیست؟
+28. Production دست‌نخورده ماند؟
+29. قدم بعدی دقیق چیست؟
+
+==================================================
+36. FINAL VERDICT
+==================================================
+
+Return exactly one:
+
+PASS — PHASE 3 P3-11 INTEGRATED INTO CANONICAL
+
+or
+
+BLOCKED — P3-11 — <specific reason>
+
+or
+
+ENVIRONMENT_INTERRUPTION — SAFE STATE PRESERVED
+
+==================================================
+37. REQUIRED PASS FLAGS
+==================================================
+
+If PASS:
+
+LPAF_BASELINE=2.7
+
+PHASE3_P3_01=PASS
+PHASE3_P3_02=PASS
+PHASE3_P3_03=PASS
+PHASE3_P3_04=PASS
+PHASE3_P3_05=PASS
+PHASE3_P3_06=PASS
+PHASE3_P3_07=PASS
+PHASE3_P3_08=PASS
+PHASE3_P3_09=PASS
+PHASE3_P3_10=PASS
+PHASE3_P3_11=PASS
+PHASE3_P3_12=PASS
+PHASE3_P3_13=PASS
+
+PHASE3_P3_11_INTEGRATED=PASS
+
+DN04_STATUS=RESOLVED_FOR_P3_11
+P311_STOP_PLACEMENT=ARRIVAL_POINT_BEFORE_NEXT_MOVEMENT
+
+DETERMINISTIC_ETA=PASS
+ETA_IS_AI=NO
+ETA_IS_GPS=NO
+ETA_IS_SLA=NO
+
+ETA_RANGE=PASS
+NEXT_POINT_ETA=PASS
+FINAL_DESTINATION_ETA=PASS
+NEXT_FINAL_INDEPENDENCE=PASS
+
+ETA_STOP_AT_ARRIVAL_POINT=PASS
+ETA_INTERMEDIATE_STOP_BEFORE_NEXT_MOVEMENT=PASS
+ETA_FINAL_DESTINATION_STOP_INCLUDED=NO
+ETA_STOP_ELAPSED_TIME_PRORATION=NO
+
+ETA_EXPLICIT_ZERO_STOP=PASS
+ETA_UNKNOWN_STOP_AS_ZERO=NO
+
+ETA_AS_OF=PASS
+ETA_PROVENANCE=PASS
+ETA_HISTORY=PASS
+ETA_REFERENCE_VERSION_PIN=PASS
+
+SPLIT_CARGO_FAKE_WHOLE_PROGRESS=NO
+FAKE_ETA_PRECISION=NO
+FAKE_DISTANCE=NO
+ACTUAL_TRAVELLED_DISTANCE_WITHOUT_PATH_EVIDENCE=NO
+
+P3_11_POSTGRESQL_18=PASS
+P3_11_BROWSER_PRODUCT_JOURNEY=PASS
+P3_11_FULL_BACKEND_REGRESSION=PASS
+P3_11_FULL_FRONTEND_REGRESSION=PASS
+
+P3_11_MIGRATION_REQUIRED=YES
+P3_11_ALEMBIC_HEAD=<exact>
+P3_11_PRODUCT_HEAD=<full sha>
+P3_11_EVIDENCE_HEAD=<full sha>
+P3_11_CANONICAL_INTEGRATION=PASS
+
+PRODUCT_AUTHORITY_RECONCILIATION=PASS
+REFERENCE_RECONCILIATION=PASS
+REFERENCE_IMPACT=NONE
+
+ALEMBIC_HEAD=<exact final head>
+ALEMBIC_HEAD_COUNT=1
+
+GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING
+INTEGRATED_PRODUCT_JOURNEYS=NOT_RUN
+HUMAN_PRODUCT_WALKTHROUGH=NOT_RUN
+RELEASE_READY=NO
+
+P3_14_STARTED=NO
+P3_15_STARTED=NO
+
+PRODUCTION_ACCESSED=NO
+PRODUCTION_MUTATED=NO
+DEPLOYMENT_PERFORMED=NO
+RELEASE_CREATED=NO
+
+FINAL_CANONICAL_HEAD=<full sha>
+CANONICAL_PUSH=PASS
+LOCAL_REMOTE_ALIGNMENT=PASS
+AHEAD_BEHIND=0/0
+
+WORKTREES_CLEAN=YES
+
+NEXT_STEP=P3_14_AND_P3_15_FINAL_IMPLEMENTATION_AND_QUALIFICATION_GATE
+
+STOP.

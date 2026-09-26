@@ -1,0 +1,340 @@
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-13-owner-transfer
+
+stdout | src/tests/components/ShipmentOwnerTransfer.test.tsx
+✅ Environment variables validated successfully
+🔗 API (dev): relative /api via Vite proxy
+
+ ❯ src/tests/components/ShipmentOwnerTransfer.test.tsx (6 tests | 1 failed) 1579ms
+     × keeps the idempotency key after an uncertain response and requires review again 396ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/tests/components/ShipmentOwnerTransfer.test.tsx > exceptional owner transfer > keeps the idempotency key after an uncertain response and requires review again
+TestingLibraryElementError: Unable to find an accessible element with the role "button" and name "تأیید نهایی انتقال"
+
+Here are the accessible roles:
+
+  region:
+
+  Name "مسئول و سابقه انتقال":
+  <section
+    aria-label="مسئول و سابقه انتقال"
+    class="space-y-4 rounded-2xl border bg-white p-4 sm:p-5"
+  />
+
+  --------------------------------------------------
+  heading:
+
+  Name "مسئول و سابقه انتقال":
+  <h2
+    class="text-xl font-bold"
+  />
+
+  Name "تاریخچه مسئولیت":
+  <h3
+    class="font-bold"
+  />
+
+  --------------------------------------------------
+  button:
+
+  Name "بررسی دوباره مسئول":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+  />
+
+  Name "جست‌وجو":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+    type="submit"
+  />
+
+  Name "کارشناسان قبلی":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+    disabled=""
+  />
+
+  Name "کارشناسان بعدی":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+    disabled=""
+  />
+
+  Name "بررسی انتقال مسئول":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary-dark shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+    disabled=""
+  />
+
+  Name "تاریخچه قبلی":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+    disabled=""
+  />
+
+  Name "تاریخچه بعدی":
+  <button
+    class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+    disabled=""
+  />
+
+  --------------------------------------------------
+  alert:
+
+  Name "":
+  <p
+    class="text-red-700"
+    role="alert"
+  />
+
+  --------------------------------------------------
+  paragraph:
+
+  Name "":
+  <p />
+
+  Name "":
+  <p
+    class="text-sm text-slate-600"
+  />
+
+  Name "":
+  <p />
+
+  Name "":
+  <p
+    class="rounded-xl bg-amber-50 p-3"
+  />
+
+  Name "":
+  <p />
+
+  --------------------------------------------------
+  strong:
+
+  Name "":
+  <strong />
+
+  --------------------------------------------------
+  textbox:
+
+  Name "جست‌وجوی کارشناس":
+  <input
+    class="mt-1 min-h-11 w-full rounded-lg border p-2"
+    maxlength="100"
+    value=""
+  />
+
+  Name "دلیل انتقال (الزامی)":
+  <textarea
+    class="mt-1 min-h-24 w-full rounded-lg border p-3"
+    maxlength="1000"
+  />
+
+  --------------------------------------------------
+  combobox:
+
+  Name "کارشناس مسئول جدید":
+  <select
+    aria-label="کارشناس مسئول جدید"
+    class="mt-1 min-h-11 w-full rounded-lg border p-2"
+  />
+
+  --------------------------------------------------
+  option:
+
+  Name "انتخاب کارشناس":
+  <option
+    value=""
+  />
+
+  --------------------------------------------------
+  list:
+
+  Name "":
+  <ol
+    class="space-y-3"
+  />
+
+  --------------------------------------------------
+
+Ignored nodes: comments, script, style
+<body>
+  <div>
+    <section
+      aria-label="مسئول و سابقه انتقال"
+      class="space-y-4 rounded-2xl border bg-white p-4 sm:p-5"
+    >
+      <div
+        class="flex flex-wrap items-center justify-between gap-3"
+      >
+        <h2
+          class="text-xl font-bold"
+        >
+          مسئول و سابقه انتقال
+        </h2>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+        >
+          بررسی دوباره مسئول
+        </button>
+      </div>
+      <p
+        class="text-red-700"
+        role="alert"
+      >
+        انتقال ثبت نشد؛ مجوز مدیر، کارشناس انتخاب‌شده و وضعیت پرونده را بررسی کنید.
+      </p>
+      <p>
+        مسئول فعلی پرونده: 
+        <strong>
+          Current owner
+        </strong>
+      </p>
+      <p
+        class="text-sm text-slate-600"
+      >
+        مسئول اولیه در سابقه: 
+        Initial owner
+         · زمان آغاز مسئولیت ثبت نشده است.
+      </p>
+      <div
+        class="space-y-3 rounded-xl border p-4"
+      >
+        <p>
+          انتقال استثنایی با دلیل مدیر انجام می‌شود. مسئول درخواست، پیشنهاد قیمت و کارهای ثبت‌شده تغییر نمی‌کند.
+        </p>
+        <p
+          class="rounded-xl bg-amber-50 p-3"
+        >
+          کارهای بازِ مسئول فعلی در این پرونده: 
+          3
+          . این کارها با انتقال پرونده واگذار نمی‌شوند.
+        </p>
+        <form
+          class="flex flex-wrap items-end gap-2"
+        >
+          <label
+            class="min-w-0 flex-1"
+          >
+            جست‌وجوی کارشناس
+            <input
+              class="mt-1 min-h-11 w-full rounded-lg border p-2"
+              maxlength="100"
+              value=""
+            />
+          </label>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+            type="submit"
+          >
+            جست‌وجو
+          </button>
+        </form>
+        <label
+          class="block"
+        >
+          کارشناس مسئول جدید
+          <select
+            aria-label="کارشناس مسئول جدید"
+            class="mt-1 min-h-11 w-full rounded-lg border p-2"
+          >
+            <option
+              value=""
+            >
+              انتخاب کارشناس
+            </option>
+          </select>
+        </label>
+        <div
+          class="flex flex-wrap gap-2"
+        >
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+            disabled=""
+          >
+            کارشناسان قبلی
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+            disabled=""
+          >
+            کارشناسان بعدی
+          </button>
+        </div>
+        <label
+          class="block"
+        >
+          دلیل انتقال (الزامی)
+          <textarea
+            class="mt-1 min-h-24 w-full rounded-lg border p-3"
+            maxlength="1000"
+          >
+            Explicit reason
+          </textarea>
+        </label>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary text-primary-foreground hover:bg-primary-dark shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+          disabled=""
+        >
+          بررسی انتقال مسئول
+        </button>
+      </div>
+      <h3
+        class="font-bold"
+      >
+        تاریخچه مسئولیت
+      </h3>
+      <p>
+        انتقالی ثبت نشده است.
+      </p>
+      <ol
+        class="space-y-3"
+      />
+      <div
+        class="flex flex-wrap gap-2"
+      >
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+          disabled=""
+        >
+          تاریخچه قبلی
+        </button>
+        <span
+          class="p-2"
+        >
+          صفحه 
+          1
+        </span>
+        <button
+          class="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm hover:shadow-md h-10 px-4 py-2 text-sm"
+          disabled=""
+        >
+          تاریخچه بعدی
+        </button>
+      </div>
+    </section>
+  </div>
+</body>
+ ❯ Object.getElementError ../../15-forwarder-golden-20260921/node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ ../../15-forwarder-golden-20260921/node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ ../../15-forwarder-golden-20260921/node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ getByRole ../../15-forwarder-golden-20260921/node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/tests/components/ShipmentOwnerTransfer.test.tsx:36:44
+     34|     fireEvent.click(screen.getByRole("button", {name: "تأیید نهایی انت…
+     35|     await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
+     36|     await choose(); fireEvent.click(screen.getByRole("button", {name: …
+       |                                            ^
+     37|     await waitFor(() => expect(api.transfer).toHaveBeenCalledTimes(2));
+     38|     expect(api.transfer.mock.calls[0][2]).toBe(api.transfer.mock.calls…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 3 passed (4)
+      Tests  1 failed | 54 passed (55)
+   Start at  18:26:04
+   Duration  40.64s (transform 2.67s, setup 2.97s, import 4.55s, tests 16.03s, environment 14.15s)
+

@@ -1,0 +1,13 @@
+{
+  "candidate_started_clean": true,
+  "canonical_clean": true,
+  "p311_runtime_imported": false,
+  "alignment": "0/0",
+  "actual_parent_migration": "20261010_phase3_closure",
+  "production_accessed": false,
+  "slice": "P3-13",
+  "canonical": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "remote": "github/integration/golden-controlled",
+  "architecture_acceptance": "6259830f2a5fe94798bf4183d2643bf624529c26",
+  "recorded_at_utc": "2026-09-26T13:31:24.5136145Z"
+}
