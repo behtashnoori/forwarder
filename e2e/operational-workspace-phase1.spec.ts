@@ -107,7 +107,7 @@ test.describe.serial("Operational Workspace Phase 1 governed browser proof", () 
 
     await page.getByRole("link", { name: /مشاهده محموله مشتری عملیاتی آزمایشی/ }).click();
     await expect(page).toHaveURL(new RegExp(`/operations/shipments/${fixture.active_shipment_public_id}$`));
-    await expect(page.getByText("کارشناس مسئول ثابت", { exact: true })).toBeVisible();
+    await expect(page.getByText("مسئول فعلی پرونده", { exact: true })).toBeVisible();
     await expect(page.getByText("کارشناس مالک ثابت", { exact: true })).toBeVisible();
     await expect(page.getByText("تهران", { exact: false }).first()).toBeVisible();
     await expect(page.getByText("تبریز", { exact: false }).first()).toBeVisible();

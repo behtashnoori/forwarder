@@ -74,6 +74,7 @@ def main() -> None:
         if admin_membership is None:
             raise RuntimeError("Synthetic organization admin membership is missing")
         phase2_permissions = {
+            "execution_unit.read",
             "operational_execution.read",
             "operational_execution.manage",
             "oip.reconcile",
