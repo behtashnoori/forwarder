@@ -149,7 +149,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
     buffer: Buffer.from("%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF"),
   });
   await page.getByRole("button", { name: "بارگذاری سند", exact: true }).click();
-  await expect(page.getByText("fixed-owner-proof.pdf")).toBeVisible();
+  await expect(page.getByText("fixed-owner-proof.pdf", { exact: true })).toBeVisible();
 
   // Journey B: use the existing governed assignment command; Shipment access stays with E1.
   const e1Token = await token(page);
@@ -160,7 +160,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   expect(reassigned.status()).toBe(200);
   await page.reload();
   await page.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
-  await expect(page.getByText("fixed-owner-proof.pdf")).toBeVisible();
+  await expect(page.getByText("fixed-owner-proof.pdf", { exact: true })).toBeVisible();
 
   // Journey D: E1 retains owner-scoped Control Tower population.
   await page.goto("/operations/control-tower");
@@ -201,7 +201,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await login(page, fixture.usernames.admin, /\/admin$/);
   await page.goto(`/operations/shipments/${shipmentId}`);
   await page.getByText("جزئیات عملیاتی بیشتر", { exact: true }).click();
-  await expect(page.getByText("fixed-owner-proof.pdf")).toBeVisible();
+  await expect(page.getByText("fixed-owner-proof.pdf", { exact: true })).toBeVisible();
   await expect(page.getByText("دسترسی شما به این بخش فقط خواندنی است.")).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/operations/control-tower");
