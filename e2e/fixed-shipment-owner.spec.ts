@@ -108,7 +108,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await page.locator(`a[href="/customer/requests/${fixture.request_public_id}"]`).click();
   await expect(page.getByText("پیشنهاد (قیمت)")).toBeVisible();
   await page.getByRole("button", { name: "تأیید پیشنهاد" }).click();
-  await expect(page.getByText("شما این پیشنهاد را تأیید کردید")).toBeVisible();
+  await expect(page.getByText("شما این پیشنهاد را تأیید کردید").first()).toBeVisible();
 
   await page.goto(`/expert/requests/${fixture.request_public_id}`);
   await expect(page.getByText("مشتری این قیمت را تأیید کرد")).toBeVisible();
