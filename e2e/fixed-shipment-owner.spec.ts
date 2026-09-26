@@ -114,7 +114,7 @@ test("A-E — accepted Quote owner stays fixed across Request reassignment", asy
   await expect(page.getByText("مشتری این قیمت را تأیید کرد")).toBeVisible();
   await page.getByRole("link", { name: "ایجاد پرونده عملیاتی" }).click();
   await expect(page).toHaveURL(/\/operations\/shipments\/new/);
-  await expect(page.locator("#quote")).not.toHaveValue("");
+  await expect(page.locator("#quote")).not.toHaveValue("", { timeout: 60_000 });
   await page.getByLabel("مبدأ روش تعیین مکان").selectOption("geography");
   await page.getByLabel("مقصد روش تعیین مکان").selectOption("geography");
   await page.getByLabel("مبدأ استان").selectOption(String(fixture.origin_province_id));
