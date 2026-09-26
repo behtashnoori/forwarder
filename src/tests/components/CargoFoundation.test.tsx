@@ -57,6 +57,16 @@ describe("Cargo foundation UI", () => {
     api.getCargoCatalogShipmentUsage.mockResolvedValue({cargo_item:catalog,summary:{shipment_count:1,active_shipment_count:1},items:[{operational_shipment_public_id:"shipment-1",project_public_id:"project-1",project_code:"PRJ-1",shipment_request_reference:null,quantity:"2.000000",uom:"ea",status:"in_progress",current_location:"Border",location_source:"operational_event",latest_event_at:"2026-08-20T09:25:00Z",shipment_cargo_line_public_id:"line-1",display_name_snapshot:"کالا"}],limit:50,offset:0});
   });
 
+  it("keeps non-owner cargo access read-only without requesting mutation selectors", async () => {
+    api.listShipmentCargoItems.mockResolvedValue({ items: [shipmentItem], can_manage: false });
+    render(<ShipmentCargoItems shipmentPublicId="shipment-1" projectPublicId="project-1" />);
+    expect(await screen.findByText("اطلاعات کالا برای شما فقط خواندنی است.")).toBeInTheDocument();
+    expect(screen.queryByText("افزودن ردیف کالا")).not.toBeInTheDocument();
+    expect(screen.queryByText("تکمیل یا اصلاح اطلاعات")).not.toBeInTheDocument();
+    expect(api.getShipmentCargoLineageOptions).not.toHaveBeenCalled();
+    expect(api.getShipmentCargoOptions).not.toHaveBeenCalled();
+  });
+
   it("keeps the accepted plan when actual quantity is edited after a delayed refresh", async () => {
     const initial = { ...shipmentItem, cargo_owner: { id: 1, label: "Customer A" }, quantities: { ...shipmentItem.quantities, planned: "100", actual: "95" } };
     const planned = { ...initial, quantities: { ...initial.quantities, planned: "95" }, version: 2 };

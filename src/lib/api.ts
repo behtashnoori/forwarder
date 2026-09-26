@@ -3786,7 +3786,7 @@ export const getOperationalTransportTracking=(shipmentId:string)=>request<{sourc
 export const enableOperationalTransportTracking=(shipmentId:string)=>request<{tracking:OperationalTransportTracking}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-tracking/enable`,{method:"POST"});
 export const addOperationalTransportTrackingUpdate=(shipmentId:string,unitId:number,payload:Record<string,unknown>)=>request<{tracking:OperationalTransportTracking}>(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/transport-units/${unitId}/tracking-updates`,{method:"POST",body:JSON.stringify(payload)});
 export const listShipmentCargoItems = (shipmentId: string) =>
-  request<{ items: ShipmentCargoItem[] }>(
+  request<{ items: ShipmentCargoItem[]; can_manage?: boolean }>(
     `/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/cargo-items`,
   );
 export const createShipmentCargoItem = (

@@ -250,7 +250,8 @@ def alias_deactivate(public_id, alias_id):
 @require_auth
 def shipment_items(shipment_id):
     try:
-        shipment = svc.scoped_shipment(_user(), shipment_id)
+        user = _user()
+        shipment = svc.scoped_shipment(user, shipment_id)
         rows = db.session.scalars(
             select(ShipmentCargoItem)
             .where(ShipmentCargoItem.operational_shipment_id == shipment.id)
@@ -267,7 +268,10 @@ def shipment_items(shipment_id):
             )
             .order_by(ShipmentCargoItem.line_number)
         ).all()
-        return jsonify({"items": [svc.shipment_item_dict(r) for r in rows]})
+        return jsonify({
+            "items": [svc.shipment_item_dict(r) for r in rows],
+            "can_manage": svc.can_manage_cargo(user, shipment),
+        })
     except svc.CargoError as exc:
         return _error(exc)
 

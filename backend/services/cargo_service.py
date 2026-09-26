@@ -529,6 +529,15 @@ def _require_cargo_mutation(user, shipment):
         )
 
 
+def can_manage_cargo(user, shipment):
+    """Report the existing cargo-mutation decision without weakening it."""
+    try:
+        operational_service.require_permission(user, "operational_shipment.create")
+    except operational_service.OperationalError:
+        return False
+    return authorize_document_management(user, shipment).allowed
+
+
 def _decimal(value, field, *, required=False):
     if value in (None, ""):
         if required:
