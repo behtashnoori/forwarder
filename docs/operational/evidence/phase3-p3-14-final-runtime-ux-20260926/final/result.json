@@ -1,0 +1,20 @@
+{
+  "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee",
+  "production_mutated": false,
+  "stopped": true,
+  "executed_at_utc": "2026-09-26T21:08:16.7411071Z",
+  "schema": "20261012_phase3_cargo_eta",
+  "production_accessed": false,
+  "results": [
+    {
+      "name": "Control Tower PostgreSQL parity",
+      "status": "PASS"
+    },
+    {
+      "name": "P3-14 Chrome",
+      "status": "PASS"
+    }
+  ],
+  "dirty_source": false,
+  "browser_only": false
+}

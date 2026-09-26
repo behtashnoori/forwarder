@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "phase": "P3-14",
+  "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee",
+  "migration_head": "20261012_phase3_cargo_eta",
+  "migration_head_count": 1,
+  "dirty_source": false,
+  "results": {
+    "backend": { "status": "PASS", "passed": 1561, "skipped": 121, "failed": 0 },
+    "frontend": { "status": "PASS", "files": 94, "passed": 447, "failed": 0 },
+    "postgresql_18": { "status": "PASS", "passed": 1, "failed": 0 },
+    "chrome": { "status": "PASS", "passed": 3, "failed": 0 },
+    "app_types": "PASS",
+    "node_types": "PASS",
+    "lint": { "status": "PASS", "errors": 0, "warnings": 14 },
+    "build": "PASS",
+    "architecture": "PASS",
+    "structure": "PASS",
+    "backend_determinism": "PASS",
+    "diff_check": "PASS"
+  },
+  "attention_ranking_changed": false,
+  "migration_required": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false
+}
+

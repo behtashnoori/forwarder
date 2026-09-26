@@ -1,0 +1,11 @@
+[
+  { "name": "app-types", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" },
+  { "name": "node-types", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" },
+  { "name": "lint", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee", "errors": 0, "warnings": 14 },
+  { "name": "build", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" },
+  { "name": "architecture", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" },
+  { "name": "structure", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" },
+  { "name": "backend-determinism", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" },
+  { "name": "diff", "status": "PASS", "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" },
+  { "name": "alembic-head", "status": "PASS", "head": "20261012_phase3_cargo_eta", "head_count": 1, "product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee" }
+]
