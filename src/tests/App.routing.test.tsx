@@ -80,6 +80,8 @@ describe("App operational routing", () => {
       "/customer/reset-password",
       "/customer/enroll",
       "/customer/requests",
+      "/customer/shipments",
+      "/customer/shipments/:shipmentId",
       "/customer/documents",
       "/customer/requests/:requestId",
       "/customer/profile",

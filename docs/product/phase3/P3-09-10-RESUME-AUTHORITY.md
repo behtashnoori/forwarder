@@ -71,3 +71,15 @@ body in the browser before accepting it. Mismatch discards the body and makes on
 fresh read; persistent churn fails closed. The revision is no entitlement and
 contains no CRM metadata. No duplicate identity storage or schema is introduced.
 Tests must revoke during a read and delay a response without synthesizing focus.
+
+## Qualification inventory correction
+
+The first full frontend run at `191c0048a4926b15b643e7c52c31a1814c7312a5`
+passed 419 tests and failed the frozen route-inventory assertion: its expected
+list had not yet included the two explicitly authorized P3-09 routes. Add only
+`/customer/shipments` and `/customer/shipments/:shipmentId` in the existing App
+order. Exact inventory and final catch-all checks remain strict. This is an
+AUTHORIZED test-contract reconciliation under resume §§9–21 and ADR-065, not
+new Product authority or normalization of an unapproved behavior. No runtime
+change results. Retain that run as superseded, stop its incomplete full backend,
+and repeat final checks on the new committed source identity.
