@@ -4,6 +4,7 @@
   "canonical_tenant_key": "organization_id",
   "classifications": ["TENANT_OWNED_DIRECT", "TENANT_OWNED_INDIRECT", "PLATFORM_SCOPED", "PUBLIC_CAPABILITY_SCOPED", "LEGACY_AMBIGUOUS"],
   "entities": {
+    "ShipmentOwnerTransfer": {"kind":"persisted_model","table":"shipment_owner_transfer","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"ADR-069 immutable exceptional transfer receipt; same-tenant Shipment/chain constraints, current authorization independent of snapshots. Request, Quote, Work and SLA assignees remain unchanged."},
     "ClosurePolicy": {"kind":"persisted_model","table":"closure_policy","scope":"TENANT_OWNED_DIRECT","tenant_key":"organization_id","rationale":"ADR-068 immutable organization policy or Shipment closure evidence; current authorization remains independent of historical snapshots."},
     "ClosurePolicyVersion": {"kind":"persisted_model","table":"closure_policy_version","scope":"TENANT_OWNED_INDIRECT","owner_path":"closure_policy.organization_id","rationale":"ADR-068 immutable organization policy or Shipment closure evidence; current authorization remains independent of historical snapshots."},
     "ClosurePolicyCriterion": {"kind":"persisted_model","table":"closure_policy_criterion","scope":"TENANT_OWNED_INDIRECT","owner_path":"closure_policy_version.closure_policy.organization_id","rationale":"ADR-068 immutable organization policy or Shipment closure evidence; current authorization remains independent of historical snapshots."},

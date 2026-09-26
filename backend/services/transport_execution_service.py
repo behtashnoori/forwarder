@@ -112,7 +112,7 @@ def _shipment(public_id: str, user: dict, *, mutation_permission: str | None = N
     shipment = scoped_shipment(public_id, user)
     if mutation_permission:
         require_permission(user, mutation_permission)
-        decision = authorize_document_management(user, shipment)
+        decision = authorize_document_management(user, shipment, for_update=True)
         if not decision.allowed:
             _fail(
                 "OWNING_TRANSPORT_EXPERT_REQUIRED",

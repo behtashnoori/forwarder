@@ -2574,3 +2574,4 @@ __all__ = [
 ]
 
 from backend.closure_models import ClosurePolicy, ClosurePolicyVersion, ClosurePolicyCriterion, ClosureDecision  # noqa: E402,F401
+from backend.owner_transfer_models import ShipmentOwnerTransfer  # noqa: E402,F401

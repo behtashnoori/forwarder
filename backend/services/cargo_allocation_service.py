@@ -86,7 +86,7 @@ def _reason(value, *, field="reason", limit=500):
 def _shipment(shipment_public_id: str, user: dict, *, write=False) -> OperationalShipment:
     shipment = scoped_shipment(shipment_public_id, user)
     require_permission(user, "operational_shipment.create" if write else "operational_shipment.read")
-    if write and not authorize_document_management(user, shipment).allowed:
+    if write and not authorize_document_management(user, shipment, for_update=True).allowed:
         _fail("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
     return shipment
 

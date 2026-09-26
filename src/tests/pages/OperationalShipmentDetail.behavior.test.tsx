@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import OperationalShipmentDetail from "../../pages/OperationalShipmentDetail";
@@ -93,6 +93,21 @@ beforeEach(() => {
 });
 
 describe("Phase 1B shipment detail behavior", () => {
+  it("clears private detail on focus denial and discards an older delayed route response", async () => {
+    renderDetail();
+    await screen.findByText("UAT Customer");
+    let finish!: (value: {data: typeof plan}) => void;
+    vi.mocked(api.getRoutePlan).mockImplementationOnce(() => new Promise(resolve => {finish = resolve;}));
+    fireEvent.focus(window);
+    await waitFor(() => expect(api.getRoutePlan).toHaveBeenCalledTimes(2));
+    vi.mocked(api.getOperationalShipment).mockRejectedValueOnce(new api.ApiError(404, "RESOURCE_NOT_FOUND", ""));
+    fireEvent.focus(window);
+    await waitFor(() => expect(screen.queryByText("UAT Customer")).not.toBeInTheDocument());
+    await act(async () => finish({data: plan}));
+    expect(screen.queryByText("UAT Customer")).not.toBeInTheDocument();
+    expect(screen.queryByText("کالا و وسایل حمل")).not.toBeInTheDocument();
+  });
+
   it("uses each leg's authoritative departure ID and the operator's edited time", async () => {
     controls.permissions.add("milestone_event.create");
     vi.mocked(api.recordOperationalEvent).mockResolvedValue({});

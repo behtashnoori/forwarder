@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCurrentAuthorityRefresh } from "@/hooks/useCurrentAuthorityRefresh";
+import ShipmentOwnerTransfer from "@/components/ShipmentOwnerTransfer";
 import { Link, useParams } from "react-router";
 import OperationalPermission from "@/components/OperationalPermission";
 import { Button } from "@/components/ui/button";
@@ -98,23 +100,31 @@ export default function OperationalShipmentDetail() {
   const [notice, setNotice] = useState("");
   const [pending, setPending] = useState("");
   const [reasons, setReasons] = useState<Record<string, string>>({});
+  const generation = useRef(0);
+  const knownOwner = useRef<{publicId: string; version: number; label?: string} | null>(null);
+  const [authorityEpoch, setAuthorityEpoch] = useState(0);
+  const retire = useCallback(() => { generation.current++; }, []);
   const shipmentPublicId = UUID_PATTERN.test(routeShipmentPublicId) ? routeShipmentPublicId : "";
   const activePlan = useMemo(() => plans.find((item) => item.is_active), [plans]);
   // A direct operational shipment can legitimately exist before route planning.
   // The API represents that state as a null current route leg.
   const displayedLegs = plan?.legs || data?.route_legs || (data?.route_leg ? [data.route_leg] : []);
 
-  const load = useCallback(async (): Promise<boolean> => {
+  const load = useCallback(async (revalidateOwner = false): Promise<boolean> => {
+    const current = ++generation.current;
     if (!shipmentPublicId) {
       setError(invalidIdentityMessage);
+      setData(undefined);
       return false;
     }
     try {
       setRoutePlansLoaded(false);
       setError("");
       const shipment = await getOperationalShipment(shipmentPublicId);
+      if (current !== generation.current) return false;
       if (!UUID_PATTERN.test(shipment.data.public_id) || shipment.data.public_id.toLowerCase() !== shipmentPublicId.toLowerCase()) {
         setError(inconsistentIdentityMessage);
+        setData(undefined);
         return false;
       }
       const [revisions, routeTimeline, routeExceptions] = await Promise.all([
@@ -122,23 +132,39 @@ export default function OperationalShipmentDetail() {
         getRouteTimeline(shipmentPublicId),
         listRouteExceptions(shipmentPublicId),
       ]);
+      if (current !== generation.current) return false;
+      const active = revisions.data.find((item) => item.is_active);
+      const activeDetail = active ? (await getRoutePlan(shipmentPublicId, active.id)).data : undefined;
+      if (current !== generation.current) return false;
+      const draft = !active && revisions.data.find((item) => item.status === "draft");
+      const draftDetail = draft ? (await getRoutePlan(shipmentPublicId, draft.id)).data : undefined;
+      if (current !== generation.current) return false;
+      const previous = knownOwner.current;
+      if (previous?.publicId === shipmentPublicId && (previous.label !== shipment.data.responsible_expert?.display_name ||
+          (revalidateOwner && previous.version !== shipment.data.version))) {
+        setAuthorityEpoch(value => value + 1); setReasons({}); setNotice("");
+      }
+      knownOwner.current = {publicId: shipmentPublicId, version: shipment.data.version, label: shipment.data.responsible_expert?.display_name};
       setData(shipment.data);
       setPlans(revisions.data);
       setTimeline(routeTimeline.data);
       setExceptions(routeExceptions.data);
-      const active = revisions.data.find((item) => item.is_active);
-      setPlan(active ? (await getRoutePlan(shipmentPublicId, active.id)).data : undefined);
-      const draft = !active && revisions.data.find((item) => item.status === "draft");
-      setDraftPlan(draft ? (await getRoutePlan(shipmentPublicId, draft.id)).data : undefined);
+      setPlan(activeDetail);
+      setDraftPlan(draftDetail);
       setRoutePlansLoaded(true);
       return true;
     } catch (caught) {
+      if (current !== generation.current) return false;
+      setData(undefined); setPlans([]); setPlan(undefined); setDraftPlan(undefined);
+      setTimeline(undefined); setExceptions([]); setReasons({}); setNotice("");
       setError(safeError(caught));
       return false;
     }
   }, [shipmentPublicId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setData(undefined); void load(); return retire; }, [load, retire]);
+  const refreshAuthority = useCallback(() => load(true), [load]);
+  useCurrentAuthorityRefresh(refreshAuthority, retire);
 
   const run = async (name: string, action: () => Promise<unknown>, success: string) => {
     if (pending) return;
@@ -187,7 +213,7 @@ export default function OperationalShipmentDetail() {
         <div className="flex flex-wrap gap-2"><Link className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" to="/operations">← بازگشت به فضای کار امروز</Link><Link className="inline-flex min-h-11 items-center rounded-md px-2 font-medium text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600" to="/operations/shipments">→ {t("operations.back")}</Link></div>
         {error && <div role="alert" className="rounded bg-red-50 p-3 text-red-700">{error} <Button variant="link" onClick={() => void load()}>{t("operations.retry")}</Button></div>}
         {notice && <div role="status" className="rounded bg-emerald-50 p-3 text-emerald-800">{notice}</div>}
-        {data && <>
+        {data && <Fragment key={`${data.public_id}:${authorityEpoch}`}>
           <header className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="flex flex-col gap-4 bg-slate-900 px-4 py-5 text-white sm:flex-row sm:items-start sm:justify-between sm:px-6">
               <div className="min-w-0"><p className="text-sm text-slate-300">فضای کار عملیاتی محموله</p><h1 className="text-2xl font-bold sm:text-3xl">خلاصه محموله</h1><p className="mt-2 break-all text-xs text-slate-300">شناسه محموله: <bdi dir="ltr">{data.public_id}</bdi></p></div>
@@ -195,7 +221,7 @@ export default function OperationalShipmentDetail() {
             </div>
             <div className="grid gap-px bg-slate-100 sm:grid-cols-2 lg:grid-cols-3">
               <div className="bg-white p-4"><p className="text-xs text-slate-500">مشتری و پروژه</p><p className="mt-1 font-semibold">{typeof data.customer === "string" ? data.customer : data.customer?.display_name || "ثبت نشده"}</p>{data.project_public_id ? <Link className="mt-1 inline-block text-xs text-blue-700 underline" to={`/operations/projects/${data.project_public_id}/units`}>مشاهده پروژه مرتبط</Link> : <p className="mt-1 text-xs text-slate-500">محموله مستقیم؛ بدون پروژه</p>}</div>
-              <div className="bg-white p-4"><p className="text-xs text-slate-500">کارشناس مسئول ثابت</p><p className="mt-1 font-semibold">{data.responsible_expert?.display_name || "نامعلوم"}</p><p className="mt-1 text-xs text-slate-500">مالکیت از خود محموله خوانده می‌شود.</p></div>
+              <div className="bg-white p-4"><p className="text-xs text-slate-500">مسئول فعلی پرونده</p><p className="mt-1 font-semibold">{data.responsible_expert?.display_name || "نامعلوم"}</p><p className="mt-1 text-xs text-slate-500">مالکیت از خود محموله خوانده می‌شود.</p></div>
               <div className="bg-white p-4"><p className="text-xs text-slate-500">مسیر فعال</p><p className="mt-1 font-semibold">{routeSummary}</p>{activePlan && <p className="mt-1 text-xs text-slate-500">نسخه {activePlan.revision_number}</p>}</div>
               {requestTransportSummary && <div className="bg-white p-4"><p className="text-xs text-slate-500">{t("transport.requestMethod")}</p><p className="mt-1 font-semibold">{requestTransportSummary}</p></div>}
               {actualRouteTransportSummary && <div className="bg-white p-4"><p className="text-xs text-slate-500">{t("transport.actualRoute")}</p><p className="mt-1 font-semibold">{actualRouteTransportSummary}</p></div>}
@@ -358,12 +384,28 @@ export default function OperationalShipmentDetail() {
               </div>
             </div>
           </details>
+          <details className="rounded-2xl border bg-white p-4">
+            <summary className="min-h-11 cursor-pointer font-bold">مسئول و سابقه انتقال</summary>
+            <OwnerTransferDetails shipment={data.public_id} />
+          </details>
           <section aria-labelledby="history-heading" className="space-y-3">
             <div><p className="text-xs font-semibold text-slate-500">روایت کامل و تغییرناپذیر</p><h2 id="history-heading" className="text-xl font-bold">تاریخچه یکپارچه محموله</h2></div>
             <UnifiedShipmentHistory shipmentPublicId={data.public_id} />
           </section>
-        </>}
+        </Fragment>}
       </div>
     </main>
   );
+}
+
+function OwnerTransferDetails({shipment}: {shipment: string}) {
+  const container = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const details = container.current?.closest("details");
+    const changed = () => setOpen(Boolean(details?.open));
+    details?.addEventListener("toggle", changed); changed();
+    return () => details?.removeEventListener("toggle", changed);
+  }, []);
+  return <div ref={container} className="mt-3">{open && <ShipmentOwnerTransfer shipment={shipment} />}</div>;
 }

@@ -58,7 +58,7 @@ def _text(value: Any, field: str, *, required: bool, maximum: int) -> str | None
 
 
 def _shipment(public_id: str, user: dict[str, Any], *, manage: bool) -> OperationalShipment:
-    shipment = operational_service.scoped_shipment(public_id, user)
+    shipment = operational_service.scoped_shipment(public_id, user, for_update=manage)
     operational_service.require_permission(
         user, "work_item.manage" if manage else "work_item.read"
     )

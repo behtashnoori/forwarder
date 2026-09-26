@@ -116,3 +116,13 @@ a qualification or controlled integration receipt. Rigor C / Astra capability; n
 DN05_GENERAL_CLOSURE_RULE=NOT_IMPLEMENTED; DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; HUMAN_WALKTHROUGH=NOT_RUN;
 RELEASE_READY=NO; PRODUCTION_UNTOUCHED=YES. No P3-14/P3-15.
+
+## P3-13 administrative authority extension
+
+The separately approved P3-13 mission §§48–69 / ADR-069 permits the named
+`owner_transfer_service.transfer` Admin command on a closed Shipment. It changes
+current responsibility with immutable history; it preserves `closed`, the original
+ClosureDecision and its facts. It creates no physical operation or new closure
+exception. Subsequent commands continue through the same matrix with live authority.
+This row derives from P3-13 authority, not an interpretation of historical-repair
+permission as permission for new physical work.

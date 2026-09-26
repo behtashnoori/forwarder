@@ -201,3 +201,16 @@ validation and documenting the trusted app-credential boundary.
 `DN02_OWNER_TRANSFER_PORTION=RESOLVED_FOR_P3_13`;
 `DN09_STATUS=RESOLVED_FOR_P3_13`. Original proposal evidence remains at
 `081f73a3d84c6aa6136e7f1fd4268f57bac497cf`; privilege proof remains required.
+
+## Implementation candidate record — 2026-09-26
+
+The [P3-13 working note](../../product/phase3/P3-13-IMPLEMENTATION-WORKING-NOTE.md)
+records actual entry from integrated P3-12 `c2e6140`. Migration
+`20261011_phase3_owner_transfer` implements the accepted mechanism;
+`owner_transfer_service` binds live session identity and refuses PostgreSQL
+schema-owner/elevated application runtimes, including TESTING. Preliminary
+restricted LOGIN proofs cover raw/ORM/history denial, privilege misuse, concurrent
+winner and same-command replay, revocation waits, stale cached owner mutation,
+atomic rollback, empty downgrade and populated downgrade denial. Final exact-source
+qualification and controlled integration remain pending; this paragraph grants
+no Product/global validation, Human Walkthrough or Release PASS.

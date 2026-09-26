@@ -1,0 +1,20 @@
+{
+  "branch": "integration/golden-controlled",
+  "canonical_sha": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "parent_migration": "20261009_phase3_route_time",
+  "production_accessed": false,
+  "integration": "FAST_FORWARD",
+  "remote": "github",
+  "fetch": "PASS",
+  "clean": true,
+  "remote_sha": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "migration": "20261010_phase3_closure",
+  "evidence_sha": "c2e6140d52eda620ecaef6e255bcd591f58da2cb",
+  "alignment": "0\t0",
+  "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+  "backend_fixture_retained_due_to_host_policy": true,
+  "slice": "P3-12",
+  "verified_at_utc": "2026-09-26T13:29:38.8292099Z",
+  "push": "PASS",
+  "previous_canonical": "368cd736cbffce3d62c33336868738d9086e8306"
+}

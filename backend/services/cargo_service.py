@@ -520,7 +520,7 @@ def _require_cargo_mutation(user, shipment):
         operational_service.require_permission(user, "operational_shipment.create")
     except operational_service.OperationalError as exc:
         raise CargoError(exc.message, exc.status, exc.code) from exc
-    decision = authorize_document_management(user, shipment)
+    decision = authorize_document_management(user, shipment, for_update=True)
     if not decision.allowed:
         raise CargoError(
             "Only the owning Transport Expert can change Cargo.",

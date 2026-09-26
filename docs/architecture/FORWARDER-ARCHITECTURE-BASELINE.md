@@ -35,7 +35,9 @@ records Product d1574fa, complete backend/frontend, PostgreSQL 18, Chrome and
 static passes; controlled integration has its own receipt. Global Product
 validation remains EVIDENCE_PENDING.
 P3-11 has retained unqualified work pending the stop-range placement Product
-answer; P3-13 runtime remains unstarted until a fresh canonical-base check.
+answer. P3-12 is integrated at `c2e6140d52eda620ecaef6e255bcd591f58da2cb` with its [fresh push/fetch receipt](../operational/evidence/phase3-p3-13-entry-20260926/p312-integration-receipt.json).
+
+P3-13 implementation candidate: [working note](../product/phase3/P3-13-IMPLEMENTATION-WORKING-NOTE.md). The sole new migration `20261011_phase3_owner_transfer` follows actual P3-12 canonical head. The narrow Admin command uses a dedicated NOLOGIN function owner and actual restricted application LOGIN, immutable transfer receipts, atomic audit/outbox, and current owner/version/chain checks. Ordinary owner/history writes stay denied. Mutation parent locks serialize ownership-derived commands with transfer; pure capability reads keep their existing behavior. Browser resume invalidates delayed responses. Request, Quote, Work, SLA, documents and Customer entitlement remain independent. Preliminary proofs are not final qualification or integration; source-bound full gates remain pending.
 
 P3-10 bounded extension: [ADR-066](../operational/adr/ADR-066-organization-route-reference-time.md)
 owns immutable organization/endpoint/mode reference keys, append-only effective

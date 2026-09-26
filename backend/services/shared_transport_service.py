@@ -105,7 +105,7 @@ def allocate(*, execution_public_id: str, cargo_public_id: str, allocated_quanti
     if not unit or not cargo:
         raise OperationalError("NOT_FOUND", "Execution or cargo not found.", 404)
     shipment = _authorized_shipment(cargo, user)
-    if not authorize_document_management(user, shipment).allowed:
+    if not authorize_document_management(user, shipment, for_update=True).allowed:
         raise OperationalError("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
     from backend.services import closure_commands as closure_guard
     closure_guard.deny_new(shipment)
@@ -163,7 +163,7 @@ def release(*, execution_public_id: str, allocation_public_id: str, user: dict) 
     # Re-check source authorization on destructive actions as well.
     cargo = db.session.scalar(select(ShipmentCargoItem).where(ShipmentCargoItem.id == row.shipment_cargo_item_id).with_for_update())
     shipment = _authorized_shipment(cargo, user)
-    if not authorize_document_management(user, shipment).allowed:
+    if not authorize_document_management(user, shipment, for_update=True).allowed:
         raise OperationalError("OWNING_TRANSPORT_EXPERT_REQUIRED", "Only the owning Transport Expert may change Cargo allocation.", 403)
     from backend.services import closure_commands as closure_guard
     closure_guard.deny_new(shipment)

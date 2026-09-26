@@ -145,7 +145,7 @@ describe("Phase 1A operational pages", () => {
     );
     expect(screen.queryByText(/Quote #2|Request #3|#1/)).not.toBeInTheDocument();
     expect(screen.getByLabelText("وضعیت محموله")).toBeInTheDocument();
-    expect(screen.getByText("کارشناس مسئول ثابت: Fixed Owner")).toBeInTheDocument();
+    expect(screen.getByText("مسئول فعلی پرونده: Fixed Owner")).toBeInTheDocument();
     expect(screen.getByText(/آخرین به‌روزرسانی: Departure reported/)).toBeInTheDocument();
     expect(api.listOperationalShipments).toHaveBeenCalledWith(expect.stringContaining("active=true"));
 

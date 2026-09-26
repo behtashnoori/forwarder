@@ -56,7 +56,7 @@ def test_p3_05_migration_roundtrip_legacy_unknown_and_guard(tmp_path):
     url = f"sqlite:///{(tmp_path / 'p305.db').as_posix()}"
     config = alembic_config(url)
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20261010_phase3_closure"]
+    assert script.get_heads() == ["20261011_phase3_owner_transfer"]
     assert script.get_revision(HEAD).down_revision == PARENT
     engine = _parent_schema(url)
     command.stamp(config, PARENT)

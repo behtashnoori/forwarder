@@ -908,6 +908,9 @@ def create_from_accepted_quote(
             )
         )
         if existing and existing.organization_id == org:
+            from backend.services.assigned_work_authorization import authorize_work_action
+            if not authorize_work_action(user, existing, "shipment.read").allowed:
+                raise OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
             return existing, False
         raise OperationalError(
             "OPERATIONAL_SHIPMENT_ALREADY_EXISTS",
@@ -917,7 +920,7 @@ def create_from_accepted_quote(
     return shipment, True
 
 
-def scoped_shipment(shipment_id: str, user: dict[str, Any]) -> OperationalShipment:
+def scoped_shipment(shipment_id: str, user: dict[str, Any], *, for_update: bool = False) -> OperationalShipment:
     """Resolve the externally supplied opaque shipment identity inside its tenant."""
     require_permission(user, "operational_shipment.read")
     org = organization_for_user(int(user["id"]))
@@ -926,12 +929,11 @@ def scoped_shipment(shipment_id: str, user: dict[str, Any]) -> OperationalShipme
         if isinstance(shipment_id, int)
         else OperationalShipment.public_id == str(shipment_id)
     )
-    shipment = db.session.scalar(
-        select(OperationalShipment).where(
+    query = select(OperationalShipment).where(
             identity_clause,
             OperationalShipment.organization_id == org,
-        )
-    )
+        ).execution_options(populate_existing=True)
+    shipment = db.session.scalar(query.with_for_update() if for_update else query)
     if shipment is None:
         raise OperationalError(
             "RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404
@@ -1166,7 +1168,7 @@ def _milestone_target(
     shipment_id: int, milestone_id: int, user: dict[str, Any], permission: str
 ):
     require_permission(user, permission)
-    shipment = scoped_shipment(shipment_id, user)
+    shipment = scoped_shipment(shipment_id, user, for_update=True)
     plan = db.session.scalar(
         select(RoutePlan.id).where(
             RoutePlan.operational_shipment_id == shipment.id,
@@ -1505,7 +1507,7 @@ def resolve_work_item(
     )
     if item is None:
         raise OperationalError("RESOURCE_NOT_FOUND", "Work item was not found.", 404)
-    scoped_shipment(item.operational_shipment_id, user)
+    scoped_shipment(item.operational_shipment_id, user, for_update=True)
     if item.work_type == "FOLLOW_UP":
         raise OperationalError(
             "ACTION_RESULT_REQUIRED",

@@ -67,7 +67,7 @@ def _reserve_idempotency(org: int, operation: str, resource_type: str, resource_
     ))
 
 
-def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipment:
+def _shipment(shipment_id: str, user: dict, permission: str, *, for_update=False) -> OperationalShipment:
     # Route reads are part of the baseline operational-shipment detail view.
     # Mutation capabilities remain explicit, while every route operation is
     # additionally fenced by the canonical assigned-shipment policy below.
@@ -83,9 +83,10 @@ def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipm
         if isinstance(shipment_id, int)
         else OperationalShipment.public_id == str(shipment_id)
     )
-    row = db.session.scalar(select(OperationalShipment).where(
+    query = select(OperationalShipment).where(
         identity_clause, OperationalShipment.organization_id == org
-    ))
+    ).execution_options(populate_existing=True)
+    row = db.session.scalar(query.with_for_update() if for_update else query)
     if row is None:
         raise base.OperationalError("RESOURCE_NOT_FOUND", "Operational shipment was not found.", 404)
     from backend.services.assigned_work_authorization import authorize_work_action
@@ -95,8 +96,9 @@ def _shipment(shipment_id: str, user: dict, permission: str) -> OperationalShipm
 
 
 def _require_route_owner(shipment: OperationalShipment, user: dict) -> None:
-    """Route design is owned by the Shipment's fixed responsible Expert."""
-    if shipment.primary_responsible_expert_id != int(user["id"]):
+    """Revalidate current owner after the parent lock, before any route write."""
+    from backend.services.assigned_work_authorization import authorize_document_management
+    if not authorize_document_management(user, shipment, for_update=True).allowed:
         raise base.OperationalError(
             "FORBIDDEN_OPERATION",
             "Only the responsible Expert can change the route plan.",
@@ -1220,7 +1222,7 @@ def replan(
 def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user: dict, key: str, action: str) -> dict:
     base._reject_recorded_at(payload)
     base.require_permission(user, "checkpoint.report")
-    shipment = _shipment(shipment_id, user, "operational_shipment.read")
+    shipment = _shipment(shipment_id, user, "operational_shipment.read", for_update=True)
     checkpoint = db.session.scalar(select(OperationalCheckpoint).join(RoutePlan).where(
         OperationalCheckpoint.id == checkpoint_id, RoutePlan.operational_shipment_id == shipment.id
     ).with_for_update())
@@ -1275,7 +1277,7 @@ def checkpoint_command(shipment_id: int, checkpoint_id: int, payload: dict, user
 @atomic_command
 def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_id: int, expected_version: int, user: dict, key: str) -> dict:
     base.require_permission(user, "checkpoint.verify")
-    shipment = _shipment(shipment_id, user, "operational_shipment.read")
+    shipment = _shipment(shipment_id, user, "operational_shipment.read", for_update=True)
     checkpoint = db.session.scalar(select(OperationalCheckpoint).join(RoutePlan).where(
         OperationalCheckpoint.id == checkpoint_id,
         RoutePlan.operational_shipment_id == shipment.id,
@@ -1322,7 +1324,7 @@ def verify_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_
 def correct_checkpoint_milestone(shipment_id: int, checkpoint_id: int, milestone_id: int, payload: dict, user: dict, key: str) -> dict:
     base._reject_recorded_at(payload)
     base.require_permission(user, "milestone.correct")
-    shipment = _shipment(shipment_id, user, "operational_shipment.read")
+    shipment = _shipment(shipment_id, user, "operational_shipment.read", for_update=True)
     milestone = db.session.scalar(select(Milestone).join(OperationalCheckpoint, Milestone.checkpoint_id == OperationalCheckpoint.id).join(RoutePlan).where(
         Milestone.id == milestone_id, Milestone.checkpoint_id == checkpoint_id,
         RoutePlan.operational_shipment_id == shipment.id,
@@ -1393,7 +1395,7 @@ def _timeline_summary(checkpoints):
 
 def recalculate_projected_timeline(shipment_id: int, user: dict, expected_version=None,
                                    idempotency_key=None, commit=True, _failure_point=None) -> dict:
-    shipment = _shipment(shipment_id, user, PLAN_PERMISSIONS["replan"])
+    shipment = _shipment(shipment_id, user, PLAN_PERMISSIONS["replan"], for_update=True)
     plan = db.session.scalar(select(RoutePlan).where(
         RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True),
     ).with_for_update())
@@ -1521,7 +1523,7 @@ def reconcile_route_exceptions(
     calculation_time: datetime | None = None, idempotency_key: str = "",
     commit: bool = True, _failure_point: str | None = None,
 ) -> dict:
-    shipment = _shipment(shipment_id, user, "route_exception.manage")
+    shipment = _shipment(shipment_id, user, "route_exception.manage", for_update=True)
     plan = db.session.scalar(select(RoutePlan).where(
         RoutePlan.operational_shipment_id == shipment.id, RoutePlan.is_active.is_(True),
     ).with_for_update())
