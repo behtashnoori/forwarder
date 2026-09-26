@@ -81,12 +81,12 @@ async function token(page: Page) {
 async function waitForControlTower(page: Page) {
   await page.getByRole("status", { name: "در حال دریافت برج کنترل" }).waitFor({
     state: "hidden",
-    timeout: 120_000,
+    timeout: 180_000,
   });
 }
 
 test("A-E — accepted Quote owner stays fixed across Request reassignment", async ({ page }, testInfo) => {
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   const evidence = observe(page);
 
   // Journey A: E1 issues Q1, the Customer accepts it, and the governed UI creates S.

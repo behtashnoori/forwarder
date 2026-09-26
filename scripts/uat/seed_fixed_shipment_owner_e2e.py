@@ -104,14 +104,21 @@ def main() -> None:
                     "operational_shipment.read",
                     "operational_shipment.create",
                     "operational_shipment.create_from_quote",
+                    "operational_execution.read",
                     "operational_execution.manage",
+                    "oip.read",
                 ],
             ),
             OperationalMembership(
                 organization_id=organization.id,
                 user_id=e2.id,
                 is_active=True,
-                permissions=["request.read", "operational_shipment.read"],
+                permissions=[
+                    "request.read",
+                    "operational_shipment.read",
+                    "operational_execution.read",
+                    "oip.read",
+                ],
             ),
             OperationalMembership(
                 organization_id=organization.id,
@@ -121,6 +128,8 @@ def main() -> None:
                     "request.read",
                     "operational_shipment.read",
                     "operational_shipment.create",
+                    "operational_execution.read",
+                    "oip.read",
                 ],
             ),
         ])
