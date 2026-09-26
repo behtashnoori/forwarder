@@ -24,6 +24,7 @@ from backend.extensions import db
 from backend.models import ShipmentRequest
 from backend.operational_models import OperationalShipment, RouteLeg, RoutePlan, utcnow
 from backend.services import control_tower_sources as sources
+from backend.services.attention_truth_contract import build_attention_truth_contract
 from backend.services.control_tower_query import select_attention_window
 from backend.services.control_tower_scope import (
     ControlTowerResponsibilityInvariant, ControlTowerScopeDenied,
@@ -62,6 +63,7 @@ class DisplayReason:
     title: str
     explanation: str
     time: tuple[DisplayTime, ...]
+    truth: dict | None = None
 
 
 @dataclass(frozen=True)
@@ -184,10 +186,38 @@ def _ordered_reasons(reasons, at):
     return tuple(ordered)
 
 
-def _display(reason):
-    return DisplayReason(reason.semantic.value, reason.attention_level.value.lower(),
-                         attention_label(reason.attention_level), reason.title, reason.explanation,
-                         tuple(DisplayTime(t.label, utc(t.at)) for t in reason.time_context if utc(t.at)))
+def _display(reason, shipment_public_id):
+    contracts = {}
+    for value in reason.enrichment:
+        if not (
+            value.situation_identity_key
+            and value.source_watermark
+            and value.calculated_at
+            and value.priority
+        ):
+            continue
+        contract = build_attention_truth_contract(
+            shipment_public_id=shipment_public_id,
+            situation_identity_key=value.situation_identity_key,
+            policy_id=value.policy_id,
+            policy_version=value.policy_version,
+            source_watermark=value.source_watermark,
+            calculated_at=value.calculated_at,
+            urgency=value.urgency,
+            severity=value.severity,
+            priority=value.priority,
+        )
+        contracts[contract["fingerprint"]] = contract
+    truth = next(iter(contracts.values())) if len(contracts) == 1 else None
+    return DisplayReason(
+        reason.semantic.value,
+        reason.attention_level.value.lower(),
+        attention_label(reason.attention_level),
+        reason.title,
+        reason.explanation,
+        tuple(DisplayTime(t.label, utc(t.at)) for t in reason.time_context if utc(t.at)),
+        truth,
+    )
 
 
 def _route_context(contexts):
@@ -439,8 +469,8 @@ def _compatibility_read(
                     route["actual_modes"],
                     fact["progress"],
                     {"reasonCount": len(ordered), "openAttention": True},
-                    _display(ordered[0]),
-                    tuple(_display(reason) for reason in ordered[1:]),
+                    _display(ordered[0], context.shipment_public_id),
+                    tuple(_display(reason, context.shipment_public_id) for reason in ordered[1:]),
                     f"/operations/shipments/{context.shipment_public_id}",
                 )))
             if refresh_summary_contexts(actor, current) != current:
@@ -583,8 +613,8 @@ def compose_control_tower(
                         "reasonCount": len(ordered),
                         "openAttention": True,
                     },
-                    _display(ordered[0]),
-                    tuple(_display(reason) for reason in ordered[1:]),
+                    _display(ordered[0], context.shipment_public_id),
+                    tuple(_display(reason, context.shipment_public_id) for reason in ordered[1:]),
                     f"/operations/shipments/{context.shipment_public_id}",
                 )
                 rows.append((key, item))

@@ -22,6 +22,12 @@ class VerifiedEnrichment:
     urgency: str
     severity: str
     promotes_urgent: bool
+    # Opaque parity inputs. They are populated only after the full governed
+    # OIP verification below and are never used to discover or rank work.
+    situation_identity_key: str | None = None
+    source_watermark: str | None = None
+    calculated_at: str | None = None
+    priority: str | None = None
 
 
 def _current_threshold(context, shipment, at):
@@ -143,7 +149,17 @@ def verified_enrichments(context, shipment, *, situation_type, source_type,
                     and s.urgency == s.severity == "HIGH"
                     or s.urgency == "HIGH" and authoritative_due
                     and due_at is not None and utc(due_at) < at)
-        verified = VerifiedEnrichment(s.policy_id, s.policy_version, s.urgency, s.severity, promotes)
+        verified = VerifiedEnrichment(
+            s.policy_id,
+            s.policy_version,
+            s.urgency,
+            s.severity,
+            promotes,
+            situation_identity_key=s.identity_key,
+            source_watermark=s.source_watermark,
+            calculated_at=utc(s.calculated_at).isoformat(),
+            priority=s.priority,
+        )
         if verified not in result:
             result.append(verified)
     return tuple(result)

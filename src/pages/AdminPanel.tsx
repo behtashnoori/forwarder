@@ -8,6 +8,7 @@ import {
   FileSpreadsheet,
   Files,
   Gauge,
+  KeyRound,
   LogOut,
   MapPin,
   Package,
@@ -342,6 +343,7 @@ const AdminPanel = () => {
             {canManageCustomers && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/customers")}><Users className="h-4 w-4"/>مشتریان</Button>}
             {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف مرکزی</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="customer-access" className="gap-2 rounded-2xl py-3"><Users className="h-4 w-4"/>دسترسی حساب مشتری</TabsTrigger>}
+            {isOrganizationAdmin && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/admin/customer-portal-accounts")}><KeyRound className="h-4 w-4"/>پشتیبانی حساب‌های پرتال</Button>}
             {isOrganizationAdmin && <TabsTrigger value="organization-reference-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف قابل استفاده سازمان</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="closure-policy" className="rounded-2xl py-3">قواعد بستن پرونده</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-route-times" className="gap-2 rounded-2xl py-3"><Clock className="h-4 w-4"/>زمان مرجع مسیر</TabsTrigger>}

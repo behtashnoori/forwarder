@@ -1880,6 +1880,12 @@ export interface OperationalWorkspaceSnapshot {
       due_at?: string | null;
       source: { type: string; public_id?: string | null; version: number; status?: string };
       freshness?: { status: string; calculated_at?: string | null; source_watermark?: string | null };
+      truth?: {
+        fingerprint: string;
+        contract_version: string;
+        rank: { policy_id: string; policy_version: string; urgency: string; severity: string; priority: string };
+        freshness: { status: "FRESH"; calculated_at: string; source_watermark: string };
+      };
       source_path: string;
     }>;
     recent_updates: Array<{
@@ -1907,6 +1913,8 @@ export interface OperationalWorkspaceSnapshot {
       next_evaluation_due_at?: string | null;
       reason_code?: string | null;
       reason?: string | null;
+      source_watermark?: string | null;
+      processed_watermark?: string | null;
       last_run?: {
         run_id?: string | null;
         state?: string;

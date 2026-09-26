@@ -186,12 +186,19 @@ describe("Phase 1B shipment detail behavior", () => {
   it("puts the shipment story first and keeps specialist work in more details", async () => {
     renderDetail();
     expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "پرش به محتوای پرونده حمل" })).toHaveAttribute("href", "#shipment-overview");
+    const sectionNavigation = screen.getByRole("navigation", { name: "بخش‌های پرونده حمل" });
+    expect(sectionNavigation.querySelector('a[href="#shipment-next-action"]')).toHaveTextContent("اقدام بعدی");
+    expect(sectionNavigation.querySelector('a[href="#shipment-closure"]')).toHaveTextContent("تکمیل و بستن");
     expect(screen.getAllByText("UAT Customer").length).toBeGreaterThan(0);
     expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
     expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "مسیر و اجرای عملیاتی" })).toBeInTheDocument();
     expect(screen.getByText("Active route plan")).toBeInTheDocument();
     expect(screen.getByText("اجرای عملیاتی")).toBeInTheDocument();
+    const route = document.querySelector("#shipment-route")!;
+    const closure = document.querySelector("#shipment-closure")!;
+    expect(route.compareDocumentPosition(closure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("keeps request intent separate from ordered actual route modes", async () => {

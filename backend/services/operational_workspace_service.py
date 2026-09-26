@@ -34,6 +34,7 @@ from backend.operational_models import (
 from backend.services import operational_read_service
 from backend.services import operational_service
 from backend.services import oip_service
+from backend.services.attention_truth_contract import build_attention_truth_contract
 from backend.services.organization_sla_service import shipment_status
 from backend.services.shipment_population_service import operational_shipment_population
 
@@ -282,6 +283,17 @@ def _attention_view(
     else:
         return None
 
+    truth = build_attention_truth_contract(
+        shipment_public_id=shipment.public_id,
+        situation_identity_key=situation.identity_key,
+        policy_id=situation.policy_id,
+        policy_version=situation.policy_version,
+        source_watermark=situation.source_watermark,
+        calculated_at=operational_read_service.iso(situation.calculated_at),
+        urgency=situation.urgency,
+        severity=situation.severity,
+        priority=situation.priority,
+    )
     return {
         "identity": situation.identity_key[:24],
         "situation_public_id": situation.public_id,
@@ -305,6 +317,7 @@ def _attention_view(
             "calculated_at": operational_read_service.iso(situation.calculated_at),
             "source_watermark": situation.source_watermark,
         },
+        "truth": truth,
         "source_path": f"/operations/shipments/{shipment.public_id}",
     }
 

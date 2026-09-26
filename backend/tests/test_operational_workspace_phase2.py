@@ -16,6 +16,7 @@ from backend.operational_models import (
     utcnow,
 )
 from backend.services import oip_service
+from backend.services.control_tower_read_model import compose_control_tower
 from backend.services import operational_action_service as action_service
 from backend.services import operational_execution_service as execution_service
 from backend.services import operational_service
@@ -215,6 +216,13 @@ def test_sla_evaluation_attention_workspace_and_control_tower(operational_app):
     )
     assert card["sla"]["status"] == "WARNING"
     assert card["sla"]["commitments"][0]["source"]["public_id"] == exception_public_id
+    exception_attention = next(
+        row
+        for row in workspace.json["data"]["attention_items"]
+        if row["kind"] == "ACTIVE_DELAY_OR_EXCEPTION"
+        and row["source"]["public_id"] == exception_public_id
+    )
+    assert exception_attention["truth"]["contract_version"] == "attention-truth-v1"
 
     tower = client.get("/api/control-tower/shipments", headers=_auth(operational_app))
     assert tower.status_code == 200
@@ -226,6 +234,32 @@ def test_sla_evaluation_attention_workspace_and_control_tower(operational_app):
     }
     assert "sla_warning" in semantics
     assert "exception_open" in semantics
+    exception_reason = next(
+        row
+        for row in [item["primaryReason"], *item["additionalReasons"]]
+        if row["semantic"] == "exception_open"
+    )
+    # The HTTP request observes real current time, while this fixture evaluates
+    # its warning slightly in the future. The route therefore correctly omits
+    # a not-yet-fresh parity proof. Re-observe at that governed evaluation time
+    # to compare the two read models without weakening the freshness boundary.
+    assert "truth" not in exception_reason
+    with operational_app.app_context():
+        governed = compose_control_tower(
+            {"id": _user(operational_app)["id"]}, at=warning_at + timedelta(seconds=1)
+        )
+        governed_item = next(
+            row for row in governed.items if row.shipment_reference == shipment_public_id
+        )
+        governed_exception = next(
+            row
+            for row in [governed_item.primary_reason, *governed_item.additional_reasons]
+            if row.semantic == "exception_open"
+        )
+    assert governed_exception.truth == exception_attention["truth"]
+    assert tower.json["data"]["attentionEvaluation"]["sourceWatermark"] == (
+        workspace.json["meta"]["attention_projection"]["source_watermark"]
+    )
 
 
 def test_action_uses_fixed_owner_preserves_history_and_is_independent(operational_app):

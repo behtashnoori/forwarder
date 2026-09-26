@@ -12,6 +12,12 @@ export interface ControlTowerReason {
   title: string;
   explanation: string;
   time: ControlTowerReasonTime[];
+  truth?: {
+    fingerprint: string;
+    contractVersion: string;
+    rank: { policyId: string; policyVersion: string; urgency: string; severity: string; priority: string };
+    freshness: { status: "FRESH"; calculatedAt: string; sourceWatermark: string };
+  };
 }
 
 export interface ControlTowerRequestTransport {
@@ -66,6 +72,10 @@ export interface ControlTowerEvaluationHealth {
   nextEvaluationDueAt: string | null;
   reasonCode: string | null;
   reason: string | null;
+  calculatedAt?: string | null;
+  sourceWatermark?: string | null;
+  processedWatermark?: string | null;
+  policyVersion?: string | null;
   lastRun: {
     run_id?: string | null;
     state?: string;
@@ -116,6 +126,14 @@ const normalizeReason = (reason: ControlTowerReason): ControlTowerReason => ({
   title: reason.title,
   explanation: reason.explanation,
   time: reason.time.map(({ label, at }) => ({ label, at })),
+  ...(reason.truth ? {
+    truth: {
+      fingerprint: reason.truth.fingerprint,
+      contractVersion: reason.truth.contractVersion,
+      rank: { ...reason.truth.rank },
+      freshness: { ...reason.truth.freshness },
+    },
+  } : {}),
 });
 
 /**

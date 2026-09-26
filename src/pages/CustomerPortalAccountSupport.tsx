@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,24 +30,28 @@ export default function CustomerPortalAccountSupport() {
   const [message, setMessage] = useState("");
   const [capability, setCapability] = useState<AdminPortalCapability | null>(null);
   const [loading, setLoading] = useState(false);
+  const generation = useRef(0);
 
-  const load = async (search = query) => {
+  const load = useCallback(async (search: string) => {
+    const current = ++generation.current;
     setLoading(true);
     setError("");
     try {
-      setItems((await listAdminPortalAccounts(search)).items);
+      const response = await listAdminPortalAccounts(search);
+      if (current !== generation.current) return;
+      setItems(response.items);
     } catch (caught) {
+      if (current !== generation.current) return;
       setError(caught instanceof Error ? caught.message : "دریافت حساب‌ها انجام نشد.");
     } finally {
-      setLoading(false);
+      if (current === generation.current) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (authority === "ORGANIZATION_ADMIN") void load("");
-    // Authority is fixed for this route render; the backend still enforces it.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authority]);
+    return () => { generation.current += 1; };
+  }, [authority, load]);
 
   if (authority !== "ORGANIZATION_ADMIN") {
     return (
@@ -71,7 +75,7 @@ export default function CustomerPortalAccountSupport() {
         account.account_status === "ACTIVE" ? "DISABLED" : "ACTIVE",
       );
       setMessage("وضعیت حساب به‌روزرسانی شد.");
-      await load();
+      await load(query);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "عملیات انجام نشد.");
     }

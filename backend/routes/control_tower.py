@@ -17,10 +17,28 @@ control_tower_bp = Blueprint("control_tower", __name__)
 
 
 def _reason(reason):
-    return {
+    result = {
         "semantic": reason.semantic, "title": reason.title, "explanation": reason.explanation,
         "time": [{"label": value.label, "at": value.at.isoformat()} for value in reason.time],
     }
+    if reason.truth:
+        result["truth"] = {
+            "fingerprint": reason.truth["fingerprint"],
+            "contractVersion": reason.truth["contract_version"],
+            "rank": {
+                "policyId": reason.truth["rank"]["policy_id"],
+                "policyVersion": reason.truth["rank"]["policy_version"],
+                "urgency": reason.truth["rank"]["urgency"],
+                "severity": reason.truth["rank"]["severity"],
+                "priority": reason.truth["rank"]["priority"],
+            },
+            "freshness": {
+                "status": reason.truth["freshness"]["status"],
+                "calculatedAt": reason.truth["freshness"]["calculated_at"],
+                "sourceWatermark": reason.truth["freshness"]["source_watermark"],
+            },
+        }
+    return result
 
 
 def _error(code, message, status):
@@ -73,6 +91,10 @@ def shipments():
             "lastSuccessAt": health["last_evaluation_success_at"],
             "nextEvaluationDueAt": health["next_evaluation_due_at"],
             "reasonCode": health["reason_code"], "reason": health["reason"],
+            "calculatedAt": health.get("calculated_at"),
+            "sourceWatermark": health.get("source_watermark"),
+            "processedWatermark": health.get("processed_watermark"),
+            "policyVersion": health.get("policy_version"),
             "lastRun": health["last_run"],
         },
         "summary": {

@@ -23,6 +23,10 @@ describe("private Customer Shipment freshness", () => {
     vi.mocked(downloadCustomerSharedDocument).mockRejectedValue(new CustomerPortalApiError(404, "NOT_FOUND", "دسترسی سند لغو شده است"));
     renderDetail();
     await screen.findByRole("heading", { name: "کالاهای من" });
+    const mobileNavigation = screen.getByRole("navigation", { name: "بخش‌های پرونده حمل مشتری" });
+    expect(mobileNavigation.querySelectorAll("a")).toHaveLength(5);
+    expect(mobileNavigation.querySelector('a[href="#customer-shipment-documents"]')).toHaveTextContent("اسناد");
+    expect(mobileNavigation).toHaveClass("md:hidden");
     expect(screen.getAllByText("نامشخص").length).toBe(3);
     expect(screen.getByText("مسیر این کالا هنوز تعریف نشده است.")).toBeInTheDocument();
     expect(screen.queryByText(/GPS/)).not.toBeInTheDocument();

@@ -2,6 +2,7 @@
 import json
 
 import pytest
+from datetime import datetime, timezone
 from sqlalchemy import update
 
 from backend.extensions import db
@@ -9,13 +10,80 @@ from backend.notification_models import NotificationAction, NotificationAttempt
 from backend.services.auth_session_service import create_session_tokens
 from backend.services import control_tower_sources as sources
 from backend.routes import control_tower as control_tower_route
+from backend.services.attention_truth_contract import build_attention_truth_contract
 from backend.services.control_tower_translation import AttentionLevel, EMPTY_MESSAGE, UNAVAILABLE_MESSAGE
+from backend.services.control_tower_read_model import DisplayReason, DisplayTime
 from backend.tests.test_control_tower_scope import tower  # noqa: F401
 from backend.tests.test_control_tower_sources import attention  # noqa: F401
 from backend.tests.test_control_tower_read_model import add_leg, reason, stub
 from backend.operational_models import CanonicalLocation, OperationalShipment
 
 PATH = "/api/control-tower/shipments"
+
+
+def test_shared_truth_contract_canonicalizes_equivalent_offsets_to_utc():
+    values = {
+        "shipment_public_id": "shipment-a",
+        "situation_identity_key": "situation-a",
+        "policy_id": "policy-a",
+        "policy_version": "3",
+        "source_watermark": "opaque-watermark",
+        "urgency": "HIGH",
+        "severity": "HIGH",
+        "priority": "HIGH",
+    }
+    local = build_attention_truth_contract(
+        **values, calculated_at="2026-09-26T11:30:00+03:30"
+    )
+    utc = build_attention_truth_contract(
+        **values, calculated_at="2026-09-26T08:00:00+00:00"
+    )
+    assert local == utc
+    assert local["freshness"]["calculated_at"] == "2026-09-26T08:00:00+00:00"
+
+
+def test_reason_serializes_opaque_shared_truth_contract():
+    truth = {
+        "fingerprint": "sha256:" + "a" * 64,
+        "contract_version": "attention-truth-v1",
+        "rank": {
+            "policy_id": "policy-a",
+            "policy_version": "3",
+            "urgency": "HIGH",
+            "severity": "HIGH",
+            "priority": "HIGH",
+        },
+        "freshness": {
+            "status": "FRESH",
+            "calculated_at": "2026-09-26T08:00:00+00:00",
+            "source_watermark": "opaque-watermark",
+        },
+    }
+    serialized = control_tower_route._reason(DisplayReason(
+        "exception_open",
+        "urgent",
+        "اقدام فوری",
+        "استثنای باز",
+        "نیاز به بررسی",
+        (DisplayTime("وقوع", datetime(2026, 9, 26, 8, tzinfo=timezone.utc)),),
+        truth,
+    ))
+    assert serialized["truth"] == {
+        "fingerprint": truth["fingerprint"],
+        "contractVersion": "attention-truth-v1",
+        "rank": {
+            "policyId": "policy-a",
+            "policyVersion": "3",
+            "urgency": "HIGH",
+            "severity": "HIGH",
+            "priority": "HIGH",
+        },
+        "freshness": {
+            "status": "FRESH",
+            "calculatedAt": "2026-09-26T08:00:00+00:00",
+            "sourceWatermark": "opaque-watermark",
+        },
+    }
 
 
 def headers(actor):
