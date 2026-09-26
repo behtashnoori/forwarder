@@ -1,0 +1,20 @@
+{
+  "observations": [
+    "Own Cargo quantities and correction history are separately readable",
+    "Authorized branch and scoped reported location retained",
+    "Partial revoke shows B only, zero A documents and quantities",
+    "Revoked mobile return shows empty authorized list",
+    "RTL labels wrap without horizontal overflow or header overlap"
+  ],
+  "screenshots": [
+    "runtime-final\\P309-browser\\phase3-customer-shipment-P-06766-e-and-mobile-browser-return\\customer-shipment-desktop.png",
+    "runtime-final\\P309-browser\\phase3-customer-shipment-P-06766-e-and-mobile-browser-return\\customer-shipment-mobile.png",
+    "runtime-final\\P309-browser\\phase3-customer-shipment-P-06766-e-and-mobile-browser-return\\customer-shipment-partial-revoke.png",
+    "runtime-final\\P309-browser\\phase3-customer-shipment-P-06766-e-and-mobile-browser-return\\customer-shipment-revoked-mobile.png"
+  ],
+  "reviewed_at_utc": "2026-09-26T04:08:20.2884466Z",
+  "status": "PASS",
+  "product_sha": "e499eb13fccc12734b21a09c1e2bfa1b92e983ee",
+  "mobile": "390x844",
+  "desktop": "1280x720"
+}

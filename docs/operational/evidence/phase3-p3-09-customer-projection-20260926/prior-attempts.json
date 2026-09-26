@@ -1,0 +1,16 @@
+{
+  "prequalification": "Dirty-source runs are diagnostic only: owned PG locale corrected; immutable fixture snapshot rewrite removed; browser selectors aligned to exact current UI.",
+  "superseded_product": "191c0048a4926b15b643e7c52c31a1814c7312a5",
+  "superseded_frontend": {
+    "passed": 419,
+    "failed": 1,
+    "reason": "Exact route inventory omitted the two approved P3-09 routes; strict inventory reconciled."
+  },
+  "superseded_backend": "STOPPED_INCOMPLETE when Product identity changed",
+  "same_product_initial_browser": {
+    "directory": "D:\\1-webapp\\forwarder-dev\\p309-final-e499eb1-20260926\\runtime",
+    "status": "FAILED_TIMEOUT",
+    "reason": "Initial Customer login and password-change redirects exceeded five-second assertions during simultaneous full suites. Later HTTP commands completed 200. Final browser rerun passed all 10 tests after frontend completed, unchanged Product and assertions."
+  },
+  "old_passes_used_as_final_evidence": false
+}

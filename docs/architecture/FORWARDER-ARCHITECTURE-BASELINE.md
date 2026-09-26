@@ -15,7 +15,9 @@ duplicate entitlement store. No-store responses and an opaque current authorizat
 comparison before browser acceptance reject delayed revoked-scope bodies; lifecycle
 return/refresh clears prior data. Public Tracking retains its separate ADR-052 DTO.
 This enables the private consumer deferred by P3-06..08 and grants no Customer writes.
-Exact-candidate qualification remains a separate gate under the resume authority.
+[Exact-Product qualification](../operational/evidence/phase3-p3-09-customer-projection-status-20260926.md)
+passed at `e499eb13fccc12734b21a09c1e2bfa1b92e983ee`; controlled integration follows
+the explicit resume authority and exact integration receipt. Global validation remains pending.
 
 P3-08 bounded extension: [ADR-064](../operational/adr/ADR-064-partial-cargo-delivery-and-exact-evidence.md) owns immutable CargoDelivery facts and exact-version CargoDeliveryEvidence. Shipment/Cargo/UOM tenant and parent FKs, owner-only serialized commands, expected correction revision and stable idempotency preserve downstream reality without rewriting Cargo quantities or closing Shipment. Partial, remaining and over-known-actual amounts are independent per Cargo; unknown actual remains unknown. DELIVERY extends typed document context through its real Cargo and live DN10; retained evidence never grants a stale file download. Customer capability is projection support only until P3-09. [Exact-Product qualification](../operational/evidence/phase3-p3-08-cargo-delivery-status-20260926.md) passed at `48fa69b70af1bcf06fc5a9783b98fdf54de7a18c`; controlled integration is governed by the mission receipt.
 

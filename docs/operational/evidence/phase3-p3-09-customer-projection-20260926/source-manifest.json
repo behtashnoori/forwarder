@@ -1,0 +1,141 @@
+{
+  "product_sha": "e499eb13fccc12734b21a09c1e2bfa1b92e983ee",
+  "base": "6a11c2e02a3103f0bc36129bd12798842b7c39cb",
+  "files": [
+    {
+      "path": "backend/routes/__init__.py",
+      "git_blob": "53b0b3ae35483c726d7936ceb75543eaa1881ea2",
+      "sha256": "512d26afa902934514b0c8e6bbd79e64a81272f2ff55cfeb09d4f6f8f75f8861"
+    },
+    {
+      "path": "backend/routes/customer_shipments.py",
+      "git_blob": "f36c4b3a7a414d408daa770f58f4b3319c41df7b",
+      "sha256": "2f14ce78a7db59c84083730b85f13f18d45249aec24b794d691cf8e4a41dc741"
+    },
+    {
+      "path": "backend/services/customer_shipment_service.py",
+      "git_blob": "609b4f0d4a8b942cf37198aaf607a279c3ad2d55",
+      "sha256": "1e0b5800d2de7ff7287fedfd6ae3ce4fd21d753a091acef1e24a01b09e53031d"
+    },
+    {
+      "path": "backend/services/reported_fact_service.py",
+      "git_blob": "ea18ab61fe2cb17dbbc84467cbd562fb3c2bf29e",
+      "sha256": "c90d258521f5725916a3d14679d6672e8701047edfeb5b1464b7a91b328e1488"
+    },
+    {
+      "path": "backend/tests/test_phase3_customer_shipment.py",
+      "git_blob": "bdf94ab5fbc5d08a04664d12b082d55d7deccb22",
+      "sha256": "35438b671855768cbaed9f2195739c289674a32d35111c28e3046eb4f1fa67d5"
+    },
+    {
+      "path": "backend/tests/test_phase3_customer_shipment_postgresql.py",
+      "git_blob": "2d18cdceba11d3d1d8bac9d2925e6c874f5456b3",
+      "sha256": "6845d204a96e64cd77734982c50d482b3728a15f425f98dcecadbe9c8944675c"
+    },
+    {
+      "path": "docs/architecture/ADR-INDEX.md",
+      "git_blob": "481a6731cdae304dd4b2c43904c6f0750111cb9f",
+      "sha256": "afef91a5f63770f924d555411afab979991d523cfa7d4ad17bb31faa3e6b836d"
+    },
+    {
+      "path": "docs/architecture/FORWARDER-ARCHITECTURE-BASELINE.md",
+      "git_blob": "79cd574492837f59222da980cad940546b516ec7",
+      "sha256": "6b492617f50fe5c983e5b995bcb09790f9a8b2b8e8b8f43f9e7624963ad0836d"
+    },
+    {
+      "path": "docs/architecture/tenant-ownership-inventory.yaml",
+      "git_blob": "841b07ba428aae83bdfdc1f9797cce35b1affdf7",
+      "sha256": "424841c949f8ad8b07b42b8cecd2bc27a19fa81f9e3f035ebbc76be4535c4a11"
+    },
+    {
+      "path": "docs/openapi/openapi.yaml",
+      "git_blob": "909f17ae3ed6b2b7629839f273b66355664f3ba1",
+      "sha256": "b6847e4535d94845c3237995a3e1ac0256a5e6b74738aac5a5223132098782e5"
+    },
+    {
+      "path": "docs/operational/adr/ADR-065-private-customer-shipment-projection.md",
+      "git_blob": "0dc7e6ecdce6e4836e93d48757e94f8b43dade3f",
+      "sha256": "54a5621e08639f7c3417de111efbec4ef4ae1acab1aa46149973d6a78a0da221"
+    },
+    {
+      "path": "docs/operational/decision-index.md",
+      "git_blob": "cf0aeab63c0fcc8bcc0ec47deb5e6b5b68712329",
+      "sha256": "b0c765fc334f9a74b204fe68915bd16a01abf646e9c75a48579813a7dcf87061"
+    },
+    {
+      "path": "docs/product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md",
+      "git_blob": "a96b180a4859b0c716b3a80f1c43432b77a63978",
+      "sha256": "2e6fd3c01347ee47f31c4171cbbb22a670a41fa13963e9c3833c71d5f415b43f"
+    },
+    {
+      "path": "docs/product/phase3/P3-06-10-MISSION-AUTHORITY.md",
+      "git_blob": "6569cd5003c3d69b30f4b4feb402380ade07e903",
+      "sha256": "12e9a1545c18da99142f38f8ea3dd2032f4800f6e194e762b46396b1e777e7fc"
+    },
+    {
+      "path": "docs/product/phase3/P3-06-DOCUMENT-CONTEXT-VISIBILITY-CONTRACT-FA.md",
+      "git_blob": "829a972d0190f221e8b1b8e25681873d61d2559f",
+      "sha256": "3b01f6805651a4fda8bfdb6771d88183ab03e240cc99d4f5621c87fa641c5c0a"
+    },
+    {
+      "path": "docs/product/phase3/P3-09-10-RESUME-AUTHORITY.md",
+      "git_blob": "945e6ab72dfcacf371caed3ee6c57c0e8cfa2308",
+      "sha256": "b86a94787c95f178a2da1318e6556d2ac12d6c82dadbf04a549daaf990087997"
+    },
+    {
+      "path": "e2e/phase3-customer-shipment.spec.ts",
+      "git_blob": "602b3da7ab25dad5fb7f3c4f47b739464cdc908a",
+      "sha256": "531554426680d6061669b674fe4b603649e6c440776a90e00f2a8c1befd8d0fe"
+    },
+    {
+      "path": "scripts/run-phase3-customer-shipment-qualification.ps1",
+      "git_blob": "494abd6dbeb92afeade2bd954b8c039d6b321b08",
+      "sha256": "4d75cafcb3c43596c821b88ff01eae051e948f227e68144fa350737a1e8bc4fe"
+    },
+    {
+      "path": "scripts/uat/seed_phase3_customer_shipment_e2e.py",
+      "git_blob": "f1a7d7916af4edbde9575759fb19ac80c3d07f0e",
+      "sha256": "f9e86a74c3bb4708f920e0523ecd0ef2842a7a9791cceb32785d7521d6f305b0"
+    },
+    {
+      "path": "src/App.tsx",
+      "git_blob": "9b158ba51e61b4bc41376b94a7021aabec120da2",
+      "sha256": "53a664d61015f8be1b371a2cb147b083dde82139942c2f58608221bca76bbbf1"
+    },
+    {
+      "path": "src/components/CustomerPortalLayout.tsx",
+      "git_blob": "5f6da4e5aaaa661ac58ff5b2fc494e28011411e1",
+      "sha256": "6107669076e15def9ce906eb0000ee35647cc3bb02b16a7c813e1306bb7fc137"
+    },
+    {
+      "path": "src/hooks/usePrivateCustomerRead.ts",
+      "git_blob": "e73a6c286c67e1672f435447eb1862043b89fd2f",
+      "sha256": "1fad2cc4fc906381b1897858746927a733cce5eca111eadec5b824c72009f03b"
+    },
+    {
+      "path": "src/lib/customerPortalApi.ts",
+      "git_blob": "65d42d225003a49064018fcb658b233a180e1831",
+      "sha256": "978002b0e2fee6a64deef0583f8a9444c3d0a846e11bd5f1fcc6eaf4ecadd7dc"
+    },
+    {
+      "path": "src/lib/customerShipmentApi.ts",
+      "git_blob": "bfa77bc84cb54c8875170d7ff6e4143fb0e618d4",
+      "sha256": "644b3b7efd4bd40eda79586dc7e4fe6c9a362db363deb55575793008977bcbaf"
+    },
+    {
+      "path": "src/pages/CustomerPortalShipments.tsx",
+      "git_blob": "02d513ed60e0e1db87914a8e2af3c27da271c852",
+      "sha256": "f3ffb3b35134940872465708dc88377626e816762072234e2fd0e43c0534bf69"
+    },
+    {
+      "path": "src/tests/App.routing.test.tsx",
+      "git_blob": "576f77dcb4e5b82f9d5c26f164749dfef805bb67",
+      "sha256": "c30135b81e5f20f44faa1b49c8991997ea2b28f79f9b3b9f6ecf423b13473b5d"
+    },
+    {
+      "path": "src/tests/pages/CustomerPortalShipments.test.tsx",
+      "git_blob": "95f268957fdd21a17c600dee085ce5467aa169e0",
+      "sha256": "e7d538a978fb9c9d09a3eef313379843f21154db13a1662b4c2952b76fdafde6"
+    }
+  ]
+}

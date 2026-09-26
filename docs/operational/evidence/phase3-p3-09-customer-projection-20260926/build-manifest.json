@@ -1,0 +1,70 @@
+{
+  "product_sha": "e499eb13fccc12734b21a09c1e2bfa1b92e983ee",
+  "files": [
+    {
+      "path": "dist/apple-touch-icon.png",
+      "sha256": "a614fca15c0f66ee586a4d3a25839b66996e7d29ace2775c17c07fe3c2fcbb25",
+      "bytes": 12245
+    },
+    {
+      "path": "dist/assets/index-Cc4B6MOd.css",
+      "sha256": "04f9478e83ac7546d510a12829053488d49a507876592c3efb14b3a1c85a85b7",
+      "bytes": 91015
+    },
+    {
+      "path": "dist/assets/index-oyx3yeJZ.js",
+      "sha256": "3955d6710551e51fcaf404b8048ac948b8f3b5b27aa20e843a79d22752496d31",
+      "bytes": 1869956
+    },
+    {
+      "path": "dist/brand-icon.png",
+      "sha256": "c24e55950c2a3803cb30e20baa4b18f0395b1f1ac53aed5b8f39449fad449371",
+      "bytes": 69671
+    },
+    {
+      "path": "dist/favicon-192.png",
+      "sha256": "f8909a75a0c5e26383ce9fb73c90f929c7bcf2701db96b3db0693930d867e5e5",
+      "bytes": 13496
+    },
+    {
+      "path": "dist/favicon-32.png",
+      "sha256": "cf5cb583062897fbda12214457334aa606004886f1cf603fb2aa4266de16902e",
+      "bytes": 1064
+    },
+    {
+      "path": "dist/favicon-512.png",
+      "sha256": "5702d50088bc8f280281aab052e3e0935a08803097d4b3da3b8f75732f5bf493",
+      "bytes": 52297
+    },
+    {
+      "path": "dist/favicon.ico",
+      "sha256": "ce0672f158d69d30b8e3b5a5569c8d46c7bfc3b4c5e1d80af55d7d06dfa7483a",
+      "bytes": 3469
+    },
+    {
+      "path": "dist/index.html",
+      "sha256": "ff236e88296e3dd65ce3a9059cbeaa752fc1726ebceb6d29bba1e5ab4679335b",
+      "bytes": 2131
+    },
+    {
+      "path": "dist/placeholder.svg",
+      "sha256": "64badf7aabda0b9630b87020ffb6095cb858ccbcf66b355c2aa08b1063954d3b",
+      "bytes": 3253
+    },
+    {
+      "path": "dist/robots.txt",
+      "sha256": "52710c261d851bc1ad35604017862f2a8444e7a0f02cd7b8b49e3ba92e6d4cea",
+      "bytes": 174
+    },
+    {
+      "path": "dist/site.webmanifest",
+      "sha256": "bb59f80de2785decd1f7a5c8de0ce9db2c9dd39439155afde2b81af390177c38",
+      "bytes": 393
+    },
+    {
+      "path": "dist/web.config",
+      "sha256": "28868b84e0ad907529e4f9f1652473a127e934167e25e9b2036f1b16cfa1e08b",
+      "bytes": 3684
+    }
+  ]
+}

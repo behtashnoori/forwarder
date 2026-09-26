@@ -125,3 +125,15 @@ must establish P3-09 entry. P3-09/10 implementation not yet started at this reco
 ## P3-09 verified entry and pre-build authority
 
 P3-08 integrated at `6a11c2e02a3103f0bc36129bd12798842b7c39cb`, clean local/fetched github 0/0; exact Product `48fa69b70af1bcf06fc5a9783b98fdf54de7a18c`. Required P3-02/05/06/07/08 are canonical. Sole head `20261008_phase3_cargo_delivery`; P3-09 adds no schema or entitlement store. [ADR-065](../../operational/adr/ADR-065-private-customer-shipment-projection.md) records the explicit §§45–61 authority before implementation in isolated `codex/phase3-p3-09-customer-projection`. Authorized Customer read only; Public Tracking, Request/account/recovery and command authority preserved, with fresh evidence pending. P3-10 not started.
+
+## P3-09 resumed qualification gate
+
+The explicit follow-up [resume authority](P3-09-10-RESUME-AUTHORITY.md) preserves the
+existing worktree and all interrupted work. Product
+`e499eb13fccc12734b21a09c1e2bfa1b92e983ee` passed fresh full backend/frontend,
+PostgreSQL 18, Chrome and static/reference gates in the
+[bound record](../../operational/evidence/phase3-p3-09-customer-projection-status-20260926.md).
+REFERENCE_RECONCILIATION=PASS; REFERENCE_IMPACT=NONE; unrelated behavior PRESERVED.
+Controlled fast-forward integration, github push/fetch and 0/0 are authorized.
+P3-10 entry must independently reverify actual canonical. P3-11..15 and all
+production/deployment/release activity remain excluded; global validation pending.

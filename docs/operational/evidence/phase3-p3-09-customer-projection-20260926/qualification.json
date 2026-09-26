@@ -1,0 +1,87 @@
+{
+  "product_sha": "e499eb13fccc12734b21a09c1e2bfa1b92e983ee",
+  "canonical_base": "6a11c2e02a3103f0bc36129bd12798842b7c39cb",
+  "qualification": "PASS",
+  "migration_required": false,
+  "migration_head": "20261008_phase3_cargo_delivery",
+  "migration_head_count": 1,
+  "backend": {
+    "tests": 1592,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 117,
+    "passed": 1475
+  },
+  "frontend": {
+    "tests": 420,
+    "files": 89,
+    "status": "PASS"
+  },
+  "postgresql": {
+    "major": 18,
+    "focused": 5,
+    "p301_through_p305": 5,
+    "public_tracking": 1,
+    "status": "PASS"
+  },
+  "chrome": {
+    "tests": 10,
+    "results": [
+      {
+        "status": "PASS",
+        "name": "PostgreSQL 18"
+      },
+      {
+        "status": "PASS",
+        "name": "P3-01 through P3-05 PostgreSQL"
+      },
+      {
+        "status": "PASS",
+        "name": "Public Tracking PostgreSQL"
+      },
+      {
+        "status": "PASS",
+        "name": "P309 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P308 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P307 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P306 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "MT3 Chrome"
+      }
+    ],
+    "status": "PASS"
+  },
+  "visual": "PASS",
+  "warnings": [
+    "13 existing ESLint warnings, zero errors",
+    "Existing build chunk-size and Browserslist data-age advisories",
+    "Full backend emitted 20682 warnings; not claimed as zero"
+  ],
+  "authorization": "Live DN10 predicates precede count/search/sort/page and all child composition; scalar session recheck and opaque grant revision gate response acceptance.",
+  "reference_reconciliation": "PASS",
+  "reference_impact": "NONE",
+  "product_authority_reconciliation": "PASS",
+  "protected_regressions": "PRESERVED",
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": "NO",
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployed": false,
+  "released": false,
+  "final_owned_runtime_stopped_and_removed": true,
+  "no_secret_inspection": "No secret/credential search or authentication workaround performed; evidence is selected non-secret summaries and synthetic screenshots.",
+  "recorded_at_utc": "2026-09-26T07:46:00.400423+03:30"
+}

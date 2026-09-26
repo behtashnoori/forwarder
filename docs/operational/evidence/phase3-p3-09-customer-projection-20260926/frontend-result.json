@@ -1,0 +1,2230 @@
+{
+  "product_sha": "e499eb13fccc12734b21a09c1e2bfa1b92e983ee",
+  "exit_code": 0,
+  "completed_at": "2026-09-26T03:27:25.1249248Z",
+  "status": "PASS",
+  "files": 89,
+  "tests": 420,
+  "passed": 420,
+  "failed": 0,
+  "skipped": 0,
+  "duration_seconds": 488.2661201171875,
+  "raw_result": "D:\\1-webapp\\forwarder-dev\\p309-final-e499eb1-20260926\\frontend.json",
+  "result_sha256": "50a69192b07fb06e79e860658b4ef8eef2681e0783e9b74e84c03506f5ee2ed3",
+  "assertions": [
+    {
+      "file": "src/lib/api-error-ux.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "API error UX maps HTTP 403 to a distinct user state",
+          "status": "passed"
+        },
+        {
+          "name": "API error UX maps HTTP 404 to a distinct user state",
+          "status": "passed"
+        },
+        {
+          "name": "API error UX maps HTTP 409 to a distinct user state",
+          "status": "passed"
+        },
+        {
+          "name": "API error UX maps HTTP 422 to a distinct user state",
+          "status": "passed"
+        },
+        {
+          "name": "API error UX maps HTTP 500 to a distinct user state",
+          "status": "passed"
+        },
+        {
+          "name": "API error UX maps transport failure to a retryable network state",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/apiAuth.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "controlled access-token refresh uses one refresh for concurrent callers",
+          "status": "passed"
+        },
+        {
+          "name": "controlled access-token refresh retries each failed API request only once after the shared refresh",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/authContinuity.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "authentication route continuity restores the shipment path including query and hash",
+          "status": "passed"
+        },
+        {
+          "name": "authentication route continuity rejects external and protocol-relative return URLs",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/customerPortalApi.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "customer portal API boundary uses credentialed cookies only through the customer client",
+          "status": "passed"
+        },
+        {
+          "name": "customer portal API boundary submits the exact quote identity, discussion message, CSRF and response version",
+          "status": "passed"
+        },
+        {
+          "name": "customer portal API boundary uses the enumeration-safe forgot endpoint",
+          "status": "passed"
+        },
+        {
+          "name": "customer portal API boundary includes Customer cookies and CSRF only after an authenticated session check",
+          "status": "passed"
+        },
+        {
+          "name": "customer portal API boundary falls back to cookie-free anonymous intake when session discovery fails",
+          "status": "passed"
+        },
+        {
+          "name": "customer portal API boundary uses tenant-scoped admin status and email recovery endpoints",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/dualCalendar.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "dual-calendar presentation converts known Local Date boundary 2026-03-20",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation converts known Local Date boundary 2026-03-21",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation converts known Local Date boundary 2024-02-29",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation converts known Local Date boundary 2026-12-31",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation does not shift a Local Date in process zone UTC",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation does not shift a Local Date in process zone Asia/Tehran",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation does not shift a Local Date in process zone America/New_York",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation does not shift a Local Date in process zone Pacific/Honolulu",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation resolves both calendars from the same Instant near local midnight",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation renders the clock once while preserving the selected Instant zone",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation localizes the Gregorian-first structure for Persian RTL",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Local Date null",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Local Date undefined",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Local Date \"\"",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Local Date \"invalid\"",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Local Date \"2026-02-30\"",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Instant null",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Instant undefined",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Instant \"\"",
+          "status": "passed"
+        },
+        {
+          "name": "dual-calendar presentation returns the existing empty-state value for invalid Instant \"invalid\"",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/localDate.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "date-only contract preserves the calendar day in UTC",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract preserves the calendar day in Asia/Tehran",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract preserves the calendar day in America/New_York",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract preserves the calendar day in Pacific/Honolulu",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract rejects invalid input null",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract rejects invalid input \"\"",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract rejects invalid input \"invalid\"",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract rejects invalid input \"2026-13-01\"",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract rejects invalid input \"2026-02-30\"",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract rejects invalid input \"29/07/2026\"",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract validates leap years without normalization",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract returns calendar parts rather than an instant",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract uses the date-only contract for pickup_date",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract uses the date-only contract for delivery_date",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract uses the date-only contract for valid_until",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract uses the date-only contract for expected_close_date",
+          "status": "passed"
+        },
+        {
+          "name": "date-only contract uses the date-only contract for actual_close_date",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/localDateTime.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "datetime-local conversion shows Tehran wall-clock time",
+          "status": "passed"
+        },
+        {
+          "name": "datetime-local conversion round-trips Tehran time once",
+          "status": "passed"
+        },
+        {
+          "name": "datetime-local conversion round-trips UTC",
+          "status": "passed"
+        },
+        {
+          "name": "datetime-local conversion crosses the local day boundary",
+          "status": "passed"
+        },
+        {
+          "name": "datetime-local conversion rejects invalid input \"\"",
+          "status": "passed"
+        },
+        {
+          "name": "datetime-local conversion rejects invalid input \"not-a-date\"",
+          "status": "passed"
+        },
+        {
+          "name": "datetime-local conversion rejects invalid input \"2026-02-30T12:00\"",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/organizationReferenceCatalogApi.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "organization reference catalog API uses the bounded family endpoint and omits version for a new activation",
+          "status": "passed"
+        },
+        {
+          "name": "organization reference catalog API sends the latest activation version and preserves list pagination",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/routeAuthoringApi.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "route authoring client contract uses shipment-scoped draft, validation and activation commands",
+          "status": "passed"
+        },
+        {
+          "name": "route authoring client contract keeps Cargo destinations and actual-route facts shipment and plan scoped",
+          "status": "passed"
+        },
+        {
+          "name": "route authoring client contract keeps typed location identity and expected versions in structural writes",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/lib/transportPresentation.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "existing transport presentation selects the stored request mode for its request scope without mutation",
+          "status": "passed"
+        },
+        {
+          "name": "existing transport presentation keeps missing request transport missing instead of assuming road",
+          "status": "passed"
+        },
+        {
+          "name": "existing transport presentation does not choose between conflicting scoped modes when shipping type is absent",
+          "status": "passed"
+        },
+        {
+          "name": "existing transport presentation preserves actual leg order and repeated modes without creating a combined state",
+          "status": "passed"
+        },
+        {
+          "name": "existing transport presentation keeps Combined Request intent independent from concrete route legs",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/App.routing.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "App operational routing allows organization-scoped users to reach operational routes",
+          "status": "passed"
+        },
+        {
+          "name": "App operational routing makes the operational workspace available to organization-scoped users",
+          "status": "passed"
+        },
+        {
+          "name": "App operational routing blocks a platform admin that has no tenant context",
+          "status": "passed"
+        },
+        {
+          "name": "App operational routing redirects malformed stored authentication state to the public route",
+          "status": "passed"
+        },
+        {
+          "name": "App operational routing freezes the complete Golden route inventory and catch-all ordering",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/i18n.business-labels.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "governed shipment-detail business labels maps persisted names and statuses without leaking unknown technical codes",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/internationalDestination.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "international destination rules requires a generic destination city for non-Iran countries",
+          "status": "passed"
+        },
+        {
+          "name": "international destination rules requires a governed international location for Iran too",
+          "status": "passed"
+        },
+        {
+          "name": "international destination rules builds a complete city destination only",
+          "status": "passed"
+        },
+        {
+          "name": "international destination rules builds a complete port destination only",
+          "status": "passed"
+        },
+        {
+          "name": "international destination rules builds a complete customs destination only",
+          "status": "passed"
+        },
+        {
+          "name": "international destination rules omits an incomplete precise destination fragment",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/viteBackendTarget.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Vite backend target precedence prefers an explicit VITE_BACKEND_URL over .backend-port",
+          "status": "passed"
+        },
+        {
+          "name": "Vite backend target precedence uses .backend-port when the explicit variable is absent",
+          "status": "passed"
+        },
+        {
+          "name": "Vite backend target precedence uses the legacy default when neither prior source is usable",
+          "status": "passed"
+        },
+        {
+          "name": "Vite backend target precedence fails closed for invalid explicit target \"\"",
+          "status": "passed"
+        },
+        {
+          "name": "Vite backend target precedence fails closed for invalid explicit target \"not-a-url\"",
+          "status": "passed"
+        },
+        {
+          "name": "Vite backend target precedence fails closed for invalid explicit target \"ftp://127.0.0.1:49123\"",
+          "status": "passed"
+        },
+        {
+          "name": "Vite backend target precedence fails closed for invalid explicit target \"http://user:secret@127.0.0.1:49123\"",
+          "status": "passed"
+        },
+        {
+          "name": "Vite backend target precedence fails closed for invalid explicit target \"http://127.0.0.1:49123/api\"",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/control-tower/api.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Control Tower feature adapter preserves D1 facts, missing values, transport distinctions, timestamps, and opaque cursor",
+          "status": "passed"
+        },
+        {
+          "name": "Control Tower feature adapter maps supported attention and search and passes the cursor without parsing it",
+          "status": "passed"
+        },
+        {
+          "name": "Control Tower feature adapter requests the bounded default page without optional filters",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/control-tower/ControlTowerOperationalView.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Golden Control Tower operational view renders the operational D1 facts without collapsing source-of-truth distinctions",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view opens the provided existing Shipment Detail destination",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view requests server-side attention and text filters and resets to the first page",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view passes through the opaque cursor and replaces the bounded page",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view does not let an older slower response overwrite newer filter results",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view shows explicit loading and empty states",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view warns that an empty stale Attention result is not proof of healthy operations",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view fails closed on 503 without Semantic Analytics fallback or stale partial cards",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view keeps HTTP 401 distinct from an empty result",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view keeps HTTP 403 distinct from an empty result",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view represents missing facts as missing instead of fabricating values",
+          "status": "passed"
+        },
+        {
+          "name": "Golden Control Tower operational view keeps core content reachable with the existing responsive stacking pattern",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/control-tower/OperationsControlTower.integration.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "existing Golden Control Tower route integration uses the dedicated D1 view for the existing no-props route",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/AdminPanelDocumentAuthority.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Admin Panel document authority contract keeps global mutation and organization policy in distinct authority-gated tabs",
+          "status": "passed"
+        },
+        {
+          "name": "Admin Panel document authority contract keeps a reporting failure distinct from the valid empty dashboard state",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ApplicationNavigation.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "shared application navigation falls back to the canonical authenticated home",
+          "status": "passed"
+        },
+        {
+          "name": "shared application navigation uses the canonical admin home",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/CargoAllocationTraceSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Cargo allocation trace shows stage totals, remaining quantity, non-blocking warnings and correction history",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo allocation trace submits an explicit plan revision with the current version",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/CargoFoundation.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Cargo foundation UI keeps the accepted plan when actual quantity is edited after a delayed refresh",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI opens shipment usage and renders quantity, status, and location",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI renders shipment usage empty and error states",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI reports shipment usage API errors",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI keeps immutable catalog code read-only during edit and uses governed aliases",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI shows legacy quantity as unknown and records an explicit planned meaning",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI creates Request-sourced Cargo with explicit customer and three quantity meanings",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI uses explicit Persian quantity allocation and preserves remaining cargo",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI keeps the canonical shipment execution-unit creation path available",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI blocks only dependent catalog and shipment creation when organization references are missing",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI shows only selectable organization-approved options for new shipment cargo",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI renders and persists Cargo Owners by unique Customer identity",
+          "status": "passed"
+        },
+        {
+          "name": "Cargo foundation UI qualifies tracking-unit render identity by source domain without masking same-domain duplicates",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/CaseDocumentsTab.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "CaseDocumentsTab renders governed language, capacity, and a multi-select add control",
+          "status": "passed"
+        },
+        {
+          "name": "CaseDocumentsTab uploads A/B/C as independent append commands in selection order",
+          "status": "passed"
+        },
+        {
+          "name": "CaseDocumentsTab targets exactly the selected current file for replacement",
+          "status": "passed"
+        },
+        {
+          "name": "CaseDocumentsTab retries only a known failed item and never resubmits successful siblings",
+          "status": "passed"
+        },
+        {
+          "name": "CaseDocumentsTab marks a lost response unknown and offers inspect without Retry",
+          "status": "passed"
+        },
+        {
+          "name": "CaseDocumentsTab preserves Admin read UI while hiding every mutation control",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/CustomerAccessTab.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Customer access administration grants explicitly, reloads current configuration and revokes with history",
+          "status": "passed"
+        },
+        {
+          "name": "Customer access administration shows failed grants without pretending success and preserves the retry command",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/DeliverySection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "partial cargo deliveries accepts excess reality and preserves command key through an uncertain retry",
+          "status": "passed"
+        },
+        {
+          "name": "partial cargo deliveries shows independent cargo warnings and preserves history in read-only oversight",
+          "status": "passed"
+        },
+        {
+          "name": "partial cargo deliveries corrects the selected version and uploads evidence to that exact delivery",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/DocumentDefinitionsTab.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "DocumentDefinitionsTab governed catalog renders bilingual identity, governance distinctions and server filters",
+          "status": "passed"
+        },
+        {
+          "name": "DocumentDefinitionsTab governed catalog shows detail sections, aliases, provenance and separate statuses",
+          "status": "passed"
+        },
+        {
+          "name": "DocumentDefinitionsTab governed catalog distinguishes empty catalog, no results and backend errors",
+          "status": "passed"
+        },
+        {
+          "name": "DocumentDefinitionsTab governed catalog honors expected revision and presents stale-write conflict",
+          "status": "passed"
+        },
+        {
+          "name": "DocumentDefinitionsTab governed catalog requires an explicit lifecycle confirmation and surfaces activation blocks",
+          "status": "passed"
+        },
+        {
+          "name": "DocumentDefinitionsTab governed catalog shows creation only to Platform Admin and keeps it absent for Organization Admin",
+          "status": "passed"
+        },
+        {
+          "name": "DocumentDefinitionsTab governed catalog validates the compact draft form, prevents duplicate submits, refreshes, and opens the created item",
+          "status": "passed"
+        },
+        {
+          "name": "DocumentDefinitionsTab governed catalog keeps entered values after a create error and does not change existing rows",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/DocumentReadinessSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "shipment document readiness renders Persian concepts, authoritative status counts, and contextual ownership help",
+          "status": "passed"
+        },
+        {
+          "name": "shipment document readiness selects an eligible exact file version instead of requiring an opaque ID",
+          "status": "passed"
+        },
+        {
+          "name": "shipment document readiness shows the empty requirement state",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ExpertLogin.workspace.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "ExpertLogin workspace routing routes an ordinary expert to the operational workspace",
+          "status": "passed"
+        },
+        {
+          "name": "ExpertLogin workspace routing preserves the existing destination for { authority: 'PLATFORM_ADMIN', role: 'expert' }",
+          "status": "passed"
+        },
+        {
+          "name": "ExpertLogin workspace routing preserves the existing destination for { authority: 'ORGANIZATION_ADMIN', role: 'expert' }",
+          "status": "passed"
+        },
+        {
+          "name": "ExpertLogin workspace routing preserves the existing destination for { authority: 'EXPERT', role: 'admin' }",
+          "status": "passed"
+        },
+        {
+          "name": "ExpertLogin workspace routing preserves the existing destination for { authority: 'EXPERT', role: 'crm_manager' }",
+          "status": "passed"
+        },
+        {
+          "name": "ExpertLogin workspace routing preserves the existing destination for { authority: 'EXPERT', role: 'business_expert' }",
+          "status": "passed"
+        },
+        {
+          "name": "ExpertLogin workspace routing preserves the existing destination for { authority: 'EXPERT', role: 'supervisor' }",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ExpertTerminology.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "expert terminology guidance explains reusable cargo master data without implying shipment creation or unsafe aggregation",
+          "status": "passed"
+        },
+        {
+          "name": "expert terminology guidance explains reusable logistics locations without promising route creation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/GlobalLogisticsNetworkAuthority.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Global Logistics Network authority gates both navigation and content on PLATFORM_ADMIN authority",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/GlobalLogisticsNetworkGovernance.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Global Logistics Network governance UI supports filters, draft creation, opaque detail, and governed actions",
+          "status": "passed"
+        },
+        {
+          "name": "Global Logistics Network governance UI sends expected versions and confirms deprecation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/InternationalLocationSelector.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "uses bounded pages and retains the selected identity across page and query changes",
+          "status": "passed"
+        },
+        {
+          "name": "distinguishes lookup failure from an empty search and supports retry",
+          "status": "passed"
+        },
+        {
+          "name": "discards a response from a prior country and marks fallback Persian labels honestly",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/LoadingSpinner.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "LoadingSpinner renders with default props",
+          "status": "passed"
+        },
+        {
+          "name": "LoadingSpinner renders with custom text",
+          "status": "passed"
+        },
+        {
+          "name": "LoadingSpinner renders with different sizes",
+          "status": "passed"
+        },
+        {
+          "name": "LoadingSpinner applies custom className",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/LocationForm.destination.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "public destination business flow offers Combined Transport as one ordinary customer intent choice",
+          "status": "passed"
+        },
+        {
+          "name": "public destination business flow Iran uses country and InternationalCity without the obsolete step",
+          "status": "passed"
+        },
+        {
+          "name": "public destination business flow Turkey uses country and InternationalCity without the obsolete step",
+          "status": "passed"
+        },
+        {
+          "name": "public destination business flow resets and reloads destination from Iran (Tehran)",
+          "status": "passed"
+        },
+        {
+          "name": "public destination business flow resets and reloads destination from Turkey (Istanbul)",
+          "status": "passed"
+        },
+        {
+          "name": "public destination business flow submits multiple optional cargo items without converting exact quantity to Number",
+          "status": "passed"
+        },
+        {
+          "name": "public destination business flow keeps an empty voluntarily-added item on the form and blocks submission",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/LocationForm.geography.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "RG-08 public Iran destination wiring does not short-circuit Iran before fetching its governed city options",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/LogisticsNetworkAcceptance.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Release 1.7.0 logistics network acceptance covers admin create, update, lifecycle, and probable duplicate confirmation",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.7.0 logistics network acceptance selects governed points, assigns role/sequence, reorders, and toggles without free-text master creation",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.7.0 logistics network acceptance reorders active rows correctly when an inactive row is interleaved",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/MasterDataAdminTab.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "MasterDataAdminTab loads, searches, filters, and activates through the reusable grid",
+          "status": "passed"
+        },
+        {
+          "name": "MasterDataAdminTab opens the create dialog with immutable code and bilingual names",
+          "status": "passed"
+        },
+        {
+          "name": "MasterDataAdminTab extends central authority to the three Phase 3 reference families",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OperationalActionsSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "operational actions shows the fixed internal owner and records a versioned follow-up",
+          "status": "passed"
+        },
+        {
+          "name": "operational actions refreshes exception contexts after an exception is created on the same page",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OperationalConditionsSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "shipment operational conditions records an explicit delay with a governed reason and reloads authoritative cases",
+          "status": "passed"
+        },
+        {
+          "name": "shipment operational conditions keeps resolved history visible and hides commands without the backend capability",
+          "status": "passed"
+        },
+        {
+          "name": "shipment operational conditions records and presents the bounded impact and evidence of an exception",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OperationalEventLocationSelector.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "operational event location selector keeps global references separate and returns exact private identity",
+          "status": "passed"
+        },
+        {
+          "name": "operational event location selector searches both bounded sources without accepting a tenant id",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OperationalExecutionPreviewIsolation.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "operational execution initialization preview retains the successful preview when an auxiliary read fails",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OperationalExecutionSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Operational Execution section renders progress, empty conditions and permission-aware controls",
+          "status": "passed"
+        },
+        {
+          "name": "Operational Execution section is read-only when requested",
+          "status": "passed"
+        },
+        {
+          "name": "Operational Execution section hides commands without backend capabilities",
+          "status": "passed"
+        },
+        {
+          "name": "uses operational_event.verify independently from manage and correct capabilities",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OperationsNav.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OperationsNav tenant customer maintenance shows مشتریان for Organization Admin without a legacy CRM role",
+          "status": "passed"
+        },
+        {
+          "name": "OperationsNav tenant customer maintenance does not show مشتریان for PLATFORM_ADMIN",
+          "status": "passed"
+        },
+        {
+          "name": "OperationsNav tenant customer maintenance does not show مشتریان for EXPERT",
+          "status": "passed"
+        },
+        {
+          "name": "OperationsNav tenant customer maintenance freezes permission-driven operational links for an organization admin",
+          "status": "passed"
+        },
+        {
+          "name": "OperationsNav tenant customer maintenance keeps tenant customer maintenance hidden from an Expert with operational permissions",
+          "status": "passed"
+        },
+        {
+          "name": "OperationsNav tenant customer maintenance does not expose the workspace link without shipment read permission",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OrganizationDocumentPolicyTab.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OrganizationDocumentPolicyTab renders nullable policy safely and saves only the selected global definition",
+          "status": "passed"
+        },
+        {
+          "name": "OrganizationDocumentPolicyTab renders a controlled API error",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OrganizationGlobalNetwork.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Organization Global Network filters and adds a reference point directly to the organization network",
+          "status": "passed"
+        },
+        {
+          "name": "Organization Global Network updates with adoption version and deactivates",
+          "status": "passed"
+        },
+        {
+          "name": "Organization Global Network completes an existing active adoption through the same add action",
+          "status": "passed"
+        },
+        {
+          "name": "Organization Global Network shows the resulting operational link and no create action",
+          "status": "passed"
+        },
+        {
+          "name": "Organization Global Network renders INACTIVE_FOR_ORGANIZATION lifecycle safely",
+          "status": "passed"
+        },
+        {
+          "name": "Organization Global Network renders PLATFORM_DEPRECATED lifecycle safely",
+          "status": "passed"
+        },
+        {
+          "name": "Organization Global Network uses a distinct retryable network error state",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OrganizationGlobalNetworkAuthority.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Organization Global Network authority keeps the organization reference workflow out of the platform-only shell",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OrganizationReferenceCatalogTab.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OrganizationReferenceCatalogTab activates and deactivates with the refreshed activation version",
+          "status": "passed"
+        },
+        {
+          "name": "OrganizationReferenceCatalogTab keeps a centrally inactive definition read-only",
+          "status": "passed"
+        },
+        {
+          "name": "OrganizationReferenceCatalogTab selects a family and exposes a stable organization-definition search",
+          "status": "passed"
+        },
+        {
+          "name": "OrganizationReferenceCatalogTab renders loading, empty, error, and denied states distinctly",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/OrganizationSlaRulesTab.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "organization SLA rules creates only an explicit organization value and explains the prospective clock",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ProjectConfigurationAcceptance.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance manages project commodity preferences without presenting an allowlist",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance loads, creates, edits and changes lifecycle for governed services",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance creates service flags and surfaces duplicate, primary and optimistic conflicts with refresh",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance supports document opaque create/edit/lifecycle and conditional-only description",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance supports milestone fields, point editing, validation, lifecycle and mixed-state reorder",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance shows selector loading and empty states",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance shows selector errors and a reload action",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance renders read-only without mutating actions",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance is responsive at 390px with fa direction",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance is responsive at 412px with fa direction",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance is responsive at 1280px with en direction",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.8.0 Project Configuration acceptance preserves the single existing network component",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ProtectedRoute.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "ProtectedRoute allows an authorized operational user",
+          "status": "passed"
+        },
+        {
+          "name": "ProtectedRoute redirects an unauthenticated request to the public route",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/QuoteModal.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "QuoteModal supported currencies offers EUR and submits its canonical code through the existing quote path",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ReleaseIdentity.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "ReleaseIdentity classifies match, mismatch, missing identity and backend failure",
+          "status": "passed"
+        },
+        {
+          "name": "ReleaseIdentity always renders the compile-time label and exposes sanitized support details",
+          "status": "passed"
+        },
+        {
+          "name": "ReleaseIdentity does not block the visible version when backend identity is unavailable",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ReportedFactsSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "scoped operational reports preserves retry key and keeps occurred time and safe text explicit",
+          "status": "passed"
+        },
+        {
+          "name": "scoped operational reports shows separate units and retained correction history in read-only oversight",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/RequestCargoEditor.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "RequestCargoEditor starts with an intentional zero-item state and adds a draft only on request",
+          "status": "passed"
+        },
+        {
+          "name": "RequestCargoEditor validates only voluntarily-created items and preserves exact decimal strings",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/RouteActualSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "actual route facts shows plan deviation separately and appends a fact without changing the plan",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/RouteAuthoringSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "governed route authoring offers draft creation without a route and hides it without capability",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring never offers a second create command while a draft detail is loading",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring blocks a repeat create when the write succeeds but authoritative reload fails",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring checks authoritative state before retrying an uncertain draft creation",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring adds a leg with distinct canonical geography and optional facility identity",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring starts the first leg at sequence one while leaving validation to the backend",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring saves an incomplete route leg without inventing mode or dates",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring assigns a Cargo line to a terminal destination branch",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring loads governed international cities for the selected country",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring edits branch and incomplete planning fields with optimistic versioning",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring adds a checkpoint with authoritative leg association and edits supported fields",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring shows backend validation findings and activates only after valid response",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring reloads a stale plan and shows a safe conflict message",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring requires fresh validation after an activation version conflict",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring explains ROUTE_SEQUENCE_DUPLICATE without exposing backend details",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring explains INVALID_ROUTE_TIMELINE without exposing backend details",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring explains LOCATION_MAPPING_REQUIRED without exposing backend details",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring keeps draft state readable when structural permissions are absent",
+          "status": "passed"
+        },
+        {
+          "name": "governed route authoring keeps actual-bearing draft segments read-only",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/RouteScrollManager.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "RouteScrollManager resets a long page to a short page through Link",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager resets through navigate() and replace navigation",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager leaves browser POP restoration alone for list-detail-Back",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager preserves same-path query changes and explicit preserveScroll",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager positions a hash target below the sticky header",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager finds a late hash target but stops retrying after user interaction",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager positions a hash target that appears during the bounded async window",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager supports optional main-heading focus without focusing body",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager does not reset the page when a dialog opens and closes",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager uses the same bounded reset at 360px mobile width",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager uses the same bounded reset at 390px mobile width",
+          "status": "passed"
+        },
+        {
+          "name": "RouteScrollManager uses the same bounded reset at 412px mobile width",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/RouteStageTransportExecutionSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "route-stage transport execution renders independent executions, a rail chain, neutral incompleteness, and history",
+          "status": "passed"
+        },
+        {
+          "name": "route-stage transport execution creates a progressive rail execution with ordered wagon and container",
+          "status": "passed"
+        },
+        {
+          "name": "route-stage transport execution records a new immutable version with optimistic concurrency",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ShipmentCargoItems.presentation.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "shipment cargo display quantities removes stored decimal scale noise and adds integer grouping",
+          "status": "passed"
+        },
+        {
+          "name": "shipment cargo display quantities retains significant fractional precision",
+          "status": "passed"
+        },
+        {
+          "name": "shipment cargo display quantities groups large integers and exact API decimal strings without Number coercion",
+          "status": "passed"
+        },
+        {
+          "name": "shipment cargo display quantities uses the requested application locale without changing numeric meaning",
+          "status": "passed"
+        },
+        {
+          "name": "shipment cargo display quantities keeps zero distinct from missing and fails safely for invalid values",
+          "status": "passed"
+        },
+        {
+          "name": "shipment cargo display quantities groups money without changing currency or recorded fractional digits",
+          "status": "passed"
+        },
+        {
+          "name": "shipment cargo display quantities is display-only and does not mutate the source API payload",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ShipmentDocuments.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "contextual Shipment documents shows context separately from visibility and keeps customer authority wording bounded",
+          "status": "passed"
+        },
+        {
+          "name": "contextual Shipment documents reports each file outcome and leaves only the failed file retryable",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/ShipmentEconomicsSection.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "ShipmentEconomicsSection capability isolation keeps authorized projection and line reads visible when optional preview is forbidden",
+          "status": "passed"
+        },
+        {
+          "name": "ShipmentEconomicsSection capability isolation still surfaces a core projection failure",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/components/UnifiedShipmentHistory.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "unified shipment history renders business labels, occurrence versus recording time, lineage, filters, and bounded pages read-only",
+          "status": "passed"
+        },
+        {
+          "name": "unified shipment history shows distinct empty, denied, and error states",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/builder-route.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "personal dashboard edit route loads directly, starts clean, and previews through the shared runtime",
+          "status": "passed"
+        },
+        {
+          "name": "personal dashboard edit route saves one explicit patch with the loaded expected version",
+          "status": "passed"
+        },
+        {
+          "name": "personal dashboard edit route does not expose archived dashboards to the editor",
+          "status": "passed"
+        },
+        {
+          "name": "personal dashboard edit route preserves an invalid local draft without calling analytics or PATCH",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/builder-state.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "dashboard builder state distinguishes semantic edits from UI selection",
+          "status": "passed"
+        },
+        {
+          "name": "dashboard builder state marks invalid drafts dirty and blocks incompatible widget definitions",
+          "status": "passed"
+        },
+        {
+          "name": "dashboard builder state creates stable unique widget identity and normalizes accessible order",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/canonical-manifest.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "canonical system dashboard manifest FROZEN_CONTROL_TOWER_PARITY=PASS",
+          "status": "passed"
+        },
+        {
+          "name": "canonical system dashboard manifest SYSTEM_DASHBOARD_SINGLE_SOURCE_OF_TRUTH=PASS",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/control-tower.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Operations Control Tower loads the governed widgets from one registry request and analytics queries",
+          "status": "passed"
+        },
+        {
+          "name": "Operations Control Tower propagates a customer filter through analytics queries",
+          "status": "passed"
+        },
+        {
+          "name": "Operations Control Tower uses POST drilldown with the widget normalized query",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/dashboard-index.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "personal dashboard index shows an intentional empty state and creates through the governed template",
+          "status": "passed"
+        },
+        {
+          "name": "personal dashboard index lists and opens owned dashboards",
+          "status": "passed"
+        },
+        {
+          "name": "personal dashboard index does not expose create without manage",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/persisted-dashboard.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "persisted dashboard route loads directly by the public id and passes the definition to the shared runtime",
+          "status": "passed"
+        },
+        {
+          "name": "persisted dashboard route shows a retryable access-safe failure",
+          "status": "passed"
+        },
+        {
+          "name": "persisted dashboard route accepts the governed row-set semantic version used by Saved View snapshots",
+          "status": "passed"
+        },
+        {
+          "name": "persisted dashboard route renders explicit persisted state for semantic_version",
+          "status": "passed"
+        },
+        {
+          "name": "persisted dashboard route renders explicit persisted state for dashboard_schema_version",
+          "status": "passed"
+        },
+        {
+          "name": "persisted dashboard route renders explicit persisted state for status",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/validator.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Dashboard definition validator accepts the governed system Control Tower definition",
+          "status": "passed"
+        },
+        {
+          "name": "Dashboard definition validator keeps the uncertified Delay Trend time-segment drilldown disabled",
+          "status": "passed"
+        },
+        {
+          "name": "Dashboard definition validator rejects a non-executable or incompatible metric definition",
+          "status": "passed"
+        },
+        {
+          "name": "Dashboard definition validator rejects a semantic-version mismatch",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/dashboard/widgets.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Dashboard widgets renders the server-provided KPI value and business coverage statistic",
+          "status": "passed"
+        },
+        {
+          "name": "Dashboard widgets does not render unknown as zero",
+          "status": "passed"
+        },
+        {
+          "name": "Dashboard widgets renders an explicit backend failure state",
+          "status": "passed"
+        },
+        {
+          "name": "Dashboard widgets renders a governed ROWSET table in server order without aggregate reinterpretation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/AdminPanelReferenceAuthority.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "AdminPanel reference authority shows organization activation and tenant cargo only to Organization Admin",
+          "status": "passed"
+        },
+        {
+          "name": "AdminPanel reference authority shows the central catalog only to Platform Admin",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/CommandCenter.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Forwarder Command Center presents the integrated platform with one dedicated tracking form",
+          "status": "passed"
+        },
+        {
+          "name": "Forwarder Command Center locks the English public brand and platform positioning",
+          "status": "passed"
+        },
+        {
+          "name": "Forwarder Command Center uses sign-in as the restrained primary account action",
+          "status": "passed"
+        },
+        {
+          "name": "Forwarder Command Center opens the existing domestic/international request choice from the primary CTA",
+          "status": "passed"
+        },
+        {
+          "name": "Forwarder Command Center validates an empty tracking submission and associates the error",
+          "status": "passed"
+        },
+        {
+          "name": "Forwarder Command Center submits a request tracking code with Enter",
+          "status": "passed"
+        },
+        {
+          "name": "Forwarder Command Center routes opaque Project codes without changing the backend contract",
+          "status": "passed"
+        },
+        {
+          "name": "Forwarder Command Center routes canonical Request capabilities and typed numeric probes to the safe Request surface",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/CRMDashboard.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "CRMDashboard renders the current placeholder CRM surface",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/CustomerManagement.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "CustomerManagement shows tenant customer navigation surface and list",
+          "status": "passed"
+        },
+        {
+          "name": "CustomerManagement requires a company identity before creating",
+          "status": "passed"
+        },
+        {
+          "name": "CustomerManagement creates and refreshes the server customer list",
+          "status": "passed"
+        },
+        {
+          "name": "CustomerManagement requires an explicit retry after a duplicate warning",
+          "status": "passed"
+        },
+        {
+          "name": "CustomerManagement does not render for Platform Admin",
+          "status": "passed"
+        },
+        {
+          "name": "CustomerManagement does not render for an ordinary Expert",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/CustomerPortalAccess.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "customer account access registers with credentials and contact fields but no client-owned identity",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/CustomerPortalShipments.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "private Customer Shipment freshness shows honest unknowns and clears the entire projection when a download is revoked",
+          "status": "passed"
+        },
+        {
+          "name": "private Customer Shipment freshness ignores a late successful request after pageshow reauthorization denies access",
+          "status": "passed"
+        },
+        {
+          "name": "private Customer Shipment freshness clears before browser hiding and uses fresh authorization on return and session revoke",
+          "status": "passed"
+        },
+        {
+          "name": "private Customer Shipment freshness clears stale list rows before focus refresh and retains only the newly authorized union",
+          "status": "passed"
+        },
+        {
+          "name": "private Customer Shipment freshness reauthorizes a delayed detail before render without needing a browser event",
+          "status": "passed"
+        },
+        {
+          "name": "private Customer Shipment freshness rejects a delayed list when its acceptance check observes revoked session generation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/ExecutionUnitPages.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Release 1.2.0 execution unit pages keeps numeric-looking unit, vehicle, and public identifiers unformatted",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.2.0 execution unit pages allocates cargo, persists a carrier, and localizes the shared-transport classification",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.2.0 execution unit pages keeps an ineligible current Carrier readable but out of new candidates",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.2.0 execution unit pages does not mount Project Configuration or issue its requests without entitlement",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.2.0 execution unit pages keeps canonical commands available and round-trips a private-point identity",
+          "status": "passed"
+        },
+        {
+          "name": "Release 1.2.0 execution unit pages keeps a numeric tracking code and UUID opaque through customer tracking",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/ExpertConsole.count-list.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Expert Console canonical count/list refresh refreshes list and canonical counts together and applies the same search",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/NewOperation.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Slice 5 governed creation defaults domestic routes to a facility and clears hidden location state when switching modes",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation defaults international routes to a facility and clears hidden location state when switching modes",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation explains the empty facility list while retaining the geography fallback",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation uses one facility selector for private and adopted organization points",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation shows a contextual Persian facility error for ApiError: You are not allowed to perform this operation.",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation shows a contextual Persian facility error for Error: Network unavailable",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation renders permission matrix",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation renders permission matrix",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation renders permission matrix",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation renders permission matrix",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation renders permission matrix",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation preselects the governed quote from request deep link",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation creates direct with canonical customer, optional project, canonical route and one in-flight key",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation ranks project facilities but keeps organization points selectable and submits typed facility identities",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation requires and reviews an Iran origin province",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation uses one typed Iran destination selector with derived province",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation uses the governed Iran selector for a domestic Tehran to Bandar Abbas operation",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation persists selected active catalog cargo before leaving the direct creation flow",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation persists selected active catalog cargo before leaving the accepted_quote creation flow",
+          "status": "passed"
+        },
+        {
+          "name": "Slice 5 governed creation associates required errors and focuses the first invalid control",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/OperationalPages.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Phase 1A operational pages renders loading then list data and filters",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1A operational pages renders detail milestones, work and audit sections",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1A operational pages renders and resolves a work item",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/OperationalShipmentDetail.behavior.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Phase 1B shipment detail behavior uses each leg's authoritative departure ID and the operator's edited time",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior shows arrival only after departure and hides blocked and completed actions",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior shows arrival only after departure and hides cancelled and completed actions",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior offers the same route action for direct shipments",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior offers the same route action for accepted_quote shipments",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior submits edited checkpoint and correction times without changing verification",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior keeps occurrence time after a failed command and hides actions without permission",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior keeps route state readable without report permission",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior renders the detailed timeline and mobile-safe containers",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior puts the shipment story first and keeps specialist work in more details",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior keeps request intent separate from ordered actual route modes",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior renders the same primary detail structure for a direct operation",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior keeps initial authoring controls out of an active route and leaves replan separate",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior renders a direct shipment that has not been route-planned yet",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior offers initial route creation for authorized direct shipments",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior offers initial route creation for authorized accepted_quote shipments",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior uses the route UUID for every detail subrequest when the response has no numeric id",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior does not request anything for an invalid route identity",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior stops before subrequests when response public_id disagrees with the route",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior reconciles a timeline and reports success",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior reports a reconciliation no-op",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior sanitizes stale timeline conflicts",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior hides every Phase 1B action without permissions",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior shows reporter controls without verifier or privileged actions",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior shows correction only with the canonical correction permission",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior requires correction and replan reasons",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior sends checkpoint version and idempotency keys",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior renders open/resolved exception history and validates manual resolution",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior sanitizes 403 command errors",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior sanitizes 404 command errors",
+          "status": "passed"
+        },
+        {
+          "name": "Phase 1B shipment detail behavior sanitizes 409 command errors",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/OperationalWorkspace.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "OperationalWorkspace renders a sourced overview and links every operational item to its shipment",
+          "status": "passed"
+        },
+        {
+          "name": "OperationalWorkspace shows honest empty and permission-limited attention states",
+          "status": "passed"
+        },
+        {
+          "name": "OperationalWorkspace shows the shared stale evaluation warning instead of implying healthy operations",
+          "status": "passed"
+        },
+        {
+          "name": "OperationalWorkspace distinguishes a forbidden response from a temporary loading failure",
+          "status": "passed"
+        },
+        {
+          "name": "OperationalWorkspace recovers through the visible retry action",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/PublicTracking.transport.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "public request transport summary shows the localized request method exactly once and does not leak the raw value",
+          "status": "passed"
+        },
+        {
+          "name": "public request transport summary shows the same safe unavailable state for a numeric public probe",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/QuoteCommunication.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Simple Quote Communication surfaces offers exactly three clear actions and sends only a bounded discussion message",
+          "status": "passed"
+        },
+        {
+          "name": "Simple Quote Communication surfaces renders persisted discussion safely, with dual-calendar time and no response actions",
+          "status": "passed"
+        },
+        {
+          "name": "Simple Quote Communication surfaces does not offer response controls for a terminal Request",
+          "status": "passed"
+        },
+        {
+          "name": "Simple Quote Communication surfaces shows the expert the discussion, immutable quote history, and official revision action",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/QuoteCurrency.role-consistency.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "EUR quote presentation uses the shared B2 money formatter for Customer and Expert views",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/RequestDetail.tracking-actions.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "retired tracking action reachability removes the retired add-unit form while keeping mapped update actions and unit reads",
+          "status": "passed"
+        },
+        {
+          "name": "retired tracking action reachability uses a canonical-workflow empty state without restoring a responsive or alternate add action",
+          "status": "passed"
+        },
+        {
+          "name": "retired tracking action reachability selects a same-tenant private point and submits its governed identity",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/RequestTransport.role-consistency.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "request transport role consistency shows the same localized stored request fact to Customer and Expert",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/pages/UserManagement.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "UserManagement API boundary renders users when nullable array fields are absent",
+          "status": "passed"
+        },
+        {
+          "name": "UserManagement API boundary explains current workload without implying default least-workload assignment",
+          "status": "passed"
+        },
+        {
+          "name": "UserManagement API boundary renders the backend error and status instead of crashing",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/saved-view/adapter.test.ts",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "operational shipment saved-view adapter roundtrips the governed ROWSET population contract",
+          "status": "passed"
+        },
+        {
+          "name": "operational shipment saved-view adapter reports filters the semantic surface cannot safely persist",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "file": "src/tests/saved-view/controls.test.tsx",
+      "status": "passed",
+      "tests": [
+        {
+          "name": "Saved View controls loads and applies a compatible view",
+          "status": "passed"
+        },
+        {
+          "name": "Saved View controls saves the current governed ROWSET population",
+          "status": "passed"
+        }
+      ]
+    }
+  ]
+}

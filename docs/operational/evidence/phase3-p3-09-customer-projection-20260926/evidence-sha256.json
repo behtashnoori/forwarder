@@ -1,0 +1,114 @@
+[
+  {
+    "sha256": "47109b0c724cf0a14aaa0e6570abf8b39f00411150f99d0705ed657852b2d4e4",
+    "file": "architecture.log"
+  },
+  {
+    "sha256": "0d8f3b86103e59dc45769fff51ecd3480c118a845a7f407493a56d5ad1f6594a",
+    "file": "backend-result.json"
+  },
+  {
+    "sha256": "b6542e88d428394eeb7fd7adcae7845ab0b2a7d8857e939eab3f53bc806601b7",
+    "file": "build-manifest.json"
+  },
+  {
+    "sha256": "d10db963864cd0ea11a403bac4886085dc8350185fcc191f7437d5fd6b4d70cc",
+    "file": "build.log"
+  },
+  {
+    "sha256": "4594df5b4677609d29514e225cbf4755808dc1e15aa94171128100b540c7fe07",
+    "file": "customer-shipment-desktop.png"
+  },
+  {
+    "sha256": "3149d5af20dac17da0edd226c91d5286b0989ad83661491d4e7b8fe6e8210703",
+    "file": "customer-shipment-mobile.png"
+  },
+  {
+    "sha256": "14df0f3ac391cc32b425a7175526f5f21a3f591779cf1d4a4433a4f25d2cf8a8",
+    "file": "customer-shipment-partial-revoke.png"
+  },
+  {
+    "sha256": "db7ba17ae1ef202171a20234fd2067775f8d17dc9f15dfa5267a19d3634bcf01",
+    "file": "customer-shipment-revoked-mobile.png"
+  },
+  {
+    "sha256": "330901b5ac07532fba2fa2bc5470020d4a574806697b2e595862b89a834502bd",
+    "file": "determinism.log"
+  },
+  {
+    "sha256": "8a7fcaa296bef3725f351cbc14229e52b1e4c3d074d2a73f0a3154c8ede0e06c",
+    "file": "frontend-result.json"
+  },
+  {
+    "sha256": "1dd4a29552661b6a8ccc7c7591b3b438fc89b6b1d18056dfe1a5b8163fd45dd5",
+    "file": "lint.log"
+  },
+  {
+    "sha256": "1a15650c9d4741f9c086f1cb1d5eec837a555893d41c88e735b4918e624a1c8d",
+    "file": "migration-head.log"
+  },
+  {
+    "sha256": "bdf9272b36ba01e60488960778feea65fd5edfbc5ad1b020baa78301e67389ff",
+    "file": "MT3-browser.log"
+  },
+  {
+    "sha256": "43d04c31f94e6e7b273b3320f293fa7de589fff0926536051325d1c4fcad5106",
+    "file": "P306-browser.log"
+  },
+  {
+    "sha256": "ca071755c99abaf92babc3533f947349a8599badd97ca82d4fa3ff9b6f910118",
+    "file": "P307-browser.log"
+  },
+  {
+    "sha256": "63de0ff3ba0e0495c3dba1336dd1973d6e0c2b552c8d5b73fd9d650fbf1400a1",
+    "file": "P308-browser.log"
+  },
+  {
+    "sha256": "fff78f76bc6ccf7f97e3b85b939934959c0f6f36d6059a9a4d99a55c3915e223",
+    "file": "P309-browser.log"
+  },
+  {
+    "sha256": "50d398b019726b0db80d3b3ea7a3c553847a3247dac3bd5f5f562a88d7d2560d",
+    "file": "postgresql-public.log"
+  },
+  {
+    "sha256": "04581e0526e8a66a95575e2a4b70a8abbc9c5a84694353dfe4fa68c39919eb64",
+    "file": "postgresql-regressions.log"
+  },
+  {
+    "sha256": "31a5bf4a3e19fbf61e29915c85c7195ea5141f04b232260a6a6a25d6ae5a9c8c",
+    "file": "postgresql.log"
+  },
+  {
+    "sha256": "0e6c7b1879c05cc47e927f8ec9b26853e5e077c4e0d405a7a1a7250005bf066b",
+    "file": "prior-attempts.json"
+  },
+  {
+    "sha256": "43f9d2870a5a9237938663dcc004fe15ef4ab1a139d208ef10693024a97b9a80",
+    "file": "qualification.json"
+  },
+  {
+    "sha256": "3b904e203b22f418c754f9c6d0bd06c61c6a4a1fed371f2030cf0fa1206c0003",
+    "file": "runtime-result.json"
+  },
+  {
+    "sha256": "b52922ef482448f16316404867044b13d5970156810b4e74abc930e5cc59edca",
+    "file": "runtime-versions.json"
+  },
+  {
+    "sha256": "b791a3208e35d99810452c11c898fc8cce5ad4cec0844dd0110935a52a1691fa",
+    "file": "source-manifest.json"
+  },
+  {
+    "sha256": "7353ea99fb4036b8aa9581cb1b3c6d24745081b6cb3b50b7bfc43fc1bd8c950a",
+    "file": "static-result.json"
+  },
+  {
+    "sha256": "9ae031b52a4f5c386196c803ae4c316aae74487288f01314da2b294e8faa3c43",
+    "file": "structure.log"
+  },
+  {
+    "sha256": "0469add0eaaef164fbb644fa366c732b7cbbcb01cc104cf02319a07433bc0c6a",
+    "file": "visual-review.json"
+  }
+]

@@ -373,7 +373,7 @@ Q0 جزئی از `QUALIFICATION_PLAN` تک‌تک رکوردهای زیر است
 - NAME=Customer-scoped shared Shipment
 - PRODUCT_OUTCOME=هر Customer همان Shipment مشترک را فقط با بار، سند، تحویل و رخداد مجاز خودش ببیند.
 - USER / ACTOR=Customer Account؛ Public Tracking در allowlist جدا
-- CURRENT_STATE=حساب پورتال و CRM مستقل‌اند؛ DN10 در P3-06 حل و ادغام شده است. candidate موجود P3-09 با ADR-065 و مأموریت resume ادامه یافته؛ تأیید نهایی و ادغام منوط به شواهد تازه همان Product است.
+- CURRENT_STATE=حساب پورتال و CRM مستقل‌اند؛ DN10 حل و ادغام شده است. P3-09 موجود بدون discard ادامه یافت و Product `e499eb13fccc12734b21a09c1e2bfa1b92e983ee` با [شواهد تازه](../../operational/evidence/phase3-p3-09-customer-projection-status-20260926.md) تأیید شد؛ ادغام کنترل‌شده مطابق receipt مأموریت است.
 - TARGET_STATE=read projection از یک SOR با entitlement مصوب و deny-by-default؛ ETA/closure بعداً به همین DTO افزوده شوند.
 - AUTHORIZED_PRODUCT_BEHAVIOR=قرارداد §15–§16 و UX Customer؛ ایجاد account هنوز اختیاری و Request public مسیر مستقل است.
 - PROTECTED_BEHAVIOR=ADR-052 Request SR2 و ADR-053 session/revoke؛ عدم ساخت Shipment تکراری یا تغییر Public Tracking فعلی.
@@ -389,7 +389,7 @@ Q0 جزئی از `QUALIFICATION_PLAN` تک‌تک رکوردهای زیر است
 - DECISIONS_REQUIRED_BEFORE_START=DN10 و دامنهٔ اسناد DN02 و پیام DN07 در P3-06/07 حل شده‌اند؛ ADR-065 و اختیار resume اعمال می‌شوند. Public Tracking جدید، ETA و انتقال مالک خارج از این slice هستند.
 - QUALIFICATION_PLAN=Q0؛ backend دو Customer، shared allowlist، unknown deny؛ frontend empty/denied/freshness؛ PostgreSQL pagination/count nondisclosure؛ browser A/B/public/revoke/direct-link؛ regression account/recovery/request SR2/project tracking.
 - MIGRATION_REQUIRED=NO
-- REFERENCE_IMPACT=معماری، API، inventory و قرارداد اسناد با ADR-065 تطبیق یافته‌اند؛ نهایی‌شدن NONE به qualification و reconciliation همان Product وابسته است. Public Tracking جدا می‌ماند.
+- REFERENCE_IMPACT=NONE؛ معماری، API، inventory، قرارداد اسناد و شواهد همان Product با ADR-065 تطبیق یافته‌اند؛ REFERENCE_RECONCILIATION=PASS. Public Tracking جدا می‌ماند.
 - STOP_CONDITIONS=هویت حدسی، افشای count/filename/customer، استفاده از internal history خام یا دسترسی با شناسه تنها.
 - DONE_CRITERIA=ماتریس مثبت/منفی دو Customer و Public در مرورگر و API قبول شود؛ identity gate بدون دورزدن بسته شود.
 

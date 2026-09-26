@@ -1,0 +1,19 @@
+{
+  "product_sha": "e499eb13fccc12734b21a09c1e2bfa1b92e983ee",
+  "started_at": "2026-09-26T03:19:14.0998899Z",
+  "finished_at": "2026-09-26T04:15:56.6882069Z",
+  "exit_code": 0,
+  "duration_seconds": 3402.588317,
+  "status": "PASS",
+  "command": "python -u -m pytest backend/tests -v --disable-warnings --junitxml=backend.xml",
+  "tests": 1592,
+  "errors": 0,
+  "failures": 0,
+  "skipped": 117,
+  "passed": 1475,
+  "pytest_seconds": 3391.245,
+  "raw_junit": "D:\\1-webapp\\forwarder-dev\\p309-final-e499eb1-20260926\\backend.xml",
+  "junit_sha256": "8b2b55e7e2da8aaa8a90c6c4b53c1d41f3fa3172c5ebb3633c828148c34d272d",
+  "raw_log": "D:\\1-webapp\\forwarder-dev\\p309-final-e499eb1-20260926\\backend.log",
+  "log_sha256": "f5a51cdd17e57d11b1676a4c93a4e832b5c4accf380c32ec9f5de616e1d1fae7"
+}

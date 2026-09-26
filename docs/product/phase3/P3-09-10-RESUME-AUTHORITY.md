@@ -83,3 +83,19 @@ AUTHORIZED test-contract reconciliation under resume §§9–21 and ADR-065, not
 new Product authority or normalization of an unapproved behavior. No runtime
 change results. Retain that run as superseded, stop its incomplete full backend,
 and repeat final checks on the new committed source identity.
+
+## P3-09 completed qualification gate
+
+Product `e499eb13fccc12734b21a09c1e2bfa1b92e983ee` passed the
+[source-bound qualification](../../operational/evidence/phase3-p3-09-customer-projection-status-20260926.md):
+1475 backend passes / 117 environment-dependent skips / zero failures, 89 frontend
+files / 420 passes, 11 PostgreSQL 18 proofs and 10 Chrome journey tests. All final
+owned runtime resources stopped/removed. The initial same-Product browser timeout
+is retained as diagnostic and followed by the full successful unchanged-source run.
+Product Authority reconciliation PASS: projection and its freshness behavior
+AUTHORIZED; protected existing behavior PRESERVED within recorded coverage.
+REFERENCE_RECONCILIATION=PASS; REFERENCE_IMPACT=NONE. Global Product validation
+EVIDENCE_PENDING; integrated journeys and human walkthrough NOT_RUN; Release Ready NO.
+This evidence-only descendant may be integrated fast-forward under the user's
+existing authorization. Exact evidence/canonical identity is recorded in the receipt
+and P3-10 entry; no self-referential SHA is invented inside this commit.
