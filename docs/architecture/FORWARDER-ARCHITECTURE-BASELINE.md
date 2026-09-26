@@ -30,8 +30,10 @@ corrections, prior facts and document repair under existing authority; new work 
 denied. Customer receives only its existing safe Shipment projection with `closed`.
 Migration `20261010_phase3_closure` follows actual `20261009_phase3_route_time`;
 no seed/backfill. Empty rollback is supported; populated rollback is refused and
-N-1 is unsupported after use. [Working scope and qualification gate](../product/phase3/P3-12-IMPLEMENTATION-WORKING-NOTE.md)
-records the independent source freeze and receipt; implementation alone is not PASS.
+N-1 is unsupported after use. [Exact-source qualification](../operational/evidence/phase3-p3-12-closure-status-20260926.md)
+records Product d1574fa, complete backend/frontend, PostgreSQL 18, Chrome and
+static passes; controlled integration has its own receipt. Global Product
+validation remains EVIDENCE_PENDING.
 P3-11 has retained unqualified work pending the stop-range placement Product
 answer; P3-13 runtime remains unstarted until a fresh canonical-base check.
 

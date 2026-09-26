@@ -1,6 +1,6 @@
 # طرح اجرای فاز ۳ — نسخه ۱
 
-> وضعیت جاری P3-11..13: معماری ADR-067/068/069 در `6259830f2a5fe94798bf4183d2643bf624529c26` پذیرفته شد. P3-11 کار حفظ‌شدهٔ تأییدنشده دارد و محل اعمال بازه توقف منتظر تصمیم محصول است. P3-12 طبق [ماتریس مصوب پس از بستن](P3-12-POST-CLOSURE-COMMAND-MATRIX.md) پیاده‌سازی شده و [دروازهٔ ارزیابی نسخهٔ ثابت](P3-12-IMPLEMENTATION-WORKING-NOTE.md) را طی می‌کند. P3-13 هنوز پیاده‌سازی نشده؛ P3-14/15، ارزیابی یکپارچهٔ سراسری، walkthrough انسانی و Release خارج از اختیار این مأموریت‌اند.
+> وضعیت جاری P3-11..13: معماری ADR-067/068/069 در `6259830f2a5fe94798bf4183d2643bf624529c26` پذیرفته شد. P3-11 کار حفظ‌شدهٔ تأییدنشده دارد و محل اعمال بازه توقف منتظر تصمیم محصول است. P3-12 طبق ماتریس مصوب، در Product `d1574fa137017ac41331cf039117ab9c19e101a3` [ارزیابی کامل و موفق](../../operational/evidence/phase3-p3-12-closure-status-20260926.md) دارد؛ ادغام کنترل‌شده رسید مستقل می‌خواهد. P3-13 هنوز پیاده‌سازی نشده؛ P3-14/15، ارزیابی یکپارچهٔ سراسری، walkthrough انسانی و Release خارج از اختیار این مأموریت‌اند.
 
 
 > Current 2026-09-26 disposition: P3-01..10 are integrated at canonical `368cd736cbffce3d62c33336868738d9086e8306`. [Named ADR-067/068/069 acceptance](P3-11-13-ARCHITECTURE-ACCEPTANCE.md) opens the architecture gate for the SAME retained P3-11..13 mission. Their implementation is NOT_STARTED at this acceptance point. P3-14/P3-15, global qualification, Human Walkthrough and release remain excluded. Earlier dated/planning statuses below are preserved historical evidence.

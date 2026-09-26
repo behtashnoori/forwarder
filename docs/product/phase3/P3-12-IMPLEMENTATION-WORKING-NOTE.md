@@ -1,8 +1,9 @@
 # P3-12 implementation and exact-source qualification gate
 
-Date: 2026-09-26. BUILD=IMPLEMENTED; QUALIFICATION=IN_PROGRESS; INTEGRATED=NO.
-This is a working source note. Final qualification, Product SHA, evidence SHA and
-controlled canonical push/fetch receipt belong to the separate evidence report.
+Date: 2026-09-26. BUILD=IMPLEMENTED; QUALIFICATION=PASS at Product d1574fa.
+This source note is retained; the [final evidence report](../../operational/evidence/phase3-p3-12-closure-status-20260926.md)
+records exact Product/tree and complete qualification. Evidence SHA and controlled
+canonical push/fetch are recorded separately in the integration receipt.
 No earlier exploratory run is substituted for exact-source qualification.
 
 ## Authority and source identity

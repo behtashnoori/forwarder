@@ -1,0 +1,17 @@
+{
+  "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-owned-backend-b8606864511746a4b2ebd5793ff57611",
+  "runtime_removed": false,
+  "retained_due_to_policy_rejection": true,
+  "owned_processes_stopped": true,
+  "process_ids": [
+    22648,
+    7904
+  ],
+  "processes_absent_verified": true,
+  "listeners_absent_verified": true,
+  "checked_at": "2026-09-26T13:25:56.769822+00:00",
+  "automatic_approval_review": "Deletion command rejected: blocked by policy",
+  "action": "Remove stopped synthetic backend fixture directory",
+  "authority": "Retained mission section 74 explicitly permits accurate retention after host policy refuses deletion; not a Product blocker. No alternative deletion attempted."
+}

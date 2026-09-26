@@ -1,0 +1,37 @@
+{
+  "final_product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+  "superseded_source": "ad113904fc0a9eab8ed2134f48f20261b3312a24",
+  "superseded_evidence_directory": "D:/1-webapp/forwarder-dev/p312-qualification-ad11390-20260926",
+  "reason": "Pre-integration review found manual new Action creation missing from the no-new-operations boundary. Corrected backend guard, hidden creation form, preserved existing follow-up/resolution, tests and command matrix. Chrome screenshots now wait for parent detail refresh.",
+  "superseded_results": {
+    "postgresql": "13 passed; superseded source",
+    "chrome": "14 passed; superseded source",
+    "static": "all nine gates passed; superseded source",
+    "frontend": "430 passed, 3 failed due to existing test timeouts under concurrent load; retry also encountered timeouts and was explicitly terminated; no PASS claimed",
+    "backend": "explicitly terminated after the source gap was found, before completion; incomplete, not a qualification PASS or a proven product test failure"
+  },
+  "corrected_focused_checks": "46 backend closure/runtime-migration-safety tests passed; 3 OperationalActionsSection tests passed after the new test entered its required note before asserting submit availability",
+  "final_frontend": "434 passed in 91 files, run without concurrent backend/browser/build load; no test timeout or implementation threshold weakened",
+  "prequalification_directories": "D:/1-webapp/forwarder-dev/p312-prequalification-* retained as diagnostic only",
+  "production_accessed": false,
+  "intermediary_a7d940b": {
+    "frontend": "434 passed / 91 files",
+    "postgresql": "13 passed",
+    "static": "9 gates passed",
+    "full_backend": "1513 passed; 1 failed; 119 skipped; stale parent assertion in test_operational_workspace_phase2_migration.py:173",
+    "runtime": "stopped and removed",
+    "chrome": "14 passed",
+    "repair": "Only test reference changed: new HEAD -> route-time -> cargo-delivery; all 3 focused migration graph/round-trip tests passed",
+    "product_sha": "a7d940b44f1b2a947bd2ef39d9e9517cc0981297",
+    "evidence_directory": "D:\\1-webapp\\forwarder-dev\\p312-qualification-a7d940b-20260926"
+  },
+  "same_source_mt3_network_retry": {
+    "source": "d1574fa137017ac41331cf039117ab9c19e101a3",
+    "first_attempt": "owned-runtime/MT3-browser.log",
+    "outcome": "1 failed, 3 did not run; only observed failure was Google Fonts net::ERR_INTERNET_DISCONNECTED",
+    "retry": "mt3-retry/MT3-browser.log",
+    "retry_outcome": "4 passed without source/assertion/timeout changes, font interception or relaxed request checks",
+    "harness": "copy of committed owned runner, exact workspace/source guard and MT3-only selection; -BrowserOnly -IncludeRegressions",
+    "runtime_cleanup": "Both owned PostgreSQL/browser runtimes stopped and removed"
+  }
+}

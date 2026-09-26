@@ -178,3 +178,12 @@ qualification is a separate gate documented in the working note and receipt.
 
 Policy input reuses the existing device-local to UTC convention. No persisted
 Jalali value, changed ordering, source timestamp, SLA deadline or precision rule.
+
+
+## Exact-source qualification — 2026-09-26
+
+Product `d1574fa137017ac41331cf039117ab9c19e101a3` passes complete backend and
+frontend, PostgreSQL 18 migration/concurrency/immutability, real Chrome and
+static gates. The [source-bound evidence report](../evidence/phase3-p3-12-closure-status-20260926.md)
+retains counts, prior attempts and rollback limits. This slice proof does not
+claim global integrated Product acceptance, Human Walkthrough or release.

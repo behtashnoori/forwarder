@@ -1,0 +1,17 @@
+{
+  "stopped": true,
+  "production_accessed": false,
+  "results": [
+    {
+      "status": "PASS",
+      "name": "MT3 Chrome"
+    }
+  ],
+  "schema": "20261010_phase3_closure",
+  "product_sha": "d1574fa137017ac41331cf039117ab9c19e101a3",
+  "dirty_source": false,
+  "executed_at_utc": "2026-09-26T13:24:24.3896273Z",
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p312-owned-a7110c08ee8641d48795c6f79fa613ac",
+  "postgres_only": false,
+  "browser_only": true
+}

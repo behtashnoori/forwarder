@@ -110,9 +110,9 @@ replace the command-specific policy above. Independent work and correction stay
 possible after commit. ORM plus PostgreSQL guards deny reopening and decision
 rewrites; delivery projections cannot auto-close or reopen.
 
-Qualification is recorded in P3-12-IMPLEMENTATION-WORKING-NOTE.md and the eventual
-exact-source evidence receipt. No qualification or integration is asserted by
-this matrix alone. Rigor C / Astra capability; no runtime model-setting assertion.
+The [exact-source qualification report](../../operational/evidence/phase3-p3-12-closure-status-20260926.md)
+records the final Product and verified gates. This authority matrix is not itself
+a qualification or controlled integration receipt. Rigor C / Astra capability; no runtime model-setting assertion.
 DN05_GENERAL_CLOSURE_RULE=NOT_IMPLEMENTED; DN05_STATUS=OPEN_FOR_FUTURE_SPECIFIC_POLICY.
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING; HUMAN_WALKTHROUGH=NOT_RUN;
 RELEASE_READY=NO; PRODUCTION_UNTOUCHED=YES. No P3-14/P3-15.
