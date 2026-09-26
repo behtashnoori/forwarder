@@ -1,0 +1,22 @@
+{
+  "reviewer": "agent visual inspection, not human product acceptance",
+  "recorded_at_utc": "2026-09-26T05:28:31.9391148Z",
+  "global_product_validation": "EVIDENCE_PENDING",
+  "status": "PASS",
+  "human_walkthrough": "NOT_RUN",
+  "screenshots": [
+    "runtime/P310-browser/phase3-route-time-P3-10-no-42b77-future-version-and-new-plan/route-time-admin-desktop.png",
+    "runtime/P310-browser/phase3-route-time-P3-10-no-42b77-future-version-and-new-plan/route-time-admin-history.png",
+    "runtime/P310-browser/phase3-route-time-P3-10-no-42b77-future-version-and-new-plan/route-time-pinned-desktop.png",
+    "runtime/P310-browser/phase3-route-time-P3-10-no-42b77-future-version-and-new-plan/route-time-pinned-mobile.png",
+    "runtime/P310-browser/phase3-route-time-P3-10-no-42b77-future-version-and-new-plan/route-time-undefined.png"
+  ],
+  "checked": [
+    "Admin saved and reopened independent movement/stop ranges",
+    "Admin old/new effective intervals and recorded actor/time",
+    "Expert version 1 pinned while applicable version 2 displayed",
+    "390x844 viewport full-page mobile readable RTL and no horizontal overflow assertion",
+    "Undefined Road reference contains no fabricated value and selection disabled"
+  ],
+  "product_sha": "6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d"
+}

@@ -1,0 +1,50 @@
+{
+  "all_prequalification_dirty_source": true,
+  "old_passes_used_as_final": false,
+  "superseded_product": {
+    "retained_runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p310-owned-d244f9a5ad4b453883de30d18a7f71c0",
+    "static_passed": true,
+    "reason": "Two stale exact current-head test expectations",
+    "frontend_passed": 425,
+    "status": "SUPERSEDED_INTERRUPTED",
+    "backend_complete": false,
+    "recorded_at_utc": "2026-09-26T05:20:09.2591040Z",
+    "runtime_stopped": true,
+    "cleanup": "Automatic approval review rejected recursive deletion: blocked by policy",
+    "postgresql_passed": 12,
+    "runtime_removed": false,
+    "product_sha": "ffce31a2228be46f992cb321f75d269cebf51ca8"
+  },
+  "focused_backend": 15,
+  "focused_head_contracts": 80,
+  "focused_frontend": 5,
+  "browser_attempts": [
+    {
+      "attempt": 1,
+      "result": "FAILED",
+      "reason": "Strict range selector matched current card and retained hidden history; scoped to first current result."
+    },
+    {
+      "attempt": 2,
+      "result": "FAILED",
+      "reason": "Planless fixture omitted by existing route-envelope-based Shipment list."
+    },
+    {
+      "attempt": 3,
+      "result": "FAILED",
+      "reason": "Workspace uses the same route-envelope population; navigation target was still absent."
+    },
+    {
+      "attempt": 4,
+      "result": "FAILED",
+      "reason": "Adding a synthetic active route made fixture navigable but correctly removed initial-draft authoring UI. Fixture-only experiment discarded; no existing product behavior changed."
+    },
+    {
+      "attempt": 5,
+      "result": "PASS",
+      "reason": "Normal credentials and authenticated Product detail URL, same entry as existing P3-03 journey; all actual authoring and selection through UI. No API bypass for positive journey."
+    }
+  ],
+  "prequalification_postgresql": "6 PostgreSQL proofs passed on each full preliminary runner; final run must prove all 12 anew.",
+  "final_capture_adjustment": "Full-page screenshots from document top avoid sticky navigation covering a cropped section; acceptance assertions unchanged."
+}

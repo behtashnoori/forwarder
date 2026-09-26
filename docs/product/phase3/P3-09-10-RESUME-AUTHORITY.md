@@ -127,3 +127,24 @@ values, retaining uniqueness, long-revision and fail-closed browser bootstrap ch
 This is the same authorized new-head contract update. The partial backend run is
 superseded, not passed; its successful frontend/static and partial runtime results
 are diagnostic only. Repeat all final gates on the new committed identity.
+
+## P3-10 completed qualification gate
+
+Product `6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d` passed the source-bound P3-10 qualification: 1490
+full backend passes / 118 explicit environment-dependent skips / zero failures or errors;
+425 frontend passes in 90 files; 12 PostgreSQL 18 proofs and 13 Chrome
+tests. Full runtime evidence, prior failures, visual inspection and warnings are
+recorded in phase3-p3-10-route-reference-time-status-20260926.md and its bundle.
+Twenty-six existing current-head contracts are reconciled; historical migrations
+and historical-head fixtures are unchanged. All final runtime resources stopped
+and were removed. A stopped superseded synthetic directory remains because the
+automatic approval review denied deletion; its exact path is preserved in evidence.
+
+Product Authority reconciliation PASS: authorized reference/version/range and
+explicit pinned basis implemented; protected behavior preserved within fresh scope.
+REFERENCE_RECONCILIATION=PASS; REFERENCE_IMPACT=NONE. No new reserved product decision.
+Global Product validation EVIDENCE_PENDING; integrated journeys and human walkthrough
+NOT_RUN; Release Ready NO. P3-11..15 NOT_STARTED. No production, deployment or release.
+This evidence-only descendant is eligible for the user's authorized canonical
+fast-forward and github branch push/fetch. The resulting exact evidence/canonical
+identity belongs in the integration receipt, avoiding a self-referential commit SHA.

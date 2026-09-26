@@ -1,0 +1,12 @@
+
+Running 4 tests using 1 worker
+
+(node:22888) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+[1/4] e2e\mt3-public-tracking-security.spec.ts:61:3 › MT-3 public tracking identity and authorization › A — valid opaque capability renders the minimized desktop RTL tracking journey
+[2/4] e2e\mt3-public-tracking-security.spec.ts:118:3 › MT-3 public tracking identity and authorization › B/D — guessed same-tenant and foreign numeric identities disclose nothing on mobile RTL
+[3/4] e2e\mt3-public-tracking-security.spec.ts:130:3 › MT-3 public tracking identity and authorization › C — adjacent numeric enumeration has zero successes and one error contract
+[4/4] e2e\mt3-public-tracking-security.spec.ts:155:3 › MT-3 public tracking identity and authorization › E — product-generated capability is opaque and opens successfully
+  4 passed (14.9s)

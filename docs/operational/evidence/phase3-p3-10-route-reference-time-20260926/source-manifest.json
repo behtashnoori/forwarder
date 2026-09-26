@@ -1,0 +1,261 @@
+{
+  "product_sha": "6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d",
+  "canonical_base": "e102ace12a741716442466d68140f632f1109bff",
+  "files": [
+    {
+      "path": "backend/migrations/versions/20261009_phase3_route_time.py",
+      "git_blob": "92c3ffdce02b766e5a8ee68449e6ee69d16546b0",
+      "working_sha256": "de9080d61b65a349454bc266cb69b949ae5139268b538a654dcb2b02d0eb8433"
+    },
+    {
+      "path": "backend/models.py",
+      "git_blob": "afb5734107f9073680f81952adeef59635132139",
+      "working_sha256": "27b5861ded44a62d438265600c1ac3a9422e41398dd032e1609ce4963cd2d6e5"
+    },
+    {
+      "path": "backend/route_time_models.py",
+      "git_blob": "0a73836feb980fd2366e221feb7eb83030edd88c",
+      "working_sha256": "02d2de22e728b30beae94e0df2b297a15cb2678eabb2e0597529a9ccbcc6980e"
+    },
+    {
+      "path": "backend/routes/__init__.py",
+      "git_blob": "ddf879df4d3286fb993302a25c7c9b0c0a3f7d74",
+      "working_sha256": "fd0055745bd9f9cc543c5f67afdb34ccebf327ebda3f1d960070578ad70aa6d5"
+    },
+    {
+      "path": "backend/routes/route_times.py",
+      "git_blob": "7d31d3f771033c77cd4232b983c6c46b2257974e",
+      "working_sha256": "54345dcbee078bc916761cabbec6bc50eb9034b938647420197f4c1a34f70346"
+    },
+    {
+      "path": "backend/services/route_time_service.py",
+      "git_blob": "61311549ae076847543e68de1d09f5ed813a26b8",
+      "working_sha256": "395261c0b00fdb9c69a80c9eb7811d7b80bc3dd509236b652318c51390b64690"
+    },
+    {
+      "path": "backend/tests/test_alembic_version_table.py",
+      "git_blob": "ef349fbb05ec101a18a67c2946ade440001f6af1",
+      "working_sha256": "b21cc582204b2a7295256f1484ffec9765a606c07f45c1b9688afec4b66ab518"
+    },
+    {
+      "path": "backend/tests/test_browser_migration_contract.py",
+      "git_blob": "d267f23ec09924395cfca48e0b6b061b46cb5030",
+      "working_sha256": "93a2d748e64894ef5e812ce13a7a31b572f88516be49ad85ce5c4c7802db3a4b"
+    },
+    {
+      "path": "backend/tests/test_case_documents_migration.py",
+      "git_blob": "696572235556a4f34ca5198bde32939110437386",
+      "working_sha256": "0eab6cbbe5271aaa6a620e8d69e27b9ef0bcd83a9081d4890177f515ba40a5cb"
+    },
+    {
+      "path": "backend/tests/test_customer_portal_account_lifecycle_migration.py",
+      "git_blob": "a21d832853fed51f773b6890ef05d23511a45033",
+      "working_sha256": "76dec3063bc52c3a9f2c18cf67ea7560449640f55fa4fbbd796425d4b83497f5"
+    },
+    {
+      "path": "backend/tests/test_execution_units.py",
+      "git_blob": "5c59ee0db48c8a3c554db0a27e896e1289e20443",
+      "working_sha256": "1c110ba3eb70e0bdc98c06964eb48df286b408d6b5567d33fb5cc68993f7ef9e"
+    },
+    {
+      "path": "backend/tests/test_expert_sla_migration.py",
+      "git_blob": "b62fc92280a60b526066a4c3eb5890a46991f6f1",
+      "working_sha256": "24c46cd05be3017f91e6de7fc01159034c41abbc9556a2f5a000d07254fd62c9"
+    },
+    {
+      "path": "backend/tests/test_fixed_shipment_owner_migration.py",
+      "git_blob": "63c37d14b35dcbf7ed777ccff512e8db936e5185",
+      "working_sha256": "852592bbbc595d176696acca48a9819a124c9b86371bcf8a6118d9ff7c3cdd9b"
+    },
+    {
+      "path": "backend/tests/test_global_logistics_point_adoption_migration.py",
+      "git_blob": "bff7d05a3443cf76e2b623f0883d87dfa11ecee8",
+      "working_sha256": "ed51d9da0dd8acf61cdb30a61ca07d5eb782058165ccdb5e836f83c9e9b36b05"
+    },
+    {
+      "path": "backend/tests/test_global_logistics_point_materialization_migration.py",
+      "git_blob": "c7dd8e0d773ee40e9b7937f94d5c2a905502e1fc",
+      "working_sha256": "e2dba043915be08ac5cfcacb12af6dd3c6909620696f2d0a929ce12178a02658"
+    },
+    {
+      "path": "backend/tests/test_logistics_network.py",
+      "git_blob": "95e33debeb297665525242839735018be2779b44",
+      "working_sha256": "ad7f621a82c6baef79bec5d49bbe8ef2059b758f82d192d6602314d83b973544"
+    },
+    {
+      "path": "backend/tests/test_master_data_migration.py",
+      "git_blob": "2ea6ae1987b9d28d2089f568620e6cf9f57c8002",
+      "working_sha256": "4860dd34f6705c5c08856f02ced0ecbe00e3c3790804306a4df535a947d7f4d3"
+    },
+    {
+      "path": "backend/tests/test_milestone_upgrade_bridge.py",
+      "git_blob": "29a88cfe0db0f2026989d25b7e1670f3133633bf",
+      "working_sha256": "2b8957864dc3096828a515da6e3ca0f6b460762c52fd386935e61ae972afeda4"
+    },
+    {
+      "path": "backend/tests/test_operational_execution_190.py",
+      "git_blob": "6dd6848b10e69e6e4ef1613fbfd201f322cd229d",
+      "working_sha256": "812f9e81f0a6154d86fb33b7104d9711337b36a0c05565b33a1b9e8de9c50f72"
+    },
+    {
+      "path": "backend/tests/test_operational_workspace_phase2_migration.py",
+      "git_blob": "08f659baf8afbcef572fa5f58b68478bd3505ad2",
+      "working_sha256": "2c3a8098f137142c8614db0c250ec98bd66b056a2467afdaa6583e576cac0e54"
+    },
+    {
+      "path": "backend/tests/test_phase3_branched_route_migration.py",
+      "git_blob": "abcb165b166cc2514eceb4c6e137e6e485a80e2a",
+      "working_sha256": "0193884a7979b3e02a4caef3a65d0c9d869983cab1f7686c76c6f3605cb23672"
+    },
+    {
+      "path": "backend/tests/test_phase3_cargo_allocation_migration.py",
+      "git_blob": "82106ff8afc8f1088a2534b41aa34172f8842d44",
+      "working_sha256": "b21b0edac339db81734c638d1f18bb5ead5455e9c1fe6f7204eb7c5958c895f6"
+    },
+    {
+      "path": "backend/tests/test_phase3_cargo_lineage_migration.py",
+      "git_blob": "08931ef1e476e92dc95658330e90af43d7dff155",
+      "working_sha256": "3d489a1416244fbf1bc803437892533c8aa7db840cbdfbcc54c172f8cc74b399"
+    },
+    {
+      "path": "backend/tests/test_phase3_reference_catalog.py",
+      "git_blob": "588904316c584ea35be7bf5a19cfc870a6a0b268",
+      "working_sha256": "deb6962c9d13cd2b88896ed9afa23b0cf515dc3333dd3e9afd21e058f616b172"
+    },
+    {
+      "path": "backend/tests/test_phase3_route_time.py",
+      "git_blob": "91094d972a0cdbdd88d8eaf6b3096eed758987b4",
+      "working_sha256": "b497e2e9763e0190914a17177ff4c60ce703bb08c4717bda6feff56a86e92975"
+    },
+    {
+      "path": "backend/tests/test_phase3_route_time_postgresql.py",
+      "git_blob": "fe6680b86552484f3749dc00897207cc8c3150df",
+      "working_sha256": "19acc256dbe5d988316c63a1dd2a20b97dcc3e75834b21083a8bef1bed24c360"
+    },
+    {
+      "path": "backend/tests/test_phase3_transport_execution_migration.py",
+      "git_blob": "8bcba8842d7e6333fa527241f5742a493ebdf9f1",
+      "working_sha256": "aedfcc15887360ec0a8ce29e1f692cd361b2b5de75ed6e92b4649a5cca551a2c"
+    },
+    {
+      "path": "backend/tests/test_project_aggregate_foundation.py",
+      "git_blob": "da3d62b5a13704b0c16de4bdc8c42f673c4606bd",
+      "working_sha256": "a57c21f78763033c485ee1c5f9eb84a3b1ab317f71e17a98d99a2591eb95f033"
+    },
+    {
+      "path": "backend/tests/test_project_configuration.py",
+      "git_blob": "1db989725e6aebaec0b9eced2460fef87db7082d",
+      "working_sha256": "6e26422dd996839d56106b1af81b3edf0faaad6585dc5ae56a49e81307ad0efb"
+    },
+    {
+      "path": "backend/tests/test_quote_communication_migration.py",
+      "git_blob": "8bbcd61a2d053a1c2bf7a5388b790988979b206e",
+      "working_sha256": "fa2e551670a5e373846d6e1eb42b69d8e9bfb44fe2d2edf34a8404014b0d351e"
+    },
+    {
+      "path": "backend/tests/test_reference_data_seed_migration.py",
+      "git_blob": "f61ea4a96aa889314f5cc5010002f685359a3e81",
+      "working_sha256": "7b20dec582de82292af90408df8ff80c94c1aec0fe53aed4e54e9a7ff204d33c"
+    },
+    {
+      "path": "backend/tests/test_release_publication_contract.py",
+      "git_blob": "9ea113ecd0dd0e6b47cc70c16717ced941eaa359",
+      "working_sha256": "f2076bebfa8ab80f1874de9550964a01462d0bd944a2bc1c31a186652029aaee"
+    },
+    {
+      "path": "backend/tests/test_request_cargo_migration.py",
+      "git_blob": "ddc87d881f2a2b1f73804351913f0d0b72f162d5",
+      "working_sha256": "db844f12748707e1a3cf2ea84f2c5984246f8af5dd6da1d8514ea71d92f821d5"
+    },
+    {
+      "path": "backend/tests/test_shipment_request_update_trigger_migration.py",
+      "git_blob": "1f7df9cb170a32d2fbc905a9520d4e576dc35549",
+      "working_sha256": "309a2ad79797f319dd7f0432400c2af4a34b2e4a78e5ffe13643265b4b5e5bd0"
+    },
+    {
+      "path": "docs/architecture/ADR-INDEX.md",
+      "git_blob": "efb0437f48da4736d07c404783022b0293884687",
+      "working_sha256": "e304472b60dbf95d111c2273ac4c1092c664b102612fcc1c39f5428a691f92a5"
+    },
+    {
+      "path": "docs/architecture/FORWARDER-ARCHITECTURE-BASELINE.md",
+      "git_blob": "22034f2bdb9939e6c2a11383382368a399be5cf5",
+      "working_sha256": "383bed96104bbdb35ee647ed03c3a87ac1e67339520e927b35de8289078eaea2"
+    },
+    {
+      "path": "docs/architecture/tenant-ownership-inventory.yaml",
+      "git_blob": "65a223b64f3bef9ef2a0cafc1a7f2fca4f5a0182",
+      "working_sha256": "c65a542cc29f9a5ce4a461513c81ba6fd56656f1a606ef51415cd09cb01a19af"
+    },
+    {
+      "path": "docs/openapi/openapi.yaml",
+      "git_blob": "4b6238a5a9b4c46b894cc6dd39bb28c200da36e0",
+      "working_sha256": "745e8d2d02d6d550f642dfe7770968ce7271060a959633c71528ab7daa462097"
+    },
+    {
+      "path": "docs/operational/adr/ADR-066-organization-route-reference-time.md",
+      "git_blob": "7385bea7291380a5d6aaef230fb327b5ab1f3dd0",
+      "working_sha256": "cd9ab03c2bfe297218c6eef3812f084292d28711b8fc0969a851c704b58f2dfa"
+    },
+    {
+      "path": "docs/operational/decision-index.md",
+      "git_blob": "21743c96c135b216508a3696c334b62c21cb8cea",
+      "working_sha256": "e3133b82716e833537fd61b55603fbc2cd65d21ed2a7b038bdee112f6c7764ae"
+    },
+    {
+      "path": "docs/product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md",
+      "git_blob": "19dd3478141bc55f461dedbba5029ee6e633125a",
+      "working_sha256": "70f7932f5d30ae74b67d349460a4a06913c819b04d5b60f70c864aae1e5e6d12"
+    },
+    {
+      "path": "docs/product/phase3/P3-09-10-RESUME-AUTHORITY.md",
+      "git_blob": "f416b918b6850f3bb954c5ca85a0620a139d8703",
+      "working_sha256": "7d2835c0c9c96c33875dc3c0c672be4a0a3eb1c7be0840765268a380ae663770"
+    },
+    {
+      "path": "e2e/phase3-route-time.spec.ts",
+      "git_blob": "0f63c549d31b0f7f64540189da36bd56f2378aea",
+      "working_sha256": "5b2950496ced0539dbd9d9cb092755027f59ee5a6a3b02c2d99e3253b0fae106"
+    },
+    {
+      "path": "scripts/run-phase3-route-time-qualification.ps1",
+      "git_blob": "a4244bdb539bb99a3beb73cf491850989472c3d1",
+      "working_sha256": "8bada704eae0baf44edf47523b1087d1b5eaf26ddaf264c58e50600aa7287c28"
+    },
+    {
+      "path": "scripts/uat/seed_phase3_route_time_e2e.py",
+      "git_blob": "50593445d3c82b12f4bd6a4877edeac86e5a17a1",
+      "working_sha256": "a6b2244d2016e9f11cd848ac403a3cc1147d0bd14928da9d36d99a9eed085f98"
+    },
+    {
+      "path": "src/components/OrganizationRouteTimesTab.tsx",
+      "git_blob": "b17b2a09b08c8e586d6323437fb1894888c40df1",
+      "working_sha256": "6d46a76d0bcf645793b65488b4824a5ccf442ce03c83b5f297703bd93376f933"
+    },
+    {
+      "path": "src/components/RouteReferenceTimes.tsx",
+      "git_blob": "b62b80353bd143c8e872efd0a91369883de57402",
+      "working_sha256": "d2e5b174ae0249710ab6b2969895e344b9b2b1ee66b75ab16df5465940aa47c4"
+    },
+    {
+      "path": "src/lib/routeTimeApi.ts",
+      "git_blob": "ecc7d3313291da02a3005dbe7cda96ace22897fc",
+      "working_sha256": "d2f3e9d4147a6b3994a25cd65ea9e87b494d1da5e9befa0fcba4223491ac464b"
+    },
+    {
+      "path": "src/pages/AdminPanel.tsx",
+      "git_blob": "fd66d6ec97e042b3fd2da4cf8fee838c1966ac37",
+      "working_sha256": "a082dff59b357b0e308765fd74400607bf8b5d4621a938bc4a8307846aa7df87"
+    },
+    {
+      "path": "src/pages/OperationalShipmentDetail.tsx",
+      "git_blob": "945827aff36e43df334102796a3b52c84929565b",
+      "working_sha256": "0e7bc07c0a27612faa3b269dc3651369bdbf92ea2917281050003e5d7616b3c7"
+    },
+    {
+      "path": "src/tests/components/RouteReferenceTimes.test.tsx",
+      "git_blob": "e67723a486e2a652942864f7ac99142c6dd07059",
+      "working_sha256": "8ae69296ebbf303bfffc3f82d02c326888d5f644586a2c9552fd8740060d012b"
+    }
+  ]
+}

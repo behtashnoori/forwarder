@@ -1,0 +1,57 @@
+{
+  "product_sha": "6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d",
+  "results": [
+    {
+      "status": "PASS",
+      "name": "PostgreSQL 18"
+    },
+    {
+      "status": "PASS",
+      "name": "P3-01 through P3-05 PostgreSQL"
+    },
+    {
+      "status": "PASS",
+      "name": "Public Tracking PostgreSQL"
+    },
+    {
+      "status": "PASS",
+      "name": "P310 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P309 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P303 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P301 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P308 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P307 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "P306 Chrome"
+    },
+    {
+      "status": "PASS",
+      "name": "MT3 Chrome"
+    }
+  ],
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p310-owned-b9b9b97d46f048169707ada282e75b9c",
+  "postgres_only": false,
+  "production_accessed": false,
+  "schema": "20261009_phase3_route_time",
+  "stopped": true,
+  "executed_at_utc": "2026-09-26T05:34:09.4532224Z",
+  "dirty_source": false,
+  "browser_only": false
+}

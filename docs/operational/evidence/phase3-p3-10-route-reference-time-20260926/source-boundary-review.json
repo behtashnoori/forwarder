@@ -1,0 +1,14 @@
+{
+  "product_sha": "6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d",
+  "head_test_reconciliation": "26 exact current-head contracts; historical parent/fixtures unchanged",
+  "migrations_changed": [
+    "backend/migrations/versions/20261009_phase3_route_time.py"
+  ],
+  "scope": "P3-10 only; no P3-11..15",
+  "new_reserved_decisions": "NONE",
+  "canonical_base": "e102ace12a741716442466d68140f632f1109bff",
+  "historical_migrations_changed": false,
+  "recorded_at_utc": "2026-09-26T05:33:53.7798781Z",
+  "implementation": "New bounded domain; existing model/router registration and existing Admin/detail consumers only",
+  "protected_existing_route_customer_public_auth_cargo_runtime_changed": false
+}

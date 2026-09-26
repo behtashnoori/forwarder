@@ -14,8 +14,9 @@ its own configuration; Expert reads and explicitly selects. Missing is undefined
 Admin updates never rewrite a prior basis, route timestamps, actual facts or SLA.
 Migration `20261009_phase3_route_time` adds three empty tables after actual parent
 `20261008_phase3_cargo_delivery`, without default, seed or backfill. History-bearing
-downgrade refuses deletion. No ETA or P3-11 behavior is introduced. Final source-bound
-qualification is pending; this implementation status is not global Product acceptance.
+downgrade refuses deletion. No ETA or P3-11 behavior is introduced. [Exact-Product qualification](../operational/evidence/phase3-p3-10-route-reference-time-status-20260926.md)
+passed at `6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d`. Controlled integration follows the explicit resume authority and
+exact receipt; global Product validation remains pending.
 
 P3-09 bounded extension: [ADR-065](../operational/adr/ADR-065-private-customer-shipment-projection.md)
 defines authenticated Customer list/detail as a live allowlisted read of the SAME

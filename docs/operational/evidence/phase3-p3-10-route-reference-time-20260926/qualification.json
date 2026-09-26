@@ -1,0 +1,100 @@
+{
+  "product_sha": "6d88c2a157e6d2ba81efa72d8bf0b4bcc779819d",
+  "canonical_base": "e102ace12a741716442466d68140f632f1109bff",
+  "qualification": "PASS",
+  "migration_required": true,
+  "migration_head": "20261009_phase3_route_time",
+  "migration_parent": "20261008_phase3_cargo_delivery",
+  "migration_head_count": 1,
+  "backend": {
+    "tests": 1608,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 118,
+    "passed": 1490
+  },
+  "frontend": {
+    "tests": 425,
+    "files": 90,
+    "status": "PASS"
+  },
+  "postgresql": {
+    "major": 18,
+    "focused": 6,
+    "p301_through_p305": 5,
+    "public_tracking": 1,
+    "total": 12,
+    "status": "PASS"
+  },
+  "chrome": {
+    "tests": 13,
+    "results": [
+      {
+        "status": "PASS",
+        "name": "PostgreSQL 18"
+      },
+      {
+        "status": "PASS",
+        "name": "P3-01 through P3-05 PostgreSQL"
+      },
+      {
+        "status": "PASS",
+        "name": "Public Tracking PostgreSQL"
+      },
+      {
+        "status": "PASS",
+        "name": "P310 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P309 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P303 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P301 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P308 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P307 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "P306 Chrome"
+      },
+      {
+        "status": "PASS",
+        "name": "MT3 Chrome"
+      }
+    ],
+    "status": "PASS"
+  },
+  "visual": "PASS",
+  "warnings": [
+    "13 existing ESLint warnings, zero errors",
+    "Existing build chunk-size and Browserslist data-age advisories"
+  ],
+  "product_authority_reconciliation": "PASS",
+  "reference_reconciliation": "PASS",
+  "reference_impact": "NONE",
+  "protected_regressions": "PRESERVED within recorded fresh coverage; skipped environment-dependent suites are not claimed executed",
+  "global_product_validation": "EVIDENCE_PENDING",
+  "integrated_product_journeys": "NOT_RUN",
+  "human_product_walkthrough": "NOT_RUN",
+  "release_ready": "NO",
+  "p311_through_p315_started": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment": false,
+  "release": false,
+  "final_owned_runtime_stopped_and_removed": true,
+  "no_auth_workaround_or_secret_search": true,
+  "recorded_at_utc": "2026-09-26T05:44:25.311180+00:00"
+}
