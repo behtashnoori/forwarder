@@ -1,0 +1,9 @@
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/phase3-p3-12-closure
+
+
+ Test Files  91 passed (91)
+      Tests  434 passed (434)
+   Start at  15:53:13
+   Duration  255.20s (transform 11.54s, setup 19.36s, import 27.88s, tests 83.59s, environment 101.22s)
+
