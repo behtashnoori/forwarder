@@ -4,6 +4,7 @@ import { MemoryRouter } from "react-router";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import LocationForm from "@/components/LocationForm";
 import * as api from "@/lib/api";
+import * as portalApi from "@/lib/customerPortalApi";
 
 const toast = vi.hoisted(() => vi.fn());
 vi.mock("@/hooks/use-toast", () => ({ useToast: () => ({ toast }) }));
@@ -20,6 +21,10 @@ vi.mock("@/lib/api", async () => ({
   fetchCountries: vi.fn(), fetchInternationalCityPage: vi.fn(), fetchTransportMethodOptions: vi.fn(), fetchRequestCargoOptions: vi.fn(),
   fetchProvinces: vi.fn(), fetchIranPorts: vi.fn(), fetchBorderCustoms: vi.fn(),
   submitShipmentRequest: vi.fn(),
+}));
+vi.mock("@/lib/customerPortalApi", async () => ({
+  ...await vi.importActual<typeof import("@/lib/customerPortalApi")>("@/lib/customerPortalApi"),
+  submitShipmentRequestForCurrentCustomer: vi.fn(),
 }));
 
 beforeAll(() => {
@@ -47,6 +52,10 @@ beforeEach(() => {
     uoms: [{ public_id: "kg", code: "KG", fa_name: "کیلوگرم", en_name: "Kilogram", symbol: "kg", measurement_dimension: "WEIGHT" }],
   });
   vi.mocked(api.submitShipmentRequest).mockResolvedValue({ id: 1, tracking_code: "SR2-AAAAAAAAAAAAAAAAAAAAAA", message: "Created", request_transport_intent: null, cargo_items: [] });
+  vi.mocked(portalApi.submitShipmentRequestForCurrentCustomer).mockImplementation(async (payload) => ({
+    response: await api.submitShipmentRequest(payload),
+    customerAuthenticated: false,
+  }));
 });
 
 async function choose(index: number, option: string) {
@@ -67,7 +76,7 @@ async function start() {
   await waitFor(() => expect(screen.getAllByRole("combobox")[1]).not.toBeDisabled());
   await choose(1, "Istanbul");
   fireEvent.change(screen.getByLabelText(/common.phone/), { target: { value: "09123456789" } });
-  await choose(4, "Forwarder chooses");
+  await choose(4, "requestForm.forwarderSuggestionOption");
 }
 async function destination(country: string, city: string) {
   await choose(2, country);
@@ -91,6 +100,25 @@ async function submit(countryId: number, cityId: number) {
 }
 
 describe("public destination business flow", () => {
+  it("contains transport choices locally at mobile width and preserves RTL without global overflow hiding", async () => {
+    vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
+      international_methods: [{ id: 9, name: "road", name_fa: "حمل زمینی", description: "A deliberately long method description used to exercise wrapping", is_active: true }],
+      domestic_methods: [],
+      preference_options: [
+        { value: "customer_choice", label: "Old API label", description: "" },
+        { value: "forwarder_suggestion", label: "Old API suggestion", description: "" },
+      ],
+    });
+    render(<MemoryRouter><div dir="rtl" style={{ width: 390 }}><LocationForm shippingType="international" onBack={vi.fn()} /></div></MemoryRouter>);
+    const section = await screen.findByTestId("transport-method-section");
+    expect(section).toHaveClass("min-w-0", "overflow-x-clip");
+    expect(section.closest("[dir='rtl']")).toBeInTheDocument();
+    expect(section.querySelectorAll("[class*='overflow-hidden']").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("requestForm.transportPreference")).toBeInTheDocument();
+    expect(screen.queryByText("Old API label")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("combobox")).toHaveLength(6);
+  });
+
   it("offers Combined Transport as one ordinary customer intent choice", async () => {
     vi.mocked(api.fetchTransportMethodOptions).mockResolvedValue({
       international_methods: [{ id: 7, name: "Combined Transport", name_fa: "حمل ترکیبی", description: "Customer intent only", is_active: true }],
@@ -157,5 +185,31 @@ describe("public destination business flow", () => {
     expect(screen.getByText("requestForm.cargoItemEmpty")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Confirm request" })).not.toBeInTheDocument();
     expect(api.submitShipmentRequest).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ display_name: "کارشناس آزمون" }, "کارشناس آزمون"],
+    [null, "customer.assignmentPending"],
+  ] as const)("uses committed assignment truth in authenticated confirmation", async (assignedExpert, expected) => {
+    vi.mocked(portalApi.submitShipmentRequestForCurrentCustomer).mockResolvedValue({
+      customerAuthenticated: true,
+      response: {
+        id: 1,
+        tracking_code: "SR2-AUTHENTICATED",
+        message: "Created",
+        request_transport_intent: null,
+        cargo_items: [],
+        request_public_id: "request-public",
+        customer_workspace_path: "/customer/requests/request-public",
+        assigned_expert: assignedExpert,
+      },
+    });
+    await start();
+    await destination("Turkey", "Istanbul");
+    await userEvent.click(screen.getByRole("button", { name: "shipping.submit" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm request" }));
+    expect(await screen.findByText(expected)).toBeInTheDocument();
+    expect(screen.getByText("customer.requestAssignee")).toBeInTheDocument();
+    expect(screen.getByText("SR2-AUTHENTICATED")).toBeInTheDocument();
   });
 });

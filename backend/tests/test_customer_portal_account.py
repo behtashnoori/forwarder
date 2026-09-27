@@ -1,12 +1,28 @@
 """Focused contracts for optional Customer Portal accounts."""
 from datetime import date, datetime, timedelta
+from decimal import Decimal
 from urllib.parse import parse_qs, urlparse
 
 import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import CustomerGamification, CustomerPortalAccountAudit, CustomerPortalRecoveryRequest, CustomerPortalRecoveryToken, ExpertQuote, ExpertUser, ShipmentRequest
+from backend.models import (
+    CargoType,
+    City,
+    County,
+    CustomerGamification,
+    CustomerWorkflowStep,
+    CustomerPortalAccountAudit,
+    CustomerPortalRecoveryRequest,
+    CustomerPortalRecoveryToken,
+    ExpertQuote,
+    ExpertUser,
+    Province,
+    RequestCargoItem,
+    ShipmentRequest,
+    UnitOfMeasure,
+)
 from backend.operational_models import OrganizationHostname, OperationalMembership, OperationalOrganization
 from backend.security import security
 from backend.services.auth_session_service import create_session_tokens
@@ -267,6 +283,228 @@ def test_cross_customer_request_is_nondisclosing_and_pagination_exceeds_five(app
     assert page["pagination"]["total"] == 7
     assert page["pagination"]["has_next"] is True
     assert client.get(f"/api/customer/requests/{foreign_public_id}").status_code == 404
+
+
+def test_private_request_detail_exposes_current_safe_assignee_and_submitted_facts(app, client):
+    _register(client)
+    with app.app_context():
+        customer = CustomerGamification.query.filter_by(email="portal@example.com").one()
+        first_expert = ExpertUser(
+            username="private-expert-login",
+            password_hash="private-password-hash",
+            full_name="کارشناس فعلی",
+            email="private-expert@example.com",
+            phone="09120000999",
+        )
+        second_expert = ExpertUser(
+            username="replacement-expert-login",
+            password_hash="replacement-password-hash",
+            full_name="کارشناس جایگزین",
+            email="replacement-expert@example.com",
+            phone="09120000888",
+        )
+        origin_province = Province(code="01", name_fa="تهران")
+        destination_province = Province(code="02", name_fa="اصفهان")
+        db.session.add_all([first_expert, second_expert, origin_province, destination_province])
+        db.session.flush()
+        origin_county = County(code="0101", name_fa="تهران", province_id=origin_province.id)
+        destination_county = County(code="0201", name_fa="اصفهان", province_id=destination_province.id)
+        db.session.add_all([origin_county, destination_county])
+        db.session.flush()
+        origin_city = City(code="010101", name_fa="تهران", province_id=origin_province.id, county_id=origin_county.id)
+        destination_city = City(code="020101", name_fa="اصفهان", province_id=destination_province.id, county_id=destination_county.id)
+        cargo_type = CargoType(immutable_code="GENERAL", fa_name="کالای عمومی", en_name="General cargo")
+        uom = UnitOfMeasure(
+            immutable_code="KG", fa_name="کیلوگرم", en_name="Kilogram",
+            symbol="kg", measurement_dimension="WEIGHT",
+        )
+        db.session.add_all([origin_city, destination_city, cargo_type, uom])
+        db.session.flush()
+        shipment = ShipmentRequest(
+            shipping_type="domestic",
+            origin_province_id=origin_province.id,
+            origin_county_id=origin_county.id,
+            origin_city_id=origin_city.id,
+            dest_province_id=destination_province.id,
+            dest_county_id=destination_county.id,
+            dest_city_id=destination_city.id,
+            contact_phone=customer.phone,
+            gamification_customer_id=customer.id,
+            status="new",
+            tracking_code="SR2-private-detail",
+            assigned_to=first_expert.id,
+            transport_method_preference="forwarder_suggestion",
+            domestic_transport_method="road",
+            special_instructions="با هماهنگی قبلی تحویل شود",
+            pickup_date=date(2026, 10, 1),
+            delivery_date=date(2026, 10, 4),
+        )
+        db.session.add(shipment)
+        db.session.flush()
+        db.session.add(RequestCargoItem(
+            shipment_request_id=shipment.id,
+            position=1,
+            cargo_type_id=cargo_type.id,
+            description="قطعات صنعتی",
+            quantity=Decimal("12.5"),
+            uom_id=uom.id,
+        ))
+        db.session.commit()
+        request_public_id = shipment.public_id
+        second_expert_id = second_expert.id
+
+    assigned = client.get(f"/api/customer/requests/{request_public_id}")
+    assert assigned.status_code == 200
+    payload = assigned.get_json()
+    assert payload["assigned_expert"] == {"display_name": "کارشناس فعلی"}
+    assert set(payload["assigned_expert"]) == {"display_name"}
+    serialized = str(payload)
+    assert "private-expert-login" not in serialized
+    assert "private-expert@example.com" not in serialized
+    assert "09120000999" not in serialized
+    assert payload["route"]["origin"] == {
+        "province": "تهران", "county": "تهران", "city": "تهران",
+        "country": None, "international_city": None, "address": None,
+    }
+    assert payload["route"]["destination"]["city"] == "اصفهان"
+    assert "canonical_ids" not in payload["route"]
+    assert payload["transport_method_preference"] == "forwarder_suggestion"
+    assert payload["domestic_transport_method"] == "road"
+    assert payload["cargo_items"][0]["description"] == "قطعات صنعتی"
+    assert payload["cargo_items"][0]["cargo_type"]["fa_name"] == "کالای عمومی"
+    assert payload["cargo_items"][0]["quantity"] == "12.500000"
+    assert payload["cargo_items"][0]["uom"]["symbol"] == "kg"
+    assert payload["special_instructions"] == "با هماهنگی قبلی تحویل شود"
+    assert payload["pickup_date"] == "2026-10-01"
+    assert payload["delivery_date"] == "2026-10-04"
+
+    with app.app_context():
+        shipment = ShipmentRequest.query.filter_by(public_id=request_public_id).one()
+        shipment.assigned_to = None
+        db.session.commit()
+    assert client.get(f"/api/customer/requests/{request_public_id}").get_json()["assigned_expert"] is None
+
+    with app.app_context():
+        shipment = ShipmentRequest.query.filter_by(public_id=request_public_id).one()
+        shipment.assigned_to = second_expert_id
+        db.session.commit()
+    reassigned = client.get(f"/api/customer/requests/{request_public_id}").get_json()
+    assert reassigned["assigned_expert"] == {"display_name": "کارشناس جایگزین"}
+    assert "replacement-expert-login" not in str(reassigned)
+    assert "replacement-expert@example.com" not in str(reassigned)
+
+
+def test_create_response_exposes_safe_assignee_only_to_authenticated_customer(app, client, monkeypatch):
+    session = _register(client)
+    with app.app_context():
+        customer = CustomerGamification.query.filter_by(email="portal@example.com").one()
+        expert = ExpertUser(
+            username="create-private-login",
+            password_hash="create-private-password",
+            full_name="کارشناس ثبت درخواست",
+            email="create-private@example.com",
+            phone="09121111999",
+        )
+        db.session.add(expert)
+        db.session.flush()
+        shipment = ShipmentRequest(
+            shipping_type="domestic",
+            contact_phone=customer.phone,
+            gamification_customer_id=customer.id,
+            status="new",
+            tracking_code="SR2-create-response",
+            assigned_to=expert.id,
+        )
+        db.session.add(shipment)
+        db.session.commit()
+        request_public_id = shipment.public_id
+
+    def committed_request(*args, **kwargs):
+        return ShipmentRequest.query.filter_by(public_id=request_public_id).one()
+
+    monkeypatch.setattr(
+        "backend.routes.shipment_request.shipment_service.create_shipment_request",
+        committed_request,
+    )
+    private_response = client.post(
+        "/api/shipment-request",
+        headers={"X-CSRF-Token": session["csrf_token"]},
+        json={"shipping_type": "domestic"},
+    )
+    assert private_response.status_code == 201
+    private_payload = private_response.get_json()
+    assert private_payload["assigned_expert"] == {"display_name": "کارشناس ثبت درخواست"}
+    assert private_payload["customer_workspace_path"] == f"/customer/requests/{request_public_id}"
+    assert "create-private-login" not in str(private_payload)
+    assert "create-private@example.com" not in str(private_payload)
+    assert "09121111999" not in str(private_payload)
+
+    anonymous = app.test_client().post(
+        "/api/shipment-request",
+        json={"shipping_type": "domestic"},
+    )
+    assert anonymous.status_code == 201
+    assert "assigned_expert" not in anonymous.get_json()
+    assert "customer_workspace_path" not in anonymous.get_json()
+
+
+def test_authenticated_create_uses_session_owner_tenant_and_customer_workflow(app, client):
+    session = _register(client)
+    with app.app_context():
+        customer = CustomerGamification.query.filter_by(email="portal@example.com").one()
+        organization = OperationalOrganization.query.filter_by(name="Portal Signup Tenant").one()
+        expert = ExpertUser(
+            username="linked-create-expert",
+            password_hash="x",
+            full_name="کارشناس پیوند امن",
+            role="expert",
+            authority="EXPERT",
+            is_active=True,
+            can_handle_domestic=True,
+        )
+        origin = Province(code="LINK-ORIGIN", name_fa="تهران")
+        destination = Province(code="LINK-DEST", name_fa="قم")
+        db.session.add_all([expert, origin, destination])
+        db.session.flush()
+        db.session.add(OperationalMembership(
+            organization_id=organization.id,
+            user_id=expert.id,
+            is_active=True,
+        ))
+        db.session.commit()
+        customer_id = customer.id
+        organization_id = organization.id
+        origin_id = origin.id
+        destination_id = destination.id
+
+    response = client.post(
+        "/api/shipment-request",
+        base_url="https://portal.synthetic.test",
+        headers={"X-CSRF-Token": session["csrf_token"]},
+        json={
+            "shipping_type": "domestic",
+            "origin_province_id": origin_id,
+            "dest_province_id": destination_id,
+            "contact_phone": "09121234567",
+            "transport_method_preference": "forwarder_suggestion",
+            "gamification_customer_id": 999999,
+        },
+    )
+    assert response.status_code == 201
+    payload = response.get_json()
+    assert payload["assigned_expert"] == {"display_name": "کارشناس پیوند امن"}
+    with app.app_context():
+        shipment = ShipmentRequest.query.filter_by(public_id=payload["request_public_id"]).one()
+        assert shipment.gamification_customer_id == customer_id
+        assert shipment.operational_organization_id == organization_id
+        assert shipment.ownership_scope == "TENANT"
+        assert shipment.assigned_expert.full_name == "کارشناس پیوند امن"
+        workflow = CustomerWorkflowStep.query.filter_by(
+            customer_id=customer_id,
+            shipment_request_id=shipment.id,
+            step_name="request_submitted",
+        ).one()
+        assert workflow.is_completed is True
 
 
 def test_organization_admin_support_is_same_org_and_uses_email_for_reset(app, client, monkeypatch):

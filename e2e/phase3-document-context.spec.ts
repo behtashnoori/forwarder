@@ -41,7 +41,7 @@ async function customer(browser: Browser, email: string) {
   await page.locator("#customer-password").fill(password!);
   await page.locator("form button").first().click();
   await expect(page).toHaveURL(/\/customer\/requests/);
-  await page.getByRole("link", { name: "اسناد مشترک" }).click();
+  await page.getByRole("link", { name: "اسناد مشتری" }).click();
   await expect(page.getByRole("heading", { name: "اسناد به‌اشتراک‌گذاشته‌شده با شما" })).toBeVisible();
   return { context, page };
 }

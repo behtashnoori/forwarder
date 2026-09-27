@@ -24,6 +24,7 @@ import {
   ApiError,
   type RequestCargoItem,
   type RequestCargoOptions,
+  type CustomerSafeAssignee,
   fetchCities,
   fetchCounties,
   fetchProvinces,
@@ -442,6 +443,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
   const [showDestinationLocationDetails, setShowDestinationLocationDetails] = useState(false);
   const [submittedTrackingCode, setSubmittedTrackingCode] = useState<string | null>(null);
   const [submittedCustomerWorkspacePath, setSubmittedCustomerWorkspacePath] = useState<string | null>(null);
+  const [submittedAssignedExpert, setSubmittedAssignedExpert] = useState<CustomerSafeAssignee | null>(null);
 
   // Fetch transport method options on component mount
   useEffect(() => {
@@ -949,6 +951,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
           : null,
       );
       setSubmittedCargoItems(response.cargo_items || []);
+      setSubmittedAssignedExpert(response.assigned_expert ?? null);
       setIsSubmitted(true);
       setShowConfirmation(false);
       toast({
@@ -1015,6 +1018,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     setShowDestinationLocationDetails(false);
     setSubmittedTrackingCode(null);
     setSubmittedCustomerWorkspacePath(null);
+    setSubmittedAssignedExpert(null);
     // Reset international cities arrays
     setOriginInternationalCities([]);
     setDestinationInternationalCities([]);
@@ -1024,6 +1028,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
     setIsSubmitted(false);
     setSubmittedTrackingCode(null);
     setSubmittedCustomerWorkspacePath(null);
+    setSubmittedAssignedExpert(null);
     onBack();
   };
 
@@ -1056,6 +1061,19 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
             <CheckCircle2 className="w-16 h-16 text-secondary mx-auto" />
           </div>
           <h3 className="text-xl font-bold text-foreground mb-2">{t("requestFlow.confirmAndSend")}</h3>
+          {submittedCustomerWorkspacePath && (
+            <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50/60 p-4 text-right">
+              <p className="text-sm text-muted-foreground">{t("customer.requestAssignee")}</p>
+              <p className="mt-1 text-lg font-bold text-foreground">
+                {submittedAssignedExpert?.display_name ?? t("customer.assignmentPending")}
+              </p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                {submittedAssignedExpert
+                  ? tf("customer.assignedConfirmation", { name: submittedAssignedExpert.display_name })
+                  : t("customer.pendingAssignmentConfirmation")}
+              </p>
+            </div>
+          )}
           {submittedTrackingCode && (
             <div className="mb-4 p-4 bg-muted/50 rounded-lg">
               <p className="text-sm text-muted-foreground mb-1">{t("common.trackingNumber")}</p>
@@ -1697,7 +1715,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
         </div>
 
         {/* Transport Method Section */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4 overflow-x-clip" data-testid="transport-method-section">
           <Label className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Truck className="w-4 h-4 text-primary" />
             {t("common.transportMethod")}
@@ -1717,15 +1735,21 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                 });
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="min-w-0 overflow-hidden">
                 <SelectValue placeholder={t("requestForm.transportPreferencePlaceholder")} />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-w-[calc(100vw-2rem)] sm:w-[var(--radix-select-trigger-width)]">
                 {transportMethodOptions?.preference_options.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    <div className="space-y-1 text-right">
-                      <div className="font-medium">{option.label}</div>
-                      <div className="text-xs text-muted-foreground">{option.description}</div>
+                    <div className="min-w-0 max-w-full space-y-1 whitespace-normal break-words text-right">
+                      <div className="font-medium">
+                        {option.value === "customer_choice"
+                          ? t("requestForm.customerChoiceOption")
+                          : option.value === "forwarder_suggestion"
+                            ? t("requestForm.forwarderSuggestionOption")
+                            : option.label}
+                      </div>
+                      <div className="whitespace-normal break-words text-xs text-muted-foreground">{option.description}</div>
                     </div>
                   </SelectItem>
                 ))}
@@ -1735,7 +1759,7 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
 
           {/* Customer Choice Transport Methods */}
           {formData.transportMethodPreference === "customer_choice" && (
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+            <div className="min-w-0 space-y-3 overflow-hidden rounded-lg border bg-muted/30 p-4">
               <p className={helperTextClass}>
                 {t("requestForm.transportChoiceHelp")}
               </p>
@@ -1754,16 +1778,16 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       });
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="min-w-0 overflow-hidden">
                       <SelectValue placeholder={t("requestForm.selectInternationalMethod")} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-w-[calc(100vw-2rem)] sm:w-[var(--radix-select-trigger-width)]">
                       {transportMethodOptions?.international_methods.map((method) => (
                         <SelectItem key={method.id} value={method.name}>
-                          <div className="space-y-1 text-right">
+                          <div className="min-w-0 max-w-full space-y-1 whitespace-normal break-words text-right">
                             <div className="font-medium">{getTransportLabel(method, language)}</div>
                             {method.description && (
-                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.internationalMethodFallback"))}</div>
+                              <div className="whitespace-normal break-words text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.internationalMethodFallback"))}</div>
                             )}
                           </div>
                         </SelectItem>
@@ -1788,16 +1812,16 @@ const LocationForm = ({ shippingType, onBack }: LocationFormProps) => {
                       });
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="min-w-0 overflow-hidden">
                       <SelectValue placeholder={t("requestForm.selectDomesticMethod")} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-w-[calc(100vw-2rem)] sm:w-[var(--radix-select-trigger-width)]">
                       {transportMethodOptions?.domestic_methods.map((method) => (
                         <SelectItem key={method.id} value={method.name}>
-                          <div className="space-y-1 text-right">
+                          <div className="min-w-0 max-w-full space-y-1 whitespace-normal break-words text-right">
                             <div className="font-medium">{getTransportLabel(method, language)}</div>
                             {method.description && (
-                              <div className="text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.domesticMethodFallback"))}</div>
+                              <div className="whitespace-normal break-words text-xs text-muted-foreground">{getTransportDescription(method, t("requestForm.domesticMethodFallback"))}</div>
                             )}
                           </div>
                         </SelectItem>

@@ -14,9 +14,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from backend import create_app
 from backend.extensions import db
 from backend.models import (
+    CargoType,
     CustomerGamification,
     CustomerPortalRecoveryRequest,
     CustomerPortalRecoveryToken,
+    UnitOfMeasure,
 )
 from backend.services.customer_account_lifecycle_service import issue_recovery_token
 from scripts.uat.seed_operational_workspace_phase1_e2e import main as seed_workspace
@@ -42,6 +44,23 @@ def main() -> None:
     app = create_app(skip_startup=True)
 
     with app.app_context():
+        if CargoType.query.filter_by(immutable_code="P315_HW_PARTS").one_or_none() is None:
+            db.session.add(CargoType(
+                immutable_code="P315_HW_PARTS",
+                fa_name="قطعات صنعتی",
+                en_name="Industrial parts",
+                is_active=True,
+            ))
+        if UnitOfMeasure.query.filter_by(immutable_code="P315_HW_KG").one_or_none() is None:
+            db.session.add(UnitOfMeasure(
+                immutable_code="P315_HW_KG",
+                fa_name="کیلوگرم",
+                en_name="Kilogram",
+                symbol="kg",
+                measurement_dimension="WEIGHT",
+                is_active=True,
+            ))
+        db.session.commit()
         customer = CustomerGamification.query.filter_by(
             email=fixture["portal_customer_email"]
         ).one()

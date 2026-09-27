@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useI18n } from "@/i18n";
 import { useNavigate } from "react-router";
+import RequestTypeChooser from "@/components/RequestTypeChooser";
 
 export const trackingRouteFor = (code: string) => {
   const normalized = code.trim();
@@ -91,7 +92,7 @@ const Index = () => {
 
       <footer id="contact" className="scroll-mt-24 border-t border-slate-200 bg-slate-950 text-slate-300"><div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 md:flex-row md:items-end md:justify-between lg:px-8"><div><p className="text-xl font-bold text-white">{t("brand.name")}</p><p className="mt-2 text-sm">{t("landing.brandDescriptor")}</p><p className="mt-4 text-xs text-slate-500">{t("landing.companyAttribution")}</p></div><a className="rounded-sm text-sm hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400" href="mailto:info@forwarding.ir">info@forwarding.ir</a></div></footer>
 
-      <Dialog open={requestPickerOpen} onOpenChange={setRequestPickerOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{t("command.requestTypeTitle")}</DialogTitle><DialogDescription>{t("command.requestTypeDescription")}</DialogDescription></DialogHeader><div className="grid gap-3 sm:grid-cols-2"><Button className="min-h-12" onClick={() => setShippingType("domestic")}>{t("shipping.domestic.title")}</Button><Button className="min-h-12" variant="outline" onClick={() => setShippingType("international")}>{t("shipping.international.title")}</Button></div></DialogContent></Dialog>
+      <Dialog open={requestPickerOpen} onOpenChange={setRequestPickerOpen}><DialogContent className="sm:max-w-lg"><DialogHeader><DialogTitle>{t("command.requestTypeTitle")}</DialogTitle><DialogDescription>{t("command.requestTypeDescription")}</DialogDescription></DialogHeader><RequestTypeChooser onSelect={setShippingType} /></DialogContent></Dialog>
     </div>
   );
 };

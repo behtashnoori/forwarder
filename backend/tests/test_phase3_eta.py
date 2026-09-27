@@ -21,7 +21,7 @@ from backend.tests.test_phase3_document_context import _as_customer
 from backend.tests.test_phase3_customer_shipment import new_cargo
 
 
-def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False):
+def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False, reference_effective_from=None):
     shipment, plan, root, branch_b, branch_a = _branched_draft(app)
     cargo_a = _cargo_lines(app, shipment, count=1)[0]
     ids = app.config["phase1a"]
@@ -61,7 +61,7 @@ def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False):
             "destination": {"source_type": b.source_type, "source_id": b.source_id}, "transport_mode": "road",
             "movement_min_minutes": 60, "movement_max_minutes": 120,
             "stop_min_minutes": stop_range[0], "stop_max_minutes": stop_range[1],
-            "effective_from": (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()}, str(uuid4()))
+            "effective_from": reference_effective_from or (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()}, str(uuid4()))
         db.session.commit(); references.append(ref.id)
         times.select_basis(shipment.public_id, plan.id, leg.id, _user(app), {
             "expected_version": leg.version, "expected_selection_revision": 0,
@@ -369,7 +369,11 @@ def test_zero_and_unknown_intermediate_stop_are_distinct(operational_app, stop, 
 
 def test_arrival_stop_is_not_prorated_after_two_hours(operational_app, monkeypatch):
     with operational_app.app_context():
-        ctx = setup(operational_app, stop_range=(240, 480))
+        ctx = setup(
+            operational_app,
+            stop_range=(240, 480),
+            reference_effective_from="2026-09-24T00:00:00+00:00",
+        )
         report(operational_app, ctx, occurred="2026-09-25T08:00:00Z")
         monkeypatch.setattr(eta, "utcnow", lambda: datetime(2026, 9, 25, 10, tzinfo=timezone.utc))
         first = ensure(operational_app, ctx)

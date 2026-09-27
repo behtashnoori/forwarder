@@ -8,6 +8,7 @@ from backend.extensions import db
 from backend.services import shipment_service
 from backend.services.customer_portal_auth import current_customer
 from backend.services.customer_portal_auth import SESSION_CSRF
+from backend.services.customer_portal_service import customer_safe_assignee_payload
 from backend.security import security
 from flask import session
 
@@ -82,6 +83,7 @@ def create_shipment_request():
         payload.update({
             "request_public_id": shipment_request.public_id,
             "customer_workspace_path": f"/customer/requests/{shipment_request.public_id}",
+            "assigned_expert": customer_safe_assignee_payload(shipment_request),
         })
     return jsonify(payload), 201
 

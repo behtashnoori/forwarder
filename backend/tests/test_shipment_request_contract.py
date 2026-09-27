@@ -92,8 +92,16 @@ def test_transport_methods_contract_and_grouping(shipment_app):
     data = response.get_json()
     assert set(data.keys()) == {"international_methods", "domestic_methods", "preference_options"}
     assert data["preference_options"] == [
-        {"value": "customer_choice", "label": "انتخاب مشتری", "description": "مشتری روش حمل را انتخاب می‌کند"},
-        {"value": "forwarder_suggestion", "label": "پیشنهاد فورواردر", "description": "فورواردر بهترین روش را پیشنهاد می‌دهد"},
+        {
+            "value": "customer_choice",
+            "label": "خودم روش حمل را انتخاب می‌کنم",
+            "description": "روش حمل موردنظر را در مرحله بعد انتخاب می‌کنید.",
+        },
+        {
+            "value": "forwarder_suggestion",
+            "label": "انتخاب روش مناسب را به فورواردر می‌سپارم",
+            "description": "فورواردر بر اساس مسیر و کالا روش مناسب را پیشنهاد می‌دهد.",
+        },
     ]
     assert {method["name"] for method in data["international_methods"]} == {"Sea Freight", "Custom Method"}
     assert {method["name"] for method in data["domestic_methods"]} == {"Road Transport", "Custom Method"}

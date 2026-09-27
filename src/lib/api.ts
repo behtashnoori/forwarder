@@ -138,6 +138,10 @@ export interface RequestCargoOptions {
   uoms: RequestCargoUomReference[];
 }
 
+export interface CustomerSafeAssignee {
+  display_name: string;
+}
+
 export interface ShipmentRequestPayload {
   shipping_type: "domestic" | "international";
   // Domestic shipping fields
@@ -444,6 +448,7 @@ export function submitShipmentRequest(
   cargo_items: RequestCargoItem[];
   request_public_id?: string;
   customer_workspace_path?: string;
+  assigned_expert?: CustomerSafeAssignee | null;
 }> {
   return request(
     "/api/shipment-request",

@@ -57,7 +57,7 @@ async function bindRequestToCustomer(page: Page) {
 async function openCompletedDomesticForm(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: "شروع یک حمل جدید" }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "حمل داخلی" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "ثبت درخواست حمل داخلی" }).click();
   await expect(page.getByText("مشخصات کالا (اختیاری)", { exact: true })).toBeVisible();
   await chooseSelect(page, 0, 0);
   await chooseSelect(page, 1, 1);

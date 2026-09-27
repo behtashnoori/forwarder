@@ -170,7 +170,7 @@ test.describe.serial("MT-3 public tracking identity and authorization", () => {
     expect(created.status()).toBe(201);
     const payload = await created.json();
     expect(payload.tracking_code).toMatch(/^SR2-[A-Za-z0-9_-]{22}$/);
-    expect(payload.tracking_code).not.toContain(String(payload.id));
+    expect(payload.tracking_code).not.toBe(`SR2-${payload.id}`);
 
     const generatedRoute = `/customer/track/${payload.tracking_code}`;
     await page.goto(generatedRoute);

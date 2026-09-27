@@ -18,6 +18,7 @@ import CustomerPortalDocuments from "./pages/CustomerPortalDocuments";
 import CustomerPortalShipments, { CustomerPortalShipmentDetail } from "./pages/CustomerPortalShipments";
 import CustomerPortalRequests from "./pages/CustomerPortalRequests";
 import CustomerPortalRequestDetail from "./pages/CustomerPortalRequestDetail";
+import CustomerPortalNewRequest from "./pages/CustomerPortalNewRequest";
 import CustomerPortalProfile from "./pages/CustomerPortalProfile";
 import CustomerPortalChangePassword from "./pages/CustomerPortalChangePassword";
 import CustomerPortalForgotPassword from "./pages/CustomerPortalForgotPassword";
@@ -182,6 +183,7 @@ const App = () => (
                 <Route path="/customer/reset-password" element={<ErrorBoundary><CustomerPortalTokenPassword mode="reset" /></ErrorBoundary>} />
                 <Route path="/customer/enroll" element={<ErrorBoundary><CustomerPortalTokenPassword mode="enrollment" /></ErrorBoundary>} />
                 <Route path="/customer/requests" element={<ErrorBoundary><CustomerPortalRequests /></ErrorBoundary>} />
+                <Route path="/customer/requests/new" element={<ErrorBoundary><CustomerPortalNewRequest /></ErrorBoundary>} />
                 <Route path="/customer/shipments" element={<ErrorBoundary><CustomerPortalShipments /></ErrorBoundary>} />
                 <Route path="/customer/shipments/:shipmentId" element={<ErrorBoundary><CustomerPortalShipmentDetail /></ErrorBoundary>} />
                 <Route path="/customer/documents" element={<ErrorBoundary><CustomerPortalDocuments /></ErrorBoundary>} />

@@ -6,9 +6,17 @@ from typing import Any
 from sqlalchemy import or_
 
 from backend.extensions import db
-from backend.models import CustomerGamification, CustomerWorkflowStep, ExpertConsoleLog, ExpertQuote, ShipmentRequest
+from backend.models import (
+    CustomerGamification,
+    CustomerWorkflowStep,
+    ExpertConsoleLog,
+    ExpertQuote,
+    ExpertUser,
+    ShipmentRequest,
+)
 from backend.services.customer_portal_auth import customer_summary
 from backend.services.request_transport_projection import project_existing_request_transport
+from backend.services.route_payload_service import build_route_payload
 from backend.services.shipment_service import build_legacy_cargo_payload, serialize_request_cargo_items
 
 TERMINAL_REQUEST_STATUSES = {"won", "lost", "closed", "completed", "cancelled"}
@@ -19,6 +27,26 @@ class CustomerPortalError(Exception):
     def __init__(self, message: str, status_code: int, code: str):
         super().__init__(message)
         self.message, self.status_code, self.code = message, status_code, code
+
+
+def customer_safe_assignee_payload(row: ShipmentRequest) -> dict[str, str] | None:
+    """Return only the approved Customer-safe current Request assignee name."""
+    if not row.assigned_to:
+        return None
+    expert = db.session.get(ExpertUser, row.assigned_to)
+    if expert is None or not expert.full_name:
+        return None
+    return {"display_name": expert.full_name}
+
+
+def _customer_safe_route_payload(row: ShipmentRequest) -> dict[str, Any]:
+    """Remove internal reference identities from the shared route projection."""
+    route = build_route_payload(row)
+    return {
+        "origin": route["origin"],
+        "destination": route["destination"],
+        "iran_destination": route["iran_destination"],
+    }
 
 
 def _quote_payload(quote: ExpertQuote) -> dict[str, Any]:
@@ -84,8 +112,11 @@ def customer_request_detail(customer_id: int, request_public_id: str) -> dict[st
     return {
         **_request_summary(row),
         **project_existing_request_transport(row),
+        "assigned_expert": customer_safe_assignee_payload(row),
+        "route": _customer_safe_route_payload(row),
         "cargo_items": serialize_request_cargo_items(row),
         "legacy_cargo": build_legacy_cargo_payload(row),
+        "special_instructions": row.special_instructions,
         "pickup_date": row.pickup_date.isoformat() if row.pickup_date else None,
         "delivery_date": row.delivery_date.isoformat() if row.delivery_date else None,
         "workflow_steps": [{
@@ -212,6 +243,6 @@ def tenant_account_or_404(organization_id: int, public_id: str) -> CustomerGamif
 
 
 __all__ = [
-    "CustomerPortalError", "customer_request_detail", "list_customer_requests",
+    "CustomerPortalError", "customer_request_detail", "customer_safe_assignee_payload", "list_customer_requests",
     "list_tenant_accounts", "respond_to_quote", "tenant_account_or_404",
 ]

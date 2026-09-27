@@ -32,8 +32,16 @@ from backend.services.location_resolver import LocationResolutionError, resolve_
 INTERNATIONAL_METHOD_NAMES = ["sea freight", "air freight", "land transport", "rail transport"]
 DOMESTIC_METHOD_NAMES = ["road transport", "rail transport", "air transport"]
 PREFERENCE_OPTIONS = [
-    {"value": "customer_choice", "label": "انتخاب مشتری", "description": "مشتری روش حمل را انتخاب می‌کند"},
-    {"value": "forwarder_suggestion", "label": "پیشنهاد فورواردر", "description": "فورواردر بهترین روش را پیشنهاد می‌دهد"},
+    {
+        "value": "customer_choice",
+        "label": "خودم روش حمل را انتخاب می‌کنم",
+        "description": "روش حمل موردنظر را در مرحله بعد انتخاب می‌کنید.",
+    },
+    {
+        "value": "forwarder_suggestion",
+        "label": "انتخاب روش مناسب را به فورواردر می‌سپارم",
+        "description": "فورواردر بر اساس مسیر و کالا روش مناسب را پیشنهاد می‌دهد.",
+    },
 ]
 VALID_SHIPPING_TYPES = ["domestic", "international"]
 VALID_TRANSPORT_PREFERENCES = ["customer_choice", "forwarder_suggestion"]

@@ -322,7 +322,7 @@ try {
       'e2e/operational-monitoring-reliability-phase2-5.spec.ts'
     ) -CustomerPassword
     Invoke-BrowserJourney -Name 'P315-CORE' -DatabaseName "forwarder_workspace_phase1_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_final_candidate_e2e.py' -Specs @('e2e/phase3-final-candidate.spec.ts') -PostAudit 'scripts/uat/audit_phase3_final_candidate_e2e.py' -CustomerPassword
-    Invoke-BrowserJourney -Name 'IPJ04' -DatabaseName "forwarder_integrated_cert_p3_06_documents_p313_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_owner_transfer_e2e.py' -Specs @('e2e/phase3-owner-transfer.spec.ts') -RestrictedOwnerRuntime -MidJourneySeed 'scripts/uat/advance_phase3_ipj04_e2e.py' -FollowUpSpecs @('e2e/phase3-ipj04-history-closure.spec.ts')
+    Invoke-BrowserJourney -Name 'IPJ04' -DatabaseName "forwarder_integrated_cert_p3_06_documents_p313_ipj04_$($runId.Substring(8, 8))" -Seed 'scripts/uat/seed_phase3_owner_transfer_e2e.py' -Specs @('e2e/phase3-owner-transfer.spec.ts') -RestrictedOwnerRuntime -MidJourneySeed 'scripts/uat/advance_phase3_ipj04_e2e.py' -FollowUpSpecs @('e2e/phase3-ipj04-history-closure.spec.ts')
     if (-not $script:browserSelectionStarted) {
       throw "Diagnostic browser resume target was not found: $StartBrowserAt"
     }

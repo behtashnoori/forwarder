@@ -1,6 +1,8 @@
 import {
   request,
   submitShipmentRequest,
+  type CustomerSafeAssignee,
+  type RequestCargoItem,
   type ShipmentRequestPayload,
 } from "@/lib/api";
 import { env } from "@/lib/env";
@@ -111,9 +113,39 @@ export interface CustomerRequestDetail {
   shipping_type: string;
   status: string;
   created_at: string;
+  assigned_expert: CustomerSafeAssignee | null;
+  route: {
+    origin: CustomerRequestRouteEndpoint;
+    destination: CustomerRequestRouteEndpoint;
+    iran_destination?: { type: string; label?: string | null; province?: string | null } | null;
+  };
+  transport_method?: string | null;
+  international_transport_method?: string | null;
+  domestic_transport_method?: string | null;
+  transport_method_preference?: string | null;
+  cargo_items: RequestCargoItem[];
+  legacy_cargo: {
+    description?: string | null;
+    weight?: number | null;
+    volume?: number | null;
+    value?: number | null;
+    special_instructions?: string | null;
+  };
+  special_instructions?: string | null;
+  pickup_date?: string | null;
+  delivery_date?: string | null;
   workflow_steps?: Array<{ name?: string; title: string; is_completed: boolean; completed_at?: string | null }>;
   latest_quote: CustomerPortalQuote | null;
   quote_history: CustomerPortalQuote[];
+}
+
+export interface CustomerRequestRouteEndpoint {
+  province?: string | null;
+  county?: string | null;
+  city?: string | null;
+  country?: string | null;
+  international_city?: string | null;
+  address?: string | null;
 }
 
 export const fetchCustomerSession = () => customerRequest<CustomerSession>("/api/customer/session");

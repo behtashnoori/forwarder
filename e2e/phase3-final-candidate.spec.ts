@@ -78,7 +78,7 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     const evidence = observe(page);
     await page.goto("/");
     await page.getByRole("button", { name: "شروع یک حمل جدید" }).click();
-    await page.getByRole("dialog").getByRole("button", { name: "حمل داخلی" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "ثبت درخواست حمل داخلی" }).click();
     await chooseSelect(page, 0, 0);
     await chooseSelect(page, 1, 1);
     await page.getByLabel("شماره تماس").fill("09128888888");
@@ -100,6 +100,121 @@ test.describe.serial("P3-15 final candidate browser acceptance", () => {
     await expect(page.getByRole("heading", { name: created.tracking_code })).toBeVisible();
     await expect(page.getByText("در انتظار بررسی", { exact: true }).first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("anonymous-intake-public-tracking.png"), fullPage: true });
+    expectClean(evidence);
+  });
+
+  test("Customer Request hardening: registration, direct chooser, committed assignment, submitted facts, and international entry", async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
+    const evidence = observe(page);
+    const email = "p315-hardening-customer@example.invalid";
+    const phone = "09127777777";
+
+    await page.goto("/");
+    await page.getByRole("link", { name: "ورود مشتری" }).first().click();
+    await page.getByRole("button", { name: "ساخت حساب" }).click();
+    await page.locator("#customer-first").fill("مشتری");
+    await page.locator("#customer-last").fill("سخت‌سازی");
+    await page.locator("#customer-email").fill(email);
+    await page.locator("#customer-phone").fill(phone);
+    await page.locator("#customer-password").fill(customerPassword!);
+    await page.locator("#customer-confirm").fill(customerPassword!);
+    await page.locator("form").getByRole("button", { name: "ساخت حساب" }).click();
+    await expect(page).toHaveURL(/\/customer\/requests$/);
+    await expect(page.getByRole("link", { name: "پنل مشتری" }).first()).toBeVisible();
+
+    await page.getByRole("button", { name: "خروج" }).click();
+    await expect(page).toHaveURL(/\/customer$/);
+    await page.locator("#customer-email").fill(email);
+    await page.locator("#customer-password").fill(customerPassword!);
+    await page.locator("form").getByRole("button", { name: "ورود" }).click();
+    await expect(page).toHaveURL(/\/customer\/requests$/);
+
+    await page.getByRole("link", { name: "ثبت درخواست جدید" }).click();
+    await expect(page).toHaveURL(/\/customer\/requests\/new$/);
+    await expect(page.getByRole("heading", { name: "نوع درخواست حمل" })).toBeVisible();
+    await page.getByRole("button", { name: "ثبت درخواست حمل داخلی" }).click();
+    await expect(page.getByRole("heading", { name: "انتخاب مبدا و مقصد داخلی" })).toBeVisible();
+
+    await chooseSelect(page, 0, 0);
+    await chooseSelect(page, 1, 1);
+    await page.getByLabel("شماره تماس").fill(phone);
+    await expect(page.getByText("نحوه انتخاب روش حمل")).toBeVisible();
+    await expect(page.getByRole("combobox").nth(2)).toContainText("خودم روش حمل را انتخاب می‌کنم");
+    await page.getByRole("combobox").nth(3).click();
+    await page.getByRole("option", { name: /حمل ترکیبی/ }).click();
+
+    await page.getByRole("button", { name: /مشخصات کالا/ }).click();
+    await page.getByRole("button", { name: "افزودن قلم کالا" }).click();
+    await page.getByLabel("توضیحات کالا").fill("محموله قطعات آزمون سخت‌سازی");
+    await page.getByLabel("نوع کالا").selectOption({ index: 1 });
+    await page.getByLabel("مقدار دقیق").fill("12.500000");
+    await page.getByLabel("واحد مقدار").selectOption({ index: 1 });
+    await page.locator("#specialInstructions").fill("تحویل با هماهنگی قبلی");
+    await page.locator("#pickupDate").fill("2026-10-01");
+    await page.locator("#deliveryDate").fill("2026-10-04");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const overflow = await page.getByTestId("transport-method-section").evaluate((section) => ({
+      component: section.scrollWidth > section.clientWidth,
+      document: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      direction: getComputedStyle(section).direction,
+    }));
+    expect(overflow).toEqual({ component: false, document: false, direction: "rtl" });
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await page.getByRole("button", { name: "ثبت درخواست حمل" }).click();
+    await expect(page.getByText("محموله قطعات آزمون سخت‌سازی")).toBeVisible();
+    const createdResponse = page.waitForResponse(response =>
+      response.request().method() === "POST" && response.url().endsWith("/api/shipment-request"),
+    );
+    await page.getByRole("button", { name: "تایید و ارسال درخواست" }).click();
+    const response = await createdResponse;
+    expect(response.status()).toBe(201);
+    const created = await response.json() as {
+      tracking_code: string;
+      request_public_id: string;
+      assigned_expert: { display_name: string } | null;
+    };
+    expect(created.tracking_code).toMatch(/^SR2-[A-Za-z0-9_-]{22}$/);
+    if (created.assigned_expert) {
+      expect(Object.keys(created.assigned_expert)).toEqual(["display_name"]);
+      await expect(page.getByText(created.assigned_expert.display_name, { exact: true })).toBeVisible();
+    } else {
+      await expect(page.getByText("در حال تخصیص", { exact: true })).toBeVisible();
+    }
+    await expect(page.getByText(created.tracking_code, { exact: true })).toBeVisible();
+    await expect(page.getByText("محموله قطعات آزمون سخت‌سازی")).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("customer-request-confirmation.png"), fullPage: true });
+
+    await page.getByRole("button", { name: "مشاهده جزئیات" }).click();
+    await expect(page).toHaveURL(new RegExp(`/customer/requests/${created.request_public_id}$`));
+    await expect(page.getByText(created.tracking_code, { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "کارشناس مسئول درخواست" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "مسیر / مبدا و مقصد" })).toBeVisible();
+    await expect(page.getByText("خودم روش حمل را انتخاب می‌کنم", { exact: true })).toBeVisible();
+    await expect(page.getByText("حمل ترکیبی", { exact: true })).toBeVisible();
+    await expect(page.getByText(/محموله قطعات آزمون سخت‌سازی/)).toBeVisible();
+    await expect(page.getByText("12.500000 kg", { exact: true })).toBeVisible();
+    await expect(page.getByText("از تاریخ").locator("..")).not.toContainText("ثبت نشده");
+    await expect(page.getByText("تا تاریخ").locator("..")).not.toContainText("ثبت نشده");
+    await expect(page.getByText("تحویل با هماهنگی قبلی", { exact: true })).toBeVisible();
+    const detailOrder = await page.evaluate(() => {
+      const headings = [...document.querySelectorAll("h3")];
+      const cargo = headings.find((node) => node.textContent?.includes("اقلام کالا"));
+      const quote = headings.find((node) => node.textContent?.includes("پیشنهاد (قیمت)"));
+      return Boolean(cargo && quote && (cargo.compareDocumentPosition(quote) & Node.DOCUMENT_POSITION_FOLLOWING));
+    });
+    expect(detailOrder).toBe(true);
+    await expect(page.getByText("هنوز پیشنهاد رسمی ثبت نشده است.").first()).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("customer-request-detail.png"), fullPage: true });
+
+    await page.getByRole("link", { name: "بازگشت به پنل مشتری" }).click();
+    await expect(page.getByText(created.tracking_code, { exact: true })).toBeVisible();
+    await page.getByRole("link", { name: "ثبت درخواست جدید" }).click();
+    await page.getByRole("button", { name: "ثبت درخواست حمل بین‌المللی" }).click();
+    await expect(page.getByRole("heading", { name: "انتخاب مبدا و مقصد بین‌المللی" })).toBeVisible();
+
+    await page.context().clearCookies();
     expectClean(evidence);
   });
 
