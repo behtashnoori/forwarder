@@ -6,6 +6,7 @@ from backend.extensions import db
 from backend.models import ExpertUser
 from backend.operational_models import OperationalMembership, Project, ProjectAccess
 from backend.services.operational_service import OperationalError, organization_for_user, require_permission
+from backend.services.admin_authorization_service import has_organization_admin_capability
 
 
 def _context(user):
@@ -20,7 +21,12 @@ def authorized_project_scope(user):
     actor, org, uid = _context(user)
     tenant = Project.organization_id == org
     authority = (actor.authority or "EXPERT").upper()
-    if authority == "ORGANIZATION_ADMIN":
+    # The tenant context above already proved a single active membership for a
+    # legacy Organization Admin.  Only composed System Admins need the extra
+    # membership-permission resolution here.
+    if authority == "ORGANIZATION_ADMIN" or (
+        authority == "PLATFORM_ADMIN" and has_organization_admin_capability(actor)
+    ):
         return tenant
     if authority != "EXPERT":
         return false()
@@ -38,7 +44,10 @@ def scoped_project(public_id, user):
 def _admin_project(public_id, user):
     require_permission(user, "project_configuration.manage")
     actor, org, uid = _context(user)
-    if (actor.authority or "EXPERT").upper() != "ORGANIZATION_ADMIN":
+    authority = (actor.authority or "EXPERT").upper()
+    if authority != "ORGANIZATION_ADMIN" and not (
+        authority == "PLATFORM_ADMIN" and has_organization_admin_capability(actor)
+    ):
         raise OperationalError("FORBIDDEN_OPERATION", "Organization administrator authority is required.", 403)
     row = db.session.scalar(select(Project).where(Project.public_id == public_id, Project.organization_id == org))
     if not row:

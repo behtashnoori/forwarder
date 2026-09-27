@@ -288,7 +288,7 @@ try {
 
   if (-not $PostgresOnly) {
     $phase3Journeys = @(
-      @{ Name = 'P301'; Seed = 'scripts/uat/seed_phase3_reference_catalog_e2e.py'; Spec = 'e2e/phase3-reference-catalog.spec.ts' },
+      @{ Name = 'P301'; Seed = 'scripts/uat/seed_phase3_reference_catalog_e2e.py'; Spec = @('e2e/phase3-reference-catalog.spec.ts', 'e2e/admin-system-foundations.spec.ts') },
       @{ Name = 'P302'; Seed = 'scripts/uat/seed_phase3_cargo_lineage_e2e.py'; Spec = 'e2e/phase3-cargo-lineage.spec.ts' },
       @{ Name = 'P303'; Seed = 'scripts/uat/seed_phase3_branched_route_e2e.py'; Spec = 'e2e/phase3-branched-route.spec.ts' },
       @{ Name = 'P304'; Seed = 'scripts/uat/seed_phase3_transport_execution_e2e.py'; Spec = 'e2e/phase3-transport-execution.spec.ts' },

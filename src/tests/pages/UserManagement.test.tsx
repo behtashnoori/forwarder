@@ -37,7 +37,7 @@ describe("UserManagement API boundary", () => {
 
     render(<UserManagement />);
     expect(await screen.findByText("بار کاری فعلی: 3 پرونده فعال")).toBeInTheDocument();
-    expect(await screen.findByText(/تخصیص پیش‌فرض بر اساس نوبت‌گردشی/)).toBeInTheDocument();
+    expect(await screen.findByText(/تخصیص پیش‌فرض به‌صورت نوبت‌گردشی/)).toBeInTheDocument();
   });
 
   it("renders the backend error and status instead of crashing", async () => {

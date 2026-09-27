@@ -1,0 +1,99 @@
+{
+  "schema_version": "1",
+  "profile_version": "1",
+  "profile_name": "FORWARDER_STANDARD_ORG_PROFILE_V1",
+  "catalog_name": "FORWARDER_REFERENCE_CATALOG_V1",
+  "catalog_version": "1",
+  "catalog_checksum": "sha256:13a0f6361eca01286422b9ca8df165c2e616c2bc2e73919391056ec7647da45a",
+  "checksum": "sha256:38795e90a723eb25c1073a6a92278508e9d89c908105074ff767069d4a8bfce8",
+  "activations": {
+    "cargo_types": [
+      "CARGO_AUTOMOTIVE_MECHANICAL_COMPONENTS",
+      "CARGO_INDUSTRIAL_MACHINERY_EQUIPMENT",
+      "CARGO_RAW_MATERIALS",
+      "CARGO_METALS_METAL_PRODUCTS",
+      "CARGO_CHEMICALS",
+      "CARGO_PETROLEUM_PETROCHEMICAL",
+      "CARGO_FOOD_AGRICULTURAL",
+      "CARGO_PHARMACEUTICAL_MEDICAL",
+      "CARGO_ELECTRICAL_ELECTRONIC",
+      "CARGO_CONSTRUCTION_MATERIALS",
+      "CARGO_TEXTILE_APPAREL",
+      "CARGO_CONSUMER_FINISHED_GOODS",
+      "CARGO_VEHICLES_MOBILE_EQUIPMENT",
+      "CARGO_OTHER"
+    ],
+    "units_of_measure": [
+      "UOM_PIECE",
+      "UOM_GRAM",
+      "UOM_KILOGRAM",
+      "UOM_METRIC_TON",
+      "UOM_LITER",
+      "UOM_CUBIC_METER",
+      "UOM_MILLIMETER",
+      "UOM_CENTIMETER",
+      "UOM_METER",
+      "UOM_KILOMETER"
+    ],
+    "packaging_types": [
+      "PACKAGING_PALLET",
+      "PACKAGING_CARTON",
+      "PACKAGING_BOX",
+      "PACKAGING_WOODEN_CRATE",
+      "PACKAGING_BAG",
+      "PACKAGING_DRUM",
+      "PACKAGING_BUNDLE",
+      "PACKAGING_ROLL_COIL",
+      "PACKAGING_BULK"
+    ],
+    "transport_means_types": [
+      "MEANS_ROAD_TRUCK_TRACTOR",
+      "MEANS_TRAIN",
+      "MEANS_SHIP",
+      "MEANS_AIRCRAFT"
+    ],
+    "transport_equipment_types": [
+      "EQUIPMENT_CURTAIN_SIDE_TRAILER",
+      "EQUIPMENT_FLATBED_TRAILER",
+      "EQUIPMENT_BOX_TRAILER",
+      "EQUIPMENT_REFRIGERATED_TRAILER",
+      "EQUIPMENT_TANK_TRAILER",
+      "EQUIPMENT_DUMP_TRAILER",
+      "EQUIPMENT_LOWBED_TRAILER",
+      "EQUIPMENT_CONTAINER_CHASSIS",
+      "EQUIPMENT_RAIL_COVERED_WAGON",
+      "EQUIPMENT_RAIL_OPEN_WAGON",
+      "EQUIPMENT_RAIL_FLAT_WAGON",
+      "EQUIPMENT_RAIL_TANK_WAGON",
+      "EQUIPMENT_RAIL_CONTAINER_WAGON",
+      "EQUIPMENT_CONTAINER_20GP",
+      "EQUIPMENT_CONTAINER_40GP",
+      "EQUIPMENT_CONTAINER_40HC",
+      "EQUIPMENT_CONTAINER_20RF",
+      "EQUIPMENT_CONTAINER_40RF",
+      "EQUIPMENT_CONTAINER_OPEN_TOP",
+      "EQUIPMENT_CONTAINER_FLAT_RACK",
+      "EQUIPMENT_CONTAINER_TANK",
+      "EQUIPMENT_AIR_ULD_PALLET",
+      "EQUIPMENT_AIR_ULD_CONTAINER"
+    ]
+  },
+  "required_global_transport_methods": [
+    "Sea Freight",
+    "Air Freight",
+    "Land Transport",
+    "Rail Transport",
+    "Road Transport",
+    "Air Transport",
+    "Combined Transport"
+  ],
+  "excluded_organization_configuration": [
+    "cargo_catalog_items",
+    "private_logistics_points",
+    "operational_reasons",
+    "sla_durations",
+    "document_requirements",
+    "route_reference_times",
+    "closure_policy"
+  ]
+}

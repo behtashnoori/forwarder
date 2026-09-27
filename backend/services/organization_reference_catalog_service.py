@@ -27,6 +27,7 @@ from backend.organization_reference_catalog_models import (
     OrganizationUnitOfMeasureActivation,
 )
 from backend.services.operational_service import OperationalError
+from backend.reference_data_catalog import approved_catalog_presentation_by_code
 
 
 @dataclass(frozen=True)
@@ -104,12 +105,19 @@ def _iso(value):
 
 def projection(definition, activation):
     organization_active = bool(activation and activation.status == "ACTIVE")
+    presentation = approved_catalog_presentation_by_code().get(
+        definition.immutable_code, {}
+    )
     return {
         "public_id": definition.public_id,
         "code": definition.immutable_code,
         "fa_name": definition.fa_name,
         "en_name": definition.en_name,
-        "description": definition.description,
+        "description": presentation.get("fa_description") or definition.description,
+        "technical_description": definition.description,
+        "measurement_dimension": getattr(definition, "measurement_dimension", None),
+        "symbol": getattr(definition, "symbol", None),
+        "catalog_version": presentation.get("catalog_version"),
         "display_order": definition.display_order,
         "central_active": definition.is_active,
         "organization_active": organization_active,

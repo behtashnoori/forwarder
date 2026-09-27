@@ -28,8 +28,14 @@ function CustomerRoleManagementContent() {
 }
 
 export default function CustomerRoleManagement() {
-  const authority = (() => { try { return JSON.parse(localStorage.getItem("expert_user") || "{}").authority; } catch { return undefined; } })();
+  const canManageOrganization = (() => {
+    try {
+      const actor = JSON.parse(localStorage.getItem("expert_user") || "{}");
+      return actor.authority === "ORGANIZATION_ADMIN"
+        || (Array.isArray(actor.capabilities) && actor.capabilities.includes("ORGANIZATION_ADMIN"));
+    } catch { return false; }
+  })();
   // Carrier eligibility is tenant-owned. Platform administration has no
   // tenant context, so the data-fetching component must never mount there.
-  return authority === "ORGANIZATION_ADMIN" ? <CustomerRoleManagementContent /> : <Navigate to="/admin" replace />;
+  return canManageOrganization ? <CustomerRoleManagementContent /> : <Navigate to="/admin" replace />;
 }

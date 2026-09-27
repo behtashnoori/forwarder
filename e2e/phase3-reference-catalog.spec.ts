@@ -58,10 +58,10 @@ async function createCentralDefinition(page: Page, definition: typeof definition
   const activePanel = page.locator('[role="tabpanel"][data-state="active"]').last();
   await activePanel.getByRole("button", { name: "ایجاد", exact: true }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("کد ثابت تعریف مرکزی").fill(definition.code);
-  await dialog.getByLabel("نام فارسی تعریف مرکزی").fill(definition.fa);
-  await dialog.getByLabel("نام انگلیسی تعریف مرکزی").fill(definition.en);
-  if ("symbol" in definition) await dialog.getByLabel("نماد واحد مرکزی").fill(definition.symbol);
+  await dialog.getByLabel("کد ثابت تعریف استاندارد سیستم").fill(definition.code);
+  await dialog.getByLabel("نام فارسی تعریف استاندارد سیستم").fill(definition.fa);
+  await dialog.getByLabel("نام انگلیسی تعریف استاندارد سیستم").fill(definition.en);
+  if ("symbol" in definition) await dialog.getByLabel("نماد واحد استاندارد سیستم").fill(definition.symbol);
   const response = page.waitForResponse(item =>
     item.request().method() === "POST" && item.url().includes("/api/admin/master-data/")
   );
@@ -87,9 +87,9 @@ async function activateForOrganization(page: Page, definition: typeof definition
   const response = page.waitForResponse(item =>
     item.request().method() === "POST" && item.url().includes(`/organization-reference-catalog/`) && item.url().endsWith("/activate")
   );
-  await card.getByRole("button", { name: "فعال‌سازی برای سازمان", exact: true }).click();
+  await card.getByRole("button", { name: "فعال کردن برای سازمان", exact: true }).click();
   expect([200, 201]).toContain((await response).status());
-  await expect(card.getByText("فعال برای سازمان", { exact: true })).toBeVisible();
+  await expect(card.getByText("فعال", { exact: true })).toBeVisible();
 }
 
 test("P3-01 — central definitions → organization activation → expert use → retained history", async ({ page }) => {
@@ -98,24 +98,24 @@ test("P3-01 — central definitions → organization activation → expert use �
   const evidence = observe(page);
 
   await login(page, "platform");
-  await page.getByRole("tab", { name: "تعاریف مرکزی", exact: true }).click();
-  await expect(page.getByText("این کاتالوگ مرجع مرکزی فقط زیر اختیار مدیر پلتفرم است.")).toBeVisible();
+  await page.getByRole("tab", { name: "تعاریف استاندارد سیستم", exact: true }).click();
+  await expect(page.getByText("این فهرست استاندارد فقط زیر اختیار مدیر سیستم است. سازمان‌ها تعریف استاندارد سیستم را تغییر نمی‌دهند و فقط تعریف‌های مجاز را برای استفادهٔ خود فعال یا غیرفعال می‌کنند.")).toBeVisible();
   await expect(page.getByRole("tab", { name: "تعاریف قابل استفاده سازمان", exact: true })).toHaveCount(0);
   for (const definition of definitions) await createCentralDefinition(page, definition);
   await logout(page);
 
   await login(page, "admin");
-  await expect(page.getByRole("tab", { name: "تعاریف مرکزی", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "تعاریف استاندارد سیستم", exact: true })).toHaveCount(0);
   await page.getByRole("tab", { name: "تعاریف قابل استفاده سازمان", exact: true }).click();
   await expect(page.getByRole("heading", { name: "تعاریف پایه حمل", exact: true })).toBeVisible();
   for (const definition of definitions) await activateForOrganization(page, definition);
 
   const packagePanel = await openOrganizationFamily(page, "انواع بسته‌بندی");
   const packageCard = packagePanel.locator("article, [data-slot=card]").filter({ hasText: "P3E2E_PACKAGE" }).first();
-  await packageCard.getByRole("button", { name: "غیرفعال‌سازی برای سازمان", exact: true }).click();
-  await expect(packageCard.getByText("غیرفعال برای سازمان", { exact: true }).first()).toBeVisible();
-  await packageCard.getByRole("button", { name: "فعال‌سازی برای سازمان", exact: true }).click();
-  await expect(packageCard.getByText("فعال برای سازمان", { exact: true })).toBeVisible();
+  await packageCard.getByRole("button", { name: "غیرفعال کردن برای سازمان", exact: true }).click();
+  await expect(packageCard.getByText("هنوز فعال نشده", { exact: true }).first()).toBeVisible();
+  await packageCard.getByRole("button", { name: "فعال کردن برای سازمان", exact: true }).click();
+  await expect(packageCard.getByText("فعال", { exact: true })).toBeVisible();
   await logout(page);
 
   await login(page, "foreign");
@@ -123,7 +123,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   const foreignCargoPanel = await openOrganizationFamily(page, "انواع کالا");
   const foreignCargoCard = foreignCargoPanel.locator("article, [data-slot=card]").filter({ hasText: "P3E2E_CARGO" }).first();
   await expect(foreignCargoCard).toBeVisible();
-  await expect(foreignCargoCard.getByText("غیرفعال برای سازمان", { exact: true }).first()).toBeVisible();
+  await expect(foreignCargoCard.getByText("هنوز فعال نشده", { exact: true }).first()).toBeVisible();
   await logout(page);
 
   await login(page, "restricted");
@@ -155,8 +155,8 @@ test("P3-01 — central definitions → organization activation → expert use �
   await page.getByRole("tab", { name: "تعاریف قابل استفاده سازمان", exact: true }).click();
   const cargoPanel = await openOrganizationFamily(page, "انواع کالا");
   const cargoCard = cargoPanel.locator("article, [data-slot=card]").filter({ hasText: "P3E2E_CARGO" }).first();
-  await cargoCard.getByRole("button", { name: "غیرفعال‌سازی برای سازمان", exact: true }).click();
-  await expect(cargoCard.getByText("غیرفعال برای سازمان", { exact: true }).first()).toBeVisible();
+  await cargoCard.getByRole("button", { name: "غیرفعال کردن برای سازمان", exact: true }).click();
+  await expect(cargoCard.getByText("هنوز فعال نشده", { exact: true }).first()).toBeVisible();
   await logout(page);
 
   await login(page, "restricted");

@@ -5,7 +5,16 @@ import pytest
 
 from backend import create_app
 from backend.extensions import db
-from backend.models import CargoType, ReferenceDataSeedRun, ServiceType, UnitOfMeasure
+from backend.models import (
+    CargoType,
+    PackagingType,
+    ReferenceDataSeedRun,
+    ServiceType,
+    TransportEquipmentType,
+    TransportMeansType,
+    TransportMethod,
+    UnitOfMeasure,
+)
 from backend.reference_data_catalog import (
     CATALOG_PATH,
     CatalogApplyError,
@@ -48,10 +57,16 @@ def _rewrite_catalog(tmp_path, mutate):
 
 def test_approved_catalog_is_exact_valid_and_excludes_deferred_values():
     catalog = load_catalog()
-    assert catalog.planned_count == 36
+    assert catalog.catalog_version == "1"
+    assert catalog.catalog_name == "FORWARDER_REFERENCE_CATALOG_V1"
+    assert catalog.planned_count == 80
     assert len(catalog.resources["cargo_types"]) == 15
     assert len(catalog.resources["service_types"]) == 12
-    assert len(catalog.resources["units_of_measure"]) == 9
+    assert len(catalog.resources["units_of_measure"]) == 10
+    assert len(catalog.resources["packaging_types"]) == 9
+    assert len(catalog.resources["transport_means_types"]) == 4
+    assert len(catalog.resources["transport_equipment_types"]) == 23
+    assert len(catalog.resources["request_transport_methods"]) == 7
     codes = {row["code"] for rows in catalog.resources.values() for row in rows}
     assert "CARGO_GENERAL_GOODS" not in codes
     assert "SERVICE_PROJECT_LOGISTICS" not in codes
@@ -60,13 +75,14 @@ def test_approved_catalog_is_exact_valid_and_excludes_deferred_values():
     assert symbols == {
         "UOM_PIECE": "pcs", "UOM_GRAM": "g", "UOM_KILOGRAM": "kg",
         "UOM_METRIC_TON": "t", "UOM_LITER": "L", "UOM_CUBIC_METER": "m³",
-        "UOM_CENTIMETER": "cm", "UOM_METER": "m", "UOM_KILOMETER": "km",
+        "UOM_MILLIMETER": "mm", "UOM_CENTIMETER": "cm", "UOM_METER": "m", "UOM_KILOMETER": "km",
     }
+    assert all(row["fa_description"] for rows in catalog.resources.values() for row in rows)
 
 
 def test_checksum_invalid_dimension_and_missing_parent_fail_validation(tmp_path):
     payload = json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
-    payload["cargo_types"][0]["en_name"] = "Tampered"
+    payload["additions"]["packaging_types"][0]["en_name"] = "Tampered"
     bad_checksum = tmp_path / "bad-checksum.json"
     bad_checksum.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     with pytest.raises(CatalogValidationError, match="checksum"):
@@ -74,24 +90,24 @@ def test_checksum_invalid_dimension_and_missing_parent_fail_validation(tmp_path)
 
     bad_dimension = _rewrite_catalog(
         tmp_path,
-        lambda data: data["units_of_measure"][0].update(measurement_dimension="INVALID"),
+        lambda data: data["additions"]["units_of_measure"][0].update(measurement_dimension="INVALID"),
     )
     with pytest.raises(CatalogValidationError, match="dimension"):
         load_catalog(bad_dimension)
 
-    missing_parent = _rewrite_catalog(
+    bad_family = _rewrite_catalog(
         tmp_path,
-        lambda data: data["cargo_types"][0].update(parent_code="CARGO_MISSING"),
+        lambda data: data["additions"]["packaging_types"][0].update(family="wrong"),
     )
-    with pytest.raises(CatalogValidationError, match="missing catalog parent"):
-        load_catalog(missing_parent)
+    with pytest.raises(CatalogValidationError, match="family"):
+        load_catalog(bad_family)
 
 
 def test_plan_first_apply_and_repeated_apply_are_idempotent(app):
     catalog = load_catalog()
     with app.app_context():
         first_plan = plan_catalog(catalog, "testing")
-        assert (first_plan.created_count, first_plan.unchanged_count, first_plan.conflict_count) == (36, 0, 0)
+        assert (first_plan.created_count, first_plan.unchanged_count, first_plan.conflict_count) == (80, 0, 0)
         assert ReferenceDataSeedRun.query.count() == 0  # plan is read-only
 
         first, first_run = apply_catalog(
@@ -99,18 +115,19 @@ def test_plan_first_apply_and_repeated_apply_are_idempotent(app):
             approval_reference="REL-1.5.0-QA",
             expected_checksum=catalog.checksum,
         )
-        assert first_run.status == "succeeded" and first_run.created_count == 36
-        assert (CargoType.query.count(), ServiceType.query.count(), UnitOfMeasure.query.count()) == (15, 12, 9)
+        assert first_run.status == "succeeded" and first_run.created_count == 80
+        assert (CargoType.query.count(), ServiceType.query.count(), UnitOfMeasure.query.count()) == (15, 12, 10)
+        assert (PackagingType.query.count(), TransportMeansType.query.count(), TransportEquipmentType.query.count(), TransportMethod.query.count()) == (9, 4, 23, 7)
 
         second, second_run = apply_catalog(
             catalog, environment="testing", executed_by="qa.operator",
             approval_reference="REL-1.5.0-QA",
             expected_checksum=catalog.checksum,
         )
-        assert (second.created_count, second.unchanged_count, second.conflict_count) == (0, 36, 0)
+        assert (second.created_count, second.unchanged_count, second.conflict_count) == (0, 80, 0)
         assert second_run.status == "succeeded" and second_run.created_count == 0
         assert ReferenceDataSeedRun.query.count() == 2
-        assert (CargoType.query.count(), ServiceType.query.count(), UnitOfMeasure.query.count()) == (15, 12, 9)
+        assert (CargoType.query.count(), ServiceType.query.count(), UnitOfMeasure.query.count()) == (15, 12, 10)
 
 
 @pytest.mark.parametrize("inactive", [False, True])
@@ -189,7 +206,7 @@ def test_checksum_and_operator_are_required(app):
 def test_cli_plan_confirmation_and_production_guards(app, capsys, tmp_path):
     catalog = load_catalog()
     assert cli_main(["plan"], app=app) == 0
-    assert '"created_count": 36' in capsys.readouterr().out
+    assert '"created_count": 80' in capsys.readouterr().out
     with app.app_context():
         assert ReferenceDataSeedRun.query.count() == 0
     assert cli_main(["apply"], app=app) == 2

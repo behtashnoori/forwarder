@@ -24,6 +24,7 @@ from backend.services.admin_authorization_service import (
     AdminAuthorizationError,
     ORGANIZATION_ADMIN,
     effective_authority,
+    has_organization_admin_capability,
     organization_context_for_authenticated_user,
     require_organization_admin_context,
 )
@@ -71,7 +72,7 @@ def _cargo_options_organization(user):
     derives exactly one active organization from the authenticated membership.
     """
     actor = db.session.get(ExpertUser, user["id"])
-    if actor and effective_authority(actor) == ORGANIZATION_ADMIN:
+    if actor and has_organization_admin_capability(actor):
         organization_context_for_authenticated_user(actor.id)
     else:
         try:

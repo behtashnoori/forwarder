@@ -45,12 +45,12 @@ describe("AdminPanel reference authority", () => {
     expect(await screen.findByRole("tab", { name: "تعاریف قابل استفاده سازمان" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "کاتالوگ کالا" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "پشتیبانی حساب‌های پرتال" })).toBeInTheDocument();
-    expect(screen.queryByRole("tab", { name: "تعاریف مرکزی" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tab", { name: "تعاریف استاندارد سیستم" })).not.toBeInTheDocument();
   });
 
   it("shows the central catalog only to Platform Admin", async () => {
     renderFor("PLATFORM_ADMIN");
-    expect(await screen.findByRole("tab", { name: "تعاریف مرکزی" })).toBeInTheDocument();
+    expect(await screen.findByRole("tab", { name: "تعاریف استاندارد سیستم" })).toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "تعاریف قابل استفاده سازمان" })).not.toBeInTheDocument();
     expect(screen.queryByRole("tab", { name: "کاتالوگ کالا" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "پشتیبانی حساب‌های پرتال" })).not.toBeInTheDocument();

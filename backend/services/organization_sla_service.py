@@ -27,20 +27,33 @@ from backend.services.operational_service import (
     OperationalError,
     organization_for_user,
 )
+from backend.services.admin_authorization_service import has_organization_admin_capability
 
 
 PROCESS_DEFINITIONS = {
     "EXCEPTION_RESPONSE": {
-        "label_fa": "رسیدگی به استثنای عملیاتی",
+        "target_code": "EXCEPTION_RESPONSE",
+        "label_fa": "رسیدگی به مشکل عملیاتی",
+        "domain_context_fa": "مشکل عملیاتی ثبت‌شده برای محموله",
+        "start_label_fa": "ثبت وقوع مشکل",
+        "end_label_fa": "رفع مشکل",
         "start_reference": "OperationalException.occurred_at",
         "completion_reference": "OperationalException.resolved_at",
         "responsibility": "SHIPMENT_TRANSPORT_EXPERT",
+        "supported_scope": "ORGANIZATION_OPERATIONAL_SHIPMENT",
+        "implementation_availability": "AVAILABLE",
     },
     "ACTION_FOLLOW_UP": {
+        "target_code": "ACTION_FOLLOW_UP",
         "label_fa": "پیگیری اقدام عملیاتی",
+        "domain_context_fa": "اقدام پیگیری ثبت‌شده برای محموله",
+        "start_label_fa": "ایجاد اقدام پیگیری",
+        "end_label_fa": "ثبت نتیجه و تکمیل اقدام",
         "start_reference": "OperationalWorkItem.created_at",
         "completion_reference": "OperationalWorkItem.resolved_at",
         "responsibility": "SHIPMENT_TRANSPORT_EXPERT",
+        "supported_scope": "ORGANIZATION_OPERATIONAL_SHIPMENT",
+        "implementation_availability": "AVAILABLE",
     },
 }
 STATUS_RANK = {"BREACHED": 0, "WARNING": 1, "WITHIN": 2, "MET": 3}
@@ -51,7 +64,7 @@ def _aware(value: datetime) -> datetime:
 
 
 def _admin_organization(user: dict[str, Any]) -> int:
-    if (user.get("authority") or "").upper() != "ORGANIZATION_ADMIN":
+    if not has_organization_admin_capability(user):
         raise OperationalError(
             "FORBIDDEN_OPERATION",
             "Organization SLA management requires Organization Admin authority.",
@@ -85,10 +98,15 @@ def _validated_rule_fields(payload: dict[str, Any], current=None) -> dict[str, A
             "The requested process is not supported by the governed SLA catalog.",
             422,
         )
-    name = str(payload.get("name", getattr(current, "name", "")) or "").strip()
-    if not name or len(name) > 120:
+    definition = PROCESS_DEFINITIONS[process_type]
+    alias_value = payload.get(
+        "organization_alias",
+        payload.get("name", getattr(current, "name", "")),
+    )
+    alias = str(alias_value or "").strip()
+    if len(alias) > 120:
         raise OperationalError(
-            "VALIDATION_FAILED", "name must contain 1 to 120 characters.", 422
+            "VALIDATION_FAILED", "organization_alias must not exceed 120 characters.", 422
         )
     duration = _integer(
         payload.get("duration_minutes", getattr(current, "duration_minutes", None)),
@@ -120,7 +138,10 @@ def _validated_rule_fields(payload: dict[str, Any], current=None) -> dict[str, A
         )
     return {
         "process_type": process_type,
-        "name": name,
+        # The existing non-null column stores an optional presentation alias.
+        # An empty alias falls back to the registry label; process_type remains
+        # the only semantic target identity.
+        "name": alias or definition["label_fa"],
         "duration_minutes": duration,
         "warning_minutes": warning,
         "is_active": active,
@@ -129,10 +150,14 @@ def _validated_rule_fields(payload: dict[str, Any], current=None) -> dict[str, A
 
 def _rule_snapshot(rule: OrganizationSlaRule) -> dict[str, Any]:
     definition = PROCESS_DEFINITIONS[rule.process_type]
+    organization_alias = (
+        None if rule.name == definition["label_fa"] else rule.name
+    )
     return {
         "public_id": rule.public_id,
         "process_type": rule.process_type,
         "name": rule.name,
+        "organization_alias": organization_alias,
         "duration_minutes": rule.duration_minutes,
         "warning_minutes": rule.warning_minutes,
         "is_active": rule.is_active,

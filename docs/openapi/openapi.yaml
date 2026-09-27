@@ -1003,7 +1003,11 @@ components:
         code: { type: string, maxLength: 64, readOnly: true }
         fa_name: { type: string, maxLength: 160 }
         en_name: { type: string, maxLength: 160 }
-        description: { type: string, nullable: true }
+        description: { type: string, nullable: true, description: Persian Product-facing description from the approved versioned catalog when available. }
+        technical_description: { type: string, nullable: true, description: Persisted definition description retained for technical and compatibility use. }
+        measurement_dimension: { type: string, nullable: true, enum: [COUNT, WEIGHT, VOLUME, LENGTH, OTHER_GOVERNED] }
+        symbol: { type: string, nullable: true, maxLength: 32 }
+        catalog_version: { type: string, nullable: true, readOnly: true }
         display_order: { type: integer }
         central_active: { type: boolean }
         organization_active: { type: boolean, description: False when no activation row exists or the tenant activation is inactive. }
@@ -1565,7 +1569,18 @@ components:
       properties:
         public_id: { type: string, format: uuid }
         process_type: { type: string, enum: [EXCEPTION_RESPONSE, ACTION_FOLLOW_UP] }
-        name: { type: string, maxLength: 120 }
+        name: { type: string, maxLength: 120, description: Compatibility projection; semantic identity remains process_type. }
+        organization_alias: { type: string, nullable: true, maxLength: 120, description: Optional presentation-only tenant alias. }
+        target_code: { type: string, enum: [EXCEPTION_RESPONSE, ACTION_FOLLOW_UP], readOnly: true }
+        label_fa: { type: string, readOnly: true }
+        domain_context_fa: { type: string, readOnly: true }
+        start_label_fa: { type: string, readOnly: true }
+        end_label_fa: { type: string, readOnly: true }
+        start_reference: { type: string, readOnly: true }
+        completion_reference: { type: string, readOnly: true }
+        responsibility: { type: string, readOnly: true }
+        supported_scope: { type: string, readOnly: true }
+        implementation_availability: { type: string, enum: [AVAILABLE], readOnly: true }
         duration_minutes: { type: integer, minimum: 1, maximum: 525600 }
         warning_minutes: { type: integer, nullable: true, minimum: 1, maximum: 525599 }
         is_active: { type: boolean }
@@ -2083,6 +2098,16 @@ components:
       additionalProperties: false
       required: [public_id, immutable_code, fa_name, en_name, display_order, is_active, version]
       properties: { public_id: { type: string, format: uuid }, immutable_code: { type: string }, fa_name: { type: string }, en_name: { type: string }, definition: { type: string, nullable: true }, display_order: { type: integer, minimum: 0 }, is_active: { type: boolean }, version: { type: integer, minimum: 1 } }
+    OperationalReasonCreate:
+      type: object
+      additionalProperties: false
+      required: [fa_name]
+      properties:
+        fa_name: { type: string, minLength: 1, maxLength: 160, description: Required Persian reason title. }
+        en_name: { type: string, maxLength: 160, description: Optional English label. }
+        definition: { type: string, nullable: true, maxLength: 4000 }
+        is_active: { type: boolean, default: true }
+      description: immutable_code is generated server-side and is never accepted from the organization administrator.
     OperationalCondition:
       type: object
       additionalProperties: false
@@ -3100,7 +3125,7 @@ paths:
     post: { tags: [Operational Shipments], summary: Resolve a work item using expected_version, security: [{ bearerAuth: [] }], parameters: [{ name: item_id, in: path, required: true, schema: { type: integer } }], responses: { '200': { description: Work item resolved. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
   /api/organization-sla-rules:
     get: { tags: [Operational Shipments], summary: List the authenticated Organization Admin tenant SLA catalog and rules, security: [{ bearerAuth: [] }], responses: { '200': { description: Tenant SLA rules and explicitly unconfigured processes. }, '403': { $ref: '#/components/responses/Forbidden' } } }
-    post: { tags: [Operational Shipments], summary: Create one prospective organization-owned SLA rule, security: [{ bearerAuth: [] }], responses: { '201': { description: SLA rule created. }, '403': { $ref: '#/components/responses/Forbidden' }, '409': { description: Rule already exists. }, '422': { description: Unsupported process or invalid timing. } } }
+    post: { tags: [Operational Shipments], summary: Create one prospective organization-owned SLA rule by selecting a governed process_type, security: [{ bearerAuth: [] }], responses: { '201': { description: SLA rule created. }, '403': { $ref: '#/components/responses/Forbidden' }, '409': { description: Rule already exists. }, '422': { description: Unsupported process, free-text semantic target, or invalid timing. } } }
   /api/organization-sla-rules/{rule_id}:
     parameters: [{ name: rule_id, in: path, required: true, schema: { type: string, format: uuid } }]
     patch: { tags: [Operational Shipments], summary: Create a prospective new version of an own-tenant SLA rule, security: [{ bearerAuth: [] }], responses: { '200': { description: SLA rule updated. }, '403': { $ref: '#/components/responses/Forbidden' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { description: Version conflict. } } }
@@ -5424,12 +5449,12 @@ paths:
     post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: shipment_id, in: path, required: true, schema: { type: string, format: uuid } }, { name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Exception resolved explicitly. }, '409': { description: Optimistic conflict. } } }
   /api/v2/admin/reference-data/delay-reasons:
     get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '200': { description: Organization-scoped DelayReason catalog. } } }
-    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '201': { description: DelayReason created. }, '409': { description: Duplicate immutable code. } } }
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OperationalReasonCreate' } } } }, responses: { '201': { description: DelayReason created with a system-generated immutable code. }, '409': { description: System-generated code collision. }, '422': { description: Invalid title or attempted client-supplied immutable code. } } }
   /api/v2/admin/reference-data/delay-reasons/{public_id}:
     patch: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Labels, definition, order, or lifecycle updated; code immutable. } } }
   /api/v2/admin/reference-data/exception-reasons:
     get: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '200': { description: Organization-scoped ExceptionReason catalog. } } }
-    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], responses: { '201': { description: ExceptionReason created. }, '409': { description: Duplicate immutable code. } } }
+    post: { tags: [Operational Execution], security: [{ bearerAuth: [] }], requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/OperationalReasonCreate' } } } }, responses: { '201': { description: ExceptionReason created with a system-generated immutable code. }, '409': { description: System-generated code collision. }, '422': { description: Invalid title or attempted client-supplied immutable code. } } }
   /api/v2/admin/reference-data/exception-reasons/{public_id}:
     patch: { tags: [Operational Execution], security: [{ bearerAuth: [] }], parameters: [{ name: public_id, in: path, required: true, schema: { type: string, format: uuid } }], responses: { '200': { description: Labels, definition, order, or lifecycle updated; code immutable. } } }
   /api/v2/operational-shipments/{shipment_id}/economics/lines:

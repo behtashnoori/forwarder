@@ -15,7 +15,7 @@
 
 شرایط توقف:
 
-- نیاز به workflow تازهٔ تعریف اختصاصی سازمان یا promotion آن به کاتالوگ مرکزی (`DN08`؛ فقط همان زیرقابلیت متوقف می‌شود)؛
+- workflow تعریف پایهٔ اختصاصی سازمان یا promotion آن به کاتالوگ سیستم؛ مأموریت سخت‌سازی ۱۴۰۵/۰۷/۰۵، `DN08` را برای نسخهٔ جاری با منع این رفتار نهایی کرده است؛
 - seed/import خارجی یا دادهٔ استاندارد بدون provenance و qualification؛
 - free-text برای جایگزینی نوع پایهٔ کنترل‌شده؛
 - بازنویسی snapshot یا معنای تاریخی؛
@@ -28,7 +28,7 @@
 | `AUTHORIZED_PRODUCT_CHANGES` | تعریف‌های مرکزیِ کنترل‌شده؛ فعال/غیرفعال‌سازی availability سازمان برای استفادهٔ جدید؛ انتخاب فقط از گزینه‌های فعال سازمان؛ باقی‌ماندن سوابق قبلی پس از rename/update/deactivation؛ UI تدریجی مطابق V2.1؛ audit تغییر availability. |
 | `DELEGATED_TECHNICAL_CHOICES` | مدل افزایشی و صریح، نام جدول و endpoint، adapterهای سازگاری، DTO، concurrency، audit، migration، ساختار component و روش آزمون، تا وقتی رفتار محصول را تغییر ندهند. |
 | `PROTECTED_OUT_OF_SCOPE_BEHAVIOR` | Request/Cargo/Cargo Catalog/Documents/Logistics Points/Combined Transport/Customer Account/Public Tracking/Operational Workspace/Control Tower و تمام lifecycleها و permissionهای خارج از این بخش؛ نصب با catalog خالی؛ نبود seed خودکار؛ Platform Admin بدون اختیار ضمنی Tenant. |
-| `DECISIONS_NEEDED` | `DN08`: semantics ایجاد تعریف اختصاصی سازمان، مرجع review و promotion. این تصمیم برای reuse/activation تعریف مرکزی لازم نیست. هر رفتار Product تازهٔ دیگر نیز `DECISION_NEEDED` است. |
+| `DECISIONS_NEEDED` | برای نامزد جاری `NONE`. تصمیم پسین Product، `DN08` را با `ORG_ADMIN_ARBITRARY_BASE_DEFINITION=NO`، `SYSTEM_ADMIN_BASE_DEFINITION=YES` و `AUTO_PROMOTION=NO` نهایی کرده است. تغییر این مرز، تصمیم Product تازه می‌خواهد. |
 | `APPROVING_OWNER_OR_AUTHORITY` | Product Owner با دستور صریح `START PHASE 3 IMPLEMENTATION — P3-01 ONLY`؛ LPAF v2.7 برای حاکمیت؛ ADRهای پذیرفته‌شده برای مرز فنی موجود. |
 | `APPROVAL_REFERENCE` | درخواست جاری، `FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md` رکورد P3-01، Product Contract v1 §5/§7/§20 و UX V2.1 approved. |
 
@@ -57,7 +57,7 @@
 
 ### DECISION NEEDED
 
-- `DN08` فقط برای create/promotion تعریف اختصاصی سازمان باز است. هیچ UI/API برای آن در این نامزد ساخته نمی‌شود.
+- `DN08` برای نسخهٔ جاری بسته است: هیچ UI/API برای create/promotion تعریف پایهٔ اختصاصی سازمان ساخته نمی‌شود؛ System Admin مرجع سیستم را اداره و Org Admin فقط availability سازمان را تنظیم می‌کند.
 
 ## مالکیت، SOR و زنجیره
 

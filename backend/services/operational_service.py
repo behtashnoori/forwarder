@@ -59,6 +59,16 @@ from backend.services import closure_commands as closure_guard
 
 def require_permission(user: dict[str, Any], permission: str) -> None:
     membership = _membership_for_user(int(user["id"]))
+    if permission in {
+        "logistics_point.read",
+        "logistics_point.manage",
+        "delay_reason.manage",
+        "exception_reason.manage",
+    }:
+        from backend.services.admin_authorization_service import has_organization_admin_capability
+
+        if has_organization_admin_capability(user):
+            return
     if permission not in set(membership.permissions or []):
         raise OperationalError(
             "FORBIDDEN_OPERATION", "You are not allowed to perform this operation.", 403

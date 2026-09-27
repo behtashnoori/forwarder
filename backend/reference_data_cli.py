@@ -14,6 +14,13 @@ from backend.reference_data_catalog import (
     load_catalog,
     plan_catalog,
 )
+from backend.organization_profile import (
+    ProfileApplyError,
+    ProfileValidationError,
+    apply_profile,
+    load_profile,
+    plan_profile,
+)
 
 ALLOWED_APPLY_ENVIRONMENTS = {
     "development", "dev", "local", "testing", "test", "uat", "staging",
@@ -35,6 +42,28 @@ def _parser() -> argparse.ArgumentParser:
         action="store_true",
         help="additional explicit Production confirmation",
     )
+    profile_plan = commands.add_parser(
+        "organization-profile-plan",
+        help="compare the standard organization profile without writes",
+    )
+    profile_plan.add_argument("--organization-public-id", required=True)
+    profile_plan.add_argument("--actor-username", required=True)
+    profile_apply = commands.add_parser(
+        "organization-profile-apply",
+        help="explicit transactional standard organization profile apply",
+    )
+    profile_apply.add_argument("--organization-public-id", required=True)
+    profile_apply.add_argument("--actor-username", required=True)
+    profile_apply.add_argument("--confirm", action="store_true")
+    profile_apply.add_argument("--operator")
+    profile_apply.add_argument("--approval-reference")
+    profile_apply.add_argument("--expected-checksum")
+    profile_apply.add_argument(
+        "--confirm-reactivation",
+        action="store_true",
+        help="explicitly approve audited reactivation candidates shown by plan",
+    )
+    profile_apply.add_argument("--confirm-production", action="store_true")
     return parser
 
 
@@ -47,6 +76,15 @@ def main(argv: list[str] | None = None, *, app=None) -> int:
         if args.command == "plan":
             print(json.dumps(plan_catalog(catalog, environment).as_dict(), ensure_ascii=False, sort_keys=True))
             return 0
+        if args.command == "organization-profile-plan":
+            profile = load_profile(catalog=catalog)
+            result = plan_profile(
+                profile,
+                organization_public_id=args.organization_public_id,
+                actor_username=args.actor_username,
+            )
+            print(json.dumps(result.as_dict(), ensure_ascii=False, sort_keys=True))
+            return 3 if result.conflict_count or result.rejected_count else 0
         if not args.confirm:
             print("REFUSED: apply requires --confirm.", file=sys.stderr)
             return 2
@@ -62,6 +100,21 @@ def main(argv: list[str] | None = None, *, app=None) -> int:
         if is_production_environment(environment) and not args.confirm_production:
             print("REFUSED: Production apply requires --confirm-production.", file=sys.stderr)
             return 2
+        if args.command == "organization-profile-apply":
+            profile = load_profile(catalog=catalog)
+            plan = apply_profile(
+                profile,
+                organization_public_id=args.organization_public_id,
+                actor_username=args.actor_username,
+                operator=args.operator,
+                approval_reference=args.approval_reference,
+                expected_checksum=args.expected_checksum,
+                confirm_reactivation=args.confirm_reactivation,
+            )
+            output = plan.as_dict()
+            output["status"] = "REFUSED" if plan.conflict_count or plan.rejected_count else "SUCCEEDED"
+            print(json.dumps(output, ensure_ascii=False, sort_keys=True))
+            return 3 if plan.conflict_count or plan.rejected_count else 0
         plan, run = apply_catalog(
             catalog,
             environment=environment,
@@ -78,7 +131,7 @@ def main(argv: list[str] | None = None, *, app=None) -> int:
 def run(argv: list[str] | None = None) -> int:
     try:
         return main(argv)
-    except (CatalogValidationError, CatalogApplyError) as exc:
+    except (CatalogValidationError, CatalogApplyError, ProfileValidationError, ProfileApplyError) as exc:
         print(f"Reference-data command failed: {exc}", file=sys.stderr)
         return 1
     except Exception as exc:

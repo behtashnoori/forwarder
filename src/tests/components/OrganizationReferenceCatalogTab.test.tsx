@@ -49,12 +49,12 @@ describe("OrganizationReferenceCatalogTab", () => {
       .mockResolvedValueOnce({ item: { ...activeItem, organization_active: false, selectable: false, activation_version: 8 } });
 
     render(<OrganizationReferenceCatalogTab />);
-    fireEvent.click(await screen.findByRole("button", { name: "فعال‌سازی برای سازمان" }));
+    fireEvent.click(await screen.findByRole("button", { name: "فعال کردن برای سازمان" }));
     await waitFor(() => expect(api.setOrganizationReferenceCatalogActive).toHaveBeenCalledWith("cargo-types", inactiveItem, true));
 
-    fireEvent.click(await screen.findByRole("button", { name: "غیرفعال‌سازی برای سازمان" }));
+    fireEvent.click(await screen.findByRole("button", { name: "غیرفعال کردن برای سازمان" }));
     await waitFor(() => expect(api.setOrganizationReferenceCatalogActive).toHaveBeenLastCalledWith("cargo-types", activeItem, false));
-    expect((await screen.findAllByText("غیرفعال برای سازمان")).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText("هنوز فعال نشده")).length).toBeGreaterThan(0);
   });
 
   it("keeps a centrally inactive definition read-only", async () => {
@@ -63,7 +63,7 @@ describe("OrganizationReferenceCatalogTab", () => {
     });
     render(<OrganizationReferenceCatalogTab />);
     expect(await screen.findByText("فقط برای خواندن سابقه")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /فعال‌سازی برای سازمان|غیرفعال‌سازی برای سازمان/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /فعال کردن برای سازمان|غیرفعال کردن برای سازمان/ })).not.toBeInTheDocument();
   });
 
   it("selects a family and exposes a stable organization-definition search", async () => {
@@ -79,12 +79,12 @@ describe("OrganizationReferenceCatalogTab", () => {
   it("renders loading, empty, error, and denied states distinctly", async () => {
     vi.mocked(api.fetchOrganizationReferenceCatalog).mockImplementationOnce(() => new Promise(() => undefined));
     const loadingView = render(<OrganizationReferenceCatalogTab />);
-    expect(screen.getByRole("status")).toHaveTextContent("در حال دریافت تعاریف قابل استفاده سازمان");
+    expect(screen.getByRole("status")).toHaveTextContent("در حال دریافت تعریف‌ها");
     loadingView.unmount();
 
     vi.mocked(api.fetchOrganizationReferenceCatalog).mockResolvedValueOnce({ items: [] });
     const emptyView = render(<OrganizationReferenceCatalogTab />);
-    expect(await screen.findByText("در این گروه هنوز تعریف مرکزی تأییدشده‌ای برای انتخاب سازمان وجود ندارد.")).toBeInTheDocument();
+    expect(await screen.findByText("در این گروه هنوز تعریف استانداردی برای انتخاب سازمان وجود ندارد.")).toBeInTheDocument();
     emptyView.unmount();
 
     vi.mocked(api.fetchOrganizationReferenceCatalog).mockRejectedValueOnce(new Error("offline"));
@@ -94,6 +94,6 @@ describe("OrganizationReferenceCatalogTab", () => {
 
     vi.mocked(api.fetchOrganizationReferenceCatalog).mockRejectedValueOnce(new api.ApiError(403, "FORBIDDEN", "forbidden"));
     render(<OrganizationReferenceCatalogTab />);
-    expect(await screen.findByRole("alert")).toHaveTextContent("فقط برای مدیر سازمان");
+    expect(await screen.findByRole("alert")).toHaveTextContent("فقط برای مدیر همین سازمان");
   });
 });

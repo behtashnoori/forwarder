@@ -15,6 +15,7 @@ from backend.models import ExpertQuote, ExpertUser, Province, ShipmentRequest
 from backend.operational_models import CanonicalLocation, Milestone, MilestoneEvent, OperationalAudit, OperationalCheckpoint, OperationalIdempotency, OperationalMembership, OperationalOrganization, OperationalOutbox, OperationalShipment, OperationalWorkItem, RouteDependency, RouteLeg, RoutePlan
 from backend.services.operational_service import OperationalError, reconcile_overdue
 from backend.services.expert_scope_service import reconcile_expert_baseline_permissions
+from backend.services.admin_authorization_service import ORGANIZATION_ADMIN_PERMISSION
 
 
 PHASE1B_PREFIX = "phase1b_uat_"
@@ -36,6 +37,87 @@ PHASE1B_ALL_PERMISSIONS = [
     "document_readiness.override",
     "oip.read", "oip.manage", "oip.reconcile",
 ]
+
+
+def bootstrap_self_hosted_admin(
+    *, username: str, organization_public_id: str, operator: str, approval_reference: str
+) -> dict:
+    """Explicitly compose System Admin and one tenant Admin membership."""
+    username = username.strip()
+    operator = operator.strip()
+    approval_reference = approval_reference.strip()
+    if not username or not operator or not approval_reference:
+        raise OperationalError(
+            "VALIDATION_FAILED",
+            "Username, named operator, and approval reference are required.",
+            422,
+        )
+    user = ExpertUser.query.filter_by(username=username).one_or_none()
+    organization = OperationalOrganization.query.filter_by(
+        public_id=organization_public_id, is_active=True
+    ).one_or_none()
+    if user is None or not user.is_active or organization is None:
+        raise OperationalError(
+            "RESOURCE_NOT_FOUND", "Active user or organization was not found.", 404
+        )
+    active_elsewhere = OperationalMembership.query.filter(
+        OperationalMembership.user_id == user.id,
+        OperationalMembership.is_active.is_(True),
+        OperationalMembership.organization_id != organization.id,
+    ).first()
+    if active_elsewhere is not None:
+        raise OperationalError(
+            "TENANT_SCOPE_VIOLATION",
+            "The user already has an active membership in another organization.",
+            409,
+        )
+    membership = OperationalMembership.query.filter_by(
+        user_id=user.id, organization_id=organization.id
+    ).one_or_none()
+    previous_authority = (user.authority or "EXPERT").upper()
+    previous_permissions = sorted(set(membership.permissions or [])) if membership else []
+    changed = previous_authority != "PLATFORM_ADMIN"
+    if membership is None:
+        membership = OperationalMembership(
+            user_id=user.id,
+            organization_id=organization.id,
+            is_active=True,
+            permissions=[ORGANIZATION_ADMIN_PERMISSION],
+        )
+        db.session.add(membership)
+        changed = True
+    else:
+        permissions = sorted(set(membership.permissions or []) | {ORGANIZATION_ADMIN_PERMISSION})
+        changed = changed or not membership.is_active or permissions != previous_permissions
+        membership.is_active = True
+        membership.permissions = permissions
+    user.authority = "PLATFORM_ADMIN"
+    db.session.flush()
+    if changed:
+        db.session.add(OperationalAudit(
+            organization_id=organization.id,
+            actor_user_id=user.id,
+            action="self_hosted_admin.composed",
+            entity_type="OperationalMembership",
+            entity_id=membership.id,
+            metadata_json={
+                "operator": operator[:160],
+                "approval_reference": approval_reference[:200],
+                "previous_authority": previous_authority,
+                "current_authority": "PLATFORM_ADMIN",
+                "added_membership_capability": ORGANIZATION_ADMIN_PERMISSION,
+                "organization_public_id": organization.public_id,
+            },
+        ))
+    db.session.commit()
+    return {
+        "status": "CHANGED" if changed else "UNCHANGED",
+        "user_id": user.id,
+        "username": user.username,
+        "organization_public_id": organization.public_id,
+        "capabilities": ["SYSTEM_ADMIN", "ORGANIZATION_ADMIN"],
+        "audit_recorded": changed,
+    }
 
 
 def _phase1b_seed_guard(app, database_url=None) -> None:
@@ -264,6 +346,7 @@ def main(argv=None) -> int:
     evaluation_status=sub.add_parser("evaluation-status"); evaluation_status.add_argument("--organization-id", type=int, required=True)
     expert_baseline=sub.add_parser("reconcile-expert-baseline"); expert_baseline.add_argument("--apply", action="store_true")
     bootstrap=sub.add_parser("bootstrap-organization"); bootstrap.add_argument("--name", required=True); bootstrap.add_argument("--user-id", type=int, required=True); bootstrap.add_argument("--permissions", required=True); bootstrap.add_argument("--confirm", action="store_true")
+    self_hosted_admin=sub.add_parser("bootstrap-self-hosted-admin"); self_hosted_admin.add_argument("--username", required=True); self_hosted_admin.add_argument("--organization-public-id", required=True); self_hosted_admin.add_argument("--operator", required=True); self_hosted_admin.add_argument("--approval-reference", required=True); self_hosted_admin.add_argument("--confirm", action="store_true")
     scope_quote=sub.add_parser("scope-quote"); scope_quote.add_argument("--quote-id", type=int, required=True); scope_quote.add_argument("--organization-id", type=int, required=True); scope_quote.add_argument("--confirm", action="store_true")
     provision=sub.add_parser("provision-uat"); provision.add_argument("--confirm", action="store_true")
     phase1b=sub.add_parser("seed-phase1b-uat"); phase1b.add_argument("--confirm", action="store_true")
@@ -357,6 +440,13 @@ def main(argv=None) -> int:
             if db.session.get(ExpertUser, args.user_id) is None: raise OperationalError("RESOURCE_NOT_FOUND", "User was not found.", 404)
             permissions=sorted({value.strip() for value in args.permissions.split(",") if value.strip()})
             organization=OperationalOrganization(name=args.name.strip()); db.session.add(organization); db.session.flush(); db.session.add(OperationalMembership(organization_id=organization.id,user_id=args.user_id,permissions=permissions)); db.session.commit(); print(f"created organization={organization.id} membership_user={args.user_id}")
+        elif args.command == "bootstrap-self-hosted-admin":
+            print(json.dumps(bootstrap_self_hosted_admin(
+                username=args.username,
+                organization_public_id=args.organization_public_id,
+                operator=args.operator,
+                approval_reference=args.approval_reference,
+            ), sort_keys=True))
         else:
             quote=db.session.get(ExpertQuote,args.quote_id); organization=db.session.get(OperationalOrganization,args.organization_id)
             if quote is None or organization is None: raise OperationalError("RESOURCE_NOT_FOUND", "Quote or organization was not found.", 404)

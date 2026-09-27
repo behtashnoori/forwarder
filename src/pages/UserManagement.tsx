@@ -263,7 +263,7 @@ const UserManagement = () => {
       if (errors.length > 0) setLoadError(errors.join(" | "));
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
-      setLoadError(`Unable to load user management data: ${detail}`);
+      setLoadError(`دریافت اطلاعات مدیریت کاربران انجام نشد: ${detail}`);
       toast({
         title: "خطا",
         description: "خطا در بارگذاری داده‌ها",
@@ -286,7 +286,7 @@ const UserManagement = () => {
 
   const getRoleLabel = (role: string) => {
     const labels: Record<string, string> = {
-      PLATFORM_ADMIN: "مدیر پلتفرم",
+      PLATFORM_ADMIN: "مدیر سیستم",
       ORGANIZATION_ADMIN: "مدیر سازمان",
       EXPERT: "کارشناس"
     };
@@ -654,7 +654,7 @@ const UserManagement = () => {
 
           <TabsContent value="users" className="space-y-4">
             <p className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
-              «بار کاری فعلی» تعداد پرونده‌های تخصیص‌یافته یا در حال پیگیری است. این عدد اطلاعات عملیاتی است؛ تخصیص پیش‌فرض بر اساس نوبت‌گردشی انجام می‌شود، نه کمترین بار کاری.
+              کارشناسان فعال همان سازمان که مجاز به رسیدگی به حمل داخلی یا بین‌المللیِ درخواست باشند، وارد نوبت تخصیص می‌شوند. تخصیص پیش‌فرض به‌صورت نوبت‌گردشی و بر پایهٔ قدیمی‌ترین نوبت قبلی انجام می‌شود؛ اگر کارشناس واجد شرایطی نباشد، درخواست بدون تخصیص می‌ماند تا مدیر آن را بررسی کند. «بار کاری فعلی» فقط تعداد پرونده‌های تخصیص‌یافته یا در حال پیگیری است و مبنای پیش‌فرض انتخاب نیست.
             </p>
             {/* Users Filters */}
             <Card>
@@ -677,7 +677,7 @@ const UserManagement = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">همه نقش‌ها</SelectItem>
-                      <SelectItem value="PLATFORM_ADMIN">مدیر پلتفرم</SelectItem>
+                      <SelectItem value="PLATFORM_ADMIN">مدیر سیستم</SelectItem>
                       <SelectItem value="ORGANIZATION_ADMIN">مدیر سازمان</SelectItem>
                       <SelectItem value="EXPERT">کارشناس</SelectItem>
                     </SelectContent>
@@ -868,7 +868,7 @@ const UserManagement = () => {
                   <CardContent>
                     <div className="mb-4 space-y-1 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900">
                       <p>تعداد پرونده‌های فعالی که در حال حاضر به هر کارشناس اختصاص دارد؛ هر پرونده یک واحد محاسبه می‌شود.</p>
-                      <p>این عدد اطلاعات عملیاتی است. تخصیص پیش‌فرض بر اساس نوبت‌گردشی انجام می‌شود و فقط قانون «کمترین بار کاری» از شمارش گسترده‌تر موتور ارجاع استفاده می‌کند.</p>
+                      <p>تخصیص پیش‌فرض میان کارشناسان فعال و واجد دامنهٔ حمل، بر اساس نوبت‌گردشی انجام می‌شود. نبود کارشناس واجد شرایط باعث می‌شود درخواست برای بررسی دستی بدون تخصیص بماند.</p>
                     </div>
                     <div className="space-y-3">
                       {statistics.expert_workloads.map((expert) => (

@@ -7,7 +7,7 @@ from backend.customer_entitlement_models import CustomerEntitlement
 from backend.models import Customer, CustomerGamification, ExpertUser
 from backend.operational_models import OperationalOrganization, utcnow
 from backend.services.admin_authorization_service import (
-    AdminAuthorizationError, effective_authority, organization_context_for_authenticated_user,
+    AdminAuthorizationError, has_organization_admin_capability, organization_context_for_authenticated_user,
 )
 from backend.services.operational_service import OperationalError
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
@@ -15,7 +15,7 @@ from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 
 def _admin(organization_id, actor_id):
     actor = db.session.get(ExpertUser, actor_id)
-    if not actor or not actor.is_active or effective_authority(actor) != "ORGANIZATION_ADMIN":
+    if not actor or not actor.is_active or not has_organization_admin_capability(actor):
         raise OperationalError("ENTITLEMENT_FORBIDDEN", "فقط مدیر سازمان مجاز است", 403)
     try:
         context = organization_context_for_authenticated_user(actor_id)

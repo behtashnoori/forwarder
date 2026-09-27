@@ -760,6 +760,10 @@ export interface OrganizationReferenceCatalogItem {
   fa_name: string;
   en_name: string;
   description: string | null;
+  technical_description?: string | null;
+  measurement_dimension?: "COUNT" | "WEIGHT" | "VOLUME" | "LENGTH" | "OTHER_GOVERNED" | null;
+  symbol?: string | null;
+  catalog_version?: string | null;
   display_order: number;
   central_active: boolean;
   organization_active: boolean;
@@ -1948,14 +1952,21 @@ export function getOperationalWorkspace(
 export type OrganizationSlaProcess = {
   process_type: "EXCEPTION_RESPONSE" | "ACTION_FOLLOW_UP";
   label_fa: string;
+  target_code: string;
+  domain_context_fa: string;
+  start_label_fa: string;
+  end_label_fa: string;
   start_reference: string;
   completion_reference: string;
   responsibility: string;
+  supported_scope: string;
+  implementation_availability: "AVAILABLE";
 };
 
 export type OrganizationSlaRule = OrganizationSlaProcess & {
   public_id: string;
   name: string;
+  organization_alias?: string | null;
   duration_minutes: number;
   warning_minutes?: number | null;
   is_active: boolean;
@@ -1976,7 +1987,7 @@ export const listOrganizationSlaRules = () =>
 
 export const createOrganizationSlaRule = (payload: {
   process_type: OrganizationSlaProcess["process_type"];
-  name: string;
+  organization_alias?: string | null;
   duration_minutes: number;
   warning_minutes?: number | null;
   is_active: boolean;
@@ -1987,7 +1998,7 @@ export const createOrganizationSlaRule = (payload: {
 
 export const updateOrganizationSlaRule = (
   rule: OrganizationSlaRule,
-  payload: Partial<Pick<OrganizationSlaRule, "name" | "duration_minutes" | "warning_minutes" | "is_active">>,
+  payload: Partial<Pick<OrganizationSlaRule, "organization_alias" | "duration_minutes" | "warning_minutes" | "is_active">>,
 ) => request<{ data: OrganizationSlaRule }>(`/api/organization-sla-rules/${rule.public_id}`, {
   method: "PATCH",
   body: JSON.stringify({ ...payload, expected_version: rule.version }),

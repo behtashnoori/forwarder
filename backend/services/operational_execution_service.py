@@ -6,6 +6,7 @@ from backend.services import occurrence_projection_service as projection
 from datetime import timezone
 import hashlib
 import json
+from uuid import uuid4
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from backend.extensions import db
@@ -796,22 +797,45 @@ def reason_collection(kind, user, payload=None):
         # remains an explicit, separate permission.
         f"{kind}_reason.manage" if payload is not None else "operational_shipment.read"
     )
-    require_permission(user, permission)
+    from backend.services.admin_authorization_service import has_organization_admin_capability
+
+    if payload is not None or not has_organization_admin_capability(user):
+        require_permission(user, permission)
     org = organization_for_user(user["id"])
     model = DelayReason if kind == "delay" else ExceptionReason
     if payload is not None:
-        code = str(payload.get("immutable_code") or "").strip().upper()
-        if not code:
+        if str(payload.get("immutable_code") or "").strip():
             raise OperationalError(
-                "VALIDATION_FAILED", "immutable_code is required.", 422
+                "SYSTEM_GENERATED_REASON_CODE",
+                "کد داخلی دلیل توسط سیستم ساخته می‌شود.",
+                422,
             )
+        fa_name = str(payload.get("fa_name") or "").strip()
+        en_name = str(payload.get("en_name") or "").strip()
+        definition = str(payload.get("definition") or "").strip() or None
+        is_active = payload.get("is_active", True)
+        if not fa_name or len(fa_name) > 160:
+            raise OperationalError(
+                "VALIDATION_FAILED", "عنوان دلیل الزامی است و نباید بیش از ۱۶۰ نویسه باشد.", 422
+            )
+        if len(en_name) > 160 or (definition is not None and len(definition) > 4000):
+            raise OperationalError(
+                "VALIDATION_FAILED", "نام انگلیسی یا توضیح بیش از حد طولانی است.", 422
+            )
+        if type(is_active) is not bool:
+            raise OperationalError("VALIDATION_FAILED", "وضعیت فعال نامعتبر است.", 422)
+        prefix = "DLR" if kind == "delay" else "EXR"
+        code = f"{prefix}_{uuid4().hex.upper()}"
         row = model(
             organization_id=org,
             immutable_code=code,
-            fa_name=str(payload.get("fa_name") or "").strip(),
-            en_name=str(payload.get("en_name") or "").strip(),
-            definition=payload.get("definition"),
+            fa_name=fa_name,
+            # The current schema requires a value.  Reusing the Persian title
+            # preserves the optional Product UX without inventing semantics.
+            en_name=en_name or fa_name,
+            definition=definition,
             display_order=int(payload.get("display_order", 0)),
+            is_active=is_active,
             created_by_user_id=user["id"],
             updated_by_user_id=user["id"],
         )
@@ -827,7 +851,7 @@ def reason_collection(kind, user, payload=None):
         except IntegrityError:
             db.session.rollback()
             raise OperationalError(
-                "DUPLICATE_REASON_CODE", "Reason code already exists.", 409
+                "DUPLICATE_REASON_CODE", "ساخت شناسهٔ داخلی دلیل با تعارض روبه‌رو شد؛ دوباره تلاش کنید.", 409
             )
     rows = db.session.scalars(
         select(model)
@@ -866,10 +890,28 @@ def update_reason(kind, public_id, payload, user):
             "STALE_AGGREGATE_VERSION", "Reason was changed by another operation.", 409
         )
     if "immutable_code" in payload and payload["immutable_code"] != row.immutable_code:
-        raise OperationalError("IMMUTABLE_CODE", "Reason code cannot be changed.", 422)
-    for field in ("fa_name", "en_name", "definition", "display_order", "is_active"):
-        if field in payload:
-            setattr(row, field, payload[field])
+        raise OperationalError("IMMUTABLE_CODE", "کد داخلی دلیل قابل تغییر نیست.", 422)
+    fa_name = str(payload.get("fa_name", row.fa_name) or "").strip()
+    en_name = str(payload.get("en_name", row.en_name) or "").strip()
+    definition = payload.get("definition", row.definition)
+    if definition is not None:
+        definition = str(definition).strip() or None
+    active = payload.get("is_active", row.is_active)
+    if not fa_name or len(fa_name) > 160:
+        raise OperationalError("VALIDATION_FAILED", "عنوان دلیل الزامی است و نباید بیش از ۱۶۰ نویسه باشد.", 422)
+    if len(en_name) > 160 or (definition is not None and len(definition) > 4000):
+        raise OperationalError("VALIDATION_FAILED", "نام انگلیسی یا توضیح بیش از حد طولانی است.", 422)
+    if type(active) is not bool:
+        raise OperationalError("VALIDATION_FAILED", "وضعیت فعال نامعتبر است.", 422)
+    row.fa_name = fa_name
+    row.en_name = en_name or fa_name
+    row.definition = definition
+    row.is_active = active
+    if "display_order" in payload:
+        try:
+            row.display_order = int(payload["display_order"])
+        except (TypeError, ValueError) as exc:
+            raise OperationalError("VALIDATION_FAILED", "ترتیب نمایش نامعتبر است.", 422) from exc
     row.updated_by_user_id = user["id"]
     row.version += 1
     db.session.add(OperationalAudit(

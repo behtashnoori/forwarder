@@ -137,7 +137,9 @@ const AdminPanel = () => {
   }, []);
   const isOrganizationAdmin = useMemo(() => {
     try {
-      return JSON.parse(localStorage.getItem("expert_user") || "{}").authority === "ORGANIZATION_ADMIN";
+      const actor = JSON.parse(localStorage.getItem("expert_user") || "{}");
+      return actor.authority === "ORGANIZATION_ADMIN"
+        || (Array.isArray(actor.capabilities) && actor.capabilities.includes("ORGANIZATION_ADMIN"));
     } catch {
       return false;
     }
@@ -164,6 +166,12 @@ const AdminPanel = () => {
   };
 
   const loadDashboard = useCallback(async () => {
+    if (!isOrganizationAdmin) {
+      setDashboardStats(null);
+      setDashboardError(false);
+      setLoading(false);
+      return;
+    }
     const token = localStorage.getItem("expert_token");
     if (!token || token === "null") {
       toast({
@@ -212,7 +220,7 @@ const AdminPanel = () => {
     } finally {
       setLoading(false);
     }
-  }, [navigate, t, toast]);
+  }, [isOrganizationAdmin, navigate, t, toast]);
 
   useEffect(() => {
     loadDashboard();
@@ -301,27 +309,27 @@ const AdminPanel = () => {
             {isOrganizationAdmin && <TabsTrigger value="unassigned" className="gap-2 rounded-2xl py-3">
               <AlertCircle className="h-4 w-4" />درخواست‌های تخصیص‌نیافته
             </TabsTrigger>}
-            <TabsTrigger
+            {isOrganizationAdmin && <TabsTrigger
               value="reports"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <FileSpreadsheet className="h-4 w-4" />
               {t("admin.reports")}
-            </TabsTrigger>
-            <TabsTrigger
+            </TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger
               value="users"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <Users className="h-4 w-4" />
               {t("admin.userManagement")}
-            </TabsTrigger>
-            <TabsTrigger
+            </TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger
               value="referral-rules"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
             >
               <Scale className="h-4 w-4" />
               {t("admin.referralRules")}
-            </TabsTrigger>
+            </TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger
               value="site-settings"
               className="gap-2 rounded-2xl border-b-2 border-transparent py-3 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:shadow-none"
@@ -341,16 +349,17 @@ const AdminPanel = () => {
             {isOrganizationAdmin && <TabsTrigger value="organization-documents" className="gap-2 rounded-2xl py-3"><Files className="h-4 w-4"/>الزامات مستندات سازمان</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-sla" className="gap-2 rounded-2xl py-3"><Clock className="h-4 w-4"/>SLA سازمان</TabsTrigger>}
             {canManageCustomers && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/customers")}><Users className="h-4 w-4"/>مشتریان</Button>}
-            {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف مرکزی</TabsTrigger>}
+            {isPlatformAdmin && <TabsTrigger value="master-data" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف استاندارد سیستم</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="customer-access" className="gap-2 rounded-2xl py-3"><Users className="h-4 w-4"/>دسترسی حساب مشتری</TabsTrigger>}
             {isOrganizationAdmin && <Button type="button" variant="ghost" className="gap-2 rounded-2xl py-3" onClick={() => navigate("/admin/customer-portal-accounts")}><KeyRound className="h-4 w-4"/>پشتیبانی حساب‌های پرتال</Button>}
             {isOrganizationAdmin && <TabsTrigger value="organization-reference-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>تعاریف قابل استفاده سازمان</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="closure-policy" className="rounded-2xl py-3">قواعد بستن پرونده</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="organization-route-times" className="gap-2 rounded-2xl py-3"><Clock className="h-4 w-4"/>زمان مرجع مسیر</TabsTrigger>}
             {isOrganizationAdmin && <TabsTrigger value="cargo-catalog" className="gap-2 rounded-2xl py-3"><Package className="h-4 w-4"/>کاتالوگ کالا</TabsTrigger>}
-            <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی سازمان</TabsTrigger>
+            {isOrganizationAdmin && <TabsTrigger value="logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه لجستیکی سازمان</TabsTrigger>}
             {isPlatformAdmin && <TabsTrigger value="global-logistics-network" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>شبکه مرجع لجستیکی</TabsTrigger>}
-            <TabsTrigger value="operational-reasons" className="gap-2 rounded-2xl py-3">دلایل عملیاتی</TabsTrigger>
+            {isPlatformAdmin && <TabsTrigger value="logistics-point-types" className="gap-2 rounded-2xl py-3"><MapPin className="h-4 w-4"/>انواع مکان لجستیکی</TabsTrigger>}
+            {isOrganizationAdmin && <TabsTrigger value="operational-reasons" className="gap-2 rounded-2xl py-3">دلایل عملیاتی</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
@@ -370,6 +379,8 @@ const AdminPanel = () => {
               </Card>
             ) : dashboardError ? (
               <DashboardErrorState onRetry={loadDashboard} />
+            ) : !isOrganizationAdmin ? (
+              <EmptyDashboardState title="مدیریت سیستم" description="از بخش‌های مدیریت سیستم برای نگهداری تعریف‌ها و تنظیمات سراسری استفاده کنید. دسترسی عملیاتی سازمان فقط با عضویت صریح مدیر سازمان فعال می‌شود." />
             ) : dashboardStats ? (
               <>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -521,19 +532,19 @@ const AdminPanel = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="reports" className="space-y-4">
+          {isOrganizationAdmin && <TabsContent value="reports" className="space-y-4">
             <AdminReportsTab />
-          </TabsContent>
+          </TabsContent>}
 
           {isOrganizationAdmin && <TabsContent value="unassigned" className="space-y-4"><UnassignedRequestsTab /></TabsContent>}
 
-          <TabsContent value="users" className="space-y-4">
+          {isOrganizationAdmin && <TabsContent value="users" className="space-y-4">
             <UserManagement />
-          </TabsContent>
+          </TabsContent>}
 
-          <TabsContent value="referral-rules" className="space-y-4">
+          {isOrganizationAdmin && <TabsContent value="referral-rules" className="space-y-4">
             <ReferralRulesTab />
-          </TabsContent>
+          </TabsContent>}
 
           {isPlatformAdmin && <TabsContent value="site-settings" className="space-y-4">
             <SiteSettingsTab />
@@ -549,9 +560,10 @@ const AdminPanel = () => {
           {isOrganizationAdmin && <TabsContent value="closure-policy" className="space-y-4"><ClosurePolicyTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="organization-route-times" className="space-y-4"><OrganizationRouteTimesTab /></TabsContent>}
           {isOrganizationAdmin && <TabsContent value="cargo-catalog" className="space-y-4"><CargoCatalogAdminTab /></TabsContent>}
-          <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab isPlatformAdmin={isPlatformAdmin} /></TabsContent>
+          {isOrganizationAdmin && <TabsContent value="logistics-network" className="space-y-4"><LogisticsNetworkAdminTab /></TabsContent>}
           {isPlatformAdmin && <TabsContent value="global-logistics-network" className="space-y-4"><GlobalLogisticsNetworkAdminTab /></TabsContent>}
-          <TabsContent value="operational-reasons" className="space-y-4"><OperationalReasonsAdminTab /></TabsContent>
+          {isPlatformAdmin && <TabsContent value="logistics-point-types" className="space-y-4"><LogisticsNetworkAdminTab isPlatformAdmin /></TabsContent>}
+          {isOrganizationAdmin && <TabsContent value="operational-reasons" className="space-y-4"><OperationalReasonsAdminTab /></TabsContent>}
         </Tabs>
         <footer className="rounded-2xl border border-slate-200 bg-white p-4"><ReleaseIdentity details /></footer>
       </div>

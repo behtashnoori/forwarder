@@ -14,16 +14,18 @@ import {
   type AdminPortalRecoveryResult,
 } from "@/lib/customerPortalApi";
 
-function currentAuthority() {
+function currentCanManageOrganization() {
   try {
-    return JSON.parse(localStorage.getItem("expert_user") || "{}").authority || "";
+    const actor = JSON.parse(localStorage.getItem("expert_user") || "{}");
+    return actor.authority === "ORGANIZATION_ADMIN"
+      || (Array.isArray(actor.capabilities) && actor.capabilities.includes("ORGANIZATION_ADMIN"));
   } catch {
-    return "";
+    return false;
   }
 }
 
 export default function CustomerPortalAccountSupport() {
-  const authority = currentAuthority();
+  const canManageOrganization = currentCanManageOrganization();
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<AdminPortalAccount[]>([]);
   const [error, setError] = useState("");
@@ -49,11 +51,11 @@ export default function CustomerPortalAccountSupport() {
   }, []);
 
   useEffect(() => {
-    if (authority === "ORGANIZATION_ADMIN") void load("");
+    if (canManageOrganization) void load("");
     return () => { generation.current += 1; };
-  }, [authority, load]);
+  }, [canManageOrganization, load]);
 
-  if (authority !== "ORGANIZATION_ADMIN") {
+  if (!canManageOrganization) {
     return (
       <main dir="rtl" className="mx-auto max-w-2xl p-8">
         <Card>
@@ -149,7 +151,7 @@ export default function CustomerPortalAccountSupport() {
           aria-label="جستجوی حساب پرتال"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="ایمیل یا شناسه عمومی حساب"
+          placeholder="ایمیل مشتری"
         />
         <Button variant="outline">جستجو</Button>
       </form>
@@ -195,12 +197,11 @@ export default function CustomerPortalAccountSupport() {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid gap-2 text-sm sm:grid-cols-2">
-                  <p>شناسه: <bdi dir="ltr">{account.public_id}</bdi></p>
                   <p>موبایل: <bdi dir="ltr">{account.phone}</bdi></p>
                   <p>تعداد درخواست: {account.request_count ?? "—"}</p>
-                  <p>مرجع پیوند: {account.linkage_source || "ثبت‌نشده"}</p>
                   <p>راه‌اندازی حساب: {account.enrollment_state === "ENROLLED" ? "تکمیل‌شده" : "در انتظار"}</p>
                 </div>
+                <details className="text-xs text-slate-500"><summary className="cursor-pointer">جزئیات فنی حساب</summary><p className="mt-2">شناسه: <bdi dir="ltr">{account.public_id}</bdi></p><p>مرجع پیوند: {account.linkage_source || "ثبت‌نشده"}</p></details>
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => void runStatus(account)}>
                     {account.account_status === "ACTIVE" ? "غیرفعال‌سازی" : "فعال‌سازی"}

@@ -43,7 +43,7 @@ export default function ClosurePolicyTab() {
   };
   return <section className="space-y-4 rounded-2xl border bg-white p-4 sm:p-6" aria-label="قواعد بستن پرونده">
     <h2 className="text-xl font-bold">قواعد بستن پرونده</h2>
-    <p className="text-sm text-slate-600">معیارهای عمومی همراه با معیارهای روش‌های حمل پرونده بررسی می‌شوند. هر تغییر نسخهٔ تازه می‌سازد و تصمیم‌های قبلی را تغییر نمی‌دهد.</p>
+    <p className="text-sm text-slate-600">معیارهای عمومی همراه با معیارهای روش‌های حمل پرونده بررسی می‌شوند. بستن عادی فقط پس از تکمیل پرونده ممکن است؛ بستن استثنایی مدیر مسیر جداگانه‌ای دارد. هر تغییر نسخهٔ تازه می‌سازد و تصمیم‌های قبلی را تغییر نمی‌دهد.</p>
     {error&&<p role="alert" className="text-red-700">{error}</p>}
     {!data?<Button variant="outline" onClick={()=>void load()}>دریافت قواعد</Button>:<>
       {!data.versions.length&&<p className="rounded-xl bg-amber-50 p-3">قواعد هنوز تعریف نشده است؛ بستن پرونده تا زمان تعریف قواعد در دسترس نیست.</p>}

@@ -58,8 +58,9 @@ def accept_intake(request_id: int):
     current_user = get_current_user()
     if not current_user:
         return jsonify({"error": "authentication required"}), 401
-    authority = effective_authority(db.session.get(ExpertUser, int(current_user["id"])))
-    if authority != "ORGANIZATION_ADMIN":
+    from backend.services.admin_authorization_service import has_organization_admin_capability
+    actor = db.session.get(ExpertUser, int(current_user["id"]))
+    if not has_organization_admin_capability(actor):
         return jsonify({"error": "intake acceptance is not authorized"}), 403
     try:
         row = ownership_service.accept_intake_for_tenant(request_id, current_user)

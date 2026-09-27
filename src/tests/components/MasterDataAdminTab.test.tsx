@@ -38,15 +38,15 @@ describe("MasterDataAdminTab", () => {
   it("extends central authority to the three Phase 3 reference families", async () => {
     const user = userEvent.setup();
     render(<MasterDataAdminTab />);
-    expect(await screen.findByText("این کاتالوگ مرجع مرکزی فقط زیر اختیار مدیر پلتفرم است. سازمان‌ها حقیقت مرکزی را تغییر نمی‌دهند و فقط تعریف‌های مجاز را برای استفادهٔ خود فعال یا غیرفعال می‌کنند.")).toBeInTheDocument();
+    expect(await screen.findByText("این فهرست استاندارد فقط زیر اختیار مدیر سیستم است. سازمان‌ها تعریف استاندارد سیستم را تغییر نمی‌دهند و فقط تعریف‌های مجاز را برای استفادهٔ خود فعال یا غیرفعال می‌کنند.")).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "انواع بسته‌بندی" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "انواع وسیله حمل" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "تجهیزات و واحدهای بار" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "انواع بسته‌بندی" }));
     await waitFor(() => expect(api.fetchMasterData).toHaveBeenCalledWith("packaging-types", expect.any(Object)));
     fireEvent.click(screen.getByRole("button", { name: "ایجاد" }));
-    expect(screen.getByLabelText("کد ثابت تعریف مرکزی")).toBeInTheDocument();
-    expect(screen.getByLabelText("نام فارسی تعریف مرکزی")).toBeInTheDocument();
-    expect(screen.getByLabelText("نام انگلیسی تعریف مرکزی")).toBeInTheDocument();
+    expect(screen.getByLabelText("کد ثابت تعریف استاندارد سیستم")).toBeInTheDocument();
+    expect(screen.getByLabelText("نام فارسی تعریف استاندارد سیستم")).toBeInTheDocument();
+    expect(screen.getByLabelText("نام انگلیسی تعریف استاندارد سیستم")).toBeInTheDocument();
   });
 });

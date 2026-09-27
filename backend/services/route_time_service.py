@@ -6,7 +6,7 @@ from backend.models import ExpertUser
 from backend.operational_models import OperationalOrganization, RouteLeg, utcnow
 from backend.route_time_models import OrganizationRouteTime as Reference, OrganizationRouteTimeVersion as Version, RouteLegTimeBasis as Basis
 from backend.services import operational_service as base, route_orchestration_service as routes
-from backend.services.admin_authorization_service import AdminAuthorizationError, organization_context_for_authenticated_user
+from backend.services.admin_authorization_service import AdminAuthorizationError, has_organization_admin_capability, organization_context_for_authenticated_user
 
 VALUES = {"movement_min_minutes", "movement_max_minutes", "stop_min_minutes", "stop_max_minutes", "effective_from"}
 KEYS = {"origin", "destination", "transport_mode"}
@@ -33,7 +33,12 @@ def instant(value):
 
 def context(user, *, manage=False):
     actor = db.session.get(ExpertUser, int(user["id"]), populate_existing=True)
-    if not actor or not actor.is_active or actor.authority not in ({"ORGANIZATION_ADMIN"} if manage else {"EXPERT", "ORGANIZATION_ADMIN"}):
+    authorized = bool(actor and actor.is_active) and (
+        has_organization_admin_capability(actor)
+        if manage
+        else actor.authority == "EXPERT" or has_organization_admin_capability(actor)
+    )
+    if not authorized:
         fail("دسترسی به مرجع زمان سازمان مجاز نیست.", 403, "ROUTE_TIME_FORBIDDEN")
     try:
         return organization_context_for_authenticated_user(actor.id).organization_id

@@ -173,9 +173,10 @@ def read(shipment_id, user):
     shipment = base.scoped_shipment(shipment_id, user)
     row = db.session.scalar(select(Decision).where(Decision.operational_shipment_id == shipment.id))
     actor = db.session.get(ExpertUser, user["id"], populate_existing=True)
+    from backend.services.admin_authorization_service import has_organization_admin_capability
     return {"assessment": assess(shipment), "decision": project_decision(row) if row else None,
         "can_close": authorize_document_management(user, shipment).allowed,
-        "can_close_exceptionally": bool(actor and actor.is_active and actor.authority == "ORGANIZATION_ADMIN")}
+        "can_close_exceptionally": bool(actor and actor.is_active and has_organization_admin_capability(actor))}
 
 
 def close(shipment_id, user, payload, key):

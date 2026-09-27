@@ -33,7 +33,7 @@ describe("Release 1.7.0 logistics network acceptance", () => {
   it("covers admin create, update, lifecycle, and probable duplicate confirmation", async () => {
     render(<LogisticsNetworkAdminTab />);
     await screen.findByText("LP-1");
-    expect(screen.getAllByText(/GLOBAL SOURCE · منبع جهانی · PLATFORM DEPRECATED/)).toHaveLength(2);
+    expect(screen.getAllByText(/برگرفته از تعریف استاندارد سیستم · منبع جهانی · منسوخ‌شده در سیستم/)).toHaveLength(2);
     fireEvent.change(screen.getByPlaceholderText("کد ثابت مکان"), { target: { value: "LP-3" } });
     fireEvent.change(screen.getByPlaceholderText("نام فارسی"), { target: { value: "نقطه سوم" } });
     fireEvent.change(screen.getByDisplayValue("انتخاب نوع مکان"), { target: { value: type.public_id } });
@@ -41,10 +41,10 @@ describe("Release 1.7.0 logistics network acceptance", () => {
     await waitFor(() => expect(api.createLogisticsPoint).toHaveBeenCalledWith(expect.objectContaining({ immutable_code: "LP-3", point_type_public_id: type.public_id })));
 
     fireEvent.click(screen.getAllByRole("button", { name: "ویرایش مکان" })[0]);
-    fireEvent.change(screen.getByLabelText("Persian name"), { target: { value: "نام جدید" } });
-    fireEvent.change(screen.getByLabelText("English name"), { target: { value: "Updated" } });
-    fireEvent.change(screen.getByLabelText("Short address"), { target: { value: "Address" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    fireEvent.change(screen.getByLabelText("نام فارسی"), { target: { value: "نام جدید" } });
+    fireEvent.change(screen.getByLabelText("نام انگلیسی"), { target: { value: "Updated" } });
+    fireEvent.change(screen.getByLabelText("نشانی کوتاه"), { target: { value: "Address" } });
+    fireEvent.click(screen.getByRole("button", { name: "ذخیره تغییرات" }));
     await waitFor(() => expect(api.updateLogisticsPoint).toHaveBeenCalledWith(point.public_id, expect.objectContaining({ version: 1, fa_name: "نام جدید" })));
     fireEvent.click(screen.getAllByRole("button", { name: "غیرفعال‌سازی" })[0]);
     await waitFor(() => expect(api.setLogisticsPointActive).toHaveBeenCalledWith(point, false));

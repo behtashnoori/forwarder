@@ -202,6 +202,7 @@ def test_expert_auth_login_refresh_logout_contract(expert_contract_app):
         "email",
         "role",
         "authority",
+        "capabilities",
     }
     assert {"access_token", "refresh_token", "token_type", "expires_in"}.issubset(
         login_data["tokens"].keys()

@@ -13,6 +13,7 @@ from backend.operational_models import OperationalMembership as Membership, Oper
 from backend.operational_models import OperationalShipment as Shipment, OperationalWorkItem as Work, utcnow
 from backend.owner_transfer_models import ShipmentOwnerTransfer as Transfer
 from backend.services import operational_service as base
+from backend.services.admin_authorization_service import has_organization_admin_capability
 
 CAPABILITY = "TRANSFER_OWNER"
 FUNCTION = "public.transfer_shipment_owner(bigint,bigint,bigint,bigint,bigint,integer,text,text,bigint,jsonb)"
@@ -29,7 +30,7 @@ def _admin_org(user):
     except (KeyError, TypeError, ValueError):
         fail("OWNER_TRANSFER_FORBIDDEN", "فقط مدیر فعال همین سازمان مجاز به انتقال مسئول است.", 403)
     actor = db.session.scalar(select(ExpertUser).where(ExpertUser.id == actor_id).execution_options(populate_existing=True))
-    if not actor or not actor.is_active or actor.authority != "ORGANIZATION_ADMIN":
+    if not actor or not actor.is_active or not has_organization_admin_capability(actor):
         fail("OWNER_TRANSFER_FORBIDDEN", "فقط مدیر فعال همین سازمان مجاز به انتقال مسئول است.", 403)
     memberships = db.session.execute(select(Membership, Organization).join(Organization, Organization.id == Membership.organization_id)
         .where(Membership.user_id == actor_id, Membership.is_active.is_(True)).execution_options(populate_existing=True)).all()

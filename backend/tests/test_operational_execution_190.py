@@ -275,7 +275,6 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
             "delay",
             actor(execution_app),
             {
-                "immutable_code": "PORT_HOLD",
                 "fa_name": "توقف بندر",
                 "en_name": "Port hold",
             },
@@ -283,8 +282,15 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
         exceptions = svc.reason_collection(
             "exception",
             actor(execution_app),
-            {"immutable_code": "DAMAGE", "fa_name": "آسیب", "en_name": "Damage"},
+            {"fa_name": "آسیب", "en_name": "Damage"},
         )
+        assert delays[0]["immutable_code"].startswith("DLR_")
+        assert exceptions[0]["immutable_code"].startswith("EXR_")
+        with pytest.raises(svc.OperationalError) as supplied_code:
+            svc.reason_collection("delay", actor(execution_app), {
+                "immutable_code": "ADMIN_TYPED_CODE", "fa_name": "دلیل نامعتبر",
+            })
+        assert supplied_code.value.code == "SYSTEM_GENERATED_REASON_CODE"
         assert OperationalAudit.query.filter_by(action="delay_reason.created").count() == 1
         assert OperationalAudit.query.filter_by(action="exception_reason.created").count() == 1
         updated_reason = svc.update_reason("delay", delays[0]["public_id"], {"version": 1, "is_active": False}, actor(execution_app))
@@ -321,7 +327,7 @@ def test_reason_delay_exception_lifecycle_and_tenant_isolation(execution_app):
         assert not resolved["active"] and resolved["duration_seconds"] >= 300
         svc.update_reason("delay", delays[0]["public_id"], {"version": 3, "is_active": False}, actor(execution_app))
         historical = svc.condition_collection("delay", shipment.public_id, actor(execution_app))
-        assert historical[0]["reason"]["immutable_code"] == "PORT_HOLD"
+        assert historical[0]["reason"]["immutable_code"] == delays[0]["immutable_code"]
         assert not historical[0]["reason"]["is_active"]
         exc = svc.condition_collection(
             "exception",
@@ -360,9 +366,9 @@ def test_unified_history_composes_distinct_facts_and_preserves_document_scope(ex
         user = actor(execution_app)
         svc.initialize(shipment.public_id, {"expected_shipment_version": 1}, user)
         delay_reason = svc.reason_collection("delay", user, {
-            "immutable_code": "PORT_HOLD", "fa_name": "توقف بندر", "en_name": "Port hold"})[0]
+            "fa_name": "توقف بندر", "en_name": "Port hold"})[0]
         exception_reason = svc.reason_collection("exception", user, {
-            "immutable_code": "DAMAGE", "fa_name": "آسیب", "en_name": "Damage"})[0]
+            "fa_name": "آسیب", "en_name": "Damage"})[0]
         instant = datetime.now(timezone.utc) - timedelta(minutes=5)
         delay = svc.condition_collection("delay", shipment.public_id, user, {
             "reason_public_id": delay_reason["public_id"], "started_at": instant.isoformat()})[0]

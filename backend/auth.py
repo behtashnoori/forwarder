@@ -38,6 +38,8 @@ class AuthManager:
                 # Update last login
                 user.last_login_at = datetime.utcnow()
                 db.session.commit()
+
+                from backend.services.admin_authorization_service import user_capabilities
                 
                 return {
                     'id': user.id,
@@ -45,7 +47,8 @@ class AuthManager:
                     'full_name': user.full_name,
                     'email': user.email,
                     'role': user.role,
-                    'authority': user.authority
+                    'authority': user.authority,
+                    'capabilities': user_capabilities(user),
                 }
             else:
                 self._record_failed_attempt(client_ip)
@@ -134,7 +137,7 @@ def get_current_user() -> Optional[Dict[str, Any]]:
             'email': user.email,
             'role': user.role,
             'authority': user.authority,
-            'manager_id': user.manager_id
+            'manager_id': user.manager_id,
         }
     except SQLAlchemyError:
         return None
