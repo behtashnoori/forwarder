@@ -15,7 +15,7 @@ export default function OrganizationGlobalNetworkTab() {
   const [rows, setRows] = useState<OrganizationGlobalPoint[]>([]), [error, setError] = useState<UserFacingApiError | null>(null), [loading, setLoading] = useState(true), [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ q: "", country: "", type: "", mode: "", corridor: "", adoption_state: "" });
   const [selected, setSelected] = useState<OrganizationGlobalPoint | null>(null), [form, setForm] = useState(blank);
-  const load = useCallback(async () => { setLoading(true); setError(null); try { const response = await listOrganizationGlobalPoints(filters); setRows(response.items); } catch (caught) { setError(toUserFacingApiError(caught)); } finally { setLoading(false); } }, [filters]);
+  const load = useCallback(async () => { setLoading(true); setError(null); try { const response = await listOrganizationGlobalPoints(filters); setRows(response.items); setSelected(current => current ? response.items.find(row => row.public_id === current.public_id) ?? null : null); } catch (caught) { setError(toUserFacingApiError(caught)); } finally { setLoading(false); } }, [filters]);
   useEffect(() => { void load(); }, [load]);
   const choose = (row: OrganizationGlobalPoint) => { setSelected(row); setForm({ organization_reference_code: row.adoption?.organization_reference_code || "", display_label: row.adoption?.display_label || "", notes: row.adoption?.notes || "" }); };
   const perform = async (action: () => Promise<unknown>) => { setSubmitting(true); setError(null); try { await action(); await load(); } catch (caught) { setError(toUserFacingApiError(caught)); } finally { setSubmitting(false); } };
