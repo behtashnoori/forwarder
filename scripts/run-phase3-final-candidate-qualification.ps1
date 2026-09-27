@@ -4,7 +4,7 @@ param(
   [Parameter(Mandatory = $true)][string]$ExpectedProductSha,
   [switch]$PostgresOnly,
   [switch]$BrowserOnly,
-  [ValidateSet('P301','P302','P303','P304','P305','P306','P307','P308','P309','P310','P311','P312','P313','P314','MT3','IPJ01','IPJ02-IPJ03','P315-CORE')]
+  [ValidateSet('P301','P302','P303','P304','P305','P306','P307','P308','P309','P310','P311','P312','P313','P314','MT3','IPJ01','IPJ02-IPJ03','P315-CORE','IPJ04')]
   [string]$StartBrowserAt
 )
 
@@ -78,6 +78,8 @@ function Invoke-BrowserJourney {
     [Parameter(Mandatory = $true)][string]$Seed,
     [Parameter(Mandatory = $true)][string[]]$Specs,
     [string]$PostAudit,
+    [string]$MidJourneySeed,
+    [string[]]$FollowUpSpecs,
     [switch]$RestrictedOwnerRuntime,
     [switch]$CustomerPassword
   )
@@ -114,6 +116,7 @@ function Invoke-BrowserJourney {
   $env:PLAYWRIGHT_BASE_URL = "http://127.0.0.1:$frontendPort"
   $env:PLAYWRIGHT_EXTERNAL_SERVER = 'true'
   $env:PLAYWRIGHT_CHANNEL = 'chrome'
+  $ownerDatabaseUrl = $databaseUrl
 
   Invoke-Logged "$Name migration" {
     python -m backend.migration_cli upgrade $schemaHead --confirm
@@ -152,6 +155,25 @@ function Invoke-BrowserJourney {
     Invoke-Logged "$Name Chrome journey" {
       npx.cmd playwright test @Specs --reporter=line --output (Join-Path $journeyEvidence 'browser')
     } (Join-Path $journeyEvidence 'browser.log')
+    if ($MidJourneySeed) {
+      $restrictedDatabaseUrl = $env:DATABASE_URL
+      try {
+        # The already-running backend retains its restricted connection.  Only
+        # this owned setup process receives the database-owner URL so it can
+        # advance the synthetic starting state between browser chapters.
+        $env:DATABASE_URL = $ownerDatabaseUrl
+        $env:E2E_DATABASE_URL = $ownerDatabaseUrl
+        Invoke-Logged "$Name mid-journey synthetic setup" {
+          python $MidJourneySeed
+        } (Join-Path $journeyEvidence 'mid-journey-seed.log')
+      } finally {
+        $env:DATABASE_URL = $restrictedDatabaseUrl
+        $env:E2E_DATABASE_URL = $restrictedDatabaseUrl
+      }
+      Invoke-Logged "$Name follow-up Chrome journey" {
+        npx.cmd playwright test @FollowUpSpecs --reporter=line --output (Join-Path $journeyEvidence 'browser-follow-up')
+      } (Join-Path $journeyEvidence 'browser-follow-up.log')
+    }
     if ($PostAudit) {
       Invoke-Logged "$Name persisted audit" {
         python $PostAudit
@@ -300,6 +322,7 @@ try {
       'e2e/operational-monitoring-reliability-phase2-5.spec.ts'
     ) -CustomerPassword
     Invoke-BrowserJourney -Name 'P315-CORE' -DatabaseName "forwarder_workspace_phase1_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_final_candidate_e2e.py' -Specs @('e2e/phase3-final-candidate.spec.ts') -PostAudit 'scripts/uat/audit_phase3_final_candidate_e2e.py' -CustomerPassword
+    Invoke-BrowserJourney -Name 'IPJ04' -DatabaseName "forwarder_integrated_cert_p3_06_documents_p313_$($runId.Substring(0, 8))" -Seed 'scripts/uat/seed_phase3_owner_transfer_e2e.py' -Specs @('e2e/phase3-owner-transfer.spec.ts') -RestrictedOwnerRuntime -MidJourneySeed 'scripts/uat/advance_phase3_ipj04_e2e.py' -FollowUpSpecs @('e2e/phase3-ipj04-history-closure.spec.ts')
     if (-not $script:browserSelectionStarted) {
       throw "Diagnostic browser resume target was not found: $StartBrowserAt"
     }

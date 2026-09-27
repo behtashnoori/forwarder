@@ -29,6 +29,7 @@ PLACEHOLDERS = {b"change_me", b"password", b"<password>", b"<temporary", b"examp
 REVIEWED_NON_PRODUCTION_FINGERPRINTS = {
     "fef372b9e8", "9ec2d5694a", "34a6c1a960",
     "bd4b969ec2", "0907ae7f66", "240be518fa",
+    "79ccd829a5",
 }
 
 
@@ -46,7 +47,12 @@ def findings(data: bytes, path: str = "") -> list[tuple[int, str, str]]:
             continue
         password = match.group(2).lower()
         database = match.group(4).lower().rstrip(b"\"'`,;)")
-        if password in PLACEHOLDERS or b"<" in password or b"test" in database:
+        if (
+            password in PLACEHOLDERS
+            or password.startswith(b"test-only-")
+            or b"<" in password
+            or b"test" in database
+        ):
             continue
         line = data.count(b"\n", 0, match.start()) + 1
         fingerprint = hashlib.sha256(match.group(0)).hexdigest()[:10]
