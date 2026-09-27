@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "phase": "P3-15",
+  "operation": "FINAL_PHASE3_CANDIDATE_FAST_FORWARD",
+  "canonical_branch": "integration/golden-controlled",
+  "approved_remote": "github",
+  "canonical_entry_head": "2a38fae84edf54664f53a958dfb59d6311fdfbef",
+  "phase3_final_product_head": "b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a",
+  "phase3_final_evidence_head": "687f6bfef8f063beb76fa3d89182f0640c42623d",
+  "canonical_after_evidence_fast_forward": "687f6bfef8f063beb76fa3d89182f0640c42623d",
+  "remote_after_evidence_push_fetch": "687f6bfef8f063beb76fa3d89182f0640c42623d",
+  "local_remote_alignment": "PASS",
+  "ahead_behind": "0/0",
+  "receipt_commit_role": "This evidence-only receipt append becomes FINAL_CANONICAL_HEAD after the second controlled fast-forward.",
+  "human_product_walkthrough": "READY_NOT_RUN",
+  "global_product_validation": "EVIDENCE_PENDING",
+  "release_ready": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "production_migration_performed": false,
+  "deployment_performed": false,
+  "release_created": false
+}
