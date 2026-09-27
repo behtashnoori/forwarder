@@ -86,7 +86,7 @@ test("explicit dual Admin manages system and own-organization foundations withou
   await page.getByLabel("کد ثابت کالا").fill("ADMIN_E2E_ENGINE");
   await page.getByLabel("نام فارسی").fill("مجموعه موتور آزمون");
   await page.getByLabel("نام انگلیسی").fill("Qualification engine assembly");
-  await page.getByLabel("نوع کالا").selectOption({ index: 1 });
+  await page.getByLabel("نوع کالا", { exact: true }).selectOption({ index: 1 });
   await page.getByLabel("واحد اندازه‌گیری پیش‌فرض").selectOption({ index: 1 });
   const cargoCreate = page.waitForResponse(response => response.request().method() === "POST" && response.url().includes("/api/admin/cargo-catalog"));
   await page.getByRole("button", { name: "ایجاد کالای استاندارد", exact: true }).click();

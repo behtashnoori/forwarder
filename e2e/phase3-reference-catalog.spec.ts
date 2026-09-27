@@ -165,7 +165,7 @@ test("P3-01 — central definitions → organization activation → expert use �
   await page.locator("summary", { hasText: "جزئیات کالا، وسیله حمل و پیگیری" }).click();
   await expect(page.getByRole("article").filter({ hasText: "[P3-01-E2E] کالای فعال سازمان" }).first()).toBeVisible();
   await page.locator("summary", { hasText: "افزودن ردیف کالا" }).click();
-  await expect(page.getByText("این نوع در تعاریف سازمان موجود نیست. برای ادامه، مدیر سازمان باید آن را تعریف یا فعال کند.")).toBeVisible();
+  await expect(page.getByLabel("Cargo type").locator("option", { hasText: "کالای مرجع پی‌سه" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "افزودن کالا", exact: true })).toBeDisabled();
 
   clean(evidence);
