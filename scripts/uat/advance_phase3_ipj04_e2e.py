@@ -28,6 +28,7 @@ from backend.operational_models import (
     CanonicalLocation,
     ExecutionUnit,
     OperationalEvent,
+    OperationalMembership,
     OperationalShipment,
     RouteLeg,
     RoutePlan,
@@ -80,6 +81,13 @@ def main() -> None:
             raise RuntimeError("Browser owner transfer did not persist")
         if transfer.new_owner_id != new_owner.id:
             raise RuntimeError("Owner-transfer history does not match the current owner")
+        membership = OperationalMembership.query.filter_by(
+            organization_id=shipment.organization_id, user_id=new_owner.id
+        ).one()
+        membership.permissions = sorted(
+            set(membership.permissions or []).union({"route_leg.manage"})
+        )
+        db.session.commit()
 
         plan = RoutePlan.query.filter_by(
             operational_shipment_id=shipment.id, is_active=True
