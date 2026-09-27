@@ -1,0 +1,10 @@
+{
+  "request_to_valid_token": "SAFE_TEST_ADAPTER",
+  "expired_token": "DENIED",
+  "single_use": "PASS",
+  "prior_session_revoked": "PASS",
+  "old_password_login": "DENIED",
+  "new_password_login": "PASS",
+  "replay": "DENIED",
+  "external_email_delivery": "RELEASE_UAT_EVIDENCE_REQUIRED"
+}

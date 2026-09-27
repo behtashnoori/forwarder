@@ -1,0 +1,24 @@
+{
+  "release_created": false,
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "dirty_source": false,
+  "stopped": true,
+  "executed_at_utc": "2026-09-27T02:19:35.9228949Z",
+  "deployment_performed": false,
+  "postgres_only": false,
+  "product_sha": "b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a",
+  "schema": "20261012_phase3_cargo_eta",
+  "browser_only": true,
+  "production_migration_performed": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "results": [
+    {
+      "status": "PASS",
+      "name": "P315-CORE Chrome",
+      "specs": [
+        "e2e/phase3-final-candidate.spec.ts"
+      ]
+    }
+  ]
+}

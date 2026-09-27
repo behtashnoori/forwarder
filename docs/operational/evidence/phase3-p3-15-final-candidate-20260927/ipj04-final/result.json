@@ -1,0 +1,24 @@
+{
+  "executed_at_utc": "2026-09-27T03:36:20.0591858Z",
+  "release_created": false,
+  "production_accessed": false,
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "stopped": true,
+  "dirty_source": false,
+  "production_mutated": false,
+  "postgres_only": false,
+  "results": [
+    {
+      "name": "IPJ04 Chrome",
+      "specs": [
+        "e2e/phase3-owner-transfer.spec.ts"
+      ],
+      "status": "PASS"
+    }
+  ],
+  "production_migration_performed": false,
+  "deployment_performed": false,
+  "product_sha": "587c479ad1a5088cf4763947790b85adb7de4db4",
+  "schema": "20261012_phase3_cargo_eta",
+  "browser_only": true
+}

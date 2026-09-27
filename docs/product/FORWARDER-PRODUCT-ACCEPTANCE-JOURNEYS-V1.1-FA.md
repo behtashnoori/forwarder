@@ -1,5 +1,15 @@
 # مرجع پذیرش سفرهای محصول Forwarder — نسخه ۱.۱
 
+> Current qualification overlay — 2026-09-27: the definitions and critical set
+> in this document remain canonical and unchanged. On Product SHA
+> `b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a`, automated `FWD-J01..J09` and
+> `FWD-IPJ-01..04` are PASS. Earlier `NOT_RUN` tables below are retained as the
+> pre-candidate historical baseline. See
+> [P3-15 current status](phase3/P3-15-FINAL-CANDIDATE-STATUS.md) and the
+> [current journey matrix](../operational/evidence/phase3-p3-15-final-candidate-20260927/journey-matrix.md).
+> Human walkthrough is `READY_NOT_RUN`; global validation remains
+> `EVIDENCE_PENDING`; `RELEASE_READY=NO`.
+
 ## ۱. شناسنامه و وضعیت
 
 | فیلد | مقدار |

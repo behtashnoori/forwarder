@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "phase": "P3-15",
+  "date": "2026-09-27",
+  "lpaf_baseline": "2.7",
+  "product_sha": "b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a",
+  "p3_14_product_sha": "c9347815746c25d3e943e1a00bc2d3cab87958ee",
+  "accepted_runs": {
+    "consolidated": "automated-final/result.json",
+    "recovery_affected_gate": "recovery/result.json",
+    "ipj04": "ipj04-final/result.json",
+    "ipj04_contract": "ipj04-final/IPJ04/fwd-ipj04-contract.json"
+  },
+  "regressions": {
+    "backend": {
+      "status": "PASS",
+      "passed": 1561,
+      "skipped": 121,
+      "failed": 0,
+      "duration_seconds": 1778.16,
+      "note": "Observed final command output; summarized because the complete terminal stream was not separately retained as a file."
+    },
+    "frontend": {
+      "status": "PASS",
+      "files_passed": 94,
+      "tests_passed": 448,
+      "failed": 0,
+      "duration_seconds": 389.45
+    },
+    "security_focused": {
+      "status": "PASS",
+      "passed": 165,
+      "failed": 0,
+      "duration_seconds": 228.22
+    },
+    "typescript": "PASS",
+    "eslint": {
+      "status": "PASS",
+      "errors": 0,
+      "retained_warnings": 14
+    },
+    "build": {
+      "status": "PASS",
+      "modules": 2581,
+      "advisories": [
+        "Browserslist database age",
+        "chunks larger than 500 kB"
+      ]
+    }
+  },
+  "postgresql_18": "PASS",
+  "migration_chain": "PASS",
+  "alembic_head": "20261012_phase3_cargo_eta",
+  "alembic_head_count": 1,
+  "fwd_j01_j09": "PASS",
+  "fwd_ipj01_ipj04": "PASS",
+  "account_recovery_product_flow": "PASS",
+  "external_recovery_email_delivery": "RELEASE_UAT_EVIDENCE_REQUIRED",
+  "human_product_walkthrough": "READY_NOT_RUN",
+  "global_product_validation": "EVIDENCE_PENDING",
+  "release_ready": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "production_migration_performed": false,
+  "deployment_performed": false,
+  "release_created": false
+}

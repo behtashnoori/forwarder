@@ -1,5 +1,13 @@
 # قرارداد محصول پرونده حمل عملیاتی Forwarder — نسخه ۱
 
+> Current qualification overlay — 2026-09-27: the approved Product meaning in
+> this contract is unchanged and is now implemented and automatically qualified
+> through P3-15 on Product SHA `b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a`.
+> Historical target/not-run statements below remain historical. Current status
+> and evidence are recorded in
+> [P3-15 final candidate status](phase3/P3-15-FINAL-CANDIDATE-STATUS.md).
+> Human walkthrough and the later Release gate remain open.
+
 ## ۱. شناسنامه و وضعیت
 
 | فیلد | مقدار |

@@ -1,0 +1,7 @@
+{
+  "actual_login": true,
+  "production_accessed": false,
+  "owner_membership": false,
+  "ddl_grants": false,
+  "elevated_runtime": false
+}

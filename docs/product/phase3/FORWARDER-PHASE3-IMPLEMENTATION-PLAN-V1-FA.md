@@ -1,5 +1,14 @@
 # طرح اجرای فاز ۳ — نسخه ۱
 
+> وضعیت جاری ۲۰۲۶-۰۹-۲۷: P3-01 تا P3-15 در نامزد نهایی خودکار فاز ۳
+> PASS شده‌اند. نتیجهٔ جاری، SHA محصول، سفرهای `FWD-J01..J09` و
+> `FWD-IPJ-01..04` و مرزهای باقی‌مانده در
+> [رکورد وضعیت P3-15](P3-15-FINAL-CANDIDATE-STATUS.md) و
+> [بسته شواهد](../../operational/evidence/phase3-p3-15-final-candidate-20260927/README.md)
+> ثبت شده است. متن‌های `NOT_STARTED`/`NOT_RUN` پایین، رکورد تاریخی زمان طراحی
+> هستند و وضعیت جاری را بازتعریف نمی‌کنند. مرور انسانی هنوز `READY_NOT_RUN`،
+> اعتبارسنجی سراسری `EVIDENCE_PENDING` و `RELEASE_READY=NO` است.
+
 > وضعیت جاری P3-11..13: معماری ADR-067/068/069 در `6259830f2a5fe94798bf4183d2643bf624529c26` پذیرفته شد. P3-11 از همان کار حفظ‌شده، طبق [تصمیم صریح توقف در نقطهٔ رسیدن](P3-11-ETA-CONTRACT.md) ادامه دارد؛ روی Product `c0e35a7845f9749ec574a3e29ed5ec81ada87979` با [شواهد تازه](../../operational/evidence/phase3-p3-11-eta-status-20260926.md) کامل ارزیابی و تأیید شد؛ ادغام صرفاً fast-forward آن در `a96436be9d2c3ca9beafbd83d20d927851a357fd` و push/fetch با اختلاف صفر در [رسید نهایی](../../operational/evidence/phase3-p3-11-integration-20260926.json) ثبت شد. P3-12 طبق ماتریس مصوب، در Product `d1574fa137017ac41331cf039117ab9c19e101a3` [ارزیابی کامل و موفق](../../operational/evidence/phase3-p3-12-closure-status-20260926.md) دارد؛ ادغام آن در `c2e6140d52eda620ecaef6e255bcd591f58da2cb` با رسید push/fetch ثبت شده است. P3-13 روی همین پایه در Product `c0914906af6675c016d5b77d51ecc8a0c05c0b72` [ارزیابی کامل و موفق](../../operational/evidence/phase3-p3-13-owner-transfer-status-20260926.md) دارد؛ ادغام کنترل‌شده و push/fetch با رسید جداگانهٔ شناسهٔ دقیق ثبت می‌شود؛ P3-14/15، ارزیابی یکپارچهٔ سراسری، walkthrough انسانی و Release خارج از اختیار این مأموریت‌اند.
 
 

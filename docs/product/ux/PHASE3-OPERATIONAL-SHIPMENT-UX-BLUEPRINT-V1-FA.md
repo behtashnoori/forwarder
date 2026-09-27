@@ -1,5 +1,12 @@
 # طرح مرجع تجربه کاربری پرونده حمل عملیاتی — فاز ۳
 
+> وضعیت جاری ۲۰۲۶-۰۹-۲۷: این baseline تصویری بدون بازبرندسازی در runtime
+> پیاده‌سازی و در P3-14/P3-15 به‌صورت خودکار تأیید شده است. وضعیت‌های
+> `PRODUCT_NOT_IMPLEMENTED` و `NOT_RUN` پایین، رکورد تاریخی زمان blueprint
+> هستند. نتیجهٔ جاری در
+> [P3-15 final candidate status](../phase3/P3-15-FINAL-CANDIDATE-STATUS.md)
+> ثبت شده است؛ مرور انسانی هنوز `READY_NOT_RUN` و Release آماده نیست.
+
 وضعیت: `TARGET_PHASE3_UX`
 نسخه: `Revision v2.1 — visual fidelity candidate`
 وضعیت جاری: `PHASE3_UX_BASELINE=APPROVED`

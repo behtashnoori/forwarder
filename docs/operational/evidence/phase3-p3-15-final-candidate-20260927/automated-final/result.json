@@ -1,0 +1,169 @@
+{
+  "release_created": false,
+  "production_mutated": false,
+  "production_migration_performed": false,
+  "product_sha": "1a539c065c72313244c9b7f61efbc6cd8de8239e",
+  "deployment_performed": false,
+  "dirty_source": false,
+  "production_accessed": false,
+  "executed_at_utc": "2026-09-27T01:42:36.9078642Z",
+  "stopped": true,
+  "schema": "20261012_phase3_cargo_eta",
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "postgres_only": false,
+  "browser_only": false,
+  "results": [
+    {
+      "name": "PostgreSQL 18 base-to-head migration chain",
+      "status": "PASS"
+    },
+    {
+      "name": "Phase 3 PostgreSQL 18",
+      "status": "PASS"
+    },
+    {
+      "name": "Public Tracking regression",
+      "status": "PASS"
+    },
+    {
+      "status": "PASS",
+      "name": "P301 Chrome",
+      "specs": [
+        "e2e/phase3-reference-catalog.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P302 Chrome",
+      "specs": [
+        "e2e/phase3-cargo-lineage.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P303 Chrome",
+      "specs": [
+        "e2e/phase3-branched-route.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P304 Chrome",
+      "specs": [
+        "e2e/phase3-transport-execution.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P305 Chrome",
+      "specs": [
+        "e2e/phase3-cargo-allocation.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P306 Chrome",
+      "specs": [
+        "e2e/phase3-document-context.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P307 Chrome",
+      "specs": [
+        "e2e/phase3-reported-facts.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P308 Chrome",
+      "specs": [
+        "e2e/phase3-cargo-delivery.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P309 Chrome",
+      "specs": [
+        "e2e/phase3-customer-shipment.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P310 Chrome",
+      "specs": [
+        "e2e/phase3-route-time.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P311 Chrome",
+      "specs": [
+        "e2e/phase3-eta.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P312 Chrome",
+      "specs": [
+        "e2e/phase3-closure.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P313 Chrome",
+      "specs": [
+        "e2e/phase3-owner-transfer.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P314 Chrome",
+      "specs": [
+        "e2e/phase3-final-runtime-ux.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "MT3 Chrome",
+      "specs": [
+        "e2e/mt3-public-tracking-security.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "IPJ01 Chrome",
+      "specs": [
+        "e2e/fixed-shipment-owner.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "IPJ02-IPJ03 Chrome",
+      "specs": [
+        "e2e/operational-workspace-phase1.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "IPJ02-IPJ03-PHASE2 Chrome",
+      "specs": [
+        "e2e/operational-workspace-phase2.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "IPJ02-IPJ03-MONITORING Chrome",
+      "specs": [
+        "e2e/operational-monitoring-reliability-phase2-5.spec.ts"
+      ]
+    },
+    {
+      "status": "PASS",
+      "name": "P315-CORE Chrome",
+      "specs": [
+        "e2e/phase3-final-candidate.spec.ts"
+      ]
+    }
+  ]
+}

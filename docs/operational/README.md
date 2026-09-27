@@ -2,10 +2,18 @@
 
 ## Current Product contract references
 
-- [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) — approved `TARGET_PHASE3` meaning; no runtime implementation claim.
-- [Product Acceptance Journey Pack v1.1](../product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md) — `FWD-J01..J08` preserved, `FWD-J09` critical target and `FWD-IPJ-04` defined but not run.
+> Current 2026-09-27 disposition: Phase 3 P3-01..P3-15 automated
+> qualification is complete. `FWD-J01..J09` and `FWD-IPJ-01..04` are PASS on
+> the frozen candidate. The [current P3-15 status](../product/phase3/P3-15-FINAL-CANDIDATE-STATUS.md)
+> and [evidence pack](evidence/phase3-p3-15-final-candidate-20260927/README.md)
+> supersede only older `NOT_RUN`/planning labels. Human walkthrough remains
+> `READY_NOT_RUN`, global validation remains `EVIDENCE_PENDING`, and release,
+> deployment and Production remain untouched.
+
+- [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) — approved `TARGET_PHASE3` meaning; current automated implementation status is recorded separately above.
+- [Product Acceptance Journey Pack v1.1](../product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md) — canonical definitions for the unchanged critical set; current automated PASS is recorded separately above.
 - [Phase 3 Operational Shipment UX Blueprint v1](../product/ux/PHASE3-OPERATIONAL-SHIPMENT-UX-BLUEPRINT-V1-FA.md) — approved V2.1 presentation baseline and isolated prototype; [final Product Owner approval](../product/ux/phase3/FINAL-PRODUCT-OWNER-APPROVAL.md) is recorded; no runtime implementation or Human Product Walkthrough PASS is implied.
-- [Phase 3 Implementation Plan v1](../product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md) — 15 bounded slices with Product decision gates and migration/privacy/history/qualification plans; implementation is not started and requires a later explicit authorization.
+- [Phase 3 Implementation Plan v1](../product/phase3/FORWARDER-PHASE3-IMPLEMENTATION-PLAN-V1-FA.md) — 15 bounded slices, now implemented and automatically qualified; historical planning text remains retained in that document.
 
 These Product references control their expressly approved Product scope. They do not rewrite historical ADR/PDR text, authorize implementation, or turn target behavior into current runtime evidence.
 
