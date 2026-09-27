@@ -25,6 +25,7 @@ from backend.cargo_models import ShipmentCargoItem
 from backend.extensions import db
 from backend.models import ExpertUser
 from backend.operational_models import (
+    CanonicalLocation,
     ExecutionUnit,
     OperationalEvent,
     OperationalShipment,
@@ -49,7 +50,10 @@ def _assert_owned_database() -> None:
 
 
 def _location_reference(leg: RouteLeg, side: str) -> dict[str, int | str]:
-    location = leg.origin_location if side == "origin" else leg.destination_location
+    location_id = leg.origin_location_id if side == "origin" else leg.destination_location_id
+    location = db.session.get(CanonicalLocation, location_id)
+    if location is None:
+        raise RuntimeError("IPJ-04 route location is missing")
     return {"source_type": location.source_type, "source_id": location.source_id}
 
 
@@ -157,7 +161,9 @@ def main() -> None:
                 "source": "CARRIER_REPORT",
                 "occurred_at": utcnow().isoformat(),
                 "location": {
-                    "canonical_location_public_id": legs[0].destination_location.public_id
+                    "canonical_location_public_id": db.session.get(
+                        CanonicalLocation, legs[0].destination_location_id
+                    ).public_id
                 },
                 "customer_message": "کالای شما از نقطه میانی عبور کرده است",
                 "internal_note": "IPJ-04 owned synthetic correction",
