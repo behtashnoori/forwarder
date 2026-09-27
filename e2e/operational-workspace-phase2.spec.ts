@@ -85,16 +85,19 @@ test.describe.serial("Operational Workspace Phase 2 governed browser proof", () 
     const evidence = observe(page, [403]);
     await loginExpert(page, fixture.usernames.admin, /\/admin$/);
     await page.getByRole("tab", { name: "SLA سازمان" }).click();
-    await expect(page.getByRole("heading", { name: "قواعد SLA سازمان" })).toBeVisible();
-    await expect(page.getByText("SLA تعریف نشده", { exact: true })).toHaveCount(1);
+    await expect(page.getByRole("heading", { name: "زمان پاسخ و پیگیری سازمان" })).toBeVisible();
+    await expect(page.getByText("فعال · نسخه 1", { exact: true })).toBeVisible();
 
+    await page.getByLabel("فرآیند یا مرحله مورد سنجش").selectOption("ACTION_FOLLOW_UP");
+    await expect(page.getByText("هنوز برای این فرآیند تنظیمی ثبت نشده است", { exact: true })).toBeVisible();
     await page.getByLabel("مدت پیگیری اقدام عملیاتی").fill("30");
     await page.getByLabel("هشدار پیگیری اقدام عملیاتی").fill("10");
-    await page.getByRole("button", { name: "ایجاد قاعده", exact: true }).click();
-    await expect(page.getByText("فعال · نسخه 1", { exact: true })).toHaveCount(2);
+    await page.getByRole("button", { name: "ثبت تنظیم", exact: true }).click();
+    await expect(page.getByText("فعال · نسخه 1", { exact: true })).toBeVisible();
 
-    await page.getByLabel("مدت رسیدگی به استثنای عملیاتی").fill("90");
-    await page.getByRole("button", { name: "ذخیره نسخه جدید", exact: true }).first().click();
+    await page.getByLabel("فرآیند یا مرحله مورد سنجش").selectOption("EXCEPTION_RESPONSE");
+    await page.getByLabel("مدت رسیدگی به مشکل عملیاتی").fill("90");
+    await page.getByRole("button", { name: "ذخیره نسخهٔ جدید", exact: true }).click();
     await expect(page.getByText("فعال · نسخه 2", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "نمایش تاریخچه", exact: true }).first().click();
     await expect(page.getByText(/تغییر ·/).first()).toBeVisible();
