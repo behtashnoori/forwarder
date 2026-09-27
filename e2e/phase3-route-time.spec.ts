@@ -38,7 +38,7 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   for(const page of [admin,expert]){page.on("pageerror",error=>pageErrors.push(error.message));await page.route("https://fonts.googleapis.com/**",route=>route.fulfill({status:200,contentType:"text/css",body:""}));await page.route("https://fonts.gstatic.com/**",route=>route.fulfill({status:204,body:""}));}
   await login(admin,"admin");await admin.getByRole("tab",{name:"زمان مرجع مسیر",exact:true}).click();
   await expect(admin.getByText("زمان مرجع تعریف نشده است. هیچ زمان پیش‌فرضی اعمال نمی‌شود.")).toBeVisible();
-  await admin.getByRole("button",{name:"تعریف مرجع تازه"}).click();
+  await admin.getByRole("button",{name:"تعریف زمان مرجع تازه",exact:true}).click();
   for(const side of ["origin","destination"]){const select=admin.locator(`#reference-${side}`);await expect(select.locator(`option[value="logistics_point:${fixture.p310_points[`own_${side}`]}"]`)).toHaveCount(1,{timeout:30_000});await select.selectOption(`logistics_point:${fixture.p310_points[`own_${side}`]}`);}
   await admin.getByLabel("روش حمل مرجع",{exact:true}).selectOption("rail");
   for(const [label,value] of [["حداقل حرکت (ساعت)","20"],["حداکثر حرکت (ساعت)","24"],["حداقل توقف (ساعت)","4"],["حداکثر توقف (ساعت)","8"]])await admin.getByLabel(label,{exact:true}).fill(value);
