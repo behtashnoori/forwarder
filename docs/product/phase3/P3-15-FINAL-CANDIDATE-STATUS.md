@@ -1,34 +1,37 @@
-# Phase 3 P3-15 final candidate status
+# Phase 3 P3-15 post-walkthrough hardening candidate status
 
 Date: 2026-09-27. Governance: LPAF v2.7, level B.
 
-This current status record supersedes only stale status labels such as
-`NOT_RUN`, `NOT_IMPLEMENTED`, or `implementation not started` for the completed
-Phase 3 automated qualification. It does not rewrite the historical facts,
-definitions, decisions, or evidence retained in the Product Contract, Journey
-Pack, UX Blueprint, implementation plan, ADRs, or dated Slice reports.
+This current status record supersedes the pre-hardening automated-candidate
+status after the Product Owner reported six concrete Customer Request defects.
+It does not rewrite the original Human Walkthrough observations or historical
+facts, definitions, decisions, ADRs, or dated Slice evidence.
 
 ## Current state
 
 | Subject | Current status |
 | --- | --- |
-| P3-01..P3-13 | PASS / integrated |
-| P3-14 | PASS / integrated |
-| P3-15 automated qualification | PASS |
-| `FWD-J01..J09` | PASS on the frozen Phase 3 candidate |
-| `FWD-IPJ-01..04` | PASS on the frozen Phase 3 candidate |
-| Human Product Walkthrough | `READY_NOT_RUN` |
+| Post-walkthrough bounded hardening | PASS / automated-qualified |
+| P3-01..P3-15, MT3 | PASS on the new hardening candidate |
+| `FWD-J01..J09` | PASS on the new hardening candidate |
+| `FWD-IPJ-01..04` | PASS on the new hardening candidate |
+| Human Product Walkthrough | `IN_PROGRESS` |
 | external recovery email | `RELEASE_UAT_EVIDENCE_REQUIRED` |
 | Global Product Validation | `EVIDENCE_PENDING` |
 | Release Ready | NO |
 
-Product SHA: `b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a`.
+Product SHA: `fe73dbf3c2789d9b88052be9098c28c8e2b2add7`.
+
+The former Product SHA
+`b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a` is historical.
 
 Evidence pack:
-[P3-15 final candidate evidence](../../operational/evidence/phase3-p3-15-final-candidate-20260927/README.md).
+[post-walkthrough Customer Request hardening](../../operational/evidence/phase3-human-walkthrough-customer-request-hardening-20260927/README.md).
 
-Human pack:
-[Persian Product Owner walkthrough](../../operational/evidence/phase3-p3-15-final-candidate-20260927/HUMAN-WALKTHROUGH-FA.md).
+The existing
+[Persian Product Owner walkthrough](../../operational/evidence/phase3-p3-15-final-candidate-20260927/HUMAN-WALKTHROUGH-FA.md)
+remains the Human pack. The Product Owner resumes it; automation does not mark
+it passed.
 
 ## Product Owner decisions
 
@@ -55,6 +58,8 @@ new critical journey.
 - Current status overlays: updated from pre-candidate planning language to the
   actual automated results above.
 - Historical records: retained as historical.
+- The six authorized findings: fixed and automated-qualified.
+- Broader walkthrough ideas: remain `NOT_IMPLEMENTED`.
 - Human and Release gates: remain open.
 
 ```text
@@ -62,7 +67,9 @@ PRODUCT_AUTHORITY_RECONCILIATION=PASS
 REFERENCE_RECONCILIATION=PASS
 REFERENCE_IMPACT=NONE
 P3_15_MIGRATION_REQUIRED=NO
-HUMAN_PRODUCT_WALKTHROUGH=READY_NOT_RUN
+POST_WALKTHROUGH_HARDENING=PASS
+NEW_PHASE3_FINAL_PRODUCT_HEAD=fe73dbf3c2789d9b88052be9098c28c8e2b2add7
+HUMAN_PRODUCT_WALKTHROUGH=IN_PROGRESS
 GLOBAL_PRODUCT_VALIDATION=EVIDENCE_PENDING
 RELEASE_READY=NO
 ```

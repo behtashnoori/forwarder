@@ -1,0 +1,27 @@
+{
+  "command": [
+    "python",
+    "-m",
+    "pytest",
+    "-q"
+  ],
+  "started_at": "2026-09-27T15:41:17.396195+00:00",
+  "timeout_seconds": 5400.0,
+  "status": "PASS",
+  "pytest_exit_code": 0,
+  "summary": null,
+  "counts": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "xfailed": 0,
+    "xpassed": 0,
+    "warnings": 0,
+    "errors": 0
+  },
+  "pytest_duration_seconds": null,
+  "outer_duration_seconds": 915.239,
+  "finished_at": "2026-09-27T15:56:32.635143+00:00",
+  "stdout_file": "stdout.log",
+  "stderr_file": "stderr.log"
+}

@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "phase": "P3-15-POST-WALKTHROUGH-HARDENING",
+  "date": "2026-09-27",
+  "lpaf_baseline": "2.7",
+  "product_sha": "fe73dbf3c2789d9b88052be9098c28c8e2b2add7",
+  "historical_pre_hardening_product_sha": "b1a8f4fafb89e4e8e9b2f35ffcb79bc98c7ec86a",
+  "accepted_run": "automated-final/result.json",
+  "regressions": {
+    "backend": {
+      "status": "PASS",
+      "passed": 1564,
+      "skipped": 121,
+      "failed": 0,
+      "duration_seconds": 902.09
+    },
+    "frontend": {
+      "status": "PASS",
+      "files_passed": 97,
+      "tests_passed": 459,
+      "failed": 0,
+      "duration_seconds": 208.39
+    },
+    "openapi": {
+      "status": "PASS",
+      "passed": 16,
+      "failed": 0
+    },
+    "typescript": "PASS",
+    "eslint": {
+      "status": "PASS",
+      "errors": 0,
+      "retained_warnings": 14
+    },
+    "build": {
+      "status": "PASS",
+      "modules": 2583,
+      "advisories": [
+        "Browserslist database age",
+        "chunks larger than 500 kB"
+      ]
+    }
+  },
+  "postgresql_18": "PASS",
+  "migration_chain": "PASS",
+  "alembic_head": "20261012_phase3_cargo_eta",
+  "alembic_head_count": 1,
+  "fwd_j01_j09": "PASS",
+  "fwd_ipj01_ipj04": "PASS",
+  "post_walkthrough_hardening": "PASS",
+  "human_product_walkthrough": "IN_PROGRESS",
+  "global_product_validation": "EVIDENCE_PENDING",
+  "release_ready": false,
+  "production_accessed": false,
+  "production_mutated": false,
+  "production_migration_performed": false,
+  "deployment_performed": false,
+  "release_created": false
+}

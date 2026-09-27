@@ -1,0 +1,12 @@
+
+> vite_react_shadcn_ts@1.10.0 test:frontend
+> vitest run
+
+
+ RUN  v4.1.10 D:/1-webapp/forwarder-dev/human-walkthrough-customer-request-hardening
+
+
+ Test Files  97 passed (97)
+      Tests  459 passed (459)
+   Start at  19:06:05
+   Duration  208.39s (transform 3.81s, setup 17.73s, import 17.91s, tests 61.40s, environment 91.82s)
