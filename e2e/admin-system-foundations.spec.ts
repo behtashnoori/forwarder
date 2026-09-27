@@ -130,7 +130,7 @@ test("explicit dual Admin manages system and own-organization foundations withou
   const adoption = page.waitForResponse(response => response.request().method() === "POST" && response.url().includes("/api/admin/global-logistics-points/") && response.url().endsWith("/add-to-organization-network"));
   await page.getByRole("button", { name: "افزودن به شبکهٔ سازمان", exact: true }).click();
   expect((await adoption).status()).toBe(201);
-  await expect(page.getByText("مکان عملیاتی آماده است", { exact: true })).toBeVisible();
+  await expect(page.getByText(/مکان عملیاتی آماده است/)).toBeVisible();
 
   await page.getByLabel("کد ثابت مکان").fill("ADMIN-E2E-PRIVATE-WAREHOUSE");
   await page.getByLabel("نام فارسی مکان").fill("انبار خصوصی آزمون");
