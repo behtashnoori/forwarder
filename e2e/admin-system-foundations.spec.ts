@@ -88,7 +88,7 @@ test("explicit dual Admin manages system and own-organization foundations withou
   await page.getByLabel("نام انگلیسی").fill("Qualification engine assembly");
   await page.getByLabel("نوع کالا", { exact: true }).selectOption({ index: 1 });
   await page.getByLabel("واحد اندازه‌گیری پیش‌فرض").selectOption({ index: 1 });
-  const cargoCreate = page.waitForResponse(response => response.request().method() === "POST" && response.url().includes("/api/admin/cargo-catalog"));
+  const cargoCreate = page.waitForResponse(response => response.request().method() === "POST" && response.url().endsWith("/api/internal/cargo-catalog"));
   await page.getByRole("button", { name: "ایجاد کالای استاندارد", exact: true }).click();
   expect((await cargoCreate).status()).toBe(201);
   await expect(page.getByText("مجموعه موتور آزمون", { exact: false })).toBeVisible();
@@ -126,7 +126,8 @@ test("explicit dual Admin manages system and own-organization foundations withou
 
   await page.getByRole("tab", { name: "شبکه لجستیکی سازمان", exact: true }).click();
   await page.getByText("انبار استاندارد آزمون", { exact: true }).click();
-  const adoption = page.waitForResponse(response => response.request().method() === "POST" && response.url().includes("/api/admin/global-logistics-points/") && response.url().endsWith("/adopt"));
+  page.once("dialog", dialog => void dialog.accept());
+  const adoption = page.waitForResponse(response => response.request().method() === "POST" && response.url().includes("/api/admin/global-logistics-points/") && response.url().endsWith("/add-to-organization-network"));
   await page.getByRole("button", { name: "افزودن به شبکهٔ سازمان", exact: true }).click();
   expect((await adoption).status()).toBe(201);
   await expect(page.getByText("مکان عملیاتی آماده است", { exact: true })).toBeVisible();
