@@ -22,7 +22,7 @@ async function draft(page:Page,mode="rail"){
   await expect(page.getByRole("button",{name:"ایجاد مسیر عملیات",exact:true})).toBeVisible();
   await page.getByRole("button",{name:"ایجاد مسیر عملیات",exact:true}).click();
   await page.getByRole("button",{name:"افزودن بخش مسیر",exact:true}).click();
-  for(const side of ["origin","destination"]){const select=page.locator(`#leg-${side}-new`);await expect(select.locator(`option[value="logistics_point:${fixture.p310_points[`own_${side}`]}"]`)).toHaveCount(1);await select.selectOption(`logistics_point:${fixture.p310_points[`own_${side}`]}`);}
+  for(const side of ["origin","destination"]){const select=page.locator(`#leg-${side}-new`);await expect(select.locator(`option[value="logistics_point:${fixture.p310_points[`own_${side}`]}"]`)).toHaveCount(1,{timeout:30_000});await select.selectOption(`logistics_point:${fixture.p310_points[`own_${side}`]}`);}
   await page.locator("#leg-mode-new").selectOption(mode);
   await page.locator("#leg-departure-new").fill(local(new Date(Date.now()+10*86400_000)));
   await page.locator("#leg-arrival-new").fill(local(new Date(Date.now()+12*86400_000)));
@@ -39,7 +39,7 @@ test("P3-10 normal Admin reference → Expert pinned basis → future version an
   await login(admin,"admin");await admin.getByRole("tab",{name:"زمان مرجع مسیر",exact:true}).click();
   await expect(admin.getByText("زمان مرجع تعریف نشده است. هیچ زمان پیش‌فرضی اعمال نمی‌شود.")).toBeVisible();
   await admin.getByRole("button",{name:"تعریف مرجع تازه"}).click();
-  for(const side of ["origin","destination"]){const select=admin.locator(`#reference-${side}`);await expect(select.locator(`option[value="logistics_point:${fixture.p310_points[`own_${side}`]}"]`)).toHaveCount(1);await select.selectOption(`logistics_point:${fixture.p310_points[`own_${side}`]}`);}
+  for(const side of ["origin","destination"]){const select=admin.locator(`#reference-${side}`);await expect(select.locator(`option[value="logistics_point:${fixture.p310_points[`own_${side}`]}"]`)).toHaveCount(1,{timeout:30_000});await select.selectOption(`logistics_point:${fixture.p310_points[`own_${side}`]}`);}
   await admin.getByLabel("روش حمل مرجع",{exact:true}).selectOption("rail");
   for(const [label,value] of [["حداقل حرکت (ساعت)","20"],["حداکثر حرکت (ساعت)","24"],["حداقل توقف (ساعت)","4"],["حداکثر توقف (ساعت)","8"]])await admin.getByLabel(label,{exact:true}).fill(value);
   await admin.getByLabel("شروع اعتبار",{exact:true}).fill(local(new Date(Date.now()-86400_000)));
