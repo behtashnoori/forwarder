@@ -118,7 +118,7 @@ export default function OrganizationReferenceCatalogTab() {
           {groups(resource, items).map(group => <section key={group.label || "all"} className="space-y-3">
             {group.label && <h3 className="text-base font-semibold text-slate-900">{group.label}</h3>}
             <div className="grid gap-3 lg:grid-cols-2">
-              {group.items.map(item => <Card key={item.public_id} className="rounded-2xl border-slate-200 shadow-none">
+              {group.items.map(item => <Card key={item.public_id} data-testid={`organization-reference-${item.code}`} className="rounded-2xl border-slate-200 shadow-none">
                 <CardContent className="space-y-4 p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0"><h4 className="break-words font-semibold text-slate-950">{item.fa_name}{item.symbol ? <span dir="ltr" className="mr-2 text-sm font-normal text-slate-500">({item.symbol})</span> : null}</h4><p dir="ltr" className="mt-1 break-words text-left text-sm text-slate-500">{item.en_name}</p></div>

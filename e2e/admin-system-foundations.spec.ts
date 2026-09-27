@@ -39,9 +39,10 @@ test("System Admin remains system-only and sees the portable Reference Catalog V
   expect(fixture.admin_foundations.profile_second_created).toBe(0);
   expect(fixture.admin_foundations.profile_unchanged).toBe(60);
 
-  const context = await browser.newContext({ locale: "fa-IR", viewport: { width: 390, height: 844 } });
+  const context = await browser.newContext({ locale: "fa-IR" });
   const page = await context.newPage();
   await login(page, "platform");
+  await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByText("مدیریت سیستم", { exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "تعاریف استاندارد سیستم", exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "تعاریف قابل استفاده سازمان", exact: true })).toHaveCount(0);
@@ -75,7 +76,7 @@ test("explicit dual Admin manages system and own-organization foundations withou
 
   await page.getByRole("tab", { name: "تعاریف قابل استفاده سازمان", exact: true }).click();
   await page.getByRole("tab", { name: "انواع بسته‌بندی", exact: true }).last().click();
-  const pallet = page.locator("article, [data-slot=card]").filter({ hasText: "پالت" }).first();
+  const pallet = page.getByTestId("organization-reference-PACKAGING_PALLET");
   await expect(pallet.getByText("فعال", { exact: true })).toBeVisible();
   await expect(pallet.getByText(/برای حمل و جابه‌جایی/)).toBeVisible();
 
