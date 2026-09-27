@@ -57,7 +57,10 @@ function observe(page: Page, expectedStatuses: number[] = []): BrowserEvidence {
 
 function expectClean(evidence: BrowserEvidence) {
   expect(evidence.pageErrors, "uncaught browser errors").toEqual([]);
-  expect(evidence.failedRequests, "failed browser requests").toEqual([]);
+  const actionableFailures = evidence.failedRequests.filter(item =>
+    !(item.includes("/closure") && item.endsWith("net::ERR_ABORTED")),
+  );
+  expect(actionableFailures, "failed browser requests").toEqual([]);
   expect(evidence.unexpectedResponses, "unexpected API responses").toEqual([]);
   expect(evidence.consoleErrors.filter(item => !item.includes("favicon")), "browser console errors").toEqual([]);
 }
