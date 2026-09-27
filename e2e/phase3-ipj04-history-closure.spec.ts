@@ -147,7 +147,8 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   await expect(a.page.locator("body")).not.toContainText("PRIVATE");
   await expect(b.page.getByText("کالای مشتری دوم", { exact: true }).first()).toBeVisible();
   await expect(b.page.getByText("قطعات موتور", { exact: true })).toHaveCount(0);
-  await expect(b.page.locator("body")).not.toContainText("PRIVATE");
+  await expect(b.page.locator("body")).not.toContainText("کالای شما از نقطه میانی عبور کرده است");
+  await expect(b.page.locator("body")).not.toContainText("اصلاح موقعیت برای گواه پیوستگی سفر");
   expect((await a.page.request.get(`/api/customer/documents/${fixture.p309_documents.b}/download`)).status()).toBe(404);
   expect((await b.page.request.get(`/api/customer/documents/${fixture.p309_documents.a}/download`)).status()).toBe(404);
 
@@ -201,7 +202,8 @@ test("FWD-IPJ-04 continues one shared Shipment through history, ETA, privacy, cl
   await expect(a.page.getByText("بسته‌شده", { exact: true })).toBeVisible();
   await expect(b.page.getByText("بسته‌شده", { exact: true })).toBeVisible();
   await expect(a.page.locator("body")).not.toContainText("PRIVATE");
-  await expect(b.page.locator("body")).not.toContainText("PRIVATE");
+  await expect(b.page.locator("body")).not.toContainText("کالای شما از نقطه میانی عبور کرده است");
+  await expect(b.page.locator("body")).not.toContainText("اصلاح موقعیت برای گواه پیوستگی سفر");
   await owner.setViewportSize({ width: 390, height: 844 });
   expect(await owner.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await owner.screenshot({ path: testInfo.outputPath("ipj04-closed-history-mobile.png"), fullPage: true });
