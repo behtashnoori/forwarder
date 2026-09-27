@@ -11,7 +11,7 @@
   "remote_after_evidence_push_fetch": "687f6bfef8f063beb76fa3d89182f0640c42623d",
   "local_remote_alignment": "PASS",
   "ahead_behind": "0/0",
-  "receipt_commit_role": "This evidence-only receipt append becomes FINAL_CANONICAL_HEAD after the second controlled fast-forward.",
+  "receipt_commit_role": "This receipt and its evidence-only trailing-blank-line cleanup become FINAL_CANONICAL_HEAD after the controlled follow-up fast-forward.",
   "human_product_walkthrough": "READY_NOT_RUN",
   "global_product_validation": "EVIDENCE_PENDING",
   "release_ready": false,

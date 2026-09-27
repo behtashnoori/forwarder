@@ -42,4 +42,3 @@ test_control_tower_scope
 
 All negative boundaries fail closed. No negative test treats an infrastructure
 failure as an authorization PASS.
-
