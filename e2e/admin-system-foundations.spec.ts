@@ -61,6 +61,8 @@ test("System Admin remains system-only and sees the portable Reference Catalog V
   await page.getByRole("tab", { name: "انواع وسیله حمل", exact: true }).last().click();
   await expect(page.getByText("کامیون / کشنده جاده‌ای", { exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "تجهیزات و واحدهای بار", exact: true }).last().click();
+  const equipmentPanel = page.locator('[role="tabpanel"][data-state="active"]').last();
+  await equipmentPanel.getByLabel("جستجو").fill("High Cube");
   await expect(page.getByText("کانتینر ۴۰ فوت High Cube", { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("system-admin-reference-catalog-mobile.png"), fullPage: true });
@@ -78,7 +80,7 @@ test("explicit dual Admin manages system and own-organization foundations withou
   await page.getByRole("tab", { name: "انواع بسته‌بندی", exact: true }).last().click();
   const pallet = page.getByTestId("organization-reference-PACKAGING_PALLET");
   await expect(pallet.getByText("فعال", { exact: true })).toBeVisible();
-  await expect(pallet.getByText(/برای حمل و جابه‌جایی/)).toBeVisible();
+  await expect(pallet.getByText(/برای قرار دادن و جابه‌جایی گروهی کالا/)).toBeVisible();
 
   await page.getByRole("tab", { name: "کاتالوگ کالا", exact: true }).click();
   await page.getByLabel("کد ثابت کالا").fill("ADMIN_E2E_ENGINE");

@@ -49,7 +49,7 @@ const definitions = [
   { tab: "انواع کالا", code: "P3E2E_CARGO", fa: "کالای مرجع پی‌سه", en: "P3 reference cargo" },
   { tab: "واحدهای اندازه‌گیری", code: "P3E2E_UOM", fa: "واحد مرجع پی‌سه", en: "P3 reference unit", symbol: "P3U" },
   { tab: "انواع بسته‌بندی", code: "P3E2E_PACKAGE", fa: "بسته مرجع پی‌سه", en: "P3 reference package" },
-  { tab: "انواع وسیله حمل", code: "P3E2E_MEANS", fa: "وسیله مرجع پی‌سه", en: "P3 reference means" },
+  { tab: "انواع وسیله حمل", organizationTab: "وسایل حمل", code: "P3E2E_MEANS", fa: "وسیله مرجع پی‌سه", en: "P3 reference means" },
   { tab: "تجهیزات و واحدهای بار", code: "P3E2E_EQUIPMENT", fa: "تجهیز مرجع پی‌سه", en: "P3 reference equipment" },
 ] as const;
 
@@ -81,7 +81,7 @@ async function openCargoEditor(page: Page) {
 }
 
 async function activateForOrganization(page: Page, definition: typeof definitions[number]) {
-  const panel = await openOrganizationFamily(page, definition.tab);
+  const panel = await openOrganizationFamily(page, "organizationTab" in definition ? definition.organizationTab : definition.tab);
   const card = panel.getByTestId(`organization-reference-${definition.code}`);
   await expect(card).toBeVisible();
   const response = page.waitForResponse(item =>
