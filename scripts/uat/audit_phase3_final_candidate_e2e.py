@@ -57,7 +57,7 @@ def main() -> None:
         assert expired.used_at is None
         assert int(customer.session_generation) == 1
         assert security.verify_password(
-            "P3-15-replacement-password!", customer.password_hash
+            os.environ["FORWARDER_E2E_REPLACEMENT_PASSWORD"], customer.password_hash
         )
         assert not security.verify_password(
             os.environ["FORWARDER_E2E_CUSTOMER_PASSWORD"], customer.password_hash

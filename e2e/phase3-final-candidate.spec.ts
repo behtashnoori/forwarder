@@ -7,7 +7,8 @@ const customerPassword = process.env.FORWARDER_E2E_CUSTOMER_PASSWORD;
 const fixturePath = process.env.FORWARDER_E2E_FIXTURE_PATH;
 const evidencePath = process.env.PHASE3_FINAL_CANDIDATE_EVIDENCE_PATH;
 const browserBase = process.env.PLAYWRIGHT_BASE_URL;
-if (!databaseUrl || !customerPassword || !fixturePath || !evidencePath || !browserBase) {
+const replacementPassword = process.env.FORWARDER_E2E_REPLACEMENT_PASSWORD;
+if (!databaseUrl || !customerPassword || !replacementPassword || !fixturePath || !evidencePath || !browserBase) {
   throw new Error("P3-15 final-candidate proof requires its owned runtime inputs.");
 }
 if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_workspace_phase1_")) {
@@ -19,8 +20,6 @@ const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as {
   public_capability: string;
   recovery: { valid_token: string; expired_token: string };
 };
-const replacementPassword = "P3-15-replacement-password!";
-
 type BrowserEvidence = {
   consoleErrors: string[];
   pageErrors: string[];

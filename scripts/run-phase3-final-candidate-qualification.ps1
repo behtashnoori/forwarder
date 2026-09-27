@@ -94,6 +94,7 @@ function Invoke-BrowserJourney {
   $env:DATABASE_URL = $databaseUrl
   $env:E2E_DATABASE_URL = $databaseUrl
   $env:FORWARDER_E2E_PASSWORD = [guid]::NewGuid().ToString('N') + 'Qa9!'
+  $env:FORWARDER_E2E_REPLACEMENT_PASSWORD = [guid]::NewGuid().ToString('N') + 'Rp9!'
   if ($CustomerPassword) {
     $env:FORWARDER_E2E_CUSTOMER_PASSWORD = [guid]::NewGuid().ToString('N') + 'Cu9!'
   } else {
