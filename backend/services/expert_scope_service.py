@@ -18,6 +18,7 @@ EXPERT_ROLES = ("expert",)
 # authority: endpoint guards and assigned-work policy remain authoritative.
 EXPERT_BASELINE_OPERATIONAL_PERMISSIONS: tuple[str, ...] = (
     "execution_unit.create",
+    "execution_unit.read",
     "execution_unit.update",
     "operational_shipment.create",
     "operational_shipment.create_direct",

@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
+import pytest
 import yaml
 
 from backend.extensions import db
 from backend.models import (
     Customer,
     CustomerRoleAssignment,
+    ExpertUser,
     TransportEquipmentType,
     TransportMeansType,
 )
@@ -28,7 +31,11 @@ from backend.organization_reference_catalog_models import (
 )
 from backend.services import execution_unit_service as unit_service
 from backend.services import operational_service as operations
+from backend.services import owner_transfer_service
 from backend.services import transport_execution_service as executions
+from backend.services.expert_scope_service import (
+    EXPERT_BASELINE_OPERATIONAL_PERMISSIONS,
+)
 from backend.tests.test_operational_vertical_slice import (
     _auth,
     _payload,
@@ -51,7 +58,7 @@ def _setup(app):
     membership = OperationalMembership.query.filter_by(user_id=ids["user"]).one()
     membership.permissions = sorted(
         set(membership.permissions or [])
-        | {"execution_unit.read", "execution_unit.create", "execution_unit.update"}
+        | set(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
     )
     verifier_membership = OperationalMembership.query.filter_by(
         user_id=ids["verifier"]
@@ -245,6 +252,150 @@ def test_multiple_executions_progressive_details_and_rail_chain(operational_app)
             "P304_WAGON",
             "P304_CONTAINER",
         ]
+
+
+def test_standard_expert_baseline_has_owner_read_write_parity(operational_app):
+    with operational_app.app_context():
+        ctx = _setup(operational_app)
+        shipment = OperationalShipment.query.filter_by(public_id=ctx["shipment"]).one()
+        owner = _user(operational_app)
+        membership = OperationalMembership.query.filter_by(user_id=owner["id"]).one()
+
+        assert "execution_unit.read" in EXPERT_BASELINE_OPERATIONAL_PERMISSIONS
+        assert "execution_unit.read" in membership.permissions
+        assert shipment.primary_responsible_expert_id == owner["id"]
+        assert operations.shipment_graph(shipment)["responsible_expert"] == {
+            "display_name": "Phase1A Operator"
+        }
+
+        initial = executions.list_for_plan(ctx["shipment"], ctx["plan"], owner)
+        assert initial["can_manage"] is True
+
+        assignment, created = executions.create(
+            ctx["shipment"],
+            ctx["plan"],
+            ctx["leg"],
+            _payload_for(
+                ctx,
+                carrier=ctx["carrier_a"],
+                identifier="OWNER-TRUCK-A",
+                equipment=[
+                    {"type_public_id": ctx["trailer"], "identifier": "OWNER-TRAILER-A"}
+                ],
+            ),
+            owner,
+            "owner-parity-create",
+        )
+        db.session.flush()
+        _, revision, revised = executions.revise(
+            ctx["shipment"],
+            ctx["plan"],
+            assignment.execution_unit.public_id,
+            {
+                **_payload_for(
+                    ctx,
+                    carrier=ctx["carrier_b"],
+                    identifier="OWNER-TRUCK-B",
+                    equipment=[
+                        {"type_public_id": ctx["trailer"], "identifier": "OWNER-TRAILER-B"}
+                    ],
+                ),
+                "expected_version": assignment.execution_unit.version,
+                "reason": "Owner parity regression",
+            },
+            owner,
+            "owner-parity-revise",
+        )
+        db.session.commit()
+
+        assert created is True
+        assert revised is True
+        assert revision.revision_number == 2
+        reopened = executions.list_for_plan(ctx["shipment"], ctx["plan"], owner)
+        assert reopened["can_manage"] is True
+        assert reopened["stages"][0]["executions"][0]["current"]["means_identifier"] == "OWNER-TRUCK-B"
+
+
+def test_owner_transfer_immediately_moves_transport_execution_authority(operational_app):
+    with operational_app.app_context():
+        ctx = _setup(operational_app)
+        shipment = OperationalShipment.query.filter_by(public_id=ctx["shipment"]).one()
+        original_owner = _user(operational_app)
+        target = ExpertUser(
+            username="p304-transfer-target",
+            password_hash="unused",
+            full_name="P304 Transfer Target",
+            role="expert",
+            authority="EXPERT",
+            is_active=True,
+        )
+        db.session.add(target)
+        db.session.flush()
+        db.session.add(
+            OperationalMembership(
+                organization_id=shipment.organization_id,
+                user_id=target.id,
+                permissions=list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS),
+            )
+        )
+        operational_app.config["phase1a"]["transfer_target"] = target.id
+
+        assignment, _ = executions.create(
+            ctx["shipment"],
+            ctx["plan"],
+            ctx["leg"],
+            _payload_for(ctx, identifier="BEFORE-TRANSFER"),
+            original_owner,
+            "before-owner-transfer",
+        )
+        db.session.commit()
+
+        owner_transfer_service.transfer(
+            shipment.public_id,
+            _user(operational_app, "verifier"),
+            {
+                "expected_owner_id": original_owner["id"],
+                "target_owner_id": target.id,
+                "expected_version": shipment.version,
+                "reason": "Transport execution authority regression",
+            },
+            str(uuid4()),
+        )
+        db.session.commit()
+
+        with pytest.raises(operations.OperationalError) as denied:
+            executions.revise(
+                ctx["shipment"],
+                ctx["plan"],
+                assignment.execution_unit.public_id,
+                {
+                    **_payload_for(ctx, identifier="OLD-OWNER-DENIED"),
+                    "expected_version": assignment.execution_unit.version,
+                },
+                original_owner,
+                "old-owner-after-transfer",
+            )
+        assert denied.value.status in {403, 404}
+        db.session.rollback()
+
+        target_actor = _user(operational_app, "transfer_target")
+        reopened = executions.list_for_plan(ctx["shipment"], ctx["plan"], target_actor)
+        assert reopened["can_manage"] is True
+        _, revision, changed = executions.revise(
+            ctx["shipment"],
+            ctx["plan"],
+            assignment.execution_unit.public_id,
+            {
+                **_payload_for(ctx, identifier="NEW-OWNER-ALLOWED"),
+                "expected_version": assignment.execution_unit.version,
+                "reason": "Current owner manages execution",
+            },
+            target_actor,
+            "new-owner-after-transfer",
+        )
+        db.session.commit()
+        assert changed is True
+        assert revision.means_identifier == "NEW-OWNER-ALLOWED"
 
 
 def test_change_history_pins_old_event_and_inactive_reference_stays_readable(

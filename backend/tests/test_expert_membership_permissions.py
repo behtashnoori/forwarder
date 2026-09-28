@@ -108,6 +108,11 @@ def test_organization_expert_provisioning_receives_operational_baseline(permissi
         assert membership.organization_id == context["organization_id"]
         assert isinstance(membership.permissions, list)
         assert membership.permissions == list(EXPERT_BASELINE_OPERATIONAL_PERMISSIONS)
+        assert {
+            "execution_unit.read",
+            "execution_unit.create",
+            "execution_unit.update",
+        }.issubset(membership.permissions)
         expert_token = create_session_tokens(user_id)["access_token"]
 
     context = client.get("/api/operational-context", headers=_headers(expert_token))
@@ -148,6 +153,54 @@ def test_expert_baseline_reconciliation_is_additive_and_idempotent(permission_ap
         assert OperationalMembership.query.filter_by(user_id=explicit.id).one().permissions == sorted([*EXPERT_BASELINE_OPERATIONAL_PERMISSIONS, "custom.explicit"])
         assert OperationalMembership.query.filter_by(user_id=inactive.id).one().permissions == []
         assert OperationalMembership.query.filter_by(user_id=non_expert.id).one().permissions == []
+        assert reconcile_expert_baseline_permissions(apply=True)["changed_memberships"] == 0
+
+
+def test_expert_baseline_reconciliation_repairs_execution_read_without_replacing_explicit_grants(
+    permission_app,
+):
+    app, context = permission_app
+    with app.app_context():
+        expert = ExpertUser(
+            username="execution-read-gap",
+            password_hash="x",
+            full_name="Execution Read Gap",
+            role="expert",
+            authority="EXPERT",
+            is_active=True,
+        )
+        db.session.add(expert)
+        db.session.flush()
+        membership = OperationalMembership(
+            organization_id=context["organization_id"],
+            user_id=expert.id,
+            permissions=[
+                "custom.explicit",
+                "execution_unit.create",
+                "execution_unit.update",
+                "operational_shipment.read",
+            ],
+        )
+        db.session.add(membership)
+        db.session.commit()
+
+        plan = reconcile_expert_baseline_permissions()
+        assert plan["changed_memberships"] == 1
+        assert plan["changes"][0]["added_permissions"] == [
+            "execution_unit.read",
+            "operational_shipment.create",
+            "operational_shipment.create_direct",
+            "operational_shipment.create_from_quote",
+            "personal_dashboard.manage",
+            "personal_dashboard.read",
+        ]
+        assert "execution_unit.read" not in membership.permissions
+
+        applied = reconcile_expert_baseline_permissions(apply=True)
+        db.session.commit()
+        assert applied["changed_memberships"] == 1
+        assert "execution_unit.read" in membership.permissions
+        assert "custom.explicit" in membership.permissions
         assert reconcile_expert_baseline_permissions(apply=True)["changed_memberships"] == 0
 
 
