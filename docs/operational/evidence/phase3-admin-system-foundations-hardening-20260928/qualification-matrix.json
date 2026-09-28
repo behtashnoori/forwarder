@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "governance": {"baseline": "LPAF v2.7", "level": "B"},
+  "product_sha": "521380b37d4c09a695cd87984f783ef5670cb127",
+  "evidence_sha_resolution": "commit containing this file",
+  "canonical_branch": "integration/golden-controlled",
+  "migration": {"required": false, "head": "20261012_phase3_cargo_eta", "head_count": 1},
+  "regression": {
+    "backend": {"status": "PASS", "passed": 1570, "skipped": 121, "failed": 0, "seconds": 995.05},
+    "frontend": {"status": "PASS", "files": 98, "passed": 461, "failed": 0, "seconds": 293.66},
+    "frontend_build": {"status": "PASS", "modules": 2583},
+    "typescript": "PASS",
+    "eslint": {"status": "PASS", "errors": 0, "retained_warnings": 14},
+    "openapi": {"status": "PASS", "version": "3.0.3", "paths": 239},
+    "python_compile": "PASS",
+    "structure_determinism_architecture": "PASS",
+    "secret_scan_findings": 0
+  },
+  "postgresql18": {
+    "source_dirty": false,
+    "base_to_head_migration": "PASS",
+    "phase3": {"status": "PASS", "passed": 15},
+    "public_tracking": {"status": "PASS", "passed": 1},
+    "evidence_root": "D:\\1-webapp\\forwarder-dev\\admin-system-foundations-qualification-20260928-postgres-final"
+  },
+  "chrome": {
+    "source_dirty": false,
+    "status": "PASS",
+    "stage_count": 21,
+    "stages": [
+      "P301", "P302", "P303", "P304", "P305", "P306", "P307", "P308",
+      "P309", "P310", "P311", "P312", "P313", "P314", "MT3", "IPJ01",
+      "IPJ02-IPJ03", "IPJ02-IPJ03-PHASE2", "IPJ02-IPJ03-MONITORING",
+      "P315-CORE", "IPJ04"
+    ],
+    "fwd_j01_through_j09": "PASS",
+    "fwd_ipj01_through_ipj04": "PASS",
+    "evidence_root": "D:\\1-webapp\\forwarder-dev\\admin-system-foundations-qualification-20260928-browser-final"
+  },
+  "reference_catalog": {
+    "name": "FORWARDER_REFERENCE_CATALOG_V1",
+    "version": 1,
+    "checksum": "sha256:13a0f6361eca01286422b9ca8df165c2e616c2bc2e73919391056ec7647da45a",
+    "definitions": 80,
+    "plan": "PASS",
+    "apply": "PASS",
+    "idempotency": "PASS",
+    "conflict_protection": "PASS"
+  },
+  "organization_profile": {
+    "name": "FORWARDER_STANDARD_ORG_PROFILE_V1",
+    "version": 1,
+    "checksum": "sha256:38795e90a723eb25c1073a6a92278508e9d89c908105074ff767069d4a8bfce8",
+    "activations": 60,
+    "verified_request_transport_methods": 7,
+    "plan": "PASS",
+    "apply": "PASS",
+    "idempotency": "PASS"
+  },
+  "runtime": {
+    "database_preserved": true,
+    "catalog_applied": "PASS",
+    "profile_applied": "PASS",
+    "postgres_running": true,
+    "backend_running": true,
+    "frontend_running": true,
+    "human_product_walkthrough": "IN_PROGRESS"
+  },
+  "boundaries": {
+    "global_product_validation": "EVIDENCE_PENDING",
+    "external_recovery_email_delivery": "RELEASE_UAT_EVIDENCE_REQUIRED",
+    "release_ready": false,
+    "production_accessed": false,
+    "production_mutated": false,
+    "production_migration_performed": false,
+    "deployment_performed": false,
+    "release_created": false
+  }
+}

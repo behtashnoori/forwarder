@@ -2,13 +2,16 @@
 
 ## Current Product contract references
 
-> Current 2026-09-27 disposition: Phase 3 P3-01..P3-15 automated
-> qualification is complete. `FWD-J01..J09` and `FWD-IPJ-01..04` are PASS on
-> the frozen candidate. The [current P3-15 status](../product/phase3/P3-15-FINAL-CANDIDATE-STATUS.md)
-> and [evidence pack](evidence/phase3-p3-15-final-candidate-20260927/README.md)
-> supersede only older `NOT_RUN`/planning labels. Human walkthrough remains
-> `READY_NOT_RUN`, global validation remains `EVIDENCE_PENDING`, and release,
-> deployment and Production remain untouched.
+> Current 2026-09-28 disposition: Phase 3 P3-01..P3-15 automated
+> qualification is complete. Admin / System Foundations hardening, Reference
+> Catalog V1, and Standard Organization Profile V1 are integrated and qualified
+> at Product SHA `521380b37d4c09a695cd87984f783ef5670cb127`.
+> `FWD-J01..J09` and `FWD-IPJ-01..04` are PASS on that Product SHA. The
+> [current P3-15 status](../product/phase3/P3-15-FINAL-CANDIDATE-STATUS.md)
+> and [hardening evidence pack](evidence/phase3-admin-system-foundations-hardening-20260928/README.md)
+> supersede only older candidate-status and `NOT_RUN`/planning labels. Human
+> walkthrough remains `IN_PROGRESS`, global validation remains
+> `EVIDENCE_PENDING`, and release, deployment and Production remain untouched.
 
 - [Operational Shipment Product Contract v1](../product/FORWARDER-OPERATIONAL-SHIPMENT-PRODUCT-CONTRACT-V1-FA.md) — approved `TARGET_PHASE3` meaning; current automated implementation status is recorded separately above.
 - [Product Acceptance Journey Pack v1.1](../product/FORWARDER-PRODUCT-ACCEPTANCE-JOURNEYS-V1.1-FA.md) — canonical definitions for the unchanged critical set; current automated PASS is recorded separately above.
