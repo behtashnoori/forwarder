@@ -664,6 +664,7 @@ def shipment_item_dict(row):
         "cargo_type_en_snapshot": row.cargo_type_en_snapshot,
         "uom_code_snapshot": row.uom_code_snapshot,
         "uom_symbol_snapshot": row.uom_symbol_snapshot,
+        "uom_display": row.uom.fa_name or row.uom_symbol_snapshot,
         "part_number_snapshot": row.part_number_snapshot,
         "customer_item_code_snapshot": row.customer_item_code_snapshot,
         "hs_code_snapshot": row.hs_code_snapshot,
@@ -945,6 +946,7 @@ def cargo_lineage_options(user, shipment):
                         if item.cargo_type
                         else None,
                         "uom_public_id": item.uom.public_id if item.uom else None,
+                        "uom_name": item.uom.fa_name if item.uom else None,
                         "uom_symbol": item.uom.symbol if item.uom else None,
                     }
                     for item in request_row.request_cargo_items
@@ -1053,8 +1055,22 @@ def delete_allocation(user, shipment, public_id):
         raise CargoError(exc.message, exc.status) from exc
 
 
-def create_shipment_item(user, shipment, data):
-    _require_cargo_mutation(user, shipment)
+def create_shipment_item(
+    user,
+    shipment,
+    data,
+    *,
+    commit: bool = True,
+    parent_command_authorized: bool = False,
+):
+    """Create one Cargo line, optionally inside an authorized parent command.
+
+    The ordinary Cargo endpoint owns authorization and commit. Shipment
+    creation uses the same validation and audit path while retaining one
+    transaction for Shipment, route, Cargo lineage, and route participation.
+    """
+    if not parent_command_authorized:
+        _require_cargo_mutation(user, shipment)
     try:
         closure_guard.deny_new(shipment)
     except operational_service.OperationalError as exc:
@@ -1214,7 +1230,8 @@ def create_shipment_item(user, shipment, data):
             "volume": (None, volume),
         },
     )
-    db.session.commit()
+    if commit:
+        db.session.commit()
     return row
 
 

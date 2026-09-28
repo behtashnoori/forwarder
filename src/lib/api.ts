@@ -1758,7 +1758,28 @@ export const deleteShipmentDocument=(shipmentId:string,documentId:string,reason:
 export async function downloadShipmentDocument(shipmentId:string,documentId:string,filename:string){const token=localStorage.getItem("expert_token");const response=await fetch(`${API_BASE_URL}${buildPath(`/api/internal/operational-shipments/${encodeURIComponent(shipmentId)}/documents/${encodeURIComponent(documentId)}/download`)}`,{headers:token?{Authorization:`Bearer ${token}`}:{}});if(!response.ok)throw new Error("دریافت فایل ناموفق بود");const url=URL.createObjectURL(await response.blob());const anchor=document.createElement("a");anchor.href=url;anchor.download=filename;anchor.click();URL.revokeObjectURL(url);}
 export interface OperationalCustomerSelector { id: number; label: string }
 export interface OperationalProjectSelector { public_id: string; label: string; project_code: string; primary_customer_id: number; lifecycle_status: string }
-export interface OperationalQuoteSelector { id: number; request_public_id: string; customer_label: string; route_label: string | null; quote_label: string; accepted_at: string | null }
+export interface OperationalQuoteCargoSelector {
+  public_id: string;
+  position: number;
+  description: string | null;
+  quantity: string | null;
+  cargo_type_public_id: string | null;
+  cargo_type_name: string | null;
+  uom_public_id: string | null;
+  uom_name: string | null;
+  uom_symbol: string | null;
+  operationally_ready: boolean;
+}
+export interface OperationalQuoteSelector {
+  id: number;
+  request_public_id: string;
+  request_entity_public_id: string;
+  customer_label: string;
+  route_label: string | null;
+  quote_label: string;
+  accepted_at: string | null;
+  cargo_items: OperationalQuoteCargoSelector[];
+}
 export interface IranDestinationOption { identity: { type: "city" | "port" | "customs" | "international_city"; id: number }; label: string; province: { id: number; name: string } | null; secondary_label: string }
 export interface SelectorPage<T> { items: T[]; meta: { count: number; limit: number } }
 export interface OperationalShipmentSummary {
@@ -2124,8 +2145,28 @@ export type OperationalRouteCommand = {
   planned_departure: string;
   planned_arrival: string;
 };
-export type DirectOperationCommand = OperationalRouteCommand & { source_type: "direct"; customer_id: number; project_public_id?: string };
-export type QuoteOperationCommand = OperationalRouteCommand & { accepted_quote_id: number; project_public_id?: string };
+export type DirectOperationCommand = OperationalRouteCommand & {
+  source_type: "direct";
+  customer_id: number;
+  project_public_id?: string;
+  cargo_items?: Array<{
+    catalog_item_public_id?: string;
+    display_name?: string;
+    cargo_type_public_id: string;
+    quantity: string;
+    planned_quantity: string;
+    uom_public_id: string;
+  }>;
+};
+export type QuoteOperationCommand = OperationalRouteCommand & {
+  accepted_quote_id: number;
+  project_public_id?: string;
+  cargo_items?: Array<{
+    source_request_cargo_item_public_id: string;
+    planned_quantity: string;
+    catalog_item_public_id?: string;
+  }>;
+};
 const selectorQuery = (path: string, q = "", limit = 25, extra?: Record<string, string | number | undefined>) =>
   request(`${path}?${new URLSearchParams(Object.entries({ q, limit, ...extra }).filter((entry): entry is [string, string | number] => entry[1] !== undefined).map(([key,value]) => [key,String(value)])).toString()}`);
 export const searchOperationalCustomers = (q = "", limit = 25) => selectorQuery("/api/operations/selectors/customers", q, limit) as Promise<SelectorPage<OperationalCustomerSelector>>;
@@ -3727,6 +3768,7 @@ export interface ShipmentCargoItem {
   cargo_type_en_snapshot: string;
   uom_code_snapshot: string;
   uom_symbol_snapshot: string;
+  uom_display: string;
   part_number_snapshot?: string | null;
   customer_item_code_snapshot?: string | null;
   hs_code_snapshot?: string | null;
@@ -3809,6 +3851,7 @@ export interface ShipmentCargoLineageOption {
     cargo_type_public_id: string | null;
     cargo_type_name: string | null;
     uom_public_id: string | null;
+    uom_name: string | null;
     uom_symbol: string | null;
   }>;
 }

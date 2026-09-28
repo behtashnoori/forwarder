@@ -10,7 +10,6 @@ import {
   ApiError,
   createDirectOperationalShipment,
   createQuoteOperationalShipment,
-  createShipmentCargoItem,
   fetchCountries,
   fetchProvinces,
   getOperationalContext,
@@ -53,6 +52,7 @@ type FieldError =
   | "arrival"
   | "timeline"
   | "iranProvince"
+  | "cargoSource"
   | "cargoQuantity"
   | "cargoUom";
 const initialSide: Side = {
@@ -241,6 +241,7 @@ export default function NewOperation() {
     uoms: [],
   });
   const [cargoCatalogId, setCargoCatalogId] = useState("");
+  const [requestCargoId, setRequestCargoId] = useState("");
   const [cargoQuery, setCargoQuery] = useState("");
   const [cargoQuantity, setCargoQuantity] = useState("");
   const [cargoUomId, setCargoUomId] = useState("");
@@ -281,6 +282,17 @@ export default function NewOperation() {
   const selectedCargo = cargoOptions.catalog.find(
     (option) => option.public_id === cargoCatalogId,
   );
+  const selectedQuote = quotes.find((option) => String(option.id) === quoteId);
+  const quoteCargoItems = selectedQuote?.cargo_items || [];
+  const selectedRequestCargo = quoteCargoItems.find(
+    (option) => option.public_id === requestCargoId,
+  );
+  const selectableCatalog = cargoOptions.catalog.filter(
+    (option) =>
+      source !== "accepted_quote" ||
+      !selectedRequestCargo?.cargo_type_public_id ||
+      option.cargo_type_public_id === selectedRequestCargo.cargo_type_public_id,
+  );
 
   useEffect(() => {
     getOperationalContext()
@@ -305,6 +317,23 @@ export default function NewOperation() {
       .then(setCargoOptions)
       .catch((caught) => setError(errorText(caught)));
   }, [projectId, cargoQuery]);
+  useEffect(() => {
+    if (source !== "accepted_quote") return;
+    const items = selectedQuote?.cargo_items || [];
+    setRequestCargoId((current) =>
+      items.some((item) => item.public_id === current)
+        ? current
+        : items.length === 1
+          ? items[0].public_id
+          : "",
+    );
+  }, [source, selectedQuote?.id]);
+  useEffect(() => {
+    if (source !== "accepted_quote") return;
+    setCargoQuantity(selectedRequestCargo?.quantity || "");
+    setCargoUomId(selectedRequestCargo?.uom_public_id || "");
+    setCargoCatalogId("");
+  }, [source, selectedRequestCargo?.public_id]);
   const loadCustomers = async (query = "") => {
     setLoading("customer");
     setSelectorError("");
@@ -429,6 +458,16 @@ export default function NewOperation() {
       next.customer = t("operations.validation.customer");
     if (source === "accepted_quote" && !quoteId)
       next.quote = t("operations.validation.quote");
+    if (
+      source === "accepted_quote" &&
+      selectedQuote &&
+      quoteCargoItems.length > 0 &&
+      !selectedRequestCargo
+    )
+      next.cargoSource = "قلم کالای درخواست را انتخاب کنید.";
+    if (selectedRequestCargo && !selectedRequestCargo.operationally_ready)
+      next.cargoSource =
+        "این قلم درخواست هنوز مقدار، واحد و نوع کالای کامل برای برنامه‌ریزی عملیاتی ندارد.";
     if (!location(origin))
       next.origin =
         isIran(origin) && !origin.provinceId
@@ -440,9 +479,9 @@ export default function NewOperation() {
     if (!arrival) next.arrival = t("operations.validation.arrival");
     if (departure && arrival && new Date(arrival) <= new Date(departure))
       next.timeline = t("operations.validation.timeline");
-    if (cargoCatalogId && (!cargoQuantity || Number(cargoQuantity) <= 0))
+    if ((selectedCargo || selectedRequestCargo) && (!cargoQuantity || Number(cargoQuantity) <= 0))
       next.cargoQuantity = "Enter a positive cargo quantity.";
-    if (cargoCatalogId && !cargoUomId)
+    if ((selectedCargo || selectedRequestCargo) && !cargoUomId)
       next.cargoUom = "Select a unit of measure.";
     setFieldErrors(next);
     return next;
@@ -471,14 +510,41 @@ export default function NewOperation() {
       planned_arrival: new Date(arrival).toISOString(),
       ...(projectId ? { project_public_id: projectId } : {}),
     };
+    const cargoItems =
+      source === "accepted_quote" && selectedRequestCargo
+        ? [
+            {
+              source_request_cargo_item_public_id: selectedRequestCargo.public_id,
+              planned_quantity: cargoQuantity,
+              ...(selectedCargo
+                ? { catalog_item_public_id: selectedCargo.public_id }
+                : {}),
+            },
+          ]
+        : source === "direct" && selectedCargo
+          ? [
+              {
+                catalog_item_public_id: selectedCargo.public_id,
+                cargo_type_public_id: selectedCargo.cargo_type_public_id,
+                quantity: cargoQuantity,
+                planned_quantity: cargoQuantity,
+                uom_public_id: cargoUomId,
+              },
+            ]
+          : [];
     const payload =
       source === "direct"
         ? {
             ...common,
             source_type: "direct" as const,
             customer_id: Number(customerId),
+            ...(cargoItems.length ? { cargo_items: cargoItems } : {}),
           }
-        : { ...common, accepted_quote_id: Number(quoteId) };
+        : {
+            ...common,
+            accepted_quote_id: Number(quoteId),
+            ...(cargoItems.length ? { cargo_items: cargoItems } : {}),
+          };
     const fingerprint = JSON.stringify(payload);
     if (
       payloadFingerprint.current &&
@@ -498,17 +564,6 @@ export default function NewOperation() {
               payload as Parameters<typeof createQuoteOperationalShipment>[0],
               key.current,
             );
-      if (selectedCargo) {
-        await createShipmentCargoItem(result.data.public_id, {
-          line_number: 1,
-          catalog_item_public_id: selectedCargo.public_id,
-          cargo_type_public_id: selectedCargo.cargo_type_public_id,
-          quantity: cargoQuantity,
-          planned_quantity: cargoQuantity,
-          uom_public_id: cargoUomId,
-          ...(customerId ? { cargo_owner_customer_id: Number(customerId) } : {}),
-        });
-      }
       navigate(`/operations/shipments/${result.data.public_id}`);
     } catch (caught) {
       setError(errorText(caught));
@@ -869,7 +924,11 @@ export default function NewOperation() {
                 id="quote"
                 label={t("operations.acceptedQuote")}
                 value={quoteId}
-                onChange={setQuoteId}
+                onChange={(value) => {
+                  setQuoteId(value);
+                  setRequestCargoId("");
+                  setCargoCatalogId("");
+                }}
                 items={quotes}
                 loading={loading === "quote"}
                 error={selectorError}
@@ -1002,6 +1061,46 @@ export default function NewOperation() {
               کاتالوگ توسط مدیر سازمان نگهداری می‌شود؛ کالای فعال را برای این محموله انتخاب کنید.
               / Organization Admin maintains the catalog; select an active item for this shipment.
             </p>
+            {source === "accepted_quote" && selectedQuote ? (
+              <div className="space-y-2">
+                <Label htmlFor="request-cargo">کالای منبع در درخواست مشتری</Label>
+                {quoteCargoItems.length ? (
+                  <select
+                    id="request-cargo"
+                    data-field="cargoSource"
+                    aria-label="کالای منبع در درخواست مشتری"
+                    aria-invalid={!!fieldErrors.cargoSource}
+                    className="min-h-11 w-full rounded border px-3"
+                    value={requestCargoId}
+                    onChange={(event) => setRequestCargoId(event.target.value)}
+                  >
+                    <option value="">انتخاب قلم درخواست</option>
+                    {quoteCargoItems.map((item) => (
+                      <option
+                        key={item.public_id}
+                        value={item.public_id}
+                        disabled={!item.operationally_ready}
+                      >
+                        {item.position}. {item.description || item.cargo_type_name || "کالا"}
+                        {item.quantity
+                          ? ` — ${Number(item.quantity).toLocaleString("fa-IR")} ${item.uom_name || item.uom_symbol || ""}`
+                          : " — اطلاعات عملیاتی ناقص"}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="rounded bg-slate-50 p-3 text-sm">
+                    این درخواست قلم کالای ثبت‌شده ندارد؛ ایجاد محموله بدون Cargo ادامه می‌یابد.
+                  </p>
+                )}
+                <FieldMessage id="cargo-source-error" message={fieldErrors.cargoSource} />
+                {selectedRequestCargo ? (
+                  <p className="text-sm text-slate-700">
+                    درخواست‌شده: {Number(selectedRequestCargo.quantity).toLocaleString("fa-IR")} {selectedRequestCargo.uom_name || selectedRequestCargo.uom_symbol} · نوع کالا: {selectedRequestCargo.cargo_type_name || "نامشخص"}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
             <div className="grid gap-3 md:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="cargo-catalog">Catalog item (optional)</Label>
@@ -1022,17 +1121,18 @@ export default function NewOperation() {
                       (option) => option.public_id === catalogId,
                     );
                     setCargoCatalogId(catalogId);
-                    setCargoUomId(item?.default_uom_public_id || "");
+                    if (source === "direct")
+                      setCargoUomId(item?.default_uom_public_id || "");
                   }}
                 >
                   <option value="">Manual cargo / no catalog item in this step</option>
-                  {cargoOptions.catalog.some((option) => option.preferred) && <optgroup label="Preferred for this project">
-                    {cargoOptions.catalog.filter((option) => option.preferred).map((option) => (
+                  {selectableCatalog.some((option) => option.preferred) && <optgroup label="Preferred for this project">
+                    {selectableCatalog.filter((option) => option.preferred).map((option) => (
                       <option key={option.public_id} value={option.public_id}>★ {option.code} — {option.name}</option>
                     ))}
                   </optgroup>}
                   <optgroup label="Other organization commodities">
-                    {cargoOptions.catalog.filter((option) => !option.preferred).map((option) => (
+                    {selectableCatalog.filter((option) => !option.preferred).map((option) => (
                       <option key={option.public_id} value={option.public_id}>{option.code} — {option.name}</option>
                     ))}
                   </optgroup>
@@ -1048,7 +1148,7 @@ export default function NewOperation() {
                   type="number"
                   min="0.000001"
                   step="any"
-                  disabled={!cargoCatalogId}
+                  disabled={source === "accepted_quote" ? !selectedRequestCargo : !cargoCatalogId}
                   value={cargoQuantity}
                   onChange={(event) => setCargoQuantity(event.target.value)}
                   aria-invalid={!!fieldErrors.cargoQuantity}
@@ -1062,7 +1162,7 @@ export default function NewOperation() {
                   data-field="cargoUom"
                   aria-label="Unit of measure"
                   className="min-h-11 w-full rounded border px-3"
-                  disabled={!cargoCatalogId}
+                  disabled={source === "accepted_quote" || !cargoCatalogId}
                   value={cargoUomId}
                   onChange={(event) => setCargoUomId(event.target.value)}
                   aria-invalid={!!fieldErrors.cargoUom}
@@ -1115,6 +1215,11 @@ export default function NewOperation() {
             {selectedCargo && (
               <p role="status">
                 Cargo: {selectedCargo.code} — {selectedCargo.name} · {cargoQuantity || "—"}
+              </p>
+            )}
+            {selectedRequestCargo && (
+              <p role="status">
+                منبع کالا: درخواست {selectedQuote?.request_public_id}، قلم {selectedRequestCargo.position} · درخواست‌شده {Number(selectedRequestCargo.quantity).toLocaleString("fa-IR")} {selectedRequestCargo.uom_name || selectedRequestCargo.uom_symbol} · برنامه {Number(cargoQuantity || 0).toLocaleString("fa-IR")} {selectedRequestCargo.uom_name || selectedRequestCargo.uom_symbol}
               </p>
             )}
           </CardContent>

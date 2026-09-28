@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from pathlib import Path
 import re
 
@@ -17,6 +18,7 @@ from backend.models import (
     ExpertQuote,
     ExpertUser,
     Province,
+    RequestCargoItem,
     ShipmentRequest,
     UnitOfMeasure,
 )
@@ -32,6 +34,7 @@ from backend.operational_models import (
     Project,
     ProjectAccess,
     RouteLeg,
+    RouteCargoDestination,
     RoutePlan,
 )
 from backend.organization_reference_catalog_models import (
@@ -271,6 +274,155 @@ def test_direct_create_converges_on_shared_aggregate_and_replays(operational_app
         with pytest.raises(service.OperationalError) as conflict:
             service.create_direct(changed, _user(operational_app), "direct-1")
         assert conflict.value.code == "IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD"
+
+
+def test_creation_atomically_preserves_request_cargo_and_initial_route_participation(
+    operational_app,
+):
+    with operational_app.app_context():
+        ids = operational_app.config["phase1a"]
+        quote = db.session.get(ExpertQuote, ids["accepted"])
+        request_row = db.session.get(ShipmentRequest, quote.shipment_request_id)
+        cargo_type = CargoType(
+            immutable_code="CREATION_ENGINE_PARTS",
+            fa_name="قطعات موتور",
+            en_name="Engine parts",
+            is_active=True,
+        )
+        uom = UnitOfMeasure(
+            immutable_code="CREATION_PIECE",
+            fa_name="عدد",
+            en_name="Piece",
+            symbol="pcs",
+            measurement_dimension="COUNT",
+            is_active=True,
+        )
+        db.session.add_all([cargo_type, uom])
+        db.session.flush()
+        db.session.add_all(
+            [
+                OrganizationCargoTypeActivation(
+                    organization_id=ids["org"],
+                    cargo_type_id=cargo_type.id,
+                    status="ACTIVE",
+                    created_by=ids["user"],
+                    updated_by=ids["user"],
+                ),
+                OrganizationUnitOfMeasureActivation(
+                    organization_id=ids["org"],
+                    unit_of_measure_id=uom.id,
+                    status="ACTIVE",
+                    created_by=ids["user"],
+                    updated_by=ids["user"],
+                ),
+            ]
+        )
+        request_cargo = RequestCargoItem(
+            shipment_request_id=request_row.id,
+            position=1,
+            cargo_type=cargo_type,
+            description="قطعات درخواستی موتور",
+            quantity=Decimal("100"),
+            uom=uom,
+        )
+        catalog = CargoCatalogItem(
+            organization_id=ids["org"],
+            immutable_code="CATALOG_XU7P",
+            fa_name="مجموعه قطعات موتور XU7P",
+            en_name="XU7P engine parts",
+            cargo_type=cargo_type,
+            default_uom=uom,
+            search_text="xu7p",
+            created_by=ids["user"],
+            updated_by=ids["user"],
+        )
+        db.session.add_all([request_cargo, catalog])
+        db.session.commit()
+
+        invalid = {
+            **_payload(operational_app),
+            "cargo_items": [
+                {
+                    "source_request_cargo_item_public_id": "not-this-request-cargo",
+                    "planned_quantity": "100",
+                }
+            ],
+        }
+        with pytest.raises(service.OperationalError) as rejected:
+            service.create_from_accepted_quote(
+                invalid, _user(operational_app), "atomic-invalid-cargo"
+            )
+        assert rejected.value.code == "INVALID_SOURCE_REQUEST_CARGO"
+        db.session.rollback()
+        assert OperationalShipment.query.count() == 0
+        assert ShipmentCargoItem.query.count() == 0
+        assert RouteCargoDestination.query.count() == 0
+
+        payload = {
+            **_payload(operational_app),
+            "cargo_items": [
+                {
+                    "source_request_cargo_item_public_id": request_cargo.public_id,
+                    "catalog_item_public_id": catalog.public_id,
+                    "planned_quantity": "100",
+                }
+            ],
+        }
+        shipment, created = service.create_from_accepted_quote(
+            payload, _user(operational_app), "atomic-request-cargo"
+        )
+        replay, recreated = service.create_from_accepted_quote(
+            payload, _user(operational_app), "atomic-request-cargo"
+        )
+        cargo = ShipmentCargoItem.query.filter_by(
+            operational_shipment_id=shipment.id
+        ).one()
+        plan = RoutePlan.query.filter_by(
+            operational_shipment_id=shipment.id, is_active=True
+        ).one()
+        leg = RouteLeg.query.filter_by(route_plan_id=plan.id).one()
+        mapping = RouteCargoDestination.query.filter_by(
+            route_plan_id=plan.id, shipment_cargo_item_id=cargo.id
+        ).one()
+
+        assert created is True and recreated is False and replay.id == shipment.id
+        assert cargo.source_shipment_request_id == request_row.id
+        assert cargo.source_request_cargo_item_id == request_cargo.id
+        assert cargo.catalog_item_id == catalog.id
+        assert cargo.requested_quantity == Decimal("100")
+        assert cargo.planned_quantity == Decimal("100")
+        assert cargo.actual_quantity is None
+        assert mapping.destination_route_leg_id == leg.id
+        assert ShipmentCargoItem.query.count() == 1
+        assert RouteCargoDestination.query.count() == 1
+        assert OperationalAudit.query.filter_by(
+            action="route_cargo_destination.created"
+        ).count() == 1
+
+        direct_payload = _direct_payload(operational_app)
+        direct_payload["cargo_items"] = [
+            {
+                "catalog_item_public_id": catalog.public_id,
+                "cargo_type_public_id": cargo_type.public_id,
+                "quantity": "25",
+                "planned_quantity": "25",
+                "uom_public_id": uom.public_id,
+            }
+        ]
+        direct, _ = service.create_direct(
+            direct_payload, _user(operational_app), "atomic-direct-cargo"
+        )
+        direct_cargo = ShipmentCargoItem.query.filter_by(
+            operational_shipment_id=direct.id
+        ).one()
+        assert direct_cargo.source_shipment_request_id is None
+        assert direct_cargo.source_request_cargo_item_id is None
+        assert direct_cargo.requested_quantity is None
+        assert direct_cargo.planned_quantity == Decimal("25")
+        assert RouteCargoDestination.query.filter_by(
+            operational_shipment_id=direct.id,
+            shipment_cargo_item_id=direct_cargo.id,
+        ).count() == 1
 
 
 def test_direct_permission_is_not_implied_by_legacy_or_quote_permission(

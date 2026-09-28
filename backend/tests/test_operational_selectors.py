@@ -302,11 +302,14 @@ def test_accepted_quote_selector_permissions_eligibility_and_create_consistency(
     assert set(item) == {
         "id",
         "request_public_id",
+        "request_entity_public_id",
         "customer_label",
         "route_label",
         "quote_label",
         "accepted_at",
+        "cargo_items",
     }
+    assert item["cargo_items"] == []
     if permission_user == "quote":
         with selector_app.app_context():
             now = datetime.now(timezone.utc)

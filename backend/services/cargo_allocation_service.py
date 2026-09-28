@@ -20,13 +20,13 @@ from backend.models import Customer, ExpertUser
 from backend.operational_models import (
     ExecutionTransportRevision,
     OperationalShipment,
-    RouteCargoDestination,
     RouteLeg,
     RouteStageExecution,
     utcnow,
 )
 from backend.services.assigned_work_authorization import authorize_document_management
 from backend.services.operational_service import OperationalError, require_permission, scoped_shipment
+from backend.services.cargo_route_service import CargoRouteError, resolve_cargo_route
 
 
 ZERO = Decimal("0")
@@ -131,21 +131,12 @@ def _stage(shipment: OperationalShipment, public_id: str) -> RouteStageExecution
 
 
 def _branch_covers(cargo: ShipmentCargoItem, stage: RouteStageExecution):
-    destination = db.session.scalar(select(RouteCargoDestination).where(
-        RouteCargoDestination.route_plan_id == stage.route_plan_id,
-        RouteCargoDestination.operational_shipment_id == cargo.operational_shipment_id,
-        RouteCargoDestination.shipment_cargo_item_id == cargo.id,
-    ))
-    if destination is None:
-        _fail("CARGO_ROUTE_REQUIRED", "Cargo has no route branch in this plan.", 409)
-    leg_id = destination.destination_route_leg_id
-    seen = set()
-    while leg_id is not None and leg_id not in seen:
-        if leg_id == stage.route_leg_id:
-            return
-        seen.add(leg_id)
-        leg = db.session.get(RouteLeg, leg_id)
-        leg_id = leg.parent_route_leg_id if leg and leg.route_plan_id == stage.route_plan_id else None
+    try:
+        path = resolve_cargo_route(cargo, stage.route_plan_id)
+    except CargoRouteError as exc:
+        _fail(exc.code, str(exc), 409)
+    if path.contains_leg(stage.route_leg_id):
+        return
     _fail("CARGO_STAGE_MISMATCH", "This stage is not on the Cargo route branch.", 409)
 
 
@@ -479,7 +470,7 @@ def trace(shipment_public_id: str, cargo_public_id: str, user: dict):
         })
         stage_views.append(stage)
     return {
-        "cargo": {"public_id": cargo.public_id, "name": cargo.display_name_snapshot, "requested_quantity": str(cargo.requested_quantity) if cargo.requested_quantity is not None else None, "planned_quantity": str(cargo.planned_quantity) if cargo.planned_quantity is not None else None, "actual_quantity": str(cargo.actual_quantity) if cargo.actual_quantity is not None else None, "uom": cargo.uom_symbol_snapshot},
+        "cargo": {"public_id": cargo.public_id, "name": cargo.display_name_snapshot, "requested_quantity": str(cargo.requested_quantity) if cargo.requested_quantity is not None else None, "planned_quantity": str(cargo.planned_quantity) if cargo.planned_quantity is not None else None, "actual_quantity": str(cargo.actual_quantity) if cargo.actual_quantity is not None else None, "uom": cargo.uom.fa_name or cargo.uom_symbol_snapshot},
         "stages": stage_views,
         "legacy_allocations": [_allocation_view(row) for row in db.session.scalars(select(ExecutionUnitCargoAllocation).where(ExecutionUnitCargoAllocation.shipment_cargo_item_id == cargo.id, ExecutionUnitCargoAllocation.route_stage_execution_id.is_(None), ExecutionUnitCargoAllocation.is_current.is_(True))).all()],
         "history": [{"public_id": item.public_id, "allocation_public_id": db.session.get(ExecutionUnitCargoAllocation, item.allocation_id).public_id, "action": item.action, "before": str(item.before_quantity), "after": str(item.after_quantity), "recorded_at": item.recorded_at.isoformat(), "occurred_at": item.occurred_at.isoformat(), "actor_name": db.session.get(ExpertUser, item.recorded_by_user_id).full_name, "reason": item.reason, "transfer_public_id": db.session.get(CargoAllocationTransfer, item.transfer_id).public_id if item.transfer_id else None} for item in revisions],

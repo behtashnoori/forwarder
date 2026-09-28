@@ -13,7 +13,13 @@ from sqlalchemy.exc import IntegrityError
 
 from backend.extensions import db
 from backend.census_context import ensure_census_context
-from backend.models import Customer, ExpertQuote, ExpertUser, ShipmentRequest
+from backend.models import (
+    Customer,
+    ExpertQuote,
+    ExpertUser,
+    RequestCargoItem,
+    ShipmentRequest,
+)
 from backend.operational_models import (
     CanonicalLocation,
     Milestone,
@@ -25,6 +31,7 @@ from backend.operational_models import (
     OperationalShipment,
     OperationalWorkItem,
     Project,
+    RouteCargoDestination,
     RouteLeg,
     RoutePlan,
     utcnow,
@@ -351,6 +358,7 @@ def accepted_quote_selector(
             {
                 "id": quote.id,
                 "request_public_id": request_row.tracking_code,
+                "request_entity_public_id": request_row.public_id,
                 "customer_label": _customer_label(customer),
                 "route_label": " → ".join(
                     value
@@ -365,6 +373,31 @@ def accepted_quote_selector(
                 "accepted_at": quote.responded_at.isoformat()
                 if quote.responded_at
                 else None,
+                "cargo_items": [
+                    {
+                        "public_id": item.public_id,
+                        "position": item.position,
+                        "description": item.description,
+                        "quantity": str(item.quantity)
+                        if item.quantity is not None
+                        else None,
+                        "cargo_type_public_id": item.cargo_type.public_id
+                        if item.cargo_type
+                        else None,
+                        "cargo_type_name": item.cargo_type.fa_name
+                        if item.cargo_type
+                        else None,
+                        "uom_public_id": item.uom.public_id if item.uom else None,
+                        "uom_name": item.uom.fa_name if item.uom else None,
+                        "uom_symbol": item.uom.symbol if item.uom else None,
+                        "operationally_ready": bool(
+                            item.quantity is not None
+                            and item.cargo_type is not None
+                            and item.uom is not None
+                        ),
+                    }
+                    for item in request_row.request_cargo_items
+                ],
             }
         )
     return {"items": items, "meta": {"count": len(items), "limit": limit}}
@@ -575,6 +608,179 @@ def _project(org: int, public_id: Any, customer_id: int) -> Project | None:
     return row
 
 
+def _cargo_command_list(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    raw = payload.get("cargo_items")
+    if raw is None:
+        return []
+    if not isinstance(raw, list) or len(raw) > 100 or any(
+        not isinstance(item, dict) for item in raw
+    ):
+        raise OperationalError(
+            "INVALID_CARGO_COMMAND",
+            "cargo_items must be a list of at most 100 Cargo commands.",
+        )
+    return raw
+
+
+def _direct_cargo_commands(
+    payload: dict[str, Any], customer_id: int
+) -> list[dict[str, Any]]:
+    commands = []
+    forbidden = {
+        "source_request_public_id",
+        "source_request_cargo_item_public_id",
+        "requested_quantity",
+    }
+    for line_number, raw in enumerate(_cargo_command_list(payload), start=1):
+        if forbidden.intersection(raw):
+            raise OperationalError(
+                "COMMERCIAL_LINEAGE_NOT_ALLOWED",
+                "Direct Shipment Cargo cannot include Request lineage.",
+            )
+        if "actual_quantity" in raw:
+            raise OperationalError(
+                "ACTUAL_QUANTITY_NOT_ALLOWED_AT_CREATION",
+                "Actual Cargo quantity is recorded by a later operational fact.",
+            )
+        command = dict(raw)
+        command.update(
+            {
+                "line_number": line_number,
+                "cargo_owner_customer_id": customer_id,
+            }
+        )
+        commands.append(command)
+    return commands
+
+
+def _quote_cargo_commands(
+    payload: dict[str, Any], request_row: ShipmentRequest
+) -> list[dict[str, Any]]:
+    commands = []
+    seen_source_items: set[int] = set()
+    allowed_fields = {
+        "source_request_cargo_item_public_id",
+        "catalog_item_public_id",
+        "planned_quantity",
+    }
+    for line_number, raw in enumerate(_cargo_command_list(payload), start=1):
+        if set(raw) - allowed_fields:
+            raise OperationalError(
+                "REQUEST_CARGO_FACT_OVERRIDE_FORBIDDEN",
+                "Request Cargo type, UOM, owner, requested quantity, and source Request are server-owned.",
+            )
+        source_public_id = raw.get("source_request_cargo_item_public_id")
+        if not source_public_id:
+            raise OperationalError(
+                "SOURCE_REQUEST_CARGO_REQUIRED",
+                "Accepted Request Cargo requires an explicit source Request Cargo item.",
+            )
+        source = db.session.scalar(
+            select(RequestCargoItem).where(
+                RequestCargoItem.public_id == str(source_public_id),
+                RequestCargoItem.shipment_request_id == request_row.id,
+            )
+        )
+        if source is None:
+            raise OperationalError(
+                "INVALID_SOURCE_REQUEST_CARGO",
+                "The selected Request Cargo does not belong to the accepted Request.",
+            )
+        if source.id in seen_source_items:
+            raise OperationalError(
+                "DUPLICATE_SOURCE_REQUEST_CARGO",
+                "A Request Cargo item can be selected only once during Shipment creation.",
+            )
+        seen_source_items.add(source.id)
+        if source.quantity is None or source.uom is None or source.cargo_type is None:
+            raise OperationalError(
+                "REQUEST_CARGO_NOT_OPERATIONALLY_READY",
+                "The selected Request Cargo needs quantity, UOM, and Cargo Type before operational creation.",
+            )
+        supplied_request = raw.get("source_request_public_id")
+        if supplied_request not in (None, request_row.public_id):
+            raise OperationalError(
+                "INVALID_SOURCE_REQUEST",
+                "Cargo lineage must use the Request behind the accepted quote.",
+            )
+        if "actual_quantity" in raw:
+            raise OperationalError(
+                "ACTUAL_QUANTITY_NOT_ALLOWED_AT_CREATION",
+                "Actual Cargo quantity is recorded by a later operational fact.",
+            )
+        command = {
+            "line_number": line_number,
+            "catalog_item_public_id": raw.get("catalog_item_public_id"),
+            "display_name": source.description or source.cargo_type.fa_name,
+            "cargo_type_public_id": source.cargo_type.public_id,
+            "quantity": raw.get("planned_quantity"),
+            "planned_quantity": raw.get("planned_quantity"),
+            "requested_quantity": str(source.quantity),
+            "uom_public_id": source.uom.public_id,
+            "cargo_owner_customer_id": request_row.customer_id,
+            "source_request_public_id": request_row.public_id,
+            "source_request_cargo_item_public_id": source.public_id,
+        }
+        commands.append(command)
+    return commands
+
+
+def _create_initial_cargo(
+    shipment: OperationalShipment,
+    plan: RoutePlan,
+    terminal_leg: RouteLeg,
+    commands: list[dict[str, Any]],
+    user: dict[str, Any],
+) -> None:
+    if not commands:
+        return
+    from backend.services import cargo_service
+
+    for command in commands:
+        try:
+            cargo = cargo_service.create_shipment_item(
+                user,
+                shipment,
+                command,
+                commit=False,
+                parent_command_authorized=True,
+            )
+        except cargo_service.CargoError as exc:
+            raise OperationalError(
+                exc.code or "INVALID_CARGO_COMMAND", str(exc), exc.status
+            ) from exc
+        destination = RouteCargoDestination(
+            operational_shipment_id=shipment.id,
+            route_plan_id=plan.id,
+            shipment_cargo_item_id=cargo.id,
+            destination_route_leg_id=terminal_leg.id,
+            created_by_user_id=user["id"],
+        )
+        db.session.add(destination)
+        db.session.flush()
+        metadata = {
+            "route_plan_id": plan.id,
+            "cargo_item_id": cargo.id,
+            "route_leg_id": terminal_leg.id,
+            "creation_boundary": "operational_shipment",
+        }
+        _audit(
+            shipment.organization_id,
+            user["id"],
+            "route_cargo_destination.created",
+            "RouteCargoDestination",
+            destination.id,
+            metadata,
+        )
+        _outbox(
+            shipment.organization_id,
+            "route_cargo_destination.created",
+            "RouteCargoDestination",
+            destination.id,
+            metadata,
+        )
+
+
 def _initialize_aggregate(
     *,
     org,
@@ -591,6 +797,7 @@ def _initialize_aggregate(
     key,
     request_hash,
     primary_responsible_expert_id=None,
+    cargo_commands=None,
 ):
     origin, destination, mode, departure, arrival = route
     shipment = OperationalShipment(
@@ -685,6 +892,7 @@ def _initialize_aggregate(
         shipment.id,
         metadata,
     )
+    _create_initial_cargo(shipment, plan, leg, cargo_commands or [], user)
     return shipment
 
 
@@ -728,6 +936,7 @@ def create_direct(
     )
     project = _project(org, payload.get("project_public_id"), customer.id)
     route = _route_command(payload, org)
+    cargo_commands = _direct_cargo_commands(payload, customer.id)
     canonical = {
         "source_type": "direct",
         "customer_id": customer.id,
@@ -740,6 +949,7 @@ def create_direct(
             "planned_departure": route[3].isoformat(),
             "planned_arrival": route[4].isoformat(),
         },
+        "cargo_items": cargo_commands,
     }
     request_hash = _hash(canonical)
     _lock_idempotency_scope(org, "create_direct_shipment", "organization", 0, key)
@@ -779,6 +989,7 @@ def create_direct(
         key=key,
         request_hash=request_hash,
         primary_responsible_expert_id=responsible_id,
+        cargo_commands=cargo_commands,
     )
     try:
         db.session.commit()
@@ -892,6 +1103,7 @@ def create_from_accepted_quote(
         quote.created_by_expert_id, org, source="accepted_quote"
     )
     project = _project(org, payload.get("project_public_id"), request_row.customer_id)
+    cargo_commands = _quote_cargo_commands(payload, request_row)
     shipment = _initialize_aggregate(
         org=org,
         user=user,
@@ -907,6 +1119,7 @@ def create_from_accepted_quote(
         key=key,
         request_hash=request_hash,
         primary_responsible_expert_id=responsible_id,
+        cargo_commands=cargo_commands,
     )
     try:
         db.session.commit()

@@ -14,11 +14,12 @@ from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem as Cargo, ExecutionUnitCargoAllocation as Allocation
 from backend.eta_models import CargoEtaSnapshot as Snapshot, CargoEtaInput as Input
 from backend.operational_models import (Milestone, OperationalCheckpoint,
-    OperationalShipment as Shipment, RouteCargoDestination, RouteLeg, RoutePlan,
+    OperationalShipment as Shipment, RouteLeg, RoutePlan,
     RouteStageExecution, RouteTraversalFact, utcnow)
 from backend.reported_fact_models import OperationalEventReportContext as Context, OperationalEventCargoImpact as Impact
 from backend.services import operational_service as base, route_time_service as times
 from backend.services import occurrence_projection_service as occurrences, customer_shipment_service as customers
+from backend.services.cargo_route_service import CargoRouteError, resolve_cargo_route
 from backend.services.customer_entitlement_service import authorized_customer_ids
 
 RULESET = "ETA_RULESET_V1"
@@ -65,26 +66,13 @@ def _path(shipment, cargo):
         RoutePlan.is_active.is_(True), RoutePlan.status == "active"))
     if plan is None:
         return None, None, []
-    mapping = db.session.scalar(select(RouteCargoDestination).where(
-        RouteCargoDestination.route_plan_id == plan.id, RouteCargoDestination.shipment_cargo_item_id == cargo.id,
-        RouteCargoDestination.operational_shipment_id == shipment.id))
-    if mapping is None:
+    try:
+        path = resolve_cargo_route(cargo, plan.id)
+    except CargoRouteError:
         return plan, None, []
-    leg_id, seen, legs = mapping.destination_route_leg_id, set(), []
-    while leg_id:
-        if leg_id in seen:
-            return plan, mapping, []
-        seen.add(leg_id)
-        leg = db.session.scalar(select(RouteLeg).where(RouteLeg.id == leg_id, RouteLeg.route_plan_id == plan.id))
-        if leg is None or leg.status in {"cancelled", "blocked"}:
-            return plan, mapping, []
-        legs.append(leg)
-        leg_id = leg.parent_route_leg_id
-    legs.reverse()
-    for previous, following in zip(legs, legs[1:]):
-        if endpoint(previous, "destination") != endpoint(following, "origin"):
-            return plan, mapping, []
-    return plan, mapping, legs
+    if any(leg.status in {"cancelled", "blocked"} for leg in path.legs):
+        return plan, path.mapping, []
+    return plan, path.mapping, list(path.legs)
 
 
 def endpoint(leg, side):

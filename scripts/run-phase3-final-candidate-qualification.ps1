@@ -251,6 +251,7 @@ try {
     $env:P3_ETA_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_p3_11_eta_$($runId.Substring(0, 8))"
     $env:P3_CLOSURE_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_p3_12_closure_$($runId.Substring(0, 8))"
     $env:P3_OWNER_TRANSFER_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_p3_13_owner_$($runId.Substring(0, 8))"
+    $env:SHIPMENT_CARGO_CREATION_POSTGRES_URL = New-OwnedDatabase "forwarder_cargo_create_$($runId.Substring(0, 8))"
     $env:DN10_POSTGRES_URL = New-OwnedDatabase "forwarder_integrated_cert_dn10_$($runId.Substring(0, 8))"
     $env:CONTROL_TOWER_DISPOSABLE_POSTGRES_URL = New-OwnedDatabase 'forwarder_control_tower_build'
     $postgresSpecs = @(
@@ -267,6 +268,7 @@ try {
       'backend/tests/test_phase3_eta_postgresql.py',
       'backend/tests/test_phase3_closure_postgresql.py',
       'backend/tests/test_phase3_owner_transfer_postgresql.py',
+      'backend/tests/test_shipment_cargo_creation_postgresql.py',
       'backend/tests/test_customer_entitlement_postgresql.py',
       'backend/tests/test_control_tower_scalability_postgresql.py'
     )
@@ -291,7 +293,7 @@ try {
       @{ Name = 'P301'; Seed = 'scripts/uat/seed_phase3_reference_catalog_e2e.py'; Spec = @('e2e/phase3-reference-catalog.spec.ts', 'e2e/admin-system-foundations.spec.ts') },
       @{ Name = 'P302'; Seed = 'scripts/uat/seed_phase3_cargo_lineage_e2e.py'; Spec = 'e2e/phase3-cargo-lineage.spec.ts' },
       @{ Name = 'P303'; Seed = 'scripts/uat/seed_phase3_branched_route_e2e.py'; Spec = 'e2e/phase3-branched-route.spec.ts' },
-      @{ Name = 'P304'; Seed = 'scripts/uat/seed_phase3_transport_execution_e2e.py'; Spec = 'e2e/phase3-transport-execution.spec.ts' },
+      @{ Name = 'P304'; Seed = 'scripts/uat/seed_human_walkthrough_cargo_chain_e2e.py'; Spec = @('e2e/phase3-transport-execution.spec.ts', 'e2e/human-walkthrough-cargo-chain.spec.ts') },
       @{ Name = 'P305'; Seed = 'scripts/uat/seed_phase3_cargo_allocation_e2e.py'; Spec = 'e2e/phase3-cargo-allocation.spec.ts' },
       @{ Name = 'P306'; Seed = 'scripts/uat/seed_phase3_document_context_e2e.py'; Spec = 'e2e/phase3-document-context.spec.ts' },
       @{ Name = 'P307'; Seed = 'scripts/uat/seed_phase3_reported_facts_e2e.py'; Spec = 'e2e/phase3-reported-facts.spec.ts' },

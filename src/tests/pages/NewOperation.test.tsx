@@ -146,10 +146,25 @@ beforeEach(() => {
       {
         id: 9,
         request_public_id: "REQ-9",
+        request_entity_public_id: "request-public-9",
         customer_label: "Canonical Co",
         route_label: "A → B",
         quote_label: "100 IRR",
         accepted_at: null,
+        cargo_items: [
+          {
+            public_id: "request-cargo-9",
+            position: 1,
+            description: "Requested engine parts",
+            quantity: "100.000000",
+            cargo_type_public_id: "cargo-type-1",
+            cargo_type_name: "قطعات موتور",
+            uom_public_id: "uom-ea",
+            uom_name: "عدد",
+            uom_symbol: "ea",
+            operationally_ready: true,
+          },
+        ],
       },
     ],
     meta: { count: 1, limit: 100 },
@@ -607,7 +622,6 @@ describe("Slice 5 governed creation", () => {
       vi.mocked(api.createQuoteOperationalShipment).mockResolvedValue(
         shipment as never,
       );
-      vi.mocked(api.createShipmentCargoItem).mockResolvedValue({ item: {} } as never);
       renderPage(
         source === "direct"
           ? "/operations/shipments/new?source=direct"
@@ -640,23 +654,32 @@ describe("Slice 5 governed creation", () => {
         await screen.findByLabelText("Catalog item"),
         "catalog-active",
       );
+      await user.clear(screen.getByLabelText("Cargo quantity"));
       await user.type(screen.getByLabelText("Cargo quantity"), "4.5");
       expect(screen.getByLabelText("Unit of measure")).toHaveValue("uom-ea");
       await user.click(screen.getByRole("button", { name: "Create operation" }));
-      await waitFor(() =>
-        expect(api.createShipmentCargoItem).toHaveBeenCalledWith(
-          "11111111-1111-4111-8111-111111111111",
-          {
-            line_number: 1,
-            catalog_item_public_id: "catalog-active",
-            cargo_type_public_id: "cargo-type-1",
-            quantity: "4.5",
-            planned_quantity: "4.5",
-            uom_public_id: "uom-ea",
-            ...(source === "direct" ? { cargo_owner_customer_id: 7 } : {}),
-          },
-        ),
-      );
+      const create = source === "direct"
+        ? api.createDirectOperationalShipment
+        : api.createQuoteOperationalShipment;
+      await waitFor(() => expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cargo_items: source === "direct"
+            ? [{
+                catalog_item_public_id: "catalog-active",
+                cargo_type_public_id: "cargo-type-1",
+                quantity: "4.5",
+                planned_quantity: "4.5",
+                uom_public_id: "uom-ea",
+              }]
+            : [{
+                source_request_cargo_item_public_id: "request-cargo-9",
+                catalog_item_public_id: "catalog-active",
+                planned_quantity: "4.5",
+              }],
+        }),
+        expect.any(String),
+      ));
+      expect(api.createShipmentCargoItem).not.toHaveBeenCalled();
       expect(await screen.findByText("created detail")).toBeInTheDocument();
     },
   );
