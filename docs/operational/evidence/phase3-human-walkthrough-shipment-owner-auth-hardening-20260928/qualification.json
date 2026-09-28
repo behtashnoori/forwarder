@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-28",
+  "lpaf_baseline": "2.7",
+  "product_sha": "8b83247c3a00433db60cc858c244199274034eb6",
+  "result": "PASS",
+  "root_cause": "standard active Expert baseline omitted execution_unit.read while Route/Execution reads required it before owner authorization",
+  "schema": {
+    "migration_required": false,
+    "alembic_head": "20261012_phase3_cargo_eta",
+    "head_count": 1
+  },
+  "tests": {
+    "focused_backend": { "passed": 60, "failed": 0 },
+    "full_backend": { "passed": 1576, "skipped": 121, "failed": 0 },
+    "full_frontend": { "files_passed": 99, "passed": 472, "failed": 0 },
+    "phase3_postgresql_18": { "passed": 15, "failed": 0 },
+    "public_tracking_postgresql_18": { "passed": 1, "failed": 0 },
+    "chrome_final_candidate": "PASS",
+    "typescript": "PASS",
+    "eslint": { "errors": 0, "advisory_warnings": 14 },
+    "build": "PASS",
+    "openapi": "PASS",
+    "architecture_governance": "PASS",
+    "structure": "PASS",
+    "backend_determinism": "PASS",
+    "current_tree_secret_findings": 0
+  },
+  "external_evidence": {
+    "directory": "D:\\1-webapp\\forwarder-dev\\human-walkthrough-shipment-owner-auth-hardening-evidence-20260928-r2",
+    "result_sha256": "B6D238699323BAC0F31FE7EC0E8C6E3C902269BF92FE442C702F507105F855AC"
+  },
+  "boundaries": {
+    "production_accessed": false,
+    "production_mutated": false,
+    "deployment_performed": false,
+    "release_created": false,
+    "human_product_walkthrough": "IN_PROGRESS",
+    "release_ready": false
+  }
+}
