@@ -277,6 +277,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "cargo_item_count",
         "has_legacy_cargo",
         "has_unread",
+        "commercial",
     }
 
     missing_detail = client.get("/api/expert/requests/999999", headers=expert_headers)
@@ -320,6 +321,7 @@ def test_expert_request_read_contracts_and_access_errors(expert_contract_app):
         "has_unread",
         "latest_quote",
         "quote_history",
+        "commercial",
     }
     assert set(detail_data["assigned_to"].keys()) == {"id", "name", "username"}
     assert detail_data["assigned_to"]["id"] == expert_contract_app["expert_id"]
@@ -597,7 +599,9 @@ def test_expert_request_filters_and_kpis_use_canonical_status_only(expert_contra
     assert kpi_response.status_code == 200
     kpi_payload = kpi_response.get_json()
     assert kpi_payload["counts"]["new"] == 1
-    assert kpi_payload["counts"]["waiting_for_customer"] == 1
+    # The raw lifecycle status remains filterable, but the commercial waiting
+    # bucket is reserved for a current latest quote with no customer response.
+    assert kpi_payload["counts"]["waiting_for_customer"] == 0
 
 
 def test_expert_message_contracts_access_creation_and_listing(expert_contract_app):
@@ -1828,7 +1832,11 @@ def test_phase_b4_canonical_population_covers_filters_pagination_tenants_and_rev
     assert revoked_counts == {
         "total_visible": 0,
         "new": 0,
+        "assigned": 0,
         "in_progress": 0,
+        "quoted": 0,
         "waiting_for_customer": 0,
+        "needs_action": 0,
+        "completed": 0,
         "closed_today": 0,
     }

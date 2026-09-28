@@ -3546,6 +3546,12 @@ paths:
           in: query
           schema:
             type: string
+        - name: bucket
+          in: query
+          description: Derived commercial work bucket shared by list rows and KPI counts.
+          schema:
+            type: string
+            enum: [all, new, assigned, in_progress, quoted, waiting_for_customer, needs_action, completed]
         - name: search
           in: query
           schema:
@@ -3586,6 +3592,93 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/ServerError'
+  /api/expert/requests/{request_public_id}/organization-customer:
+    parameters:
+      - name: request_public_id
+        in: path
+        required: true
+        description: Opaque public identity of the authorized Request parent.
+        schema:
+          type: string
+          format: uuid
+    get:
+      tags: [Expert Console]
+      summary: Read the organization Customer linked to an owning Expert Request
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Bounded Request-to-Customer link state.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [operation, request_public_id, customer, has_available_customers, can_change]
+                properties:
+                  operation: { type: string, enum: [read] }
+                  request_public_id: { type: string, format: uuid }
+                  customer: { type: object, nullable: true, additionalProperties: true }
+                  has_available_customers: { type: boolean }
+                  can_change: { type: boolean }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Expert Console]
+      summary: Link or relink an existing same-organization Customer to an owning Expert Request
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_id]
+              properties:
+                customer_id: { type: integer }
+      responses:
+        '200':
+          description: Audited link, relink, or idempotent result.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { description: Customer linkage could not be persisted. }
+  /api/expert/requests/{request_public_id}/organization-customers:
+    get:
+      tags: [Expert Console]
+      summary: Search active same-organization Customers for an owning Expert Request
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: request_public_id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - name: search
+          in: query
+          description: Name or company-name search after Request authorization and tenant scoping.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated bounded Customer candidates.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [customers, pagination]
+                properties:
+                  customers:
+                    type: array
+                    items: { type: object, additionalProperties: true }
+                  pagination: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/expert/requests/{request_id}/assign:
     post:
       tags: [Expert Console]
@@ -3893,9 +3986,17 @@ paths:
                     properties:
                       new:
                         type: integer
+                      assigned:
+                        type: integer
                       in_progress:
                         type: integer
+                      quoted:
+                        type: integer
                       waiting_for_customer:
+                        type: integer
+                      needs_action:
+                        type: integer
+                      completed:
                         type: integer
                       closed_today:
                         type: integer
@@ -3912,8 +4013,12 @@ paths:
                   value:
                     counts:
                       new: 3
+                      assigned: 2
                       in_progress: 5
+                      quoted: 1
                       waiting_for_customer: 2
+                      needs_action: 4
+                      completed: 6
                       closed_today: 1
                     sla:
                       overdue: 1

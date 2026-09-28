@@ -70,6 +70,12 @@ describe("request transport role consistency", () => {
       timeline: [],
       messages: [],
       has_unread: false,
+      commercial: {
+        request_status: "new",
+        request_status_label_fa: "ثبت شده",
+        latest_quote_response: null,
+        next_action: { code: "expert_review_request", actor: "expert", label_fa: "بررسی درخواست" },
+      },
       latest_quote: null,
     });
     vi.mocked(api.listOperationalShipments).mockResolvedValue({ data: [], meta: { page: 1, has_more: false } });

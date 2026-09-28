@@ -13,6 +13,7 @@ if (!databaseUrl.includes("127.0.0.1") || !databaseUrl.includes("/forwarder_inte
 
 type Journey = {
   customer_id: number;
+  customer_email: string;
   request_id: number;
   request_public_id: string;
   tracking_code: string;
@@ -22,6 +23,8 @@ type Journey = {
 };
 const fixture = JSON.parse(fs.readFileSync(fixturePath, "utf8")) as {
   username: string;
+  crm_customer_id: number;
+  crm_customer_name: string;
   journeys: Record<"approve" | "discussion" | "reject", Journey>;
 };
 
@@ -53,7 +56,13 @@ function expectClean(evidence: BrowserEvidence) {
 }
 
 async function openCustomer(page: Page, journey: Journey) {
-  await page.goto(`/request/${journey.request_id}?customer=${journey.customer_id}`);
+  await page.goto("/customer");
+  await page.locator("#customer-email").fill(journey.customer_email);
+  await page.locator("#customer-password").fill(password!);
+  const loggedIn = page.waitForResponse(response => response.url().endsWith("/api/customer/login"));
+  await page.locator("form").getByRole("button").first().click();
+  expect((await loggedIn).status()).toBe(200);
+  await page.goto(`/customer/requests/${journey.request_public_id}`);
   await expect(page.getByText("پیشنهاد (قیمت)")).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 }
@@ -64,7 +73,7 @@ async function loginExpert(page: Page) {
   await page.getByLabel("نام کاربری").fill(fixture.username);
   await page.getByLabel("رمز عبور").fill(password!);
   await page.getByRole("dialog").getByRole("button", { name: "ورود", exact: true }).click();
-  await expect(page).toHaveURL(/\/expert$/);
+  await expect(page).toHaveURL(/\/operations$/);
 }
 
 test.describe.serial("Simple Quote Communication", () => {
@@ -75,7 +84,7 @@ test.describe.serial("Simple Quote Communication", () => {
     await expect(actions).toHaveCount(3);
     await expect(page.getByRole("spinbutton")).toHaveCount(0);
     await page.getByRole("button", { name: "تأیید پیشنهاد" }).click();
-    await expect(page.getByText("شما این پیشنهاد را تأیید کردید")).toBeVisible();
+    await expect(page.getByText("شما این پیشنهاد را تأیید کردید").first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("quote-approved-desktop-rtl.png"), fullPage: true });
     expectClean(evidence);
   });
@@ -90,11 +99,10 @@ test.describe.serial("Simple Quote Communication", () => {
     await page.getByRole("button", { name: "نیاز به گفتگو" }).click();
     const message = page.getByLabel("پیام کوتاه برای کارشناس");
     await expect(message).toHaveAttribute("maxlength", "500");
-    await expect(page.getByText("این پیام مبلغ یا ارز پیشنهاد رسمی را تغییر نمی‌دهد.")).toBeVisible();
     await message.fill("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم");
     await page.getByRole("button", { name: "ارسال درخواست گفتگو" }).click();
-    await expect(page.getByText("برای این پیشنهاد درخواست گفتگو فرستادید")).toBeVisible();
-    await expect(page.getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
+    await expect(page.getByText("برای این پیشنهاد درخواست گفتگو فرستادید").first()).toBeVisible();
+    await expect(page.getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم").first()).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("quote-discussion-mobile-rtl.png"), fullPage: true });
     expectClean(evidence);
   });
@@ -102,18 +110,31 @@ test.describe.serial("Simple Quote Communication", () => {
   test("C — Expert sees the message and issues a new official Quote object", async ({ page }, testInfo) => {
     const evidence = observe(page);
     await loginExpert(page);
+    const requestNavigation = page.getByRole("link", { name: "درخواست‌ها و قیمت‌ها" });
+    await expect(requestNavigation).toBeVisible();
+    await requestNavigation.click();
+    await expect(page).toHaveURL(/\/expert$/);
+    await expect(requestNavigation).toHaveAttribute("aria-current", "page");
+    await expect(page.getByRole("link", { name: "عملیات جدید" })).not.toHaveAttribute("aria-current", "page");
     await page.goto(`/expert/requests/${fixture.journeys.discussion.request_public_id}`);
+    await expect(requestNavigation).toHaveAttribute("aria-current", "page");
+    await page.getByPlaceholder("جستجو با نام یا نام شرکت").fill("آرمان تجارت");
+    await page.getByRole("button", { name: "جستجوی مشتری سازمان" }).click();
+    await page.getByRole("button", { name: new RegExp(fixture.crm_customer_name) }).click();
+    await page.getByRole("button", { name: "اتصال مشتری انتخاب‌شده" }).click();
+    await expect(page.getByText("مشتری سازمان به درخواست متصل شد.", { exact: true })).toBeVisible();
+    await expect(page.getByText(fixture.crm_customer_name, { exact: true })).toBeVisible();
     await expect(page.getByText("مشتری نیاز به گفتگو دارد")).toBeVisible();
-    await expect(page.getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
+    await expect(page.getByRole("main").getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
     await page.getByRole("button", { name: "صدور پیشنهاد بازنگری‌شده" }).click();
     const dialog = page.getByRole("dialog", { name: "ارسال پیشنهاد" });
     await dialog.getByLabel("مبلغ (الزامی)").fill("1500000");
     await dialog.getByLabel("ارز").selectOption("USD");
     await dialog.getByLabel("توضیح کوتاه (اختیاری)").fill("پیشنهاد بازنگری‌شده رسمی");
     await dialog.getByRole("button", { name: "ارسال پیشنهاد", exact: true }).click();
-    await expect(page.getByText("۱٬۵۰۰٬۰۰۰ USD")).toBeVisible();
+    await expect(page.getByText("۱٬۵۰۰٬۰۰۰ دلار آمریکا (USD)").first()).toBeVisible();
     await expect(page.getByText("تاریخچه پیشنهادها")).toBeVisible();
-    await expect(page.getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
+    await expect(page.getByRole("main").getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath("quote-revised-expert-desktop.png"), fullPage: true });
     expectClean(evidence);
   });
@@ -121,11 +142,36 @@ test.describe.serial("Simple Quote Communication", () => {
   test("D — Customer responds to Q2 while Q1 remains immutable history", async ({ page }) => {
     const evidence = observe(page);
     await openCustomer(page, fixture.journeys.discussion);
-    await expect(page.getByText("۱٬۵۰۰٬۰۰۰ USD")).toBeVisible();
+    await expect(page.getByText("۱٬۵۰۰٬۰۰۰ دلار آمریکا (USD)").first()).toBeVisible();
     await page.getByRole("button", { name: "تأیید پیشنهاد" }).click();
-    await expect(page.getByText("شما این پیشنهاد را تأیید کردید")).toBeVisible();
+    await expect(page.getByText("شما این پیشنهاد را تأیید کردید").first()).toBeVisible();
     await expect(page.getByText("تاریخچه پیشنهادهای رسمی")).toBeVisible();
-    await expect(page.getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم")).toBeVisible();
+    await expect(page.getByText("لطفاً شرایط پرداخت و زمان تحویل را هماهنگ کنیم").first()).toBeVisible();
+    expectClean(evidence);
+  });
+
+  test("D2 — Expert sees accepted latest Quote as own action, preserves history, and concludes explicitly", async ({ page }, testInfo) => {
+    const evidence = observe(page);
+    await loginExpert(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/expert/requests/${fixture.journeys.discussion.request_public_id}`);
+    await expect(page.getByText("پیشنهاد پذیرفته شده است", { exact: true })).toBeVisible();
+    await expect(page.getByText("در انتظار جمع‌بندی کارشناس", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("ثبت نتیجه تجاری توسط کارشناس", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("مشتری پیشنهاد را پذیرفت", { exact: true })).toBeVisible();
+    await expect(page.getByText("مشتری درخواست مذاکره کرد", { exact: true })).toBeVisible();
+    await expect(page.getByText("پیشنهاد برای مشتری ارسال شد", { exact: true })).toHaveCount(2);
+    await expect(page.getByText("customer_quote_response", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("۱٬۵۰۰٬۰۰۰ دلار آمریکا (USD)", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "ایجاد پرونده عملیاتی" })).toBeVisible();
+
+    await page.getByText("تغییر صریح وضعیت درخواست").click();
+    await page.getByRole("option", { name: "پذیرفته شد" }).click();
+    await expect(page.getByText("نتیجه تجاری ثبت شده است", { exact: true }).first()).toBeVisible();
+    await page.goto("/expert");
+    await page.getByRole("tab", { name: /تکمیل‌شده/ }).click();
+    await expect(page.getByText(fixture.journeys.discussion.tracking_code, { exact: true })).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("expert-commercial-conclusion-mobile-ready.png"), fullPage: true });
     expectClean(evidence);
   });
 
@@ -134,12 +180,16 @@ test.describe.serial("Simple Quote Communication", () => {
     const journey = fixture.journeys.reject;
     await openCustomer(page, journey);
     await page.getByRole("button", { name: "رد پیشنهاد" }).click();
-    await expect(page.getByText("شما این پیشنهاد را رد کردید")).toBeVisible();
-    const conflict = await page.request.post(`/api/customer/quotes/${journey.quote_public_id}/response`, {
+    await expect(page.getByText("شما این پیشنهاد را رد کردید").first()).toBeVisible();
+    const session = await (await page.request.get("/api/customer/session")).json() as { csrf_token: string };
+    const detail = await (await page.request.get(`/api/customer/requests/${journey.request_public_id}`)).json() as {
+      latest_quote: { response_version: number };
+    };
+    const conflict = await page.request.post(`/api/customer/requests/${journey.request_public_id}/quotes/${journey.quote_public_id}/response`, {
+      headers: { "X-CSRF-Token": session.csrf_token },
       data: {
-        tracking_code: journey.tracking_code,
-        customer_id: journey.customer_id,
         response: "accepted",
+        expected_response_version: detail.latest_quote.response_version,
       },
     });
     expect(conflict.status()).toBe(409);

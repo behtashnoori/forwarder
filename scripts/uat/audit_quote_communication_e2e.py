@@ -68,14 +68,35 @@ def main() -> None:
         notification_actions = connection.execute(text("SELECT COUNT(*) FROM notification_action")).scalar_one()
         notification_attempts = connection.execute(text("SELECT COUNT(*) FROM notification_attempt")).scalar_one()
         local_console_notifications = connection.execute(text("SELECT COUNT(*) FROM expert_console_notification")).scalar_one()
+        commercial_request = connection.execute(text("""
+            SELECT r.status, r.customer_id
+            FROM shipment_request r
+            WHERE r.tracking_code='QC-E2E-DISCUSSION'
+        """)).mappings().one()
+        crm_link_audits = connection.execute(text("""
+            SELECT COUNT(*)
+            FROM crm_customer_link_audit a
+            JOIN shipment_request r ON r.id=a.shipment_request_id
+            WHERE r.tracking_code='QC-E2E-DISCUSSION'
+              AND a.operation='link'
+              AND a.source='expert_request_review'
+        """)).scalar_one()
+        entitlement_count = connection.execute(text("SELECT COUNT(*) FROM customer_entitlement")).scalar_one()
+        operational_shipment_count = connection.execute(text("SELECT COUNT(*) FROM operational_shipment")).scalar_one()
 
         assert audit_count == 4
         assert leaked_message_count == 0
         assert cargo_count == 2
         assert notification_actions == 0
         assert notification_attempts == 0
-        # The official Quote revision retains the pre-existing local expert-console notice.
-        assert local_console_notifications == 1
+        # The revised Quote and the explicit commercial conclusion each retain their
+        # existing local expert-console notification; no outbound notification work is created.
+        assert local_console_notifications == 2
+        assert commercial_request["status"] == "won"
+        assert commercial_request["customer_id"] is not None
+        assert crm_link_audits == 1
+        assert entitlement_count == 0
+        assert operational_shipment_count == 0
 
     engine.dispose()
     print(json.dumps({
@@ -84,6 +105,9 @@ def main() -> None:
         "notification_actions": notification_actions,
         "notification_attempts": notification_attempts,
         "local_console_notifications": local_console_notifications,
+        "crm_link_audits": crm_link_audits,
+        "entitlement_count": entitlement_count,
+        "operational_shipment_count": operational_shipment_count,
         "result": "PASS",
     }, sort_keys=True))
 

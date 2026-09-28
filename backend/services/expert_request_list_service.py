@@ -8,11 +8,15 @@ from sqlalchemy import case, desc, func, or_
 from sqlalchemy.orm import joinedload, selectinload
 
 from backend.extensions import db
-from backend.models import ShipmentRequest
+from backend.models import ExpertQuote, ShipmentRequest
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
 from backend.services.assigned_work_authorization import assigned_request_scope
 from backend.services.shipment_service import has_legacy_cargo
+from backend.services.request_commercial_state import (
+    build_commercial_projection,
+    request_bucket_condition,
+)
 
 
 def normalize_request_list_filters(args: Mapping[str, Any]) -> dict[str, Any]:
@@ -21,6 +25,7 @@ def normalize_request_list_filters(args: Mapping[str, Any]) -> dict[str, Any]:
         "page": args.get("page", 1, type=int),
         "per_page": min(args.get("per_page", 20, type=int), 100),
         "status": args.get("status"),
+        "bucket": args.get("bucket"),
         "assigned_to": args.get("assigned_to"),
         "priority": args.get("priority"),
         "search": args.get("search"),
@@ -51,6 +56,12 @@ def apply_request_population_filters(
             query = query.filter(ShipmentRequest.status.in_(status_list))
         else:
             query = query.filter(ShipmentRequest.status == status)
+
+    bucket = filters.get("bucket")
+    if bucket:
+        condition = request_bucket_condition(bucket)
+        if condition is not None:
+            query = query.filter(condition)
 
     priority = filters.get("priority")
     if priority:
@@ -126,8 +137,12 @@ def build_expert_request_kpis(
     counts = population.with_entities(
         func.count(ShipmentRequest.id),
         matching_count(ShipmentRequest.status == "new"),
+        matching_count(ShipmentRequest.status == "assigned"),
         matching_count(ShipmentRequest.status == "in_progress"),
-        matching_count(ShipmentRequest.status == "waiting_for_customer"),
+        matching_count(ShipmentRequest.status == "quoted"),
+        matching_count(request_bucket_condition("waiting_for_customer")),
+        matching_count(request_bucket_condition("needs_action")),
+        matching_count(request_bucket_condition("completed")),
         matching_count(
             ShipmentRequest.status.in_(["won", "lost", "closed"])
             & (func.date(ShipmentRequest.created_at) == observed_at.date())
@@ -146,18 +161,25 @@ def build_expert_request_kpis(
         "counts": {
             "total_visible": counts[0],
             "new": counts[1],
-            "in_progress": counts[2],
-            "waiting_for_customer": counts[3],
-            "closed_today": counts[4],
+            "assigned": counts[2],
+            "in_progress": counts[3],
+            "quoted": counts[4],
+            "waiting_for_customer": counts[5],
+            "needs_action": counts[6],
+            "completed": counts[7],
+            "closed_today": counts[8],
         },
         "sla": {
-            "overdue": counts[5],
-            "due_soon": counts[6],
+            "overdue": counts[9],
+            "due_soon": counts[10],
         },
     }
 
 
-def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
+def build_request_list_item_payload(
+    req: ShipmentRequest,
+    latest_quote: ExpertQuote | None = None,
+) -> dict[str, Any]:
     """Build the current request list item payload."""
     assigned_expert = req.assigned_expert
 
@@ -199,13 +221,22 @@ def build_request_list_item_payload(req: ShipmentRequest) -> dict[str, Any]:
         "cargo_item_count": len(req.request_cargo_items),
         "has_legacy_cargo": has_legacy_cargo(req),
         "has_unread": req.has_unread_for_assignee,
+        "commercial": build_commercial_projection(req.status, latest_quote),
     }
 
 
-def build_request_list_response_payload(items, pagination, filters: dict[str, Any]) -> dict[str, Any]:
+def build_request_list_response_payload(
+    items,
+    pagination,
+    filters: dict[str, Any],
+    latest_quotes: dict[int, ExpertQuote] | None = None,
+) -> dict[str, Any]:
     """Build the current request list response payload."""
     return {
-        "requests": [build_request_list_item_payload(req) for req in items],
+        "requests": [
+            build_request_list_item_payload(req, (latest_quotes or {}).get(req.id))
+            for req in items
+        ],
         "pagination": {
             "page": filters["page"],
             "per_page": filters["per_page"],
@@ -230,4 +261,18 @@ def list_expert_requests(user: dict[str, Any], filters: dict[str, Any]) -> dict[
         per_page=filters["per_page"],
         error_out=False,
     )
-    return build_request_list_response_payload(pagination.items, pagination, filters)
+    request_ids = [row.id for row in pagination.items]
+    latest_quotes: dict[int, ExpertQuote] = {}
+    if request_ids:
+        quote_rows = db.session.query(ExpertQuote).filter(
+            ExpertQuote.shipment_request_id.in_(request_ids)
+        ).order_by(
+            ExpertQuote.shipment_request_id.asc(),
+            ExpertQuote.created_at.desc(),
+            ExpertQuote.id.desc(),
+        ).all()
+        for quote in quote_rows:
+            latest_quotes.setdefault(quote.shipment_request_id, quote)
+    return build_request_list_response_payload(
+        pagination.items, pagination, filters, latest_quotes
+    )

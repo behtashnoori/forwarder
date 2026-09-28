@@ -114,3 +114,24 @@ export const formatMoney = (
   const amount = formatBusinessNumber(value, { locale, missing });
   return amount === missing ? missing : `${amount}${currency ? ` ${currency}` : ""}`;
 };
+
+const quoteCurrencyLabelsFa: Record<string, string> = {
+  IRR: "ریال ایران (IRR)",
+  USD: "دلار آمریکا (USD)",
+  EUR: "یورو (EUR)",
+};
+
+/** Quote money uses the governed Persian label while the canonical code stays visible. */
+export const formatQuoteMoney = (
+  value: BusinessNumericValue,
+  currency: string | null | undefined,
+  locale = "en-US",
+  missing = "—",
+): string => formatMoney(
+  value,
+  locale.toLowerCase().startsWith("fa") && currency
+    ? quoteCurrencyLabelsFa[currency] ?? currency
+    : currency,
+  locale,
+  missing,
+);

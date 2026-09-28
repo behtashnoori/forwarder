@@ -51,6 +51,28 @@ import { getRequestTransportMethod } from "@/lib/transportPresentation";
 type ShipmentRequest = ExpertRequest;
 type KPI = KPIs;
 
+const kpiCountForBucket = (kpis: KPI | null, bucket: string): number => {
+  if (!kpis) return 0;
+  const counts: Record<string, number> = {
+    all: kpis.counts.total_visible,
+    new: kpis.counts.new,
+    assigned: kpis.counts.assigned,
+    in_progress: kpis.counts.in_progress,
+    quoted: kpis.counts.quoted,
+    waiting_for_customer: kpis.counts.waiting_for_customer,
+    needs_action: kpis.counts.needs_action,
+    completed: kpis.counts.completed,
+  };
+  return counts[bucket] ?? 0;
+};
+
+const commercialResponseLabel = (response: ExpertRequest["commercial"]["latest_quote_response"]) => {
+  if (response === "accepted") return "پذیرفته شده";
+  if (response === "discussion") return "درخواست مذاکره";
+  if (response === "declined") return "رد شده";
+  return "پاسخی ثبت نشده";
+};
+
 const ExpertConsole = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -58,7 +80,7 @@ const ExpertConsole = () => {
   const [requests, setRequests] = useState<ShipmentRequest[]>([]);
   const [kpis, setKpis] = useState<KPI | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("new");
+  const [activeTab, setActiveTab] = useState("needs_action");
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [currentExpert, setCurrentExpert] = useState<ExpertUser | null>(null);
@@ -74,10 +96,8 @@ const ExpertConsole = () => {
         sort_order: "desc",
       };
 
-      if (activeTab !== "all" && activeTab !== "closed") {
-        params.status = activeTab;
-      } else if (activeTab === "closed") {
-        params.status = "won,lost,closed";
+      if (activeTab !== "all") {
+        params.bucket = activeTab;
       }
 
       if (searchTerm) {
@@ -184,7 +204,7 @@ const ExpertConsole = () => {
       } else if (newStatus === "waiting_for_customer") {
         setActiveTab("waiting_for_customer");
       } else if (newStatus === "closed" || newStatus === "won" || newStatus === "lost") {
-        setActiveTab("all");
+        setActiveTab("completed");
       }
     } catch (error) {
       toast({
@@ -264,8 +284,10 @@ const ExpertConsole = () => {
     { value: "new", label: statusLabel("new") },
     { value: "assigned", label: statusLabel("assigned") },
     { value: "in_progress", label: statusLabel("in_progress") },
-    { value: "waiting_for_customer", label: statusLabel("waiting_for_customer") },
-    { value: "closed", label: statusLabel("completed") },
+    { value: "quoted", label: "پیشنهاد آماده" },
+    { value: "waiting_for_customer", label: "در انتظار پاسخ مشتری" },
+    { value: "needs_action", label: "نیازمند اقدام من" },
+    { value: "completed", label: "تکمیل‌شده" },
   ];
 
   const statusFilterItems = [
@@ -295,8 +317,8 @@ const ExpertConsole = () => {
           tone: "text-violet-700 bg-violet-50 border-violet-100",
         },
         {
-          label: statusLabel("waiting_for_customer"),
-          value: kpis.counts.waiting_for_customer,
+          label: "نیازمند اقدام من",
+          value: kpis.counts.needs_action,
           icon: MessageSquare,
           tone: "text-orange-700 bg-orange-50 border-orange-100",
         },
@@ -440,24 +462,9 @@ const ExpertConsole = () => {
                 className="rounded-2xl px-4 py-2 text-sm text-slate-600 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
               >
                 {item.label}
-                {item.value === "new" && Boolean(kpis?.counts.new) && (
+                {Boolean(kpiCountForBucket(kpis, item.value)) && (
                   <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
-                    {kpis?.counts.new}
-                  </Badge>
-                )}
-                {item.value === "in_progress" && Boolean(kpis?.counts.in_progress) && (
-                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
-                    {kpis?.counts.in_progress}
-                  </Badge>
-                )}
-                {item.value === "waiting_for_customer" && Boolean(kpis?.counts.waiting_for_customer) && (
-                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
-                    {kpis?.counts.waiting_for_customer}
-                  </Badge>
-                )}
-                {item.value === "closed" && Boolean(kpis?.counts.closed_today) && (
-                  <Badge variant="secondary" className="mr-2 bg-white/20 text-current">
-                    {kpis?.counts.closed_today}
+                    {kpiCountForBucket(kpis, item.value)}
                   </Badge>
                 )}
               </TabsTrigger>
@@ -508,9 +515,20 @@ const ExpertConsole = () => {
                                 {request.tracking_number}
                               </div>
                               <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
-                                {statusLabel(request.status)}
+                                {request.commercial.request_status_label_fa}
                               </Badge>
                               {request.has_unread && <Badge className="rounded-full bg-blue-600 text-white">{t("common.unread")}</Badge>}
+                            </div>
+
+                            <div className="grid gap-3 rounded-2xl border border-blue-100 bg-blue-50/50 p-3 text-sm md:grid-cols-2">
+                              <div>
+                                <p className="text-xs text-slate-500">آخرین پاسخ مشتری</p>
+                                <p className="mt-1 font-semibold text-slate-900">{commercialResponseLabel(request.commercial.latest_quote_response)}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-slate-500">اقدام بعدی</p>
+                                <p className="mt-1 font-semibold text-slate-900">{request.commercial.next_action.label_fa}</p>
+                              </div>
                             </div>
 
                             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">

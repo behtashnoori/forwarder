@@ -11,10 +11,10 @@ vi.mock("@/lib/api", async () => {
   return { ...actual, getOperationalContext: vi.fn() };
 });
 
-function renderNav(authority: string, permissions = ["operational_shipment.create_direct"]) {
+function renderNav(authority: string, permissions = ["operational_shipment.create_direct"], route = "/operations") {
   localStorage.setItem("expert_user", JSON.stringify({ authority, role: "expert" }));
   vi.mocked(api.getOperationalContext).mockResolvedValue({ data: { organization_id: 1, permissions } });
-  return render(<MemoryRouter><I18nProvider><OperationsNav /></I18nProvider></MemoryRouter>);
+  return render(<MemoryRouter initialEntries={[route]}><I18nProvider><OperationsNav /></I18nProvider></MemoryRouter>);
 }
 
 describe("OperationsNav tenant customer maintenance", () => {
@@ -42,10 +42,11 @@ describe("OperationsNav tenant customer maintenance", () => {
     await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
       "/operations",
+      "/expert",
       "/operations/shipments",
       "/operations/control-tower",
-      "/operations/work-queue",
       "/dashboards",
+      "/operations/work-queue",
       "/customers",
       "/operations/shipments/new",
     ]);
@@ -62,10 +63,11 @@ describe("OperationsNav tenant customer maintenance", () => {
     await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
     expect(screen.getAllByRole("link").map((link) => link.getAttribute("href"))).toEqual([
       "/operations",
+      "/expert",
       "/operations/shipments",
       "/operations/control-tower",
-      "/operations/work-queue",
       "/dashboards",
+      "/operations/work-queue",
       "/operations/shipments/new",
     ]);
   });
@@ -74,5 +76,13 @@ describe("OperationsNav tenant customer maintenance", () => {
     renderNav("EXPERT", ["oip.read"]);
     await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
     expect(screen.queryByRole("link", { name: "فضای کار امروز" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "درخواست‌ها و قیمت‌ها" })).toHaveAttribute("href", "/expert");
+  });
+
+  it("marks the request area current and never marks the create action current", async () => {
+    renderNav("EXPERT", ["operational_shipment.read", "operational_shipment.create_direct"], "/expert/requests/request-public-id");
+    await waitFor(() => expect(api.getOperationalContext).toHaveBeenCalled());
+    expect(screen.getByRole("link", { name: "درخواست‌ها و قیمت‌ها" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: /عملیات جدید/ })).not.toHaveAttribute("aria-current");
   });
 });

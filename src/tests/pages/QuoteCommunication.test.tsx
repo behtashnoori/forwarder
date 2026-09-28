@@ -17,6 +17,9 @@ vi.mock("@/lib/api", async () => {
     submitQuoteResponse: vi.fn(),
     fetchExpertRequestDetail: vi.fn(),
     listOperationalShipments: vi.fn(),
+    fetchRequestOrganizationCustomer: vi.fn(),
+    searchRequestOrganizationCustomers: vi.fn(),
+    linkRequestOrganizationCustomer: vi.fn(),
   };
 });
 
@@ -74,9 +77,22 @@ const expertRequest = {
   },
   cargo: {},
   dates: {},
-  timeline: [],
+  timeline: [{
+    id: 1,
+    action: "customer_quote_response",
+    title: "مشتری درخواست مذاکره کرد",
+    description: "شرایط پرداخت نیاز به هماهنگی دارد",
+    created_at: "2026-09-21T10:30:00Z",
+    created_by: "مشتری",
+  }],
   messages: [],
   has_unread: false,
+  commercial: {
+    request_status: "waiting_for_customer",
+    request_status_label_fa: "در انتظار جمع‌بندی کارشناس",
+    latest_quote_response: "discussion" as const,
+    next_action: { code: "expert_review_negotiation", actor: "expert" as const, label_fa: "بررسی درخواست مذاکره" },
+  },
   latest_quote: {
     ...q1,
     id: 102,
@@ -137,6 +153,24 @@ describe("Simple Quote Communication surfaces", () => {
     vi.mocked(api.listOperationalShipments).mockResolvedValue({
       data: [],
       meta: { page: 1, has_more: false },
+    });
+    vi.mocked(api.fetchRequestOrganizationCustomer).mockResolvedValue({
+      operation: "read",
+      request_public_id: expertRequest.public_id,
+      customer: null,
+      has_available_customers: true,
+      can_change: true,
+    });
+    vi.mocked(api.searchRequestOrganizationCustomers).mockResolvedValue({
+      customers: [{ id: 8, name: "مشتری سازمانی", company_name: "شرکت آزمون", phone: "09120000008" }],
+      pagination: { page: 1, per_page: 8, total: 1, pages: 1, has_next: false, has_prev: false },
+    });
+    vi.mocked(api.linkRequestOrganizationCustomer).mockResolvedValue({
+      operation: "link",
+      request_public_id: expertRequest.public_id,
+      customer: { id: 8, name: "مشتری سازمانی", company_name: "شرکت آزمون", phone: "09120000008" },
+      has_available_customers: true,
+      can_change: true,
     });
   });
 
@@ -217,13 +251,35 @@ describe("Simple Quote Communication surfaces", () => {
     );
 
     expect((await screen.findAllByText("مشتری نیاز به گفتگو دارد")).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText("شرایط پرداخت نیاز به هماهنگی دارد")).toBeVisible();
+    expect(screen.getAllByText("شرایط پرداخت نیاز به هماهنگی دارد").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: "صدور پیشنهاد بازنگری‌شده" })).toBeVisible();
     expect(screen.getByText("تاریخچه پیشنهادها")).toBeVisible();
     expect(screen.getByText("درخواست بازنگری نسخه اول")).toBeVisible();
-    expect(document.body).toHaveTextContent("۱٬۲۵۰٬۰۰۰ EUR");
-    expect(document.body).toHaveTextContent("۱٬۵۰۰٬۰۰۰ USD");
+    expect(document.body).toHaveTextContent("۱٬۲۵۰٬۰۰۰ یورو (EUR)");
+    expect(document.body).toHaveTextContent("۱٬۵۰۰٬۰۰۰ دلار آمریکا (USD)");
     expect(document.body).toHaveTextContent("۲۰۲۶");
     expect(document.body).toHaveTextContent("۱۴۰۵");
+    expect(screen.getByText("مشتری درخواست مذاکره کرد")).toBeVisible();
+    expect(screen.queryByText("customer_quote_response")).not.toBeInTheDocument();
+  });
+
+  it("lets the owning Expert select and link an existing organization Customer", async () => {
+    const user = userEvent.setup();
+    render(
+      <I18nProvider>
+        <MemoryRouter initialEntries={["/expert/requests/42"]}>
+          <Routes><Route path="/expert/requests/:id" element={<RequestDetail />} /></Routes>
+        </MemoryRouter>
+      </I18nProvider>,
+    );
+
+    await screen.findByText("هنوز مشتری سازمان برای این درخواست انتخاب نشده است.");
+    await user.type(screen.getByPlaceholderText("جستجو با نام یا نام شرکت"), "شرکت آزمون");
+    await user.click(screen.getByRole("button", { name: "جستجوی مشتری سازمان" }));
+    await user.click(await screen.findByRole("button", { name: /مشتری سازمانی/ }));
+    await user.click(screen.getByRole("button", { name: "اتصال مشتری انتخاب‌شده" }));
+
+    await waitFor(() => expect(api.linkRequestOrganizationCustomer).toHaveBeenCalledWith(expertRequest.public_id, 8));
+    expect(await screen.findByText("شرکت آزمون")).toBeVisible();
   });
 });

@@ -31,7 +31,7 @@ import {
 import { useI18n } from "@/i18n";
 import { isLocalDateBeforeToday } from "@/lib/localDate";
 import { formatDualCalendarDate, formatDualCalendarInstant } from "@/lib/dualCalendar";
-import { formatMoney } from "@/lib/formatQuantity";
+import { formatQuoteMoney } from "@/lib/formatQuantity";
 import { getRequestTransportMethod } from "@/lib/transportPresentation";
 import RequestCargoSummary from "@/components/RequestCargoSummary";
 
@@ -455,7 +455,7 @@ const CustomerRequestDetail: React.FC = () => {
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="text-sm text-muted-foreground">{t("common.amount")}</span>
                       <span className="text-lg font-bold text-foreground">
-                        {formatMoney(quote.amount, quote.currency, locale)}
+                        {formatQuoteMoney(quote.amount, quote.currency, locale)}
                       </span>
                     </div>
                     {quote.valid_until && (
@@ -577,7 +577,7 @@ const CustomerRequestDetail: React.FC = () => {
                   {requestDetail.quote_history?.slice(1).map((historicalQuote) => (
                     <div key={historicalQuote.public_id} className="rounded-lg border p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-semibold">{formatMoney(historicalQuote.amount, historicalQuote.currency, locale)}</span>
+                        <span className="font-semibold">{formatQuoteMoney(historicalQuote.amount, historicalQuote.currency, locale)}</span>
                         <span className="text-xs text-muted-foreground">{formatDualCalendarInstant(historicalQuote.created_at, locale)}</span>
                       </div>
                       <p className="mt-2 text-muted-foreground">

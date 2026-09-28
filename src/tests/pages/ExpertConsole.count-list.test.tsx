@@ -62,6 +62,12 @@ const requestRow: api.ExpertRequest = {
   domestic_transport_method: "Combined Transport",
   cargo: {},
   has_unread: false,
+  commercial: {
+    request_status: "new",
+    request_status_label_fa: "ثبت شده",
+    latest_quote_response: null,
+    next_action: { code: "expert_review_request", actor: "expert", label_fa: "بررسی درخواست" },
+  },
 };
 
 describe("Expert Console canonical count/list refresh", () => {
@@ -87,8 +93,12 @@ describe("Expert Console canonical count/list refresh", () => {
       counts: {
         total_visible: 1,
         new: 1,
+        assigned: 0,
         in_progress: 0,
+        quoted: 0,
         waiting_for_customer: 0,
+        needs_action: 0,
+        completed: 0,
         closed_today: 0,
       },
       sla: { overdue: 0, due_soon: 0 },
@@ -120,7 +130,7 @@ describe("Expert Console canonical count/list refresh", () => {
     });
     await waitFor(() => {
       expect(api.fetchExpertRequests).toHaveBeenLastCalledWith(
-        expect.objectContaining({ status: "new", search: "Needle" }),
+        expect.objectContaining({ bucket: "needs_action", search: "Needle" }),
       );
       expect(api.fetchKPIs).toHaveBeenLastCalledWith(undefined, "Needle");
     });

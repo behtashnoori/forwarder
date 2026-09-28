@@ -38,6 +38,8 @@ describe("QuoteModal supported currencies", () => {
       "EUR",
     ]);
     expect(screen.getByRole("option", { name: "یورو (EUR)" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "ریال ایران (IRR)" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "دلار آمریکا (USD)" })).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("مبلغ (الزامی)"), "1234567");
     await user.selectOptions(currency, "EUR");

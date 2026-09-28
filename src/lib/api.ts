@@ -1284,6 +1284,17 @@ function getFilenameFromContentDisposition(
 }
 
 // Expert Console Interfaces
+export interface RequestCommercialProjection {
+  request_status: string;
+  request_status_label_fa: string;
+  latest_quote_response: QuoteResponseState | null;
+  next_action: {
+    code: string;
+    actor: "expert" | "customer" | "none";
+    label_fa: string;
+  };
+}
+
 export interface ExpertRequest {
   id: number;
   public_id: string;
@@ -1339,6 +1350,7 @@ export interface ExpertRequest {
   cargo_item_count?: number;
   has_legacy_cargo?: boolean;
   has_unread: boolean;
+  commercial: RequestCommercialProjection;
 }
 
 export interface ExpertUser {
@@ -1373,8 +1385,12 @@ export interface KPIs {
   counts: {
     total_visible: number;
     new: number;
+    assigned: number;
     in_progress: number;
+    quoted: number;
     waiting_for_customer: number;
+    needs_action: number;
+    completed: number;
     closed_today: number;
   };
   sla: {
@@ -1388,6 +1404,7 @@ export function fetchExpertRequests(params?: {
   page?: number;
   per_page?: number;
   status?: string;
+  bucket?: string;
   assigned_to?: number;
   priority?: string;
   search?: string;
@@ -1423,6 +1440,8 @@ export function fetchExpertRequestDetail(requestId: string): Promise<
     timeline: Array<{
       id: number;
       action: string;
+      title: string;
+      description?: string | null;
       old_status?: string;
       new_status?: string;
       note?: string;
@@ -2950,6 +2969,22 @@ export interface CRMShipmentRequestLinkState {
   customer: CRMLinkCustomer | null;
 }
 
+export interface RequestOrganizationCustomer {
+  id: number;
+  name: string;
+  company_name?: string | null;
+  phone?: string | null;
+  email?: string | null;
+}
+
+export interface RequestOrganizationCustomerState {
+  operation: "read" | "link" | "relink" | "noop";
+  request_public_id: string;
+  customer: RequestOrganizationCustomer | null;
+  has_available_customers: boolean;
+  can_change: boolean;
+}
+
 export interface CRMCreateCustomerFields {
   first_name?: string | null;
   last_name?: string | null;
@@ -3164,6 +3199,42 @@ export function searchCRMLinkCustomers(params?: {
 }> {
   const path = withQuery("/api/crm/customer-link/customers", params);
   return request(path);
+}
+
+export function fetchRequestOrganizationCustomer(
+  requestPublicId: string,
+): Promise<RequestOrganizationCustomerState> {
+  return request(`/api/expert/requests/${requestPublicId}/organization-customer`);
+}
+
+export function searchRequestOrganizationCustomers(
+  requestPublicId: string,
+  params?: { page?: number; per_page?: number; search?: string },
+): Promise<{
+  customers: RequestOrganizationCustomer[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}> {
+  return request(withQuery(
+    `/api/expert/requests/${requestPublicId}/organization-customers`,
+    params,
+  ));
+}
+
+export function linkRequestOrganizationCustomer(
+  requestPublicId: string,
+  customerId: number,
+): Promise<RequestOrganizationCustomerState> {
+  return request(`/api/expert/requests/${requestPublicId}/organization-customer`, {
+    method: "PUT",
+    body: JSON.stringify({ customer_id: customerId }),
+  });
 }
 
 export function fetchShipmentRequestCustomerLink(

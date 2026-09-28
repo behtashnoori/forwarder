@@ -15,11 +15,9 @@ import {
   Package,
   Phone,
   Plus,
-  RefreshCw,
   Search,
   Send,
   Truck,
-  Unlink,
   User,
   Weight,
   type LucideIcon,
@@ -33,6 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import PageNav from "@/components/PageNav";
+import OperationsNav from "@/components/OperationsNav";
 import OperationalPermission from "@/components/OperationalPermission";
 import OperationalAnyPermission from "@/components/OperationalAnyPermission";
 import CaseDocumentsTab from "@/components/CaseDocumentsTab";
@@ -42,26 +41,22 @@ import OperationalEventLocationSelector, {
   type OperationalEventLocation,
 } from "@/components/OperationalEventLocationSelector";
 import { useToast } from "@/hooks/use-toast";
-import { formatMoney as formatBusinessMoney, formatQuantity } from "@/lib/formatQuantity";
+import { formatMoney as formatBusinessMoney, formatQuantity, formatQuoteMoney } from "@/lib/formatQuantity";
 import {
   addMessage,
   addTrackingUnitUpdate,
   changeRequestStatus,
-  createCustomerFromShipmentRequest,
   fetchExpertRequestDetail,
+  fetchRequestOrganizationCustomer,
   fetchTrackingManagement,
   enableTrackingManagement,
   updateTrackingUnitMetadata,
-  fetchShipmentRequestCustomerLink,
-  fetchShipmentRequestCustomerCreatePreview,
+  linkRequestOrganizationCustomer,
   listOperationalShipments,
-  linkShipmentRequestCustomer,
-  searchCRMLinkCustomers,
-  unlinkShipmentRequestCustomer,
-  type CRMCreateCustomerFields,
-  type CRMCustomerCreatePreview,
-  type CRMLinkCustomer,
-  type CRMShipmentRequestLinkState,
+  searchRequestOrganizationCustomers,
+  type RequestCommercialProjection,
+  type RequestOrganizationCustomer,
+  type RequestOrganizationCustomerState,
   type TrackingManagementData,
   type OperationalShipmentSummary,
   type RequestCargoItem,
@@ -133,6 +128,8 @@ interface RequestDetail {
   timeline: Array<{
     id: number;
     action: string;
+    title: string;
+    description?: string | null;
     old_status?: string;
     new_status?: string;
     note?: string;
@@ -150,6 +147,7 @@ interface RequestDetail {
     created_by: string;
   }>;
   has_unread: boolean;
+  commercial: RequestCommercialProjection;
   latest_quote?: {
     id: number;
     public_id: string;
@@ -195,28 +193,19 @@ const formatMeasurement = (value: number | null | undefined, unit: string, local
 const formatMoney = (value: number | null | undefined, locale: string, fallback: string, unit: string) => {
   return formatBusinessMoney(value, unit, locale, fallback);
 };
-const crmLinkAllowedRoles = new Set(["admin", "crm_manager", "supervisor", "business_expert"]);
-
-const emptyCreateCustomerFields: CRMCreateCustomerFields = {
-  first_name: "",
-  last_name: "",
-  company_name: "",
-  email: "",
-  phone: "",
-  mobile: "",
-  customer_type: "prospect",
-  status: "active",
-  source: "shipment_request",
-  notes: "",
-  city: "",
-  province: "",
-  country: "Iran",
+const customerResponseLabel = (
+  response: RequestCommercialProjection["latest_quote_response"],
+  hasQuote: boolean,
+) => {
+  if (response === "accepted") return "پیشنهاد پذیرفته شده است";
+  if (response === "discussion") return "مشتری درخواست مذاکره کرده است";
+  if (response === "declined") return "پیشنهاد رد شده است";
+  return hasQuote ? "هنوز پاسخی ثبت نشده است" : "هنوز پیشنهادی ارسال نشده است";
 };
-
 const RequestDetail = () => {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
-  const { actionLabel, locale, statusLabel, t, tf, transportLabel } = useI18n();
+  const { locale, statusLabel, t, tf, transportLabel } = useI18n();
   const missingValue = t("common.notRegistered");
 
   const [request, setRequest] = useState<RequestDetail | null>(null);
@@ -229,22 +218,15 @@ const RequestDetail = () => {
     content: "",
   });
   const [sendingMessage, setSendingMessage] = useState(false);
-  const [crmLinkState, setCrmLinkState] = useState<CRMShipmentRequestLinkState | null>(null);
-  const [crmLinkLoading, setCrmLinkLoading] = useState(false);
-  const [crmSearch, setCrmSearch] = useState("");
-  const [crmCandidates, setCrmCandidates] = useState<CRMLinkCustomer[]>([]);
-  const [crmSearchLoading, setCrmSearchLoading] = useState(false);
-  const [crmSaving, setCrmSaving] = useState(false);
-  const [selectedCrmCustomerId, setSelectedCrmCustomerId] = useState<number | null>(null);
-  const [crmLinkNote, setCrmLinkNote] = useState("");
-  const [crmCreatePreview, setCrmCreatePreview] = useState<CRMCustomerCreatePreview | null>(null);
-  const [crmCreateFields, setCrmCreateFields] = useState<CRMCreateCustomerFields>(emptyCreateCustomerFields);
-  const [crmCreateLoading, setCrmCreateLoading] = useState(false);
-  const [crmCreateSaving, setCrmCreateSaving] = useState(false);
-  const [crmCreateConfirm, setCrmCreateConfirm] = useState(false);
-  const [crmDuplicateAcknowledged, setCrmDuplicateAcknowledged] = useState(false);
-  const [crmCreateLink, setCrmCreateLink] = useState(true);
-  const [crmCreateReason, setCrmCreateReason] = useState("");
+  const [organizationCustomerState, setOrganizationCustomerState] = useState<RequestOrganizationCustomerState | null>(null);
+  const [organizationCustomerLoading, setOrganizationCustomerLoading] = useState(false);
+  const [organizationCustomerError, setOrganizationCustomerError] = useState<string | null>(null);
+  const [organizationCustomerSearch, setOrganizationCustomerSearch] = useState("");
+  const [organizationCustomerCandidates, setOrganizationCustomerCandidates] = useState<RequestOrganizationCustomer[]>([]);
+  const [organizationCustomerSearchLoading, setOrganizationCustomerSearchLoading] = useState(false);
+  const [organizationCustomerSearchComplete, setOrganizationCustomerSearchComplete] = useState(false);
+  const [organizationCustomerSaving, setOrganizationCustomerSaving] = useState(false);
+  const [selectedOrganizationCustomerId, setSelectedOrganizationCustomerId] = useState<number | null>(null);
   const [operationalShipments, setOperationalShipments] = useState<OperationalShipmentSummary[]>([]);
 
   const storedExpert = useMemo(() => {
@@ -259,7 +241,6 @@ const RequestDetail = () => {
     return null;
   }, []);
   const expertId = typeof storedExpert?.id === "number" ? storedExpert.id : 1;
-  const canUseCrmLink = !!storedExpert?.role && crmLinkAllowedRoles.has(storedExpert.role);
 
   const loadRequestDetail = useCallback(async () => {
     try {
@@ -278,22 +259,19 @@ const RequestDetail = () => {
     }
   }, [id, t, toast]);
 
-  const loadCrmLinkState = useCallback(async () => {
-    if (!request || !canUseCrmLink) return;
+  const loadOrganizationCustomer = useCallback(async (requestPublicId: string) => {
     try {
-      setCrmLinkLoading(true);
-      const data = await fetchShipmentRequestCustomerLink(request.id);
-      setCrmLinkState(data);
-    } catch (error) {
-      toast({
-        title: "CRM",
-        description: "وضعیت لینک مشتری CRM دریافت نشد",
-        variant: "destructive",
-      });
+      setOrganizationCustomerLoading(true);
+      setOrganizationCustomerError(null);
+      const data = await fetchRequestOrganizationCustomer(requestPublicId);
+      setOrganizationCustomerState(data);
+    } catch {
+      setOrganizationCustomerState(null);
+      setOrganizationCustomerError("اطلاعات مشتری سازمان در دسترس نیست.");
     } finally {
-      setCrmLinkLoading(false);
+      setOrganizationCustomerLoading(false);
     }
-  }, [canUseCrmLink, request, toast]);
+  }, []);
 
   useEffect(() => {
     if (id) {
@@ -309,151 +287,53 @@ const RequestDetail = () => {
   }, [request]);
 
   useEffect(() => {
-    if (id && canUseCrmLink) {
-      loadCrmLinkState();
+    if (request?.public_id) {
+      void loadOrganizationCustomer(request.public_id);
     }
-  }, [canUseCrmLink, id, loadCrmLinkState]);
+  }, [loadOrganizationCustomer, request?.public_id]);
 
-  const handleCrmCustomerSearch = async () => {
-    if (!canUseCrmLink) return;
+  const handleOrganizationCustomerSearch = async () => {
+    if (!request) return;
     try {
-      setCrmSearchLoading(true);
-      setSelectedCrmCustomerId(null);
-      const data = await searchCRMLinkCustomers({
-        search: crmSearch.trim() || undefined,
+      setOrganizationCustomerSearchLoading(true);
+      setOrganizationCustomerSearchComplete(false);
+      setSelectedOrganizationCustomerId(null);
+      setOrganizationCustomerError(null);
+      const data = await searchRequestOrganizationCustomers(request.public_id, {
+        search: organizationCustomerSearch.trim() || undefined,
         per_page: 8,
       });
-      setCrmCandidates(data.customers);
-    } catch (error) {
-      toast({
-        title: "CRM",
-        description: "جستجوی مشتری CRM انجام نشد",
-        variant: "destructive",
-      });
+      setOrganizationCustomerCandidates(data.customers);
+    } catch {
+      setOrganizationCustomerCandidates([]);
+      setOrganizationCustomerError("جستجوی مشتری سازمان انجام نشد.");
     } finally {
-      setCrmSearchLoading(false);
+      setOrganizationCustomerSearchLoading(false);
+      setOrganizationCustomerSearchComplete(true);
     }
   };
 
-  const handleCrmLink = async () => {
-    if (!request || !selectedCrmCustomerId) return;
+  const handleOrganizationCustomerLink = async () => {
+    if (!request || !selectedOrganizationCustomerId) return;
     try {
-      setCrmSaving(true);
-      const data = await linkShipmentRequestCustomer(request.id, selectedCrmCustomerId, crmLinkNote);
-      setCrmLinkState(data);
-      setSelectedCrmCustomerId(null);
-      setCrmLinkNote("");
+      setOrganizationCustomerSaving(true);
+      setOrganizationCustomerError(null);
+      const data = await linkRequestOrganizationCustomer(request.public_id, selectedOrganizationCustomerId);
+      setOrganizationCustomerState(data);
+      setSelectedOrganizationCustomerId(null);
+      setOrganizationCustomerCandidates([]);
+      setOrganizationCustomerSearchComplete(false);
       toast({
-        title: "CRM",
-        description: "مشتری CRM به درخواست لینک شد",
+        title: "مشتری سازمان",
+        description: data.operation === "relink"
+          ? "مشتری سازمان این درخواست تغییر کرد."
+          : "مشتری سازمان به درخواست متصل شد.",
       });
-    } catch (error) {
-      toast({
-        title: "CRM",
-        description: "لینک مشتری CRM انجام نشد",
-        variant: "destructive",
-      });
+      await loadRequestDetail();
+    } catch {
+      setOrganizationCustomerError("اتصال مشتری سازمان انجام نشد.");
     } finally {
-      setCrmSaving(false);
-    }
-  };
-
-  const handleLoadCrmCreatePreview = async () => {
-    if (!id || !canUseCrmLink) return;
-    try {
-      setCrmCreateLoading(true);
-      if (!request) return;
-      const data = await fetchShipmentRequestCustomerCreatePreview(request.id);
-      setCrmCreatePreview(data);
-      setCrmCreateFields({ ...emptyCreateCustomerFields, ...data.suggested_customer });
-      setCrmCreateConfirm(false);
-      setCrmDuplicateAcknowledged(false);
-      setCrmCreateLink(!data.shipment_request.customer_id);
-      setCrmCreateReason("");
-    } catch (error) {
-      toast({
-        title: "CRM",
-        description: "پیش‌نمایش ساخت مشتری CRM دریافت نشد",
-        variant: "destructive",
-      });
-    } finally {
-      setCrmCreateLoading(false);
-    }
-  };
-
-  const handleCrmCreateFieldChange = (field: keyof CRMCreateCustomerFields, value: string) => {
-    setCrmCreateFields((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCreateCrmCustomer = async () => {
-    if (!id || !crmCreatePreview || !crmCreateConfirm) return;
-    const hasStrongDuplicate = crmCreatePreview.metadata.strong_duplicate_count > 0;
-    if (hasStrongDuplicate && !crmDuplicateAcknowledged) {
-      toast({
-        title: "CRM",
-        description: "برای ساخت مشتری جدید، تکراری‌های قوی را تایید کنید",
-        variant: "destructive",
-      });
-      return;
-    }
-    try {
-      setCrmCreateSaving(true);
-      if (!request) return;
-      const result = await createCustomerFromShipmentRequest(request.id, {
-        customer: crmCreateFields,
-        link: crmCreateLink,
-        duplicate_acknowledged: crmDuplicateAcknowledged,
-        reason: crmCreateReason.trim() || undefined,
-      });
-      if (result.metadata.linked) {
-        setCrmLinkState({
-          operation: result.operation,
-          shipment_request: result.shipment_request,
-          customer: result.customer,
-        });
-        await loadCrmLinkState();
-      }
-      setCrmCreatePreview(null);
-      setCrmCreateConfirm(false);
-      setCrmDuplicateAcknowledged(false);
-      setCrmCreateReason("");
-      toast({
-        title: "CRM",
-        description: result.metadata.linked
-          ? "مشتری CRM ساخته و به درخواست لینک شد"
-          : "مشتری CRM ساخته شد",
-      });
-    } catch (error) {
-      toast({
-        title: "CRM",
-        description: "ساخت مشتری CRM انجام نشد",
-        variant: "destructive",
-      });
-    } finally {
-      setCrmCreateSaving(false);
-    }
-  };
-
-  const handleCrmUnlink = async () => {
-    if (!id) return;
-    try {
-      setCrmSaving(true);
-      if (!request) return;
-      const data = await unlinkShipmentRequestCustomer(request.id, crmLinkNote);
-      setCrmLinkState(data);
-      setCrmLinkNote("");
-      toast({
-        title: "CRM",
-        description: "لینک مشتری CRM حذف شد",
-      });
-    } catch (error) {
-      toast({
-        title: "CRM",
-        description: "حذف لینک مشتری CRM انجام نشد",
-        variant: "destructive",
-      });
-    } finally {
-      setCrmSaving(false);
+      setOrganizationCustomerSaving(false);
     }
   };
 
@@ -467,7 +347,7 @@ const RequestDetail = () => {
         description: t("requestDetail.statusUpdated"),
       });
 
-      setRequest((prev) => (prev ? { ...prev, status: newStatus } : null));
+      await loadRequestDetail();
 
       setTimeout(() => {
         toast({
@@ -640,6 +520,9 @@ const RequestDetail = () => {
   }
 
   const internalNotes = request.messages.filter((message) => message.type === "internal_note");
+  const latestQuoteAlreadyConverted = request.latest_quote
+    ? operationalShipments.some((shipment) => shipment.source.accepted_quote_id === request.latest_quote?.id)
+    : false;
   const cargo = request.cargo ?? {};
   const hasLegacyCargo = Object.values(cargo).some((value) => value != null && value !== "");
   const origin = request.route?.origin ?? emptyLocation;
@@ -648,6 +531,7 @@ const RequestDetail = () => {
   return (
     <div className="min-h-screen bg-slate-50" dir="rtl">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
+        <OperationsNav />
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-start gap-4">
@@ -657,7 +541,7 @@ const RequestDetail = () => {
               <div className="min-w-0">
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className={`rounded-full px-3 py-1 ${getStatusColor(request.status)}`}>
-                    {statusLabel(request.status)}
+                    {request.commercial.request_status_label_fa}
                   </Badge>
                 </div>
                 <h1 className="break-words text-2xl font-bold text-slate-950 sm:text-3xl">{request.tracking_number}</h1>
@@ -667,6 +551,17 @@ const RequestDetail = () => {
             <PageNav backTo="/expert" backLabel={t("requestDetail.backToConsole")} showLogout logoutTo="/expert" className="flex-wrap lg:justify-end" />
           </div>
         </section>
+
+        <Card className="rounded-3xl border-blue-100 bg-blue-50/60 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-slate-950">وضعیت تجاری درخواست</CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-3">
+            <InfoRow label="وضعیت درخواست" value={request.commercial.request_status_label_fa} />
+            <InfoRow label="آخرین پاسخ مشتری" value={customerResponseLabel(request.commercial.latest_quote_response, !!request.latest_quote)} />
+            <InfoRow label="اقدام بعدی" value={request.commercial.next_action.label_fa} />
+          </CardContent>
+        </Card>
 
         <Card><CardHeader><CardTitle>محموله‌های عملیاتی این درخواست</CardTitle></CardHeader><CardContent className="space-y-2">{operationalShipments.length===0?<p className="text-sm text-muted-foreground">هنوز محموله عملیاتی از این درخواست ایجاد نشده است.</p>:operationalShipments.map((shipment)=><Link key={shipment.public_id} className="block rounded border p-3 hover:bg-slate-50" to={`/operations/shipments/${shipment.public_id}`}><strong>{shipment.route_leg.origin.display_name} → {shipment.route_leg.destination.display_name}</strong><p className="text-sm">{shipment.status} · {shipment.project_public_id||"بدون پروژه"}</p></Link>)}</CardContent></Card>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
@@ -803,7 +698,7 @@ const RequestDetail = () => {
                           <div className="flex items-baseline justify-between gap-2">
                             <span className="text-xs text-slate-500">{t("common.amount")}</span>
                             <span className="text-lg font-bold text-slate-900">
-                              {formatBusinessMoney(request.latest_quote.amount, request.latest_quote.currency, locale, missingValue)}
+                              {formatQuoteMoney(request.latest_quote.amount, request.latest_quote.currency, locale, missingValue)}
                             </span>
                           </div>
                           {request.latest_quote.valid_until && (
@@ -818,7 +713,18 @@ const RequestDetail = () => {
                         {request.latest_quote.customer_response === "accepted" ? (
                           <div className="space-y-3 rounded-2xl bg-green-50 p-3 text-sm font-medium text-green-800">
                             <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 shrink-0" />{t("requestDetail.customerAccepted")}</div>
-                            <OperationalAnyPermission permissions={["operational_shipment.create_from_quote","operational_shipment.create"]}><Button asChild size="sm"><Link to={`/operations/shipments/new?source=accepted_quote&accepted_quote_id=${request.latest_quote.id}&request_ref=${encodeURIComponent(request.tracking_number)}`}>{t("operations.create")}</Link></Button></OperationalAnyPermission>
+                            {latestQuoteAlreadyConverted ? (
+                              <p className="text-xs font-normal leading-6">محموله عملیاتی این پیشنهاد قبلاً ایجاد شده است.</p>
+                            ) : organizationCustomerState?.customer ? (
+                              <OperationalAnyPermission
+                                permissions={["operational_shipment.create_from_quote","operational_shipment.create"]}
+                                fallback={<p className="text-xs font-normal leading-6">برای ایجاد محموله عملیاتی، مجوز مربوط به ساخت از پیشنهاد پذیرفته‌شده لازم است.</p>}
+                              >
+                                <Button asChild size="sm"><Link to={`/operations/shipments/new?source=accepted_quote&accepted_quote_id=${request.latest_quote.id}&request_ref=${encodeURIComponent(request.tracking_number)}`}>{t("operations.create")}</Link></Button>
+                              </OperationalAnyPermission>
+                            ) : (
+                              <p className="text-xs font-normal leading-6">برای ادامه، ابتدا مشتری سازمان این درخواست را انتخاب کنید.</p>
+                            )}
                           </div>
                         ) : request.latest_quote.customer_response === "discussion" ? (
                           <div className="space-y-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
@@ -851,7 +757,7 @@ const RequestDetail = () => {
                               <div key={quote.public_id} className="rounded-xl border border-slate-100 bg-white p-3 text-sm">
                                 <div className="flex flex-wrap items-center justify-between gap-2">
                                   <span className="font-semibold text-slate-900">
-                                    {formatBusinessMoney(quote.amount, quote.currency, locale, missingValue)}
+                                    {formatQuoteMoney(quote.amount, quote.currency, locale, missingValue)}
                                   </span>
                                   <span className="text-xs text-slate-500">{formatDualCalendarInstant(quote.created_at, locale)}</span>
                                 </div>
@@ -882,42 +788,24 @@ const RequestDetail = () => {
               </main>
 
               <aside className="min-w-0 space-y-6">
-                <CrmCustomerLinkCard
-                  canUseCrmLink={canUseCrmLink}
-                  candidates={crmCandidates}
-                  linkState={crmLinkState}
-                  loading={crmLinkLoading}
-                  note={crmLinkNote}
-                  onLink={handleCrmLink}
-                  onNoteChange={setCrmLinkNote}
-                  onSearch={handleCrmCustomerSearch}
-                  onSearchChange={setCrmSearch}
-                  onSelectCustomer={setSelectedCrmCustomerId}
-                  onUnlink={handleCrmUnlink}
-                  createConfirm={crmCreateConfirm}
-                  createFields={crmCreateFields}
-                  createLink={crmCreateLink}
-                  createLoading={crmCreateLoading}
-                  createPreview={crmCreatePreview}
-                  createReason={crmCreateReason}
-                  createSaving={crmCreateSaving}
-                  duplicateAcknowledged={crmDuplicateAcknowledged}
-                  onCreateConfirmChange={setCrmCreateConfirm}
-                  onCreateCustomer={handleCreateCrmCustomer}
-                  onCreateFieldChange={handleCrmCreateFieldChange}
-                  onCreateLinkChange={setCrmCreateLink}
-                  onCreateReasonChange={setCrmCreateReason}
-                  onDuplicateAcknowledgedChange={setCrmDuplicateAcknowledged}
-                  onLoadCreatePreview={handleLoadCrmCreatePreview}
-                  saving={crmSaving}
-                  search={crmSearch}
-                  searchLoading={crmSearchLoading}
-                  selectedCustomerId={selectedCrmCustomerId}
+                <OrganizationCustomerCard
+                  candidates={organizationCustomerCandidates}
+                  error={organizationCustomerError}
+                  linkState={organizationCustomerState}
+                  loading={organizationCustomerLoading}
+                  onLink={handleOrganizationCustomerLink}
+                  onSearch={handleOrganizationCustomerSearch}
+                  onSearchChange={setOrganizationCustomerSearch}
+                  onSelectCustomer={setSelectedOrganizationCustomerId}
+                  saving={organizationCustomerSaving}
+                  search={organizationCustomerSearch}
+                  searchLoading={organizationCustomerSearchLoading}
+                  searchComplete={organizationCustomerSearchComplete}
+                  selectedCustomerId={selectedOrganizationCustomerId}
                 />
-                <OperationsCard handleStatusChange={handleStatusChange} statusLabel={statusLabel} t={t} />
+                <OperationsCard commercial={request.commercial} handleStatusChange={handleStatusChange} statusLabel={statusLabel} />
                 <TimelineCard
                   timeline={request.timeline}
-                  actionLabel={actionLabel}
                   formatDate={(value) => formatDateValue(value, locale, missingValue)}
                   statusLabel={statusLabel}
                   t={t}
@@ -1044,318 +932,134 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-const CrmCustomerLinkCard = ({
-  canUseCrmLink,
+const OrganizationCustomerCard = ({
   candidates,
-  createConfirm,
-  createFields,
-  createLink,
-  createLoading,
-  createPreview,
-  createReason,
-  createSaving,
-  duplicateAcknowledged,
+  error,
   linkState,
   loading,
-  note,
-  onCreateConfirmChange,
-  onCreateCustomer,
-  onCreateFieldChange,
-  onCreateLinkChange,
-  onCreateReasonChange,
-  onDuplicateAcknowledgedChange,
-  onLoadCreatePreview,
   onLink,
-  onNoteChange,
   onSearch,
   onSearchChange,
   onSelectCustomer,
-  onUnlink,
   saving,
   search,
+  searchComplete,
   searchLoading,
   selectedCustomerId,
 }: {
-  canUseCrmLink: boolean;
-  candidates: CRMLinkCustomer[];
-  createConfirm: boolean;
-  createFields: CRMCreateCustomerFields;
-  createLink: boolean;
-  createLoading: boolean;
-  createPreview: CRMCustomerCreatePreview | null;
-  createReason: string;
-  createSaving: boolean;
-  duplicateAcknowledged: boolean;
-  linkState: CRMShipmentRequestLinkState | null;
+  candidates: RequestOrganizationCustomer[];
+  error: string | null;
+  linkState: RequestOrganizationCustomerState | null;
   loading: boolean;
-  note: string;
-  onCreateConfirmChange: (value: boolean) => void;
-  onCreateCustomer: () => void;
-  onCreateFieldChange: (field: keyof CRMCreateCustomerFields, value: string) => void;
-  onCreateLinkChange: (value: boolean) => void;
-  onCreateReasonChange: (value: string) => void;
-  onDuplicateAcknowledgedChange: (value: boolean) => void;
-  onLoadCreatePreview: () => void;
   onLink: () => void;
-  onNoteChange: (value: string) => void;
   onSearch: () => void;
   onSearchChange: (value: string) => void;
   onSelectCustomer: (customerId: number) => void;
-  onUnlink: () => void;
   saving: boolean;
   search: string;
+  searchComplete: boolean;
   searchLoading: boolean;
   selectedCustomerId: number | null;
 }) => {
   const linkedCustomer = linkState?.customer ?? null;
   const isRelinking = !!linkedCustomer && !!selectedCustomerId && selectedCustomerId !== linkedCustomer.id;
-  const strongDuplicateCount = createPreview?.metadata.strong_duplicate_count ?? 0;
-  const hasStrongDuplicate = strongDuplicateCount > 0;
-  const missingRequiredFields = createPreview?.metadata.missing_fields.required ?? [];
-  const canSubmitCreate =
-    createConfirm &&
-    (!hasStrongDuplicate || duplicateAcknowledged) &&
-    !!createFields.first_name?.trim() &&
-    !!createFields.last_name?.trim() &&
-    !createSaving;
 
   return (
     <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg text-slate-950">
           <Link2 className="h-5 w-5 text-blue-600" />
-          لینک مشتری CRM
+          مشتری سازمان
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!canUseCrmLink ? (
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm leading-6 text-amber-800">
-            دسترسی لینک CRM برای نقش فعلی فعال نیست.
-          </div>
-        ) : loading ? (
-          <div className="flex items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-500">
+        <p className="text-sm leading-6 text-slate-600">
+          مشتری موجود همین سازمان را به درخواست متصل کنید. ساخت یا حذف مشتری از این صفحه انجام نمی‌شود.
+        </p>
+        {loading ? (
+          <div className="flex items-center gap-2 rounded-2xl bg-slate-50 p-4 text-sm text-slate-500">
             <Loader2 className="h-4 w-4 animate-spin" />
-            در حال دریافت وضعیت لینک CRM
+            در حال دریافت اطلاعات مشتری سازمان
           </div>
         ) : (
-          <>
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-              <p className="mb-3 text-xs text-slate-500">وضعیت فعلی</p>
-              {linkedCustomer ? (
-                <div className="space-y-3">
-                  <div>
-                    <p className="font-semibold text-slate-950">{linkedCustomer.name}</p>
-                    <p className="text-sm text-slate-600">{linkedCustomer.company_name || "شرکت ثبت نشده"}</p>
-                  </div>
-                  <div className="grid gap-2 text-sm text-slate-600">
-                    <InfoRow label="تلفن" value={linkedCustomer.phone || linkedCustomer.mobile || "ثبت نشده"} />
-                    <InfoRow label="ایمیل" value={linkedCustomer.email || "ثبت نشده"} />
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={onUnlink}
-                    disabled={saving}
-                    className="w-full rounded-2xl border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                  >
-                    {saving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Unlink className="ml-2 h-4 w-4" />}
-                    حذف لینک CRM
-                  </Button>
-                </div>
-              ) : (
-                <p className="text-sm leading-6 text-slate-600">این درخواست هنوز به مشتری CRM لینک نشده است.</p>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={search}
-                  onChange={(event) => onSearchChange(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      onSearch();
-                    }
-                  }}
-                  placeholder="جستجوی نام، شرکت، تلفن یا ایمیل"
-                  className="rounded-2xl bg-slate-50"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onSearch}
-                  disabled={searchLoading || saving}
-                  className="shrink-0 rounded-2xl"
-                  aria-label="جستجوی مشتری CRM"
-                >
-                  {searchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </Button>
+          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+            <p className="mb-2 text-xs text-slate-500">مشتری فعلی</p>
+            {linkedCustomer ? (
+              <div className="space-y-2">
+                <p className="font-semibold text-slate-950">{linkedCustomer.name}</p>
+                <p className="text-sm text-slate-600">{linkedCustomer.company_name || "شرکت ثبت نشده"}</p>
+                <InfoRow label="تلفن" value={linkedCustomer.phone || "ثبت نشده"} />
+                <InfoRow label="ایمیل" value={linkedCustomer.email || "ثبت نشده"} />
               </div>
-
-              {candidates.length > 0 && (
-                <div className="space-y-2">
-                  {candidates.map((customer) => {
-                    const selected = selectedCustomerId === customer.id;
-                    return (
-                      <button
-                        key={customer.id}
-                        type="button"
-                        onClick={() => onSelectCustomer(customer.id)}
-                        className={`w-full rounded-2xl border p-3 text-right transition ${
-                          selected
-                            ? "border-blue-300 bg-blue-50 text-blue-950"
-                            : "border-slate-100 bg-white text-slate-800 hover:border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        <span className="block text-sm font-semibold">{customer.name}</span>
-                        <span className="mt-1 block text-xs text-slate-500">
-                          {customer.company_name || "بدون شرکت"} · {customer.phone || customer.mobile || "بدون تلفن"}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-
-              <Textarea
-                value={note}
-                onChange={(event) => onNoteChange(event.target.value)}
-                rows={2}
-                placeholder="یادداشت لینک CRM (اختیاری)"
-                className="rounded-2xl bg-slate-50"
-              />
-
-              {isRelinking && (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
-                  این درخواست از قبل به یک مشتری CRM لینک شده است. با ادامه، لینک قبلی فقط به مشتری انتخاب‌شده تغییر می‌کند و وضعیت عملیاتی درخواست تغییر نمی‌کند.
-                </div>
-              )}
-
-              <Button
-                type="button"
-                onClick={onLink}
-                disabled={!selectedCustomerId || saving}
-                className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700"
-              >
-                {saving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Link2 className="ml-2 h-4 w-4" />}
-                {isRelinking ? "تغییر لینک به مشتری انتخاب‌شده" : "لینک به مشتری انتخاب‌شده"}
-              </Button>
-            </div>
-
-            <div className="space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">ساخت مشتری CRM از این درخواست</p>
-                  <p className="mt-1 text-xs leading-6 text-slate-600">
-                    ابتدا پیش‌نمایش را بررسی کنید، سپس با تایید صریح مشتری CRM ساخته می‌شود.
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onLoadCreatePreview}
-                  disabled={createLoading || createSaving}
-                  className="shrink-0 rounded-2xl border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
-                >
-                  {createLoading ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ml-2 h-4 w-4" />}
-                  پیش‌نمایش ساخت
-                </Button>
-              </div>
-
-              {createPreview && (
-                <div className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <CrmCreateField label="نام" value={createFields.first_name || ""} onChange={(value) => onCreateFieldChange("first_name", value)} required />
-                    <CrmCreateField label="نام خانوادگی" value={createFields.last_name || ""} onChange={(value) => onCreateFieldChange("last_name", value)} required />
-                    <CrmCreateField label="شرکت" value={createFields.company_name || ""} onChange={(value) => onCreateFieldChange("company_name", value)} />
-                    <CrmCreateField label="ایمیل" value={createFields.email || ""} onChange={(value) => onCreateFieldChange("email", value)} ltr />
-                    <CrmCreateField label="تلفن" value={createFields.phone || ""} onChange={(value) => onCreateFieldChange("phone", value)} ltr />
-                    <CrmCreateField label="موبایل" value={createFields.mobile || ""} onChange={(value) => onCreateFieldChange("mobile", value)} ltr />
-                    <CrmCreateField label="شهر" value={createFields.city || ""} onChange={(value) => onCreateFieldChange("city", value)} />
-                    <CrmCreateField label="کشور" value={createFields.country || ""} onChange={(value) => onCreateFieldChange("country", value)} />
-                  </div>
-
-                  {missingRequiredFields.length > 0 && (
-                    <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm leading-6 text-red-700">
-                      فیلدهای ضروری ناقص هستند: {missingRequiredFields.join(", ")}
-                    </div>
-                  )}
-
-                  <div className="rounded-2xl border border-slate-100 bg-white p-3">
-                    <p className="mb-2 text-xs font-semibold text-slate-600">مشتری‌های مشابه</p>
-                    {createPreview.duplicate_candidates.length === 0 ? (
-                      <p className="text-sm text-slate-500">مورد مشابهی پیدا نشد.</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {createPreview.duplicate_candidates.map((customer) => (
-                          <div key={customer.id} className="rounded-2xl border border-slate-100 bg-slate-50 p-3">
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-semibold text-slate-900">{customer.name}</p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {customer.company_name || "بدون شرکت"} · {customer.phone || customer.mobile || "بدون تلفن"}
-                                </p>
-                              </div>
-                              <Badge className={customer.match_strength === "strong" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}>
-                                {customer.match_strength === "strong" ? "قوی" : "ضعیف"}
-                              </Badge>
-                            </div>
-                            {customer.match_reasons && customer.match_reasons.length > 0 && (
-                              <p className="mt-2 text-xs text-slate-500">{customer.match_reasons.join(", ")}</p>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <Textarea
-                    value={createReason}
-                    onChange={(event) => onCreateReasonChange(event.target.value)}
-                    rows={2}
-                    placeholder="دلیل یا یادداشت ساخت مشتری CRM"
-                    className="rounded-2xl bg-white"
-                  />
-
-                  <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-3">
-                    <CrmCheckboxRow
-                      checked={createLink}
-                      label="بعد از ساخت، مشتری جدید به همین درخواست لینک شود"
-                      onCheckedChange={onCreateLinkChange}
-                    />
-                    <CrmCheckboxRow
-                      checked={createConfirm}
-                      label="اطلاعات پیشنهادی را بررسی کردم و ساخت مشتری CRM را تایید می‌کنم"
-                      onCheckedChange={onCreateConfirmChange}
-                    />
-                    {hasStrongDuplicate && (
-                      <CrmCheckboxRow
-                        checked={duplicateAcknowledged}
-                        label={`وجود ${strongDuplicateCount} مشابه قوی را تایید می‌کنم و همچنان مشتری جدید می‌سازم`}
-                        onCheckedChange={onDuplicateAcknowledgedChange}
-                      />
-                    )}
-                  </div>
-
-                  <Button
-                    type="button"
-                    onClick={onCreateCustomer}
-                    disabled={!canSubmitCreate}
-                    className="w-full rounded-2xl bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {createSaving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Plus className="ml-2 h-4 w-4" />}
-                    {createLink ? "ساخت مشتری و لینک به درخواست" : "ساخت مشتری بدون لینک"}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </>
+            ) : (
+              <p className="text-sm leading-6 text-slate-600">هنوز مشتری سازمان برای این درخواست انتخاب نشده است.</p>
+            )}
+          </div>
         )}
+
+        {!loading && linkState && !linkState.has_available_customers && (
+          <div className="rounded-2xl border border-amber-100 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+            ابتدا مدیر سازمان باید مشتری را در فهرست مشتریان سازمان ثبت کند.
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Input
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onSearch();
+              }
+            }}
+            placeholder="جستجو با نام یا نام شرکت"
+            className="rounded-2xl bg-slate-50"
+          />
+          <Button type="button" variant="outline" onClick={onSearch} disabled={searchLoading || saving} className="shrink-0 rounded-2xl" aria-label="جستجوی مشتری سازمان">
+            {searchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {candidates.length > 0 && (
+          <div className="space-y-2">
+            {candidates.map((customer) => {
+              const selected = selectedCustomerId === customer.id;
+              return (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => onSelectCustomer(customer.id)}
+                  className={`w-full rounded-2xl border p-3 text-right transition ${selected ? "border-blue-300 bg-blue-50 text-blue-950" : "border-slate-100 bg-white text-slate-800 hover:bg-slate-50"}`}
+                >
+                  <span className="block text-sm font-semibold">{customer.name}</span>
+                  <span className="mt-1 block text-xs text-slate-500">{customer.company_name || "بدون نام شرکت"} · {customer.phone || "بدون تلفن"}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+        {searchComplete && !error && candidates.length === 0 && (
+          <p className="rounded-2xl border border-dashed border-slate-200 p-3 text-sm text-slate-500">
+            مشتری سازمانی مطابق جستجو پیدا نشد.
+          </p>
+        )}
+
+        {isRelinking && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-800">
+            با تأیید، مشتری فعلی این درخواست با مشتری انتخاب‌شده جایگزین می‌شود.
+          </div>
+        )}
+        {error && <div className="rounded-2xl border border-red-100 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        <Button type="button" onClick={onLink} disabled={!selectedCustomerId || saving} className="w-full rounded-2xl bg-blue-600 hover:bg-blue-700">
+          {saving ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Link2 className="ml-2 h-4 w-4" />}
+          {isRelinking ? "تغییر مشتری سازمان" : "اتصال مشتری انتخاب‌شده"}
+        </Button>
       </CardContent>
     </Card>
   );
 };
+
 
 const TrackingManagementCard = ({ requestId, locale, t, toast }: {
   requestId: string;
@@ -1443,82 +1147,40 @@ const TrackingManagementCard = ({ requestId, locale, t, toast }: {
   );
 };
 
-const CrmCreateField = ({
-  label,
-  ltr = false,
-  onChange,
-  required = false,
-  value,
-}: {
-  label: string;
-  ltr?: boolean;
-  onChange: (value: string) => void;
-  required?: boolean;
-  value: string;
-}) => (
-  <label className="space-y-1 text-sm">
-    <span className="text-slate-600">
-      {label}
-      {required ? <span className="text-red-500"> *</span> : null}
-    </span>
-    <Input
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      className="rounded-2xl bg-white"
-      dir={ltr ? "ltr" : "rtl"}
-    />
-  </label>
-);
-
-const CrmCheckboxRow = ({
-  checked,
-  label,
-  onCheckedChange,
-}: {
-  checked: boolean;
-  label: string;
-  onCheckedChange: (value: boolean) => void;
-}) => (
-  <label className="flex items-start gap-3 text-sm leading-6 text-slate-700">
-    <Checkbox
-      checked={checked}
-      onCheckedChange={(value) => onCheckedChange(value === true)}
-      className="mt-1"
-    />
-    <span>{label}</span>
-  </label>
-);
 
 const OperationsCard = ({
+  commercial,
   handleStatusChange,
   statusLabel,
-  t,
 }: {
+  commercial: RequestCommercialProjection;
   handleStatusChange: (newStatus: string) => void;
   statusLabel: (status: string) => string;
-  t: ReturnType<typeof useI18n>["t"];
 }) => (
   <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
     <CardHeader className="pb-3">
       <CardTitle className="flex items-center gap-2 text-lg text-slate-950">
         <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-        {t("requestDetail.operations")}
+        وضعیت تجاری درخواست
       </CardTitle>
     </CardHeader>
     <CardContent>
       <p className="mb-3 text-sm leading-6 text-slate-500">
-        {t("requestDetail.operationsHint")}
+        پاسخ مشتری، وضعیت درخواست را خودکار تغییر نمی‌دهد. پس از بررسی پاسخ، وضعیت تجاری را صریحاً انتخاب کنید.
       </p>
+      <div className="mb-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+        اقدام بعدی: <span className="font-semibold text-slate-950">{commercial.next_action.label_fa}</span>
+      </div>
       <Select onValueChange={handleStatusChange}>
         <SelectTrigger className="rounded-2xl bg-slate-50">
-          <SelectValue placeholder={t("requestDetail.changeStatus")} />
+          <SelectValue placeholder="تغییر صریح وضعیت درخواست" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="in_progress">{statusLabel("in_progress")}</SelectItem>
           <SelectItem value="waiting_for_customer">{statusLabel("waiting_for_customer")}</SelectItem>
           <SelectItem value="won">{statusLabel("won")}</SelectItem>
-          <SelectItem value="lost">{t("status.rejectedOrLost")}</SelectItem>
-          <SelectItem value="closed">{t("requestDetail.close")}</SelectItem>
+          <SelectItem value="lost">رد شده / از دست رفته</SelectItem>
+          <SelectItem value="closed">بسته شده</SelectItem>
         </SelectContent>
       </Select>
     </CardContent>
@@ -1527,13 +1189,11 @@ const OperationsCard = ({
 
 const TimelineCard = ({
   timeline,
-  actionLabel,
   formatDate,
   statusLabel,
   t,
 }: {
   timeline: RequestDetail["timeline"];
-  actionLabel: (action: string) => string;
   formatDate: (value: string) => string;
   statusLabel: (status: string) => string;
   t: ReturnType<typeof useI18n>["t"];
@@ -1559,18 +1219,19 @@ const TimelineCard = ({
               <div className="pb-5">
                 <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-slate-950">{actionLabel(event.action)}</span>
+                    <span className="text-sm font-semibold text-slate-950">{event.title}</span>
                     {event.old_status && event.new_status && (
-                      <Badge variant="outline" className="rounded-full bg-white">
-                        {statusLabel(event.old_status)} ← {statusLabel(event.new_status)}
-                      </Badge>
+                      <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+                        <Badge variant="outline" className="rounded-full bg-white">از: {statusLabel(event.old_status)}</Badge>
+                        <Badge variant="outline" className="rounded-full bg-white">به: {statusLabel(event.new_status)}</Badge>
+                      </div>
                     )}
                   </div>
-                  {event.note && <p className="mb-2 text-sm leading-6 text-slate-600">{event.note}</p>}
+                  {event.description && <p className="mb-2 whitespace-pre-wrap break-words text-sm leading-6 text-slate-600">{event.description}</p>}
                   <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                    <span>{formatDate(event.created_at)}</span>
+                    <span>زمان: {formatDate(event.created_at)}</span>
                     <span>•</span>
-                    <span>{event.created_by}</span>
+                    <span>توسط: {event.created_by}</span>
                   </div>
                 </div>
               </div>

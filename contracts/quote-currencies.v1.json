@@ -4,11 +4,11 @@
   "currencies": [
     {
       "code": "IRR",
-      "label_fa": "تومان (IRR)"
+      "label_fa": "ریال ایران (IRR)"
     },
     {
       "code": "USD",
-      "label_fa": "دلار (USD)"
+      "label_fa": "دلار آمریکا (USD)"
     },
     {
       "code": "EUR",

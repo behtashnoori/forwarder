@@ -37,6 +37,12 @@ const request = {
   timeline: [],
   messages: [],
   has_unread: false,
+  commercial: {
+    request_status: "accepted",
+    request_status_label_fa: "پذیرفته شد",
+    latest_quote_response: null,
+    next_action: { code: "expert_continue_review", actor: "expert" as const, label_fa: "ادامه بررسی تجاری" },
+  },
   latest_quote: null,
 };
 

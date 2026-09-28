@@ -16,7 +16,7 @@ import {
   type CustomerRequestRouteEndpoint,
 } from "@/lib/customerPortalApi";
 import { formatDualCalendarDate, formatDualCalendarInstant } from "@/lib/dualCalendar";
-import { formatMoney } from "@/lib/formatQuantity";
+import { formatQuoteMoney } from "@/lib/formatQuantity";
 import { isLocalDateBeforeToday } from "@/lib/localDate";
 import { useI18n } from "@/i18n";
 
@@ -140,7 +140,7 @@ export default function CustomerPortalRequestDetail() {
 
       <Card><CardHeader><CardTitle>{t("customer.quoteTitle")}</CardTitle></CardHeader><CardContent className="space-y-4">
         {!quote ? <p>{t("customer.noQuote")}</p> : <>
-          <div className="text-xl font-bold">{formatMoney(quote.amount, quote.currency, locale)}</div>
+          <div className="text-xl font-bold">{formatQuoteMoney(quote.amount, quote.currency, locale)}</div>
           {quote.valid_until && <p className="text-sm text-muted-foreground">{t("customer.quoteValidUntil")}: {formatDualCalendarDate(quote.valid_until, locale)}</p>}
           {quote.note && <p className="border-t pt-3 text-sm">{quote.note}</p>}
           {quote.customer_response === "accepted" && <p className="flex gap-2 rounded bg-green-50 p-3 text-green-800"><CheckCircle className="h-4 w-4" />{t("customer.quoteAccepted")}</p>}
@@ -152,7 +152,7 @@ export default function CustomerPortalRequestDetail() {
       </CardContent></Card>
 
       <Card><CardHeader><CardTitle>{t("customer.quoteHistory")}</CardTitle></CardHeader><CardContent className="space-y-3">
-        {!data.quote_history.length ? <p className="text-sm text-muted-foreground">{t("customer.noQuote")}</p> : data.quote_history.map((item) => <div key={item.public_id} className="rounded border p-3"><div className="flex flex-wrap justify-between gap-2"><strong>{formatMoney(item.amount, item.currency, locale)}</strong><span className="text-xs text-muted-foreground">{formatDualCalendarInstant(item.created_at, locale)}</span></div><p className="mt-2 text-sm">{item.customer_response === "accepted" ? t("customer.quoteAccepted") : item.customer_response === "discussion" ? t("customer.quoteDiscussion") : item.customer_response === "declined" ? t("customer.quoteDeclined") : t("customer.quoteAwaitingResponse")}</p>{item.customer_response_message && <p className="mt-2 whitespace-pre-wrap rounded bg-amber-50 p-2 text-sm">{item.customer_response_message}</p>}</div>)}
+        {!data.quote_history.length ? <p className="text-sm text-muted-foreground">{t("customer.noQuote")}</p> : data.quote_history.map((item) => <div key={item.public_id} className="rounded border p-3"><div className="flex flex-wrap justify-between gap-2"><strong>{formatQuoteMoney(item.amount, item.currency, locale)}</strong><span className="text-xs text-muted-foreground">{formatDualCalendarInstant(item.created_at, locale)}</span></div><p className="mt-2 text-sm">{item.customer_response === "accepted" ? t("customer.quoteAccepted") : item.customer_response === "discussion" ? t("customer.quoteDiscussion") : item.customer_response === "declined" ? t("customer.quoteDeclined") : t("customer.quoteAwaitingResponse")}</p>{item.customer_response_message && <p className="mt-2 whitespace-pre-wrap rounded bg-amber-50 p-2 text-sm">{item.customer_response_message}</p>}</div>)}
       </CardContent></Card>
     </div>}
   </CustomerPortalLayout>;

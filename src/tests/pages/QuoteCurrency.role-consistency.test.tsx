@@ -69,6 +69,12 @@ describe("EUR quote presentation", () => {
       timeline: [],
       messages: [],
       has_unread: false,
+      commercial: {
+        request_status: "waiting_for_customer",
+        request_status_label_fa: "در انتظار مشتری",
+        latest_quote_response: null,
+        next_action: { code: "waiting_for_customer", actor: "customer", label_fa: "در انتظار پاسخ مشتری" },
+      },
       latest_quote: latestQuote,
     });
     vi.mocked(api.listOperationalShipments).mockResolvedValue({

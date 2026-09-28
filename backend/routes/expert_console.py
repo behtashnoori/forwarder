@@ -23,6 +23,7 @@ from backend.operational_models import OperationalMembership
 from backend.security import require_auth, validate_input, sanitize_input
 from backend.services import (
     assignment_service,
+    expert_request_customer_service,
     expert_request_detail_service,
     expert_request_list_service,
     message_service,
@@ -180,6 +181,57 @@ def get_shipment_request_detail(request_id: int):
     except Exception as e:
         current_app.logger.error(f"Error getting shipment request detail: {e}")
         return jsonify({"error": "خطا در دریافت جزئیات درخواست"}), 500
+
+
+@expert_console_bp.get("/requests/<request_id>/organization-customer")
+@require_auth
+@_resolve_opaque_request_route
+def get_request_organization_customer(request_id: int):
+    """Read the owning Expert's bounded Request-to-Customer link state."""
+    try:
+        return jsonify(expert_request_customer_service.get_link_state(
+            request_id, get_current_user()
+        ))
+    except expert_request_customer_service.ExpertRequestCustomerError as exc:
+        return jsonify({"error": exc.message}), exc.status_code
+
+
+@expert_console_bp.get("/requests/<request_id>/organization-customers")
+@require_auth
+@_resolve_opaque_request_route
+def search_request_organization_customers(request_id: int):
+    """Search active same-tenant Customers only after Request authorization."""
+    try:
+        return jsonify(expert_request_customer_service.search_candidates(
+            request_id,
+            get_current_user(),
+            search=request.args.get("search"),
+            page=request.args.get("page", 1, type=int),
+            per_page=request.args.get("per_page", 20, type=int),
+        ))
+    except expert_request_customer_service.ExpertRequestCustomerError as exc:
+        return jsonify({"error": exc.message}), exc.status_code
+
+
+@expert_console_bp.put("/requests/<request_id>/organization-customer")
+@require_auth
+@_resolve_opaque_request_route
+def link_request_organization_customer(request_id: int):
+    """Link or audit-relink one existing Customer during commercial review."""
+    try:
+        return jsonify(expert_request_customer_service.link_existing_customer(
+            request_id,
+            get_current_user(),
+            request.get_json(silent=True) or {},
+            request.remote_addr,
+        ))
+    except expert_request_customer_service.ExpertRequestCustomerError as exc:
+        db.session.rollback()
+        return jsonify({"error": exc.message}), exc.status_code
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Failed to link Request organization Customer")
+        return jsonify({"error": "اتصال مشتری سازمان انجام نشد"}), 409
 
 
 @expert_console_bp.get("/requests/<int:request_id>/tracking")

@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from backend import create_app
 from backend.extensions import db
 from backend.models import (
+    Customer,
     CustomerGamification,
     ExpertQuote,
     ExpertUser,
@@ -27,6 +28,7 @@ from backend.operational_models import (
     OrganizationHostname,
 )
 from backend.request_transport_catalog import COMBINED_TRANSPORT_CODE
+from backend.security import security
 from backend.services.user_service import hash_password
 
 
@@ -75,6 +77,17 @@ def main() -> None:
         )
         db.session.add_all([organization, expert])
         db.session.flush()
+        crm_customer = Customer(
+            operational_organization_id=organization.id,
+            ownership_scope="TENANT",
+            status="active",
+            first_name="مشتری",
+            last_name="تجاری آزمایشی",
+            company_name="آرمان تجارت آزمایشی",
+            phone="09124440001",
+            email="commercial-crm@example.invalid",
+        )
+        db.session.add(crm_customer)
         db.session.add_all([
             OrganizationHostname(
                 organization_id=organization.id,
@@ -90,6 +103,7 @@ def main() -> None:
                     "request.read",
                     "request.quote",
                     "operational_shipment.read",
+                    "operational_shipment.create_from_quote",
                 ],
             ),
         ])
@@ -100,6 +114,9 @@ def main() -> None:
             customer = CustomerGamification(
                 id=customer_id,
                 email=f"quote-{journey}@example.invalid",
+                password_hash=security.hash_password(password),
+                account_status="ACTIVE",
+                operational_organization_id=organization.id,
                 phone=f"09125550{index:03d}",
                 first_name="مشتری",
                 last_name={
@@ -162,6 +179,7 @@ def main() -> None:
             db.session.flush()
             fixtures[journey] = {
                 "customer_id": customer.id,
+                "customer_email": customer.email,
                 "request_id": request_row.id,
                 "request_public_id": request_row.public_id,
                 "tracking_code": request_row.tracking_code,
@@ -178,6 +196,8 @@ def main() -> None:
                     "username": USERNAME,
                     "expert_id": expert.id,
                     "organization_id": organization.id,
+                    "crm_customer_id": crm_customer.id,
+                    "crm_customer_name": "مشتری تجاری آزمایشی",
                     "journeys": fixtures,
                 },
                 ensure_ascii=False,

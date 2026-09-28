@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { formatBusinessNumber, formatMoney, formatQuantity } from "../../lib/formatQuantity";
+import { formatBusinessNumber, formatMoney, formatQuantity, formatQuoteMoney } from "../../lib/formatQuantity";
 
 describe("shipment cargo display quantities", () => {
   it("removes stored decimal scale noise and adds integer grouping", () => {
     expect(formatQuantity("1000.000000")).toBe("1,000");
+  });
+
+  it("uses governed Persian Quote currency labels while preserving the code", () => {
+    expect(formatQuoteMoney("100000000", "IRR", "fa-IR")).toBe("۱۰۰٬۰۰۰٬۰۰۰ ریال ایران (IRR)");
+    expect(formatQuoteMoney("100000000", "USD", "fa-IR")).toBe("۱۰۰٬۰۰۰٬۰۰۰ دلار آمریکا (USD)");
+    expect(formatQuoteMoney("100000000", "USD", "en-US")).toBe("100,000,000 USD");
   });
 
   it("retains significant fractional precision", () => {

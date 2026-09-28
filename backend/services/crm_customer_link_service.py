@@ -194,6 +194,7 @@ def add_customer_link_audit_records(
     new_customer_id: int | None,
     note: str | None,
     remote_addr: str | None,
+    source: str = "crm_api",
 ) -> None:
     """Add structured CRM audit and existing console timeline records."""
     add_structured_customer_link_audit(
@@ -204,6 +205,7 @@ def add_customer_link_audit_records(
         new_customer_id=new_customer_id,
         note=note,
         remote_addr=remote_addr,
+        source=source,
     )
     add_customer_link_console_log(
         shipment_request=shipment_request,
@@ -224,6 +226,7 @@ def add_structured_customer_link_audit(
     new_customer_id: int | None,
     note: str | None,
     remote_addr: str | None,
+    source: str = "crm_api",
 ) -> None:
     """Add the durable structured CRM customer-link audit record."""
     db.session.add(
@@ -234,7 +237,7 @@ def add_structured_customer_link_audit(
             operation=operation,
             performed_by_user_id=user.get("id"),
             performed_by_role=user.get("role"),
-            source="crm_api",
+            source=source,
             reason=note,
             request_status_at_time=shipment_request.status,
             assigned_to_at_time=shipment_request.assigned_to,

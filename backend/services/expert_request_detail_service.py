@@ -11,6 +11,10 @@ from backend.models import (
     ShipmentRequest,
 )
 from backend.services import message_service, quote_service
+from backend.services.request_commercial_state import (
+    build_commercial_projection,
+    latest_quote_for_request,
+)
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime
 from backend.services.route_payload_service import build_route_payload
 from backend.services.assigned_work_authorization import authorize_work_action
@@ -65,6 +69,12 @@ def can_access_request_detail(req: ShipmentRequest, user: Optional[dict[str, Any
 
 def build_request_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
     """Build the current request-detail response payload."""
+    latest_quote_row = latest_quote_for_request(req.id)
+    latest_quote_payload = (
+        quote_service.build_quote_payload(latest_quote_row, include_created_by=True)
+        if latest_quote_row
+        else None
+    )
     return {
         "id": req.id,
         "public_id": req.public_id,
@@ -84,8 +94,9 @@ def build_request_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
         "timeline": build_timeline_payload(req.id),
         "messages": build_messages_payload(req.id),
         "has_unread": req.has_unread_for_assignee,
-        "latest_quote": build_latest_quote_payload(req.id),
+        "latest_quote": latest_quote_payload,
         "quote_history": build_quote_history_payload(req.id),
+        "commercial": build_commercial_projection(req.status, latest_quote_row),
     }
 
 
@@ -134,22 +145,70 @@ def build_dates_detail_payload(req: ShipmentRequest) -> dict[str, Any]:
 
 
 def build_timeline_payload(request_id: int) -> list[dict[str, Any]]:
-    """Build the current expert-console timeline payload."""
+    """Build a Persian Product narrative without exposing stored technical codes."""
     logs = db.session.query(ExpertConsoleLog).filter(
         ExpertConsoleLog.shipment_request_id == request_id
-    ).order_by(ExpertConsoleLog.created_at.desc()).all()
-    return [
-        {
+    ).all()
+    quotes = db.session.query(ExpertQuote).filter(
+        ExpertQuote.shipment_request_id == request_id
+    ).all()
+    events: list[tuple[datetime, dict[str, Any]]] = []
+
+    for log in logs:
+        if log.action == "customer_quote_response":
+            # The exact Quote is the authoritative response source below.
+            continue
+        if log.action == "status_change" and log.note == "ارسال پیشنهاد و انتظار پاسخ مشتری":
+            # Quote issuance is narrated once from the immutable Quote row.
+            continue
+        title = {
+            "assignment": "درخواست به کارشناس ارجاع شد",
+            "status_change": "وضعیت تجاری درخواست تغییر کرد",
+            "message_added": "پیام یا یادداشت جدید ثبت شد",
+            "crm_customer_link": "مشتری سازمان درخواست تغییر کرد"
+            if "relink" in (log.note or "")
+            else "مشتری سازمان به درخواست متصل شد",
+        }.get(log.action, "رویداد درخواست ثبت شد")
+        event = {
             "id": log.id,
             "action": log.action,
-            "old_status": log.old_status,
-            "new_status": log.new_status,
-            "note": log.note,
+            "title": title,
+            "old_status": log.old_status if log.old_status != log.new_status else None,
+            "new_status": log.new_status if log.old_status != log.new_status else None,
             "created_at": log.created_at.isoformat(),
             "created_by": log.created_by_user.full_name if log.created_by_user else "سیستم",
         }
-        for log in logs
-    ]
+        events.append((log.created_at, event))
+
+    response_titles = {
+        "accepted": "مشتری پیشنهاد را پذیرفت",
+        "discussion": "مشتری درخواست مذاکره کرد",
+        "declined": "مشتری پیشنهاد را رد کرد",
+    }
+    for quote in quotes:
+        events.append((quote.created_at, {
+            "id": -(quote.id * 2),
+            "action": "quote_created",
+            "title": "پیشنهاد برای مشتری ارسال شد",
+            "created_at": quote.created_at.isoformat(),
+            "created_by": quote.created_by_expert.full_name
+            if quote.created_by_expert
+            else "کارشناس حمل",
+        }))
+        if quote.customer_response in response_titles and quote.responded_at:
+            events.append((quote.responded_at, {
+                "id": -(quote.id * 2 + 1),
+                "action": "quote_response",
+                "title": response_titles[quote.customer_response],
+                "description": quote.customer_response_message
+                if quote.customer_response == "discussion"
+                else None,
+                "created_at": quote.responded_at.isoformat(),
+                "created_by": "مشتری",
+            }))
+
+    events.sort(key=lambda item: (item[0], item[1]["id"]), reverse=True)
+    return [event for _, event in events]
 
 
 def build_messages_payload(request_id: int) -> list[dict[str, Any]]:
@@ -163,12 +222,7 @@ def build_messages_payload(request_id: int) -> list[dict[str, Any]]:
 def build_latest_quote_payload(request_id: int) -> dict[str, Any] | None:
     """Build the current latest quote payload, preserving the safe failure behavior."""
     try:
-        latest_quote_row = (
-            db.session.query(ExpertQuote)
-            .filter(ExpertQuote.shipment_request_id == request_id)
-            .order_by(ExpertQuote.created_at.desc(), ExpertQuote.id.desc())
-            .first()
-        )
+        latest_quote_row = latest_quote_for_request(request_id)
         if latest_quote_row:
             return quote_service.build_quote_payload(latest_quote_row, include_created_by=True)
     except Exception:
