@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "lpaf_baseline": "2.7",
+  "product_sha": "e00bd18cb1048d738fdf12570757e4491f23c3a0",
+  "qualified_at_utc": "2026-09-28T08:34:32.2648019Z",
+  "environment": "owned disposable local/UAT PostgreSQL 18 and Chrome",
+  "result": "PASS",
+  "alembic_head": "20261012_phase3_cargo_eta",
+  "alembic_head_count": 1,
+  "migration_required": false,
+  "full_backend": { "passed": 1573, "skipped": 121 },
+  "full_frontend": { "files_passed": 99, "tests_passed": 472 },
+  "postgresql_phase3": { "passed": 15 },
+  "public_tracking_postgresql": { "passed": 1 },
+  "commercial_browser_journey": { "passed": 6 },
+  "all_required_browser_gates": "PASS",
+  "commercial_persisted_audit": {
+    "crm_link_audits": 1,
+    "quote_response_audits": 4,
+    "dn10_entitlements": 0,
+    "outbound_notification_actions": 0,
+    "outbound_notification_attempts": 0,
+    "automatically_created_operational_shipments": 0
+  },
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "result_file_sha256": "B1298773EA0646683E33764715D20C8A3091811B6E47079D77C06C9392E3FFC2"
+}
