@@ -106,7 +106,7 @@ test("P3-02 — Request lineage, direct cargo, progressive completion, and reope
   await expect(requestCard).toContainText(`درخواست ${fixture.p3_request_tracking_code}`);
   await expect(requestCard).toContainText("درخواستی12");
   await expect(requestCard).toContainText("برنامه‌ریزی‌شده10");
-  await expect(requestCard).toContainText("واقعینامشخص");
+  await expect(requestCard).toContainText("واقعیهنوز ثبت نشده");
   await expect(requestCard).toContainText("اطلاعات قابل تکمیل: HS، وزن، حجم");
 
   await createDirectCargo(page);
