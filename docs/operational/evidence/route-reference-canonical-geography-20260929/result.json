@@ -1,0 +1,25 @@
+{
+  "production_accessed": false,
+  "stopped": true,
+  "schema": "20261013_structured_route_progress_eta",
+  "dirty_source": false,
+  "product_sha": "645630b63110b2556b4dda3c589cd16d7150e3d9",
+  "runtime": "C:\\Users\\pc\\AppData\\Local\\Temp\\forwarder-p311-owned-4ef76eb62f4e4fcfa493a0d5b96c2e5b",
+  "postgres_only": true,
+  "browser_only": false,
+  "results": [
+    {
+      "status": "PASS",
+      "name": "PostgreSQL 18"
+    },
+    {
+      "status": "PASS",
+      "name": "P3-01 through P3-05 PostgreSQL"
+    },
+    {
+      "status": "PASS",
+      "name": "Public Tracking PostgreSQL"
+    }
+  ],
+  "executed_at_utc": "2026-09-29T16:03:14.0242767Z"
+}

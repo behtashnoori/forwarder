@@ -1,82 +1,102 @@
-# Route Reference canonical geography hardening — partial qualification
+# Route Reference country-only canonical geography apply
 
-Date: 2026-09-29. LPAF v2.7, rigor C. Product:
-`b0b22d4144d1fc78a02b8508d83b29aa5fdce558`.
+Date: 2026-09-29. Governing baseline: LPAF v2.7 (`ACTIVE / FROZEN /
+CANONICAL`). Qualification rigor: C. Product SHA:
+`645630b63110b2556b4dda3c589cd16d7150e3d9`.
 
-## Qualified Product result
+## Authorized scope and implementation
 
-The Route Reference create flow now reads the shared Admin `Country` projection,
-requires Country before a canonical location, persists CanonicalLocation and
-optional same-tenant LogisticsPoint identity, rejects mismatched or country-only
-keys, derives labels as display snapshots, localizes geography types, and excludes
-Iranian `InternationalCity` records from new selection while preserving historical
-reads. There is no schema change. `planned_distance_km`, immutable versions and
-pins, and ETA_RULESET_V2 are unchanged.
+The Product Owner authorized a governed `COUNTRY_ONLY` apply against the
+approved FWD-02 catalog checksum
+`sha256:b3e71f12f7c9cc8a9c5061a9df0ed67f085636bc84bd7120400694adab2d48ca`.
+The implementation adds an explicit country-only plan/apply scope and keeps the
+full catalog behavior unchanged. Country-only apply can insert only missing
+exact ISO alpha-2 `Country` identities. It does not scan, map, update, reactivate,
+or delete `InternationalCity` rows. The successful seed-run audit is committed
+in the same database transaction as the Country inserts; a failed apply rolls
+back those inserts and records a sanitized failed-run receipt separately.
 
-Finding `HW_ADMIN_ROUTE_REFERENCE_001 — CANONICAL REFERENCE INTEGRATION GAP` and
-all five subfindings are recorded in the Product authority record. The source
-implementation is qualified:
+The Route Reference location API now supports a canonical-only selector view.
+New non-Iran Route References request that view, and the service rejects any
+legacy `InternationalCity` without a matching country-prefixed UN/LOCODE.
+Historical reads remain available. Geography type labels remain localized and
+raw enum values are not rendered in the form.
 
-- focused backend: 60 passed, then 50 passed after the UAT-only correction;
-- focused frontend: 45 passed;
-- exact-Product full backend: 1,633 passed, 124 environment-gated skipped;
-- exact-Product full frontend: 99 files / 474 tests passed;
-- PostgreSQL 18: fresh base-to-head migration PASS, 17/17 Phase 3 tests PASS,
-  Public Tracking PASS, owned cluster stopped;
-- real Chrome on exact Product: P310 Route Reference, P311 ETA, P312-P315,
-  MT3, IPJ01, IPJ02/IPJ03, monitoring, commercial continuity and IPJ04 PASS;
-- P301 Reference Catalog/Admin foundations also passed on the immediately prior
-  candidate; the only subsequent delta was the IPJ04 UAT helper corrected and
-  then proven by exact-Product IPJ04;
-- TypeScript, build, lint (0 errors, 16 existing warnings), architecture,
-  structure, backend determinism, diff and one-head checks PASS.
+## Plan/apply receipts
 
-Alembic head is `20261013_structured_route_progress_eta`; head count is one.
+The pre-apply full plan proved 249 source countries, 12 existing countries, 237
+missing countries, and 51 same-country legacy location-name conflicts. The
+country-only plan was conflict-free because locations are outside that scope.
+
+- First apply: `CHANGED`, 237 countries created, 12 unchanged, zero updated,
+  zero conflicts. Audit run
+  `61971c46-9c71-4a9f-aa0a-308daefbc6f3`, status `succeeded`.
+- Second apply: `UNCHANGED`, zero created, 249 unchanged, zero updated, zero
+  conflicts. Audit run `c971a68e-216f-4291-8e37-3b3542ca2f5f`, status
+  `succeeded`.
+- Post-plan: `UNCHANGED`, 249 countries, zero missing, zero conflicts.
+- Integrity: zero duplicate codes and zero malformed Country codes.
+
+The authorized catalog-conflict set is 51 rows. The preserved database contains
+56 total rows with no UN/LOCODE; all 56 are excluded from new Route Reference
+selection. Their complete-row fingerprint is identical before and after the
+apply. No mapping package was inferred or created.
 
 ## Preserved walkthrough runtime
 
-The integrated Product bytes were started in the preserved local runtime without
-resetting PostgreSQL. Backend health/readiness and frontend returned 200. Before
-and after row counts and complete-row hashes were identical for Request, Quote,
-Shipment, Cargo, RoutePlan, RouteLeg, ExecutionUnit, allocation, event, report
-context, structured progress, Route Reference/version/pin, and ETA snapshot
-tables. The significant counts remain: 1 Request, 2 Quotes, 1 Shipment, 1 Cargo,
-1 plan/leg/execution unit, two current allocations, one event/report context,
-zero structured progress, zero Route References, zero basis pins and zero
-ETA_RULESET_V2 snapshots. Requested/planned Cargo are 100, actual is unknown;
-PLANNED allocation is 100 and ACTUAL allocation is 95. Three older
-ETA_RULESET_V1 snapshots remain byte-identical.
+Before apply, a fresh PostgreSQL custom-format backup was written to
+`D:\1-webapp\forwarder-human-walkthrough-runtime\pre-country-only-apply-20260929.dump`.
+Its SHA-256 is
+`1F9CEB3449FC1F4D7C6FE6F1AEC04C56683D370B94C8FB953F818B9B2A02BD92`.
 
-No Isfahan-to-Bandar Abbas Route Reference was created.
+Complete-row fingerprints were captured for every public table before apply,
+after apply, and after the final runtime restart. Only these tables changed:
 
-## Runtime catalog stop condition
+- `country`: 12 to 249;
+- `reference_data_seed_run`: append-only governed audit receipts.
 
-The preserved database has only 12 active Country rows. A read-only plan against
-the approved FWD-02 catalog (`sha256:b3e71f12f7c9cc8a9c5061a9df0ed67f085636bc84bd7120400694adab2d48ca`)
-proved 249 source countries, 237 missing countries and 51 same-country unbound
-legacy location-name conflicts. The existing governed reconciler correctly
-refuses every write when such location identity conflicts exist. Apply was not
-invoked; no Country or InternationalCity row was changed.
+All other table counts and complete-row hashes are identical, including
+`international_city`, `canonical_location`, Request, both Quotes, Shipment,
+Cargo, RoutePlan, RouteLeg, ExecutionUnit, allocations, CRM, event/report
+context, structured progress, Route Reference/version/basis, and ETA snapshots.
+The existing cargo facts remain requested/planned 100, actual unknown, with
+current PLANNED/ACTUAL allocations 100/95. Structured progress, Route Reference,
+RouteLegTimeBasis and ETA_RULESET_V2 counts remain zero. Three older
+ETA_RULESET_V1 snapshots remain unchanged.
 
-This is the mission's legacy-reconciliation stop condition. Bypassing the atomic
-reconciler, adding rows with manual SQL, or assigning UN/LOCODE by name would
-silently redefine the frozen geography contract.
+The same preserved PostgreSQL 18 data directory was retained; it was not reset
+or replaced. The runtime manifest records the Product SHA, checksum, both audit
+run IDs, 249 active countries, 51 authorized conflicts, 56 total unbound legacy
+rows, the backup identity, and `COUNTRY_ONLY_APPLIED_IDEMPOTENT`. Backend health
+and readiness and the frontend returned 200. No Isfahan-to-Bandar Abbas Route
+Reference was created.
 
-## Exact Product decision required
+## Exact-Product qualification
 
-Recommended decision: authorize a new governed `COUNTRY_ONLY` reconciliation
-mode for this approved FWD-02 checksum. It may insert only the 237 missing exact
-ISO alpha-2 Country identities, update/delete/reactivate nothing, leave every
-InternationalCity untouched, record an audited plan/apply receipt, and keep the
-51 unbound legacy InternationalCity records readable but unavailable for new
-Route Reference selection until a separately reviewed mapping package exists.
+- Country-only focused backend: 5 passed.
+- Route/ETA focused backend: 20 passed.
+- Combined affected backend: 67 passed.
+- Affected frontend: 5 files / 41 tests passed; Route Reference component: 7
+  passed, including the canonical-only selector request and localized rendering.
+- Full backend: 1,635 passed, 124 environment-gated skipped.
+- Full frontend: 99 files / 475 tests passed.
+- PostgreSQL 18 owned runtime: 9 Phase 3 tests, P3-01 through P3-05 (5 tests),
+  and Public Tracking (1 test) passed; owned qualification cluster stopped.
+- TypeScript, production build, architecture governance, repository structure,
+  backend determinism, and diff checks passed.
+- Lint passed with zero errors and 16 pre-existing warnings.
 
-Alternative: supply an adjudicated mapping package for all 51 conflicts and run
-the existing all-or-nothing catalog apply. No heuristic mapping is acceptable.
+The live preserved runtime landing surface was also opened read-only after
+restart; no credentials were entered and no form was submitted. Form behavior
+is proven by the exact-Product frontend integration suite and backend selector
+and service tests, while the live database and runtime checks prove the applied
+249-country state.
 
-Until one option is approved, the source implementation is qualified but the
-preserved walkthrough cannot truthfully claim a complete canonical Country list.
-Verdict: `PARTIAL PASS — LEGACY LOCATION RECONCILIATION DECISION REQUIRED`.
+## Governance disposition
 
+Product validation evidence is complete for this authorized country-only apply.
 Production was not accessed or mutated. No deployment or release occurred.
 Human Product Walkthrough remains `IN_PROGRESS`; Release Ready remains `NO`.
+
+Verdict: `PASS — COUNTRY-ONLY CANONICAL GEOGRAPHY APPLY COMPLETE — ROUTE
+REFERENCE WALKTHROUGH READY`.

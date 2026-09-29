@@ -1,0 +1,23 @@
+[startup] DATABASE_URL detected=yes, dialect=postgresql, driver=psycopg2, host=127.0.0.1, database=forwarder_human_walkthrough
+[startup] SECRET_KEY is not set; using development-only fallback secret.
+[startup] JWT_SECRET_KEY is not set; using development-only fallback JWT secret.
+[startup] SECRET_KEY is not set; using development-only fallback secret.
+[startup] JWT_SECRET_KEY is not set; using development-only fallback JWT secret.
+[startup] CORS configured.
+CORS Configuration:
+   Environment: uat
+   Total Origins: 246
+   Canonical Origin Present: False
+   Allow All Enabled: False
+   Supports Credentials: True
+   Max Age: 3600 seconds
+   Sample Origins:
+      - http://127.0.0.1:3000
+      - http://127.0.0.1:5173
+      - http://127.0.0.1:8080
+      - http://127.0.0.1:8081
+      - http://127.0.0.1:8082
+      ... and 241 more
+
+[startup] Routes registered.
+{"catalog_version": "2025-1", "checksum": "sha256:b3e71f12f7c9cc8a9c5061a9df0ed67f085636bc84bd7120400694adab2d48ca", "conflict_count": 0, "conflicts": [], "country_count": 249, "country_count_after": 249, "country_count_before": 249, "created_count": 0, "created_country_count": 0, "created_location_count": 0, "dataset_id": "forwarder-international-geography-v2-fwd02", "iran_location_count": 154, "italy_present": true, "location_count": 115208, "location_type_counts": {"airport": 5252, "city": 102894, "port": 7062}, "norway_present": true, "result": "UNCHANGED", "run_id": "c971a68e-216f-4291-8e37-3b3542ca2f5f", "scope": "COUNTRY_ONLY", "skipped_count": 0, "status": "succeeded", "unchanged_count": 249, "unchanged_country_count": 249, "unchanged_location_count": 0, "updated_count": 0}
