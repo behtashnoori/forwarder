@@ -1,0 +1,66 @@
+{
+  "mission": "FORWARDER consolidated product hardening",
+  "lpaf_baseline": "2.6",
+  "qualified_source_sha": "f1aed8a8e0011cfa0a2ff9fa35f3eace76ffa4dc",
+  "canonical_product_sha": "add28ca831b9a0c5958a548d98b4cdedae44f1d9",
+  "geography": {
+    "dataset": "GEONAMES_ADMIN1_CITY_V1",
+    "checksum_sha256": "62c7ecc05c5860e0f48f6e84d6087897a967df41acbdaaa8af0add44e22e16f2",
+    "countries": ["IR", "CN", "KZ", "TM", "UZ", "KG", "TJ", "AF", "PK", "AZ", "AM", "GE", "TR", "RU"],
+    "admin1_count": 416,
+    "city_count": 30553,
+    "excluded_unparented_source_count": 22,
+    "conflict_count": 0,
+    "post_apply_created_count": 0,
+    "apply_run_id": "ea37811c-27cd-44eb-a705-66c535f25f8b",
+    "source_urls": [
+      "https://www.geonames.org/export/",
+      "https://download.geonames.org/export/dump/readme.txt"
+    ]
+  },
+  "qualification": {
+    "focused_tests": "PASS",
+    "full_backend": "1643 passed, 124 skipped, 0 failed",
+    "frontend": "100 files passed, 479 tests passed, 0 failed",
+    "affected_postgresql_18": "PASS: allocation, reported facts, structured delivery, route time, ETA v2, closure, public tracking authority",
+    "public_tracking": "32 passed, 0 failed (PG18 authority plus SQLite security/timeline)",
+    "typescript": "PASS",
+    "build": "PASS (existing large-chunk warning)",
+    "lint": "PASS: 0 errors, 16 existing warnings",
+    "architecture_governance": "PASS: checker plus 10 tests",
+    "chrome": "3 passed, 0 failed"
+  },
+  "migration": {
+    "head": "20261014_canonical_geography_locations",
+    "head_count": 1,
+    "postgresql_version": "18.0"
+  },
+  "preservation": {
+    "database": "forwarder_human_walkthrough",
+    "backup": "D:\\1-webapp\\forwarder-human-walkthrough-runtime\\pre-consolidated-shipment-hardening-20260930.dump",
+    "backup_sha256": "4BD4589EEED031E87111AE368D52DA825B458682E65252ECC82785CD57FC9FAB",
+    "before_after_business_counts_equal": true,
+    "shipment_public_id": "c66be7ef-ee20-4d39-a985-a3db5bd611db",
+    "cargo_public_id": "50a534cc-6489-4b07-80e5-89190386bd24",
+    "cargo_actual_quantity": null,
+    "planned_allocation": 100,
+    "actual_allocation": 95,
+    "delivery_quantity": 95,
+    "legacy_delivery_text": "بندرعباس",
+    "legacy_delivery_structured_identity": null,
+    "manual_position_text": "نزدیک مرز",
+    "automated_lifecycle_action_performed": false
+  },
+  "owner_decisions_required": {
+    "document_content": true,
+    "operational_stage_definitions": true,
+    "closure_policy_values": true
+  },
+  "production_accessed": false,
+  "production_mutated": false,
+  "deployment_performed": false,
+  "release_created": false,
+  "human_product_walkthrough": "IN_PROGRESS",
+  "release_ready": false,
+  "verdict": "PARTIAL PASS — QUALIFIED IMPLEMENTATION COMPLETE — PRODUCT OWNER CONFIGURATION DECISIONS REQUIRED"
+}

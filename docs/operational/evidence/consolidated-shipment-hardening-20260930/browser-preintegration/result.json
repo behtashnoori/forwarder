@@ -1,0 +1,16 @@
+﻿{
+    "results":  [
+                    {
+                        "name":  "P3-14 Chrome",
+                        "status":  "PASS"
+                    }
+                ],
+    "dirty_source":  true,
+    "browser_only":  true,
+    "stopped":  true,
+    "production_accessed":  false,
+    "schema":  "20261014_canonical_geography_locations",
+    "product_sha":  "1dd77b7c84ea2b793a0863fcb46e2190ff58bda3",
+    "production_mutated":  false,
+    "executed_at_utc":  "2026-09-29T21:59:29.1195456Z"
+}
