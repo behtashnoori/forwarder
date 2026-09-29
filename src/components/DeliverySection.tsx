@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { ApiError, downloadShipmentDocument, uploadShipmentDocument } from "@/lib/api";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
 import { listDeliveries, recordDelivery, type DeliveryCargo, type DeliveryDraft, type DeliveryFact, type DeliveryList } from "@/lib/deliveryApi";
+import CanonicalLocationPicker, {type CanonicalEndpointRef} from "@/components/CanonicalLocationPicker";
 
 const time = (value: string) => formatDualCalendarInstant(value, "fa-IR");
 const number = (value: string | null) => value === null ? "نامشخص" : Number(value).toLocaleString("fa-IR", { maximumFractionDigits: 6 });
@@ -22,23 +23,25 @@ function DeliveryForm({ cargo, initial, pending, onSubmit, onCancel }: {
   onSubmit: (draft: DeliveryDraft) => Promise<void>; onCancel: () => void;
 }) {
   const [quantity, setQuantity] = useState(initial?.quantity || "");
-  const [destination, setDestination] = useState(initial?.destination_text || "");
+  const [destination, setDestination] = useState<CanonicalEndpointRef|null>(initial?.destination_reference || null);
+  const [destinationNote, setDestinationNote] = useState(initial?.destination_text || "");
   const [occurred, setOccurred] = useState(initial ? localTime(initial.occurred_at) : "");
   const [reason, setReason] = useState("");
   return <form aria-label={initial ? "اصلاح تحویل" : "ثبت تحویل"} className="rounded-xl border bg-slate-50 p-3" onSubmit={event => {
     event.preventDefault();
     void onSubmit({ cargo_public_id: cargo.public_id, quantity, uom_public_id: cargo.uom_public_id,
-      destination_text: destination, occurred_at: initial && occurred === localTime(initial.occurred_at) ? initial.occurred_at : new Date(occurred).toISOString(),
+      destination_reference: destination!, destination_note: destinationNote || null, occurred_at: initial && occurred === localTime(initial.occurred_at) ? initial.occurred_at : new Date(occurred).toISOString(),
       expected_version: initial?.revision || 0, ...(initial ? { corrects_public_id: initial.public_id, reason: reason || null } : {}) });
   }}>
     <fieldset disabled={pending} className="grid gap-3 sm:grid-cols-2">
       <legend className="mb-3 font-semibold">{initial ? "اصلاح تحویل" : "تحویل تازه"} · {cargo.label} · {cargo.customer_label}</legend>
       <label>مقدار تحویل ({cargo.uom_symbol})<Input aria-label="مقدار تحویل" required type="number" min="0.000001" step="0.000001" max="999999999999.999999" dir="ltr" value={quantity} onChange={e => setQuantity(e.target.value)} /></label>
-      <label>مقصد تحویل<Input aria-label="مقصد تحویل" required maxLength={255} value={destination} onChange={e => setDestination(e.target.value)} /></label>
+      <div className="sm:col-span-2"><CanonicalLocationPicker label="مقصد تحویل" value={destination} onChange={setDestination}/></div>
+      <label className="sm:col-span-2">یادداشت مقصد (اختیاری)<Input aria-label="یادداشت مقصد تحویل" maxLength={255} value={destinationNote} onChange={e => setDestinationNote(e.target.value)} /></label>
       <label>زمان وقوع تحویل<Input aria-label="زمان وقوع تحویل" required type="datetime-local" step="0.001" dir="ltr" value={occurred} onChange={e => setOccurred(e.target.value)} /><span className="text-xs text-slate-600">زمان محلی شما؛ ثبت دیرهنگام مجاز است.</span></label>
       {initial && <label>دلیل اصلاح (اختیاری)<Input aria-label="دلیل اصلاح تحویل" maxLength={500} value={reason} onChange={e => setReason(e.target.value)} /></label>}
       <p className="text-xs text-slate-600 sm:col-span-2">مقدار واقعی گزارش‌شده را ثبت کنید. اختلاف با مقدار شناخته‌شده مانع ثبت نیست و مقدار کالا را تغییر نمی‌دهد.</p>
-      <div className="flex flex-wrap gap-2 sm:col-span-2"><Button type="submit">{pending ? "در حال ثبت…" : initial ? "ثبت اصلاح تحویل" : "ثبت تحویل"}</Button><Button type="button" variant="outline" onClick={onCancel}>انصراف</Button></div>
+      <div className="flex flex-wrap gap-2 sm:col-span-2"><Button type="submit" disabled={!destination}>{pending ? "در حال ثبت…" : initial ? "ثبت اصلاح تحویل" : "ثبت تحویل"}</Button><Button type="button" variant="outline" onClick={onCancel}>انصراف</Button></div>
     </fieldset>
   </form>;
 }
@@ -103,7 +106,8 @@ export default function DeliverySection({ shipmentId }: { shipmentId: string }) 
     const cargo = data?.cargo.find(c => c.public_id === item.cargo_public_id);
     return <article key={item.public_id} data-delivery-id={item.public_id} className="space-y-2 rounded-xl border p-3">
       <div className="flex flex-wrap justify-between gap-2"><h5 className="font-semibold">{cargo?.label} · {cargo?.customer_label}</h5><span className="text-xs">{item.status === "SUPERSEDED" ? "اصلاح‌شده؛ محفوظ در سابقه" : item.is_correction ? "نسخه اصلاحی جاری" : "تحویل جاری"}</span></div>
-      <p>{number(item.quantity)} {item.uom_symbol} · مقصد: {item.destination_text}</p>
+      <p>{number(item.quantity)} {item.uom_symbol} · مقصد: {item.destination?.facility?.display_name || item.destination?.display_name || item.destination_text || "ثبت نشده"}</p>
+      {item.destination && item.destination_text && <p className="text-sm text-slate-600">یادداشت مقصد: {item.destination_text}</p>}
       <p className="text-xs text-slate-600">وقوع: {time(item.occurred_at)}<br />ثبت: {time(item.recorded_at)} · {item.actor_label}</p>
       {item.reason && <p className="text-sm">دلیل اصلاح: {item.reason}</p>}
       {item.evidence.length > 0 ? <ul className="space-y-1">{item.evidence.map(doc => <li key={doc.public_id} className="flex flex-wrap items-center gap-2 text-sm"><span className="break-all">{doc.filename} · نسخه {doc.version}</span>{doc.status === "active" ? <Button variant="outline" size="sm" onClick={async () => { try { await downloadShipmentDocument(shipmentId, doc.public_id, doc.filename); } catch (caught) { setError(message(caught)); } }}>دریافت مدرک</Button> : <span>نسخه پیشین؛ محفوظ در سابقه</span>}</li>)}</ul> : <p className="text-xs text-slate-600">مدرک تحویل ثبت نشده است.</p>}

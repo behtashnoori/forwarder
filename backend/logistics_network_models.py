@@ -112,7 +112,7 @@ class LogisticsPoint(db.Model):
     logistics_point_type_id = db.Column(
         BIGINT,
         db.ForeignKey("logistics_point_type.id", ondelete="RESTRICT"),
-        nullable=False,
+        nullable=True,
     )
     fa_name = db.Column(db.String(160), nullable=False)
     normalized_name = db.Column(db.String(200), nullable=False)
@@ -128,6 +128,17 @@ class LogisticsPoint(db.Model):
     )
     geography_key = db.Column(db.String(200), nullable=False)
     short_address = db.Column(db.String(500), nullable=True)
+    latitude = db.Column(db.Numeric(10, 7), nullable=True)
+    longitude = db.Column(db.Numeric(10, 7), nullable=True)
+    description = db.Column(db.Text, nullable=True)
+    governance_state = db.Column(db.String(32), nullable=False, default="APPROVED")
+    duplicate_of_id = db.Column(
+        BIGINT, db.ForeignKey("logistics_point.id", ondelete="RESTRICT"), nullable=True
+    )
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+    reviewed_by = db.Column(
+        BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=True
+    )
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     version = db.Column(db.Integer, nullable=False, default=1)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
@@ -146,6 +157,7 @@ class LogisticsPoint(db.Model):
     city = db.relationship("City")
     global_point = db.relationship("GlobalLogisticsPoint")
     global_adoption = db.relationship("OrganizationGlobalLogisticsPointAdoption")
+    duplicate_of = db.relationship("LogisticsPoint", remote_side=[id])
     __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
 
 

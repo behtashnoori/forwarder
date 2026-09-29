@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import RouteReferenceTimes from "@/components/RouteReferenceTimes";
 import OrganizationRouteTimesTab from "@/components/OrganizationRouteTimesTab";
 import { timeRange, type LegTime, type TimeVersion } from "@/lib/routeTimeApi";
 const api=vi.hoisted(()=>({
   get:vi.fn(),select:vi.fn(),list:vi.fn(),revise:vi.fn(),create:vi.fn(),
   countries:vi.fn(),provinces:vi.fn(),iran:vi.fn(),international:vi.fn(),points:vi.fn(),
+  canonicalCountries:vi.fn(),canonicalAdmin1:vi.fn(),canonicalCities:vi.fn(),types:vi.fn(),
 }));
 vi.mock("@/i18n",()=>({useI18n:()=>({transportLabel:(value:string)=>value,businessLabel:(value:string)=>value})}));
 vi.mock("@/lib/routeTimeApi",async()=>({...await vi.importActual<typeof import("@/lib/routeTimeApi")>("@/lib/routeTimeApi"),getPlanTimes:api.get,selectPlanTime:api.select,listRouteTimes:api.list,reviseRouteTime:api.revise,createRouteTime:api.create}));
-vi.mock("@/lib/api",async()=>({...await vi.importActual<typeof import("@/lib/api")>("@/lib/api"),fetchAdminCountries:api.countries,fetchAdminProvinces:api.provinces,searchIranDestinations:api.iran,fetchInternationalCityPage:api.international,listLogisticsPoints:api.points}));
+vi.mock("@/lib/api",async()=>({...await vi.importActual<typeof import("@/lib/api")>("@/lib/api"),fetchAdminCountries:api.countries,fetchAdminProvinces:api.provinces,searchIranDestinations:api.iran,fetchInternationalCityPage:api.international,listLogisticsPoints:api.points,fetchCanonicalCountries:api.canonicalCountries,fetchCanonicalAdmin1:api.canonicalAdmin1,fetchCanonicalCities:api.canonicalCities,listLogisticsPointTypes:api.types}));
 const version:TimeVersion={public_id:"version-1",version:1,movement_min_minutes:1200,movement_max_minutes:1440,stop_min_minutes:240,stop_max_minutes:480,planned_distance_km:"1250.000",effective_from:"2026-09-01T00:00:00Z",effective_until:null,recorded_at:"2026-09-01T00:00:00Z",actor_user_id:2,recorded_by:"مدیر سازمان"};
 const leg:LegTime={leg_id:3,leg_version:1,sequence_number:1,origin_label:"خورگوس",destination_label:"آکتائو",transport_mode:"rail",reference_at:"2027-10-01T00:00:00Z",time_basis:"PLANNED_DEPARTURE",applicable:version,selected:null,selection_matches_leg:false,history:[],can_select:true};
 const plans=[{id:1,revision_number:1,status:"draft"}];
@@ -33,6 +34,18 @@ describe("explicit route reference basis",()=>{
     api.iran.mockImplementation(async(query:string,_limit:number,type:string)=>({data:type==="international_city"&&(!query||query.includes("بندرعباس"))?[{identity:{type:"international_city",id:59},label:"بندر — بندرعباس · ایران",display_name:"بندرعباس",type_label:"بندر",province:null,secondary_label:"بندر · ایران"}]:[],meta:{count:type==="international_city"?1:0,limit:50}}));
     api.international.mockResolvedValue({items:[],offset:0,limit:50,has_more:false});
     api.points.mockResolvedValue({items:[],page:1,pages:0,total:0});
+    api.types.mockResolvedValue({items:[]});
+    api.canonicalCountries.mockResolvedValue({items:[
+      {id:1,name_fa:"ایران",name_en:"Iran",code:"IR"},
+      {id:2,name_fa:"چین",name_en:"China",code:"CN"},
+    ]});
+    api.canonicalAdmin1.mockImplementation(async(code:string)=>({items:code==="IR"?[
+      {source_id:10,geoname_id:418862,code:"04",name_fa:"اصفهان",name_en:"Isfahan"},
+      {source_id:11,geoname_id:131222,code:"11",name_fa:"هرمزگان",name_en:"Hormozgan"},
+    ]:[{source_id:12,geoname_id:1796236,code:"22",name_fa:"شانگهای",name_en:"Shanghai"}]}));
+    api.canonicalCities.mockImplementation(async(admin:number)=>({items:admin===418862?[
+      {source_id:20,geoname_id:418863,name_fa:"اصفهان",name_en:"Isfahan",latitude:"32.65",longitude:"51.67"},
+    ]:[{source_id:21,geoname_id:141679,name_fa:"بندرعباس",name_en:"Bandar Abbas",latitude:"27.18",longitude:"56.28"}]}));
   });
   it("shows undefined without invented zero and keeps movement separate from stop",async()=>{
     api.get.mockResolvedValue(response({...leg,applicable:null}));render(<RouteReferenceTimes shipmentId="shipment" plans={plans}/>);
@@ -81,62 +94,58 @@ describe("explicit route reference basis",()=>{
     await waitFor(()=>expect(api.revise).toHaveBeenCalledWith("reference",expect.objectContaining({expected_version:1,movement_min_minutes:1500,movement_max_minutes:1800,stop_min_minutes:240,stop_max_minutes:480}),expect.any(String)));
     expect(reference.versions[0].movement_min_minutes).toBe(1200);
   });
-  it("uses the complete canonical Country source and persists country-bound canonical locations without raw enums",async()=>{
+  it("uses the qualified country scope and persists city-bound canonical locations without raw enums",async()=>{
     render(<OrganizationRouteTimesTab/>);
     fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
     const originCountry=await screen.findByLabelText("مبدأ مرجع کشور");
     const destinationCountry=screen.getByLabelText("مقصد مرجع کشور");
-    expect(screen.getAllByRole("option",{name:"آندورا · AD"})).toHaveLength(2);
-    expect(screen.queryByRole("option",{name:/قدیمی/})).not.toBeInTheDocument();
+    expect(screen.getAllByRole("option",{name:"ایران · IR"})).toHaveLength(2);
+    expect(screen.getAllByRole("option",{name:"چین · CN"})).toHaveLength(2);
     fireEvent.change(originCountry,{target:{value:"1"}});
     fireEvent.change(destinationCountry,{target:{value:"1"}});
-    const originLocation=await screen.findByLabelText("مبدأ مرجع مکان");
-    const destinationLocation=screen.getByLabelText("مقصد مرجع مکان");
-    await waitFor(()=>expect(originLocation).toHaveTextContent("استان — اصفهان"));
-    expect(destinationLocation).toHaveTextContent("بندر — بندرعباس");
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع استان"),{target:{value:"418862"}});
+    fireEvent.change(screen.getByLabelText("مقصد مرجع استان"),{target:{value:"131222"}});
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع شهر"),{target:{value:"418863"}});
+    fireEvent.change(await screen.findByLabelText("مقصد مرجع شهر"),{target:{value:"141679"}});
     expect(document.body).not.toHaveTextContent("international_city");
-    expect(api.iran).toHaveBeenCalledWith("",50,"international_city");
-    fireEvent.change(originLocation,{target:{value:"province:10"}});
-    fireEvent.change(destinationLocation,{target:{value:"international_city:59"}});
     fireEvent.change(screen.getByLabelText("روش حمل مرجع"),{target:{value:"road"}});
     fireEvent.change(screen.getByLabelText("حداقل حرکت (ساعت)"),{target:{value:"6"}});
     fireEvent.change(screen.getByLabelText("حداکثر حرکت (ساعت)"),{target:{value:"8"}});
     fireEvent.change(screen.getByLabelText("شروع اعتبار"),{target:{value:"2026-10-01T09:00"}});
     fireEvent.click(screen.getByRole("button",{name:"ثبت زمان مرجع"}));
     await waitFor(()=>expect(api.create).toHaveBeenCalledWith(expect.objectContaining({
-      origin:{country_id:1,source_type:"province",source_id:10},
-      destination:{country_id:1,source_type:"international_city",source_id:59},
+      origin:{country_id:1,source_type:"city",source_id:20},
+      destination:{country_id:1,source_type:"city",source_id:21},
       transport_mode:"road",
     }),expect.any(String)));
-    expect(api.countries).toHaveBeenCalledTimes(1);
+    expect(api.canonicalCountries).toHaveBeenCalledTimes(2);
   });
   it("shows explicit loading, empty, and backend error states",async()=>{
-    api.iran.mockResolvedValue({data:[],meta:{count:0,limit:50}});
     let finishPoints!:(value:{items:never[];page:number;pages:number;total:number})=>void;
     api.points.mockImplementationOnce(()=>new Promise(resolve=>{finishPoints=resolve;}));
     render(<OrganizationRouteTimesTab/>);
     fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
     fireEvent.change(await screen.findByLabelText("مبدأ مرجع کشور"),{target:{value:"1"}});
-    expect(await screen.findByRole("status",{name:""})).toHaveTextContent("در حال جست‌وجوی مکان‌های معتبر");
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع استان"),{target:{value:"418862"}});
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع شهر"),{target:{value:"418863"}});
+    const origin=screen.getByRole("group",{name:"مبدأ مرجع"});
+    expect(await within(origin).findByRole("status")).toHaveTextContent("در حال جست‌وجوی مکان‌های سازمان");
     finishPoints({items:[],page:1,pages:0,total:0});
-    await waitFor(()=>expect(screen.queryByText("در حال جست‌وجوی مکان‌های معتبر…")).not.toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText("مبدأ مرجع جست‌وجوی مکان"),{target:{value:"ناشناخته"}});
-    fireEvent.click(screen.getAllByRole("button",{name:"جست‌وجو"})[0]);
-    expect(await screen.findByText("مکان معتبر منطبق با این جست‌وجو یافت نشد.")).toBeInTheDocument();
+    expect(await within(origin).findByText(/خود شهر همچنان قابل انتخاب است/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("مبدأ مرجع جست‌وجوی مکان سازمان"),{target:{value:"ناشناخته"}});
     api.points.mockRejectedValueOnce(new Error("network"));
-    fireEvent.click(screen.getAllByRole("button",{name:"جست‌وجو"})[0]);
-    expect(await screen.findByRole("alert")).toHaveTextContent("دوباره جست‌وجو کنید");
+    fireEvent.click(within(origin).getAllByRole("button",{name:"جست‌وجو"})[1]);
+    expect(await within(origin).findByRole("alert")).toHaveTextContent("جست‌وجوی مکان سازمان ممکن نشد");
   });
   it("does not turn Persian free text into endpoint identity",async()=>{
-    api.iran.mockResolvedValue({data:[],meta:{count:0,limit:50}});
-    api.points.mockResolvedValue({items:[],page:1,pages:0,total:0});
-    api.provinces.mockResolvedValue({items:[]});
+    api.canonicalCities.mockResolvedValue({items:[]});
     render(<OrganizationRouteTimesTab/>);
     fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
     fireEvent.change(await screen.findByLabelText("مبدأ مرجع کشور"),{target:{value:"1"}});
-    fireEvent.change(screen.getByLabelText("مبدأ مرجع جست‌وجوی مکان"),{target:{value:"اصفهان"}});
-    fireEvent.click(screen.getAllByRole("button",{name:"جست‌وجو"})[0]);
-    await screen.findByText("مکان معتبر منطبق با این جست‌وجو یافت نشد.");
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع استان"),{target:{value:"418862"}});
+    fireEvent.change(screen.getByLabelText("مبدأ مرجع جست‌وجوی شهر"),{target:{value:"اصفهان"}});
+    fireEvent.click(within(screen.getByRole("group",{name:"مبدأ مرجع"})).getAllByRole("button",{name:"جست‌وجو"})[0]);
+    await screen.findByText("شهر منطبق یافت نشد.");
     fireEvent.change(screen.getByLabelText("روش حمل مرجع"),{target:{value:"road"}});
     fireEvent.change(screen.getByLabelText("حداقل حرکت (ساعت)"),{target:{value:"6"}});
     fireEvent.change(screen.getByLabelText("حداکثر حرکت (ساعت)"),{target:{value:"8"}});
@@ -145,10 +154,11 @@ describe("explicit route reference basis",()=>{
     expect(await screen.findByRole("alert")).toHaveTextContent("مبدأ، مقصد و روش حمل را انتخاب کنید");
     expect(api.create).not.toHaveBeenCalled();
   });
-  it("requests only canonically bound international locations for new Route References",async()=>{
+  it("loads Admin1 only by a stable qualified country code",async()=>{
     render(<OrganizationRouteTimesTab/>);
     fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
     fireEvent.change(await screen.findByLabelText("مبدأ مرجع کشور"),{target:{value:"2"}});
-    await waitFor(()=>expect(api.international).toHaveBeenCalledWith(2,"",0,undefined,true));
+    await waitFor(()=>expect(api.canonicalAdmin1).toHaveBeenCalledWith("CN"));
+    expect(screen.queryByText("international_city")).not.toBeInTheDocument();
   });
 });

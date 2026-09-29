@@ -153,10 +153,13 @@ def resolve_location(
     elif source_type == "city":
         source = _required(City, source_id, source_type)
         province = _province(source.province_id)
-        county = _required(County, source.county_id, "county")
-        if county.province_id != province.id:
+        county = _required(County, source.county_id, "county") if source.county_id is not None else None
+        if county is not None and county.province_id != province.id:
             raise LocationResolutionError("LOCATION_ANCESTRY_MISMATCH", "City ancestry is inconsistent.")
-        country, location_type = _country(province.country_id), "city"
+        country = _country(source.country_id or province.country_id)
+        if source.country_id is not None and province.country_id != source.country_id:
+            raise LocationResolutionError("LOCATION_ANCESTRY_MISMATCH", "City ancestry is inconsistent.")
+        country, location_type = country, "city"
         city_id, city_name = source.id, source.name_fa
     elif source_type == "international_city":
         source = _required(InternationalCity, source_id, source_type)

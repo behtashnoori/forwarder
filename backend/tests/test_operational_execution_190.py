@@ -470,7 +470,7 @@ def test_verification_separation_and_one_migration_head(execution_app):
         )
     config = Config("backend/migrations/alembic.ini")
     assert ScriptDirectory.from_config(config).get_heads() == [
-        "20261013_structured_route_progress_eta"
+        "20261014_canonical_geography_locations"
     ]
 
 

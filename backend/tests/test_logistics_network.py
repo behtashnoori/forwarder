@@ -8,11 +8,12 @@ from backend import create_app
 from backend.auth import auth_manager
 from backend.extensions import db
 from backend.logistics_network_models import (
+    LogisticsPoint,
     LogisticsPointType,
     ProjectLogisticsPoint,
 )
 from backend.logistics_point_catalog import ALLOWED_CODES, load_catalog, plan_catalog
-from backend.models import Country, Customer, ExpertUser
+from backend.models import City, Country, Customer, ExpertUser, Province
 from backend.operational_models import (
     OperationalMembership,
     OperationalOrganization,
@@ -199,6 +200,58 @@ def test_tracking_selector_is_active_tenant_scoped_and_bounded(network_app):
         assert client.get(endpoint, headers=ctx["auth"]).get_json()["items"] == []
 
 
+def test_expert_location_is_immediately_usable_and_admin_review_never_merges_history(network_app):
+    app, ctx = network_app
+    with app.app_context():
+        country = Country.query.filter_by(code="IR").one()
+        province = Province(code="04", name_fa="اصفهان", name_en="Isfahan", geoname_id=418862,
+                            country_id=country.id, dataset_id="GEONAMES_ADMIN1_CITY_V1", is_active=True)
+        db.session.add(province); db.session.flush()
+        city = City(code="418863", name_fa="اصفهان", name_en="Isfahan", geoname_id=418863,
+                    country_id=country.id, province_id=province.id, county_id=None,
+                    dataset_id="GEONAMES_ADMIN1_CITY_V1", is_active=True)
+        db.session.add(city)
+        admin = ExpertUser.query.filter_by(username="network-admin").one()
+        membership = OperationalMembership.query.filter_by(user_id=admin.id).one()
+        membership.permissions = [*membership.permissions, "operational_shipment.create"]
+        db.session.commit()
+
+    with app.test_client() as client:
+        created = client.post("/api/internal/logistics-points", headers=ctx["auth"], json={
+            "name": "انبار مشتری", "city_geoname_id": 418863,
+        })
+        assert created.status_code == 201, created.get_json()
+        first = created.get_json()["item"]
+        assert first["governance_state"] == "PENDING_REVIEW" and first["point_type"] is None
+        listed = client.get("/api/internal/logistics-points?city_geoname_id=418863", headers=ctx["auth"])
+        assert [row["public_id"] for row in listed.get_json()["items"]] == [first["public_id"]]
+
+        duplicate = client.post("/api/internal/logistics-points", headers=ctx["auth"], json={
+            "name": "انبار مشتری", "city_geoname_id": 418863,
+        })
+        assert duplicate.status_code == 409 and duplicate.get_json()["error"]["code"] == "PROBABLE_DUPLICATE"
+        second_response = client.post("/api/internal/logistics-points", headers=ctx["auth"], json={
+            "name": "انبار دوم", "city_geoname_id": 418863,
+        })
+        second = second_response.get_json()["item"]
+
+        approved = client.post(f"/api/admin/logistics-points/{first['public_id']}/review/approve",
+            headers=ctx["auth"], json={"version": first["version"]})
+        assert approved.get_json()["item"]["governance_state"] == "APPROVED"
+        flagged = client.post(f"/api/admin/logistics-points/{second['public_id']}/review/flag-duplicate",
+            headers=ctx["auth"], json={"version": second["version"], "duplicate_of_public_id": first["public_id"]})
+        assert flagged.get_json()["item"]["governance_state"] == "POTENTIAL_DUPLICATE"
+        assert flagged.get_json()["item"]["duplicate_of_public_id"] == first["public_id"]
+        with app.app_context():
+            assert LogisticsPoint.query.count() == 2
+
+        inactive = client.post(f"/api/admin/logistics-points/{second['public_id']}/review/deactivate",
+            headers=ctx["auth"], json={"version": flagged.get_json()["item"]["version"]})
+        assert inactive.get_json()["item"]["governance_state"] == "DEACTIVATED"
+        current = client.get("/api/internal/logistics-points?city_geoname_id=418863", headers=ctx["auth"])
+        assert [row["public_id"] for row in current.get_json()["items"]] == [first["public_id"]]
+
+
 def test_operational_project_selection_requires_active_point_type(network_app):
     app, ctx = network_app
     with app.test_client() as client:
@@ -359,7 +412,7 @@ def test_logistics_migration_is_the_single_head():
     config = Config(str(root / "migrations" / "alembic.ini"))
     config.set_main_option("script_location", str(root / "migrations"))
     script = ScriptDirectory.from_config(config)
-    assert script.get_heads() == ["20261013_structured_route_progress_eta"]
+    assert script.get_heads() == ["20261014_canonical_geography_locations"]
     assert (
         script.get_revision("20260910_route_leg_logistics_points").down_revision
         == "20260909_cargo_transport_allocation"

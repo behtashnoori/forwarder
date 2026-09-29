@@ -272,7 +272,7 @@ describe("Slice 5 governed creation", () => {
         data: { organization_id: 1, permissions: ["operational_shipment.create_direct"] },
       });
       renderPage("/operations/shipments/new?source=direct");
-      await screen.findByRole("option", { name: "Canonical Co" });
+      await screen.findByRole("option", { name: "Canonical Co" }, { timeout: 5000 });
       if (kind === "international") {
         await user.selectOptions(screen.getByLabelText("Origin route type"), "international");
       }

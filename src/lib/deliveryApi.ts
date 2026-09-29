@@ -6,13 +6,16 @@ export interface DeliveryCargo {
   has_delivery: boolean; can_record: boolean;
 }
 export interface DeliveryFact {
-  public_id: string; cargo_public_id: string; quantity: string; uom_symbol: string; destination_text: string;
+  public_id: string; cargo_public_id: string; quantity: string; uom_symbol: string; destination_text: string | null;
   occurred_at: string; recorded_at: string; revision: number; status: "CURRENT" | "SUPERSEDED";
   is_correction: boolean; actor_label: string; reason: string | null; corrects_public_id: string | null;
   evidence: Array<{ public_id: string; filename: string; version: number; status: string }>;
+  destination?: { display_name?: string; facility?: { display_name?: string }; canonical_geography?: { display_name?: string } } | null;
+  destination_reference?: {country_id:number;source_type:string;source_id:number|string} | null;
 }
 export interface DeliveryDraft {
-  cargo_public_id: string; quantity: string; uom_public_id: string; destination_text: string;
+  cargo_public_id: string; quantity: string; uom_public_id: string; destination_text?: string;
+  destination_reference?: {country_id:number;source_type:string;source_id:number|string}; destination_note?: string | null;
   occurred_at: string; expected_version: number; corrects_public_id?: string; reason?: string | null;
   evidence_document_public_ids?: string[];
 }

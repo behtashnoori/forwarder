@@ -25,11 +25,11 @@ class ResolvedFacilityEndpoint:
             "endpoint_kind": "logistics_point",
             "logistics_point_public_id": point.public_id,
             "organization_local_code": point.immutable_code,
-            "point_type": {
+            "point_type": ({
                 "code": point.point_type.immutable_code,
                 "fa_name": point.point_type.fa_name,
                 "en_name": point.point_type.en_name,
-            },
+            } if point.point_type else None),
             "display_name": point.fa_name,
             "global_provenance": ({
                 "public_id": global_point.public_id,
@@ -57,7 +57,7 @@ def resolve_facility_endpoint(organization_id: int, public_id: Any) -> ResolvedF
     point = db.session.scalar(select(LogisticsPoint).where(LogisticsPoint.public_id == public_id))
     if point is None or point.organization_id != organization_id:
         raise LocationResolutionError("RESOURCE_NOT_FOUND", "The selected logistics point was not found.", 404)
-    if not point.is_active or not point.point_type.is_active:
+    if not point.is_active or (point.point_type is not None and not point.point_type.is_active):
         raise LocationResolutionError("LOCATION_MAPPING_REQUIRED", "The selected logistics point is not active.")
     try:
         geography = resolve_location(_geographic_reference(point))

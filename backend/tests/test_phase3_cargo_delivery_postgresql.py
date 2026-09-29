@@ -25,6 +25,7 @@ from backend.tests.test_phase3_transport_execution_postgresql import _seed_runti
 URL = os.environ.get("P3_CARGO_DELIVERY_POSTGRES_URL", "")
 PARENT = "20261007_phase3_reported_facts"
 HEAD = "20261008_phase3_cargo_delivery"
+REPOSITORY_HEAD = "20261014_canonical_geography_locations"
 pytestmark = pytest.mark.skipif(not URL, reason="requires owned P3_CARGO_DELIVERY_POSTGRES_URL")
 
 
@@ -63,6 +64,10 @@ def test_postgresql18_delivery_migration_constraints_and_concurrent_commands():
         assert connection.execute(sa.text("SELECT lifecycle_status FROM operational_shipment WHERE id=:id"), {"id": ctx["shipment_id"]}).scalar_one() == "completed"
     command.downgrade(config, PARENT)
     command.upgrade(config, HEAD)
+    # Keep the historical delivery-migration round trip above, then exercise the
+    # current service against the current schema. The structured destination
+    # columns are intentionally introduced by the repository-head migration.
+    command.upgrade(config, REPOSITORY_HEAD)
     payload = {"cargo_public_id": ctx["cargo"], "quantity": "60", "uom_public_id": ctx["uom"],
         "destination_text": "انبار واقعی", "occurred_at": "2026-09-21T08:00:00Z", "expected_version": 0}
     barrier = Barrier(2)
@@ -152,6 +157,6 @@ def test_postgresql18_delivery_migration_constraints_and_concurrent_commands():
     with pytest.raises(RuntimeError, match="rollback would erase"):
         command.downgrade(config, PARENT)
     with engine.connect() as connection:
-        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == HEAD
+        assert connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalar_one() == REPOSITORY_HEAD
         assert connection.execute(sa.text("SELECT count(*) FROM cargo_delivery")).scalar_one() == 4
     engine.dispose()

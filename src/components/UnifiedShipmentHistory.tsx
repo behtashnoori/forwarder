@@ -11,6 +11,7 @@ const categories: Record<string, string> = {
   CHECKPOINT: "نقطه کنترل", EXECUTION_STAGE: "مرحله عملیاتی", DELAY: "تأخیرها",
   EXCEPTION: "استثناها", WORK_ITEM: "موارد نیازمند رسیدگی", REFERENCE: "مراجع عملیاتی",
   DOCUMENT: "اسناد", AUDIT: "اقدامات عملیاتی",
+  EXECUTION: "اجرا", CARGO: "کالا و تخصیص", TRACKING: "پیگیری", DELIVERY: "تحویل",
 };
 
 export default function UnifiedShipmentHistory({ shipmentPublicId }: { shipmentPublicId: string }) {
@@ -44,10 +45,15 @@ export default function UnifiedShipmentHistory({ shipmentPublicId }: { shipmentP
         </label>
         {!data?.total ? <p>در محدوده دسترسی شما سابقه‌ای برای این محموله ثبت نشده است.</p> : !visible.length ? <p>در این صفحه موردی از دسته انتخاب‌شده وجود ندارد.</p> : <ol className="space-y-3">
           {visible.map(item => <li key={item.history_id} className="min-w-0 rounded border p-3">
-            <div className="flex flex-wrap items-start justify-between gap-2"><strong>{businessLabel(item.business_type)}</strong><span className="rounded bg-slate-100 px-2 py-1 text-xs">{categories[item.category] || "اقدام عملیاتی"}</span></div>
+            <div className="flex flex-wrap items-start justify-between gap-2"><strong>{item.business_label || businessLabel(item.business_type)}</strong><span className="rounded bg-slate-100 px-2 py-1 text-xs">{categories[item.category] || "اقدام عملیاتی"}</span></div>
             <p>{item.occurred_at ? <>زمان وقوع: <time dateTime={item.occurred_at} dir="auto">{displayTime(item.occurred_at)}</time></> : item.recorded_at ? <>زمان ثبت: <time dateTime={item.recorded_at} dir="auto">{displayTime(item.recorded_at)}</time></> : "زمان در منبع ثبت نشده است."}</p>
             {item.occurred_at && item.recorded_at && <p className="text-sm text-slate-600">ثبت سیستمی: <time dateTime={item.recorded_at} dir="auto">{displayTime(item.recorded_at)}</time></p>}
             {item.actor && <p>اقدام‌کننده: {item.actor}</p>}
+            {item.execution_label && <p>اجرا: {item.execution_label}</p>}
+            {item.cargo_label && <p>کالا: {item.cargo_label}</p>}
+            {item.before_quantity != null && item.after_quantity != null && <p>مقدار: {Number(item.before_quantity).toLocaleString("fa-IR")} ← {Number(item.after_quantity).toLocaleString("fa-IR")}</p>}
+            {item.quantity != null && <p>مقدار: {Number(item.quantity).toLocaleString("fa-IR")} {item.uom_symbol || ""}</p>}
+            {item.destination_label && <p>مقصد: {item.destination_label}</p>}
             {item.source_is_projection && <p>این مورد از وضعیت عملیات شناسایی شده است.</p>}
             {item.source_type && <p>منبع: {item.source_type === "direct" ? "عملیات مستقیم" : "درخواست و پیشنهاد پذیرفته‌شده"}</p>}
             {item.request_public_id && <p><Link className="text-blue-700 underline" to={`/expert/requests/${item.request_public_id}`}>مشاهده درخواست مبدأ</Link></p>}

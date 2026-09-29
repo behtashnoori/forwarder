@@ -21,6 +21,12 @@ class Province(db.Model):
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     code = db.Column(db.String(10), nullable=True, index=True)
     name_fa = db.Column(db.Text, nullable=False)
+    name_en = db.Column(db.Text, nullable=True)
+    geoname_id = db.Column(SQLITE_COMPAT_BIGINT, nullable=True, unique=True, index=True)
+    aliases = db.Column(db.JSON, nullable=True)
+    latitude = db.Column(db.Numeric(10, 7), nullable=True)
+    longitude = db.Column(db.Numeric(10, 7), nullable=True)
+    timezone = db.Column(db.String(64), nullable=True)
     country_id = db.Column(SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id", ondelete="RESTRICT"), nullable=True, index=True)
     is_active = db.Column(db.Boolean, nullable=False, default=True)
     effective_from = db.Column(db.Date, nullable=True)
@@ -81,8 +87,13 @@ class City(db.Model):
     id = db.Column(SQLITE_COMPAT_BIGINT, primary_key=True)
     code = db.Column(db.String(64), nullable=True, index=True)
     name_fa = db.Column(db.Text, nullable=False)
+    name_en = db.Column(db.Text, nullable=True)
+    geoname_id = db.Column(SQLITE_COMPAT_BIGINT, nullable=True, unique=True, index=True)
+    country_id = db.Column(
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("country.id", ondelete="RESTRICT"), nullable=True, index=True
+    )
     county_id = db.Column(
-        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=False
+        SQLITE_COMPAT_BIGINT, db.ForeignKey("county.id"), nullable=True
     )
     province_id = db.Column(
         SQLITE_COMPAT_BIGINT, db.ForeignKey("province.id"), nullable=False
@@ -95,6 +106,12 @@ class City(db.Model):
     source_reference = db.Column(db.String(255), nullable=True)
     source_version = db.Column(db.String(100), nullable=True)
     dataset_id = db.Column(db.String(100), nullable=True)
+    feature_code = db.Column(db.String(16), nullable=True)
+    aliases = db.Column(db.JSON, nullable=True)
+    latitude = db.Column(db.Numeric(10, 7), nullable=True)
+    longitude = db.Column(db.Numeric(10, 7), nullable=True)
+    population = db.Column(db.BigInteger, nullable=True)
+    timezone = db.Column(db.String(64), nullable=True)
     __table_args__ = (
         db.UniqueConstraint("county_id", "code", name="uq_city_county_code"),
         db.CheckConstraint("effective_to IS NULL OR effective_from IS NULL OR effective_to >= effective_from", name="ck_city_effective_range"),

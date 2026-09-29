@@ -17,8 +17,9 @@ from backend.services.assigned_work_authorization import authorize_document_mana
 from backend.services.customer_entitlement_service import authorized_customer_ids
 from backend.services.legacy_datetime import serialize_legacy_utc_datetime as iso
 from backend.services.operational_service import OperationalError, require_permission, scoped_shipment
+from backend.services import operational_service as base
 
-FIELDS = {"cargo_public_id", "quantity", "uom_public_id", "destination_text", "occurred_at",
+FIELDS = {"cargo_public_id", "quantity", "uom_public_id", "destination_text", "destination_reference", "destination_note", "occurred_at",
           "expected_version", "corrects_public_id", "reason", "evidence_document_public_ids"}
 
 
@@ -165,9 +166,26 @@ def create(shipment_public_id, user, payload, key):
         fail("نسخه تحویل تازه معتبر نیست.", 409, "DELIVERY_VERSION_CONFLICT")
     documents = _evidence_selection(shipment, cargo, payload.get("evidence_document_public_ids", []))
     closure_guard.prior_fact(shipment, _instant(payload.get("occurred_at")))
+    destination = payload.get("destination_reference")
+    destination_location_id = destination_point_id = None
+    destination_snapshot = None
+    if destination is not None:
+        if not isinstance(destination, dict):
+            fail("مقصد ساخت‌یافته معتبر نیست.")
+        endpoint = base._endpoint(destination, shipment.organization_id)
+        geography = base._endpoint_location(endpoint)
+        if geography.source_type != "city" and destination.get("source_type") != "logistics_point":
+            fail("مقصد تحویل باید شهر یا مکان سازمانی متصل به شهر باشد.")
+        destination_location_id = geography.canonical_location.id
+        destination_point_id = endpoint.logistics_point.id if hasattr(endpoint, "logistics_point") else None
+        destination_snapshot = base._endpoint_snapshot(endpoint)
+    note = _text(payload.get("destination_note"), 255)
+    legacy_text = _text(payload.get("destination_text"), 255, destination is None)
     row = Delivery(organization_id=shipment.organization_id, operational_shipment_id=shipment.id, cargo_item_id=cargo.id,
         quantity=_quantity(payload.get("quantity")), uom_id=cargo.uom_id, uom_code_snapshot=cargo.uom_code_snapshot,
-        uom_symbol_snapshot=cargo.uom_symbol_snapshot, destination_text=_text(payload.get("destination_text"), 255, True),
+        uom_symbol_snapshot=cargo.uom_symbol_snapshot, destination_text=note if destination is not None else legacy_text,
+        destination_location_id=destination_location_id, destination_logistics_point_id=destination_point_id,
+        destination_snapshot=destination_snapshot,
         occurred_at=_instant(payload.get("occurred_at")), actor_user_id=int(user["id"]),
         supersedes_delivery_id=previous.id if previous else None, revision=previous.revision + 1 if previous else 1,
         reason=_text(payload.get("reason"), 500))
@@ -216,8 +234,20 @@ def evidence_projection(delivery, account=None):
 
 
 def project(row, superseded, *, account=None):
+    destination_reference = None
+    snapshot = row.destination_snapshot if isinstance(row.destination_snapshot, dict) else None
+    if snapshot:
+        country = snapshot.get("country") if isinstance(snapshot.get("country"), dict) else None
+        facility = snapshot.get("facility") if isinstance(snapshot.get("facility"), dict) else None
+        canonical = snapshot.get("canonical_reference") if isinstance(snapshot.get("canonical_reference"), dict) else None
+        if country and isinstance(country.get("id"), int):
+            if facility and isinstance(facility.get("logistics_point_public_id"), str):
+                destination_reference = {"country_id": country["id"], "source_type": "logistics_point", "source_id": facility["logistics_point_public_id"]}
+            elif canonical and isinstance(canonical.get("source_type"), str) and isinstance(canonical.get("source_id"), int):
+                destination_reference = {"country_id": country["id"], **canonical}
     result = {"public_id": row.public_id, "cargo_public_id": db.session.get(ShipmentCargoItem, row.cargo_item_id).public_id,
         "quantity": str(row.quantity), "uom_symbol": row.uom_symbol_snapshot, "destination_text": row.destination_text,
+        "destination": row.destination_snapshot, "destination_reference": destination_reference,
         "occurred_at": iso(row.occurred_at), "recorded_at": iso(row.recorded_at), "revision": row.revision,
         "status": "SUPERSEDED" if row.id in superseded else "CURRENT",
         "is_correction": row.supersedes_delivery_id is not None, "evidence": evidence_projection(row, account)}

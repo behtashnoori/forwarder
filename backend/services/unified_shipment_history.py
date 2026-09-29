@@ -6,8 +6,11 @@ from backend.extensions import db
 from backend.models import ExpertUser, ShipmentRequest
 from backend.operational_models import (
     DelayReason, ExceptionReason, Milestone, MilestoneEvent, OperationalAudit,
-    OperationalDelay, OperationalException, OperationalShipment, OperationalWorkItem, RoutePlan,
+    OperationalDelay, OperationalEvent, OperationalException, OperationalShipment, OperationalWorkItem, RoutePlan, ExecutionUnit, RouteStageExecution,
 )
+from backend.reported_fact_models import OperationalEventReportContext
+from backend.cargo_models import CargoAllocationRevision, ExecutionUnitCargoAllocation, ShipmentCargoItem
+from backend.delivery_models import CargoDelivery
 from backend.external_reference_models import OperationalShipmentExternalReference
 from backend.mdpm_models import DocumentReadinessAudit, OperationalDocumentRequirement
 from backend.services.assigned_work_authorization import authorize_work_action
@@ -25,6 +28,7 @@ OMIT_AUDIT_ACTIONS = {
     "operational_shipment.created", "route_plan.created", "route_plan.replanned",
     "operational_delay.created", "operational_delay.resolved",
     "operational_exception.created", "operational_exception.resolved",
+    "ROUTE_STAGE_EXECUTION_CREATED",
 }
 
 
@@ -77,6 +81,50 @@ def _item(shipment, kind, ident, phase):
         item["actor"] = _actor(row.actor_user_id)
         item["reason_label"] = row.reason
         item["note"] = row.note
+        return item
+    if kind == "execution":
+        row = db.session.get(RouteStageExecution, ident)
+        unit = db.session.get(ExecutionUnit, row.execution_unit_id)
+        item = _base(kind, row, phase, "EXECUTION", "route_stage_execution.created",
+                     None, row.created_at, row.created_by_user_id)
+        item.update({"business_label": "اجرای حمل ایجاد شد", "execution_label": unit.display_name or unit.unit_code,
+                     "source_entity_id": row.public_id, "execution_unit_public_id": unit.public_id})
+        return item
+    if kind == "allocation":
+        row = db.session.get(CargoAllocationRevision, ident)
+        allocation = db.session.get(ExecutionUnitCargoAllocation, row.allocation_id)
+        cargo = db.session.get(ShipmentCargoItem, row.shipment_cargo_item_id)
+        dimension = allocation.dimension if allocation else None
+        item = _base(kind, row, phase, "CARGO", f"cargo_allocation.{(dimension or 'UNKNOWN').lower()}",
+                     row.occurred_at, row.recorded_at, row.recorded_by_user_id)
+        item.update({"business_label": "تخصیص برنامه‌ریزی‌شده تغییر کرد" if dimension == "PLANNED" else "تخصیص واقعی تغییر کرد" if dimension == "ACTUAL" else "تخصیص کالا تغییر کرد",
+                     "cargo_label": cargo.display_name_snapshot if cargo else None,
+                     "before_quantity": str(row.before_quantity), "after_quantity": str(row.after_quantity),
+                     "reason_label": row.reason, "source_entity_id": row.public_id})
+        return item
+    if kind == "report":
+        row = db.session.get(OperationalEvent, ident)
+        context = db.session.get(OperationalEventReportContext, ident)
+        labels = {"LOCATION": "گزارش موقعیت ثبت شد", "PROGRESS": "پیشرفت مسیر ثبت شد",
+                  "TRANSPORT_CHANGE": "تغییر حمل ثبت شد", "EFFECT": "اثر عملیاتی ثبت شد"}
+        item = _base(kind, row, phase, "TRACKING", "reported_fact.recorded",
+                     row.occurred_at, row.recorded_at, row.actor_user_id)
+        item.update({"business_label": labels.get(context.kind, "گزارش عملیاتی ثبت شد"),
+                     "note": row.checkpoint_text or row.internal_note, "status": context.kind,
+                     "source_entity_id": row.public_id})
+        return item
+    if kind == "delivery":
+        row = db.session.get(CargoDelivery, ident)
+        cargo = db.session.get(ShipmentCargoItem, row.cargo_item_id)
+        destination = (row.destination_snapshot or {}).get("facility") or row.destination_snapshot or {}
+        item = _base(kind, row, phase, "DELIVERY", "cargo_delivery.recorded",
+                     row.occurred_at, row.recorded_at, row.actor_user_id)
+        item.update({"business_label": "تحویل کالا ثبت شد" if row.revision == 1 else "اصلاح تحویل ثبت شد",
+                     "cargo_label": cargo.display_name_snapshot if cargo else None,
+                     "quantity": str(row.quantity), "uom_symbol": row.uom_symbol_snapshot,
+                     "destination_label": destination.get("display_name") or row.destination_text,
+                     "note": row.destination_text if row.destination_snapshot else None,
+                     "reason_label": row.reason, "source_entity_id": row.public_id})
         return item
     if kind == "revision":
         row = db.session.get(RoutePlan, ident)
@@ -163,6 +211,18 @@ def history(shipment, page=1, per_page=50, user=None):
                 (MilestoneEvent.organization_id == org, MilestoneEvent.milestone_id.in_(milestone_ids))),
         _branch("revision", RoutePlan.id, "created", RoutePlan.created_at,
                 (RoutePlan.operational_shipment_id == shipment.id,)),
+        _branch("execution", RouteStageExecution.id, "created", RouteStageExecution.created_at,
+                (RouteStageExecution.operational_shipment_id == shipment.id, RouteStageExecution.organization_id == org)),
+        _branch("allocation", CargoAllocationRevision.id, "recorded", CargoAllocationRevision.occurred_at,
+                (CargoAllocationRevision.organization_id == org,
+                 CargoAllocationRevision.allocation_id.in_(select(ExecutionUnitCargoAllocation.id).where(
+                     ExecutionUnitCargoAllocation.operational_shipment_id == shipment.id)))),
+        _branch("report", OperationalEvent.id, "recorded", OperationalEvent.occurred_at,
+                (OperationalEvent.organization_id == org,
+                 OperationalEvent.id.in_(select(OperationalEventReportContext.operational_event_id).where(
+                     OperationalEventReportContext.operational_shipment_id == shipment.id)))),
+        _branch("delivery", CargoDelivery.id, "recorded", CargoDelivery.occurred_at,
+                (CargoDelivery.operational_shipment_id == shipment.id, CargoDelivery.organization_id == org)),
     ]
     for kind, model, time_field in (("delay", OperationalDelay, OperationalDelay.started_at),
                                     ("exception", OperationalException, OperationalException.occurred_at)):

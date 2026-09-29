@@ -10,14 +10,14 @@ from sqlalchemy.engine import make_url
 from backend import create_app
 from backend.extensions import db
 from backend.migration_runtime import alembic_config
-from backend.models import Country, Customer, ExpertUser, Province
-from backend.operational_models import OperationalMembership, OperationalOrganization, OperationalShipment, RouteLeg, RoutePlan
+from backend.models import Country, Customer, ExpertUser
+from backend.operational_models import CanonicalLocation, OperationalMembership, OperationalOrganization, OperationalShipment, RouteLeg, RoutePlan
 from backend.route_time_models import OrganizationRouteTime as Reference, OrganizationRouteTimeVersion as Version, RouteLegTimeBasis as Basis
 from backend.services import operational_service as base, route_time_service as svc
 
 URL=os.environ.get("P3_ROUTE_TIME_POSTGRES_URL", "")
 PREVIOUS="20261008_phase3_cargo_delivery"
-HEAD="20261013_structured_route_progress_eta"
+HEAD="20261014_canonical_geography_locations"
 pytestmark=pytest.mark.skipif(not URL,reason="requires explicit P3_ROUTE_TIME_POSTGRES_URL")
 
 
@@ -38,8 +38,10 @@ def test_postgresql18_route_time_upgrade_history_tenant_concurrency_and_safe_rol
         expert=ExpertUser(username="p310-expert",password_hash="unused",full_name="P310 Expert",role="expert",authority="EXPERT",is_active=True)
         country=Country(code="KZ",name_en="Kazakhstan",name_fa="قزاقستان",is_active=True)
         db.session.add_all([org,foreign,admin,expert,country]);db.session.flush()
-        origin=Province(code="P310-O",name_fa="خورگوس آزمایشی",country_id=country.id,is_active=True); destination=Province(code="P310-D",name_fa="آکتائو آزمایشی",country_id=country.id,is_active=True)
-        db.session.add_all([origin,destination]);db.session.flush()
+        # Seed the legacy pre-geography schema without asking the current ORM
+        # model to write columns that are introduced by the migration under test.
+        origin_id=db.session.execute(sa.text("INSERT INTO province (code,name_fa,country_id,is_active) VALUES (:code,:name,:country_id,true) RETURNING id"),{"code":"P310-O","name":"خورگوس آزمایشی","country_id":country.id}).scalar_one()
+        destination_id=db.session.execute(sa.text("INSERT INTO province (code,name_fa,country_id,is_active) VALUES (:code,:name,:country_id,true) RETURNING id"),{"code":"P310-D","name":"آکتائو آزمایشی","country_id":country.id}).scalar_one()
         customer=Customer(company_name="P310 Customer",ownership_scope="TENANT",operational_organization_id=org.id,status="active")
         db.session.add(customer);db.session.flush()
         for user in (admin,expert):db.session.add(OperationalMembership(organization_id=org.id,user_id=user.id,permissions=["operational_shipment.read","route_leg.manage"]))
@@ -47,12 +49,16 @@ def test_postgresql18_route_time_upgrade_history_tenant_concurrency_and_safe_rol
         db.session.add(shipment);db.session.flush()
         plan=RoutePlan(operational_shipment_id=shipment.id,revision_number=1,status="draft",is_active=False,created_by_user_id=expert.id)
         db.session.add(plan);db.session.flush()
-        a=base.resolve_location({"source_type":"province","source_id":origin.id}); b=base.resolve_location({"source_type":"province","source_id":destination.id})
-        leg=RouteLeg(route_plan_id=plan.id,sequence_number=1,origin_location_id=a.canonical_location.id,destination_location_id=b.canonical_location.id,
-            origin_snapshot=a.snapshot(),destination_snapshot=b.snapshot(),transport_mode="rail",planned_departure=now+timedelta(days=10),planned_arrival=now+timedelta(days=12),status="planned")
+        origin_location=CanonicalLocation(source_type="province",source_id=origin_id,location_type="province",display_name="خورگوس آزمایشی",country_code="KZ",verification_state="verified")
+        destination_location=CanonicalLocation(source_type="province",source_id=destination_id,location_type="province",display_name="آکتائو آزمایشی",country_code="KZ",verification_state="verified")
+        db.session.add_all([origin_location,destination_location]);db.session.flush()
+        origin_snapshot={"canonical_location_id":origin_location.id,"canonical_reference":{"source_type":"province","source_id":origin_id},"display_name":origin_location.display_name,"location_type":"province","country":{"id":country.id,"code":"KZ","name":"Kazakhstan"},"country_code":"KZ","province":{"id":origin_id,"name":origin_location.display_name},"county":None,"city":None,"operational_point":None,"verification_state":"verified"}
+        destination_snapshot={"canonical_location_id":destination_location.id,"canonical_reference":{"source_type":"province","source_id":destination_id},"display_name":destination_location.display_name,"location_type":"province","country":{"id":country.id,"code":"KZ","name":"Kazakhstan"},"country_code":"KZ","province":{"id":destination_id,"name":destination_location.display_name},"county":None,"city":None,"operational_point":None,"verification_state":"verified"}
+        leg=RouteLeg(route_plan_id=plan.id,sequence_number=1,origin_location_id=origin_location.id,destination_location_id=destination_location.id,
+            origin_snapshot=origin_snapshot,destination_snapshot=destination_snapshot,transport_mode="rail",planned_departure=now+timedelta(days=10),planned_arrival=now+timedelta(days=12),status="planned")
         db.session.add(leg);db.session.commit()
         ids={"org":org.id,"foreign":foreign.id,"admin":admin.id,"expert":expert.id,"shipment":shipment.public_id,"shipment_id":shipment.id,"plan":plan.id,"leg":leg.id}
-        body={"origin":{"country_id":country.id,"source_type":"province","source_id":origin.id},"destination":{"country_id":country.id,"source_type":"province","source_id":destination.id},"transport_mode":"rail",
+        body={"origin":{"country_id":country.id,"source_type":"province","source_id":origin_id},"destination":{"country_id":country.id,"source_type":"province","source_id":destination_id},"transport_mode":"rail",
             "movement_min_minutes":1200,"movement_max_minutes":1440,"stop_min_minutes":240,"stop_max_minutes":480,"effective_from":(now-timedelta(days=1)).isoformat()}
     def legacy():
         with engine.connect() as c:return c.execute(sa.text("SELECT id,route_plan_id,origin_snapshot::text,destination_snapshot::text,planned_departure,planned_arrival,status,version FROM route_leg ORDER BY id")).all()

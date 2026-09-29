@@ -20,7 +20,7 @@ from backend.tests.test_phase3_transport_execution_postgresql import _seed_runti
 URL = os.environ.get("P3_REPORTED_FACTS_POSTGRES_URL", "")
 PARENT = "20261006_customer_entitlement"
 HEAD = "20261007_phase3_reported_facts"
-CURRENT = "20261013_structured_route_progress_eta"
+CURRENT = "20261014_canonical_geography_locations"
 pytestmark = pytest.mark.skipif(not URL, reason="requires owned P3_REPORTED_FACTS_POSTGRES_URL")
 
 

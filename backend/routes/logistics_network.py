@@ -158,6 +158,21 @@ def point_active(public_id, action):
         return _error(exc)
 
 
+@logistics_network_bp.post("/api/admin/logistics-points/<public_id>/review/<action>")
+@require_organization_admin_context(allow_platform=False)
+def point_review(public_id, action):
+    try:
+        user = _user()
+        row = svc.review_point(
+            svc.scoped_point(public_id, user, "logistics_point.manage"), action,
+            request.get_json(silent=True) or {}, user,
+        )
+        svc.commit_or_error()
+        return jsonify({"item": svc.point_projection(row)})
+    except OperationalError as exc:
+        return _error(exc)
+
+
 @logistics_network_bp.get("/api/internal/logistics-point-types")
 @require_auth
 def internal_types():
@@ -169,6 +184,41 @@ def internal_types():
 def internal_points():
     try:
         return jsonify(svc.list_points(request.args, _user()))
+    except OperationalError as exc:
+        return _error(exc)
+
+
+@logistics_network_bp.post("/api/internal/logistics-points")
+@require_auth
+def internal_point_create():
+    try:
+        row = svc.create_expert_point(request.get_json(silent=True) or {}, _user())
+        svc.commit_or_error()
+        return jsonify({"item": svc.point_projection(row)}), 201
+    except OperationalError as exc:
+        return _error(exc)
+
+
+@logistics_network_bp.get("/api/internal/geography/countries")
+@require_auth
+def geography_countries():
+    return jsonify(svc.canonical_countries(request.args))
+
+
+@logistics_network_bp.get("/api/internal/geography/admin1")
+@require_auth
+def geography_admin1():
+    try:
+        return jsonify(svc.canonical_admin1(request.args))
+    except OperationalError as exc:
+        return _error(exc)
+
+
+@logistics_network_bp.get("/api/internal/geography/cities")
+@require_auth
+def geography_cities():
+    try:
+        return jsonify(svc.canonical_cities(request.args))
     except OperationalError as exc:
         return _error(exc)
 

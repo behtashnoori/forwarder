@@ -23,6 +23,7 @@ from backend.tests.test_phase3_transport_execution_postgresql import _seed_runti
 URL = os.environ.get("P3_CLOSURE_POSTGRES_URL", "")
 HEAD = "20261010_phase3_closure"
 PREVIOUS = "20261009_phase3_route_time"
+REPOSITORY_HEAD = "20261014_canonical_geography_locations"
 pytestmark = pytest.mark.skipif(not URL, reason="requires explicit owned P3_CLOSURE_POSTGRES_URL")
 
 
@@ -72,6 +73,9 @@ def test_postgresql18_closure_upgrade_preservation_history_and_both_race_orders(
     command.downgrade(config, PREVIOUS)
     assert legacy()==before
     command.upgrade(config, HEAD)
+    # Preserve the closure migration round trip, then exercise the current
+    # closure service against the complete current schema.
+    command.upgrade(config, REPOSITORY_HEAD)
     owner = {"id":ids["owner"],"role":"expert"}
     admin_user = {"id":ids["admin"],"role":"admin"}
     with app.app_context():

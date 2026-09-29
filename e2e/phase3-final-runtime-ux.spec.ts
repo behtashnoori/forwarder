@@ -85,9 +85,15 @@ test("P3-14 Expert context navigation and Workspace/Tower shared truth", async (
   await page.goto(`/operations/shipments/${fixture.p304_shipment}`);
   await expect(page.getByRole("heading", { name: "خلاصه محموله", exact: true })).toBeVisible();
   const navigation = page.getByRole("navigation", { name: "بخش‌های پرونده حمل" });
-  await expect(navigation.getByRole("link", { name: "اقدام بعدی", exact: true })).toHaveAttribute("href", "#shipment-next-action");
-  await expect(navigation.getByRole("link", { name: "تکمیل و بستن", exact: true })).toHaveAttribute("href", "#shipment-closure");
+  await expect(navigation.getByRole("link", { name: "خلاصه", exact: true })).toHaveAttribute("href", `/operations/shipments/${fixture.p304_shipment}/summary`);
+  await expect(navigation.getByRole("link", { name: "تکمیل و بستن", exact: true })).toHaveAttribute("href", `/operations/shipments/${fixture.p304_shipment}/closure`);
+  await expect(navigation.getByRole("link", { name: "تاریخچه", exact: true })).toHaveAttribute("href", `/operations/shipments/${fixture.p304_shipment}/history`);
   await expect(page.getByText("مرحله فعلی و تازگی پرونده", { exact: true })).toBeVisible();
+  await navigation.getByRole("link", { name: "مسیر و اجرا", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/operations/shipments/${fixture.p304_shipment}/route$`));
+  await expect(page.getByRole("heading", { name: "مسیر و اجرای عملیاتی", exact: true })).toBeVisible();
+  await navigation.getByRole("link", { name: "تاریخچه", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/operations/shipments/${fixture.p304_shipment}/history$`));
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: info.outputPath("expert-shipment-mobile-rtl.png"), fullPage: true });

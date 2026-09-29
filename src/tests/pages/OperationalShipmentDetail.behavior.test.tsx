@@ -188,8 +188,8 @@ describe("Phase 1B shipment detail behavior", () => {
     expect(await screen.findByRole("heading", { name: "خلاصه محموله" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "پرش به محتوای پرونده حمل" })).toHaveAttribute("href", "#shipment-overview");
     const sectionNavigation = screen.getByRole("navigation", { name: "بخش‌های پرونده حمل" });
-    expect(sectionNavigation.querySelector('a[href="#shipment-next-action"]')).toHaveTextContent("اقدام بعدی");
-    expect(sectionNavigation.querySelector('a[href="#shipment-closure"]')).toHaveTextContent("تکمیل و بستن");
+    expect(sectionNavigation.querySelector(`a[href="/operations/shipments/${shipment.public_id}/route"]`)).toHaveTextContent("مسیر و اجرا");
+    expect(sectionNavigation.querySelector(`a[href="/operations/shipments/${shipment.public_id}/closure"]`)).toHaveTextContent("تکمیل و بستن");
     expect(screen.getAllByText("UAT Customer").length).toBeGreaterThan(0);
     expect(screen.getByText("کالا و وسایل حمل")).toBeInTheDocument();
     expect(screen.getByText("وضعیت و پیگیری حمل")).toBeInTheDocument();

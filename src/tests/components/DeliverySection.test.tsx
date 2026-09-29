@@ -6,6 +6,10 @@ import { uploadShipmentDocument } from "@/lib/api";
 
 vi.mock("@/lib/deliveryApi", () => ({ listDeliveries: vi.fn(), recordDelivery: vi.fn() }));
 vi.mock("@/lib/api", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/api")>(), uploadShipmentDocument: vi.fn(), downloadShipmentDocument: vi.fn() }));
+vi.mock("@/components/CanonicalLocationPicker", () => ({
+  default: ({ label, onChange }: { label: string; onChange: (value: {country_id:number;source_type:string;source_id:number}) => void }) =>
+    <button type="button" onClick={() => onChange({ country_id: 1, source_type: "city", source_id: 2 })}>{label} ساخت‌یافته</button>,
+}));
 const fixture = (canManage = true): DeliveryList => ({ items: [], total: 0, page: 1, can_manage: canManage,
   cargo: [{ public_id: "cargo-a", label: "کالای اول", customer_label: "مشتری الف", uom_public_id: "carton", uom_symbol: "کارتن", known_actual: "100", delivered: "0", remaining: "100", excess: "0", has_delivery: false, can_record: true },
     { public_id: "cargo-b", label: "کالای دوم", customer_label: "مشتری ب", uom_public_id: "carton", uom_symbol: "کارتن", known_actual: "25", delivered: "0", remaining: "25", excess: "0", has_delivery: false, can_record: true }] });
@@ -17,9 +21,9 @@ describe("partial cargo deliveries", () => {
     vi.mocked(recordDelivery).mockRejectedValueOnce(new Error("خطای شبکه")).mockResolvedValueOnce({ public_id: "delivery", revision: 1, created: true });
     render(<DeliverySection shipmentId="shipment" />);
     fireEvent.click(await screen.findByRole("button", { name: "تحویل تازه برای کالای اول" }));
-    expect(screen.getByLabelText("مقصد تحویل")).toHaveValue("");
     fireEvent.change(screen.getByLabelText("مقدار تحویل"), { target: { value: "102" } });
-    fireEvent.change(screen.getByLabelText("مقصد تحویل"), { target: { value: "انبار الف" } });
+    fireEvent.click(screen.getByRole("button", { name: "مقصد تحویل ساخت‌یافته" }));
+    fireEvent.change(screen.getByLabelText("یادداشت مقصد تحویل"), { target: { value: "انبار الف" } });
     fireEvent.change(screen.getByLabelText("زمان وقوع تحویل"), { target: { value: "2026-09-21T10:30" } });
     fireEvent.click(screen.getByRole("button", { name: "ثبت تحویل" }));
     await screen.findByRole("alert");
@@ -27,7 +31,7 @@ describe("partial cargo deliveries", () => {
     await screen.findByText("تحویل ثبت شد؛ وضعیت پرونده حمل تغییری نکرد.");
     const calls = vi.mocked(recordDelivery).mock.calls;
     expect(calls).toHaveLength(2); expect(calls[0][2]).toBe(calls[1][2]);
-    expect(calls[0][1]).toEqual({ cargo_public_id: "cargo-a", quantity: "102", uom_public_id: "carton", destination_text: "انبار الف", occurred_at: new Date("2026-09-21T10:30").toISOString(), expected_version: 0 });
+    expect(calls[0][1]).toEqual({ cargo_public_id: "cargo-a", quantity: "102", uom_public_id: "carton", destination_reference: { country_id: 1, source_type: "city", source_id: 2 }, destination_note: "انبار الف", occurred_at: new Date("2026-09-21T10:30").toISOString(), expected_version: 0 });
   });
 
   it("shows independent cargo warnings and preserves history in read-only oversight", async () => {
@@ -50,6 +54,7 @@ describe("partial cargo deliveries", () => {
     render(<DeliverySection shipmentId="shipment" />);
     fireEvent.click(await screen.findByRole("button", { name: "اصلاح تحویل" }));
     fireEvent.change(screen.getByLabelText("مقدار تحویل"), { target: { value: "58" } });
+    fireEvent.click(screen.getByRole("button", { name: "مقصد تحویل ساخت‌یافته" }));
     fireEvent.change(screen.getByLabelText("دلیل اصلاح تحویل"), { target: { value: "بازشماری" } });
     fireEvent.click(screen.getByRole("button", { name: "ثبت اصلاح تحویل" }));
     await waitFor(() => expect(recordDelivery).toHaveBeenCalled());

@@ -31,6 +31,12 @@ from backend.services import document_context_service as contexts
 from backend.services.customer_portal_auth import require_customer
 from sqlalchemy import select
 
+
+def _delivery_destination_label(row):
+    snapshot = row.destination_snapshot if isinstance(row.destination_snapshot, dict) else {}
+    facility = snapshot.get("facility") if isinstance(snapshot.get("facility"), dict) else {}
+    return facility.get("display_name") or snapshot.get("display_name") or row.destination_text or "مقصد ثبت‌نشده"
+
 document_bp = Blueprint("case_documents", __name__)
 
 
@@ -243,7 +249,7 @@ def shipment_document_context_options(shipment_id: str):
         "cargo": [{"id": row.public_id, "label": f"کالا {row.line_number}: {row.display_name_snapshot}"} for row in cargo],
         "route_leg": [{"id": str(row.id), "label": f"مرحله {row.sequence_number} · طرح {row.route_plan_id}"} for row in legs],
         "execution_unit": [{"id": row.public_id, "label": row.unit_code} for row in units],
-        "delivery": [{"id": row.public_id, "label": f"{cargo.display_name_snapshot} · {row.quantity} {row.uom_symbol_snapshot} · {row.destination_text} · اصلاح {row.revision}"} for row, cargo in deliveries],
+        "delivery": [{"id": row.public_id, "label": f"{cargo.display_name_snapshot} · {row.quantity} {row.uom_symbol_snapshot} · {_delivery_destination_label(row)} · اصلاح {row.revision}"} for row, cargo in deliveries],
         "audience": [{"id": row.public_id, "label": f"{row.first_name or ''} {row.last_name or ''}".strip() or row.email}
                      for row in accounts],
     }})

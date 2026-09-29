@@ -68,6 +68,7 @@ describe("App operational routing", () => {
       "/operations/shipments",
       "/operations/shipments/new",
       "/operations/shipments/:id",
+      "/operations/shipments/:id/:section",
       "/operations/work-queue",
       "/operations/control-tower",
       "/dashboards",

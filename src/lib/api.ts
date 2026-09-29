@@ -2087,6 +2087,7 @@ export interface ShipmentHistoryItem {
   history_id: string;
   category: string;
   business_type: string;
+  business_label?: string | null;
   occurred_at: string | null;
   recorded_at: string | null;
   actor: string | null;
@@ -2110,6 +2111,13 @@ export interface ShipmentHistoryItem {
   evidence_attached?: boolean;
   work_type?: string | null;
   source_is_projection?: boolean;
+  cargo_label?: string | null;
+  execution_label?: string | null;
+  before_quantity?: string | null;
+  after_quantity?: string | null;
+  quantity?: string | null;
+  uom_symbol?: string | null;
+  destination_label?: string | null;
 }
 
 export interface ShipmentHistoryPage {
@@ -4084,12 +4092,17 @@ export interface LogisticsPointView {
   short_address?: string | null;
   is_active: boolean;
   version: number;
-  point_type: LogisticsPointTypeView;
+  point_type: LogisticsPointTypeView | null;
   country: { code: string; fa_name: string; en_name: string };
   province?: { code?: string | null; name_fa: string } | null;
   city?: { code?: string | null; name_fa: string } | null;
   global_source?: { global_point_public_id:string; adoption_public_id:string; fa_name:string; en_name:string;
     platform_lifecycle_status:string; adoption_status:string } | null;
+  latitude?: string | null;
+  longitude?: string | null;
+  description?: string | null;
+  governance_state: "PENDING_REVIEW" | "APPROVED" | "POTENTIAL_DUPLICATE" | "DEACTIVATED";
+  duplicate_of_public_id?: string | null;
 }
 export interface ProjectLogisticsPointView {
   public_id: string;
@@ -4148,6 +4161,20 @@ export const createLogisticsPoint = (payload: Record<string, unknown>) =>
     method: "POST",
     body: JSON.stringify(payload),
   });
+export const createExpertLocation = (payload: Record<string, unknown>) =>
+  request<{ item: LogisticsPointView }>("/api/internal/logistics-points", {
+    method: "POST", body: JSON.stringify(payload),
+  });
+export const reviewLogisticsPoint = (item: LogisticsPointView, action: "approve" | "flag-duplicate" | "deactivate", extra: Record<string, unknown> = {}) =>
+  request<{ item: LogisticsPointView }>(`/api/admin/logistics-points/${encodeURIComponent(item.public_id)}/review/${action}`, {
+    method: "POST", body: JSON.stringify({ version: item.version, ...extra }),
+  });
+export interface CanonicalCountry { id:number; code:string; name_fa:string; name_en:string }
+export interface CanonicalAdmin1 { source_id:number; geoname_id:number; code:string; name_fa:string; name_en:string }
+export interface CanonicalCity { source_id:number; geoname_id:number; name_fa:string; name_en:string; latitude:string; longitude:string }
+export const fetchCanonicalCountries = (q = "") => request<{items:CanonicalCountry[]}>(withQuery("/api/internal/geography/countries", {q}));
+export const fetchCanonicalAdmin1 = (countryCode:string, q = "") => request<{items:CanonicalAdmin1[]}>(withQuery("/api/internal/geography/admin1", {country_code:countryCode,q}));
+export const fetchCanonicalCities = (admin1GeonameId:number, q = "") => request<{items:CanonicalCity[]}>(withQuery("/api/internal/geography/cities", {admin1_geoname_id:admin1GeonameId,q}));
 export const updateLogisticsPoint = (
   id: string,
   payload: Record<string, unknown>,

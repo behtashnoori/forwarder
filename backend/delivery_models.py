@@ -19,8 +19,11 @@ class CargoDelivery(db.Model):
             ["shipment_cargo_item.id", "shipment_cargo_item.uom_id"], name="fk_delivery_cargo_uom", ondelete="RESTRICT"),
         db.ForeignKeyConstraint(["supersedes_delivery_id", "cargo_item_id"],
             ["cargo_delivery.id", "cargo_delivery.cargo_item_id"], name="fk_delivery_predecessor_cargo", ondelete="RESTRICT"),
+        db.ForeignKeyConstraint(["destination_logistics_point_id", "organization_id"],
+            ["logistics_point.id", "logistics_point.organization_id"], name="fk_delivery_destination_point_org", ondelete="RESTRICT"),
         db.CheckConstraint("quantity > 0", name="ck_delivery_positive_quantity"),
         db.CheckConstraint("(supersedes_delivery_id IS NULL AND revision = 1) OR (supersedes_delivery_id IS NOT NULL AND revision > 1)", name="ck_delivery_revision"),
+        db.CheckConstraint("destination_text IS NOT NULL OR (destination_location_id IS NOT NULL AND destination_snapshot IS NOT NULL)", name="ck_delivery_destination_identity"),
         db.Index("ix_delivery_shipment_history", "operational_shipment_id", "occurred_at", "id"),
         db.Index("ix_delivery_cargo_history", "cargo_item_id", "id"),
     )
@@ -33,7 +36,12 @@ class CargoDelivery(db.Model):
     uom_id = db.Column(BIGINT, db.ForeignKey("unit_of_measure.id", ondelete="RESTRICT"), nullable=False)
     uom_code_snapshot = db.Column(db.String(64), nullable=False)
     uom_symbol_snapshot = db.Column(db.String(32), nullable=False)
-    destination_text = db.Column(db.String(255), nullable=False)
+    destination_text = db.Column(db.String(255), nullable=True)
+    destination_location_id = db.Column(
+        BIGINT, db.ForeignKey("canonical_location.id", ondelete="RESTRICT"), nullable=True
+    )
+    destination_logistics_point_id = db.Column(BIGINT, nullable=True)
+    destination_snapshot = db.Column(db.JSON, nullable=True)
     occurred_at = db.Column(db.DateTime(timezone=True), nullable=False)
     recorded_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     actor_user_id = db.Column(BIGINT, db.ForeignKey("expert_user.id", ondelete="RESTRICT"), nullable=False)

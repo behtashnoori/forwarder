@@ -16,7 +16,8 @@ export interface CustomerCargo {
   delivered: string; remaining: string | null; excess: string | null; has_delivery: boolean;
 }
 export interface CustomerDelivery {
-  public_id: string; cargo_public_id: string; quantity: string; uom_symbol: string; destination_text: string;
+  public_id: string; cargo_public_id: string; quantity: string; uom_symbol: string; destination_text: string | null;
+  destination?: { display_name?: string; facility?: { display_name?: string } } | null;
   occurred_at: string; recorded_at: string; revision: number; status: "CURRENT" | "SUPERSEDED";
   is_correction: boolean; evidence: { public_id: string; filename: string; version: number; status: string }[];
 }

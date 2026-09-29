@@ -9,9 +9,10 @@ from sqlalchemy import select
 from backend.extensions import db
 from backend.cargo_models import ShipmentCargoItem
 from backend.delivery_models import CargoDelivery, CargoDeliveryEvidence
-from backend.models import Customer, CustomerGamification, ExpertUser
+from backend.models import City, Country, Customer, CustomerGamification, ExpertUser, Province
 from backend.operational_models import OperationalShipment, OperationalWorkItem, ExecutionUnit, OperationalMembership
 from backend.services import delivery_service as deliveries, customer_entitlement_service as entitlements
+from backend.services import unified_shipment_history as unified_history
 from backend.services.operational_service import OperationalError
 from backend.tests.test_operational_vertical_slice import _auth, _user, operational_app
 from backend.tests.test_phase3_cargo_allocation import _fixture
@@ -115,6 +116,46 @@ def test_legacy_status_unknown_actual_and_unknown_customer_are_not_inferred(oper
         assert caught.value.code == "DELIVERY_CUSTOMER_UNKNOWN"
         db.session.rollback()
         assert CargoDelivery.query.count() == 1
+
+
+def test_structured_destination_is_exact_and_legacy_free_text_remains_unbound(operational_app):
+    app = operational_app
+    with app.app_context():
+        ctx = setup(app)
+        legacy, _ = record(app, ctx, payload(ctx, quantity="5", destination_text="بندرعباس"))
+        country = Country(code="IR", name_fa="ایران", name_en="Iran", is_active=True)
+        db.session.add(country); db.session.flush()
+        province = Province(code="DEL-HRZ", name_fa="هرمزگان", name_en="Hormozgan",
+                            geoname_id=131222, country_id=country.id,
+                            dataset_id="GEONAMES_ADMIN1_CITY_V1", is_active=True)
+        db.session.add(province); db.session.flush()
+        city = City(code="141679", name_fa="بندرعباس", name_en="Bandar Abbas",
+                    geoname_id=141679, country_id=country.id, province_id=province.id,
+                    county_id=None, dataset_id="GEONAMES_ADMIN1_CITY_V1", is_active=True)
+        db.session.add(city); db.session.commit()
+
+        structured, _ = record(app, ctx, payload(ctx, quantity="7", destination_text=None,
+            destination_reference={"country_id": country.id, "source_type": "city", "source_id": city.id},
+            destination_note="تحویل در دروازه شرقی"))
+        projected = {item["public_id"]: item for item in deliveries.listing(ctx["shipment"], _user(app))["items"]}
+        assert projected[legacy.public_id]["destination_text"] == "بندرعباس"
+        assert projected[legacy.public_id]["destination"] is None
+        assert projected[legacy.public_id]["destination_reference"] is None
+        current = projected[structured.public_id]
+        assert current["destination"]["canonical_reference"] == {"source_type": "city", "source_id": city.id}
+        assert current["destination_reference"] == {"country_id": country.id, "source_type": "city", "source_id": city.id}
+        assert current["destination_text"] == "تحویل در دروازه شرقی"
+
+        history = unified_history.history(db.session.get(OperationalShipment, ctx["shipment_id"]), per_page=100)
+        delivery_items = [item for item in history["items"] if item["category"] == "DELIVERY"]
+        assert {item["source_entity_id"] for item in delivery_items}.issuperset({legacy.public_id, structured.public_id})
+        assert all(item["business_label"] == "تحویل کالا ثبت شد" for item in delivery_items)
+
+        row = db.session.get(CargoDelivery, structured.id)
+        row.destination_snapshot = {**row.destination_snapshot, "display_name": "بازنویسی ممنوع"}
+        with pytest.raises(ValueError, match="immutable"):
+            db.session.flush()
+        db.session.rollback()
 
 
 @pytest.mark.parametrize("changes", [

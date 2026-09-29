@@ -170,7 +170,8 @@ const App = () => (
                 <Route path="/operations" element={<ProtectedRoute><OperationalRoute><OperationalWorkspace /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/shipments" element={<ProtectedRoute><OperationalRoute><OperationalShipments /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/shipments/new" element={<ProtectedRoute><OperationalRoute><NewOperation /></OperationalRoute></ProtectedRoute>} />
-                <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalRoute><OperationalShipmentDetail /></OperationalRoute></ProtectedRoute>} />
+                  <Route path="/operations/shipments/:id" element={<ProtectedRoute><OperationalRoute><OperationalShipmentDetail /></OperationalRoute></ProtectedRoute>} />
+                  <Route path="/operations/shipments/:id/:section" element={<ProtectedRoute><OperationalRoute><OperationalShipmentDetail /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/work-queue" element={<ProtectedRoute><OperationalRoute><OperationalWorkQueue /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/operations/control-tower" element={<ProtectedRoute><OperationalRoute><OperationsControlTower /></OperationalRoute></ProtectedRoute>} />
                 <Route path="/dashboards" element={<ProtectedRoute><DashboardIndex /></ProtectedRoute>} />
