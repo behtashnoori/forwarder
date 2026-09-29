@@ -203,8 +203,10 @@ components:
           type: string
         origin_label:
           type: string
+          description: Display snapshot derived from the canonical endpoint; never endpoint identity.
         destination_label:
           type: string
+          description: Display snapshot derived from the canonical endpoint; never endpoint identity.
         transport_mode:
           type: string
         latest_version:
@@ -383,15 +385,18 @@ components:
           type: object
           additionalProperties: false
           required:
+          - country_id
           - source_type
           - source_id
           properties:
+            country_id:
+              type: integer
+              description: Canonical Country id; the server verifies endpoint ancestry.
             source_type:
               type: string
               enum:
               - province
               - city
-              - country
               - international_city
               - iran_port
               - customs_office
@@ -404,15 +409,18 @@ components:
           type: object
           additionalProperties: false
           required:
+          - country_id
           - source_type
           - source_id
           properties:
+            country_id:
+              type: integer
+              description: Canonical Country id; the server verifies endpoint ancestry.
             source_type:
               type: string
               enum:
               - province
               - city
-              - country
               - international_city
               - iran_port
               - customs_office

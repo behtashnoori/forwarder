@@ -109,3 +109,27 @@ Existing local input→UTC conversion is reused and the form labels the device
 timezone rule. P3-10 makes no new timezone ownership decision. Backend range/history
 and browser old/new plan checks plus existing calendar/route regressions verify
 the bounded adoption. UI dates cannot alter authoritative timestamps.
+
+## 2026-09-29 canonical-geography integration hardening
+
+Human Walkthrough finding `HW_ADMIN_ROUTE_REFERENCE_001` exposed a consumer
+integration gap, not a competing domain model. `backend.models.Country` and the
+governed ISO 3166-1 alpha-2 snapshot remain the sole Country source. The Admin
+create flow now selects an active Country first, then a country-consistent
+Province/City/Port/Customs/InternationalCity or same-tenant LogisticsPoint. A
+Country alone is ancestry/filter context and is no longer accepted as a new
+Route Reference endpoint.
+
+`OrganizationRouteTime` continues to bind identity by its CanonicalLocation and
+optional LogisticsPoint foreign keys. Endpoint labels in snapshots and responses
+are display evidence only; request-supplied free text cannot define or split an
+identity. The create contract supplies `country_id`, `source_type` and `source_id`
+and fails closed if the resolved source belongs to another Country. No persistence
+or migration change is required.
+
+Iranian `InternationalCity` rows belong to the international-request/legacy
+locality domain. They remain readable when already referenced, but are excluded
+from new Route Reference selection; there is no deletion, remap or historical
+rewrite. The Persian selector localizes geography types and does not expose raw
+enum values. Existing version immutability, explicit basis pins,
+`planned_distance_km` and ETA_RULESET_V2 remain unchanged.

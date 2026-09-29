@@ -173,28 +173,35 @@ beforeEach(() => {
     data: [
       {
         identity: { type: "international_city", id: 66 },
-        label: "بندرعباس — international_city — ایران",
+        label: "شهر — بندرعباس · ایران",
+        display_name: "بندرعباس",
+        type_label: "شهر",
         province: null,
-        secondary_label: "international_city — ایران",
+        secondary_label: "شهر · ایران",
       },
       {
         identity: { type: "international_city", id: 64 },
-        label: "تهران — international_city — ایران",
+        label: "شهر — تهران · ایران",
+        display_name: "تهران",
+        type_label: "شهر",
         province: null,
-        secondary_label: "international_city — ایران",
+        secondary_label: "شهر · ایران",
       },
       {
         identity: { type: "international_city", id: 65 },
-        label:
-          "فرودگاه بین‌المللی امام خمینی تهران — international_city — ایران",
+        label: "فرودگاه — فرودگاه بین‌المللی امام خمینی تهران · ایران",
+        display_name: "فرودگاه بین‌المللی امام خمینی تهران",
+        type_label: "فرودگاه",
         province: null,
-        secondary_label: "international_city — ایران",
+        secondary_label: "فرودگاه · ایران",
       },
       {
         identity: { type: "port", id: 8 },
-        label: "Bandar — port — Hormozgan",
+        label: "بندر — Bandar · Hormozgan",
+        display_name: "Bandar",
+        type_label: "بندر",
         province: { id: 2, name: "Hormozgan" },
-        secondary_label: "port — Hormozgan",
+        secondary_label: "بندر · Hormozgan",
       },
     ],
     meta: { count: 1, limit: 50 },
@@ -572,7 +579,7 @@ describe("Slice 5 governed creation", () => {
     await user.selectOptions(screen.getByLabelText("Customer"), "7");
     await user.selectOptions(screen.getByLabelText("Origin province"), "1");
     expect(screen.getByLabelText("Destination")).toHaveTextContent(
-      "تهران — international_city — ایران",
+      "شهر — تهران · ایران",
     );
     expect(screen.getByLabelText("Destination")).toHaveTextContent(
       "فرودگاه بین‌المللی امام خمینی تهران",

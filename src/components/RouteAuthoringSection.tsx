@@ -61,7 +61,7 @@ export function RouteLocationPicker({ id, label, value, onChange, catalog, searc
   const key = value ? `${value.source_type}:${value.source_id}` : "";
   const options = [
     ...catalog.provinces.map((row) => ({ key: `province:${row.id}`, label: row.name, group: "استان" })),
-    ...catalog.iran.map((row) => ({ key: `${row.identity.type === "port" ? "iran_port" : row.identity.type === "customs" ? "customs_office" : row.identity.type}:${row.identity.id}`, label: row.label, group: "مکان ایران" })),
+    ...catalog.iran.map((row) => ({ key: `${row.identity.type === "port" ? "iran_port" : row.identity.type === "customs" ? "customs_office" : row.identity.type}:${row.identity.id}`, label: `${row.type_label} — ${row.display_name}`, group: "مکان ایران" })),
     ...cities.map((row) => ({ key: `international_city:${row.id}`, label: row.name, group: "شهر بین‌المللی" })),
     ...(includeFacilities ? catalog.facilities.map((row) => ({ key: `logistics_point:${row.public_id}`, label: row.fa_name, group: "نقطه عملیاتی (موقعیت جغرافیایی وابسته)" })) : []),
   ];

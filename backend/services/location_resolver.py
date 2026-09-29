@@ -242,14 +242,27 @@ def iran_destination_results(q: str | None = None, source_type: str | None = Non
             except LocationResolutionError:
                 continue
             administrative_label = resolved.province_name or resolved.country_name
-            label = f"{resolved.display_label} — {public_type} — {administrative_label}"
+            display_type = (
+                resolved.operational_metadata.get("city_type")
+                if public_type == "international_city" and resolved.operational_metadata
+                else public_type
+            )
+            type_label = {
+                "city": "شهر",
+                "port": "بندر",
+                "airport": "فرودگاه",
+                "customs": "گمرک",
+            }.get(display_type, "مکان")
+            label = f"{type_label} — {resolved.display_label} · {administrative_label}"
             results.append({
                 "identity": {"type": public_type, "id": row.id},
                 "label": label,
+                "display_name": resolved.display_label,
+                "type_label": type_label,
                 "province": (
                     {"id": resolved.province_id, "name": resolved.province_name}
                     if resolved.province_id is not None else None
                 ),
-                "secondary_label": f"{public_type} — {administrative_label}",
+                "secondary_label": f"{type_label} · {administrative_label}",
             })
     return sorted(results, key=lambda item: (item["label"], item["identity"]["id"]))[:limit]

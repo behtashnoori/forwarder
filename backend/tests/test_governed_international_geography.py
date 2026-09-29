@@ -131,6 +131,8 @@ def test_governed_iran_operation_reference_returns_tehran_ikia_and_bandar_abbas(
     rows = response.json["data"]
     assert {row["identity"]["id"] for row in rows} == set(expected.values())
     assert {row["identity"]["type"] for row in rows} == {"international_city"}
+    assert all(row["type_label"] in {"شهر", "بندر", "فرودگاه"} for row in rows)
+    assert all("international_city" not in row["label"] + row["secondary_label"] for row in rows)
     assert set(expected) == {
         "Tehran",
         "Imam Khomeini International Apt/Tehran",

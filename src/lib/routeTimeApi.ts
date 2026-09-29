@@ -8,6 +8,7 @@ export type TimeVersion = {
 export type RouteTime = { public_id: string; origin_label: string; destination_label: string; transport_mode: string;
   latest_version: number; current: TimeVersion | null; versions: TimeVersion[] };
 export type ReferenceValues = Pick<TimeVersion, "movement_min_minutes" | "movement_max_minutes" | "stop_min_minutes" | "stop_max_minutes" | "effective_from"> & { planned_distance_km: number | null };
+export type RouteReferenceEndpointRef = OperationalLocationRef & { country_id: number };
 export type TimeSelection = { public_id: string; selection_revision: number; reference_at: string; recorded_at: string;
   actor_user_id: number; reference: TimeVersion };
 export type LegTime = { leg_id: number; leg_version: number; sequence_number: number; origin_label: string; destination_label: string;
@@ -17,7 +18,7 @@ export type PlanTimes = { plan_id: number; plan_revision: number; plan_status: s
 const post = (path: string, payload: unknown, key: string) => request<{data: {public_id: string; created: boolean}}>(path,
   {method: "POST", cache: "no-store", headers: {"Idempotency-Key": key}, body: JSON.stringify(payload)});
 export const listRouteTimes = (page=1, signal?: AbortSignal) => request<{data: {items: RouteTime[]; page: number; total: number; has_next: boolean}}>(`/api/organization/route-reference-times?page=${page}`, {cache: "no-store", signal});
-export const createRouteTime = (payload: ReferenceValues & {origin: OperationalLocationRef; destination: OperationalLocationRef; transport_mode: string}, key: string) => post("/api/admin/organization-route-reference-times", payload, key);
+export const createRouteTime = (payload: ReferenceValues & {origin: RouteReferenceEndpointRef; destination: RouteReferenceEndpointRef; transport_mode: string}, key: string) => post("/api/admin/organization-route-reference-times", payload, key);
 export const reviseRouteTime = (id: string, payload: ReferenceValues & {expected_version: number}, key: string) => post(`/api/admin/organization-route-reference-times/${id}/versions`,payload,key);
 export const getPlanTimes = (shipment: string, plan: number, signal?: AbortSignal) => request<{data: PlanTimes}>(`/api/operational-shipments/${shipment}/route-plans/${plan}/reference-times`,{cache: "no-store",signal});
 export const selectPlanTime = (shipment: string, plan: number, leg: LegTime, key: string) => post(`/api/operational-shipments/${shipment}/route-plans/${plan}/legs/${leg.leg_id}/reference-time`, {

@@ -41,8 +41,8 @@ def main():
         new=OperationalShipment(organization_id=old.organization_id,source_type="direct",customer_id=old.customer_id,
             lifecycle_status="planned",created_by_user_id=old.primary_responsible_expert_id,primary_responsible_expert_id=old.primary_responsible_expert_id)
         db.session.add(new);db.session.commit()
-        foreign_version,_=svc.save({"id":foreign.id}, {"origin":{"source_type":"logistics_point","source_id":points["foreign_origin"]},
-            "destination":{"source_type":"logistics_point","source_id":points["foreign_destination"]},"transport_mode":"rail",
+        foreign_version,_=svc.save({"id":foreign.id}, {"origin":{"country_id":country.id,"source_type":"logistics_point","source_id":points["foreign_origin"]},
+            "destination":{"country_id":country.id,"source_type":"logistics_point","source_id":points["foreign_destination"]},"transport_mode":"rail",
             "movement_min_minutes":600,"movement_max_minutes":900,"effective_from":(datetime.now(timezone.utc)-timedelta(days=1)).isoformat()},str(uuid4()))
         db.session.commit()
         from backend.route_time_models import OrganizationRouteTime

@@ -298,7 +298,7 @@ def list_countries(*, include_inactive=False):
     query = Country.query
     if not include_inactive:
         query = query.filter(Country.is_active.is_(True))
-    return query.order_by(Country.name_fa).all()
+    return query.order_by(Country.name_fa, Country.name_en, Country.code, Country.id).all()
 
 
 def create_country(data):

@@ -8,7 +8,7 @@ from flask import session
 from sqlalchemy import select
 
 from backend.extensions import db
-from backend.models import Customer, CustomerGamification
+from backend.models import Country, Customer, CustomerGamification, Province
 from backend.eta_models import CargoEtaSnapshot as Snapshot, CargoEtaInput as Input
 from backend.operational_models import CanonicalLocation, Milestone, RouteLeg, RoutePlan
 from backend.route_time_models import OrganizationRouteTime as Reference
@@ -33,6 +33,17 @@ def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False, ref
     accounts = [CustomerGamification(email=f"eta-{i}@example.test", phone=f"0900311000{i}",
                                     operational_organization_id=ids["org"]) for i in range(2)]
     db.session.add_all(accounts); db.session.commit()
+    country = Country.query.filter_by(code="IR").one_or_none()
+    if country is None:
+        country = Country(code="IR", name_en="Iran", name_fa="ایران", is_active=True)
+        db.session.add(country); db.session.flush()
+    for leg_id in [root["id"], branch_a["id"]]:
+        leg = db.session.get(RouteLeg, leg_id)
+        for location_id in (leg.origin_location_id, leg.destination_location_id):
+            location = db.session.get(CanonicalLocation, location_id)
+            if location.source_type == "province":
+                db.session.get(Province, location.source_id).country_id = country.id
+    db.session.commit()
     for cargo, leg, account in ((cargo_a, branch_a, accounts[0]), (cargo_b, branch_b, accounts[1])):
         routes.assign_cargo_destination(shipment.id, plan.id, cargo.public_id,
             {"destination_route_leg_id": leg["id"]}, _user(app))
@@ -57,8 +68,8 @@ def setup(app, *, final_reference=True, stop_range=(0, 0), checkpoint=False, ref
         a = db.session.get(CanonicalLocation, leg.origin_location_id)
         b = db.session.get(CanonicalLocation, leg.destination_location_id)
         ref, _ = times.save(_user(app, "verifier"), {
-            "origin": {"source_type": a.source_type, "source_id": a.source_id},
-            "destination": {"source_type": b.source_type, "source_id": b.source_id}, "transport_mode": "road",
+            "origin": {"country_id": country.id, "source_type": a.source_type, "source_id": a.source_id},
+            "destination": {"country_id": country.id, "source_type": b.source_type, "source_id": b.source_id}, "transport_mode": "road",
             "movement_min_minutes": 60, "movement_max_minutes": 120,
             "stop_min_minutes": stop_range[0], "stop_max_minutes": stop_range[1],
             "planned_distance_km": planned_distance_km,

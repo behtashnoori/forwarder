@@ -6,17 +6,34 @@ import re
 import yaml
 import pytest
 from backend.extensions import db
-from backend.models import ExpertUser, CustomerGamification
+from backend.models import Country, ExpertUser, CustomerGamification, InternationalCity, Province
 from backend.operational_models import RouteLeg, RoutePlan, OrganizationSlaRule, OperationalShipment
 from backend.route_time_models import OrganizationRouteTime as Reference, OrganizationRouteTimeVersion as Version, RouteLegTimeBasis as Basis
 from backend.services import route_time_service as svc, operational_service as operations, route_orchestration_service as routes
 from backend.tests.test_operational_vertical_slice import operational_app, _user, _payload, _auth
 
 
+@pytest.fixture(autouse=True)
+def route_time_country(operational_app):
+    """Route Reference creation always has explicit governed Country ancestry."""
+    with operational_app.app_context():
+        iran = Country.query.filter_by(code="IR").first()
+        if iran is None:
+            iran = Country(code="IR", name_en="Iran", name_fa="ایران", is_active=True)
+            db.session.add(iran)
+            db.session.flush()
+        ids = operational_app.config["phase1a"]
+        db.session.get(Province, ids["origin"]).country_id = iran.id
+        db.session.get(Province, ids["destination"]).country_id = iran.id
+        db.session.commit()
+        ids["country"] = iran.id
+    yield
+
+
 def payload(app, **changes):
     ids = app.config["phase1a"]
-    return {"origin": {"source_type": "province", "source_id": ids["origin"]},
-        "destination": {"source_type": "province", "source_id": ids["destination"]}, "transport_mode": "road",
+    return {"origin": {"country_id": ids["country"], "source_type": "province", "source_id": ids["origin"]},
+        "destination": {"country_id": ids["country"], "source_type": "province", "source_id": ids["destination"]}, "transport_mode": "road",
         "movement_min_minutes": 1200, "movement_max_minutes": 1440, "stop_min_minutes": 240, "stop_max_minutes": 480,
         "effective_from": (datetime.now(timezone.utc)-timedelta(days=1)).isoformat(), **changes}
 
@@ -155,6 +172,67 @@ def test_explicit_zero_stop_is_distinct_from_undefined_movement(operational_app)
         assert value["movement_min_minutes"] is None and value["movement_max_minutes"] is None
         assert value["stop_min_minutes"]==value["stop_max_minutes"]==0
         assert value["planned_distance_km"] == "321.125"
+
+
+def test_canonical_country_binding_rejects_mismatch_free_text_and_legacy_iran_but_preserves_history(operational_app):
+    app = operational_app
+    with app.app_context():
+        ids = app.config["phase1a"]
+        foreign = Country(code="TR", name_en="Türkiye", name_fa="ترکیه", is_active=True)
+        legacy = InternationalCity(
+            country_id=ids["country"], name_en="Bandar Abbas", name_fa="بندرعباس",
+            city_type="city", is_active=True,
+        )
+        db.session.add_all([foreign, legacy]); db.session.commit()
+
+        with pytest.raises(operations.OperationalError) as mismatch:
+            save(app, payload(app, origin={
+                "country_id": foreign.id, "source_type": "province", "source_id": ids["origin"],
+            }))
+        assert mismatch.value.code == "ROUTE_TIME_LOCATION_COUNTRY_MISMATCH"
+        db.session.rollback()
+
+        with pytest.raises(operations.OperationalError) as text_identity:
+            save(app, payload(app, origin={
+                "country_id": ids["country"], "source_type": "province",
+                "source_id": ids["origin"], "label": "اصفهان",
+            }))
+        assert text_identity.value.code == "ROUTE_TIME_INVALID"
+        db.session.rollback()
+
+        with pytest.raises(operations.OperationalError) as country_only:
+            save(app, payload(app, origin={
+                "country_id": ids["country"], "source_type": "country", "source_id": ids["country"],
+            }))
+        assert country_only.value.code == "ROUTE_TIME_INVALID"
+        db.session.rollback()
+
+        with pytest.raises(operations.OperationalError) as legacy_new:
+            save(app, payload(app, origin={
+                "country_id": ids["country"], "source_type": "international_city", "source_id": legacy.id,
+            }))
+        assert legacy_new.value.code == "ROUTE_TIME_LEGACY_LOCATION_NOT_SELECTABLE"
+        db.session.rollback()
+
+        legacy_location = operations.resolve_location({"source_type": "international_city", "source_id": legacy.id})
+        destination = operations.resolve_location({"source_type": "province", "source_id": ids["destination"]})
+        reference = Reference(
+            organization_id=ids["org"], origin_location_id=legacy_location.canonical_location.id,
+            destination_location_id=destination.canonical_location.id,
+            origin_snapshot=legacy_location.snapshot(), destination_snapshot=destination.snapshot(),
+            transport_mode="road", actor_user_id=ids["verifier"],
+        )
+        db.session.add(reference); db.session.flush()
+        version = Version(
+            organization_id=ids["org"], reference_id=reference.id, version=1,
+            movement_min_minutes=600, movement_max_minutes=720,
+            effective_from=datetime.now(timezone.utc) - timedelta(days=1),
+            actor_user_id=ids["verifier"],
+        )
+        db.session.add(version); db.session.commit()
+        view = svc.listing(_user(app, "verifier"))["items"][0]
+        assert view["origin_label"] == "بندرعباس"
+        assert reference.origin_location_id == legacy_location.canonical_location.id
 
 
 def test_live_role_tenant_and_parent_boundaries_for_http(operational_app):

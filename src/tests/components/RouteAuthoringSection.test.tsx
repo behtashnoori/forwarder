@@ -29,7 +29,7 @@ beforeEach(() => {
   permissions.clear();
   for (const permission of ["route_plan.create", "route_leg.manage", "checkpoint.report", "route_plan.activate"]) permissions.add(permission);
   vi.mocked(api.fetchProvinces).mockResolvedValue([{ id: 1, name: "Tehran" }, { id: 2, name: "Tabriz" }]);
-  vi.mocked(api.searchIranDestinations).mockResolvedValue({ data: [{ identity: { type: "city", id: 7 }, label: "Qom", province: null, secondary_label: "" }], meta: { count: 1, limit: 50 } });
+  vi.mocked(api.searchIranDestinations).mockResolvedValue({ data: [{ identity: { type: "city", id: 7 }, label: "شهر — قم · ایران", display_name: "قم", type_label: "شهر", province: null, secondary_label: "شهر · ایران" }], meta: { count: 1, limit: 50 } });
   vi.mocked(api.listLogisticsPoints).mockResolvedValue({ items: [{ public_id: "facility-1", fa_name: "Depot", is_active: true, point_type: { fa_name: "Depot" } } as api.LogisticsPointView], page: 1, pages: 1, total: 1 });
   vi.mocked(api.fetchCountries).mockResolvedValue([]);
   vi.mocked(api.fetchInternationalCityPage).mockResolvedValue({ items: [], offset: 0, limit: 50, has_more: false });

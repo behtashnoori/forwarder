@@ -11,7 +11,10 @@ from backend.services.admin_authorization_service import AdminAuthorizationError
 
 VALUES = {"movement_min_minutes", "movement_max_minutes", "stop_min_minutes", "stop_max_minutes", "planned_distance_km", "effective_from"}
 KEYS = {"origin", "destination", "transport_mode"}
-SOURCES = {"province", "city", "country", "international_city", "iran_port", "customs_office", "logistics_point"}
+# A Country supplies ancestry and filtering; it is not a sufficiently precise
+# Route Reference endpoint by itself. Existing rows that used a country-level
+# canonical location remain readable, but new keys must bind a governed location.
+SOURCES = {"province", "city", "international_city", "iran_port", "customs_office", "logistics_point"}
 
 
 def fail(message, status=422, code="ROUTE_TIME_INVALID"):
@@ -82,9 +85,29 @@ def _key(payload, org):
     result = {"transport_mode": payload["transport_mode"]}
     for side in ("origin", "destination"):
         value = payload.get(side)
-        if not isinstance(value, dict) or value.get("source_type") not in SOURCES: fail("مکان مرجع معتبر را انتخاب کنید.")
+        if (
+            not isinstance(value, dict)
+            or set(value) != {"country_id", "source_type", "source_id"}
+            or value.get("source_type") not in SOURCES
+            or type(value.get("country_id")) is not int
+        ):
+            fail("کشور و مکان مرجع معتبر را انتخاب کنید.")
         endpoint = base._endpoint(value, org)
-        result[f"{side}_location_id"] = base._endpoint_location(endpoint).canonical_location.id
+        location = base._endpoint_location(endpoint)
+        if location.country_id != value["country_id"]:
+            fail(
+                "مکان انتخاب‌شده به کشور انتخاب‌شده تعلق ندارد.",
+                code="ROUTE_TIME_LOCATION_COUNTRY_MISMATCH",
+            )
+        # Iran InternationalCity rows belong to the international-request
+        # locality domain. Preserve historical references but use governed
+        # domestic geography or tenant logistics nodes for new route references.
+        if value["source_type"] == "international_city" and location.country_code == "IR":
+            fail(
+                "این رکورد قدیمی برای مرجع مسیر تازه قابل انتخاب نیست.",
+                code="ROUTE_TIME_LEGACY_LOCATION_NOT_SELECTABLE",
+            )
+        result[f"{side}_location_id"] = location.canonical_location.id
         result[f"{side}_point_id"] = endpoint.logistics_point.id if isinstance(endpoint, base.ResolvedFacilityEndpoint) else None
         result[f"{side}_snapshot"] = base._endpoint_snapshot(endpoint)
     if (result["origin_location_id"], result["origin_point_id"]) == (result["destination_location_id"], result["destination_point_id"]):

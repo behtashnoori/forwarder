@@ -10,7 +10,7 @@ from sqlalchemy.engine import make_url
 from backend import create_app
 from backend.extensions import db
 from backend.migration_runtime import alembic_config
-from backend.models import Customer, ExpertUser, Province
+from backend.models import Country, Customer, ExpertUser, Province
 from backend.operational_models import OperationalMembership, OperationalOrganization, OperationalShipment, RouteLeg, RoutePlan
 from backend.route_time_models import OrganizationRouteTime as Reference, OrganizationRouteTimeVersion as Version, RouteLegTimeBasis as Basis
 from backend.services import operational_service as base, route_time_service as svc
@@ -36,8 +36,10 @@ def test_postgresql18_route_time_upgrade_history_tenant_concurrency_and_safe_rol
         org=OperationalOrganization(name="P310 synthetic A"); foreign=OperationalOrganization(name="P310 synthetic B")
         admin=ExpertUser(username="p310-admin",password_hash="unused",full_name="P310 Admin",role="admin",authority="ORGANIZATION_ADMIN",is_active=True)
         expert=ExpertUser(username="p310-expert",password_hash="unused",full_name="P310 Expert",role="expert",authority="EXPERT",is_active=True)
-        origin=Province(code="P310-O",name_fa="خورگوس آزمایشی",is_active=True); destination=Province(code="P310-D",name_fa="آکتائو آزمایشی",is_active=True)
-        db.session.add_all([org,foreign,admin,expert,origin,destination]);db.session.flush()
+        country=Country(code="KZ",name_en="Kazakhstan",name_fa="قزاقستان",is_active=True)
+        db.session.add_all([org,foreign,admin,expert,country]);db.session.flush()
+        origin=Province(code="P310-O",name_fa="خورگوس آزمایشی",country_id=country.id,is_active=True); destination=Province(code="P310-D",name_fa="آکتائو آزمایشی",country_id=country.id,is_active=True)
+        db.session.add_all([origin,destination]);db.session.flush()
         customer=Customer(company_name="P310 Customer",ownership_scope="TENANT",operational_organization_id=org.id,status="active")
         db.session.add(customer);db.session.flush()
         for user in (admin,expert):db.session.add(OperationalMembership(organization_id=org.id,user_id=user.id,permissions=["operational_shipment.read","route_leg.manage"]))
@@ -50,7 +52,7 @@ def test_postgresql18_route_time_upgrade_history_tenant_concurrency_and_safe_rol
             origin_snapshot=a.snapshot(),destination_snapshot=b.snapshot(),transport_mode="rail",planned_departure=now+timedelta(days=10),planned_arrival=now+timedelta(days=12),status="planned")
         db.session.add(leg);db.session.commit()
         ids={"org":org.id,"foreign":foreign.id,"admin":admin.id,"expert":expert.id,"shipment":shipment.public_id,"shipment_id":shipment.id,"plan":plan.id,"leg":leg.id}
-        body={"origin":{"source_type":"province","source_id":origin.id},"destination":{"source_type":"province","source_id":destination.id},"transport_mode":"rail",
+        body={"origin":{"country_id":country.id,"source_type":"province","source_id":origin.id},"destination":{"country_id":country.id,"source_type":"province","source_id":destination.id},"transport_mode":"rail",
             "movement_min_minutes":1200,"movement_max_minutes":1440,"stop_min_minutes":240,"stop_max_minutes":480,"effective_from":(now-timedelta(days=1)).isoformat()}
     def legacy():
         with engine.connect() as c:return c.execute(sa.text("SELECT id,route_plan_id,origin_snapshot::text,destination_snapshot::text,planned_departure,planned_arrival,status,version FROM route_leg ORDER BY id")).all()

@@ -37,6 +37,7 @@ from backend.operational_models import (
 from backend.owner_transfer_models import ShipmentOwnerTransfer
 from backend.reported_fact_models import OperationalEventReportContext
 from backend.services import reported_fact_service as reports
+from backend.services.location_resolver import resolve_location
 from backend.services import route_time_service as route_times
 
 
@@ -55,7 +56,16 @@ def _location_reference(leg: RouteLeg, side: str) -> dict[str, int | str]:
     location = db.session.get(CanonicalLocation, location_id)
     if location is None:
         raise RuntimeError("IPJ-04 route location is missing")
-    return {"source_type": location.source_type, "source_id": location.source_id}
+    resolved = resolve_location(
+        {"source_type": location.source_type, "source_id": location.source_id}
+    )
+    if resolved.country_id is None:
+        raise RuntimeError("IPJ-04 route location lacks governed country ancestry")
+    return {
+        "country_id": resolved.country_id,
+        "source_type": location.source_type,
+        "source_id": location.source_id,
+    }
 
 
 def main() -> None:

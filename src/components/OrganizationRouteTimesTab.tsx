@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ApiError, fetchCountries, fetchProvinces, listLogisticsPoints, searchIranDestinations, type OperationalLocationRef } from "@/lib/api";
-import { RouteLocationPicker, routeSelectClass, type RouteLocationCatalog } from "@/components/RouteAuthoringSection";
+import { ApiError, fetchAdminCountries, fetchAdminProvinces, type AdminCountry, type AdminProvince } from "@/lib/api";
+import { routeSelectClass } from "@/components/RouteAuthoringSection";
+import { RouteReferenceLocationPicker, type RouteReferenceEndpointRef } from "@/components/RouteReferenceLocationPicker";
 import { createRouteTime, listRouteTimes, reviseRouteTime, timeRange, type RouteTime, type TimeVersion } from "@/lib/routeTimeApi";
 import { localDateTimeInputToUtc } from "@/lib/localDateTime";
 import { formatDualCalendarInstant } from "@/lib/dualCalendar";
@@ -15,9 +16,10 @@ export function ReferenceRanges({ value }: {value: TimeVersion | null}) {
 
 function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | null; saved: () => void; cancel: () => void}) {
   const { transportLabel } = useI18n();
-  const [catalog,setCatalog] = useState<RouteLocationCatalog>({provinces:[],iran:[],facilities:[],countries:[]});
-  const [origin,setOrigin] = useState<OperationalLocationRef | null>(null);
-  const [destination,setDestination] = useState<OperationalLocationRef | null>(null);
+  const [countries,setCountries] = useState<AdminCountry[]>([]);
+  const [provinces,setProvinces] = useState<AdminProvince[]>([]);
+  const [origin,setOrigin] = useState<RouteReferenceEndpointRef | null>(null);
+  const [destination,setDestination] = useState<RouteReferenceEndpointRef | null>(null);
   const [mode,setMode] = useState("");
   const previous=reference?.versions[0];
   const hours = (value: number | null | undefined) => value == null ? "" : String(value/60);
@@ -30,12 +32,15 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
   useEffect(() => {
     if (reference) return;
     let alive=true;
-    Promise.all([fetchProvinces(),searchIranDestinations(),listLogisticsPoints({active:"true",per_page:100}),fetchCountries()])
-      .then(([provinces,iran,points,countries]) => {if(alive)setCatalog({provinces,iran:iran.data,facilities:points.items,countries});})
+    Promise.all([fetchAdminCountries(),fetchAdminProvinces()])
+      .then(([countryResult,provinceResult]) => {
+        if (!alive) return;
+        setCountries(countryResult.items.filter((item) => item.is_active));
+        setProvinces(provinceResult.items.filter((item) => item.is_active));
+      })
       .catch(() => {if(alive)setError("دریافت مکان‌های معتبر ممکن نشد؛ فرم را دوباره باز کنید.");});
     return () => {alive=false;};
   },[reference]);
-  const searchIran=(query:string) => { void searchIranDestinations(query).then(result=>setCatalog(old=>({...old,iran:result.data}))).catch(()=>setError("جست‌وجوی مکان ممکن نشد.")); };
   const submit=async () => {
     const date=effective ? localDateTimeInputToUtc(effective) : null;
     const values=ranges.map(value=>value.trim()==="" ? null : Number(value)*60);
@@ -62,7 +67,7 @@ function ReferenceForm({ reference, saved, cancel }: {reference: RouteTime | nul
   return <section className="space-y-4 rounded-2xl border border-blue-200 bg-white p-4" aria-label="فرم زمان مرجع">
     <h3 className="text-lg font-semibold">{reference?"ثبت نسخه تازه زمان مرجع":"تعریف زمان مرجع مسیر"}</h3>
     {reference?<p>{reference.origin_label} ← {reference.destination_label} · {transportLabel(reference.transport_mode)}</p>:<>
-      <div className="grid min-w-0 gap-4 md:grid-cols-2"><RouteLocationPicker id="reference-origin" label="مبدأ مرجع" value={origin} onChange={setOrigin} catalog={catalog} searchIran={searchIran}/><RouteLocationPicker id="reference-destination" label="مقصد مرجع" value={destination} onChange={setDestination} catalog={catalog} searchIran={searchIran}/></div>
+      <div className="grid min-w-0 gap-4 md:grid-cols-2"><RouteReferenceLocationPicker id="reference-origin" label="مبدأ مرجع" value={origin} onChange={setOrigin} countries={countries} provinces={provinces}/><RouteReferenceLocationPicker id="reference-destination" label="مقصد مرجع" value={destination} onChange={setDestination} countries={countries} provinces={provinces}/></div>
       <label className="block space-y-2">روش حمل مرجع<select aria-label="روش حمل مرجع" className={routeSelectClass} value={mode} onChange={event=>setMode(event.target.value)}><option value="">انتخاب روش حمل</option>{["road","rail","sea","air","multimodal_transfer","customs_handling"].map(value=><option key={value} value={value}>{transportLabel(value)}</option>)}</select></label>
     </>}
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{labels.map((label,index)=><label key={label} className="block space-y-2">{label}<Input aria-label={label} type="number" step="any" value={ranges[index]} onChange={event=>setRanges(old=>old.map((value,i)=>i===index?event.target.value:value))}/></label>)}</div>

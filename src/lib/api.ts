@@ -1780,7 +1780,14 @@ export interface OperationalQuoteSelector {
   accepted_at: string | null;
   cargo_items: OperationalQuoteCargoSelector[];
 }
-export interface IranDestinationOption { identity: { type: "city" | "port" | "customs" | "international_city"; id: number }; label: string; province: { id: number; name: string } | null; secondary_label: string }
+export interface IranDestinationOption {
+  identity: { type: "city" | "port" | "customs" | "international_city"; id: number };
+  label: string;
+  display_name: string;
+  type_label: string;
+  province: { id: number; name: string } | null;
+  secondary_label: string;
+}
 export interface SelectorPage<T> { items: T[]; meta: { count: number; limit: number } }
 export interface OperationalShipmentSummary {
   scope?: "current_route";
@@ -2172,7 +2179,13 @@ const selectorQuery = (path: string, q = "", limit = 25, extra?: Record<string, 
 export const searchOperationalCustomers = (q = "", limit = 25) => selectorQuery("/api/operations/selectors/customers", q, limit) as Promise<SelectorPage<OperationalCustomerSelector>>;
 export const searchOperationalProjects = (q = "", customerId?: number, limit = 25) => selectorQuery("/api/operations/selectors/projects", q, limit, { customer_id: customerId }) as Promise<SelectorPage<OperationalProjectSelector>>;
 export const searchAcceptedOperationalQuotes = (q = "", limit = 25) => selectorQuery("/api/operations/selectors/accepted-quotes", q, limit) as Promise<SelectorPage<OperationalQuoteSelector>>;
-export const searchIranDestinations = (q = "", limit = 50) => request<{data:IranDestinationOption[];meta:{count:number;limit:number}}>(withQuery("/api/locations/iran-destinations", { q, limit }));
+export const searchIranDestinations = (
+  q = "",
+  limit = 50,
+  type?: "city" | "port" | "customs" | "international_city",
+) => request<{data:IranDestinationOption[];meta:{count:number;limit:number}}>(
+  withQuery("/api/locations/iran-destinations", { q, limit, type }),
+);
 export const createDirectOperationalShipment = (payload: DirectOperationCommand, key: string) => request<{data:OperationalShipmentSummary;meta:{created:boolean;replayed:boolean}}>("/api/operational-shipments", { method:"POST", headers:{"Idempotency-Key":key}, body:JSON.stringify(payload) });
 export const createQuoteOperationalShipment = (payload: QuoteOperationCommand, key: string) => request<{data:OperationalShipmentSummary;meta:{created:boolean}}>("/api/operational-shipments/from-accepted-quote", { method:"POST", headers:{"Idempotency-Key":key}, body:JSON.stringify(payload) });
 export function recordOperationalEvent(

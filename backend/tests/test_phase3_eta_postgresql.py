@@ -13,7 +13,7 @@ from sqlalchemy.engine import make_url
 from backend import create_app
 from backend.extensions import db
 from backend.migration_runtime import alembic_config
-from backend.models import CargoType, UnitOfMeasure, ExpertUser, Province
+from backend.models import CargoType, Country, UnitOfMeasure, ExpertUser, Province
 from backend.cargo_models import ExecutionUnitCargoAllocation, ShipmentCargoItem as Cargo
 from backend.eta_models import CargoEtaSnapshot as Snapshot, CargoEtaInput as Input
 from backend.operational_models import (ExecutionUnit, OperationalEvent, OperationalShipment, OperationalMembership,
@@ -54,7 +54,9 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         admin = ExpertUser(username="p311-admin", password_hash="unused", full_name="Admin", role="admin", authority="ORGANIZATION_ADMIN", is_active=True)
         kind = CargoType(immutable_code="P311", fa_name="آزمایشی", en_name="Synthetic", is_active=True)
         uom = UnitOfMeasure(immutable_code="P311", fa_name="عدد", en_name="Each", symbol="ea", measurement_dimension="COUNT", is_active=True)
-        db.session.add_all([admin, kind, uom, Province(id=800001, name_fa="مبدأ آزمایشی", code="P311-O"), Province(id=800002, name_fa="مقصد آزمایشی", code="P311-D")])
+        country = Country(code="PZ", name_en="P311 Country", name_fa="کشور آزمایشی", is_active=True)
+        db.session.add_all([admin, kind, uom, country]); db.session.flush()
+        db.session.add_all([Province(id=800001, name_fa="مبدأ آزمایشی", code="P311-O", country_id=country.id), Province(id=800002, name_fa="مقصد آزمایشی", code="P311-D", country_id=country.id)])
         db.session.flush()
         db.session.add(OperationalMembership(organization_id=ctx["org"], user_id=admin.id, permissions=[]))
         cargo = Cargo(operational_shipment_id=shipment.id, line_number=1, cargo_owner_customer_id=ctx["carrier"],
@@ -66,7 +68,7 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
         db.session.add(RouteCargoDestination(route_plan_id=ctx["plan"], operational_shipment_id=shipment.id,
             shipment_cargo_item_id=cargo.id, destination_route_leg_id=ctx["leg"], created_by_user_id=ctx["owner"]))
         db.session.commit()
-        ctx.update(cargo=cargo.public_id, cargo_id=cargo.id, admin=admin.id)
+        ctx.update(cargo=cargo.public_id, cargo_id=cargo.id, admin=admin.id, country=country.id)
         milestone = Milestone(organization_id=ctx["org"], operational_shipment_id=ctx["shipment_id"],
             route_plan_id=ctx["plan"], route_leg_id=ctx["leg"], milestone_type="departure",
             planned_at=datetime(2026, 9, 20, 8, tzinfo=timezone.utc))
@@ -85,8 +87,8 @@ def test_postgresql18_eta_upgrade_source_preservation_history_and_concurrent_ens
 
     with app.app_context():
         reference, _ = times.save({"id": ctx["admin"]}, {
-            "origin": {"source_type": "province", "source_id": 800001},
-            "destination": {"source_type": "province", "source_id": 800002}, "transport_mode": "road",
+            "origin": {"country_id": ctx["country"], "source_type": "province", "source_id": 800001},
+            "destination": {"country_id": ctx["country"], "source_type": "province", "source_id": 800002}, "transport_mode": "road",
             "movement_min_minutes": 60, "movement_max_minutes": 120,
             "stop_min_minutes": 0, "stop_max_minutes": 0,
             "planned_distance_km": "100.000",

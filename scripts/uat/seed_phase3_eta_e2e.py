@@ -9,7 +9,7 @@ from uuid import uuid4
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from backend import create_app
 from backend.extensions import db
-from backend.models import CargoType, Customer, CustomerGamification, ExpertUser, Province, UnitOfMeasure, TransportMeansType
+from backend.models import CargoType, Country, Customer, CustomerGamification, ExpertUser, Province, UnitOfMeasure, TransportMeansType
 from backend.operational_models import CanonicalLocation, Milestone, OperationalCheckpoint, OperationalMembership, OperationalShipment, RouteLeg
 from backend.security import security
 from backend.services import customer_entitlement_service as grants, operational_service as operations
@@ -26,6 +26,7 @@ def main():
         template = OperationalShipment.query.filter_by(public_id=fixture["p3_route_shipment"]).one()
         owner = db.session.get(ExpertUser, template.primary_responsible_expert_id)
         admin = ExpertUser.query.filter_by(username="shared_transport_e2e_admin").one()
+        iran = Country.query.filter_by(code="IR", is_active=True).one()
         membership = OperationalMembership.query.filter_by(user_id=owner.id).one()
         membership.permissions = sorted(set(membership.permissions) | {"milestone_event.create", "milestone.correct", "operational_shipment.create"})
         actor = {"id": owner.id}
@@ -65,7 +66,12 @@ def main():
             plan = routes.create_plan(shipment.id, {}, actor)
             places = []
             for index in range(5):
-                place = Province(code=f"P311-{case_index}-{index}", name_fa=f"نقطه {index+1} {name}", is_active=True)
+                place = Province(
+                    code=f"P311-{case_index}-{index}",
+                    name_fa=f"نقطه {index+1} {name}",
+                    country_id=iran.id,
+                    is_active=True,
+                )
                 db.session.add(place); places.append(place)
             db.session.commit()
             count = 3 if name == "missing_later" else 2
@@ -107,8 +113,8 @@ def main():
                     continue
                 stop = (0, 0) if name == "zero" else (None, None) if name == "unknown" else (240, 480)
                 version, _ = times.save({"id": admin.id}, {
-                    "origin": {"source_type": "province", "source_id": places[index].id},
-                    "destination": {"source_type": "province", "source_id": places[index+1].id},
+                    "origin": {"country_id": iran.id, "source_type": "province", "source_id": places[index].id},
+                    "destination": {"country_id": iran.id, "source_type": "province", "source_id": places[index+1].id},
                     "transport_mode": "road", "movement_min_minutes": 60, "movement_max_minutes": 120,
                     "stop_min_minutes": stop[0], "stop_max_minutes": stop[1],
                     "planned_distance_km": "100.000" if name == "structured" else None,
