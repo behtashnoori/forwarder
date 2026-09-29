@@ -347,6 +347,7 @@ def main(argv=None) -> int:
     expert_baseline=sub.add_parser("reconcile-expert-baseline"); expert_baseline.add_argument("--apply", action="store_true")
     bootstrap=sub.add_parser("bootstrap-organization"); bootstrap.add_argument("--name", required=True); bootstrap.add_argument("--user-id", type=int, required=True); bootstrap.add_argument("--permissions", required=True); bootstrap.add_argument("--confirm", action="store_true")
     self_hosted_admin=sub.add_parser("bootstrap-self-hosted-admin"); self_hosted_admin.add_argument("--username", required=True); self_hosted_admin.add_argument("--organization-public-id", required=True); self_hosted_admin.add_argument("--operator", required=True); self_hosted_admin.add_argument("--approval-reference", required=True); self_hosted_admin.add_argument("--confirm", action="store_true")
+    platform_maintenance_admin=sub.add_parser("provision-platform-maintenance-admin"); platform_maintenance_admin.add_argument("--username", required=True); platform_maintenance_admin.add_argument("--full-name", required=True); platform_maintenance_admin.add_argument("--organization-public-id", required=True); platform_maintenance_admin.add_argument("--operator", required=True); platform_maintenance_admin.add_argument("--approval-reference", required=True); platform_maintenance_admin.add_argument("--confirm", action="store_true")
     scope_quote=sub.add_parser("scope-quote"); scope_quote.add_argument("--quote-id", type=int, required=True); scope_quote.add_argument("--organization-id", type=int, required=True); scope_quote.add_argument("--confirm", action="store_true")
     provision=sub.add_parser("provision-uat"); provision.add_argument("--confirm", action="store_true")
     phase1b=sub.add_parser("seed-phase1b-uat"); phase1b.add_argument("--confirm", action="store_true")
@@ -447,6 +448,30 @@ def main(argv=None) -> int:
                 operator=args.operator,
                 approval_reference=args.approval_reference,
             ), sort_keys=True))
+        elif args.command == "provision-platform-maintenance-admin":
+            from backend.services.platform_admin_provisioning_service import (
+                PlatformAdminProvisioningError,
+                provision_platform_maintenance_admin,
+            )
+
+            password = os.getenv("FORWARDER_PLATFORM_ADMIN_PASSWORD", "")
+            if not password:
+                print(json.dumps({"error": "PLATFORM_ADMIN_PASSWORD_REQUIRED"}), file=sys.stderr)
+                return 2
+            try:
+                result = provision_platform_maintenance_admin(
+                    username=args.username,
+                    full_name=args.full_name,
+                    password=password,
+                    organization_public_id=args.organization_public_id,
+                    operator=args.operator,
+                    approval_reference=args.approval_reference,
+                    bootstrap_authorized=True,
+                )
+            except PlatformAdminProvisioningError as exc:
+                print(json.dumps({"error": exc.code}), file=sys.stderr)
+                return 3
+            print(json.dumps(result, sort_keys=True))
         else:
             quote=db.session.get(ExpertQuote,args.quote_id); organization=db.session.get(OperationalOrganization,args.organization_id)
             if quote is None or organization is None: raise OperationalError("RESOURCE_NOT_FOUND", "Quote or organization was not found.", 404)
