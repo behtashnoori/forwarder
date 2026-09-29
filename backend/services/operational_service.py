@@ -537,13 +537,23 @@ def _location_snapshot(
     }
 
 
-def _endpoint(reference: dict[str, Any], organization_id: int):
+def _endpoint(
+    reference: dict[str, Any],
+    organization_id: int,
+    *,
+    expected_country_id: int | None = None,
+):
     if reference.get("source_type") == "logistics_point":
         try:
             return resolve_facility_endpoint(organization_id, reference.get("source_id"))
         except LocationResolutionError as exc:
             raise OperationalError(exc.code, exc.message, exc.status) from exc
-    return resolve_location(reference)
+    try:
+        return resolve_canonical_location(
+            reference, expected_country_id=expected_country_id
+        )
+    except LocationResolutionError as exc:
+        raise OperationalError(exc.code, exc.message, exc.status) from exc
 
 
 def _endpoint_location(endpoint: ResolvedLocation | ResolvedFacilityEndpoint) -> ResolvedLocation:

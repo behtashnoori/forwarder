@@ -197,6 +197,69 @@ def test_iran_projection_is_eligible_typed_and_disambiguated(app):
     ]
 
 
+def test_iran_persian_search_returns_only_country_bound_international_locations(app):
+    with app.app_context():
+        iran_id = app.config["geo"]["IR"]
+        bound = InternationalCity(
+            name_en="Bandar Abbas",
+            name_fa="بندرعباس",
+            country_id=iran_id,
+            city_type="port",
+            un_locode="IRBND",
+            is_active=True,
+        )
+        unbound = InternationalCity(
+            name_en="Legacy Isfahan",
+            name_fa="اصفهان قدیمی",
+            country_id=iran_id,
+            city_type="city",
+            is_active=True,
+        )
+        db.session.add_all([bound, unbound])
+        db.session.commit()
+        bound_id = bound.id
+
+    client = app.test_client()
+    result = client.get(
+        "/api/locations/iran-destinations",
+        query_string={"q": "  بندرعباس  ", "type": "international_city"},
+    )
+    assert result.status_code == 200
+    assert [(row["identity"]["type"], row["identity"]["id"]) for row in result.json["data"]] == [
+        ("international_city", bound_id)
+    ]
+    assert result.json["data"][0]["type_label"] == "بندر"
+    assert client.get(
+        "/api/locations/iran-destinations",
+        query_string={"q": "اصفهان", "type": "international_city"},
+    ).json["data"] == []
+    assert client.get(
+        "/api/locations/iran-destinations",
+        query_string={"q": "%", "type": "international_city"},
+    ).json["data"] == []
+
+
+def test_legacy_domestic_province_uses_only_explicit_iran_context(app):
+    with app.app_context():
+        iran_id = app.config["geo"]["IR"]
+        province = Province(code="ISF", name_fa="اصفهان", country_id=None)
+        db.session.add(province)
+        db.session.commit()
+        resolved = resolve_location(
+            {"source_type": "province", "source_id": province.id},
+            expected_country_id=iran_id,
+        )
+        assert resolved.country_id == iran_id
+        assert resolved.country_code == "IR"
+        assert resolved.canonical_location.display_name == "اصفهان"
+        with pytest.raises(LocationResolutionError) as mismatch:
+            resolve_location(
+                {"source_type": "province", "source_id": province.id},
+                expected_country_id=app.config["geo"]["DE"],
+            )
+        assert mismatch.value.code == "LOCATION_ANCESTRY_MISMATCH"
+
+
 def _payload(app, **changes):
     ids = app.config["geo"]
     payload = {

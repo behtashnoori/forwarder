@@ -105,20 +105,22 @@ def _key(payload, org):
                     "این رکورد قدیمی برای مرجع مسیر تازه قابل انتخاب نیست.",
                     code="ROUTE_TIME_LEGACY_LOCATION_NOT_SELECTABLE",
                 )
-        endpoint = base._endpoint(value, org)
+        try:
+            endpoint = base._endpoint(
+                value, org, expected_country_id=value["country_id"]
+            )
+        except base.OperationalError as exc:
+            if exc.code == "LOCATION_ANCESTRY_MISMATCH":
+                fail(
+                    "مکان انتخاب‌شده به کشور انتخاب‌شده تعلق ندارد.",
+                    code="ROUTE_TIME_LOCATION_COUNTRY_MISMATCH",
+                )
+            raise
         location = base._endpoint_location(endpoint)
         if location.country_id != value["country_id"]:
             fail(
                 "مکان انتخاب‌شده به کشور انتخاب‌شده تعلق ندارد.",
                 code="ROUTE_TIME_LOCATION_COUNTRY_MISMATCH",
-            )
-        # Iran InternationalCity rows belong to the international-request
-        # locality domain. Preserve historical references but use governed
-        # domestic geography or tenant logistics nodes for new route references.
-        if value["source_type"] == "international_city" and location.country_code == "IR":
-            fail(
-                "این رکورد قدیمی برای مرجع مسیر تازه قابل انتخاب نیست.",
-                code="ROUTE_TIME_LEGACY_LOCATION_NOT_SELECTABLE",
             )
         result[f"{side}_location_id"] = location.canonical_location.id
         result[f"{side}_point_id"] = endpoint.logistics_point.id if isinstance(endpoint, base.ResolvedFacilityEndpoint) else None

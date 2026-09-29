@@ -56,6 +56,7 @@ export function RouteReferenceLocationPicker({
   const [options, setOptions] = useState<EndpointOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [searched, setSearched] = useState(false);
   const requestSequence = useRef(0);
 
   const load = useCallback(async (term: string) => {
@@ -67,36 +68,42 @@ export function RouteReferenceLocationPicker({
     const sequence = ++requestSequence.current;
     setLoading(true);
     setError("");
+    setSearched(true);
     try {
       const facilitiesPromise = listLogisticsPoints({
         active: "true",
         country: country.code,
         q: term,
         per_page: 100,
-      }).catch(() => ({ items: [], page: 1, pages: 0, total: 0 }));
+      });
       let next: EndpointOption[] = [];
       if (country.code === "IR") {
-        const [cities, ports, customs, facilities] = await Promise.all([
+        const [cities, ports, customs, internationalLocations, facilities] = await Promise.all([
           searchIranDestinations(term, 50, "city"),
           searchIranDestinations(term, 50, "port"),
           searchIranDestinations(term, 50, "customs"),
+          searchIranDestinations(term, 50, "international_city"),
           facilitiesPromise,
         ]);
         const needle = normalized(term);
         next.push(...provinces
-          .filter((item) => item.is_active && item.country_id === country.id)
+          .filter((item) => item.is_active && (
+            item.country_id === country.id || item.country_id === null
+          ))
           .filter((item) => !needle || normalized(item.name_fa).includes(needle))
           .map((item) => ({
             key: `province:${item.id}`,
             label: `استان — ${item.name_fa}`,
             reference: { country_id: country.id, source_type: "province" as const, source_id: item.id },
           })));
-        for (const item of [...cities.data, ...ports.data, ...customs.data]) {
+        for (const item of [...cities.data, ...ports.data, ...customs.data, ...internationalLocations.data]) {
           const sourceType = item.identity.type === "port"
             ? "iran_port"
             : item.identity.type === "customs"
               ? "customs_office"
-              : "city";
+              : item.identity.type === "international_city"
+                ? "international_city"
+                : "city";
           next.push({
             key: `${sourceType}:${item.identity.id}`,
             label: `${item.type_label} — ${item.display_name}`,
@@ -133,7 +140,7 @@ export function RouteReferenceLocationPicker({
     } catch {
       if (sequence === requestSequence.current) {
         setOptions([]);
-        setError("دریافت مکان‌های معتبر این کشور ممکن نشد.");
+        setError("دریافت مکان‌های معتبر این کشور ممکن نشد؛ اتصال را بررسی و دوباره جست‌وجو کنید.");
       }
     } finally {
       if (sequence === requestSequence.current) setLoading(false);
@@ -157,6 +164,7 @@ export function RouteReferenceLocationPicker({
         setQuery("");
         setOptions([]);
         setError("");
+        setSearched(false);
         onChange(null);
       }}
     >
@@ -188,6 +196,13 @@ export function RouteReferenceLocationPicker({
       <option value="">انتخاب مکان معتبر</option>
       {options.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
     </select>
+    {loading && <p role="status" className="text-sm text-slate-600">در حال جست‌وجوی مکان‌های معتبر…</p>}
+    {searched && !loading && !error && options.length === 0 && (
+      <p role="status" className="text-sm text-slate-600">مکان معتبر منطبق با این جست‌وجو یافت نشد.</p>
+    )}
+    {value && <p className="text-sm text-emerald-800">
+      مکان انتخاب‌شده: {options.find((option) => option.key === referenceKey(value))?.label ?? "مکان معتبر"}
+    </p>}
     <p className="text-xs leading-6 text-slate-600">
       نام نمایشی از رکورد انتخاب‌شده ساخته می‌شود؛ هویت مبدأ یا مقصد با شناسهٔ مکان ثبت می‌شود، نه متن آزاد.
     </p>

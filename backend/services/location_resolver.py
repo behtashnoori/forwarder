@@ -142,6 +142,14 @@ def resolve_location(
     elif source_type == "province":
         source = _required(Province, source_id, source_type)
         province, country, location_type = source, _country(source.country_id), "province"
+        # Province predates the explicit Country relationship and the preserved
+        # Iranian rows legitimately carry NULL country_id.  Only an explicit IR
+        # caller context may supply that legacy ancestry; no name matching or
+        # cross-country inference is permitted.
+        if country is None and expected_country_id is not None:
+            expected_country = _country(expected_country_id)
+            if expected_country is not None and expected_country.code == "IR":
+                country = expected_country
     elif source_type == "city":
         source = _required(City, source_id, source_type)
         province = _province(source.province_id)
@@ -220,17 +228,25 @@ def iran_destination_results(q: str | None = None, source_type: str | None = Non
     iran = db.session.scalar(select(Country).where(Country.code == "IR", Country.is_active.is_(True)))
     if iran is None:
         return []
+    search = (q or "").strip()
+    if len(search) > 160:
+        raise LocationResolutionError("VALIDATION_FAILED", "Search text is too long.", 400)
     results = []
     for public_type in selected:
         model, canonical_type = type_map[public_type]
         query = select(model).where(model.is_active.is_(True))
         if model is InternationalCity:
-            query = query.where(InternationalCity.country_id == iran.id)
-        if q:
-            pattern = f"%{q.strip()}%"
-            names = [model.name_fa.ilike(pattern)]
+            query = query.where(
+                InternationalCity.country_id == iran.id,
+                InternationalCity.un_locode.is_not(None),
+                InternationalCity.un_locode.startswith("IR"),
+            )
+        if search:
+            literal = search.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+            pattern = f"%{literal}%"
+            names = [model.name_fa.ilike(pattern, escape="!")]
             if hasattr(model, "name_en"):
-                names.append(model.name_en.ilike(pattern))
+                names.append(model.name_en.ilike(pattern, escape="!"))
             query = query.where(or_(*names))
         if province_id is not None and hasattr(model, "province_id"):
             query = query.where(model.province_id == province_id)

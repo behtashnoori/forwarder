@@ -27,10 +27,10 @@ describe("explicit route reference basis",()=>{
       {id:3,name_fa:"قدیمی",name_en:"Inactive",code:"ZZ",is_active:false},
     ]});
     api.provinces.mockResolvedValue({items:[
-      {id:10,name_fa:"اصفهان",code:"ISF",country_id:1,is_active:true},
-      {id:11,name_fa:"هرمزگان",code:"HRZ",country_id:1,is_active:true},
+      {id:10,name_fa:"اصفهان",code:"ISF",country_id:null,is_active:true},
+      {id:11,name_fa:"هرمزگان",code:"HRZ",country_id:null,is_active:true},
     ]});
-    api.iran.mockImplementation(async(_query:string,_limit:number,type:string)=>({data:type==="city"?[{identity:{type:"city",id:20},label:"شهر — اصفهان · اصفهان",display_name:"اصفهان",type_label:"شهر",province:{id:10,name:"اصفهان"},secondary_label:"شهر · اصفهان"}]:type==="port"?[{identity:{type:"port",id:30},label:"بندر — بندرعباس · هرمزگان",display_name:"بندرعباس",type_label:"بندر",province:{id:11,name:"هرمزگان"},secondary_label:"بندر · هرمزگان"}]:[],meta:{count:1,limit:50}}));
+    api.iran.mockImplementation(async(query:string,_limit:number,type:string)=>({data:type==="international_city"&&(!query||query.includes("بندرعباس"))?[{identity:{type:"international_city",id:59},label:"بندر — بندرعباس · ایران",display_name:"بندرعباس",type_label:"بندر",province:null,secondary_label:"بندر · ایران"}]:[],meta:{count:type==="international_city"?1:0,limit:50}}));
     api.international.mockResolvedValue({items:[],offset:0,limit:50,has_more:false});
     api.points.mockResolvedValue({items:[],page:1,pages:0,total:0});
   });
@@ -92,23 +92,58 @@ describe("explicit route reference basis",()=>{
     fireEvent.change(destinationCountry,{target:{value:"1"}});
     const originLocation=await screen.findByLabelText("مبدأ مرجع مکان");
     const destinationLocation=screen.getByLabelText("مقصد مرجع مکان");
-    await waitFor(()=>expect(originLocation).toHaveTextContent("شهر — اصفهان"));
+    await waitFor(()=>expect(originLocation).toHaveTextContent("استان — اصفهان"));
     expect(destinationLocation).toHaveTextContent("بندر — بندرعباس");
     expect(document.body).not.toHaveTextContent("international_city");
-    expect(api.iran).not.toHaveBeenCalledWith(expect.anything(),expect.anything(),"international_city");
-    fireEvent.change(originLocation,{target:{value:"city:20"}});
-    fireEvent.change(destinationLocation,{target:{value:"iran_port:30"}});
+    expect(api.iran).toHaveBeenCalledWith("",50,"international_city");
+    fireEvent.change(originLocation,{target:{value:"province:10"}});
+    fireEvent.change(destinationLocation,{target:{value:"international_city:59"}});
     fireEvent.change(screen.getByLabelText("روش حمل مرجع"),{target:{value:"road"}});
     fireEvent.change(screen.getByLabelText("حداقل حرکت (ساعت)"),{target:{value:"6"}});
     fireEvent.change(screen.getByLabelText("حداکثر حرکت (ساعت)"),{target:{value:"8"}});
     fireEvent.change(screen.getByLabelText("شروع اعتبار"),{target:{value:"2026-10-01T09:00"}});
     fireEvent.click(screen.getByRole("button",{name:"ثبت زمان مرجع"}));
     await waitFor(()=>expect(api.create).toHaveBeenCalledWith(expect.objectContaining({
-      origin:{country_id:1,source_type:"city",source_id:20},
-      destination:{country_id:1,source_type:"iran_port",source_id:30},
+      origin:{country_id:1,source_type:"province",source_id:10},
+      destination:{country_id:1,source_type:"international_city",source_id:59},
       transport_mode:"road",
     }),expect.any(String)));
     expect(api.countries).toHaveBeenCalledTimes(1);
+  });
+  it("shows explicit loading, empty, and backend error states",async()=>{
+    api.iran.mockResolvedValue({data:[],meta:{count:0,limit:50}});
+    let finishPoints!:(value:{items:never[];page:number;pages:number;total:number})=>void;
+    api.points.mockImplementationOnce(()=>new Promise(resolve=>{finishPoints=resolve;}));
+    render(<OrganizationRouteTimesTab/>);
+    fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع کشور"),{target:{value:"1"}});
+    expect(await screen.findByRole("status",{name:""})).toHaveTextContent("در حال جست‌وجوی مکان‌های معتبر");
+    finishPoints({items:[],page:1,pages:0,total:0});
+    await waitFor(()=>expect(screen.queryByText("در حال جست‌وجوی مکان‌های معتبر…")).not.toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("مبدأ مرجع جست‌وجوی مکان"),{target:{value:"ناشناخته"}});
+    fireEvent.click(screen.getAllByRole("button",{name:"جست‌وجو"})[0]);
+    expect(await screen.findByText("مکان معتبر منطبق با این جست‌وجو یافت نشد.")).toBeInTheDocument();
+    api.points.mockRejectedValueOnce(new Error("network"));
+    fireEvent.click(screen.getAllByRole("button",{name:"جست‌وجو"})[0]);
+    expect(await screen.findByRole("alert")).toHaveTextContent("دوباره جست‌وجو کنید");
+  });
+  it("does not turn Persian free text into endpoint identity",async()=>{
+    api.iran.mockResolvedValue({data:[],meta:{count:0,limit:50}});
+    api.points.mockResolvedValue({items:[],page:1,pages:0,total:0});
+    api.provinces.mockResolvedValue({items:[]});
+    render(<OrganizationRouteTimesTab/>);
+    fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع کشور"),{target:{value:"1"}});
+    fireEvent.change(screen.getByLabelText("مبدأ مرجع جست‌وجوی مکان"),{target:{value:"اصفهان"}});
+    fireEvent.click(screen.getAllByRole("button",{name:"جست‌وجو"})[0]);
+    await screen.findByText("مکان معتبر منطبق با این جست‌وجو یافت نشد.");
+    fireEvent.change(screen.getByLabelText("روش حمل مرجع"),{target:{value:"road"}});
+    fireEvent.change(screen.getByLabelText("حداقل حرکت (ساعت)"),{target:{value:"6"}});
+    fireEvent.change(screen.getByLabelText("حداکثر حرکت (ساعت)"),{target:{value:"8"}});
+    fireEvent.change(screen.getByLabelText("شروع اعتبار"),{target:{value:"2026-10-01T09:00"}});
+    fireEvent.click(screen.getByRole("button",{name:"ثبت زمان مرجع"}));
+    expect(await screen.findByRole("alert")).toHaveTextContent("مبدأ، مقصد و روش حمل را انتخاب کنید");
+    expect(api.create).not.toHaveBeenCalled();
   });
   it("requests only canonically bound international locations for new Route References",async()=>{
     render(<OrganizationRouteTimesTab/>);

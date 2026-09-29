@@ -174,7 +174,7 @@ def test_explicit_zero_stop_is_distinct_from_undefined_movement(operational_app)
         assert value["planned_distance_km"] == "321.125"
 
 
-def test_canonical_country_binding_rejects_mismatch_free_text_and_legacy_iran_but_preserves_history(operational_app):
+def test_canonical_country_binding_rejects_mismatch_free_text_and_unbound_legacy_but_preserves_history(operational_app):
     app = operational_app
     with app.app_context():
         ids = app.config["phase1a"]
@@ -247,6 +247,37 @@ def test_canonical_country_binding_rejects_mismatch_free_text_and_legacy_iran_bu
         view = svc.listing(_user(app, "verifier"))["items"][0]
         assert view["origin_label"] == "بندرعباس"
         assert reference.origin_location_id == legacy_location.canonical_location.id
+
+
+def test_bound_iran_international_location_persists_existing_canonical_id(operational_app):
+    app = operational_app
+    with app.app_context():
+        ids = app.config["phase1a"]
+        bandar = InternationalCity(
+            country_id=ids["country"],
+            name_en="Bandar Abbas",
+            name_fa="بندرعباس",
+            city_type="port",
+            un_locode="IRBND",
+            is_active=True,
+        )
+        db.session.add(bandar)
+        db.session.flush()
+        canonical = operations.resolve_location(
+            {"source_type": "international_city", "source_id": bandar.id}
+        ).canonical_location
+        db.session.commit()
+
+        version, created = save(app, payload(app, origin={
+            "country_id": ids["country"],
+            "source_type": "international_city",
+            "source_id": bandar.id,
+        }))
+        reference = db.session.get(Reference, version.reference_id)
+        assert created is True
+        assert reference.origin_location_id == canonical.id
+        assert reference.origin_snapshot["canonical_location_id"] == canonical.id
+        assert reference.origin_snapshot["display_name"] == "بندرعباس"
 
 
 def test_live_role_tenant_and_parent_boundaries_for_http(operational_app):
