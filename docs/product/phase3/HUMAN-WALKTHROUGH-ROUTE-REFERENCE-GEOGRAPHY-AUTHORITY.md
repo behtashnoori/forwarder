@@ -76,9 +76,16 @@ snapshot applied; affected selectors have no unpublished second Country catalog;
 historical Iranian `InternationalCity` references may exist and therefore must be
 readable even though they are not valid for new Route Reference creation.
 
-Unknown until controlled qualification: exact preserved walkthrough database row
-counts and runtime SHA after integration. They must be inspected without creating
-or rewriting the Product Owner's Route Reference.
+The first controlled qualification established 12 existing canonical Countries,
+237 missing catalog Countries and 51 active unbound legacy `InternationalCity`
+rows. Full catalog Apply correctly refused those legacy identity conflicts. The
+Product Owner subsequently authorized only `COUNTRY_ONLY` Apply: insert the 237
+missing exact ISO identities, preserve all 51 legacy rows without mapping or
+mutation, and exclude those unbound rows from new Route Reference selection.
+
+Unknown until the authorized Apply is qualified: the exact final Product/evidence
+SHA and post-Apply audit IDs. They must be captured without creating or rewriting
+the Product Owner's Route Reference.
 
 ## Target process, ownership and chain
 
@@ -101,9 +108,11 @@ For Iran, new Route Reference selection uses domestic Province/City/Port/Customs
 sources and active same-tenant LogisticsPoints. `InternationalCity` remains the
 international-request/legacy locality domain for Iran and is not silently merged,
 deleted or remapped. Existing route references using it remain readable from their
-stored canonical identity and snapshot. Outside Iran, active InternationalCity
-rows remain eligible governed locality endpoints, with their city/port/airport
-type localized for display.
+stored canonical identity and snapshot. Outside Iran, only active
+`InternationalCity` rows with a valid, country-matching UN/LOCODE binding are
+eligible for a new Route Reference. Unbound legacy rows remain readable by
+historical consumers and stored snapshots, but the selector and create command
+both reject them. Eligible city/port/airport types remain localized for display.
 
 ## Journey and reference impact
 
@@ -121,9 +130,11 @@ qualification evidence. ADR-074 semantics remain unchanged.
 
 ## PDA-07 reconciliation target
 
-Authorized: complete canonical Country source, country-first location selection,
-localized type labels, explicit create-time Country/location validation, and
-new-selection exclusion of Iranian `InternationalCity`.
+Authorized: transactional and audited `COUNTRY_ONLY` insertion of the 237 missing
+ISO Countries from the approved checksum; complete canonical Country source;
+country-first location selection; localized type labels; explicit create-time
+Country/location validation; and new-selection exclusion of every unbound legacy
+`InternationalCity` plus the prior Iran-specific compatibility exclusion.
 
 Preserved: authentication/role meaning, tenant scope, route/version/basis
 immutability, existing records and snapshots, `planned_distance_km`, ETA v2,
@@ -144,3 +155,19 @@ unreconciled Product-visible difference blocks qualification.
 | `VALID_LOCATION_SELECTOR_MIXES_REFERENCE_DOMAINS` | Use a dedicated country-first Route Reference adapter with explicit localized types and exclude Iranian legacy `InternationalCity` from new selection. |
 | `RAW_GEOGRAPHY_ENUM_LEAK` | Localize display types without changing persisted source-type semantics. |
 | `LEGACY_LOCATION_RECORDS_NOT_RECONCILED` | Preserve existing identities and snapshots read-only; do not merge by text, delete or rewrite history. |
+
+## Product Owner COUNTRY_ONLY authorization addendum
+
+| Field | Record |
+| --- | --- |
+| `AUTHORIZED_PRODUCT_CHANGES` | Add the missing 237 exact ISO Countries from the approved FWD-02 checksum so the Country catalog reaches 249; preserve the 12 existing Countries; exclude all 51 unbound legacy locations from new Route Reference selection; preserve historical reads. |
+| `DELEGATED_TECHNICAL_CHOICES` | Explicit reconciler scope/CLI shape, transaction mechanics, audit receipt representation, selector query parameter, fail-closed service validation, tests and evidence capture. |
+| `PROTECTED_OUT_OF_SCOPE_BEHAVIOR` | No legacy mapping, rename, delete, merge, historical-reference rewrite or fabricated CanonicalLocation; no Shipment/Request/Quote/CRM/DN10/Cargo/Allocation/RoutePlan/RouteLeg/Execution/ExecutionUnit/report/progress/ETA mutation; no walkthrough Route Reference creation; no Production, deployment or release. |
+| `DECISIONS_NEEDED` | None for the bounded Country-only mission. Any location mapping remains a separate owner decision. |
+| `APPROVING_OWNER_OR_AUTHORITY` | Product Owner. |
+| `APPROVAL_REFERENCE` | `FORWARDER — COUNTRY-ONLY CANONICAL GEOGRAPHY APPLY`, supplied 2026-09-29. |
+
+`JOURNEY_IMPACT=AFFECTS_EXISTING_JOURNEY`: re-qualify the Route Reference slice
+and affected Route/ETA regressions on the new exact Product. The Human Product
+Walkthrough remains `IN_PROGRESS`; the agent must not create the planned
+اصفهان → بندرعباس reference or grant walkthrough PASS.

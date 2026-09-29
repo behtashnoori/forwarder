@@ -8,6 +8,7 @@ from backend.extensions import db
 from backend.international_geography_catalog import (
     CATALOG_CHECKSUM,
     CATALOG_DATASET_ID,
+    COUNTRY_ONLY_SCOPE,
     EXPECTED_TYPE_COUNTS,
     GeographyCatalog,
     apply_catalog,
@@ -267,3 +268,102 @@ def test_ambiguous_legacy_name_and_cross_country_stable_key_refuse_all_writes(ap
     assert {item["stable_key"] for item in plan.conflicts}.issuperset({"IRTHR"})
     assert (Country.query.count(), InternationalCity.query.count()) == before
     assert run.created_count == 0 and run.updated_count == 0
+
+
+def test_country_only_apply_preserves_unbound_legacy_rows_and_is_audited_idempotent(app, catalog):
+    with app.app_context():
+        existing_records = catalog.payload["records"][:12]
+        for record in existing_records:
+            db.session.add(Country(**record["country"]))
+        db.session.flush()
+        legacy_country = Country.query.filter_by(
+            code=existing_records[0]["country"]["code"]
+        ).one()
+        for index in range(51):
+            db.session.add(
+                InternationalCity(
+                    country_id=legacy_country.id,
+                    name_en=f"Legacy {index}",
+                    name_fa=f"Legacy {index}",
+                    city_type="city",
+                    is_active=True,
+                )
+            )
+        db.session.commit()
+        before_legacy = [
+            (row.id, row.country_id, row.name_en, row.name_fa, row.un_locode)
+            for row in InternationalCity.query.order_by(InternationalCity.id)
+        ]
+
+        first, first_run = apply_catalog(
+            catalog=catalog,
+            scope=COUNTRY_ONLY_SCOPE,
+            expected_checksum=CATALOG_CHECKSUM,
+            executed_by="Country-only test",
+            approval_reference="Product Owner COUNTRY_ONLY authorization",
+            environment="qualification",
+        )
+        assert first.result == "CHANGED"
+        assert first.database_country_count_before == 12
+        assert first.created_country_count == first_run.created_count == 237
+        assert first.created_location_count == 0
+        assert first_run.status == "succeeded"
+        assert first_run.schema_version == "2-country-only"
+        assert Country.query.count() == 249
+
+        second, second_run = apply_catalog(
+            catalog=catalog,
+            scope=COUNTRY_ONLY_SCOPE,
+            expected_checksum=CATALOG_CHECKSUM,
+            executed_by="Country-only test",
+            approval_reference="Product Owner COUNTRY_ONLY authorization",
+            environment="qualification",
+        )
+        assert second.result == "UNCHANGED"
+        assert second.created_count == second_run.created_count == 0
+        assert second.unchanged_country_count == 249
+        assert ReferenceDataSeedRun.query.filter_by(
+            schema_version="2-country-only", status="succeeded"
+        ).count() == 2
+        after_legacy = [
+            (row.id, row.country_id, row.name_en, row.name_fa, row.un_locode)
+            for row in InternationalCity.query.order_by(InternationalCity.id)
+        ]
+        assert after_legacy == before_legacy
+
+
+def test_canonical_only_location_projection_excludes_unbound_legacy_rows(app):
+    with app.app_context():
+        country = Country(code="TR", name_en="Türkiye", name_fa="ترکیه")
+        db.session.add(country)
+        db.session.flush()
+        db.session.add_all(
+            [
+                InternationalCity(
+                    country_id=country.id,
+                    name_en="Bound",
+                    name_fa="Bound",
+                    un_locode="TRIST",
+                ),
+                InternationalCity(
+                    country_id=country.id,
+                    name_en="Legacy",
+                    name_fa="Legacy",
+                ),
+            ]
+        )
+        db.session.commit()
+        country_id = country.id
+
+    client = app.test_client()
+    historical = client.get(
+        f"/api/international-cities?country_id={country_id}&paged=1"
+    ).get_json()["items"]
+    selectable = client.get(
+        f"/api/international-cities?country_id={country_id}&paged=1&canonical_only=1"
+    ).get_json()["items"]
+    assert {item["name_en"] for item in historical} == {"Bound", "Legacy"}
+    assert [item["name_en"] for item in selectable] == ["Bound"]
+    assert client.get(
+        f"/api/international-cities?country_id={country_id}&canonical_only=yes"
+    ).status_code == 400

@@ -33,6 +33,9 @@ EXPECTED_LOCATION_COUNT = 115_208
 EXPECTED_IRAN_LOCATION_COUNT = 154
 EXPECTED_TYPE_COUNTS = {"airport": 5_252, "city": 102_894, "port": 7_062}
 ALLOWED_LOCATION_TYPES = frozenset(EXPECTED_TYPE_COUNTS)
+FULL_SCOPE = "FULL"
+COUNTRY_ONLY_SCOPE = "COUNTRY_ONLY"
+APPLY_SCOPES = frozenset({FULL_SCOPE, COUNTRY_ONLY_SCOPE})
 ALLOWED_SOURCE_STATUSES = frozenset(
     {"AA", "AC", "AF", "AI", "AS", "AM", "AQ", "RN", "RL"}
 )
@@ -66,6 +69,7 @@ class GeographyCatalog:
 
 @dataclass
 class GeographyCatalogPlan:
+    scope: str
     dataset_id: str
     catalog_version: str
     checksum: str
@@ -73,6 +77,7 @@ class GeographyCatalogPlan:
     location_count: int
     iran_location_count: int
     location_type_counts: dict[str, int]
+    database_country_count_before: int = 0
     created_country_count: int = 0
     created_location_count: int = 0
     unchanged_country_count: int = 0
@@ -101,10 +106,17 @@ class GeographyCatalogPlan:
 
     @property
     def planned_count(self) -> int:
+        if self.scope == COUNTRY_ONLY_SCOPE:
+            return self.country_count
         return self.country_count + self.location_count
+
+    @property
+    def result(self) -> str:
+        return "CHANGED" if self.created_count else "UNCHANGED"
 
     def as_dict(self) -> dict[str, Any]:
         return {
+            "scope": self.scope,
             "dataset_id": self.dataset_id,
             "catalog_version": self.catalog_version,
             "checksum": self.checksum,
@@ -115,6 +127,10 @@ class GeographyCatalogPlan:
             "italy_present": self._country_present("IT"),
             "norway_present": self._country_present("NO"),
             "created_country_count": self.created_country_count,
+            "country_count_before": self.database_country_count_before,
+            "country_count_after": (
+                self.database_country_count_before + self.created_country_count
+            ),
             "created_location_count": self.created_location_count,
             "created_count": self.created_count,
             "updated_count": 0,
@@ -124,6 +140,7 @@ class GeographyCatalogPlan:
             "skipped_count": self.skipped_count,
             "conflict_count": self.conflict_count,
             "conflicts": self.conflicts,
+            "result": self.result,
         }
 
     def _country_present(self, code: str) -> bool:
@@ -256,10 +273,18 @@ def load_catalog(path: Path = CATALOG_PATH) -> GeographyCatalog:
     )
 
 
-def plan_catalog(catalog: GeographyCatalog | None = None) -> GeographyCatalogPlan:
+def plan_catalog(
+    catalog: GeographyCatalog | None = None,
+    *,
+    scope: str = FULL_SCOPE,
+) -> GeographyCatalogPlan:
     """Compare catalog identities without writing or mutating tracked rows."""
     catalog = catalog or load_catalog()
+    if scope not in APPLY_SCOPES:
+        raise GeographyCatalogError("unsupported geography apply scope")
+    countries = {row.code: row for row in Country.query.all()}
     plan = GeographyCatalogPlan(
+        scope=scope,
         dataset_id=catalog.dataset_id,
         catalog_version=catalog.snapshot_version,
         checksum=catalog.checksum,
@@ -267,8 +292,20 @@ def plan_catalog(catalog: GeographyCatalog | None = None) -> GeographyCatalogPla
         location_count=catalog.location_count,
         iran_location_count=catalog.iran_location_count,
         location_type_counts=catalog.location_type_counts,
+        database_country_count_before=len(countries),
     )
-    countries = {row.code: row for row in Country.query.all()}
+    for record in catalog.payload["records"]:
+        source_country = record["country"]
+        country = countries.get(source_country["code"])
+        if country is None:
+            plan.created_country_count += 1
+            plan.country_creates.append(source_country)
+        else:
+            plan.unchanged_country_count += 1
+
+    if scope == COUNTRY_ONLY_SCOPE:
+        return plan
+
     coded_locations: dict[str, list[int]] = {}
     unbound_names: set[tuple[int, str]] = set()
     location_rows = db.session.query(
@@ -286,11 +323,6 @@ def plan_catalog(catalog: GeographyCatalog | None = None) -> GeographyCatalogPla
         source_country = record["country"]
         country_code = source_country["code"]
         country = countries.get(country_code)
-        if country is None:
-            plan.created_country_count += 1
-            plan.country_creates.append(source_country)
-        else:
-            plan.unchanged_country_count += 1
         for source_location in record["locations"]:
             locode = source_location["un_locode"]
             matches = coded_locations.get(locode, [])
@@ -344,6 +376,7 @@ def apply_catalog(
     approval_reference: str,
     environment: str,
     catalog: GeographyCatalog | None = None,
+    scope: str = FULL_SCOPE,
 ) -> tuple[GeographyCatalogPlan, ReferenceDataSeedRun]:
     """Apply only missing identities in one data transaction with an audit run."""
     catalog = catalog or load_catalog()
@@ -357,12 +390,16 @@ def apply_catalog(
     if db.session.new or db.session.dirty or db.session.deleted:
         raise GeographyCatalogError("geography apply requires a clean unit of work")
 
-    plan = plan_catalog(catalog)
+    plan = plan_catalog(catalog, scope=scope)
     run = ReferenceDataSeedRun(
         catalog_version=CATALOG_DATASET_ID,
         catalog_family="GEOGRAPHY",
-        catalog_name="Governed international geography",
-        schema_version="2",
+        catalog_name=(
+            "Governed international geography countries"
+            if scope == COUNTRY_ONLY_SCOPE
+            else "Governed international geography"
+        ),
+        schema_version=("2-country-only" if scope == COUNTRY_ONLY_SCOPE else "2"),
         source_bundle_version=CATALOG_VERSION,
         checksum=CATALOG_CHECKSUM,
         environment=environment,
@@ -376,6 +413,61 @@ def apply_catalog(
         executed_by=executed_by,
         approval_reference=approval_reference,
     )
+
+    if scope == COUNTRY_ONLY_SCOPE:
+        try:
+            created_at = _utc_naive_now()
+            db.session.add(run)
+            for source in plan.country_creates:
+                db.session.add(
+                    Country(
+                        code=source["code"],
+                        name_en=source["name_en"],
+                        name_fa=source["name_fa"],
+                        is_active=True,
+                        source_organization=source["source_organization"],
+                        source_reference=source["source_reference"],
+                        source_version=source["source_version"],
+                        dataset_id=CATALOG_DATASET_ID,
+                        created_at=created_at,
+                    )
+                )
+            run.status = "succeeded"
+            run.created_count = plan.created_count
+            run.completed_at = _utc_naive_now()
+            db.session.commit()
+            return plan, run
+        except Exception as exc:
+            db.session.rollback()
+            failed = ReferenceDataSeedRun(
+                catalog_version=CATALOG_DATASET_ID,
+                catalog_family="GEOGRAPHY",
+                catalog_name="Governed international geography countries",
+                schema_version="2-country-only",
+                source_bundle_version=CATALOG_VERSION,
+                checksum=CATALOG_CHECKSUM,
+                environment=environment,
+                mode="apply",
+                planned_count=plan.planned_count,
+                created_count=0,
+                updated_count=0,
+                unchanged_count=plan.unchanged_count,
+                conflict_count=plan.conflict_count,
+                status="failed",
+                executed_by=executed_by,
+                approval_reference=approval_reference,
+                completed_at=_utc_naive_now(),
+                error_summary=(
+                    f"Country-only geography apply rolled back ({type(exc).__name__}); "
+                    "inspect operator diagnostics."
+                )[:500],
+            )
+            db.session.add(failed)
+            db.session.commit()
+            raise GeographyCatalogError(
+                "country-only geography catalog apply failed and rolled back"
+            ) from exc
+
     db.session.add(run)
     db.session.commit()
     run_public_id = run.public_id

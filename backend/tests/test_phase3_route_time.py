@@ -183,7 +183,12 @@ def test_canonical_country_binding_rejects_mismatch_free_text_and_legacy_iran_bu
             country_id=ids["country"], name_en="Bandar Abbas", name_fa="بندرعباس",
             city_type="city", is_active=True,
         )
-        db.session.add_all([foreign, legacy]); db.session.commit()
+        db.session.add_all([foreign, legacy]); db.session.flush()
+        foreign_legacy = InternationalCity(
+            country_id=foreign.id, name_en="Legacy Türkiye", name_fa="ترکیه قدیمی",
+            city_type="city", is_active=True,
+        )
+        db.session.add(foreign_legacy); db.session.commit()
 
         with pytest.raises(operations.OperationalError) as mismatch:
             save(app, payload(app, origin={
@@ -212,6 +217,15 @@ def test_canonical_country_binding_rejects_mismatch_free_text_and_legacy_iran_bu
                 "country_id": ids["country"], "source_type": "international_city", "source_id": legacy.id,
             }))
         assert legacy_new.value.code == "ROUTE_TIME_LEGACY_LOCATION_NOT_SELECTABLE"
+        db.session.rollback()
+
+        with pytest.raises(operations.OperationalError) as foreign_legacy_new:
+            save(app, payload(app, origin={
+                "country_id": foreign.id,
+                "source_type": "international_city",
+                "source_id": foreign_legacy.id,
+            }))
+        assert foreign_legacy_new.value.code == "ROUTE_TIME_LEGACY_LOCATION_NOT_SELECTABLE"
         db.session.rollback()
 
         legacy_location = operations.resolve_location({"source_type": "international_city", "source_id": legacy.id})

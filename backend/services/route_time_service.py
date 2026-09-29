@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from sqlalchemy import func, select
 from backend.extensions import db
-from backend.models import ExpertUser
+from backend.models import Country, ExpertUser, InternationalCity
 from backend.operational_models import OperationalOrganization, RouteLeg, utcnow
 from backend.route_time_models import OrganizationRouteTime as Reference, OrganizationRouteTimeVersion as Version, RouteLegTimeBasis as Basis
 from backend.services import operational_service as base, route_orchestration_service as routes
@@ -92,6 +92,19 @@ def _key(payload, org):
             or type(value.get("country_id")) is not int
         ):
             fail("کشور و مکان مرجع معتبر را انتخاب کنید.")
+        if value["source_type"] == "international_city":
+            legacy = db.session.get(InternationalCity, value["source_id"])
+            selected_country = db.session.get(Country, value["country_id"])
+            if (
+                legacy is None
+                or selected_country is None
+                or legacy.un_locode is None
+                or not legacy.un_locode.startswith(selected_country.code)
+            ):
+                fail(
+                    "این رکورد قدیمی برای مرجع مسیر تازه قابل انتخاب نیست.",
+                    code="ROUTE_TIME_LEGACY_LOCATION_NOT_SELECTABLE",
+                )
         endpoint = base._endpoint(value, org)
         location = base._endpoint_location(endpoint)
         if location.country_id != value["country_id"]:

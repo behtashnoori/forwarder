@@ -110,7 +110,7 @@ export function RouteReferenceLocationPicker({
         })));
       } else {
         const [locations, facilities] = await Promise.all([
-          fetchInternationalCityPage(country.id, term, 0),
+          fetchInternationalCityPage(country.id, term, 0, undefined, true),
           facilitiesPromise,
         ]);
         next = locations.items.map((item) => ({

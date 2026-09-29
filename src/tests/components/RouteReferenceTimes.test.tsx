@@ -110,4 +110,10 @@ describe("explicit route reference basis",()=>{
     }),expect.any(String)));
     expect(api.countries).toHaveBeenCalledTimes(1);
   });
+  it("requests only canonically bound international locations for new Route References",async()=>{
+    render(<OrganizationRouteTimesTab/>);
+    fireEvent.click(await screen.findByRole("button",{name:"تعریف زمان مرجع تازه"}));
+    fireEvent.change(await screen.findByLabelText("مبدأ مرجع کشور"),{target:{value:"2"}});
+    await waitFor(()=>expect(api.international).toHaveBeenCalledWith(2,"",0,undefined,true));
+  });
 });

@@ -11,7 +11,7 @@
 | External authority | ISO and UNECE; the checked-in snapshot is the approved reproducible input, while the database is the runtime System of Record. |
 | Owner / change authority | Reference Data Owner. Assignment to a named business person/team remains organizational governance. |
 | Runtime network policy | No ISO/UNECE network fetch is permitted at runtime. |
-| Reconciliation | Explicit, idempotent, deterministic and non-destructive. It adds missing snapshot rows but never deletes, rewrites stable identity, or reactivates an existing inactive row. |
+| Reconciliation | Explicit, idempotent, deterministic and non-destructive. Full Apply adds missing snapshot rows but never deletes, rewrites stable identity, or reactivates an existing inactive row. Product Owner-authorized `COUNTRY_ONLY` Apply is a separately explicit scope: it adds only missing exact ISO alpha-2 Country identities, audits the result in the same successful transaction, and never writes an `InternationalCity` row. |
 
 `InternationalCity` remains the compatibility name. It presently represents the
 public selector's city/port/airport-like transport-location projection. A future
@@ -28,6 +28,13 @@ The current catalog is validated by
 runtime System of Record by its read-only `plan_catalog()` path. Those controls
 bind the v2-FWD02 identity, checksum, coverage counts, location types, Iran
 projection count, and required country coverage before an explicit Apply.
+
+The operator command requires `--scope country-only` for the narrow Country
+mode. The plan and Apply receipts name the scope and report `CHANGED` when at
+least one Country was inserted, otherwise `UNCHANGED`. Full reconciliation
+remains the default and continues to refuse any location-identity conflict.
+Country-only mode neither resolves nor bypasses a location conflict; it leaves
+every coded and unbound `InternationalCity` row outside the write set.
 
 `backend.services.international_geography_readiness.readiness_report()` remains
 a read-only diagnostic for the historical v1 compatibility anchors used by

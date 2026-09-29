@@ -8,6 +8,8 @@ import sys
 from backend import create_app
 from backend.config import is_production_environment
 from backend.international_geography_catalog import (
+    COUNTRY_ONLY_SCOPE,
+    FULL_SCOPE,
     GeographyCatalogError,
     apply_catalog,
     load_catalog,
@@ -26,8 +28,10 @@ def _parser() -> argparse.ArgumentParser:
         description="Governed worldwide geography catalog reconciliation"
     )
     commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("plan", help="validate and compare without writes")
+    plan = commands.add_parser("plan", help="validate and compare without writes")
+    plan.add_argument("--scope", choices=("full", "country-only"), default="full")
     apply = commands.add_parser("apply", help="explicit additive apply")
+    apply.add_argument("--scope", choices=("full", "country-only"), default="full")
     apply.add_argument("--confirm", action="store_true")
     apply.add_argument("--operator")
     apply.add_argument("--approval-reference")
@@ -42,8 +46,9 @@ def main(argv: list[str] | None = None, *, app=None) -> int:
     app = app or create_app(skip_startup=True)
     environment = str(app.config.get("APP_ENV", "development")).strip().lower()
     with app.app_context():
+        scope = COUNTRY_ONLY_SCOPE if args.scope == "country-only" else FULL_SCOPE
         if args.command == "plan":
-            print(json.dumps(plan_catalog(catalog).as_dict(), ensure_ascii=False, sort_keys=True))
+            print(json.dumps(plan_catalog(catalog, scope=scope).as_dict(), ensure_ascii=False, sort_keys=True))
             return 0
         if not args.confirm:
             print("REFUSED: apply requires --confirm.", file=sys.stderr)
@@ -66,6 +71,7 @@ def main(argv: list[str] | None = None, *, app=None) -> int:
             executed_by=args.operator,
             approval_reference=args.approval_reference,
             environment=environment,
+            scope=scope,
         )
         output = plan.as_dict()
         output.update(run_id=run.public_id, status=run.status)

@@ -2,7 +2,7 @@
 import traceback
 
 from flask import Blueprint, jsonify, request, current_app
-from sqlalchemy import or_, text
+from sqlalchemy import func, or_, text
 
 from backend.extensions import db
 from backend.international_geography_catalog import CATALOG_DATASET_ID
@@ -183,6 +183,14 @@ def list_international_cities():
         InternationalCity.is_active.is_(True),
         Country.is_active.is_(True),
     )
+    canonical_only = request.args.get("canonical_only")
+    if canonical_only not in (None, "0", "1"):
+        return jsonify({"message": "پارامتر هویت مکان معتبر نیست."}), 400
+    if canonical_only == "1":
+        query = query.filter(
+            InternationalCity.un_locode.is_not(None),
+            func.substr(InternationalCity.un_locode, 1, 2) == Country.code,
+        )
     search = request.args.get("q", "").strip()
     if len(search) > 160:
         return jsonify({"message": "عبارت جست‌وجو بیش از حد طولانی است."}), 400

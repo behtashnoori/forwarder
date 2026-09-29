@@ -425,6 +425,7 @@ export function fetchInternationalCityPage(
   query = "",
   offset = 0,
   type?: "city" | "port" | "airport",
+  canonicalOnly = false,
 ): Promise<InternationalCityPage> {
   const path = withQuery("/api/international-cities", {
     country_id: countryId,
@@ -433,6 +434,7 @@ export function fetchInternationalCityPage(
     offset,
     limit: 50,
     type,
+    canonical_only: canonicalOnly ? 1 : undefined,
   });
   return request<InternationalCityPage>(path);
 }
